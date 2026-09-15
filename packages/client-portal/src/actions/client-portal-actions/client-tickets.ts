@@ -1,9 +1,13 @@
 'use server'
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
+import { registerAfterCommit } from '@alga-psa/db';
+import Comment from '@alga-psa/tickets/models/comment';
+import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { validateData } from '@alga-psa/validation';
-import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
+import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -459,7 +463,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         linkedAssetsQuery
       ]);
 
-      return { ticket, conversations, documents, users, linkedAssets };
+      return { ticket, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
@@ -565,7 +569,8 @@ export const addClientTicketComment = withAuth(async (
   ticketId: string,
   content: string,
   isInternal: boolean = false,
-  isResolution: boolean = false
+  isResolution: boolean = false,
+  parentCommentId?: string
 ): Promise<ClientTicketActionResult<boolean>> => {
   // Client portal contacts can never create internal notes/threads. Force the
   // flag server-side — the portal UI always passes false, but server actions
@@ -615,47 +620,24 @@ export const addClientTicketComment = withAuth(async (
         markdownContent = "[Error converting content to markdown]";
       }
 
-      // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
-      const clientCommentIds = await trx.raw(
-        'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-      );
-      const clientGeneratedIds = clientCommentIds.rows?.[0] as
-        | { comment_id: string; thread_id: string }
-        | undefined;
-      if (!clientGeneratedIds?.comment_id || !clientGeneratedIds?.thread_id) {
-        throw new Error('Database UUID generation did not return comment/thread identifiers.');
+      if (parentCommentId) {
+        const parent = await tenantDb(trx, tenant).table('comments')
+          .where({ comment_id: parentCommentId, ticket_id: ticketId, is_internal: false, publish_state: 'published' })
+          .whereNull('deleted_at').forUpdate().first();
+        if (!parent) throw expectedClientTicketActionError('Parent comment not found');
       }
-      const clientNowIso = new Date().toISOString();
-
-      await tenantDb(trx, tenant).table('comment_threads').insert({
-        tenant,
-        thread_id: clientGeneratedIds.thread_id,
+      const commentId = await Comment.insert(trx, tenant, {
         ticket_id: ticketId,
-        project_task_id: null,
-        root_comment_id: clientGeneratedIds.comment_id,
-        is_internal: isInternal,
-        reply_count: 0,
-        last_activity_at: clientNowIso,
-        created_at: clientNowIso,
-        created_by: userId,
-      });
-
-      const [newComment] = await tenantDb(trx, tenant).table('comments').insert({
-        tenant,
-        comment_id: clientGeneratedIds.comment_id,
-        thread_id: clientGeneratedIds.thread_id,
-        ticket_id: ticketId,
+        parent_comment_id: parentCommentId,
         author_type: 'client',
         note: content,
-        is_internal: isInternal,
+        is_internal: false,
         is_resolution: isResolution,
-        metadata: JSON.stringify({
-          responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL,
-        }),
-        created_at: clientNowIso,
+        metadata: { responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL },
         user_id: userId,
-        markdown_content: markdownContent
-      }).returning('*');
+        markdown_content: markdownContent,
+      });
+      const newComment = await tenantDb(trx, tenant).table('comments').where({ comment_id: commentId }).first();
 
       if (!isInternal) {
         await tenantDb(trx, tenant).table('tickets')
@@ -668,7 +650,7 @@ export const addClientTicketComment = withAuth(async (
       }
 
       // Publish comment added event
-      await publishEvent({
+      await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -683,7 +665,7 @@ export const addClientTicketComment = withAuth(async (
             isInternal
           }
         }
-      });
+      }, publishEvent);
 
       await publishTicketUpdate({
         tenantId: tenant,
@@ -782,6 +764,7 @@ export const updateClientTicketComment = withAuth(async (
           updated_at: new Date().toISOString()
           // Removed updated_by as it doesn't exist in the comments table
         });
+      await reconcileCommentAttachments(trx, tenant, commentId, userId);
 
       await publishTicketUpdate({
         tenantId: tenant,
@@ -796,6 +779,84 @@ export const updateClientTicketComment = withAuth(async (
     });
   } catch (error) {
     return expectedOrThrow(error, 'Failed to update comment:');
+  }
+});
+
+/**
+ * Portal-facing ticket status read. Returns only the statuses a client portal
+ * user is allowed to SET for the given board, preserving the board's ordering.
+ *
+ * Kept separate from the shared `getTicketStatuses` (15 MSP call sites) so MSP
+ * behavior cannot change based on caller identity. `currentStatusId` is always
+ * included even when it is not selectable, so a ticket parked in a restricted
+ * status still renders its current value instead of a blank picker.
+ */
+export const getClientPortalTicketStatuses = withAuth(async (
+  user,
+  { tenant },
+  boardId: string,
+  currentStatusId?: string | null
+): Promise<ClientTicketActionResult<IStatus[]>> => {
+  try {
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
+    }
+
+    const db = await getConnection(tenant);
+
+    const userForPermission = {
+      user_id: userId,
+      email: user.email,
+      user_type: 'client',
+      is_inactive: false,
+      tenant
+    } as IUser;
+    const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
+    if (!canRead) {
+      return permissionError('Insufficient permissions to view ticket statuses', 'common:errors.permissions.tickets.read');
+    }
+
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const userRecord = await tenantDb(trx, tenant).table('users')
+        .where({
+          user_id: userId
+        })
+        .first();
+
+      if (!userRecord?.contact_id) {
+        throw expectedClientTicketActionError('User not associated with a contact');
+      }
+
+      const visibility = await getClientContactVisibilityContext(trx, tenant, userRecord.contact_id);
+      if (visibility.visibleBoardIds !== null && !visibility.visibleBoardIds.includes(boardId)) {
+        throw expectedClientTicketActionError(
+          'Ticket not found or access denied',
+          'client-portal:errors.tickets.notFoundOrDenied',
+        );
+      }
+
+      const query = tenantDb(trx, tenant).table<IStatus>('statuses')
+        .where({
+          board_id: boardId,
+          status_type: 'ticket',
+        })
+        .select('*')
+        .orderBy('order_number', 'asc')
+        .orderBy('name', 'asc');
+
+      if (currentStatusId) {
+        query.where((builder: Knex.QueryBuilder) => {
+          builder.where('portal_selectable', true).orWhere('status_id', currentStatusId);
+        });
+      } else {
+        query.where('portal_selectable', true);
+      }
+
+      return await query as IStatus[];
+    });
+  } catch (error) {
+    return expectedOrThrow(error, 'Failed to fetch client portal ticket statuses:');
   }
 });
 
@@ -855,10 +916,20 @@ export const updateTicketStatus = withAuth(async (
           status_type: 'ticket',
           board_id: ticket.board_id,
         })
-        .first('status_id', 'is_closed', 'name');
+        .first('status_id', 'is_closed', 'name', 'portal_selectable');
 
       if (!statusForBoard) {
         throw expectedClientTicketActionError('Selected status is not valid for the ticket board');
+      }
+
+      if (statusForBoard.portal_selectable === false) {
+        // Checked in the same lookup that proves board membership: there is one
+        // place a target status can be admitted from, and the rejection happens
+        // before any ticket mutation or event publication.
+        throw expectedClientTicketActionError(
+          'This status cannot be selected from the client portal',
+          'client-portal:errors.tickets.statusNotPortalSelectable',
+        );
       }
 
       // Get old status for change tracking
@@ -1047,6 +1118,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
 
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
 
+      await withdrawCommentAttachments(trx, tenant, commentId);
       await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId
@@ -1117,12 +1189,13 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
       const documentsQuery = scopedDb.table('documents as d').select('d.*');
       scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
 
-      return documentsQuery
+      const rows = await documentsQuery
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
           'd.is_client_visible': true,
-        }) as unknown as Promise<IDocument[]>;
+        });
+      return filterReadableCommentAttachments(trx, tenant, userId, rows) as Promise<IDocument[]>;
     });
 
     return documents;

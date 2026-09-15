@@ -192,7 +192,7 @@ export interface CatalogPickerSearchOptions {
 
 export type CatalogPickerItem = Pick<
   IService,
-  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku'
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku' | 'description'
 > & {
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
@@ -258,6 +258,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.unit_of_measure as unit_of_measure',
         'sc.item_kind as item_kind',
         'sc.sku as sku',
+        'sc.description as description',
         trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
         trx.raw('CAST(sc.cost AS FLOAT) as cost'),
         'sc.cost_currency as cost_currency'
@@ -1309,6 +1310,74 @@ export const setServicePrices = withAuth(async (
     });
   } catch (error) {
     console.error(`Error setting prices for service ${serviceId}:`, error);
+    throw error;
+  }
+});
+
+/**
+ * Save a service's editable fields and its price rows in one transaction.
+ *
+ * `default_rate` is the currency-untagged mirror of the primary price row; it is
+ * derived here from the rows being written rather than from an `onBlur`
+ * side-effect, so a save with the price field still focused cannot leave the two
+ * stores divergent. A non-atomic `updateService` + `setServicePrices` pair could
+ * commit one and lose the other.
+ */
+export const updateServicePricing = withAuth(async (
+  user,
+  { tenant },
+  serviceId: string,
+  servicePatch: Partial<IService>,
+  prices: Array<{ currency_code: string; rate: number }>
+): Promise<{ service: IService; prices: IServicePrice[] } | ServiceActionError | ActionPermissionError> => {
+  const canUpdate = await hasPermission(user, 'service', 'update');
+  if (!canUpdate) {
+    return permissionError('Permission denied: Cannot update services/products', 'msp/service-catalog:errors.permissions.updateServices');
+  }
+
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const normalizedPrices = prices.map((price) => ({
+        currency_code: price.currency_code,
+        rate: Math.round(Number(price.rate || 0)),
+      }));
+      const primaryRate =
+        normalizedPrices.length > 0 ? normalizedPrices[0].rate : null;
+
+      const normalizedServiceData: Partial<IService> = {
+        ...servicePatch,
+        ...(primaryRate !== null ? { default_rate: primaryRate } : {}),
+        ...(servicePatch.barcode !== undefined
+          ? { barcode: normalizeGtin(servicePatch.barcode ?? '') || null }
+          : {}),
+      };
+
+      const updatedService = await Service.update(trx, serviceId, normalizedServiceData);
+      if (updatedService === null) {
+        return actionError(
+          `Service with id ${serviceId} not found or couldn't be updated`,
+          'msp/service-catalog:errors.product.notFound',
+        );
+      }
+
+      const updatedPrices = await Service.setPrices(trx, serviceId, normalizedPrices);
+
+      await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, serviceId, {
+        userId: user.user_id,
+        itemKind: updatedService.item_kind,
+        changedFields: Object.keys(normalizedServiceData),
+      });
+
+      safeRevalidate('/msp/billing');
+      safeRevalidate('/msp/settings/billing');
+
+      return { service: updatedService as IService, prices: updatedPrices };
+    });
+  } catch (error) {
+    console.error(`Error updating service pricing for ${serviceId}:`, error);
+    const expected = serviceActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });

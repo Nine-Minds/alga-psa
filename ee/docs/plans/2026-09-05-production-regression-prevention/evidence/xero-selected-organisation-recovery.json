@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-xero-selected-organisation-refresh",
+  "baseRevision": "2c539e1ed7a26e8d4aed132f06129c7223f150ce",
+  "workingTreeDirty": true,
+  "status": "native-passed-ci-pending",
+  "sourceSha256": {
+    "packages/emulators/xero/tests/clientRecoveryConsumer.test.ts": "c6b15b0dbbc984cca22944eadca96eaca8a03fca9a74cc41e27207686da16edf",
+    "packages/emulators/xero/vitest.config.ts": "f1f835696501a84b1b773a90d1729fa1648c76f134423e87ec5c632fe8bfd649"
+  },
+  "execution": {
+    "command": "npm test --workspace @alga-psa/emulator-xero",
+    "files": 4,
+    "passed": 23,
+    "failed": 0,
+    "typecheck": "passed",
+    "canonicalCiRegistration": ".github/workflows/e2e-fresh-install-tests.yaml:156"
+  },
+  "behavior": {
+    "test": "refreshes the selected organisation once without overwriting a newer sibling connection",
+    "httpSequence": [
+      "GET /api.xro/2.0/Contacts 401",
+      "POST /connect/token 200",
+      "GET /api.xro/2.0/Contacts 200"
+    ],
+    "selectedOrganisationPreserved": true,
+    "selectedContactReadback": true,
+    "credentialWrites": 1,
+    "newerSiblingPreserved": true,
+    "externalDestinationsBlocked": true
+  },
+  "limitations": [
+    "Native actual XeroClientService/Axios/emulator HTTP; not live Xero or browser evidence.",
+    "Private in-memory secret provider; disconnect lock and database seams mocked, no cross-process concurrency proof.",
+    "Sibling update is deliberately interleaved after client creation and before refresh, not a real simultaneous database transaction.",
+    "No product fix required; initial failed test runs corrected fixture assertions, not a production regression red."
+  ]
+}

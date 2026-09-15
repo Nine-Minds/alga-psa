@@ -162,6 +162,9 @@ async function seedFixture(): Promise<Fixture> {
 async function cleanupTenant(tenant: string): Promise<void> {
   const del = async (name: string) => table(tenant, name).del().catch(() => undefined);
   for (const name of [
+    'document_associations',
+    'documents',
+    'external_files',
     'asset_associations',
     'asset_maintenance_occurrences',
     'asset_maintenance_history',
@@ -238,6 +241,69 @@ describe('AssetService REST repairs (integration)', () => {
     // getMaintenanceSchedules joins created_by -> created_by_name (not the dropped assigned_to).
     expect(detail.maintenance_schedules).toHaveLength(1);
     expect(detail.maintenance_schedules[0].schedule_id).toBe(fx.scheduleId);
+  }, HOOK_TIMEOUT);
+
+  it('lists asset documents from real columns: upload name and time, with in-app fallbacks', async () => {
+    const fx = await seedFixture();
+    const ctx = { tenant: fx.tenantId, userId: fx.userId, db } as any;
+    const service = new AssetService();
+
+    const fileId = randomUUID();
+    await table(fx.tenantId, 'external_files').insert({
+      tenant: fx.tenantId,
+      file_id: fileId,
+      file_name: `${fileId}.pdf`,
+      original_name: 'warranty.pdf',
+      mime_type: 'application/pdf',
+      file_size: 2048,
+      storage_path: `${fx.tenantId}/${fileId}.pdf`,
+      uploaded_by_id: fx.userId,
+    });
+    const uploadedId = randomUUID();
+    const noteId = randomUUID();
+    await table(fx.tenantId, 'documents').insert([
+      {
+        tenant: fx.tenantId,
+        document_id: uploadedId,
+        document_name: 'Warranty (renamed after upload)',
+        user_id: fx.userId,
+        created_by: fx.userId,
+        file_id: fileId,
+        mime_type: 'application/pdf',
+        file_size: 2048,
+      },
+      {
+        tenant: fx.tenantId,
+        document_id: noteId,
+        document_name: 'Setup notes',
+        user_id: fx.userId,
+        created_by: fx.userId,
+        content: 'Rack 3, shelf B',
+      },
+    ]);
+    await table(fx.tenantId, 'document_associations').insert([
+      { tenant: fx.tenantId, document_id: uploadedId, entity_type: 'asset', entity_id: fx.assetId },
+      { tenant: fx.tenantId, document_id: noteId, entity_type: 'asset', entity_id: fx.assetId },
+    ]);
+
+    const documents = await service.getAssetDocuments(fx.assetId, ctx);
+    expect(documents).toHaveLength(2);
+    const byId = new Map(documents.map((row: any) => [row.document_id, row]));
+
+    // Uploaded file: the original upload name wins over the editable document_name.
+    const uploaded = byId.get(uploadedId);
+    expect(uploaded).toMatchObject({ original_filename: 'warranty.pdf', mime_type: 'application/pdf' });
+    expect(Number(uploaded.file_size)).toBe(2048);
+    expect(uploaded.uploaded_at).toBeInstanceOf(Date);
+
+    // In-app document: no external file, so the document's own name and timestamp stand in.
+    const note = byId.get(noteId);
+    expect(note.original_filename).toBe('Setup notes');
+    expect(note.uploaded_at).toBeInstanceOf(Date);
+
+    // getWithDetails must hydrate the same rows rather than settle() to [].
+    const detail = await service.getWithDetails(fx.assetId, ctx);
+    expect(detail.documents.map((row: any) => row.document_id).sort()).toEqual([uploadedId, noteId].sort());
   }, HOOK_TIMEOUT);
 
   it('records maintenance into history, advances the schedule, and rejects a repeat for the same occurrence', async () => {

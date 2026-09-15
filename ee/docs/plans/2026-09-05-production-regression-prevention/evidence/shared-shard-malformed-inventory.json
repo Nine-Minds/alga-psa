@@ -1,0 +1,35 @@
+{
+  "scope": "Shared shard verifier malformed inventory handling",
+  "baseRevision": "edc10c6f85",
+  "workingTreeDirty": true,
+  "before": "New malformed-input regression fails because null shards throws before a verdict is returned.",
+  "after": {
+    "tests": 17,
+    "passed": 17,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "durationMs": 10211.309167
+  },
+  "coverage": [
+    "Invalid shard-list and entry types",
+    "Malformed required/expected/executed file lists",
+    "Workspace gate retains seven healthy sibling suite verdicts",
+    "Temporal gate regression suite",
+    "Actual infrastructure runner in temporary Git checkout"
+  ],
+  "limitations": [
+    "Focused local validation only; no native candidate CI run.",
+    "Does not complete global inventory or aggregate enforcement."
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-shard-shape-before.log",
+      "sha256": "eaa34148d5233ae042c0ff74a29d560a2cfdd71ba328855f4624f88d5e597e88"
+    },
+    {
+      "path": "/tmp/alga-shard-shape-final.log",
+      "sha256": "36701eb7b53175880b21300a5cf7242e22c0719cecc659d2d6237a03734f1916"
+    }
+  ]
+}

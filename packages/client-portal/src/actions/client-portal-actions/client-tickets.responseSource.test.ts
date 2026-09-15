@@ -5,6 +5,47 @@ let currentUser: any;
 const hasPermissionMock = vi.fn();
 const getConnectionMock = vi.fn();
 const withTransactionMock = vi.fn();
+
+// Row the shared Comment model and publication intent read back after insert.
+const storedComment = {
+  comment_id: 'comment-1',
+  ticket_id: 'ticket-1',
+  thread_id: 'thread-1',
+  user_id: 'user-1',
+  note: '[]',
+  is_internal: false,
+  publish_state: 'published',
+  created_at: '2026-09-05T00:00:00.000Z',
+};
+
+function usersBuilder() {
+  const builder: any = {
+    select: () => builder,
+    where: () => builder,
+    first: async () => ({ contact_id: 'contact-1', first_name: 'Client', last_name: 'User', user_type: 'client' }),
+  };
+  return builder;
+}
+
+function commentsBuilder(insert: any) {
+  return {
+    insert,
+    where: () => ({
+      first: async () => storedComment,
+      forUpdate: () => ({ first: async () => storedComment }),
+      update: vi.fn().mockResolvedValue(1),
+    }),
+  };
+}
+
+// No attachment drafts are claimed in these scenarios.
+function attachmentRowsBuilder() {
+  const builder: any = {};
+  for (const method of ['where', 'whereIn', 'orderBy', 'forUpdate', 'select']) builder[method] = () => builder;
+  builder.first = async () => undefined;
+  builder.then = (resolve: any, reject?: any) => Promise.resolve([]).then(resolve, reject);
+  return builder;
+}
 const convertBlockNoteToMarkdownMock = vi.fn();
 const publishEventMock = vi.fn();
 const maybeReopenBundleMasterFromChildReplyMock = vi.fn();
@@ -20,6 +61,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   getConnection: (...args: any[]) => getConnectionMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  registerAfterCommit: vi.fn(),
   createTenantKnex: vi.fn(),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (table: string) => conn(table),
@@ -85,15 +127,7 @@ describe('addClientTicketComment response source metadata', () => {
         const trx = Object.assign(
           (table: string) => {
             if (table === 'users') {
-              return {
-                where: () => ({
-                  first: async () => ({
-                    contact_id: 'contact-1',
-                    first_name: 'Client',
-                    last_name: 'User',
-                  }),
-                }),
-              };
+              return usersBuilder();
             }
 
             if (table === 'contacts') {
@@ -132,9 +166,7 @@ describe('addClientTicketComment response source metadata', () => {
             }
 
             if (table === 'comments') {
-              return {
-                insert: commentsInsertMock,
-              };
+              return commentsBuilder(commentsInsertMock);
             }
 
             if (table === 'tickets') {
@@ -145,9 +177,14 @@ describe('addClientTicketComment response source metadata', () => {
               };
             }
 
+            if (table === 'ticket_comment_attachments') {
+              return attachmentRowsBuilder();
+            }
+
             throw new Error(`Unexpected table: ${table}`);
           },
           {
+            isTransaction: true,
             raw: vi.fn().mockResolvedValue({
               rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
             }),
@@ -193,15 +230,7 @@ describe('addClientTicketComment response source metadata', () => {
         const trx = Object.assign(
           (table: string) => {
             if (table === 'users') {
-              return {
-                where: () => ({
-                  first: async () => ({
-                    contact_id: 'contact-1',
-                    first_name: 'Client',
-                    last_name: 'User',
-                  }),
-                }),
-              };
+              return usersBuilder();
             }
 
             if (table === 'contacts') {
@@ -240,9 +269,7 @@ describe('addClientTicketComment response source metadata', () => {
             }
 
             if (table === 'comments') {
-              return {
-                insert: commentsInsertMock,
-              };
+              return commentsBuilder(commentsInsertMock);
             }
 
             if (table === 'tickets') {
@@ -253,9 +280,14 @@ describe('addClientTicketComment response source metadata', () => {
               };
             }
 
+            if (table === 'ticket_comment_attachments') {
+              return attachmentRowsBuilder();
+            }
+
             throw new Error(`Unexpected table: ${table}`);
           },
           {
+            isTransaction: true,
             raw: vi.fn().mockResolvedValue({
               rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
             }),
@@ -288,15 +320,7 @@ describe('addClientTicketComment response source metadata', () => {
         const trx = Object.assign(
           (table: string) => {
             if (table === 'users') {
-              return {
-                where: () => ({
-                  first: async () => ({
-                    contact_id: 'contact-1',
-                    first_name: 'Client',
-                    last_name: 'User',
-                  }),
-                }),
-              };
+              return usersBuilder();
             }
 
             if (table === 'contacts') {
@@ -343,14 +367,20 @@ describe('addClientTicketComment response source metadata', () => {
                   }
                   return {
                     update: commentsUpdateMock,
+                    forUpdate: () => ({ first: async () => storedComment }),
                   };
                 }),
               };
             }
 
+            if (table === 'ticket_comment_attachments') {
+              return attachmentRowsBuilder();
+            }
+
             throw new Error(`Unexpected table: ${table}`);
           },
           {
+            isTransaction: true,
             raw: vi.fn().mockResolvedValue({ rows: [] }),
           }
         );

@@ -14,6 +14,7 @@
         "manualEntryHelp": "Voer de identifier exact in zoals deze verschijnt in uw boekhoudsysteem.",
         "metadataLabel": "Metagegevens (JSON)",
         "metadataPlaceholder": "Optionele metadata als JSON",
+        "noKindOptions": "Er zijn geen bruikbare records van dit type gevonden in de gekoppelde organisatie.",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Toewijzing opslaan",
         "saving": "Opslaan…",
@@ -1697,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Beheer tenant-eigen Microsoft-profielen voor MSP SSO, Microsoft-aanmelding en detectie van aanmeldingsdomeinen.",
+        "descriptionCe": "Beheer de Microsoft-app-registraties van uw bedrijf voor Outlook-e-mail.",
         "descriptionEe": "Beheer tenant-eigen Microsoft-profielen voor MSP SSO, Outlook-e-mail, agendasynchronisatie en Microsoft Teams.",
         "dialog": {
           "cancel": "Annuleren",
@@ -1723,7 +1724,7 @@
         },
         "empty": {
           "createButton": "Microsoft-profiel aanmaken",
-          "descriptionCe": "Maak eerst een benoemd profiel aan en koppel het vervolgens expliciet aan MSP SSO- en aanmeldingsdomein-flows.",
+          "descriptionCe": "Maak een Microsoft-app-registratie voor Outlook-e-mail.",
           "descriptionEe": "Maak eerst een benoemd profiel aan en koppel het vervolgens expliciet aan MSP SSO, Outlook-e-mail, agendasynchronisatie en Teams.",
           "title": "Nog geen Microsoft-profielen"
         },
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "QuickBooks-installatiegids",
         "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
-        "connectionsPermissionNotice": "U kunt de QuickBooks-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen."
-,
+        "connectionsPermissionNotice": "U kunt de QuickBooks-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen.",
         "disconnectPending": "QuickBooks wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
         "disconnectForceFinalized": "De QuickBooks-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
         "disconnect": {
@@ -2774,6 +2774,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Laat medewerkers aanmelden via uw eigen Keycloak-realm. Gebruikers worden op e-mailadres gekoppeld aan bestaande AlgaPSA-accounts; Keycloak maakt hier nooit gebruikers aan.",
+        "status": {
+          "configured": "Geconfigureerd",
+          "notConfigured": "Niet geconfigureerd"
+        },
+        "actions": {
+          "refresh": "Vernieuwen",
+          "save": "Controleren en opslaan",
+          "saving": "Controleren en opslaan…",
+          "remove": "Verwijderen"
+        },
+        "setup": {
+          "redirectUri": "Maak een vertrouwelijke OpenID Connect-client in uw realm en sta deze redirect-URI toe:",
+          "domainsEe": "Claim en verifieer daarna uw aanmelddomein onder „Geavanceerd” zodat e-mails van dat domein naar dit realm worden geleid.",
+          "domainsCe": "Voeg daarna uw aanmelddomein toe onder „Geavanceerd” zodat e-mails van dat domein naar dit realm worden geleid.",
+          "issuer": "Uitgever: {{issuer}}"
+        },
+        "fields": {
+          "url": "Keycloak-server-URL",
+          "realm": "Realm",
+          "clientId": "Client-ID",
+          "clientSecret": "Clientgeheim",
+          "clientSecretKeep": "Laat leeg om {{masked}} te behouden"
+        },
+        "errors": {
+          "loadFailed": "Keycloak-instellingen konden niet worden geladen",
+          "saveFailed": "Keycloak-instellingen konden niet worden opgeslagen",
+          "removeFailed": "Keycloak-instellingen konden niet worden verwijderd"
+        },
+        "toasts": {
+          "savedTitle": "Keycloak-instellingen opgeslagen",
+          "savedDescription": "Het realm heeft op OpenID-discovery geantwoord; medewerkers kunnen nu aanmelden met Keycloak.",
+          "saveFailedTitle": "Keycloak-instellingen kunnen niet worden opgeslagen",
+          "removedTitle": "Keycloak-instellingen verwijderd",
+          "removedDescription": "Aanmelden met Keycloak wordt voor deze tenant niet meer aangeboden.",
+          "removeFailedTitle": "Keycloak-instellingen kunnen niet worden verwijderd"
+        },
+        "removeDialog": {
+          "title": "Aanmelden met Keycloak verwijderen?",
+          "message": "Medewerkers zien de Keycloak-knop niet meer. Aanmelden met wachtwoord blijft ongewijzigd.",
+          "confirm": "Verwijderen",
+          "cancel": "Annuleren"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Toevoegen",
@@ -3528,8 +3574,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
-        "connectionsPermissionNotice": "U kunt de Xero-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen."
-,
+        "connectionsPermissionNotice": "U kunt de Xero-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen.",
         "disconnectPending": "Xero wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
         "disconnectForceFinalized": "De Xero-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
         "disconnect": {
@@ -3618,7 +3663,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "Inkomende Outlook-e-mail voor de Microsoft-app-registratie van uw bedrijf.",
         "descriptionEe": "MSP-SSO, Outlook-e-mail, agendasynchronisatie en Teams.",
         "label": "Microsoft"
       },
@@ -3725,8 +3770,7 @@
       "notFound": "Koppeling niet gevonden. Vernieuw de koppelingen en probeer het opnieuw.",
       "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw.",
       "invoiceCancelled": "De factuur is geannuleerd en kan niet worden gekoppeld aan de boekhoudintegratie.",
-      "invoiceNotFound": "De factuur bestaat niet meer en kan niet worden gekoppeld aan de boekhoudintegratie."
-,
+      "invoiceNotFound": "De factuur bestaat niet meer en kan niet worden gekoppeld aan de boekhoudintegratie.",
       "scopeRequired": "Voor het opzoeken van koppelingen zijn een integratie, een entiteitstype en een realm-scope vereist."
     },
     "qbo": {

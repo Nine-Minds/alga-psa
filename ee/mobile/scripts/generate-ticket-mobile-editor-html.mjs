@@ -24,6 +24,31 @@ const result = await build({
   format: "iife",
   platform: "browser",
   nodePaths: [mobileNodeModulesPath],
+  plugins: [{
+    name: "mobile-editor-dependencies",
+    setup(builder) {
+      builder.onResolve({ filter: /^[^./]/ }, async (args) => {
+        if (args.pluginData?.mobileEditorResolution) return;
+        // Shared editor source lives outside mobile. Its bare imports must use
+        // mobile's locked packages even when a root workspace install exists.
+        // Retain nested package resolution for dependencies already in mobile.
+        const resolveDir = args.resolveDir.startsWith(`${mobileNodeModulesPath}${path.sep}`)
+          ? args.resolveDir : projectRoot;
+        const result = await builder.resolve(args.path, {
+          resolveDir,
+          kind: args.kind,
+          pluginData: { mobileEditorResolution: true },
+        });
+        if (result.errors.length) return result;
+        if (!result.path.startsWith(`${mobileNodeModulesPath}${path.sep}`)) {
+          return { errors: [{ text: `Mobile editor dependency ${args.path} must be installed inside ee/mobile/node_modules` }] };
+        }
+        // The recursion guard is only for builder.resolve above; don't pass it
+        // to the loaded module and accidentally bypass its transitive imports.
+        return { ...result, pluginData: undefined };
+      });
+    },
+  }],
   target: ["es2019"],
   minify: true,
   legalComments: "none",

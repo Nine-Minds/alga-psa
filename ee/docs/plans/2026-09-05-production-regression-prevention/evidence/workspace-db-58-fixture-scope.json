@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-execution",
+  "observedAt": "2026-09-06",
+  "revision": "e23148e2865d82c41ec9dc163ddcbfc09d54209a",
+  "dirty": true,
+  "status": "passed",
+  "selection": {
+    "mode": "full",
+    "filters": []
+  },
+  "counts": {
+    "passed": 421,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "reportSha256": "6cd8523f76a4c12a032b82c89715eaf473dcb34e29c04c307582050dd276a2aa",
+  "expectedFileCount": 58,
+  "seed": 20260610,
+  "checks": {
+    "workspaceDb": "58files421assertions; zero skips/failures",
+    "nxTooling": "5files12assertions; zero failures",
+    "circularDependencies": "3known cycles, zero new; unchanged baseline",
+    "taskPlan": "57tasks; opportunities build included, server build excluded",
+    "typecheck": "Targeted activation and new DB regression typecheck passed"
+  },
+  "logs": {
+    "workspaceDb": "/tmp/alga-workspace-db-58-final.log",
+    "connectionBefore": "/tmp/alga-workspace-connection-before.log",
+    "nxTooling": "/tmp/alga-nx-task-plan-guard.log",
+    "circular": "/tmp/alga-reporting-cycle-guard-fixed.log"
+  },
+  "limits": [
+    "Local dirty-checkout evidence; native candidate revalidation remains pending.",
+    "Previous57suite run failed one timeout because local Redis was given an incorrect password. Corrected57suite run passed; the final58suite run additionally verifies the active worker database fix at CI ordering seed.",
+    "Pre-fix new regression failed on actual current_database identity; the fix preserves DB_NAME_SERVER/DB_USER_SERVER pairing and restricts names to the declared disposable test family.",
+    "Financial business assertions were retained. The connection helper does not grant privileges or migrate/drop databases."
+  ]
+}

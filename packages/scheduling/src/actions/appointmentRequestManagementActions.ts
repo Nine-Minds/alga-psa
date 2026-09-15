@@ -742,6 +742,7 @@ export const approveAppointmentRequest = withAuth(async (
       }
     }
 
+    const tenantSettings = await getTenantSettings(tenant);
     let result;
     try {
       result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1159,7 +1160,6 @@ export const approveAppointmentRequest = withAuth(async (
         const emailService = SystemEmailService.getInstance();
 
         // Shared data for both client and technician emails
-        const tenantSettings = await getTenantSettings(tenant);
         const scheduleEntryWithDetails = await trxTenantDb.table('schedule_entries')
           .where({ entry_id: scheduleEntry.entry_id })
           .first();
@@ -1337,6 +1337,7 @@ export const declineAppointmentRequest = withAuth(async (
     // match against the request's preferred technician.
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
 
+    const tenantSettings = await getTenantSettings(tenant);
     const meetingsToCleanUp = await withTransaction(db, async (trx: Knex.Transaction) => {
       const trxTenantDb = tenantDb(trx, tenant);
       // Get the appointment request
@@ -1495,7 +1496,6 @@ export const declineAppointmentRequest = withAuth(async (
 
         if (recipientEmail && tenant) {
           // Get tenant settings
-          const tenantSettings = await getTenantSettings(tenant);
           const requestNewAppointmentLink = await getRequestNewAppointmentLink();
 
           // requested_date/requested_time are the requester's wall-clock; label their timezone.

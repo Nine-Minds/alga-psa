@@ -43,13 +43,14 @@
       "contractTemplates": "Modelli di contratto",
       "invoicing": "Fatturazione",
       "invoiceLayouts": "Layout di fattura",
-      "taxRates": "Aliquote fiscali",
+      "taxRates": "Imposte",
       "contractLinePresets": "Preimpostazioni della linea di contratto",
       "billingCycles": "Cicli di fatturazione",
       "servicePeriods": "Periodi di servizio",
       "usageTracking": "Monitoraggio dell'utilizzo",
       "reports": "Rapporti",
       "serviceTypes": "Tipi di servizio",
+      "serviceCategories": "Categorie di servizio",
       "serviceCatalog": "Servizi",
       "products": "Prodotti"
     }
@@ -141,6 +142,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Panoramica dei pacchetti ore",
+    "bucketLoadError": "Impossibile caricare i saldi dei pacchetti ore. Riprova per visualizzare i saldi attuali.",
+    "retryBucketBalances": "Ricarica i saldi dei pacchetti ore",
     "usageRecords": "Registrazioni di utilizzo",
     "actions": {
       "addUsage": "Aggiungi utilizzo",
@@ -211,6 +214,12 @@
       "updateError": "Impossibile aggiornare il record di utilizzo",
       "deleteSuccess": "Record di utilizzo eliminato correttamente",
       "deleteError": "Impossibile eliminare il record di utilizzo"
+    },
+    "periodReport": "Report di utilizzo del periodo",
+    "periodAlreadyInvoiced": "Questo periodo è già fatturato. Correggilo tramite il processo di rettifica della fattura.",
+    "periodFilter": {
+      "notice": "Visualizzazione dell'utilizzo per il periodo di servizio dal {{start}} al {{end}}",
+      "clear": "Rimuovi"
     }
   },
   "lineItem": {
@@ -666,7 +675,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Selezionare almeno un periodo di fatturazione ricorrente da generare.",
-      "invoicePermission": "Autorizzazione negata: è richiesta l’autorizzazione per creare o generare fatture"
+      "invoicePermission": "Autorizzazione negata: è richiesta l’autorizzazione per creare o generare fatture",
+      "monthEndCloseNotMaterialized": "Nessun periodo di servizio ricorrente è stato materializzato per questa finestra di esecuzione ricorrente.",
+      "monthEndCloseNotEligible": "Il periodo {{servicePeriod}} può essere chiuso a fine mese solo il {{finalCalendarDay}}. Solo i periodi di servizio in arretrato che coprono un intero mese di calendario possono essere chiusi in anticipo nell'ultimo giorno di calendario."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Per esaminare i periodi di servizio ricorrenti è necessaria una chiave di pianificazione.",

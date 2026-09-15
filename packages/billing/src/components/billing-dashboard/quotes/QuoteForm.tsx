@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -9,6 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -20,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ArrowLeft, ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem, QuoteConversionPreview, QuoteStatus } from '@alga-psa/types';
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
@@ -37,7 +37,7 @@ import {
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
-import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -47,6 +47,12 @@ interface QuoteFormProps {
     contactId?: string;
     opportunityId?: string;
     title?: string;
+    /**
+     * Business template to instantiate on mount (the "Create Quote from
+     * Template" deep link). Distinct from `documentTemplateId`, which is the
+     * PDF layout. Consumed once, in create mode only.
+     */
+    sourceTemplateId?: string;
   };
   onCancel: () => void;
   onSaved: (quoteId: string) => void;
@@ -55,7 +61,8 @@ interface QuoteFormProps {
 interface QuoteFormState {
   client_id: string;
   contact_id: string;
-  template_id: string;
+  /** Source business template for a create; never the PDF layout id. */
+  source_template_id: string;
   title: string;
   description: string;
   quote_date: string;
@@ -69,7 +76,7 @@ interface QuoteFormState {
 const EMPTY_FORM: QuoteFormState = {
   client_id: '',
   contact_id: '',
-  template_id: '',
+  source_template_id: '',
   title: '',
   description: '',
   quote_date: '',
@@ -144,9 +151,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [isTemplate, setIsTemplate] = useState(initialIsTemplate);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
-  const [templates, setTemplates] = useState<IQuoteListItem[]>([]);
+  const [businessTemplates, setBusinessTemplates] = useState<IQuoteListItem[]>([]);
   const [documentTemplates, setDocumentTemplates] = useState<IQuoteDocumentTemplate[]>([]);
   const [documentTemplateId, setDocumentTemplateId] = useState<string>('');
+  // Guards the deep-link source-template seed so it runs exactly once per mount
+  // and never re-clobbers edits on subsequent renders.
+  const hasSeededSourceTemplateRef = useRef(false);
   const [lineItems, setLineItems] = useState<DraftQuoteItem[]>([]);
   const [persistedQuoteItemIds, setPersistedQuoteItemIds] = useState<string[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
@@ -276,7 +286,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
       setClients(fetchedClients);
       setContacts(fetchedContacts);
-      setTemplates(isActionPermissionError(fetchedTemplates) ? [] : fetchedTemplates.data);
+      setBusinessTemplates(isActionPermissionError(fetchedTemplates) ? [] : fetchedTemplates.data);
       setDocumentTemplates(Array.isArray(fetchedDocTemplates) ? fetchedDocTemplates : []);
 
       if (isEditMode && quoteId) {
@@ -295,7 +305,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         setForm({
           client_id: quote.client_id || '',
           contact_id: quote.contact_id || '',
-          template_id: quote.template_id || '',
+          // A quote has no column recording its source business template, so in
+          // edit mode this stays empty. The layout id travels in
+          // `documentTemplateId` instead.
+          source_template_id: '',
           title: quote.title || '',
           description: quote.description || '',
           quote_date: toDateInputValue(quote.quote_date),
@@ -325,6 +338,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         setLineItems([]);
         setPersistedQuoteItemIds([]);
         setLastSavedAt(null);
+
+        // "Create Quote from Template" deep link: the business template list
+        // has now loaded, so seed through the same routine the "+ From
+        // template" picker uses. The ref keeps this to a single application per
+        // mount; without it a re-render would clobber the user's edits.
+        const sourceTemplateId = initialContext?.sourceTemplateId;
+        if (sourceTemplateId && !hasSeededSourceTemplateRef.current) {
+          hasSeededSourceTemplateRef.current = true;
+          await handleTemplateChange(sourceTemplateId);
+        }
       }
 
       setError(null);
@@ -350,19 +373,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
   const draftTotals = useMemo(() => calculateDraftQuoteTotals(lineItems), [lineItems]);
 
-  // Derived: recurring per-month subtotal across draft items (expressed in
-  // the quote's minor currency units). Used for the sidebar "$X recurring /
-  // month" hint. Only monthly-recurring items count; mixed frequencies don't
-  // reduce cleanly to a single per-month number without more math.
-  const recurringMonthlySubtotal = useMemo(() => {
-    return lineItems.reduce((sum, item) => {
-      if (!item.is_recurring || item.is_discount) return sum;
-      if (item.is_optional && item.is_selected === false) return sum;
-      const freq = (item.billing_frequency || '').toLowerCase();
-      if (freq && freq !== 'monthly') return sum;
-      return sum + Math.round(item.quantity * item.unit_price);
-    }, 0);
-  }, [lineItems]);
+  // Derived: recurring per-month figure after the shared discount allocation,
+  // expressed in the quote's minor currency units. Used for the sidebar "$X
+  // recurring / month" hint. Discounts aimed at monthly recurring services
+  // reduce the figure; mixed billing frequencies reduce only their own
+  // monthly rows through the allocation.
+  const recurringMonthlySubtotal = useMemo(
+    () => calculateDraftMonthlyRecurringNet(lineItems),
+    [lineItems],
+  );
 
   const selectedClient = useMemo(
     () => clients.find((c) => c.client_id === form.client_id) ?? null,
@@ -383,7 +402,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   };
 
   const handleTemplateChange = async (templateId: string) => {
-    handleChange('template_id', templateId);
+    handleChange('source_template_id', templateId);
 
     if (!templateId) {
       setLineItems([]);
@@ -392,16 +411,24 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
     try {
       const template = await getQuote(templateId);
-      if (!template || isActionPermissionError(template)) return;
+      if (!template || isActionPermissionError(template)) {
+        // A source template that cannot be loaded (deleted, or no longer
+        // visible) must not leave a dangling id: clear it so submit falls back
+        // to a plain createQuote and the user still gets a blank quote.
+        handleChange('source_template_id', '');
+        return;
+      }
 
       setForm((current) => ({
         ...current,
-        template_id: templateId,
+        source_template_id: templateId,
         title: current.title || template.title || '',
         description: current.description || template.description || '',
         client_notes: current.client_notes || template.client_notes || '',
         terms_and_conditions: current.terms_and_conditions || template.terms_and_conditions || '',
-        currency_code: current.currency_code || template.currency_code || defaultCurrency,
+        // The template owns the currency; a blank/absent value falls back to the
+        // form's existing choice, then the tenant default.
+        currency_code: template.currency_code || current.currency_code || defaultCurrency,
         po_number: current.po_number || template.po_number || '',
       }));
 
@@ -418,6 +445,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       }
     } catch (err) {
       console.error('Failed to load template:', err);
+      handleChange('source_template_id', '');
     }
   };
 
@@ -429,7 +457,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       return;
     }
 
-    if (!form.title && !form.template_id) {
+    if (!form.title && !form.source_template_id) {
       setError(
         t('quoteForm.validation.titleRequired', {
           defaultValue: 'Title is required unless creating from template',
@@ -465,8 +493,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
       if (isEditMode && quoteId) {
         result = await updateQuote(quoteId, payload as Partial<IQuote>);
-      } else if (form.template_id) {
-        result = await createQuoteFromTemplate(form.template_id, payload as any);
+      } else if (form.source_template_id) {
+        result = await createQuoteFromTemplate(form.source_template_id, payload as any);
       } else {
         result = await createQuote(payload as any);
       }
@@ -481,7 +509,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
       // When creating from a template, the server already created all line items.
       // Skip client-side item persistence to avoid duplicates.
-      const createdFromTemplate = !isEditMode && Boolean(form.template_id);
+      const createdFromTemplate = !isEditMode && Boolean(form.source_template_id);
 
       let nextLineItems = createdFromTemplate
         ? (result.quote_items || []).map(createDraftQuoteItemFromQuoteItem)
@@ -1375,12 +1403,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
                 <div className="flex flex-col gap-1 text-sm font-medium">
                   <label htmlFor="quote-currency">{t('quoteForm.essentials.currency', { defaultValue: 'Currency' })}</label>
-                  <CustomSelect
+                  <CurrencyPicker
                     id="quote-currency"
                     value={form.currency_code}
                     onValueChange={(value) => handleChange('currency_code', value)}
                     placeholder={t('quoteForm.essentials.currencyPlaceholder', { defaultValue: 'Select currency' })}
-                    options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
                     disabled={isReadOnly}
                   />
                 </div>
@@ -1447,14 +1474,14 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                         {t('quoteForm.lineItems.addLocation', { defaultValue: '+ Add location' })}
                       </Button>
                     )}
-                    {!isEditMode && templates.length > 0 && (
+                    {!isEditMode && businessTemplates.length > 0 && (
                       <CustomSelect
                         id="quote-form-template-picker"
-                        value={form.template_id || undefined}
+                        value={form.source_template_id || undefined}
                         onValueChange={(value) => void handleTemplateChange(value)}
                         placeholder={t('quoteForm.fields.createFromTemplate', { defaultValue: '+ From template' })}
                         allowClear
-                        options={templates.map((template) => ({
+                        options={businessTemplates.map((template) => ({
                           value: template.quote_id,
                           label: template.title,
                         }))}
@@ -1842,7 +1869,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 // default action.
                 variant={conversionPreview.sales_order_items.length > 0 && !conversionPreview.existing_sales_order ? 'outline' : 'default'}
                 onClick={() => void handleConfirmConversion('invoice')}
-                disabled={isWorking}
+                disabled={isWorking || Boolean(conversionPreview.invoice_error)}
               >
                 {t('quoteConversion.actions.invoice', { defaultValue: 'Create Draft Invoice' })}
               </Button>
@@ -1861,6 +1888,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           </DialogHeader>
           {conversionPreview ? (
             <div className="space-y-4">
+              {conversionPreview.invoice_error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{conversionPreview.invoice_error}</AlertDescription>
+                </Alert>
+              )}
               {conversionPreview.sales_order_items.length > 0 ? (
                 <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
                   {conversionPreview.existing_sales_order

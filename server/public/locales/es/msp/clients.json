@@ -1477,7 +1477,18 @@
         "unavailable": "La creación de reuniones de Teams no está disponible para este inquilino."
       },
       "loadFailed": "No se pudieron cargar las opciones de interacción. Inténtelo de nuevo.",
-      "saveFailed": "No se pudo guardar la interacción. Inténtelo de nuevo."
+      "saveFailed": "No se pudo guardar la interacción. Inténtelo de nuevo.",
+      "schedule": {
+        "addToggle": "Agregar al calendario",
+        "addHelp": "Se añadirá una entrada de programación a su calendario de AlgaPSA.",
+        "addHelpOthers": "Se añadirá una entrada de programación a los calendarios de AlgaPSA de los usuarios seleccionados.",
+        "assigneesLabel": "Programar para",
+        "assigneesPlaceholder": "Seleccionar usuarios"
+      },
+      "assignedTo": {
+        "label": "Asignado a",
+        "placeholder": "Seleccionar usuario"
+      }
     },
     "feed": {
       "addInteraction": "Agregar interacción",
@@ -1773,7 +1784,9 @@
       "missingField": "Falta un campo obligatorio de la interacción.",
       "missingFieldNamed": "Falta un campo obligatorio de la interacción: {{field}}.",
       "referenceMissing": "La interacción, el cliente, el contacto, el usuario, el estado o el tipo seleccionados ya no existen. Actualice la página e inténtelo de nuevo.",
-      "duplicate": "Ya existe una interacción con estos datos."
+      "duplicate": "Ya existe una interacción con estos datos.",
+      "scheduleAssignDenied": "Permiso denegado: no se pueden asignar entradas de programación a otros usuarios.",
+      "scheduleUsersMissing": "No se pudieron encontrar uno o más usuarios asignados."
     },
     "interactionType": {
       "notFound": "Tipo de interacción no encontrado o no tiene acceso a él.",

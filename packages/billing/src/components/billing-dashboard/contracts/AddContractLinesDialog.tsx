@@ -40,7 +40,6 @@ interface ContractLinePresetServiceWithName extends IContractLinePresetService {
 }
 
 interface PresetServiceOverrides {
-  quantity?: number;
   custom_rate?: number;
 }
 
@@ -80,7 +79,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
 
   // Service overrides for each preset
   const [presetServiceOverrides, setPresetServiceOverrides] = useState<Record<string, Record<string, PresetServiceOverrides>>>({});
-  const [presetServiceInputs, setPresetServiceInputs] = useState<Record<string, Record<string, { quantity: string; rate: string }>>>({});
+  const [presetServiceInputs, setPresetServiceInputs] = useState<Record<string, Record<string, { rate: string }>>>({});
 
   // Hourly preset configuration overrides
   const [hourlyPresetOverrides, setHourlyPresetOverrides] = useState<Record<string, { minimum_billable_time?: number; round_up_to_nearest?: number }>>({});
@@ -247,8 +246,8 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           [presetId]: enhancedServices
         }));
 
-        // Initialize service input states with current quantities and rates
-        const serviceInputs: Record<string, { quantity: string; rate: string }> = {};
+        // Initialize service input states with current rates
+        const serviceInputs: Record<string, { rate: string }> = {};
         enhancedServices.forEach(service => {
           const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
             ? (typeof service.custom_rate === 'string' ? parseFloat(service.custom_rate) : service.custom_rate)
@@ -259,7 +258,6 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
             : (service.default_rate || 0);
 
           serviceInputs[service.service_id] = {
-            quantity: service.quantity?.toString() || '1',
             rate: (rateInCents / 100).toFixed(2)
           };
         });
@@ -336,7 +334,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
         Array.from(selectedPresetIds).map(presetId => {
           const overrides: {
             base_rate?: number | null;
-            services?: Record<string, { quantity?: number; custom_rate?: number }>;
+            services?: Record<string, { custom_rate?: number }>;
             minimum_billable_time?: number;
             round_up_to_nearest?: number;
           } = {};
@@ -357,13 +355,12 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
             }
           }
 
-          // Add service-level overrides (quantity and custom_rate)
+          // Add service-level overrides (custom_rate)
           const serviceOverrides = presetServiceOverrides[presetId];
           if (serviceOverrides && Object.keys(serviceOverrides).length > 0) {
             overrides.services = {};
             for (const [serviceId, override] of Object.entries(serviceOverrides)) {
               overrides.services[serviceId] = {
-                quantity: override.quantity,
                 custom_rate: override.custom_rate
               };
             }
@@ -786,7 +783,6 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                       : (service.default_rate || 0);
 
                                     const serviceInputs = presetServiceInputs[preset.preset_id]?.[service.service_id] || {
-                                      quantity: service.quantity?.toString() || '1',
                                       rate: (rateInCents / 100).toFixed(2)
                                     };
 
@@ -865,8 +861,14 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                               </div>
                             </div>
                           ) : (
-                            /* For Usage presets, show quantity, rate, and unit of measure */
+                            /* For Usage presets, show rate and unit of measure — usage bills from recorded usage, never a configured quantity */
                             <div className="space-y-3">
+                              <p className="text-xs text-muted-foreground">
+                                {t('addLines.usageConfig.recordDrivenNote', {
+                                  defaultValue:
+                                    'Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.',
+                                })}
+                              </p>
                               {services.map((service) => {
                                 const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
                                   ? (typeof service.custom_rate === 'string' ? parseFloat(service.custom_rate) : service.custom_rate)
@@ -877,54 +879,13 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                   : (service.default_rate || 0);
 
                                 const serviceInputs = presetServiceInputs[preset.preset_id]?.[service.service_id] || {
-                                  quantity: service.quantity?.toString() || '1',
                                   rate: (rateInCents / 100).toFixed(2)
                                 };
 
                                 return (
                                   <div key={service.service_id} className="bg-muted rounded-md p-3 border border-[rgb(var(--color-border-200))]">
                                     <div className="font-medium text-sm text-[rgb(var(--color-text-900))] mb-2">{service.service_name}</div>
-                                    <div className="grid grid-cols-3 gap-3">
-                                      <div>
-                                        <Label htmlFor={`quantity-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                          {t('addLines.usageConfig.quantity', { defaultValue: 'Quantity' })}
-                                        </Label>
-                                        <Input
-                                          id={`quantity-${preset.preset_id}-${service.service_id}`}
-                                          type="number"
-                                          min="1"
-                                          step="1"
-                                          value={serviceInputs.quantity}
-                                          onChange={(e) => {
-                                            const newInputs = {
-                                              ...presetServiceInputs,
-                                              [preset.preset_id]: {
-                                                ...(presetServiceInputs[preset.preset_id] || {}),
-                                                [service.service_id]: {
-                                                  ...serviceInputs,
-                                                  quantity: e.target.value
-                                                }
-                                              }
-                                            };
-                                            setPresetServiceInputs(newInputs);
-                                          }}
-                                          onBlur={() => {
-                                            const quantity = parseInt(serviceInputs.quantity) || 1;
-                                            const newOverrides = {
-                                              ...presetServiceOverrides,
-                                              [preset.preset_id]: {
-                                                ...(presetServiceOverrides[preset.preset_id] || {}),
-                                                [service.service_id]: {
-                                                  ...(presetServiceOverrides[preset.preset_id]?.[service.service_id] || {}),
-                                                  quantity
-                                                }
-                                              }
-                                            };
-                                            setPresetServiceOverrides(newOverrides);
-                                          }}
-                                          className="h-9 text-sm mt-1"
-                                        />
-                                      </div>
+                                    <div className="grid grid-cols-2 gap-3">
                                       <div>
                                         <Label htmlFor={`rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                           {t('addLines.usageConfig.ratePerUnit', { defaultValue: 'Rate (per unit)' })}

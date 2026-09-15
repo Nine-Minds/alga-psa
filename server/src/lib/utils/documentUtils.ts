@@ -1,6 +1,9 @@
-export function getDocumentDownloadUrl(file_id: string): string {
-    if (!file_id) return '#';
-    return `/api/documents/download/${file_id}`;
+// Link by document id, not file id: generated PDFs are re-rendered in place and
+// the previous file retired, so a file-id link goes stale; the download route
+// resolves a document id to its current file.
+export function getDocumentDownloadUrl(documentId: string): string {
+    if (!documentId) return '#';
+    return `/api/documents/download/${documentId}`;
 }
 
 /**

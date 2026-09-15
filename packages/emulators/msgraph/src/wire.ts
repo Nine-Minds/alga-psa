@@ -5,7 +5,7 @@ import type { HostEnv } from '@alga-psa/emulator-host';
 import { GraphApiError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
 import type { MsGraphCore } from './core';
 import { BOT_FRAMEWORK_ISSUER, botFrameworkJwks } from './botFramework';
-import { deliverNotifications, validateNotificationUrl } from './notifier';
+import { deliverCalendarNotifications, deliverNotifications, validateNotificationUrl } from './notifier';
 
 interface Authed {
   clientId: string;
@@ -175,8 +175,9 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.status(202).end();
   };
 
-  graph.post('/me/sendMail', (req, res) => captureSendMail(req, res, null));
-  graph.post('/users/:mailbox/sendMail', (req, res) =>
+  const mimeBody = express.text({ type: 'text/plain', limit: '4mb' });
+  graph.post('/me/sendMail', mimeBody, (req, res) => captureSendMail(req, res, null));
+  graph.post('/users/:mailbox/sendMail', mimeBody, (req, res) =>
     captureSendMail(req, res, decodePath(String(req.params.mailbox)))
   );
 
@@ -193,8 +194,10 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   graph.get('/users/:userId', (req, res) => {
     const userId = String(req.params.userId);
-    if (core.directoryUsers.has(userId)) {
-      res.json(core.getDirectoryUser(userId));
+    const directoryUser = core.directoryUsers.get(userId) ?? [...core.directoryUsers.values()]
+      .find(user => user.userPrincipalName?.toLowerCase() === userId.toLowerCase());
+    if (directoryUser) {
+      res.json(core.getDirectoryUser(directoryUser.id));
       return;
     }
     // Real Graph 404s unknown ids. Only the emulated mailbox identity keeps
@@ -237,6 +240,86 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   graph.get('/chats/:chatId/messages', (req, res) => {
     res.json({ value: core.listChatMessages(String(req.params.chatId)) });
   });
+
+  // Delegated primary-calendar surface used by CalendarAdapter. The emulator
+  // currently has one delegated mailbox; this is not Entra user isolation.
+  const primaryCalendar = { id: 'calendar', name: 'Calendar', isDefaultCalendar: true };
+  graph.get('/me/calendar', (_req, res) => res.json(primaryCalendar));
+  graph.get('/me/calendars', (_req, res) => res.json({ value: [primaryCalendar] }));
+  graph.get('/me/calendarView/delta', (req, res) => {
+    const allowed = new Set(['startDateTime', 'endDateTime', '$deltatoken', '$skiptoken']);
+    const token = req.query.$deltatoken || req.query.$skiptoken;
+    if (Object.keys(req.query).some(key => !allowed.has(key)) ||
+        (req.query.$deltatoken && req.query.$skiptoken) ||
+        (token && (req.query.startDateTime || req.query.endDateTime))) {
+      throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
+    }
+    const prefer = req.get('prefer') ?? '';
+    if (prefer && !/^odata\.maxpagesize=\d+$/.test(prefer)) {
+      throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
+    }
+    const result = core.calendarDelta(authed(res).clientId, mailboxUser.id, {
+      start: req.query.startDateTime ? String(req.query.startDateTime) : undefined,
+      end: req.query.endDateTime ? String(req.query.endDateTime) : undefined,
+      deltaToken: req.query.$deltatoken ? String(req.query.$deltatoken) : undefined,
+      skipToken: req.query.$skiptoken ? String(req.query.$skiptoken) : undefined,
+      pageSize: prefer ? Number(prefer.split('=')[1]) : undefined,
+    });
+    const next = new URL(`${req.protocol}://${req.get('host')}/v1.0/me/calendarView/delta`);
+    next.searchParams.set(result.skipToken ? '$skiptoken' : '$deltatoken', result.skipToken ?? result.deltaToken!);
+    res.json({ value: result.value.map(event => '@removed' in event ? event : publicEvent(event)),
+      [result.skipToken ? '@odata.nextLink' : '@odata.deltaLink']: next.toString() });
+  });
+  const ownedEvent = (id: string) => {
+    const event = core.getCalendarEvent(id);
+    if (event.organizerUserId !== mailboxUser.id) {
+      throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
+    }
+    return event;
+  };
+  graph.get('/me/calendar/events', (req, res) => {
+    let events = [...core.calendarEvents.values()].filter(event => event.organizerUserId === mailboxUser.id);
+    if (req.query.$filter) {
+      const range = String(req.query.$filter).match(/^start\/dateTime ge '([^']+)' and end\/dateTime le '([^']+)'$/);
+      if (!range || !Number.isFinite(Date.parse(range[1])) || !Number.isFinite(Date.parse(range[2]))) {
+        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Only adapter UTC date-range filters are modeled' } });
+      }
+      const utcTime = (value: unknown) => {
+        const date = value as { dateTime?: string; timeZone?: string } | null;
+        if (date?.timeZone && date.timeZone !== 'UTC') {
+          throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Non-UTC calendar filtering is not modeled' } });
+        }
+        const dateTime = date?.dateTime ?? '';
+        // Graph dateTimeTimeZone commonly carries a wall-clock value without
+        // an offset. An explicitly UTC event must not use the host timezone.
+        return Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(dateTime) ? dateTime : `${dateTime}Z`);
+      };
+      events = events.filter(event => utcTime(event.start) >= Date.parse(range[1]) && utcTime(event.end) <= Date.parse(range[2]));
+    }
+    if (req.query.$orderby && req.query.$orderby !== 'start/dateTime') {
+      throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
+    }
+    events.sort((a, b) => String((a.start as any)?.dateTime).localeCompare(String((b.start as any)?.dateTime)));
+    res.json({ value: events.map(publicEvent) });
+  });
+  graph.post('/me/calendar/events', route(async (req, res) => {
+    const event = core.createCalendarEvent(mailboxUser.id, req.body ?? {});
+    await deliverCalendarNotifications(core, event, 'created', env);
+    res.status(201).json(publicEvent(event));
+  }));
+  graph.get('/me/calendar/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
+  graph.patch('/me/calendar/events/:eventId', route(async (req, res) => {
+    ownedEvent(String(req.params.eventId));
+    const event = core.updateCalendarEvent(String(req.params.eventId), req.body ?? {});
+    await deliverCalendarNotifications(core, event, 'updated', env);
+    res.json(publicEvent(event));
+  }));
+  graph.delete('/me/calendar/events/:eventId', route(async (req, res) => {
+    const event = ownedEvent(String(req.params.eventId));
+    core.deleteCalendarEvent(String(req.params.eventId));
+    await deliverCalendarNotifications(core, event, 'deleted', env);
+    res.status(204).end();
+  }));
 
   // Meetings surface: calendar events that carry a Teams meeting, onlineMeetings
   // (creation probe, join-URL resolution), and recording/transcript artifacts.
@@ -384,10 +467,15 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   const mailboxRoots = ['/me', '/users/:userId'];
   for (const root of mailboxRoots) {
     graph.get(`${root}/mailFolders`, (_req, res) => {
-      res.json({ value: [{ id: 'inbox', displayName: 'Inbox' }] });
+      res.json({ value: [core.getMailFolder('inbox')] });
+    });
+
+    graph.get(`${root}/mailFolders/:folderId`, (req, res) => {
+      res.json(core.getMailFolder(String(req.params.folderId)));
     });
 
     graph.get(`${root}/mailFolders/:folderId/messages`, (req, res) => {
+      core.getMailFolder(String(req.params.folderId));
       const filter = String(req.query.$filter ?? '');
       const match = filter.match(/receivedDateTime ge (.+)$/);
       const since = match ? new Date(match[1]).getTime() : 0;
@@ -438,9 +526,31 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.status(204).end();
   });
 
+  // A missing route is an emulator capability gap, not a missing Graph item.
+  // Returning 404 here can turn a client's misspelled DELETE URL into a false
+  // idempotent success. Known routes still return their normal resource errors.
+  graph.use((_req, res) => {
+    res.status(501).json({
+      error: {
+        code: 'EmulatorUnsupportedOperation',
+        message: 'This Graph operation is not implemented by the emulator.',
+      },
+    });
+  });
+
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof GraphApiError) {
-      res.status(err.status).json(err.body);
+      const body = err.body as { error?: { code?: string; message?: string } } | null;
+      // Graph errors require a developer-facing message alongside the code.
+      // OAuth uses a string error and a different envelope; preserve it.
+      if (body && typeof body.error === 'object' && body.error !== null &&
+          typeof body.error.code === 'string' && typeof body.error.message !== 'string') {
+        res.status(err.status).json({ ...body, error: {
+          ...body.error, message: `The emulated Graph request failed (${body.error.code}).`,
+        } });
+      } else {
+        res.status(err.status).json(err.body);
+      }
       return;
     }
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });

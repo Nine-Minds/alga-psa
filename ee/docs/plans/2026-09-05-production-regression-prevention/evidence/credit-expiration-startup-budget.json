@@ -1,0 +1,23 @@
+{
+  "status": "local behavioral suite passed; native rerun pending",
+  "native": {
+    "run": 34082555507,
+    "job": 101620543726,
+    "result": "146 passed, 4 skipped due to failed beforeAll hook",
+    "failure": "creditExpirationEffects.test.ts beforeAll timed out at 60000ms during full database setup; output reached final dev seeds",
+    "log": "/tmp/alga-infrastructure-shard2-2de93.log"
+  },
+  "change": "Only this full migration/seed startup hook receives 120000ms. Existing per-test hooks, assertions and behavior timeouts remain unchanged.",
+  "validation": {
+    "command": "server Vitest creditExpirationEffects.test.ts against owned disposable credit_expiration_effects_82cc database",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 18.02,
+    "log": "/tmp/alga-credit-expiration-startup.log"
+  },
+  "limits": [
+    "Local pass does not establish native runner timing; native after-fix run remains required.",
+    "No product behavior changed and no retries, skips or assertion weakening added."
+  ]
+}

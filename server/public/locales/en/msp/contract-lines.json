@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Missing plan or service information"
       },
       "loading": "Loading service configuration...",
-      "title": "Edit Service Configuration"
+      "title": "Edit Service Configuration",
+      "effectiveFrom": "Quantity or measurement change effective from",
+      "effectiveHelp": "Changes take effect at this service-period boundary. Earlier periods retain their pricing and measurement."
     },
     "tierEditor": {
       "actions": {
@@ -692,7 +694,10 @@
       "allServicesAssociated": "All available services are already associated with this contract line.",
       "badges": {
         "billingMismatch": "Billing mismatch",
-        "defaultConfigType": "Default"
+        "defaultConfigType": "Default",
+        "standard": "Standard",
+        "custom": "Custom",
+        "unreviewed": "Unreviewed"
       },
       "billingMethod": {
         "fixed": "Fixed Price",

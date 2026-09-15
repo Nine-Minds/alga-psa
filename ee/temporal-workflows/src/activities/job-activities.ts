@@ -1,6 +1,6 @@
 import { createLogger, format, transports } from 'winston';
 import { isTenantSuspended, tenantDb } from '@alga-psa/db';
-import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
+import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 import {
   workflowOneTimeScheduledRunHandler,
@@ -32,6 +32,7 @@ const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
 const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
 const PUBLISH_SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
+const RECOVER_COMMENT_PUBLICATIONS_JOB = 'recover-comment-publications';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
@@ -125,7 +126,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // plain-Node-ESM worker cannot load, so they run server-side: forward the job to
   // the server (which has them registered via registerAllHandlers) over the event
   // bus and let a subscriber execute the real handler for the tenant.
-  const forwardJobToServer = (jobName: string) =>
+  const forwardJobToServer = (jobName: string, options?: { strict: boolean }) =>
     async (jobId: string, data: Record<string, unknown>) => {
       await publishEvent({
         eventType: 'MAINTENANCE_JOB_REQUESTED',
@@ -136,7 +137,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
           jobId,
           data: data ?? {},
         },
-      });
+      }, options);
     };
   registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
@@ -178,6 +179,10 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   registerJobHandlerForActivities(
     PUBLISH_SCHEDULED_COMMENT_JOB,
     forwardJobToServer(PUBLISH_SCHEDULED_COMMENT_JOB),
+  );
+  registerJobHandlerForActivities(
+    RECOVER_COMMENT_PUBLICATIONS_JOB,
+    forwardJobToServer(RECOVER_COMMENT_PUBLICATIONS_JOB, { strict: true }),
   );
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these

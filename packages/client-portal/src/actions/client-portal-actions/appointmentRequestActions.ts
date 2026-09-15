@@ -1308,6 +1308,7 @@ export const cancelAppointmentRequest = withAuth(async (
     }
 
     const clientId = contact.client_id;
+    const clientUserId = await getClientUserIdFromContact(contact.contact_name_id, tenant);
 
     const cancellationContext = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Verify request exists and belongs to this client
@@ -1417,8 +1418,6 @@ export const cancelAppointmentRequest = withAuth(async (
           })
           .first();
 
-        // Get client user_id for internal notification
-        const clientUserId = await getClientUserIdFromContact(contact.contact_name_id, tenant);
 
         // Email to client confirming cancellation
         const cancellationRecipient = contact.email || currentUser.email;

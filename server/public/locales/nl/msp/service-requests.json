@@ -124,6 +124,10 @@
         "descriptionPrefix": "Beschrijvingsprefix",
         "save": "Ticketrouting opslaan"
       },
+      "storeOnly": {
+        "title": "Alleen opslaan",
+        "description": "Voltooide inzendingen worden met hun antwoorden en bijlagen bewaard in de aanvraaggeschiedenis. Er wordt geen supportticket aangemaakt."
+      },
       "workflow": {
         "title": "Workflowconfiguratie",
         "workflowId": "Workflow-ID",
@@ -199,7 +203,17 @@
       "executionError": "Uitvoeringsfout",
       "submittedAtStatus": "{{date}} · {{status}}",
       "loadingTicket": "Laden…",
-      "ticketLoadError": "Ticketdetails konden niet worden geladen."
+      "ticketLoadError": "Ticketdetails konden niet worden geladen.",
+      "formVersion": "Formulierversie",
+      "formVersionValue": "Versie {{version}}",
+      "historyTitle": "Geschiedenis",
+      "historyEmpty": "Geen geschiedenis vastgelegd voor deze inzending.",
+      "historyActor": "door {{actor}}",
+      "historyOperations": {
+        "service_request_submission_created": "Inzending aangemaakt",
+        "service_request_submission_execution_succeeded": "Uitvoering geslaagd",
+        "service_request_submission_execution_failed": "Uitvoering mislukt"
+      }
     }
   },
   "icons": {

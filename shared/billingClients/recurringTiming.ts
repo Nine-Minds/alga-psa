@@ -349,6 +349,41 @@ export function groupDueServicePeriodsForInvoiceCandidates(
     });
 }
 
+/**
+ * Whether a recurring client-cadence line is expected to have a materialized
+ * service period settled inside a given invoice window.
+ *
+ * The window bills different service periods depending on due position:
+ * - advance bills the window itself, so any assignment overlapping the window
+ *   is expected;
+ * - arrears bills the service period that ended at the window start, so an
+ *   assignment that only began at (or after) the window start has nothing to
+ *   settle in this window yet — demanding materialization for it is a false
+ *   positive that blocks the whole window.
+ */
+export function isRecurringLineExpectedInClientCadenceWindow(input: {
+  duePosition: DuePosition;
+  assignmentStart: string;
+  assignmentEnd?: string | null;
+  windowStart: string;
+  windowEnd: string;
+}): boolean {
+  const assignmentStart = toPlainDate(input.assignmentStart);
+  const assignmentEnd = input.assignmentEnd ? toPlainDate(input.assignmentEnd) : null;
+
+  if (input.duePosition === 'arrears') {
+    // The billed service period ends at windowStart; the assignment overlaps
+    // it only when it began strictly before that boundary.
+    return Temporal.PlainDate.compare(assignmentStart, toPlainDate(input.windowStart)) < 0;
+  }
+
+  return (
+    Temporal.PlainDate.compare(assignmentStart, toPlainDate(input.windowEnd)) < 0
+    && (assignmentEnd === null
+      || Temporal.PlainDate.compare(assignmentEnd, toPlainDate(input.windowStart)) >= 0)
+  );
+}
+
 export function buildRecurringInvoiceDetailTiming(input: {
   servicePeriod: IRecurringServicePeriod;
   invoiceWindow: IRecurringInvoiceWindow;

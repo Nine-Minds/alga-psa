@@ -1,0 +1,21 @@
+{
+  "status": "local_verified_native_pending",
+  "change": "Make original approved-source invoice immutability case mandatory with isolated migrated DB and seeded MSP Admin; install Poppler in integration CI",
+  "validation": {
+    "passed": 1,
+    "duration_ms": 18385,
+    "log": "/tmp/alga-invoice-immutable-port.log",
+    "boundaries": [
+      "Real approved source records through preview and invoice generation",
+      "Persisted ticket/time contribution snapshots",
+      "Accounting export and PDF text unchanged after source edits",
+      "Credit and adjustment math",
+      "Historical snapshot representation and localization"
+    ]
+  },
+  "local_pdf_tooling": "Separate disposable alga-regression-pdf-tools container provides Poppler; host wrapper only streams fixture PDFs to pdftotext",
+  "limits": [
+    "Native execution pending",
+    "Five remaining cases still require manual fixtures or previously authored artifacts"
+  ]
+}

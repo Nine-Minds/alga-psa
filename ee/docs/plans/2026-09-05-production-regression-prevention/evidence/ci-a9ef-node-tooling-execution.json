@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "scope": "ci-node-tooling-execution",
+  "runId": "34339167571",
+  "jobId": "102425612873",
+  "artifactId": 10099205685,
+  "publishedRevision": "a9efecce23230ead68afb69ddc85613c6becf1fa",
+  "testedRevision": "16264b7e71ade1ec39a1caf1654e81d860f95ba3",
+  "status": "passed",
+  "counts": {
+    "tests": 1050,
+    "passed": 1050,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "16264b7e71ade1ec39a1caf1654e81d860f95ba3",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "16264b7e71ade1ec39a1caf1654e81d860f95ba3",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "rawExecutionSummaryAgrees": true,
+  "durationMs": 218211.207448,
+  "artifactSha256": "1ec4631888751cb5c4cad358d13637f1a82f17278b3ec18f97334cccadce4cfa",
+  "limitations": [
+    "Actual published candidate tooling only; full CI is still live.",
+    "Local release assembler and its additional sixteen tests are not part of this published candidate."
+  ]
+}

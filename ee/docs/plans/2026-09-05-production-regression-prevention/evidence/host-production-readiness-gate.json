@@ -1,0 +1,36 @@
+{
+  "revision": "a9f291053c3e42d5a0eb296eda38d261406a5f7d",
+  "scope": "Host verification of candidate readiness decision code; not a native workflow result",
+  "tooling": {
+    "session": 77896,
+    "status": "passed",
+    "counts": {
+      "tests": 528,
+      "passed": 528,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "cancelled": 0
+    },
+    "files": 56,
+    "durationMs": 154788.344125
+  },
+  "focusedTests": 17,
+  "workflowValidation": "actionlint passed all eight affected workflows",
+  "artifacts": [
+    {
+      "file": "test-results/node-tooling/evidence.json",
+      "sha256": "64c1dc889bc64a032f19e941957540d0d2499b7297d603406c56916e5aaf5114"
+    },
+    {
+      "file": "test-results/node-tooling/events.jsonl",
+      "sha256": "8fc1b720a7bb6fc3e366a50b286ac37c60b548b8cfd5f3feccf446cfcd39f08e"
+    }
+  ],
+  "limitations": [
+    "Reusable-workflow orchestration and same-run GitHub artifact flow require native candidate execution",
+    "Readiness is not yet an effective required check",
+    "No Docker builds were run; full host tooling prepares only native emulator bundles",
+    "Publication approval remains pending"
+  ]
+}

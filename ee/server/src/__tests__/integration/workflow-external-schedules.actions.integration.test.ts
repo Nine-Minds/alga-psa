@@ -1,7 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
-import path from 'node:path';
-import { createRequire } from 'node:module';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -10,8 +8,6 @@ import {
 } from '@alga-psa/workflows/lib/jobRunnerProvider';
 import { resolveWorkflowBusinessDaySettings } from '@alga-psa/workflows/lib/workflowBusinessDayScheduling';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
-
-const require = createRequire(import.meta.url);
 
 let db: Knex;
 const WORKFLOW_SCHEDULES_TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -34,7 +30,8 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args)
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal() as typeof import('@alga-psa/db')),
   createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId }))
 }));
 
@@ -46,18 +43,6 @@ let updateWorkflowScheduleAction: WorkflowScheduleActionsModule['updateWorkflowS
 let pauseWorkflowScheduleAction: WorkflowScheduleActionsModule['pauseWorkflowScheduleAction'];
 let resumeWorkflowScheduleAction: WorkflowScheduleActionsModule['resumeWorkflowScheduleAction'];
 let deleteWorkflowScheduleAction: WorkflowScheduleActionsModule['deleteWorkflowScheduleAction'];
-
-async function applyWorkflowScheduleMigrations(connection: Knex): Promise<void> {
-  const repoRoot = path.resolve(process.cwd(), '..', '..');
-  for (const migrationName of [
-    '20260307200000_create_workflow_schedule_tables.cjs',
-    '20260308130000_expand_workflow_schedule_for_external_schedules.cjs',
-    '20260410120000_add_workflow_schedule_business_day_fields.cjs'
-  ]) {
-    const migration = require(path.resolve(repoRoot, 'ee', 'server', 'migrations', migrationName));
-    await migration.up(connection);
-  }
-}
 
 async function seedWorkflow(params?: {
   name?: string;
@@ -97,6 +82,7 @@ async function seedWorkflow(params?: {
 
   if (published && publishedVersion) {
     await db('workflow_definition_versions').insert({
+      tenant: tenantId,
       version_id: uuidv4(),
       workflow_id: workflowId,
       version: publishedVersion,
@@ -161,7 +147,7 @@ describe('Workflow external schedules actions – DB integration', () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
     db = await createTestDbConnection();
-    await applyWorkflowScheduleMigrations(db);
+    await db('tenants').insert({ tenant: WORKFLOW_SCHEDULES_TENANT, client_name: 'Workflow schedules', email: 'schedules@example.invalid' });
 
     ({
       listWorkflowSchedulesAction,

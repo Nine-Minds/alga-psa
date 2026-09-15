@@ -3,6 +3,12 @@ import type { ExternalEntityMapping, CreateMappingData, UpdateMappingData } from
 export type AccountingMappingEntityOption = {
   id: string;
   name: string;
+  /**
+   * Target-kind discriminator when the module offers more than one external
+   * catalog (see AccountingMappingTargetConfig). Options without a kind are
+   * shown regardless of the selected kind.
+   */
+  kind?: string;
 };
 
 export type AccountingMappingLoadResult = {
@@ -68,6 +74,31 @@ export type AccountingMappingLabels = {
   };
 };
 
+/**
+ * Configuration for modules whose external side spans more than one provider
+ * catalog (e.g. a Xero service maps to an Item or to a revenue Account). The
+ * dialog renders an explicit kind chooser and filters the external options by
+ * the chosen kind — the kind is a deliberate user decision, never inferred
+ * from the shape of a code, because codes can collide across catalogs.
+ */
+export type AccountingMappingTargetConfig = {
+  /** Dialog label for the kind chooser. */
+  label: string;
+  kinds: Array<{ id: string; label: string }>;
+  /** Kind preselected when creating a new mapping. */
+  defaultKindId: string;
+  /** Kind persisted on a stored mapping row (legacy rows resolve to a default). */
+  kindForMapping: (mapping: ExternalEntityMapping) => string;
+  /** Catalog option id a stored mapping row corresponds to. */
+  optionIdForMapping: (mapping: ExternalEntityMapping) => string;
+  /**
+   * Copy rendered (table and edit dialog) when a stored mapping's target no
+   * longer exists in the live catalog — the remediation prompt for invalid
+   * legacy mappings.
+   */
+  invalidNotice: string;
+};
+
 export type AccountingMetadataConfig = {
   /**
     * If true, allow users to edit metadata as JSON.
@@ -92,6 +123,8 @@ export interface AccountingMappingModule {
   externalEntityType: string;
   labels: AccountingMappingLabels;
   metadata?: AccountingMetadataConfig;
+  /** Present when the external side spans multiple provider catalogs. */
+  externalTarget?: AccountingMappingTargetConfig;
   overridesKey?: string;
   resolveOverrides?: (
     context: AccountingMappingContext

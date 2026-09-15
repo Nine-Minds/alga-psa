@@ -1,3 +1,4 @@
+import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -42,6 +43,20 @@ const legacyBillingCycleSelectorRequest = {
 };
 
 describe('invoice recurring selector-input API schemas', () => {
+  it('preserves the producer schedule and period keys through preview and generation parsing', () => {
+    const selector = buildClientCadenceDueSelectionInput({
+      clientId: '11111111-1111-4111-8111-111111111111', scheduleKey: 'client-schedule', periodKey: '2026-09',
+      windowStart: '2026-09-01', windowEnd: '2026-10-01',
+    });
+    for (const schema of [generateInvoiceSchema, invoicePreviewRequestSchema]) {
+      expect(schema.parse({ selector_input: selector }).selector_input).toEqual(selector);
+      for (const field of ['scheduleKey', 'periodKey']) {
+        const invalid = structuredClone(selector);
+        delete (invalid.executionWindow as any)[field];
+        expect(schema.safeParse({ selector_input: invalid }).success).toBe(false);
+      }
+    }
+  });
   it('T014: invoice preview request schema accepts canonical selector-input execution windows and rejects billing-cycle recurring selectors', () => {
     const selectorResult = invoicePreviewRequestSchema.safeParse(selectorInputRequest);
     const compatibilityResult = invoicePreviewRequestSchema.safeParse({

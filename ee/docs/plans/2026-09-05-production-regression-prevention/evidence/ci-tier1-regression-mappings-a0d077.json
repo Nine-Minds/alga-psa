@@ -1,0 +1,608 @@
+{
+  "schemaVersion": 1,
+  "scope": "current-ci-tier1-regression-mapping-readback",
+  "status": "passed",
+  "runId": "34308610232",
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34308610232",
+  "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+  "sources": [
+    {
+      "shard": 1,
+      "jobId": 102330474174,
+      "jobName": "integration / Integration shard 1",
+      "artifactId": 10087990822,
+      "artifactName": "server-integration-shard-1",
+      "counts": {
+        "passed": 539,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "resultsSha256": "76635de24fb0442c7f311d4ad3e7f9b9154f34d374991fc91315060aad8b4e19"
+    },
+    {
+      "shard": 2,
+      "jobId": 102330474177,
+      "jobName": "integration / Integration shard 2",
+      "artifactId": 10088043935,
+      "artifactName": "server-integration-shard-2",
+      "counts": {
+        "passed": 455,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "resultsSha256": "100c29b7b71270a0e3ef447caaa2f280e42b3df1cea31abfca0adc556468aad1"
+    },
+    {
+      "shard": 3,
+      "jobId": 102330474002,
+      "jobName": "integration / Integration shard 3",
+      "artifactId": 10088031298,
+      "artifactName": "server-integration-shard-3",
+      "counts": {
+        "passed": 600,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "resultsSha256": "6dbe2e5cd87815a7538f5032189e24ea65326f6d3a85989c265cb2206ff0d5b5"
+    },
+    {
+      "shard": 4,
+      "jobId": 102330473953,
+      "jobName": "integration / Integration shard 4",
+      "artifactId": 10087958111,
+      "artifactName": "server-integration-shard-4",
+      "counts": {
+        "passed": 558,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "resultsSha256": "620d17ab48a0d6e891e8b208f510696a761e3585b211fa57c1bb677bff69537c"
+    }
+  ],
+  "files": [
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "ledgerRecordId": null,
+      "incident": null,
+      "classification": "supplemental-execution-not-incident-attribution",
+      "shard": 1,
+      "jobId": 102330474174,
+      "artifactId": 10087990822,
+      "tests": [
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "weighted bucket burn integration (real DB) > resolves the pool and per-member multipliers"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "weighted bucket burn integration (real DB) > depletes the pool on weighted minutes: 2x member burns double"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "weighted bucket burn integration (real DB) > accrues overage on weighted minutes once the pool is exhausted"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "weighted bucket burn integration (real DB) > invoice amount equals weighted overage hours × rate"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "weighted bucket burn integration (real DB) > reconcile recomputes the same weighted totals from source records"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "weighted bucket burn integration (real DB) > dormant pool overage charges a NULL service_id and keeps the pool identity on config_id (no bucket_id leak into service FKs)"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "weighted bucket burn integration (real DB) > member pool charges carry a real service_id and keep the pool identity separately on config_id"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "catch-all scope is line-service membership scoped (real DB) > does not route a service to the catch-all pool of a line that does not offer it"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "catch-all scope is line-service membership scoped (real DB) > does not let an entry for a non-line service inflate a catch-all pool on reconcile"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "pool overage attributes per-service tax metadata by contribution (real DB) > apportions overage per contributing service with per-service tax metadata and amounts summing to the pool charge"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "pool overage attributes per-service tax metadata by contribution (real DB) > excludes a service not configured on the line from a catch-all pool's overage contributions"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/bucketUsageIntegration.test.ts",
+            "pool overage attributes per-service tax metadata by contribution (real DB) > a single-member pool produces unchanged charge output (one charge, that member metadata)"
+          ],
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+      "ledgerRecordId": null,
+      "incident": null,
+      "classification": "supplemental-execution-not-incident-attribution",
+      "shard": 1,
+      "jobId": 102330474174,
+      "artifactId": 10087990822,
+      "tests": [
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Gmail: webhook processes a new inbound email and creates 1 ticket + 1 initial comment"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Google: in-app path persists regular attachment, embedded image, and original .eml via shared artifact orchestrator"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Microsoft: webhook processes a new inbound email and creates 1 ticket + 1 initial comment"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Raw MIME: inline Outlook elementToProof blockquote does not truncate the body (alga0002339)"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Raw MIME: inline blockquote followed by quoted history keeps the authored suffix and cuts the history"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Raw MIME: bottom-posted reply keeps the answer below the quoted block"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Microsoft: in-app path persists regular attachment, embedded image, and original .eml via shared artifact orchestrator"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Idempotency: duplicate inbound message does not duplicate provider, embedded, or .eml artifact documents"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Artifact failure: attachment persistence failure is recorded while ticket/comment creation still succeeds"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Reply threading: reply token resolves ticket and creates exactly 1 new comment"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Reply threading: In-Reply-To/References resolves ticket and creates exactly 1 new comment"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T001: closed ticket internal threaded reply inside cutoff reopens to explicit board reopen status and adds comment"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T002: closed ticket internal threaded reply inside cutoff falls back to board default open status when explicit reopen status is unset"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T003: when board reopen-on-reply is disabled, threaded reply on closed ticket adds comment without reopening"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T004: client threaded reply beyond cutoff creates a new ticket instead of attaching to closed ticket"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T005: client threaded reply with AI suppression disabled reopens closed ticket and adds comment"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T006: with board AI suppression enabled and decider ACK, client reply stays attached without reopening"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T007: with board AI suppression enabled and decider NOT_ACK, client reply reopens closed ticket"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T008: with AI suppression enabled but decider reports missing AI Assistant add-on, client reply reopens normally"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T009: invalid AI classification output falls back to normal reopen behavior for client reply"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T010: token-only inbound replies are skipped before any reopen or comment work"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > T012: threaded reply comment metadata stores reopen decision details for debugging"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Contact match: sender email matches existing contact and ticket uses contact's client_id/contact_id"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Contact match (Microsoft): sender email matches existing contact and ticket stores contact-authored initial comment"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Contact reply match: reply-token threading stores contact-authored comment when sender has no user"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Contact match: initial comment is associated with matched client user"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Domain fallback: unique domain match sets ticket client_id (no default contact configured => contact is null)"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Routing destination: exact sender contact override uses contact override defaults board"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Routing destination: exact sender without contact override uses contact's client destination defaults"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Routing destination: unknown sender + domain-matched client uses domain client destination defaults"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Domain fallback: applies client's default contact when configured (client.properties.primary_contact_id)"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Domain fallback: does not match by domain unless the domain is explicitly configured"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Domain fallback: when resolved client differs from defaults, ticket location_id is null"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Unmatched sender: inbound email is treated as customer-authored and awaits internal response"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > persists an internal sender-auth failure through the audit_logs tenant trigger"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > does not mark an authenticated, matched internal sender as unmatched"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Contact match: sender email is normalized from display-name format"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Missing defaults: inbound processing returns without creating ticket/comment"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Attachments: attachment failure does not prevent ticket creation"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Attachments: attachment failure does not prevent reply comment creation"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Idempotency: replay same reply email does not create duplicate comments"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Idempotency: replay same new-email does not create duplicate tickets"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts",
+            "Inbound email in-app processing via webhooks (integration) > Idempotency: replay same routed contact-override email does not create duplicate routed tickets"
+          ],
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "server/src/test/integration/workItemPickerSearch.integration.test.ts",
+      "ledgerRecordId": "work-item-picker-ticket-number-search",
+      "incident": null,
+      "classification": "ledger-mapped",
+      "shard": 1,
+      "jobId": 102330474174,
+      "artifactId": 10087990822,
+      "tests": [
+        {
+          "identity": [
+            "server/src/test/integration/workItemPickerSearch.integration.test.ts",
+            "finds an open ticket by its displayed title without requiring the other field to match"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/workItemPickerSearch.integration.test.ts",
+            "finds an open ticket by its displayed ticket_number without requiring the other field to match"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/workItemPickerSearch.integration.test.ts",
+            "keeps already-added work items excluded when their ticket number matches"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/workItemPickerSearch.integration.test.ts",
+            "does not match a ticket number outside the authenticated tenant"
+          ],
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "server/src/test/integration/clientCreationAtomicity.integration.test.ts",
+      "ledgerRecordId": "client-creation-tax-initialization-atomicity",
+      "incident": null,
+      "classification": "ledger-mapped",
+      "shard": 2,
+      "jobId": 102330474177,
+      "artifactId": 10088043935,
+      "tests": [
+        {
+          "identity": [
+            "server/src/test/integration/clientCreationAtomicity.integration.test.ts",
+            "a real missing-active-tax-rate failure leaves no client or billing profile"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/clientCreationAtomicity.integration.test.ts",
+            "creates the client, default profile and tax settings together when an active tax rate exists"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/clientCreationAtomicity.integration.test.ts",
+            "preserves AlgaDesk client creation without tax rates or tax settings"
+          ],
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "server/src/test/integration/journeys/inboundEmailToTicketReply.journey.integration.test.ts",
+      "ledgerRecordId": null,
+      "incident": null,
+      "classification": "supplemental-execution-not-incident-attribution",
+      "shard": 3,
+      "jobId": 102330474002,
+      "artifactId": 10088031298,
+      "tests": [
+        {
+          "identity": [
+            "server/src/test/integration/journeys/inboundEmailToTicketReply.journey.integration.test.ts",
+            "journey: inbound email → ticket → threaded reply → agent reply out > routes the thread end to end: new ticket, same-thread comment, threaded agent reply out, customer reply back in"
+          ],
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "server/src/test/integration/seededBoardTicketLifecycle.integration.test.ts",
+      "ledgerRecordId": "3338-seeded-board-ticket-lifecycle",
+      "incident": "https://github.com/Nine-Minds/alga-psa/issues/3338",
+      "classification": "ledger-mapped",
+      "shard": 4,
+      "jobId": 102330473953,
+      "artifactId": 10087958111,
+      "tests": [
+        {
+          "identity": [
+            "server/src/test/integration/seededBoardTicketLifecycle.integration.test.ts",
+            "demo board seeds support opening and closing a persisted ticket (#3338)"
+          ],
+          "status": "passed"
+        },
+        {
+          "identity": [
+            "server/src/test/integration/seededBoardTicketLifecycle.integration.test.ts",
+            "ITIL board seeds support opening and closing a persisted ticket (#3338)"
+          ],
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Raw current CI execution identities and passed outcomes verified; this report does not replay pre-fix code.",
+    "Incident identifiers copied only from existing ledger; client atomicity and ticket-number search remain unattributed defects.",
+    "Supplemental usage/inbound files are executed coverage, not newly asserted ledger or incident mappings.",
+    "Inbound journey mocks authentication/RBAC/provider transport; it is not production email-service container delivery proof.",
+    "Month-end hydration is a workspace database test, outside these four Tier-1 shards; no result inferred.",
+    "No explicit usage-context or inbound-email exemplar record exists in the current ledger; supplemental matches do not complete T023 incident mapping."
+  ]
+}

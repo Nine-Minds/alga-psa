@@ -56,7 +56,7 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
                   <TableHead>{t('dashboard.responsesList.table.rating', { defaultValue: 'Rating' })}</TableHead>
                   <TableHead>{t('dashboard.responsesList.table.comment', { defaultValue: 'Comment' })}</TableHead>
                   <TableHead className="text-right">
-                    {t('dashboard.responsesList.table.ticket', { defaultValue: 'Ticket' })}
+                    {t('dashboard.responsesList.table.subject', { defaultValue: 'Ticket / Project' })}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -101,10 +101,10 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
                     </TableCell>
                     <TableCell className="text-right text-sm">
                       <Link
-                        href={`/msp/tickets/${response.ticketId}`}
+                        href={response.projectId ? `/msp/projects/${response.projectId}` : `/msp/tickets/${response.ticketId}`}
                         className="text-primary-600 hover:text-primary-700 hover:underline"
                       >
-                        {response.ticketNumber ?? response.ticketId.slice(0, 7)}
+                        {response.projectId ? (response.projectNumber ?? response.projectId.slice(0, 7)) : (response.ticketNumber ?? response.ticketId?.slice(0, 7) ?? '—')}
                       </Link>
                     </TableCell>
                   </TableRow>

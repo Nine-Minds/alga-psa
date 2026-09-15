@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-08",
+  "scope": "Cross-runner inventory triage using completed CI artifacts",
+  "source": {
+    "productionRun": 34226006210,
+    "mobileRun": 34226005891,
+    "branchRevision": "964c67be64a8a6fc5c3b232077fdf48cd7e45421",
+    "collectionRevision": "c7f6525ec7703ee75a897c58e2facbb5f30bf3dd",
+    "candidateRevision": "84a37839cb3c76df2c5e1268adf2c1f3a7dbbe4f"
+  },
+  "initialUnmatchedCount": 151,
+  "classification": {
+    "separateMobileWorkflow": 134,
+    "remainingToReconcile": 17
+  },
+  "remainingFiles": [
+    "e2e-tests/upgrade-tests/retained-invoice.spec.ts",
+    "e2e-tests/upgrade-tests/retained-ticket.spec.ts",
+    "e2e-tests/upgrade-tests/retained-usage.spec.ts",
+    "ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts",
+    "ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts",
+    "ee/temporal-workflows/src/db/__tests__/product-upgrade-operations.integration.test.ts",
+    "ee/temporal-workflows/src/db/__tests__/tenant-setup-idempotency.integration.test.ts",
+    "server/src/test/e2e/collaborativeEditing.e2e.test.ts",
+    "server/src/test/e2e/email-processing.test.ts",
+    "server/src/test/e2e/email-settings/email-threading.test.ts",
+    "server/src/test/e2e/email-settings/oauth-flow.test.ts",
+    "server/src/test/e2e/email-settings/webhook-processing.test.ts",
+    "server/src/test/integration/workItemPickerSearch.integration.test.ts",
+    "server/src/test/visual/invoiceTemplateGolden.test.ts",
+    "tools/i18n/tests/baseline.test.mjs"
+  ],
+  "fixes": [
+    "Include upgrade-tests in browser candidate discovery and collect playwright.upgrade.config.ts explicitly.",
+    "Rename collaborativeEditing to match its actual Playwright runner.",
+    "Include supported-upgrade artifacts in the Node aggregate recheck."
+  ],
+  "validation": {
+    "regressionBefore": "Real Playwright fixture incorrectly reported no unmatched upgrade file.",
+    "regressionAfter": "Two actual-runner/gate tests pass, including added/moved/empty/broken-import coverage.",
+    "log": "/tmp/alga-upgrade-discovery-green.log",
+    "browserCollection": {
+      "revision": "8f4b62b709c165fab0014160c0b4b697c745dbcc",
+      "status": "passed",
+      "executionVerified": false,
+      "runners": [
+        {
+          "runner": "teams-development",
+          "files": 1,
+          "tests": 1
+        },
+        {
+          "runner": "supported-upgrade",
+          "files": 3,
+          "tests": 3
+        },
+        {
+          "runner": "server-legacy",
+          "files": 16,
+          "tests": 33
+        },
+        {
+          "runner": "enterprise-legacy",
+          "files": 53,
+          "tests": 411
+        },
+        {
+          "runner": "enterprise-deploy",
+          "files": 1,
+          "tests": 2
+        },
+        {
+          "runner": "production-community",
+          "files": 20,
+          "tests": 42
+        },
+        {
+          "runner": "production-enterprise",
+          "files": 20,
+          "tests": 46
+        }
+      ]
+    }
+  },
+  "limits": [
+    "This is not a complete same-current-revision inventory or proof of execution.",
+    "Mobile collection must be merged from its separate workflow.",
+    "Some Citus collections were absent because prior execution failed before reaching that lane.",
+    "The newer picker test did not exist in the older collection revision.",
+    "Remaining email and visual/manual suites still require classification and wiring."
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-inventory-complete-964-manifest.json",
+      "sha256": "907f9bbde2e72328a87d5d9734d51924ec2ee1b3ade2c58e7652b9db34e44349"
+    },
+    {
+      "path": "/tmp/alga-inventory-complete-964-result.json",
+      "sha256": "6ddb14ca957b19e536ca8f96d25e6f5f90f526c53b9703c694eaa8761406078a"
+    },
+    {
+      "path": "/tmp/alga-inventory-mobile-964/collected.json",
+      "sha256": "c5a6b3201247cd484130afab0080defab55f711b9fa8cf1143c7ebc09f902ecc"
+    }
+  ]
+}

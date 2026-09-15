@@ -14,6 +14,7 @@
         "manualEntryHelp": "Enter the identifier exactly as it appears in your accounting system.",
         "metadataLabel": "Metadata (JSON)",
         "metadataPlaceholder": "Optional metadata as JSON",
+        "noKindOptions": "No usable records of this type were found in the connected organisation.",
         "realmIdLabel": "Realm ID",
         "saveMapping": "Save Mapping",
         "saving": "Saving…",
@@ -1697,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Manage your company's Microsoft app registrations for staff sign-in and Outlook email.",
+        "descriptionCe": "Manage your company's Microsoft app registrations for Outlook email.",
         "descriptionEe": "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams.",
         "disconnectDialog": {
           "cancel": "Keep providers connected",
@@ -1728,7 +1729,7 @@
         },
         "empty": {
           "createButton": "Create Microsoft app",
-          "descriptionCe": "Create a Microsoft app registration for staff sign-in.",
+          "descriptionCe": "Create a Microsoft app registration for Outlook email.",
           "descriptionEe": "Create a Microsoft app registration, then choose which services can use it.",
           "title": "No Microsoft apps yet"
         },
@@ -1850,7 +1851,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "Staff sign-in with Microsoft.",
+        "descriptionCe": "Outlook inbound email for your company's Microsoft app registration.",
         "descriptionEe": "Staff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.",
         "label": "Microsoft"
       },
@@ -1957,8 +1958,7 @@
         },
         "setupGuideLink": "QuickBooks setup guide",
         "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
-        "connectionsPermissionNotice": "You can view QuickBooks settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it."
-,
+        "connectionsPermissionNotice": "You can view QuickBooks settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.",
         "disconnectPending": "QuickBooks is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
         "disconnectForceFinalized": "The QuickBooks disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
         "disconnect": {
@@ -2797,6 +2797,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Let staff sign in through your own Keycloak realm. Users are matched by email to existing AlgaPSA accounts; Keycloak never creates users here.",
+        "status": {
+          "configured": "Configured",
+          "notConfigured": "Not configured"
+        },
+        "actions": {
+          "refresh": "Refresh",
+          "save": "Verify and save",
+          "saving": "Verifying and saving…",
+          "remove": "Remove"
+        },
+        "setup": {
+          "redirectUri": "Create a confidential OpenID Connect client in your realm and allow this redirect URI:",
+          "domainsEe": "Then claim and verify your staff login domain under Advanced below so sign-in routes emails from that domain to this realm.",
+          "domainsCe": "Then add your staff login domain under Advanced below so sign-in routes emails from that domain to this realm.",
+          "issuer": "Issuer: {{issuer}}"
+        },
+        "fields": {
+          "url": "Keycloak server URL",
+          "realm": "Realm",
+          "clientId": "Client ID",
+          "clientSecret": "Client secret",
+          "clientSecretKeep": "Leave blank to keep {{masked}}"
+        },
+        "errors": {
+          "loadFailed": "Failed to load Keycloak settings",
+          "saveFailed": "Failed to save Keycloak settings",
+          "removeFailed": "Failed to remove Keycloak settings"
+        },
+        "toasts": {
+          "savedTitle": "Keycloak settings saved",
+          "savedDescription": "The realm answered OpenID discovery and staff can now sign in with Keycloak.",
+          "saveFailedTitle": "Unable to save Keycloak settings",
+          "removedTitle": "Keycloak settings removed",
+          "removedDescription": "Keycloak sign-in is no longer offered for this tenant.",
+          "removeFailedTitle": "Unable to remove Keycloak settings"
+        },
+        "removeDialog": {
+          "title": "Remove Keycloak sign-in?",
+          "message": "Staff will no longer see the Keycloak button. Existing password sign-in is unaffected.",
+          "confirm": "Remove",
+          "cancel": "Cancel"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Add",
@@ -3551,8 +3597,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
-        "connectionsPermissionNotice": "You can view Xero settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it."
-,
+        "connectionsPermissionNotice": "You can view Xero settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.",
         "disconnectPending": "Xero is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
         "disconnectForceFinalized": "The Xero disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
         "disconnect": {
@@ -3725,8 +3770,7 @@
       "notFound": "Mapping not found. Refresh mappings and try again.",
       "deleteFailed": "Unable to delete mapping. Please try again.",
       "invoiceCancelled": "The invoice has been voided and cannot be mapped to the accounting integration.",
-      "invoiceNotFound": "The invoice no longer exists and cannot be mapped to the accounting integration."
-,
+      "invoiceNotFound": "The invoice no longer exists and cannot be mapped to the accounting integration.",
       "scopeRequired": "Mapping lookups require an integration, an entity type, and a realm scope."
     },
     "qbo": {

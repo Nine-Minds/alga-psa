@@ -445,6 +445,24 @@ describe('Microsoft email OAuth callback route (DB-backed behavioral)', () => {
   });
 
   describe('blocker 1: Microsoft-error callbacks are fully guarded', () => {
+    it('does not log authorization code, signed state or provider error description on denial', async () => {
+      const providerId = await seedProvider({});
+      const state = await signAndStoreState({ purpose: 'reconnect', providerId });
+      const code = 'synthetic-sensitive-authorization-code';
+      const description = 'synthetic-private-provider-description';
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        const { payload } = await invokeCallback({ error: 'access_denied', error_description: description, code, state });
+        expect(payload).toMatchObject({ success: false, error: 'access_denied' });
+        expect((await readProviderStatus(providerId)).status).toBe('error');
+        const logged = JSON.stringify(errors.mock.calls);
+        expect(logged).toContain('[MS OAuth] OAuth error from Microsoft:');
+        for (const sensitive of [code, state, description]) expect(logged).not.toContain(sensitive);
+      } finally {
+        errors.mockRestore();
+      }
+    });
+
     it('a valid signed error callback attributes the failure after consuming the nonce and running the guard', async () => {
       const providerId = await seedProvider({});
       const state = await signAndStoreState({ purpose: 'reconnect', providerId });

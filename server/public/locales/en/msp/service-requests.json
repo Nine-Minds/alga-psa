@@ -124,6 +124,10 @@
         "descriptionPrefix": "Description Prefix",
         "save": "Save Ticket Routing"
       },
+      "storeOnly": {
+        "title": "Store Only",
+        "description": "Completed submissions are retained with their answers and attachments in request history. No support ticket is created."
+      },
       "workflow": {
         "title": "Workflow Configuration",
         "workflowId": "Workflow ID",
@@ -199,7 +203,17 @@
       "executionError": "Execution Error",
       "submittedAtStatus": "{{date}} · {{status}}",
       "loadingTicket": "Loading…",
-      "ticketLoadError": "Failed to load ticket details."
+      "ticketLoadError": "Failed to load ticket details.",
+      "formVersion": "Form Version",
+      "formVersionValue": "Version {{version}}",
+      "historyTitle": "History",
+      "historyEmpty": "No history recorded for this submission.",
+      "historyActor": "by {{actor}}",
+      "historyOperations": {
+        "service_request_submission_created": "Submission created",
+        "service_request_submission_execution_succeeded": "Execution succeeded",
+        "service_request_submission_execution_failed": "Execution failed"
+      }
     }
   },
   "icons": {

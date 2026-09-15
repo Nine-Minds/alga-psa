@@ -510,7 +510,7 @@ describe('T068: every reveal is audited (who/when/which, never the value)', () =
 
     const result = await revealHuduPassword(CLIENT_1, 42);
 
-    expect(result).toEqual({ state: 'error', error: 'Failed to write audit log' });
+    expect(result).toEqual({ state: 'error', error: 'Unable to reveal the Hudu password. Please try again.' });
     expect('value' in (result as Record<string, unknown>)).toBe(false);
     expect(JSON.stringify(result)).not.toContain(PASSWORD_VALUE);
   });

@@ -67,8 +67,10 @@ describe('T027: hudu_integrations is referenced by EE code only', () => {
     expect(findReferences(path.join(repoRoot, 'server', 'src'), 'hudu_integrations')).toEqual([]);
   });
 
-  it('CE migrations (server/migrations) never reference hudu_integrations', () => {
-    expect(findReferences(path.join(repoRoot, 'server', 'migrations'), 'hudu_integrations')).toEqual([]);
+  it('CE migrations reference hudu_integrations only in shared tenant metadata', () => {
+    expect(findReferences(path.join(repoRoot, 'server', 'migrations'), 'hudu_integrations')).toEqual([
+      path.join('server', 'migrations', 'utils', 'tenantDb.cjs'),
+    ]);
   });
 
   it('shared packages (including the packages/ee stubs) never reference hudu_integrations', () => {

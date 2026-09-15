@@ -240,8 +240,9 @@
     },
     "summary": {
       "totalMRR": {
-        "title": "Łączne MRR",
-        "subtitle": "Miesięczny przychód cykliczny"
+        "title": "Stałe MRR",
+        "subtitle": "Stały miesięczny przychód cykliczny aktywnych umów",
+        "variableUsageNote": "{{count}} aktywnych umów rozlicza także zmienne użycie (nieuwzględnione)"
       },
       "ytdRevenue": {
         "title": "Przychód od początku roku",
@@ -302,7 +303,9 @@
       "revenueYtd": "Przychód (YTD)",
       "costYtd": "Koszt (YTD)",
       "profit": "Zysk",
-      "margin": "Marża"
+      "margin": "Marża",
+      "plusVariableUsage": "+ zmienne użycie",
+      "variableUsage": "Zmienne użycie"
     },
     "statusValues": {
       "active": "Aktywny",

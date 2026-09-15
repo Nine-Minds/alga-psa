@@ -69,7 +69,7 @@ async function reconcilePgBossWorkflowSchedules(
       continue;
     }
 
-    runner.registerHandler(buildRecurringWorkflowScheduleHandler(queueName));
+    await runner.registerHandler(buildRecurringWorkflowScheduleHandler(queueName));
     registered += 1;
   }
 

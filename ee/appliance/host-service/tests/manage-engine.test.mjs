@@ -7,6 +7,7 @@ import {
   isWellFormedLicenseJws,
   decodeLicenseClaims,
   licenseStatusFromClaims,
+  readLicenseStatus,
   applyLicense,
   redeemClaimCode,
   applyAppUrl,
@@ -56,6 +57,111 @@ test('license JWS format check + claim decode + status', () => {
   assert.equal(perpetual.perpetual, true);
   assert.equal(perpetual.status, 'active');
   assert.equal(perpetual.expiresAt, null);
+});
+
+// --- License read: candidate reproductions --------------------------------
+//
+// The appliance Manage tab must mirror the portal, which derives the displayed
+// edition from the *license token's* `tier` claim, not from `edition_choice`
+// (the build edition, always 'ee' on an appliance). The claims actually minted
+// for appliance licenses carry `tier` + numeric `exp` (see
+// packages/licensing/src/lib/license-types.ts), so the token is authoritative.
+
+test('licenseStatusFromClaims treats the token tier as authoritative over the build edition', () => {
+  const future = Math.floor(Date.now() / 1000) + 3600;
+  const claims = decodeLicenseClaims(jwsWith({ tier: 'pro', exp: future }));
+  const status = licenseStatusFromClaims(claims, 'ee');
+  // Candidate 5: the 'ee' build edition must not mask the Pro license tier.
+  assert.equal(status.edition, 'pro');
+  assert.equal(status.status, 'active');
+  assert.equal(status.perpetual, false);
+});
+
+test('licenseStatusFromClaims reads the minted claim shape (tier + numeric exp)', () => {
+  // Candidate 4 (eliminated): real appliance tokens use `tier` and numeric
+  // `exp`, both of which the decoder already reads.
+  const future = Math.floor(Date.now() / 1000) + 3600;
+  const claims = decodeLicenseClaims(jwsWith({ iss: 'nineminds-license', sub: 's', cust: 'c', tier: 'pro', iat: 1, exp: future }));
+  const status = licenseStatusFromClaims(claims, null);
+  assert.equal(status.edition, 'pro');
+  assert.equal(status.status, 'active');
+  assert.ok(status.expiresAt);
+});
+
+test('readLicenseStatus reports the live token tier as the edition', async () => {
+  const future = Math.floor(Date.now() / 1000) + 3600;
+  const kube = fakeKube({
+    run: (args) => args.includes('appliance-license-status')
+      ? { ok: true, stdout: JSON.stringify({ ok: true, row: { edition_choice: 'ee', license_token: jwsWith({ tier: 'pro', exp: future }), last_checkin_at: '2026-08-01T00:00:00.000Z' } }) }
+      : { ok: true, stdout: '' }
+  });
+  const status = await readLicenseStatus({ kube });
+  assert.equal(status.source, 'live');
+  assert.equal(status.edition, 'pro');
+  assert.equal(status.status, 'active');
+  assert.equal(status.lastCheckinAt, '2026-08-01T00:00:00.000Z');
+});
+
+test('readLicenseStatus targets the configured app deployment/namespace for the live read', async () => {
+  // Candidate 1: the read path hardcoded deploy/alga-core-sebastian -n msp and
+  // ignored appDeployment/appNamespace, unlike applyLicense.
+  const future = Math.floor(Date.now() / 1000) + 3600;
+  const kube = fakeKube({
+    run: (args) => args.includes('appliance-license-status')
+      ? { ok: true, stdout: JSON.stringify({ ok: true, row: { edition_choice: 'ee', license_token: jwsWith({ tier: 'pro', exp: future }) } }) }
+      : { ok: true, stdout: '' }
+  });
+  await readLicenseStatus({ kube, appDeployment: 'custom-app', appNamespace: 'custom-ns' });
+  const exec = kube.calls.find((c) => c[0] === 'run' && c[1].includes('appliance-license-status'));
+  assert.ok(exec, 'expected a live status exec');
+  assert.match(exec[1], /deploy\/custom-app -n custom-ns/);
+});
+
+test('readLicenseStatus distinguishes a failed live read from an absent license', async () => {
+  // Candidate 2: every failure fell through to the seed fallback silently, so
+  // the operator could not tell "the app was unreachable" from "no license".
+  const kube = fakeKube({
+    run: (args) => args.includes('appliance-license-status')
+      ? { ok: false, stdout: '', stderr: 'error: unable to upgrade connection: container not found ("sebastian")' }
+      : { ok: true, stdout: '' },
+    json: () => ({ ok: true, value: { data: {} } })
+  });
+  const status = await readLicenseStatus({ kube });
+  assert.equal(status.status, 'unknown');
+  assert.equal(status.source, 'seed-fallback');
+  assert.ok(status.liveError, 'a failed live read must be distinguishable from no license');
+});
+
+test('readLicenseStatus seed fallback prefers the registry edition and the token tier', async () => {
+  // Candidate 3: the seed only ever carries activation-time data, and its
+  // INSTALL_EDITION (essentials|pro) is the registry edition the portal shows —
+  // EDITION_CHOICE ('ee') is the build edition and must not win.
+  const future = Math.floor(Date.now() / 1000) + 3600;
+  const kube = fakeKube({
+    run: (args) => args.includes('appliance-license-status') ? { ok: false, stdout: '', stderr: 'boom' } : { ok: true, stdout: '' },
+    json: () => ({ ok: true, value: { data: {
+      EDITION_CHOICE: Buffer.from('ee').toString('base64'),
+      INSTALL_EDITION: Buffer.from('pro').toString('base64'),
+      LICENSE_TOKEN: Buffer.from(jwsWith({ tier: 'pro', exp: future })).toString('base64')
+    } } })
+  });
+  const status = await readLicenseStatus({ kube });
+  assert.equal(status.source, 'seed-fallback');
+  assert.equal(status.edition, 'pro');
+  assert.equal(status.status, 'active');
+  assert.ok(status.liveError);
+});
+
+test('redeemClaimCode targets the configured app deployment/namespace', async () => {
+  // Candidate 1 (shared): redemption hardcoded the same deployment/namespace.
+  const result = { edition: 'pro', licenseToken: 'a.b.c', applianceId: 'appliance-1', applianceCredential: 'credential', checkInUrl: 'https://license.example/check-in' };
+  const kube = fakeKube({ run: (args) => args.includes('appliance-redeem-claim-code')
+    ? { ok: true, stdout: JSON.stringify({ ok: true, result }) }
+    : { ok: true, stdout: '' } });
+  await redeemClaimCode({ claimCode: 'ABCD', kube, appDeployment: 'custom-app', appNamespace: 'custom-ns' });
+  const exec = kube.calls.find((c) => c[0] === 'run' && c[1].includes('appliance-redeem-claim-code'));
+  assert.ok(exec, 'expected a redeem exec');
+  assert.match(exec[1], /deploy\/custom-app -n custom-ns/);
 });
 
 test('applyLicense rejects an invalid JWS without touching kubectl', async () => {
@@ -230,6 +336,36 @@ test('collectManageStatus reports upgradeAvailable on digest mismatch', async ()
   assert.equal(status.license.edition, 'pro');
   assert.equal(status.appUrl.url, 'http://10.0.0.5:3000');
   assert.equal(status.appUrl.host, '10.0.0.5');
+});
+
+test('collectManageStatus marks a failed live license read while still showing the seed edition', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-license-fallback-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
+  const future = Math.floor(Date.now() / 1000) + 3600;
+  const kube = fakeKube({
+    run: (args) => args.includes('appliance-license-status')
+      ? { ok: false, stdout: '', stderr: 'error: unable to upgrade connection' }
+      : { ok: true, stdout: '' },
+    json: (args) => args.includes('secret appliance-license-seed')
+      ? { ok: true, value: { data: {
+        EDITION_CHOICE: Buffer.from('ee').toString('base64'),
+        INSTALL_EDITION: Buffer.from('pro').toString('base64'),
+        LICENSE_TOKEN: Buffer.from(jwsWith({ tier: 'pro', exp: future })).toString('base64')
+      } } }
+      : { ok: true, value: {} }
+  });
+  const status = await collectManageStatus({
+    kube,
+    releaseSelectionFile,
+    installStateFile: path.join(tmp, 'install-state.json'),
+    cpUpgradeStatusFile: path.join(tmp, 'cp.json'),
+    resolveControlPlaneRef: async () => null
+  });
+  assert.equal(status.license.source, 'seed-fallback');
+  assert.equal(status.license.edition, 'pro');
+  assert.equal(status.license.status, 'active');
+  assert.ok(status.license.liveError, 'the failed live read must be surfaced to the UI');
 });
 
 // The detached update child (queueUpdateWorkflow) moves install-state through

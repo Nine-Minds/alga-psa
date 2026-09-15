@@ -456,6 +456,11 @@ spec:
 {{ . | nindent 10 }}
           {{- end }}
 
+          # ----------- KEYCLOAK / OIDC AUTH ----------------
+          {{- with include "sebastian.keycloakOAuthEnv" . }}
+{{ . | nindent 10 }}
+          {{- end }}
+
           # ----------- GMAIL INTEGRATION ----------------
           {{- if .Values.gmail_integration.enabled }}
           - name: GOOGLE_CLIENT_ID

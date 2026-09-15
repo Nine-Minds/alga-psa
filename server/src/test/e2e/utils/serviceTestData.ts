@@ -17,7 +17,7 @@ export interface ServiceRequestPayload {
 }
 
 /**
- * Ensure a service type exists for the provided billing method.
+ * Ensure a named service type exists for the API fixture. Billing method belongs to the service.
  * Creates a new service type when one is not already present.
  */
 export async function ensureServiceType(
@@ -32,11 +32,11 @@ export async function ensureServiceType(
     description: string | null;
   }> = {}
 ): Promise<string> {
-  const schemaBillingMethod = billingMethod === 'fixed' ? 'fixed' : 'usage';
+  const name = overrides.name ?? `${billingMethod.toUpperCase()} API Test Type`;
   const serviceTypes = () => tenantDb(db, tenantId).table('service_types');
 
   const existing = await serviceTypes()
-    .where({ billing_method: schemaBillingMethod })
+    .where({ name })
     .first();
 
   if (existing?.id) {
@@ -53,8 +53,7 @@ export async function ensureServiceType(
   const insertData: Record<string, unknown> = {
     id: serviceTypeId,
     tenant: tenantId,
-    name: overrides.name ?? `${billingMethod.toUpperCase()} API Test Type`,
-    billing_method: schemaBillingMethod,
+    name,
     is_active: overrides.is_active ?? true,
     order_number: nextOrderNumber
   };

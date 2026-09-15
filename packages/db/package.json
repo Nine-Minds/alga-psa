@@ -6,6 +6,10 @@
   "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
+    "./tenantDb": {
+      "import": "./dist/lib/tenantDb.js",
+      "types": "./src/lib/tenantDb.ts"
+    },
     ".": {
       "import": "./dist/index.js",
       "types": "./src/index.ts"

@@ -1,0 +1,25 @@
+{
+  "status": "Ownership guard implemented and locally verified; API CI assignment remains pending",
+  "revision": "1c68a2ef8063cd4953bd297fb28a3c2a50a9d389",
+  "workingTreeDirty": true,
+  "behavior": "API fixture setup awaits database ownership verification. Default server database additionally requires loopback and UUID v4 identity. Supplied identities are verified against a pre-provisioned public.alga_test_environment_ownership row tied to current_database(). The test connection never creates its own marker.",
+  "verification": {
+    "files": 2,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 13.22,
+    "database": "api_environment_attestation_82cc",
+    "logLocal": "/tmp/alga-api-ownership.log",
+    "cases": [
+      "Explicit configuration and forbidden database identities",
+      "Default-name ownership identity and loopback requirement",
+      "Real PostgreSQL missing table, empty marker, stale identity, wrong database rejection and matching marker permits fixture writes"
+    ]
+  },
+  "remaining": [
+    "Provision marker from the verified owned compose PostgreSQL container in fresh-install CI",
+    "Assign API runner with collected/executed reconciliation and artifacts",
+    "Execute API journeys against rebuilt images containing local repairs"
+  ]
+}

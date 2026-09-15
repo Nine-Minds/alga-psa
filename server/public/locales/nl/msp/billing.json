@@ -43,13 +43,14 @@
       "contractTemplates": "Contractsjablonen",
       "invoicing": "Facturering",
       "invoiceLayouts": "Factuurlay-outs",
-      "taxRates": "Belastingtarieven",
+      "taxRates": "Belastingen",
       "contractLinePresets": "Voorinstellingen voor contractregels",
       "billingCycles": "Factureringscycli",
       "servicePeriods": "Serviceperioden",
       "usageTracking": "Gebruik volgen",
       "reports": "Rapporten",
       "serviceTypes": "Servicetypen",
+      "serviceCategories": "Servicecategorieën",
       "serviceCatalog": "Diensten",
       "products": "Producten"
     }
@@ -141,6 +142,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Overzicht van bucketuren",
+    "bucketLoadError": "De saldi van de urenbundels konden niet worden geladen. Probeer het opnieuw om de huidige saldi te bekijken.",
+    "retryBucketBalances": "Saldi van urenbundels opnieuw laden",
     "usageRecords": "Gebruiksrecords",
     "actions": {
       "addUsage": "Gebruik toevoegen",
@@ -211,6 +214,12 @@
       "updateError": "Kan het gebruiksrecord niet bijwerken",
       "deleteSuccess": "Gebruiksrecord is succesvol verwijderd",
       "deleteError": "Kan gebruiksrecord niet verwijderen"
+    },
+    "periodReport": "Gebruiksrapport per periode",
+    "periodAlreadyInvoiced": "Deze periode is al gefactureerd. Corrigeer dit via het correctieproces voor facturen.",
+    "periodFilter": {
+      "notice": "Toont het gebruik voor de serviceperiode {{start}} tot {{end}}",
+      "clear": "Wissen"
     }
   },
   "lineItem": {
@@ -666,7 +675,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Selecteer minstens één terugkerende factuurperiode om te genereren.",
-      "invoicePermission": "Toestemming geweigerd: rechten voor het aanmaken of genereren van facturen vereist"
+      "invoicePermission": "Toestemming geweigerd: rechten voor het aanmaken of genereren van facturen vereist",
+      "monthEndCloseNotMaterialized": "Er zijn geen terugkerende serviceperioden gematerialiseerd voor dit terugkerende uitvoeringsvenster.",
+      "monthEndCloseNotEligible": "De periode {{servicePeriod}} kan alleen aan het einde van de maand worden afgesloten op {{finalCalendarDay}}. Alleen achteraf gefactureerde serviceperioden die een volledige kalendermaand beslaan, kunnen vroegtijdig worden afgesloten op hun laatste kalenderdag."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Er is een planningssleutel vereist om terugkerende serviceperioden te bekijken.",

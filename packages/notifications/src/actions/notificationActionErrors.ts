@@ -38,6 +38,9 @@ export function notificationActionErrorFrom(error: unknown): NotificationActionE
     if (message === 'Notification not found') {
       return actionError('Notification not found. It may have already been updated or deleted.', 'msp/settings:errors.notifications.notificationNotFound');
     }
+    if (message === 'Notification disabled by administrator') {
+      return actionError('This notification has been disabled by an administrator and cannot be changed.', 'common:emailPreferences.disabledByAdmin');
+    }
     if (message.startsWith('Cannot disable ')) {
       return actionError(message);
     }

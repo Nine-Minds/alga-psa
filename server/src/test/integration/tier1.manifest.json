@@ -1,10 +1,11 @@
 {
-  "$comment": "Tier-1 integration gate floor: these suites run on every PR, unioned by scripts/run-tier1-integration.mjs with every suite whose import graph reaches the PR diff (vitest --changed), so a suite need not be listed here to gate the code it covers. Membership is deliberate — money paths, intake paths (tickets, inbound email, portal), authorization, and the named user journeys. Every entry must exist on disk; the runner fails loudly on a missing path so files cannot silently drop out of the gate. Budget: ~15 min wall clock (serial sum from the 2026-07-17 nightly: ~12.3 min). When adding entries, check the integration-tier1 duration column in the test-metrics sheet and keep headroom.",
+  "$comment": "Tier-1 integration gate floor: these suites run on every PR, unioned by scripts/run-tier1-integration.mjs with every suite whose import graph reaches the PR diff (vitest --changed), so a suite need not be listed here to gate the code it covers. Membership is deliberate \u2014 money paths, intake paths (tickets, inbound email, portal), authorization, and the named user journeys. Every entry must exist on disk; the runner fails loudly on a missing path so files cannot silently drop out of the gate. Budget: ~15 min wall clock (serial sum from the 2026-07-17 nightly: ~12.3 min). When adding entries, check the integration-tier1 duration column in the test-metrics sheet and keep headroom.",
   "paths": [
     "src/test/integration/journeys",
     "src/test/integration/accounting",
     "src/test/integration/authorization",
     "src/test/integration/permissionCatalogSync.integration.test.ts",
+    "src/test/integration/remainingBucketUnits.integration.test.ts",
     "src/test/integration/billing",
     "src/test/integration/sla",
     "src/test/integration/billingInvoiceTiming.integration.test.ts",
@@ -16,6 +17,8 @@
     "src/test/integration/itilBoardDeletionCleanup.integration.test.ts",
     "src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts",
     "src/test/integration/ticketCloseRules.integration.test.ts",
+    "src/test/integration/seededBoardTicketLifecycle.integration.test.ts",
+    "src/test/integration/clientCreationAtomicity.integration.test.ts",
     "src/test/integration/ticketAssignmentResources.integration.test.ts",
     "src/test/integration/ticketStatusReadSurfaces.integration.test.ts",
     "src/test/integration/ticketActivityLog.integration.test.ts",
@@ -41,6 +44,12 @@
     "src/test/integration/imports/importWorkflow.integration.test.ts",
     "src/test/integration/payments/stripePaymentIntegration.test.ts",
     "src/test/integration/webhookDelivery.happyPath.test.ts",
-    "src/test/integration/webhookDelivery.tenantIsolation.test.ts"
+    "src/test/integration/webhookDelivery.tenantIsolation.test.ts",
+    "../ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+    "src/test/integration/invoiceTicketImmutable.integration.test.ts",
+    "src/test/integration/workflowRuntimeV2TriggerLaunch.integration.test.ts",
+    "src/test/integration/microsoftEmailOAuthCallbackRoute.integration.test.ts",
+    "src/test/integration/emailScenarioMessageLookup.integration.test.ts",
+    "src/test/integration/workItemPickerSearch.integration.test.ts"
   ]
 }

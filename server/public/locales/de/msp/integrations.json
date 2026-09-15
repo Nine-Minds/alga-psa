@@ -14,6 +14,7 @@
         "manualEntryHelp": "Geben Sie die Kennung genau so ein, wie sie in Ihrem Buchhaltungssystem erscheint.",
         "metadataLabel": "Metadaten (JSON)",
         "metadataPlaceholder": "Optionale Metadaten als JSON",
+        "noKindOptions": "In der verbundenen Organisation wurden keine verwendbaren Datensätze dieses Typs gefunden.",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Zuordnung speichern",
         "saving": "Speichern…",
@@ -1697,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Verwalten Sie tenant-eigene Microsoft-Profile für MSP SSO, Microsoft-Anmeldung und die Erkennung von Anmeldedomänen.",
+        "descriptionCe": "Verwalten Sie die Microsoft-App-Registrierungen Ihres Unternehmens für Outlook-E-Mail.",
         "descriptionEe": "Verwalten Sie tenant-eigene Microsoft-Profile für MSP SSO, Outlook-E-Mail, Kalendersynchronisation und Microsoft Teams.",
         "dialog": {
           "cancel": "Abbrechen",
@@ -1723,7 +1724,7 @@
         },
         "empty": {
           "createButton": "Microsoft-Profil erstellen",
-          "descriptionCe": "Erstellen Sie zunächst ein benanntes Profil und binden Sie es anschließend explizit an MSP-SSO und Anmeldungsflüsse mit Anmeldedomänen.",
+          "descriptionCe": "Erstellen Sie eine Microsoft-App-Registrierung für Outlook-E-Mail.",
           "descriptionEe": "Erstellen Sie zunächst ein benanntes Profil und binden Sie es anschließend explizit an MSP SSO, Outlook-E-Mail, Kalendersynchronisation und Teams.",
           "title": "Noch keine Microsoft-Profile"
         },
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "QuickBooks-Einrichtungsanleitung",
         "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
-        "connectionsPermissionNotice": "Sie können die QuickBooks-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
-,
+        "connectionsPermissionNotice": "Sie können die QuickBooks-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen.",
         "disconnectPending": "QuickBooks wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
         "disconnectForceFinalized": "Die Trennung von QuickBooks wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
         "disconnect": {
@@ -2774,6 +2774,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Lassen Sie Mitarbeitende sich über Ihren eigenen Keycloak-Realm anmelden. Benutzer werden per E-Mail bestehenden AlgaPSA-Konten zugeordnet; Keycloak legt hier nie Benutzer an.",
+        "status": {
+          "configured": "Konfiguriert",
+          "notConfigured": "Nicht konfiguriert"
+        },
+        "actions": {
+          "refresh": "Aktualisieren",
+          "save": "Prüfen und speichern",
+          "saving": "Wird geprüft und gespeichert…",
+          "remove": "Entfernen"
+        },
+        "setup": {
+          "redirectUri": "Erstellen Sie in Ihrem Realm einen vertraulichen OpenID-Connect-Client und erlauben Sie diese Redirect-URI:",
+          "domainsEe": "Beanspruchen und verifizieren Sie anschließend unter „Erweitert“ Ihre Anmeldedomäne, damit E-Mails dieser Domäne zu diesem Realm geleitet werden.",
+          "domainsCe": "Fügen Sie anschließend unter „Erweitert“ Ihre Anmeldedomäne hinzu, damit E-Mails dieser Domäne zu diesem Realm geleitet werden.",
+          "issuer": "Aussteller: {{issuer}}"
+        },
+        "fields": {
+          "url": "Keycloak-Server-URL",
+          "realm": "Realm",
+          "clientId": "Client-ID",
+          "clientSecret": "Client-Secret",
+          "clientSecretKeep": "Leer lassen, um {{masked}} beizubehalten"
+        },
+        "errors": {
+          "loadFailed": "Keycloak-Einstellungen konnten nicht geladen werden",
+          "saveFailed": "Keycloak-Einstellungen konnten nicht gespeichert werden",
+          "removeFailed": "Keycloak-Einstellungen konnten nicht entfernt werden"
+        },
+        "toasts": {
+          "savedTitle": "Keycloak-Einstellungen gespeichert",
+          "savedDescription": "Der Realm hat auf die OpenID-Discovery geantwortet; Mitarbeitende können sich jetzt mit Keycloak anmelden.",
+          "saveFailedTitle": "Keycloak-Einstellungen können nicht gespeichert werden",
+          "removedTitle": "Keycloak-Einstellungen entfernt",
+          "removedDescription": "Die Keycloak-Anmeldung wird für diesen Mandanten nicht mehr angeboten.",
+          "removeFailedTitle": "Keycloak-Einstellungen können nicht entfernt werden"
+        },
+        "removeDialog": {
+          "title": "Keycloak-Anmeldung entfernen?",
+          "message": "Mitarbeitende sehen die Keycloak-Schaltfläche nicht mehr. Die Anmeldung mit Passwort bleibt unverändert.",
+          "confirm": "Entfernen",
+          "cancel": "Abbrechen"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Hinzufügen",
@@ -3528,8 +3574,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
-        "connectionsPermissionNotice": "Sie können die Xero-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
-,
+        "connectionsPermissionNotice": "Sie können die Xero-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen.",
         "disconnectPending": "Xero wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
         "disconnectForceFinalized": "Die Trennung von Xero wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
         "disconnect": {
@@ -3618,7 +3663,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "Outlook-Posteingang über die Microsoft-App-Registrierung Ihres Unternehmens.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },
@@ -3725,8 +3770,7 @@
       "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie die Zuordnungen und versuchen Sie es erneut.",
       "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut.",
       "invoiceCancelled": "Die Rechnung wurde storniert und kann nicht der Buchhaltungsintegration zugeordnet werden.",
-      "invoiceNotFound": "Die Rechnung existiert nicht mehr und kann nicht der Buchhaltungsintegration zugeordnet werden."
-,
+      "invoiceNotFound": "Die Rechnung existiert nicht mehr und kann nicht der Buchhaltungsintegration zugeordnet werden.",
       "scopeRequired": "Zuordnungsabfragen erfordern eine Integration, einen Entitätstyp und einen Bereichs-Scope."
     },
     "qbo": {

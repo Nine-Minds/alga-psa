@@ -43,13 +43,14 @@
       "contractTemplates": "Contract Templates",
       "invoicing": "Invoicing",
       "invoiceLayouts": "Invoice Layouts",
-      "taxRates": "Tax rates",
+      "taxRates": "Tax",
       "contractLinePresets": "Contract Line Presets",
       "billingCycles": "Billing Cycles",
       "servicePeriods": "Service Periods",
       "usageTracking": "Usage Tracking",
       "reports": "Reports",
       "serviceTypes": "Service Types",
+      "serviceCategories": "Service Categories",
       "serviceCatalog": "Services",
       "products": "Products"
     }
@@ -140,6 +141,8 @@
     }
   },
   "usage": {
+    "bucketLoadError": "Bucket balances could not be loaded. Retry to see the current balances.",
+    "retryBucketBalances": "Retry bucket balances",
     "bucketHoursOverview": "Bucket Hours Overview",
     "usageRecords": "Usage Records",
     "actions": {
@@ -211,6 +214,12 @@
       "updateError": "Failed to update usage record",
       "deleteSuccess": "Usage record deleted successfully",
       "deleteError": "Failed to delete usage record"
+    },
+    "periodReport": "Period usage report",
+    "periodAlreadyInvoiced": "This period is already invoiced. Correct it through the invoice adjustment process.",
+    "periodFilter": {
+      "notice": "Showing usage for the service period {{start}} to {{end}}",
+      "clear": "Clear"
     }
   },
   "lineItem": {
@@ -666,7 +675,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Select at least one recurring billing period to generate.",
-      "invoicePermission": "Permission denied: invoice create or generate required"
+      "invoicePermission": "Permission denied: invoice create or generate required",
+      "monthEndCloseNotMaterialized": "Recurring service periods were not materialized for this recurring execution window.",
+      "monthEndCloseNotEligible": "The {{servicePeriod}} period can only be closed at month end on {{finalCalendarDay}}. Only calendar-month arrears service periods can be closed early on their final calendar day."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "A schedule key is required to inspect recurring service periods.",

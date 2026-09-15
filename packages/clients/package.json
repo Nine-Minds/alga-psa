@@ -20,6 +20,10 @@
       "types": "./src/actions/interactionCreateHelper.ts",
       "import": "./src/actions/interactionCreateHelper.ts"
     },
+    "./actions/clientNoteActions": {
+      "types": "./src/actions/clientNoteActions.ts",
+      "import": "./src/actions/clientNoteActions.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./dist/components/index.js",

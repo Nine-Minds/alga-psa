@@ -223,6 +223,12 @@ interface TicketDetailsProps {
     renderCreateProjectTask?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
 
     /**
+     * Optional injected UI for quick-invoicing a ticket (e.g. billing package
+     * QuickInvoiceTicketDialog). Keeps @alga-psa/tickets from importing billing.
+     */
+    renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -256,6 +262,8 @@ interface TicketDetailsProps {
     disableAgentSchedule?: boolean;
 }
 
+const EMPTY_DOCUMENTS: NonNullable<TicketDetailsProps['initialDocuments']> = [];
+
 const TicketDetails: React.FC<TicketDetailsProps> = ({
     id = 'ticket-details',
     initialTicket,
@@ -265,7 +273,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     isInDrawer = false,
     // Pre-fetched data with defaults
     initialComments = [],
-    initialDocuments = [],
+    initialDocuments = EMPTY_DOCUMENTS,
     initialClient = null,
     initialContacts = [],
     initialContactInfo = null,
@@ -296,6 +304,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     associatedAssets = null,
     renderContactDetails,
     renderCreateProjectTask,
+    renderQuickInvoice,
     renderClientDetails,
     renderIntervalManagement,
     hideSlaStatus = false,
@@ -446,6 +455,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isTicketDeleteProcessing, setIsTicketDeleteProcessing] = useState(false);
     const [conversations, setConversations] = useState<IComment[]>(initialComments);
     const [documents, setDocuments] = useState<any[]>(initialDocuments);
+    // A server refresh can change metadata or access without changing IDs.
+    useEffect(() => {
+        setDocuments(initialDocuments);
+    }, [initialDocuments]);
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
@@ -1965,6 +1978,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     willCloseTicket,
                     schedule,
                 );
+                await refreshTicketDocuments();
 
                 // Optimistically update the response state in UI to match server behavior:
                 // - Internal note: no change
@@ -2075,6 +2089,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     }
                     
                     if (newComment) {
+                        await refreshTicketDocuments();
                         // Refresh comments after adding
                         const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
                         if (isReturnedActionError(updatedComments)) {
@@ -2169,6 +2184,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 throw updatedComments;
             }
             setConversations(updatedComments);
+            await refreshTicketDocuments();
 
             if (!isInternal && responseStateTrackingEnabled) {
                 setTicket((prev: any) => ({
@@ -2235,6 +2251,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(updateResult)) {
                 throw updateResult;
             }
+            await refreshTicketDocuments();
 
             const updatedCommentData = await findCommentById(currentComment.comment_id!);
             if (isReturnedActionError(updatedCommentData)) {
@@ -3684,6 +3701,7 @@ const handleClose = () => {
                     tags={tags}
                     onTagsChange={handleTagsChange}
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
+                    quickInvoiceActions={hideBilling ? undefined : renderQuickInvoice?.({ ticket })}
                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                         ? () => setIsResolutionCloseDialogOpen(true)
                         : undefined}
@@ -3816,6 +3834,7 @@ const handleClose = () => {
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
+                                    renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                         ? () => setIsResolutionCloseDialogOpen(true)
                                         : undefined}
@@ -4030,6 +4049,7 @@ const handleClose = () => {
                             isBundledChild={Boolean(bundle?.isBundleChild)}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
+                            renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                             onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                 ? () => setIsResolutionCloseDialogOpen(true)
                                 : undefined}

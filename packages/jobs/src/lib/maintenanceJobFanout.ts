@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
+import type { TenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 // Sibling handlers live in this same package; imported relatively so the
@@ -38,9 +39,39 @@ import { providerDisconnectRetryHandler } from './handlers/providerDisconnectRet
 const RENEWAL_HORIZON_DAYS = 90;
 const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
 
+// Narrows a tenant job to the tenants that can actually do its work (the
+// integration is configured), so the fan-out does not burn a pooled connection
+// per tenant just to discover there is nothing to do. Returns distinct tenant ids.
+type TenantSelector = (db: TenantDb) => PromiseLike<Array<{ tenant: string }>>;
+
 type MaintenanceJobDef =
-  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown> }
+  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number }
   | { scope: 'system'; run: () => Promise<unknown> };
+
+const DEFAULT_CONCURRENCY = 10;
+
+const tenantsWithActiveTeams: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('teams_integrations', 'maintenance fanout narrows Teams jobs to tenants with an active integration')
+  .where('install_status', 'active')
+  .whereNotNull('selected_profile_id')
+  .distinct('tenant');
+
+const tenantsWithInboundEmail: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('email_providers', 'maintenance fanout narrows inbound-email recovery to tenants with an active provider')
+  .where('is_active', true)
+  .distinct('tenant');
+
+// 'teams-phone' mirrors TEAMS_PHONE_PROVIDER in @alga-psa/ee-microsoft-teams, which this CE package cannot import.
+const tenantsWithActiveTeamsPhone: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows telephony renewals to tenants with an active Teams Phone provider')
+  .where('provider', 'teams-phone')
+  .where('status', 'active')
+  .distinct('tenant');
+
+const tenantsWithPendingCallArtifacts: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_call_records', 'maintenance fanout narrows the call artifact sweep to tenants with calls awaiting artifacts')
+  .where('artifact_status', 'pending')
+  .distinct('tenant');
 
 // The per-tenant handlers are the same functions the CE pg-boss runner invokes
 // per tenant; here a single global run fans them out across all tenants. System
@@ -58,15 +89,15 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   [SEARCH_RECONCILE_JOB_NAME]: { scope: 'tenant', run: (tenantId) => searchReconcileHandler({ tenantId }) },
   'verify-google-calendar-pubsub': { scope: 'tenant', run: (tenantId) => verifyGoogleCalendarProvisioning({ tenantId }) },
   'renew-google-gmail-watch': { scope: 'tenant', run: (tenantId) => renewGoogleGmailWatchSubscriptions({ tenantId }) },
-  'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }) },
-  'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }) },
-  [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }) },
-  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }) },
+  'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }), tenants: tenantsWithActiveTeams },
+  'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }), tenants: tenantsWithActiveTeamsPhone },
+  [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }), tenants: tenantsWithPendingCallArtifacts },
+  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithActiveTeams },
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
-  'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }) },
+  'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }), tenants: tenantsWithInboundEmail, concurrency: 3 },
   'provider-disconnect-retry': { scope: 'tenant', run: (tenantId) => providerDisconnectRetryHandler({ tenantId }) },
 };
 
@@ -113,15 +144,20 @@ export async function runMaintenanceJob(
     return { jobName, scope: 'system', total: 1, succeeded: 1, failed: 0 };
   }
 
-  const knex = await getAdminConnection();
-  const tenants = await tenantDb(knex, '__maintenance_job_fanout_tenant_enumeration__')
+  const db = tenantDb(await getAdminConnection(), '__maintenance_job_fanout_tenant_enumeration__');
+  const active = await db
     .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
     .whereNull('suspended_at')
     .select('tenant');
+  let tenants = active;
+  if (def.tenants) {
+    const eligible = new Set((await def.tenants(db)).map((row) => String(row.tenant)));
+    tenants = active.filter((row) => eligible.has(String(row.tenant)));
+  }
   let succeeded = 0;
   let failed = 0;
 
-  await runWithConcurrency(tenants, opts.concurrency ?? 10, async (row: { tenant: string }) => {
+  await runWithConcurrency(tenants, opts.concurrency ?? def.concurrency ?? DEFAULT_CONCURRENCY, async (row: { tenant: string }) => {
     const tenantId = String(row.tenant);
     try {
       await def.run(tenantId);

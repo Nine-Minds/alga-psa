@@ -2,6 +2,7 @@
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { resolveTenantDefaultCountry } from '../lib/tenantDefaultCountry';
 
 export interface ICountry {
   code: string;
@@ -27,6 +28,25 @@ export const getAllCountries = withAuth(async (
     return countries;
   } catch (error) {
     console.error('Error fetching countries:', error);
+    throw error;
+  }
+});
+
+/**
+ * The tenant's own country, for preselecting country fields on new records.
+ * Null when the MSP's default client carries no usable country, so forms keep
+ * their existing default.
+ */
+export const getTenantDefaultCountry = withAuth(async (
+  _user,
+  { tenant }
+): Promise<ICountry | null> => {
+  const { knex } = await createTenantKnex();
+
+  try {
+    return await resolveTenantDefaultCountry(knex, tenant);
+  } catch (error) {
+    console.error('Error resolving tenant default country:', error);
     throw error;
   }
 });

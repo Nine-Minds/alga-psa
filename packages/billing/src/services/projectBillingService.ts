@@ -1,3 +1,6 @@
+import { assertNonNegativeCents, percentageAsScaledInteger, FULL_PERCENTAGE_SCALED } from '../lib/billing/compute/projectCapMath';
+export { computeCapWriteDown, detectThresholdCrossings, isFirstProjectCapOverage } from '../lib/billing/compute/projectCapMath';
+export type { CapWriteDownResult } from '../lib/billing/compute/projectCapMath';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type {
@@ -12,8 +15,6 @@ import {
   resolveProjectBillingDb
 } from '../models/projectBillingModelUtils';
 
-const PERCENTAGE_SCALE = 10_000;
-const FULL_PERCENTAGE_SCALED = 100 * PERCENTAGE_SCALE;
 
 type AllocationConfig = Pick<IProjectBillingConfig, 'total_price'>;
 type AllocationEntry = Pick<
@@ -27,10 +28,7 @@ export interface AllocationValidationResult {
   isFinalEntryBlocked: boolean;
 }
 
-export interface CapWriteDownResult {
-  billable: number;
-  writtenDown: number;
-}
+
 
 export interface DepositReconciliationEntry {
   entry_type: ProjectBillingScheduleEntryType;
@@ -57,19 +55,6 @@ export function assertTotalCoversFrozenAmounts(
   }
 }
 
-function assertNonNegativeCents(value: number, label: string): void {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new RangeError(`${label} must be a non-negative integer number of cents`);
-  }
-}
-
-function percentageAsScaledInteger(percentage: number): number {
-  if (!Number.isFinite(percentage) || percentage < 0) {
-    throw new RangeError('percentage must be a non-negative finite number');
-  }
-
-  return Math.round(percentage * PERCENTAGE_SCALE);
-}
 
 function roundPositiveFraction(numerator: bigint, denominator: bigint): bigint {
   return (numerator + (denominator / 2n)) / denominator;
@@ -267,66 +252,6 @@ export async function evaluateDateReadiness(
       || left.schedule_entry_id.localeCompare(right.schedule_entry_id));
 }
 
-export function computeCapWriteDown(
-  capAmount: number,
-  usedBilled: number,
-  chargeAmount: number
-): CapWriteDownResult {
-  assertNonNegativeCents(capAmount, 'capAmount');
-  assertNonNegativeCents(usedBilled, 'usedBilled');
-  assertNonNegativeCents(chargeAmount, 'chargeAmount');
-
-  const remaining = Math.max(0, capAmount - usedBilled);
-  const billable = Math.min(remaining, chargeAmount);
-  return {
-    billable,
-    writtenDown: chargeAmount - billable
-  };
-}
-
-/** First persisted hard-cap overage; used to dedupe workflow and user notifications. */
-export function isFirstProjectCapOverage(
-  writtenDownBefore: number,
-  writtenDownAfter: number,
-): boolean {
-  assertNonNegativeCents(writtenDownBefore, 'writtenDownBefore');
-  assertNonNegativeCents(writtenDownAfter, 'writtenDownAfter');
-  return writtenDownBefore === 0 && writtenDownAfter > 0;
-}
-
-export function detectThresholdCrossings(
-  capAmount: number,
-  prevBilled: number,
-  newBilled: number,
-  thresholds: readonly number[],
-  alreadyNotified: readonly number[]
-): number[] {
-  assertNonNegativeCents(capAmount, 'capAmount');
-  assertNonNegativeCents(prevBilled, 'prevBilled');
-  assertNonNegativeCents(newBilled, 'newBilled');
-
-  if (capAmount === 0 || newBilled <= prevBilled) {
-    return [];
-  }
-
-  const notified = new Set(alreadyNotified);
-  const seen = new Set<number>();
-  return thresholds.filter((threshold) => {
-    if (!Number.isFinite(threshold) || threshold < 0) {
-      throw new RangeError('thresholds must contain non-negative finite percentages');
-    }
-    if (notified.has(threshold) || seen.has(threshold)) {
-      return false;
-    }
-    seen.add(threshold);
-
-    const thresholdScaled = BigInt(percentageAsScaledInteger(threshold));
-    const denominator = BigInt(FULL_PERCENTAGE_SCALED);
-    const thresholdTarget = BigInt(capAmount) * thresholdScaled;
-    return BigInt(prevBilled) * denominator < thresholdTarget
-      && BigInt(newBilled) * denominator >= thresholdTarget;
-  });
-}
 
 export function computeDepositReconciliation(
   entries: readonly DepositReconciliationEntry[],

@@ -1,0 +1,2093 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-09T04:18:12.095102+00:00",
+  "scope": "Executed workspace database regression-ledger mappings only",
+  "repository": "Nine-Minds/alga-psa",
+  "runId": "34308610232",
+  "runAttempt": 1,
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34308610232",
+  "runHeadSha": "a0d0771b8dbc61eb56b618f8c6a734f150329466",
+  "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+  "job": {
+    "id": "102330473963",
+    "name": "integration / Workspace database tests",
+    "conclusion": "success"
+  },
+  "aggregateJob": {
+    "id": "102332483297",
+    "name": "integration / Workspace database execution complete",
+    "conclusion": "success"
+  },
+  "artifacts": [
+    {
+      "id": "10087767497",
+      "name": "workspace-db-evidence",
+      "members": [
+        "evidence.json",
+        "results.json",
+        "collected-tests.json",
+        "discovery.json"
+      ],
+      "downloadSha256": "54730cdff27882c1be5be7a0a071c5e24229738e02aca072df0fd345e523b572"
+    },
+    {
+      "id": "10087784654",
+      "name": "workspace-db-aggregate",
+      "members": [
+        "aggregate.json"
+      ],
+      "downloadSha256": "f6bfa2793079d1122660e792d5d5654055ad0bb140ba1082ecd532e01a516af6"
+    }
+  ],
+  "source": {
+    "before": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "selection": {
+    "mode": "full",
+    "filters": []
+  },
+  "aggregate": {
+    "schemaVersion": 1,
+    "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+    "scope": "workspace-db-execution",
+    "status": "passed",
+    "results": [
+      {
+        "id": "workspace-db",
+        "status": "passed",
+        "counts": {
+          "passed": 477,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "pending": 0
+        },
+        "failures": []
+      }
+    ],
+    "failures": []
+  },
+  "suite": {
+    "executedFiles": 64,
+    "counts": {
+      "passed": 477,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "pending": 0
+    }
+  },
+  "mappingSummary": {
+    "ledgerRecords": 8,
+    "uniqueFiles": {
+      "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts": 8,
+      "packages/inventory/src/actions/salesOrderGuards.db.test.ts": 19,
+      "packages/billing/tests/financialStateModel.db.test.ts": 4,
+      "packages/billing/src/services/taxService.rateSelection.db.test.ts": 30,
+      "server/src/services/surveyResponseActions.db.test.ts": 17
+    },
+    "uniqueExecutedTests": 78
+  },
+  "mappings": [
+    {
+      "ledgerId": "month-end-postgres-date-hydration",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "mappedFiles": [
+        {
+          "file": "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+          "tests": [
+            {
+              "identity": [
+                "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+                "generateCalendarMonthEndCloseInvoices (DB-backed hydration) > matches the tenant calendar across generated month ends, leap years and timezone boundaries"
+              ],
+              "fullName": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) matches the tenant calendar across generated month ends, leap years and timezone boundaries",
+              "status": "passed",
+              "durationMs": 440.76438100000087,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+                "generateCalendarMonthEndCloseInvoices (DB-backed hydration) > rejects invalid invoice-window dates before attempting generation"
+              ],
+              "fullName": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) rejects invalid invoice-window dates before attempting generation",
+              "status": "passed",
+              "durationMs": 6.097234000000753,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+                "generateCalendarMonthEndCloseInvoices (DB-backed hydration) > generates a month-end arrears invoice from pg-hydrated Date columns on the final calendar day"
+              ],
+              "fullName": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) generates a month-end arrears invoice from pg-hydrated Date columns on the final calendar day",
+              "status": "passed",
+              "durationMs": 8.300590999999258,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+                "generateCalendarMonthEndCloseInvoices (DB-backed hydration) > rejects a pre-final-day direct invocation even when the row hydrates as Dates"
+              ],
+              "fullName": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) rejects a pre-final-day direct invocation even when the row hydrates as Dates",
+              "status": "passed",
+              "durationMs": 6.445337999997719,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+                "generateCalendarMonthEndCloseInvoices (DB-backed hydration) > refuses the close when an active line has no materialized period for the window"
+              ],
+              "fullName": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) refuses the close when an active line has no materialized period for the window",
+              "status": "passed",
+              "durationMs": 6.194616999993741,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+                "generateCalendarMonthEndCloseInvoices (DB-backed hydration) > refuses the close when the canonical window also serves an advance period"
+              ],
+              "fullName": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) refuses the close when the canonical window also serves an advance period",
+              "status": "passed",
+              "durationMs": 32.39834499999415,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+                "generateCalendarMonthEndCloseInvoices (DB-backed hydration) > refuses a partial selection of an otherwise eligible window"
+              ],
+              "fullName": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) refuses a partial selection of an otherwise eligible window",
+              "status": "passed",
+              "durationMs": 14.037877000002482,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+                "generateCalendarMonthEndCloseInvoices (DB-backed hydration) > surfaces a repeated close as duplicateRecurringInvoice"
+              ],
+              "fullName": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) surfaces a repeated close as duplicateRecurringInvoice",
+              "status": "passed",
+              "durationMs": 6.873250000004191,
+              "expectedCount": 1,
+              "executedCount": 1
+            }
+          ]
+        }
+      ],
+      "ledgerLimits": [
+        "Replay proves real migrated PostgreSQL hydration and eligibility; invoice creation and authentication are mocked.",
+        "No production incident identifier was supplied; this is not an attributed incident count."
+      ]
+    },
+    {
+      "ledgerId": "sales-order-tenant-tax-reference-validation",
+      "classification": "discovered-during-database-test-activation",
+      "incident": null,
+      "mappedFiles": [
+        {
+          "file": "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+          "tests": [
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T001: rejects fulfillment for a draft order without moving stock"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T001: rejects fulfillment for a draft order without moving stock",
+              "status": "passed",
+              "durationMs": 7.410117000050377,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T002: fulfills a confirmed order"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T002: fulfills a confirmed order",
+              "status": "passed",
+              "durationMs": 14.010467000014614,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T003: fulfills an invoiced manual-mode order"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T003: fulfills an invoiced manual-mode order",
+              "status": "passed",
+              "durationMs": 9.361682999995537,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T004: rejects fulfillment for a cancelled order"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T004: rejects fulfillment for a cancelled order",
+              "status": "passed",
+              "durationMs": 5.348928999970667,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T005: rejects a duplicate drop-ship PO and reports the existing PO number"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T005: rejects a duplicate drop-ship PO and reports the existing PO number",
+              "status": "passed",
+              "durationMs": 13.017659000004642,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T006: rejects drop-ship PO creation for a cancelled order"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T006: rejects drop-ship PO creation for a cancelled order",
+              "status": "passed",
+              "durationMs": 8.90949599997839,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T007: denies drop-ship PO creation without purchase-order create permission"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T007: denies drop-ship PO creation without purchase-order create permission",
+              "status": "passed",
+              "durationMs": 3.8160829999833368,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T008: rejects backorder procurement for a cancelled order without creating a PO"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T008: rejects backorder procurement for a cancelled order without creating a PO",
+              "status": "passed",
+              "durationMs": 5.744680999952834,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T009: rejects line edits on a confirmed order and leaves the line unchanged"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T009: rejects line edits on a confirmed order and leaves the line unchanged",
+              "status": "passed",
+              "durationMs": 5.883586000010837,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order state guards (real DB, rolled back) > T010: rejects drop-ship shipment confirmation for a cancelled order without fulfillment writes"
+              ],
+              "fullName": "sales-order state guards (real DB, rolled back) T010: rejects drop-ship shipment confirmation for a cancelled order without fulfillment writes",
+              "status": "passed",
+              "durationMs": 13.736883000005037,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order tax references > create refuses a missing tax rate without persisting changes"
+              ],
+              "fullName": "sales-order tax references create refuses a missing tax rate without persisting changes",
+              "status": "passed",
+              "durationMs": 5.32859000004828,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order tax references > add refuses a missing tax rate without persisting changes"
+              ],
+              "fullName": "sales-order tax references add refuses a missing tax rate without persisting changes",
+              "status": "passed",
+              "durationMs": 6.450447999988683,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order tax references > update refuses a missing tax rate without persisting changes"
+              ],
+              "fullName": "sales-order tax references update refuses a missing tax rate without persisting changes",
+              "status": "passed",
+              "durationMs": 6.403038999997079,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order tax references > create refuses a foreign tax rate without persisting changes"
+              ],
+              "fullName": "sales-order tax references create refuses a foreign tax rate without persisting changes",
+              "status": "passed",
+              "durationMs": 6.220458000025246,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order tax references > add refuses a foreign tax rate without persisting changes"
+              ],
+              "fullName": "sales-order tax references add refuses a foreign tax rate without persisting changes",
+              "status": "passed",
+              "durationMs": 7.418856000003871,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "sales-order tax references > update refuses a foreign tax rate without persisting changes"
+              ],
+              "fullName": "sales-order tax references update refuses a foreign tax rate without persisting changes",
+              "status": "passed",
+              "durationMs": 7.8433180000283755,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "valid sales-order tax selection > create persists this tenant\u2019s rate and permits clearing it"
+              ],
+              "fullName": "valid sales-order tax selection create persists this tenant\u2019s rate and permits clearing it",
+              "status": "passed",
+              "durationMs": 11.513396000023931,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "valid sales-order tax selection > add persists this tenant\u2019s rate and permits clearing it"
+              ],
+              "fullName": "valid sales-order tax selection add persists this tenant\u2019s rate and permits clearing it",
+              "status": "passed",
+              "durationMs": 8.850648000021465,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/inventory/src/actions/salesOrderGuards.db.test.ts",
+                "valid sales-order tax selection > update persists this tenant\u2019s rate and permits clearing it"
+              ],
+              "fullName": "valid sales-order tax selection update persists this tenant\u2019s rate and permits clearing it",
+              "status": "passed",
+              "durationMs": 9.489773000008427,
+              "expectedCount": 1,
+              "executedCount": 1
+            }
+          ]
+        }
+      ],
+      "ledgerLimits": [
+        "No production incident identifier was supplied.",
+        "Latest committed revision CI verification remains pending."
+      ]
+    },
+    {
+      "ledgerId": "credit-application-ignores-cash-payments",
+      "classification": "discovered-by-real-database-state-model",
+      "incident": null,
+      "mappedFiles": [
+        {
+          "file": "packages/billing/tests/financialStateModel.db.test.ts",
+          "tests": [
+            {
+              "identity": [
+                "packages/billing/tests/financialStateModel.db.test.ts",
+                "Independent financial state model > does not apply credit to an amount already paid"
+              ],
+              "fullName": "Independent financial state model does not apply credit to an amount already paid",
+              "status": "passed",
+              "durationMs": 63.65388199998415,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/tests/financialStateModel.db.test.ts",
+                "Independent financial state model > conserves credit and cash across finalization, delivery retries, reversal and repeated void"
+              ],
+              "fullName": "Independent financial state model conserves credit and cash across finalization, delivery retries, reversal and repeated void",
+              "status": "passed",
+              "durationMs": 93.4175539999851,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/tests/financialStateModel.db.test.ts",
+                "Independent financial state model > replays the saved shrunk payment-credit counterexample"
+              ],
+              "fullName": "Independent financial state model replays the saved shrunk payment-credit counterexample",
+              "status": "passed",
+              "durationMs": 51.8701520000177,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/tests/financialStateModel.db.test.ts",
+                "Independent financial state model > checks generated two-tenant operation sequences and reports shrunk replay seeds"
+              ],
+              "fullName": "Independent financial state model checks generated two-tenant operation sequences and reports shrunk replay seeds",
+              "status": "passed",
+              "durationMs": 5773.557926999987,
+              "expectedCount": 1,
+              "executedCount": 1
+            }
+          ]
+        }
+      ],
+      "ledgerLimits": [
+        "USD manual invoices with unrestricted eligible charges and direct credit grants; this pilot does not exhaust every billing policy or currency.",
+        "Each model example rolls back a real transaction. The separate concurrency suites exercise competing committed connections.",
+        "Authentication, external event delivery and remote notifications are fixture seams.",
+        "No production incident identifier supplied. Native candidate execution remains required."
+      ]
+    },
+    {
+      "ledgerId": "default-tax-rate-postgres-numeric",
+      "classification": "discovered-during-database-regression-testing",
+      "incident": null,
+      "mappedFiles": [
+        {
+          "file": "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+          "tests": [
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > honors persisted threshold minima and gaps with PostgreSQL numeric values"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection honors persisted threshold minima and gaps with PostgreSQL numeric values",
+              "status": "passed",
+              "durationMs": 20.8041760000051,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > create and update actions persist a valid rate through their real transactions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection create and update actions persist a valid rate through their real transactions",
+              "status": "passed",
+              "durationMs": 6.425846999991336,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > create and update actions reject overlapping ranges without persisting changes"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection create and update actions reject overlapping ranges without persisting changes",
+              "status": "passed",
+              "durationMs": 9.686310999997659,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > excludes the edited rate while preserving tenant and region boundaries in overlap validation"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection excludes the edited rate while preserving tenant and region boundaries in overlap validation",
+              "status": "passed",
+              "durationMs": 6.821715999991284,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, null) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, null) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.732046999997692,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, null) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, null) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.020042999996804,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, null) against existing [2026-07-01, 2026-08-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, null) against existing [2026-07-01, 2026-08-01)",
+              "status": "passed",
+              "durationMs": 4.253444000001764,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, null) against existing [2026-01-01, 2026-07-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, null) against existing [2026-01-01, 2026-07-01)",
+              "status": "passed",
+              "durationMs": 3.8930659999896307,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, 2026-07-01) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, 2026-07-01) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.183424999995623,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, 2026-08-01) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, 2026-08-01) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.3493409999937285,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, 2026-08-01) against existing [2026-01-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, 2026-08-01) against existing [2026-01-01, null)",
+              "status": "passed",
+              "durationMs": 4.57717699999921,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > uses the default billing profile when another profile has a conflicting reverse-charge setting"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection uses the default billing profile when another profile has a conflicting reverse-charge setting",
+              "status": "passed",
+              "durationMs": 12.922946999999112,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > persists default-profile reverse charge and applies it before regional rate lookup"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection persists default-profile reverse charge and applies it before regional rate lookup",
+              "status": "passed",
+              "durationMs": 14.993289000005461,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-01-01, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-01-01, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 6.92728299999726,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-06-30, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-06-30, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 10.129696999996668,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-07-01, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-07-01, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 8.497963999994681,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > rejects a date before any active regional rate starts"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection rejects a date before any active regional rate starts",
+              "status": "passed",
+              "durationMs": 8.07781299999624,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (undefined)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (undefined)",
+              "status": "passed",
+              "durationMs": 8.210404999990715,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (USD)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (USD)",
+              "status": "passed",
+              "durationMs": 8.568259000006947,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (EUR)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (EUR)",
+              "status": "passed",
+              "durationMs": 11.447897000005469,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (GBP)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (GBP)",
+              "status": "passed",
+              "durationMs": 8.236147000003257,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2025-12-31)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2025-12-31)",
+              "status": "passed",
+              "durationMs": 7.751582000011695,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2026-01-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2026-01-01)",
+              "status": "passed",
+              "durationMs": 7.987630000003264,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2026-07-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2026-07-01)",
+              "status": "passed",
+              "durationMs": 7.675719000006211,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > filters the default rate by currency (USD)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection filters the default rate by currency (USD)",
+              "status": "passed",
+              "durationMs": 8.19941299999482,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > filters the default rate by currency (EUR)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection filters the default rate by currency (EUR)",
+              "status": "passed",
+              "durationMs": 7.779412000003504,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for 0 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for 0 cents",
+              "status": "passed",
+              "durationMs": 15.77943100000266,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for -10000 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for -10000 cents",
+              "status": "passed",
+              "durationMs": 8.146254000006593,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for 333 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for 333 cents",
+              "status": "passed",
+              "durationMs": 8.807633000003989,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > preserves a fractional PostgreSQL percentage and rounds only the resulting tax cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection preserves a fractional PostgreSQL percentage and rounds only the resulting tax cents",
+              "status": "passed",
+              "durationMs": 8.90020899999945,
+              "expectedCount": 1,
+              "executedCount": 1
+            }
+          ]
+        }
+      ],
+      "ledgerLimits": [
+        "Local focused database run uses the task-owned migrated visual_regression_82cc_test database; it bypasses bootstrap in a temporary config and rolls back every fixture.",
+        "Tenant context and reverse-charge/default-profile provisioning are substituted; rate selection, tenant predicates and PostgreSQL hydration are real.",
+        "Does not verify authentication, international policy selection, invoice orchestration, tax caps or subscription periods.",
+        "Current candidate native CI remains unverified."
+      ]
+    },
+    {
+      "ledgerId": "tax-open-ended-overlap",
+      "classification": "discovered-during-database-regression-testing",
+      "incident": null,
+      "mappedFiles": [
+        {
+          "file": "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+          "tests": [
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > honors persisted threshold minima and gaps with PostgreSQL numeric values"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection honors persisted threshold minima and gaps with PostgreSQL numeric values",
+              "status": "passed",
+              "durationMs": 20.8041760000051,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > create and update actions persist a valid rate through their real transactions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection create and update actions persist a valid rate through their real transactions",
+              "status": "passed",
+              "durationMs": 6.425846999991336,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > create and update actions reject overlapping ranges without persisting changes"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection create and update actions reject overlapping ranges without persisting changes",
+              "status": "passed",
+              "durationMs": 9.686310999997659,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > excludes the edited rate while preserving tenant and region boundaries in overlap validation"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection excludes the edited rate while preserving tenant and region boundaries in overlap validation",
+              "status": "passed",
+              "durationMs": 6.821715999991284,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, null) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, null) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.732046999997692,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, null) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, null) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.020042999996804,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, null) against existing [2026-07-01, 2026-08-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, null) against existing [2026-07-01, 2026-08-01)",
+              "status": "passed",
+              "durationMs": 4.253444000001764,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, null) against existing [2026-01-01, 2026-07-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, null) against existing [2026-01-01, 2026-07-01)",
+              "status": "passed",
+              "durationMs": 3.8930659999896307,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, 2026-07-01) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, 2026-07-01) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.183424999995623,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, 2026-08-01) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, 2026-08-01) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.3493409999937285,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, 2026-08-01) against existing [2026-01-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, 2026-08-01) against existing [2026-01-01, null)",
+              "status": "passed",
+              "durationMs": 4.57717699999921,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > uses the default billing profile when another profile has a conflicting reverse-charge setting"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection uses the default billing profile when another profile has a conflicting reverse-charge setting",
+              "status": "passed",
+              "durationMs": 12.922946999999112,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > persists default-profile reverse charge and applies it before regional rate lookup"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection persists default-profile reverse charge and applies it before regional rate lookup",
+              "status": "passed",
+              "durationMs": 14.993289000005461,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-01-01, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-01-01, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 6.92728299999726,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-06-30, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-06-30, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 10.129696999996668,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-07-01, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-07-01, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 8.497963999994681,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > rejects a date before any active regional rate starts"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection rejects a date before any active regional rate starts",
+              "status": "passed",
+              "durationMs": 8.07781299999624,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (undefined)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (undefined)",
+              "status": "passed",
+              "durationMs": 8.210404999990715,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (USD)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (USD)",
+              "status": "passed",
+              "durationMs": 8.568259000006947,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (EUR)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (EUR)",
+              "status": "passed",
+              "durationMs": 11.447897000005469,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (GBP)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (GBP)",
+              "status": "passed",
+              "durationMs": 8.236147000003257,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2025-12-31)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2025-12-31)",
+              "status": "passed",
+              "durationMs": 7.751582000011695,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2026-01-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2026-01-01)",
+              "status": "passed",
+              "durationMs": 7.987630000003264,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2026-07-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2026-07-01)",
+              "status": "passed",
+              "durationMs": 7.675719000006211,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > filters the default rate by currency (USD)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection filters the default rate by currency (USD)",
+              "status": "passed",
+              "durationMs": 8.19941299999482,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > filters the default rate by currency (EUR)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection filters the default rate by currency (EUR)",
+              "status": "passed",
+              "durationMs": 7.779412000003504,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for 0 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for 0 cents",
+              "status": "passed",
+              "durationMs": 15.77943100000266,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for -10000 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for -10000 cents",
+              "status": "passed",
+              "durationMs": 8.146254000006593,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for 333 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for 333 cents",
+              "status": "passed",
+              "durationMs": 8.807633000003989,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > preserves a fractional PostgreSQL percentage and rounds only the resulting tax cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection preserves a fractional PostgreSQL percentage and rounds only the resulting tax cents",
+              "status": "passed",
+              "durationMs": 8.90020899999945,
+              "expectedCount": 1,
+              "executedCount": 1
+            }
+          ]
+        }
+      ],
+      "ledgerLimits": [
+        "Requires disposable PostgreSQL/Redis services for canonical runner; local evidence used the task-owned migrated database with rollback fixtures.",
+        "No production incident identifier was supplied; do not count as an attributed production escape.",
+        "Current candidate native CI remains unverified."
+      ]
+    },
+    {
+      "ledgerId": "tax-action-asynchronous-error-mapping",
+      "classification": "discovered-during-database-regression-testing",
+      "incident": null,
+      "mappedFiles": [
+        {
+          "file": "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+          "tests": [
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > honors persisted threshold minima and gaps with PostgreSQL numeric values"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection honors persisted threshold minima and gaps with PostgreSQL numeric values",
+              "status": "passed",
+              "durationMs": 20.8041760000051,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > create and update actions persist a valid rate through their real transactions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection create and update actions persist a valid rate through their real transactions",
+              "status": "passed",
+              "durationMs": 6.425846999991336,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > create and update actions reject overlapping ranges without persisting changes"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection create and update actions reject overlapping ranges without persisting changes",
+              "status": "passed",
+              "durationMs": 9.686310999997659,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > excludes the edited rate while preserving tenant and region boundaries in overlap validation"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection excludes the edited rate while preserving tenant and region boundaries in overlap validation",
+              "status": "passed",
+              "durationMs": 6.821715999991284,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, null) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, null) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.732046999997692,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, null) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, null) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.020042999996804,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, null) against existing [2026-07-01, 2026-08-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, null) against existing [2026-07-01, 2026-08-01)",
+              "status": "passed",
+              "durationMs": 4.253444000001764,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, null) against existing [2026-01-01, 2026-07-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, null) against existing [2026-01-01, 2026-07-01)",
+              "status": "passed",
+              "durationMs": 3.8930659999896307,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, 2026-07-01) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, 2026-07-01) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.183424999995623,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, 2026-08-01) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, 2026-08-01) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.3493409999937285,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, 2026-08-01) against existing [2026-01-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, 2026-08-01) against existing [2026-01-01, null)",
+              "status": "passed",
+              "durationMs": 4.57717699999921,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > uses the default billing profile when another profile has a conflicting reverse-charge setting"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection uses the default billing profile when another profile has a conflicting reverse-charge setting",
+              "status": "passed",
+              "durationMs": 12.922946999999112,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > persists default-profile reverse charge and applies it before regional rate lookup"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection persists default-profile reverse charge and applies it before regional rate lookup",
+              "status": "passed",
+              "durationMs": 14.993289000005461,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-01-01, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-01-01, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 6.92728299999726,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-06-30, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-06-30, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 10.129696999996668,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-07-01, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-07-01, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 8.497963999994681,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > rejects a date before any active regional rate starts"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection rejects a date before any active regional rate starts",
+              "status": "passed",
+              "durationMs": 8.07781299999624,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (undefined)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (undefined)",
+              "status": "passed",
+              "durationMs": 8.210404999990715,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (USD)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (USD)",
+              "status": "passed",
+              "durationMs": 8.568259000006947,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (EUR)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (EUR)",
+              "status": "passed",
+              "durationMs": 11.447897000005469,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (GBP)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (GBP)",
+              "status": "passed",
+              "durationMs": 8.236147000003257,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2025-12-31)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2025-12-31)",
+              "status": "passed",
+              "durationMs": 7.751582000011695,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2026-01-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2026-01-01)",
+              "status": "passed",
+              "durationMs": 7.987630000003264,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2026-07-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2026-07-01)",
+              "status": "passed",
+              "durationMs": 7.675719000006211,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > filters the default rate by currency (USD)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection filters the default rate by currency (USD)",
+              "status": "passed",
+              "durationMs": 8.19941299999482,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > filters the default rate by currency (EUR)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection filters the default rate by currency (EUR)",
+              "status": "passed",
+              "durationMs": 7.779412000003504,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for 0 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for 0 cents",
+              "status": "passed",
+              "durationMs": 15.77943100000266,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for -10000 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for -10000 cents",
+              "status": "passed",
+              "durationMs": 8.146254000006593,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for 333 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for 333 cents",
+              "status": "passed",
+              "durationMs": 8.807633000003989,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > preserves a fractional PostgreSQL percentage and rounds only the resulting tax cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection preserves a fractional PostgreSQL percentage and rounds only the resulting tax cents",
+              "status": "passed",
+              "durationMs": 8.90020899999945,
+              "expectedCount": 1,
+              "executedCount": 1
+            }
+          ]
+        }
+      ],
+      "ledgerLimits": [
+        "Requires disposable PostgreSQL/Redis services for canonical runner; local evidence used the task-owned migrated database with rollback fixtures.",
+        "No production incident identifier was supplied; do not count as an attributed production escape.",
+        "Current candidate native CI remains unverified.",
+        "Auth, RBAC and product-access guards are substituted. Transaction/savepoint, validation and persistence behavior are real."
+      ]
+    },
+    {
+      "ledgerId": "tax-threshold-minimum-and-gaps",
+      "classification": "discovered-during-regression-testing",
+      "incident": null,
+      "mappedFiles": [
+        {
+          "file": "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+          "tests": [
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > honors persisted threshold minima and gaps with PostgreSQL numeric values"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection honors persisted threshold minima and gaps with PostgreSQL numeric values",
+              "status": "passed",
+              "durationMs": 20.8041760000051,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > create and update actions persist a valid rate through their real transactions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection create and update actions persist a valid rate through their real transactions",
+              "status": "passed",
+              "durationMs": 6.425846999991336,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > create and update actions reject overlapping ranges without persisting changes"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection create and update actions reject overlapping ranges without persisting changes",
+              "status": "passed",
+              "durationMs": 9.686310999997659,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > excludes the edited rate while preserving tenant and region boundaries in overlap validation"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection excludes the edited rate while preserving tenant and region boundaries in overlap validation",
+              "status": "passed",
+              "durationMs": 6.821715999991284,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, null) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, null) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.732046999997692,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, null) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, null) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.020042999996804,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, null) against existing [2026-07-01, 2026-08-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, null) against existing [2026-07-01, 2026-08-01)",
+              "status": "passed",
+              "durationMs": 4.253444000001764,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, null) against existing [2026-01-01, 2026-07-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, null) against existing [2026-01-01, 2026-07-01)",
+              "status": "passed",
+              "durationMs": 3.8930659999896307,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, 2026-07-01) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, 2026-07-01) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.183424999995623,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-01-01, 2026-08-01) against existing [2026-07-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-01-01, 2026-08-01) against existing [2026-07-01, null)",
+              "status": "passed",
+              "durationMs": 4.3493409999937285,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > validates proposed [2026-07-01, 2026-08-01) against existing [2026-01-01, null)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection validates proposed [2026-07-01, 2026-08-01) against existing [2026-01-01, null)",
+              "status": "passed",
+              "durationMs": 4.57717699999921,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > uses the default billing profile when another profile has a conflicting reverse-charge setting"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection uses the default billing profile when another profile has a conflicting reverse-charge setting",
+              "status": "passed",
+              "durationMs": 12.922946999999112,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > persists default-profile reverse charge and applies it before regional rate lookup"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection persists default-profile reverse charge and applies it before regional rate lookup",
+              "status": "passed",
+              "durationMs": 14.993289000005461,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-01-01, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-01-01, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 6.92728299999726,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-06-30, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-06-30, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 10.129696999996668,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > selects the active rate at 2026-07-01, excluding other tenants and regions"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection selects the active rate at 2026-07-01, excluding other tenants and regions",
+              "status": "passed",
+              "durationMs": 8.497963999994681,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > rejects a date before any active regional rate starts"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection rejects a date before any active regional rate starts",
+              "status": "passed",
+              "durationMs": 8.07781299999624,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (undefined)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (undefined)",
+              "status": "passed",
+              "durationMs": 8.210404999990715,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (USD)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (USD)",
+              "status": "passed",
+              "durationMs": 8.568259000006947,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (EUR)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (EUR)",
+              "status": "passed",
+              "durationMs": 11.447897000005469,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > combines only universal and matching currency rates (GBP)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection combines only universal and matching currency rates (GBP)",
+              "status": "passed",
+              "durationMs": 8.236147000003257,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2025-12-31)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2025-12-31)",
+              "status": "passed",
+              "durationMs": 7.751582000011695,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2026-01-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2026-01-01)",
+              "status": "passed",
+              "durationMs": 7.987630000003264,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > applies default-rate start and exclusive end dates (2026-07-01)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection applies default-rate start and exclusive end dates (2026-07-01)",
+              "status": "passed",
+              "durationMs": 7.675719000006211,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > filters the default rate by currency (USD)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection filters the default rate by currency (USD)",
+              "status": "passed",
+              "durationMs": 8.19941299999482,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > filters the default rate by currency (EUR)"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection filters the default rate by currency (EUR)",
+              "status": "passed",
+              "durationMs": 7.779412000003504,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for 0 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for 0 cents",
+              "status": "passed",
+              "durationMs": 15.77943100000266,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for -10000 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for -10000 cents",
+              "status": "passed",
+              "durationMs": 8.146254000006593,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > normalizes the PostgreSQL default percentage for 333 cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection normalizes the PostgreSQL default percentage for 333 cents",
+              "status": "passed",
+              "durationMs": 8.807633000003989,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "packages/billing/src/services/taxService.rateSelection.db.test.ts",
+                "TaxService PostgreSQL rate selection > preserves a fractional PostgreSQL percentage and rounds only the resulting tax cents"
+              ],
+              "fullName": "TaxService PostgreSQL rate selection preserves a fractional PostgreSQL percentage and rounds only the resulting tax cents",
+              "status": "passed",
+              "durationMs": 8.90020899999945,
+              "expectedCount": 1,
+              "executedCount": 1
+            }
+          ]
+        }
+      ],
+      "ledgerLimits": [
+        "Existing three tax policy TODOs remain unresolved.",
+        "Local focused runs, not full candidate native execution.",
+        "Database fixture substitutes tenant connection context and rolls back each test."
+      ]
+    },
+    {
+      "ledgerId": "survey-unverified-domain-false-success",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "mappedFiles": [
+        {
+          "file": "server/src/services/surveyResponseActions.db.test.ts",
+          "tests": [
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "ticket survey response persistence > resolves the token, persists feedback once and publishes tenant-scoped subject metadata"
+              ],
+              "fullName": "ticket survey response persistence resolves the token, persists feedback once and publishes tenant-scoped subject metadata",
+              "status": "passed",
+              "durationMs": 105.74074599999585,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "ticket survey response persistence > does not publish contact or client metadata owned by another tenant"
+              ],
+              "fullName": "ticket survey response persistence does not publish contact or client metadata owned by another tenant",
+              "status": "passed",
+              "durationMs": 97.58057700000063,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "ticket survey response persistence > renders an invitation whose link resolves and accepts a response"
+              ],
+              "fullName": "ticket survey response persistence renders an invitation whose link resolves and accepts a response",
+              "status": "passed",
+              "durationMs": 108.053780000002,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "ticket survey response persistence > rejects a recipient from another tenant before sending or persisting an invitation"
+              ],
+              "fullName": "ticket survey response persistence rejects a recipient from another tenant before sending or persisting an invitation",
+              "status": "passed",
+              "durationMs": 101.80539199999475,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "ticket survey response persistence > rejects delivery failure (Synthetic transport failure) without persisting an invitation or publishing sent events"
+              ],
+              "fullName": "ticket survey response persistence rejects delivery failure (Synthetic transport failure) without persisting an invitation or publishing sent events",
+              "status": "passed",
+              "durationMs": 111.95197300000291,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "ticket survey response persistence > rejects delivery failure (Sender domain is not verified) without persisting an invitation or publishing sent events"
+              ],
+              "fullName": "ticket survey response persistence rejects delivery failure (Sender domain is not verified) without persisting an invitation or publishing sent events",
+              "status": "passed",
+              "durationMs": 132.66147599999385,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "ticket survey response persistence > reports the subject and assigned technician in lists, negative feedback and filters"
+              ],
+              "fullName": "ticket survey response persistence reports the subject and assigned technician in lists, negative feedback and filters",
+              "status": "passed",
+              "durationMs": 117.54167700000107,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "ticket survey response persistence > rejects an out-of-range rating without consuming the invitation"
+              ],
+              "fullName": "ticket survey response persistence rejects an out-of-range rating without consuming the invitation",
+              "status": "passed",
+              "durationMs": 96.85433300001023,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "project survey response persistence > resolves the token, persists feedback once and publishes tenant-scoped subject metadata"
+              ],
+              "fullName": "project survey response persistence resolves the token, persists feedback once and publishes tenant-scoped subject metadata",
+              "status": "passed",
+              "durationMs": 100.72363199999381,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "project survey response persistence > does not publish contact or client metadata owned by another tenant"
+              ],
+              "fullName": "project survey response persistence does not publish contact or client metadata owned by another tenant",
+              "status": "passed",
+              "durationMs": 104.20209500000055,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "project survey response persistence > renders an invitation whose link resolves and accepts a response"
+              ],
+              "fullName": "project survey response persistence renders an invitation whose link resolves and accepts a response",
+              "status": "passed",
+              "durationMs": 109.60932999999204,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "project survey response persistence > rejects a recipient from another tenant before sending or persisting an invitation"
+              ],
+              "fullName": "project survey response persistence rejects a recipient from another tenant before sending or persisting an invitation",
+              "status": "passed",
+              "durationMs": 104.87356900000304,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "project survey response persistence > rejects delivery failure (Synthetic transport failure) without persisting an invitation or publishing sent events"
+              ],
+              "fullName": "project survey response persistence rejects delivery failure (Synthetic transport failure) without persisting an invitation or publishing sent events",
+              "status": "passed",
+              "durationMs": 112.27703399999882,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "project survey response persistence > rejects delivery failure (Sender domain is not verified) without persisting an invitation or publishing sent events"
+              ],
+              "fullName": "project survey response persistence rejects delivery failure (Sender domain is not verified) without persisting an invitation or publishing sent events",
+              "status": "passed",
+              "durationMs": 106.86652899999171,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "project survey response persistence > reports the subject and assigned technician in lists, negative feedback and filters"
+              ],
+              "fullName": "project survey response persistence reports the subject and assigned technician in lists, negative feedback and filters",
+              "status": "passed",
+              "durationMs": 112.8674769999925,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "project survey response persistence > rejects an out-of-range rating without consuming the invitation"
+              ],
+              "fullName": "project survey response persistence rejects an out-of-range rating without consuming the invitation",
+              "status": "passed",
+              "durationMs": 96.47870600000897,
+              "expectedCount": 1,
+              "executedCount": 1
+            },
+            {
+              "identity": [
+                "server/src/services/surveyResponseActions.db.test.ts",
+                "installs all project email translations idempotently and rolls back without removing ticket templates"
+              ],
+              "fullName": "installs all project email translations idempotently and rolls back without removing ticket templates",
+              "status": "passed",
+              "durationMs": 140.27965899999253,
+              "expectedCount": 1,
+              "executedCount": 1
+            }
+          ]
+        }
+      ],
+      "ledgerLimits": [
+        "Synthetic transport rejection with actual database/template/token behavior.",
+        "No production incident identifier supplied."
+      ]
+    }
+  ],
+  "limits": [
+    "Exact after-fix test execution at the stated merge revision; this artifact does not rerun the broken implementations or independently establish a production incident.",
+    "Only ledger files selected by the workspace-db lane are covered; other mapped unit, infrastructure and browser tests require their own evidence.",
+    "Month-end hydration uses real database data but mocks invoice creation, authentication and event publishing.",
+    "Survey failure cases inject transport/domain failures and mock email/event/auth boundaries; they verify database persistence guards, not actual provider delivery.",
+    "No supplied incident identifiers or named owners were inferred. A passed database lane is not whole-run or deployment readiness."
+  ]
+}

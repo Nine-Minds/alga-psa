@@ -114,6 +114,35 @@ const InteractionStatusSettings = (): React.JSX.Element => {
     }
   };
 
+  // New interactions are created with the default status, so exactly one open status must
+  // hold it. Closed statuses are rejected server-side too.
+  const setDefaultStatus = async (status: IStatus): Promise<void> => {
+    if (status.is_default) {
+      toast.error(t('interactions.statuses.messages.error.defaultRequired'));
+      return;
+    }
+    if (status.is_closed) {
+      toast.error(t('interactions.statuses.messages.error.closedCannotBeDefault'));
+      return;
+    }
+
+    try {
+      const result = await updateStatus(status.status_id!, { ...status, is_default: true });
+      if (isStatusActionError(result)) {
+        toast.error(statusActionErrorMessage(result));
+        return;
+      }
+      setStatuses(statuses.map((candidate): IStatus =>
+        candidate.status_type === STATUS_TYPE
+          ? { ...candidate, is_default: candidate.status_id === status.status_id }
+          : candidate
+      ));
+      toast.success(t('interactions.statuses.messages.success.defaultUpdated'));
+    } catch (error) {
+      handleError(error, 'Failed to update default status');
+    }
+  };
+
   const handleDeleteStatusRequest = (statusId: string): void => {
     const status = statuses.find(s => s.status_id === statusId);
     if (status) {
@@ -231,12 +260,12 @@ const InteractionStatusSettings = (): React.JSX.Element => {
     {
       title: t('interactions.statuses.table.name'),
       dataIndex: 'name',
-      width: '30%',
+      width: '25%',
     },
     {
       title: t('interactions.statuses.table.status'),
       dataIndex: 'is_closed',
-      width: '40%',
+      width: '35%',
       render: (value, record) => (
         <div className="flex items-center space-x-2 text-gray-500">
           <span className="text-sm mr-2">
@@ -252,6 +281,27 @@ const InteractionStatusSettings = (): React.JSX.Element => {
               ? t('interactions.statuses.statusLabels.closedHelp')
               : t('interactions.statuses.statusLabels.openHelp')
             }
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: t('interactions.statuses.table.default'),
+      dataIndex: 'is_default',
+      width: '20%',
+      render: (_, record) => (
+        <div className="flex items-center space-x-2 text-gray-500">
+          <Switch
+            id={`interaction-status-default-${record.status_id}`}
+            checked={!!record.is_default}
+            disabled={record.is_closed}
+            onCheckedChange={() => setDefaultStatus(record)}
+            className="data-[state=checked]:bg-primary-500"
+          />
+          <span className="text-xs text-gray-400">
+            {record.is_default
+              ? t('interactions.statuses.defaultLabels.isDefault')
+              : t('interactions.statuses.defaultLabels.setDefault')}
           </span>
         </div>
       ),

@@ -46,7 +46,8 @@ type TemplateRow = {
 type InvitationRow = {
   invitation_id: string;
   tenant: string;
-  ticket_id: string;
+  ticket_id: string | null;
+  project_id: string | null;
   client_id: string | null;
   contact_id: string | null;
   template_id: string;
@@ -56,9 +57,9 @@ type InvitationRow = {
   responded?: boolean;
 };
 
-type TicketRow = {
-  ticket_id: string;
-  ticket_number: string | null;
+type SubjectRow = {
+  subject_id: string;
+  subject_number: string | null;
   title: string | null;
   client_id: string | null;
   contact_name_id: string | null;
@@ -81,15 +82,14 @@ type TenantRow = {
   name?: string | null;
 };
 
-export interface SendSurveyInvitationParams {
+export type SendSurveyInvitationParams = {
   tenantId: string;
-  ticketId: string;
   templateId?: string;
   clientId?: string | null;
   contactId?: string | null;
   locale?: string;
   actorUserId?: string;
-}
+} & ({ ticketId: string; projectId?: never } | { projectId: string; ticketId?: never });
 
 export interface SendSurveyInvitationResult {
   invitationId: string;
@@ -117,11 +117,16 @@ function appendDebug(step: string, data: Record<string, unknown>) {
 }
 
 export async function sendSurveyInvitation(params: SendSurveyInvitationParams): Promise<SendSurveyInvitationResult> {
+  if (Boolean(params.ticketId) === Boolean(params.projectId)) throw new Error('Exactly one survey subject is required');
+  const isProject = Boolean(params.projectId);
+  const subjectId = params.projectId ?? params.ticketId!;
+  const subjectColumn = isProject ? 'project_id' : 'ticket_id';
+  const subjectIds = isProject ? { projectId: subjectId } : { ticketId: subjectId };
   appendDebug('start', { params });
   return runWithTenant(params.tenantId, async () => {
     logger.info('[SurveyService] sendSurveyInvitation invoked', {
       tenantId: params.tenantId,
-      ticketId: params.ticketId,
+      ...subjectIds,
       templateId: params.templateId,
     });
 
@@ -134,29 +139,29 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       invitation,
       template,
       contact,
-      ticket,
+      subject,
       tenant,
       reminderNumber,
     } = await withTransaction(knex, async (trx) => {
-      appendDebug('transaction-begin', { tenantId: params.tenantId, ticketId: params.ticketId });
+      appendDebug('transaction-begin', { tenantId: params.tenantId, ...subjectIds });
 
       const templateRow = await loadTemplate(trx, params.tenantId, params.templateId);
       appendDebug('loaded-template', { templateId: templateRow.template_id, enabled: templateRow.enabled });
 
-      const ticketRow = await loadTicket(trx, params.tenantId, params.ticketId);
-      appendDebug('loaded-ticket', {
-        ticketId: ticketRow?.ticket_id,
-        contactId: ticketRow?.contact_name_id,
-        clientId: ticketRow?.client_id,
+      const subjectRow = await loadSubject(trx, params.tenantId, subjectId, isProject);
+      appendDebug('loaded-subject', {
+        ...subjectIds,
+        contactId: subjectRow?.contact_name_id,
+        clientId: subjectRow?.client_id,
       });
 
-      if (!ticketRow) {
-        appendDebug('ticket-missing', { ticketId: params.ticketId });
-        throw new Error('Ticket not found for survey invitation');
+      if (!subjectRow) {
+        appendDebug('subject-missing', subjectIds);
+        throw new Error(`${isProject ? 'Project' : 'Ticket'} not found for survey invitation`);
       }
 
-      const resolvedClientId = params.clientId ?? ticketRow.client_id ?? null;
-      const resolvedContactId = params.contactId ?? ticketRow.contact_name_id ?? null;
+      const resolvedClientId = params.clientId ?? subjectRow.client_id ?? null;
+      const resolvedContactId = params.contactId ?? subjectRow.contact_name_id ?? null;
 
       const contactRow = resolvedContactId
         ? await loadContact(trx, params.tenantId, resolvedContactId)
@@ -179,7 +184,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       const [{ count: previousCountRaw } = { count: 0 }] = (await tenantDb(trx, params.tenantId)
         .table(SURVEY_INVITATION_TABLE)
         .where({
-          ticket_id: ticketRow.ticket_id,
+          [subjectColumn]: subjectRow.subject_id,
           template_id: templateRow.template_id,
           contact_id: contactRow.contact_name_id,
         })
@@ -192,7 +197,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         .table<InvitationRow>(SURVEY_INVITATION_TABLE)
         .insert({
           tenant: params.tenantId,
-          ticket_id: ticketRow.ticket_id,
+          [subjectColumn]: subjectRow.subject_id,
           client_id: resolvedClientId,
           contact_id: contactRow.contact_name_id,
           template_id: templateRow.template_id,
@@ -216,7 +221,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         invitation: invitationRow,
         template: templateRow,
         contact: contactRow,
-        ticket: ticketRow,
+        subject: subjectRow,
         tenant: tenantRow,
         reminderNumber: nextReminderNumber,
       };
@@ -227,7 +232,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
     const ratingLinks = buildRatingLinks(plainToken, template.rating_scale, ratingLabels);
     const ratingButtonsHtml = buildRatingButtonsHtml(ratingLinks, template.rating_type, template.rating_scale);
     const ratingLinksText = buildRatingLinksText(ratingLinks, template.rating_type, template.rating_scale);
-    const technicianName = formatFullName(ticket.technician_first_name, ticket.technician_last_name);
+    const technicianName = formatFullName(subject.technician_first_name, subject.technician_last_name);
     const tenantDisplayName = tenant?.client_name || tenant?.name || 'Your Team';
     // Resolve contact locale when caller didn't pass one — surveys always go to
     // client-portal contacts, so the full hierarchy (user preference → client
@@ -237,14 +242,14 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         ? await resolveEmailLocale(params.tenantId, {
             email: contact.email,
             userType: 'client',
-            clientId: ticket.client_id ?? undefined,
+            clientId: subject.client_id ?? undefined,
           })
         : undefined);
 
     const templateData = {
       tenant_name: tenantDisplayName,
-      ticket_number: ticket.ticket_number ?? ticket.ticket_id,
-      ticket_subject: ticket.title ?? '',
+      ...(isProject ? { project_number: subject.subject_number ?? subject.subject_id, project_name: subject.title ?? '' }
+        : { ticket_number: subject.subject_number ?? subject.subject_id, ticket_subject: subject.title ?? '' }),
       technician_name: technicianName ?? '',
       survey_url: surveyUrl,
       rating_scale: template.rating_scale,
@@ -256,9 +261,10 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       comment_prompt: template.comment_prompt,
       thank_you_text: template.thank_you_text,
       contact_name: contact.full_name ?? '',
-      company_name: ticket.client_name ?? '',
+      company_name: subject.client_name ?? '',
       expires_at: expiresAt.toISOString(),
-      ticket_closed_at: ticket.closed_at ? toIsoString(ticket.closed_at) : '',
+      ...(isProject ? { project_closed_at: subject.closed_at ? toIsoString(subject.closed_at) : '' }
+        : { ticket_closed_at: subject.closed_at ? toIsoString(subject.closed_at) : '' }),
     };
 
     if (!contact.email) {
@@ -274,7 +280,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
     }
 
     try {
-      const processor = new DatabaseTemplateProcessor(knex, SURVEY_EMAIL_TEMPLATE_CODE);
+      const processor = new DatabaseTemplateProcessor(knex, isProject ? 'SURVEY_PROJECT_CLOSED' : SURVEY_EMAIL_TEMPLATE_CODE);
       const emailService = TenantEmailService.getInstance(params.tenantId);
       appendDebug('before-email-send', { contactEmail: contact.email });
 
@@ -301,29 +307,19 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
     } catch (error) {
       logger.error('[SurveyService] Failed to send survey invitation email', {
         tenantId: params.tenantId,
-        ticketId: params.ticketId,
+        ...subjectIds,
         contactId: contact.contact_name_id,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       appendDebug('email-error', {
         tenantId: params.tenantId,
-        ticketId: params.ticketId,
+        ...subjectIds,
         contactId: contact.contact_name_id,
         error: error instanceof Error ? error.message : error,
       });
 
-      const message = error instanceof Error ? error.message : String(error);
-      const isDomainNotVerified = message.includes('domain is not verified');
-
-      if (isDomainNotVerified) {
-        logger.warn('[SurveyService] Proceeding despite email failure (unverified domain)', {
-          tenantId: params.tenantId,
-          ticketId: params.ticketId,
-        });
-      } else {
-        await removeInvitationSafe(params.tenantId, invitation.invitation_id);
-        throw error;
-      }
+      await removeInvitationSafe(params.tenantId, invitation.invitation_id);
+      throw error;
     }
 
     const workflowCtx = {
@@ -339,7 +335,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
           surveyId: invitation.invitation_id,
           surveyType: 'csat',
           recipientId: contact.contact_name_id,
-          ticketId: ticket.ticket_id,
+          ...subjectIds,
           sentAt: new Date().toISOString(),
           channel: 'email',
           templateId: template.template_id,
@@ -356,7 +352,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
           payload: buildSurveyReminderSentPayload({
             surveyId: invitation.invitation_id,
             recipientId: contact.contact_name_id,
-            ticketId: ticket.ticket_id,
+            ...subjectIds,
             sentAt: new Date().toISOString(),
             channel: 'email',
             reminderNumber,
@@ -370,7 +366,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
     } catch (error) {
       logger.warn('[SurveyService] Failed to publish workflow survey events', {
         tenantId: params.tenantId,
-        ticketId: params.ticketId,
+        ...subjectIds,
         invitationId: invitation.invitation_id,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -414,13 +410,14 @@ async function loadTemplate(
   return template;
 }
 
-async function loadTicket(
+async function loadSubject(
   knex: Knex | Knex.Transaction,
   tenantId: string,
-  ticketId: string
-): Promise<TicketRow | null> {
+  subjectId: string,
+  isProject: boolean
+): Promise<SubjectRow | null> {
   const db = tenantDb(knex, tenantId);
-  const query = db.table<TicketRow>(`${TICKETS_TABLE} as t`);
+  const query = db.table<SubjectRow>(`${isProject ? 'projects' : TICKETS_TABLE} as t`);
 
   db.tenantJoin(query, `${CLIENTS_TABLE} as c`, 't.client_id', 'c.client_id', {
     type: 'left',
@@ -433,18 +430,18 @@ async function loadTicket(
 
   return query
     .select(
-      't.ticket_id',
-      't.ticket_number',
-      't.title',
+      `t.${isProject ? 'project_id' : 'ticket_id'} as subject_id`,
+      `t.${isProject ? 'project_number' : 'ticket_number'} as subject_number`,
+      `t.${isProject ? 'project_name' : 'title'} as title`,
       't.client_id',
       't.contact_name_id',
       't.assigned_to',
-      't.closed_at',
+      isProject ? knex.raw('NULL as closed_at') : 't.closed_at',
       'c.client_name',
       'u.first_name as technician_first_name',
       'u.last_name as technician_last_name'
     )
-    .where('t.ticket_id', ticketId)
+    .where(`t.${isProject ? 'project_id' : 'ticket_id'}`, subjectId)
     .first();
 }
 

@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "scope": "Native single-node Citus supported upgrade with application behavior",
+  "revision": "895319e52762c4343203a77f0af36f2445ea5d26",
+  "verdict": {
+    "schemaVersion": 1,
+    "scope": "supported-upgrade",
+    "revision": "895319e52762c4343203a77f0af36f2445ea5d26",
+    "status": "passed",
+    "failures": [],
+    "database": "upgrade_citus_layout_82cc_20260908",
+    "baselineRevision": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+    "results": [
+      {
+        "id": "upgrade-schema",
+        "counts": {
+          "passed": 1,
+          "failed": 0
+        },
+        "status": "passed",
+        "failures": []
+      },
+      {
+        "schemaVersion": 1,
+        "suite": "production-browser",
+        "revision": "895319e52762c4343203a77f0af36f2445ea5d26",
+        "status": "passed",
+        "expectedTests": [
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-invoice.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "upgraded billing sources generate a correctly priced invoice without consuming other tenant records"
+              ]
+            ],
+            "count": 1
+          },
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-ticket.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "upgraded tenants retain ticket writes and reject other-tenant record access"
+              ]
+            ],
+            "count": 1
+          },
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-usage.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Add Usage after upgrade preserves the old record and uses its existing contract line"
+              ]
+            ],
+            "count": 1
+          }
+        ],
+        "executedTests": [
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-invoice.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "upgraded billing sources generate a correctly priced invoice without consuming other tenant records"
+              ]
+            ],
+            "count": 1
+          },
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-ticket.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "upgraded tenants retain ticket writes and reject other-tenant record access"
+              ]
+            ],
+            "count": 1
+          },
+          {
+            "identity": [
+              "e2e-tests/upgrade-tests/retained-usage.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Add Usage after upgrade preserves the old record and uses its existing contract line"
+              ]
+            ],
+            "count": 1
+          }
+        ],
+        "counts": {
+          "passed": 3,
+          "failed": 0,
+          "flaky": 0,
+          "skipped": 0,
+          "interrupted": 0,
+          "missing": 0
+        },
+        "failures": [],
+        "id": "upgrade-browser"
+      }
+    ],
+    "source": {
+      "before": {
+        "revision": "895319e52762c4343203a77f0af36f2445ea5d26",
+        "dirty": false,
+        "changes": []
+      },
+      "after": {
+        "revision": "895319e52762c4343203a77f0af36f2445ea5d26",
+        "dirty": false,
+        "changes": []
+      }
+    }
+  },
+  "hashes": {
+    "test-results/supported-upgrade/schema.json": "18594c13ddf0ae840c68f6c6e3ab60b66c04f6a2a6f2726114967a10179ccdbc",
+    "test-results/supported-upgrade/collected.json": "74b3938922f64079ac552b1baa89fb6f0de82903d94bc66e29a90ba1c7414fc4",
+    "test-results/supported-upgrade/results.json": "da146c2dff1efc8d1d474df6889bda2a3533f7d0814e4147c1ae80c9c0fc18d0",
+    "test-results/supported-upgrade/runner.json": "01a29b0fb028f3ba62b0e355344c6a72f81d50e3156d713b3abb2becbed2aacc",
+    "test-results/supported-upgrade/evidence.json": "a845c779502bc5457e00114b14ba527f798cdd0d78850d3f5c1af1c2e2da5e7b"
+  },
+  "build": {
+    "exitCode": 0,
+    "log": "/tmp/alga-citus-app-build-895319.log",
+    "dist": "server/.next/upgrade-citus",
+    "typeValidation": false
+  },
+  "execution": {
+    "durationSeconds": 31.6,
+    "passed": 3,
+    "retries": 0,
+    "skipped": 0,
+    "database": "upgrade_citus_layout_82cc_20260908",
+    "port": 53015
+  },
+  "limitations": [
+    "Local execution only; native CI wiring and green current-source PR checks remain outstanding.",
+    "Single-node Citus; usage_tracking and time_entries are local, with tenant isolation checked through application behavior.",
+    "Initial browser run failed because reused app credentials did not match the Citus service. Preserved under /tmp/alga-citus-browser-auth-failure-895319; dedicated non-superuser upgrade_citus_82cc_app fixed environment."
+  ]
+}

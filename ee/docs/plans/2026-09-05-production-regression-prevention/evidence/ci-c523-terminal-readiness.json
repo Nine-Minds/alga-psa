@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 1,
+  "scope": "terminal-production-regression-run",
+  "repository": "Nine-Minds/alga-psa",
+  "runId": "34320694357",
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34320694357",
+  "headSha": "c523418b5d70082ae191689e26cdfa1bc9a5973d",
+  "testedRevision": "cec08351189624fb4db8db7ec453e788157fbdad",
+  "runStatus": "completed",
+  "runConclusion": "failure",
+  "runUpdatedAt": "2026-09-09T08:29:43Z",
+  "enterpriseBrowserJob": {
+    "id": 102373190823,
+    "conclusion": "failure",
+    "completedAt": "2026-09-09T08:27:45Z"
+  },
+  "readiness": {
+    "artifactId": 10095103032,
+    "status": "failed",
+    "sha256": "18436adf4a91c8202d9fc790f5865e08980f5a47135988fafb9e5dd8d4c3f9fc",
+    "results": [
+      {
+        "id": "repository-inventory",
+        "status": "passed",
+        "failures": []
+      },
+      {
+        "id": "server-unit-aggregate",
+        "status": "failed",
+        "failures": [
+          "Required workflow: failure",
+          "Failed or malformed verdict",
+          "Incomplete verdict: failed",
+          "server-unit: failed or malformed member",
+          "server-unit: empty or failed execution counts",
+          "server-unit: skipped or incomplete execution"
+        ]
+      },
+      {
+        "id": "node-workflow-gate",
+        "status": "passed",
+        "failures": []
+      },
+      {
+        "id": "workspace-execution-gate",
+        "status": "passed",
+        "failures": []
+      },
+      {
+        "id": "integration-execution-gate",
+        "status": "failed",
+        "failures": [
+          "Required workflow: failure",
+          "Failed or malformed verdict",
+          "Incomplete verdict: failed",
+          "integration: failed or malformed member",
+          "integration: skipped or incomplete execution"
+        ]
+      },
+      {
+        "id": "infrastructure-execution-evidence",
+        "status": "failed",
+        "failures": [
+          "Required workflow: failure"
+        ]
+      },
+      {
+        "id": "workspace-db-aggregate",
+        "status": "failed",
+        "failures": [
+          "Required workflow: failure"
+        ]
+      },
+      {
+        "id": "fresh-install-execution-gate",
+        "status": "failed",
+        "failures": [
+          "Required workflow: failure",
+          "Failed or malformed verdict",
+          "Incomplete verdict: failed",
+          "vitest-community: failed or malformed member",
+          "playwright-community: failed or malformed member",
+          "vitest-enterprise: failed or malformed member",
+          "playwright-enterprise: failed or malformed member",
+          "playwright-enterprise: skipped or incomplete execution"
+        ]
+      },
+      {
+        "id": "supported-upgrade-execution",
+        "status": "failed",
+        "failures": [
+          "Required workflow: failure"
+        ]
+      },
+      {
+        "id": "supported-citus-upgrade-execution",
+        "status": "failed",
+        "failures": [
+          "Required workflow: failure"
+        ]
+      },
+      {
+        "id": "teams-development-execution",
+        "status": "failed",
+        "failures": [
+          "Required workflow: failure",
+          "Failed or malformed verdict",
+          "Incomplete verdict: failed",
+          "teams-development-browser: failed or malformed member",
+          "teams-development-browser: empty or failed execution counts",
+          "teams-development-browser: skipped or incomplete execution"
+        ]
+      },
+      {
+        "id": "temporal-execution-gate",
+        "status": "passed",
+        "failures": []
+      },
+      {
+        "id": "citus-aggregate",
+        "status": "passed",
+        "failures": []
+      }
+    ]
+  },
+  "rawExecution": [
+    {
+      "artifactId": 10094086426,
+      "lane": "server-unit",
+      "counts": {
+        "passed": 15031,
+        "failed": 1,
+        "todo": 3
+      },
+      "failure": "translationKeyResolution: missing usage.bucketLoadError and usage.retryBucketBalances; three tax TODOs remain separately unresolved"
+    },
+    {
+      "artifactId": 10093970583,
+      "lane": "integration-aggregate",
+      "counts": {
+        "passed": 2155,
+        "failed": 0,
+        "skipped": 3
+      },
+      "failure": "surveyTriggerDispatch.integration.test.ts setup failure left all three assertions unexecuted"
+    },
+    {
+      "artifactId": 10093192689,
+      "lane": "community-browser",
+      "counts": {
+        "passed": 42,
+        "failed": 0,
+        "flaky": 0
+      }
+    },
+    {
+      "artifactId": 10093296439,
+      "lane": "enterprise-browser",
+      "counts": {
+        "passed": 45,
+        "failed": 0,
+        "flaky": 2
+      },
+      "failure": "Timed and all-day Microsoft calendar cases retained mapping at immediate post-delete assertion; both passed retry 1, not first-attempt readiness"
+    },
+    {
+      "artifactId": 10093385067,
+      "lane": "community-api",
+      "counts": {
+        "passed": 349,
+        "failed": 0
+      }
+    },
+    {
+      "artifactId": 10093493203,
+      "lane": "enterprise-api",
+      "counts": {
+        "passed": 349,
+        "failed": 0
+      }
+    },
+    {
+      "artifactId": 10093566639,
+      "lane": "postgres-supported-upgrade",
+      "counts": {
+        "passed": 3,
+        "failed": 0,
+        "retries": 0
+      },
+      "schemaStatus": "passed"
+    },
+    {
+      "artifactId": 10093682343,
+      "lane": "citus-supported-upgrade",
+      "counts": {
+        "passed": 3,
+        "failed": 0,
+        "retries": 0
+      },
+      "schemaStatus": "passed"
+    },
+    {
+      "artifactId": 10094035339,
+      "lane": "teams-development",
+      "counts": {
+        "passed": 0,
+        "failed": 1
+      },
+      "failure": "90 second page.goto load timeout in fixtures/microsoft-profile.ts:7 during initial provider-settings navigation"
+    }
+  ],
+  "propagatedFailures": {
+    "freshInstallAggregateArtifactId": 10095051245,
+    "explanation": "Shared failed browser workflow marks CE browser and both API members failed despite passing raw execution counts. Final readiness also marks supported upgrades failed solely through the failed browser workflow. Infrastructure and workspace DB final readiness failures likewise reflect their failed integration workflow, not new raw assertion failures."
+  },
+  "localWorkAfterTestedRevision": {
+    "queuedRepairs": [
+      "Missing English translation keys",
+      "Calendar post-delete mapping completion polling",
+      "Survey setup timeout isolation",
+      "Bounded diagnostic capture with partial logs"
+    ],
+    "unresolvedOrSeparate": [
+      "Teams native chunk/memory diagnosis does not establish identical CI restart cause",
+      "Tax TODO acceptance requires separate policy decision"
+    ],
+    "claim": "These later local changes were not executed by this completed run and do not alter its failed verdict."
+  },
+  "limits": [
+    "No rerun, cancellation, push, Docker execution or external state mutation was performed for this audit.",
+    "runUpdatedAt is GitHub run metadata update time; enterpriseBrowserJob.completedAt is the exact verified terminal job timestamp."
+  ]
+}

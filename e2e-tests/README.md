@@ -1,0 +1,342 @@
+# Production browser journeys
+
+This standalone Playwright package runs against an already started production
+build and its migrated services. The fresh-install workflow builds and starts
+separate CE and EE installations, obtains each installation's seeded
+credentials, and runs the tracked specs here. It installs dependencies from this package's lockfile.
+
+## Run locally
+
+For fast development feedback, run the application directly on the host against
+an isolated database and existing emulator services, then use
+`npm run test:local -- tests/<journey>.spec.ts`. This executes the same journeys
+headed, with no retries, and writes results under `test-results/local/` with
+`releaseValidation: false` and a host-development lifecycle label. It does not
+produce the production runner's execution evidence. Supply the same isolated
+database and real sign-in credentials described below. A host dev server can set
+`NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true` at startup for the
+billed-time designer journey. Reserve full production image builds for final
+packaging and installation validation.
+
+Match the database schema to the application edition. An EE host app needs the
+merged CE+EE migrations, with EE files overriding same-named CE files, as in
+`scripts/run-additional-workspace-tests.mjs` for `enterprise-integration`.
+`createTestDbConnection` accepts that directory through `TEST_MIGRATIONS_DIR`;
+without it, the helper defaults to CE migrations. Use a separate disposable
+database when changing editions. A CE-only database can pass billing tests yet
+fail unrelated EE calls because tables such as `teams_integrations` are absent.
+
+Keep the browser base URL and the application's authentication origin identical:
+cookies set on `127.0.0.1` do not follow a redirect to `localhost`. If a host test
+reports `ERR_CONNECTION_REFUSED`, check the server log before adding retries.
+Next.js can automatically restart its development server when heap usage crosses
+its threshold, briefly dropping the listener. Size `NODE_OPTIONS` for the host's
+available memory and reuse the compilation cache; the local runner keeps retries
+disabled so these interruptions remain visible.
+
+For repeated browser acceptance runs, a production build directly on the host
+can avoid development-server compilation and refresh interruptions without a
+Docker build. From `server`, with the isolated database, edition and feature
+flags configured, build once with
+`NEXT_DIST_DIR=.next/host-production node ../node_modules/next/dist/bin/next build --webpack`,
+then start with
+`NEXT_DIST_DIR=.next/host-production node ../node_modules/next/dist/bin/next start --port 53010 --hostname ::`.
+Use `playwright.config.ts` for production timeouts and keep output under
+`test-results/host-production/`. Reuse that application while editing tests;
+rebuild when application code or build-time configuration changes. Record this
+as host production-build evidence: it does not validate container packaging,
+installation or the native CI candidate.
+
+Start an isolated production installation first. Set `E2E_USER_EMAIL` and
+`E2E_USER_PASSWORD` to its credentials, then use Node 22.13 or later (through Node 26). The tenant fixtures
+also require `E2E_DATABASE_ISOLATED=true`, `E2E_DB_NAME`, and `E2E_DB_PASSWORD`.
+Set `E2E_DB_HOST`, `E2E_DB_PORT`, and `E2E_DB_USER` when they differ from
+`127.0.0.1`, `5432`, and `postgres`:
+
+```sh
+cd e2e-tests
+npm ci
+npx playwright install chromium
+E2E_BASE_URL=http://localhost:3000 E2E_EDITION=community npm test
+```
+
+The browser runs headed. On Linux without a display, install Playwright's
+Chromium system dependencies and use `xvfb-run --auto-servernum npm test`.
+`E2E_EDITION` accepts `community` or `enterprise`; it records the intended
+edition and chooses the corresponding dashboard assertion. It does not build
+an edition or enable features. CI provisions each edition on a separate runner
+using its own production image,
+migrated database, and edition-specific reports. The EE smoke stack covers the
+web application; it does not provide Temporal, extension-runner, or Citus proof. Set
+`E2E_REVISION` to the tested checkout for local report attribution; CI supplies
+its actual checkout SHA. This metadata does not prove image digest provenance.
+
+The fresh-install CE and EE images enable `release-v1-6-feature` using the
+existing client build override `NEXT_PUBLIC_FORCE_FEATURE_FLAGS`. Both server
+Dockerfiles accept that build argument and default to an empty override for
+normal builds. Local runs of the billed-time designer journey require an image
+built with `--build-arg NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true`.
+Set `E2E_BUILD_FEATURE_FLAGS=release-v1-6-feature:true` when running that image to
+record its declared configuration. The variable records metadata; it does not
+enable a feature in an already built image or override server-side flag checks.
+The designer journey verifies that the enabled controls are actually available.
+
+## Add a journey
+
+Register every new spec in `criticalBrowserFiles` in
+`scripts/verify-fresh-install-execution.mjs` and the independent `landedJourneys`
+fixture in `scripts/tests/fresh-install-execution.test.mjs`. A successful browser
+run alone is insufficient: the gate rejects unregistered specs so they cannot
+later disappear silently from both the checkout inventory and runner reports.
+Run the fresh-install execution gate tests after adding or intentionally moving
+a journey. This registry protects whole journey files; meaningful assertions
+within each file still require review.
+
+The raw email journey additionally requires `E2E_EMAIL_TRANSPORT_ISOLATED=true`,
+GreenMail 2.1.8, the built email-service image, and the SMTP sink from the
+candidate emulator build. `docker-compose.e2e-emulators.yaml` shares tenant
+secrets and attachment files between server and email-service. It exposes SMTP
+and Redis through the fixed ingress proxy; the application network remains
+internal. Set `E2E_SMTP_HOST`/`E2E_SMTP_PORT` and
+`E2E_REDIS_HOST`/`E2E_REDIS_PORT` when they differ from localhost ports 3025 and
+6379, and set `E2E_REDIS_PASSWORD` for an authenticated test Redis.
+
+`inbound-email.spec.ts` creates its IMAP provider through real sign-in and the
+settings form. It sends raw MIME through SMTP, waits for the built IMAP/queue
+consumer to create a ticket, checks inline quotation preservation, downloads
+the actual attachment, sends an agent reply through the UI, and checks the SMTP
+sink's threading headers. A customer reply must become a comment on the same
+ticket with old quoted history removed. Replaying the original IMAP pointers
+through the shipped webhook must drain from the queue without dead letters or
+duplicate tickets, comments, documents, processed-message rows, or agent mail.
+
+GreenMail creates distinct disposable mailboxes with authentication disabled
+inside the test network. The fixture supplies synthetic provider authentication
+results; this journey does not validate Internet SPF, DKIM, DMARC, or live
+provider authentication. Duplicate coverage means redelivery of the same
+provider UID and MIME bytes. A fresh SMTP delivery changes its provider UID and
+Received headers and is a different source message.
+
+Add `tests/*.spec.ts` and import `test`, `expect` and `signIn` from
+`fixtures/auth.ts`. Sign-in submits the product form and uses the resulting
+browser session. New fixtures can seed preconditions, but the operation under
+test must use real UI/API boundaries. Verify saved state after reload and the
+corresponding business outcome. Provider journeys should additionally inspect
+the emulator's actual records and wait for asynchronous work to complete.
+
+The login specs verify dashboard content, tenant/user identity, session
+persistence after reload, a rejected password, and unauthenticated access from
+a separate browser context. Tenant specs cover administrator and technician
+sign-in, saved client details, and cross-tenant client reads. Portal specs cover
+separate client identities, persistence, tenant-specific sign-in, and refusal
+to enter MSP pages. The dashboard redirect regression signs in as a real portal
+user, records the MSP-to-portal redirect, rejects authentication loops, and
+checks the same session identity after reload. The portal ticket round trip submits a request, checks its
+persisted client/contact/default assignment, adds public and internal technician
+comments, and verifies the public reply after reload. Separate client and tenant
+sessions must be denied access to the ticket. New journeys require successful
+production execution before their plan items can be marked complete.
+
+Extend fixtures by business domain so later journeys can reuse identities,
+contracts, invoices and provider controls. Keep each scenario's preconditions
+isolated. A useful journey checks three boundaries: what the user can do, what
+Alga persists, and what the external service receives. For financial operations,
+replay the actual authenticated request and verify that invoice, charge and
+transaction rows do not duplicate or change unexpectedly. For permissions,
+send that request under the denied user's own session and verify unchanged data.
+
+`fixtures/usage.ts` supplies overlapping usage/bucket contracts for Add Usage
+and invoice generation. `fixtures/invoice-document.ts` parses the PDF downloaded
+by the product and checks its invoice number, client, service and total. A
+rendered HTML preview alone does not establish that document download works.
+The invoice generation cases cover recurring usage and manually entered invoice
+numbers; their complete production execution remains pending at the time of this
+addition. See the plan's evidence and checklist for verified scope.
+
+`fixtures/recurring-billing.ts` shares tenant, Finance-role, service, billing-profile
+and scheduled-period setup between usage and hourly journeys. The time journey
+creates a ticket and empty timesheet as preconditions, then logs/submits time as
+a technician, attempts billing before approval, approves as a manager, and
+generates the invoice as Finance. It checks an explicit approval-required refusal
+from a stale Finance selection, unchanged billing data before approval, and the
+exact hours, rate, amount and billed state afterward.
+Replaying generation must preserve invoice, charge, transaction and time rows.
+
+For concurrent user identities, use `sessions.create('finance')` from the auth
+fixture and submit the normal sign-in form in its new page. This creates a
+separate browser context and closes it in fixture teardown. Playwright manages
+its trace; the fixture adds named actor screenshots and videos on failure and
+discards those extra diagnostics on success. Let the fixture close these
+contexts so it can capture failed-session state before cleanup.
+
+When a new journey exposes a defect, retain its intended before-fix assertion
+failure and the successful after-fix execution. Record the missing boundary,
+owning suite and reproduction command in the
+[regression evidence ledger](../ee/docs/plans/2026-09-05-production-regression-prevention/evidence/regression-ledger.json).
+Distinguish a product assertion failure from a test setup or runner failure.
+
+The worker fixture creates two tenants, each with an administrator, technician,
+and two portal users linked to different clients. Each tenant has a support
+board, open/closed statuses, and a normal priority; its technician is the board's
+default assignee. It uses the migration's
+canonical role grants and copies the disposable installation's initialized
+password hash. Every browser still submits the real sign-in form with the
+installation password. Fixture creation is transactional; an error rolls back
+both tenants. Reports attach synthetic identities without passwords or hashes.
+Each worker/retry has a fresh run identity. Dispose of the entire database after
+the run; the fixture deliberately retains failed-run data until that cleanup.
+CI owns this database and removes its Docker volumes in the cleanup step.
+
+## Provider fixtures
+
+CI builds algasim from the candidate checkout with
+`packages/emulators/build-image.sh --stage-only`, tests its controls, and exports
+the resulting image alongside the application images. Each edition gets its
+own instance without a persisted state volume. The browser artifact includes
+the emulator catalog and local image ID; this does not establish release digest
+promotion provenance.
+
+For local production stacks, add `docker-compose.e2e-emulators.yaml` to the
+Compose files and build `alga-e2e-test-algasim:latest` using
+`packages/emulators/build-image.sh alga-e2e-test-algasim:latest`. Add
+`127.0.0.1 algasim.test` to the browser host's hosts file for Microsoft login.
+Before loading this Compose override, generate fresh callback TLS files in an
+owned temporary directory:
+
+```sh
+export E2E_CALLBACK_TLS_DIR="$(mktemp -d)"
+node e2e-tests/harness/create-calendar-callback-tls.mjs "$E2E_CALLBACK_TLS_DIR"
+```
+
+If Docker runs in a VM, the directory must be shared with its daemon. For
+example, Colima may not share the host's `/tmp`. From the repository root, use
+a fresh directory in the ignored workspace cache instead:
+
+```bash
+mkdir -p node_modules/.cache
+export E2E_CALLBACK_TLS_DIR="$(mktemp -d "$PWD/node_modules/.cache/calendar-tls.XXXXXX")"
+node e2e-tests/harness/create-calendar-callback-tls.mjs "$E2E_CALLBACK_TLS_DIR"
+```
+
+The emulator trusts that certificate through `NODE_EXTRA_CA_CERTS`. The private
+key is mounted only into the fixed callback proxy. Its internal
+`https://calendar-callback:3443` endpoint forwards POSTs on
+`/api/calendar/webhooks/microsoft` and `/api/email/webhooks/microsoft` to the real
+application. Other paths and methods are rejected. The application retains its
+HTTPS requirement. CI verifies both proxy
+health and certificate trust from algasim before starting application journeys.
+Remove the temporary TLS directory after the stack is stopped.
+
+The override sets `APPLICATION_URL` to this trusted callback endpoint for email
+setup and background renewal. Browser authorization keeps the browser-facing
+`NEXT_PUBLIC_BASE_URL`; the two origins can differ. Calendar uses its explicit
+`CALENDAR_MICROSOFT_WEBHOOK_BASE_URL` setting.
+
+`microsoft-mailbox.spec.ts` configures the Microsoft app and mailbox through the
+UI, registers a real webhook, chooses outbound Graph sending, and checks ticket
+creation, an agent reply, expired-token recovery, and callback deduplication.
+It requires the built email-service and isolated Redis as well as msgraph.
+`fixtures/microsoft-profile.ts` shares app setup with the calendar journey.
+The emulator currently models one authorized mailbox per reset. Its
+`send-mails` view records accepted Graph requests; actual mail delivery and
+Exchange Send As permissions remain outside the emulator's scope.
+The mailbox fixture explicitly seeds aligned SPF/DKIM authentication results;
+messages without those results remain unverified and cannot establish contact
+authorship. Only Inbox is modeled, with a stable opaque folder ID and message
+parent-folder metadata. Unknown folder lookups return a Graph 404.
+
+The `algasim.test` name resolves through a Docker alias for server-side token exchange.
+QBO/Xero browser authorization uses localhost; token/API calls use the algasim
+container. Seed Stripe's `hostedBaseUrl` with `ALGASIM_PUBLIC_STRIPE_URL` and its
+webhook target with `ALGASIM_CALLBACK_BASE_URL` plus the actual webhook path.
+Do not use a browser-facing localhost address for a container callback.
+
+The override applies provider endpoints to the server, email-service, and
+workflow-worker. It makes the application network internal so containers cannot
+fall back to live vendor endpoints. A TCP ingress publishes only fixed Alga,
+PostgreSQL and emulator destinations for the host browser/test runner. The
+current smoke job starts the server and
+email-service; workflow/Temporal journeys must explicitly start their workers.
+Teams' production override restriction and unsupported SSO behavior remain
+coverage gaps; this fixture does not bypass those guards.
+
+Import `test` from `fixtures/emulators.ts` and select providers with
+`test.use({ emulatorProviders: ['stripe'] })`. Set
+`E2E_EMULATORS_ISOLATED=true` and `ALGASIM_CONTROL_URL` to the disposable
+instance. The fixture requires one worker, resets selected providers before
+each scenario, and attaches request/fault-operation evidence afterward. Use
+`emulators.seed`, `arm`, `disarm`, `action`, and `state` to control or inspect
+external services. Perform the Alga operation through the actual product.
+
+Await application jobs and the expected provider effects before finishing a
+scenario. Reset refuses observable in-flight vendor requests, but cannot detect
+future requests from an application job that is still queued. The default
+attachment omits seed parameters, headers, and bodies; explicitly select and
+redact any provider state attached by a journey. Unused provider fixtures do not
+count as completed integration coverage.
+
+Verify control behavior with built emulator dependencies from the repository
+root: `node --test e2e-tests/harness/emulator-control.test.mjs`.
+
+The Stripe specs collect three EE journeys: successful hosted payment with
+signed webhook redelivery, decline/cancellation without settlement, and
+Checkout creation failure followed by explicit fault removal and UI retry.
+They use fresh tenant identities and a transactionally seeded finalized invoice
+per scenario, avoiding stale customer mappings after an emulator reset. The
+successful case checks the persisted invoice balance, single payment and ledger
+entry, processed webhook identity, provider records and the reloaded success UI.
+CE instead collects a named API assertion that the enterprise payment webhook
+is unavailable. This distinction is visible in runner-derived case identities;
+neither edition uses a skipped Stripe test to satisfy its required collection.
+These three EE journeys and the CE availability assertion have passed production
+execution; F032 records that completed scope. Provider parity and release
+promotion are tracked separately and remain required for broader readiness.
+
+The QBO and Xero specs each drive real OAuth, service mapping and invoice
+export through the UI. They inject a failed export, expire provider access
+tokens, and recover with one invoice in the intended company/organisation.
+QBO also detects an external invoice-number edit through CDC and re-exports
+with the current SyncToken. Xero's supported live context is the first returned
+connection: the `select-organisation` emulator action controls that ordering
+before OAuth, and the journey verifies Alga displays and persists that context.
+This is not a separate Alga organisation picker or proof of live-provider OAuth
+parity. Both specs collect an explicit enterprise-only refusal check in CE.
+
+## Diagnose failures
+
+Reports are written to `playwright-report/` and `test-results/`. Traces,
+screenshots and videos are retained for the original failed attempt. CI allows
+one retry for diagnosis, but a retry-only pass fails the command. Missing
+credentials fail the tests rather than skipping them. Tests run serially
+until data fixtures support independent concurrent execution.
+
+`npm test` first collects the installed runner's cases and compares discovered
+files with Git's independent inventory of `e2e-tests/tests/`. After execution it
+reconciles file, project, nested test title and repeat count. Missing, skipped,
+interrupted, expected-failure and retry-only cases cannot satisfy the required
+set. Collection, raw results, discovery and source-attributed execution evidence
+are saved in `execution-evidence/` and uploaded by CI. Use `npx playwright test`
+directly for a filtered local investigation; that command is not the gate.
+
+Use only isolated test credentials and data: browser traces include requests
+and form interactions. CI uploads these reports with seven-day retention.
+
+Verify the retry and artifact policy independently of an application:
+
+```sh
+npm run test:harness
+```
+
+This launches the installed Chromium runner using the production configuration
+and a disposable test suite. It checks a first-attempt pass, then an intentional
+failure that passes on retry, requiring the latter command to fail and retain
+the first attempt's trace, screenshot and video. It also proves that skipped and
+expected-failure cases fail required execution accounting even though plain
+Playwright permits them. Results go to
+`harness-results/`, separate from customer journey reports. These probes do not
+count as application coverage.
+
+The same command also runs an intentional assertion failure in an additional
+manager session, verifies its trace/screenshot/video attachments, then verifies
+that a passing session discards its extra diagnostics. It needs no application
+credentials or database and does not count as a customer journey.

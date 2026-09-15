@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntraConsole } from '@ee/components/settings/integrations/entra/EntraConsole';
 import type { EntraStatusResponse } from '@alga-psa/integrations/actions';
 
 const {
+  discoverEntraManagedTenantsMock,
   getEntraConfirmedMappingsMock,
   getEntraReconciliationQueueMock,
   getEntraSyncRunDetailMock,
@@ -14,6 +15,7 @@ const {
   saveEntraSyncScheduleMock,
   startEntraSyncMock,
 } = vi.hoisted(() => ({
+  discoverEntraManagedTenantsMock: vi.fn(),
   getEntraConfirmedMappingsMock: vi.fn(),
   getEntraReconciliationQueueMock: vi.fn(),
   getEntraSyncRunDetailMock: vi.fn(),
@@ -30,6 +32,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   disconnectEntraIntegration: vi.fn(),
+  discoverEntraManagedTenants: discoverEntraManagedTenantsMock,
   getEntraConfirmedMappings: getEntraConfirmedMappingsMock,
   getEntraReconciliationQueue: getEntraReconciliationQueueMock,
   getEntraSyncRunDetail: getEntraSyncRunDetailMock,
@@ -114,6 +117,7 @@ const FABRIKAM = {
 
 describe('EntraConsole overview', () => {
   beforeEach(() => {
+    discoverEntraManagedTenantsMock.mockReset();
     getEntraConfirmedMappingsMock.mockReset();
     getEntraReconciliationQueueMock.mockReset();
     getEntraSyncRunDetailMock.mockReset();
@@ -235,6 +239,8 @@ describe('EntraConsole overview', () => {
   });
 
   it('says what the run did in words, not by printing its database status', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-25T12:00:00Z'));
     renderConsole();
 
     await waitFor(() =>
@@ -490,6 +496,55 @@ describe('EntraConsole overview', () => {
     expect((document.getElementById('entra-console-rotate') as HTMLButtonElement)?.disabled).toBe(true);
   });
 
+  it('discovers tenants onboarded after setup, from the console', async () => {
+    // Discovery only ever existed on the setup wizard, which the console
+    // replaces once setup is done — so a client onboarded later could never be
+    // found again without hand-patching the build.
+    window.history.replaceState({}, '', '/msp/settings/integrations/entra?tab=connection');
+    discoverEntraManagedTenantsMock.mockResolvedValue({
+      success: true,
+      data: { discoveredTenantCount: 1, discoveredTenants: [{ managedTenantId: 'managed-3' }] },
+    });
+
+    renderConsole();
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-run-discovery')).not.toBeNull()
+    );
+    const loadsBefore = getEntraConfirmedMappingsMock.mock.calls.length;
+
+    fireEvent.click(document.getElementById('entra-console-run-discovery') as HTMLButtonElement);
+
+    await waitFor(() => expect(discoverEntraManagedTenantsMock).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-message')?.textContent).toBe(
+        'Discovery completed. 1 tenant discovered.'
+      )
+    );
+    // The newly discovered tenant is only useful once the console has re-read
+    // what it can map.
+    expect(getEntraConfirmedMappingsMock.mock.calls.length).toBeGreaterThan(loadsBefore);
+  });
+
+  it('says why a discovery failed rather than reporting nothing found', async () => {
+    window.history.replaceState({}, '', '/msp/settings/integrations/entra?tab=connection');
+    discoverEntraManagedTenantsMock.mockResolvedValue({
+      error: 'CIPP returned 401',
+    });
+
+    renderConsole();
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-run-discovery')).not.toBeNull()
+    );
+    fireEvent.click(document.getElementById('entra-console-run-discovery') as HTMLButtonElement);
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-error')?.textContent).toBe('CIPP returned 401')
+    );
+    expect(document.getElementById('entra-console-message')).toBeNull();
+  });
+
   it('summarises the overwrite rules that are actually in force', async () => {
     renderConsole();
 
@@ -533,3 +588,5 @@ describe('EntraConsole overview', () => {
     );
   });
 });
+
+afterEach(() => vi.useRealTimers());

@@ -58,11 +58,20 @@ describe('TaxService', () => {
 
     beforeEach(() => {
         taxService = new TaxService();
-        vi.clearAllMocks();
+        vi.resetAllMocks();
         db.rows = {};
         db.queriedTables.length = 0;
         // Every calculateTax call first checks the client's tax-exempt flag.
         db.rows['clients'] = { is_tax_exempt: false };
+        db.rows['client_tax_rates'] = { tax_rate_id: 'rate1' };
+        db.rows['tax_rates'] = { tax_rate_id: 'rate1', tax_percentage: 10, is_composite: false };
+        mockClientTaxSettings.get.mockResolvedValue({
+            tenant: 'test_tenant', client_id: 'client1', tax_rate_id: 'rate1',
+            is_reverse_charge_applicable: false,
+        });
+        mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue([]);
+        mockClientTaxSettings.getCompositeTaxComponents.mockResolvedValue([]);
+        mockClientTaxSettings.getTaxHolidays.mockResolvedValue([]);
     });
 
     describe('calculateTax', () => {
@@ -97,7 +106,7 @@ describe('TaxService', () => {
             expect(result.taxRate).toBe(10);
         });
 
-        it.todo('should calculate composite tax correctly', async () => {
+        it('should calculate composite tax correctly', async () => {
             const mockTaxSettings: IClientTaxSettings = {
                 tenant: 'test_tenant',
                 client_id: 'client1',
@@ -142,13 +151,13 @@ describe('TaxService', () => {
             mockClientTaxSettings.getCompositeTaxComponents.mockResolvedValue(mockTaxComponents);
             mockClientTaxSettings.getTaxHolidays.mockResolvedValue([]);
 
-            const result = await taxService.calculateTax('client1', 100, '2023-06-01');
+            const result = await taxService.calculateTax('client1', 10000, '2023-06-01');
 
             // Expected calculation:
-            // State Tax: 100 * 5% = 5
-            // City Tax: (100 + 5) * 2% = 2.1
-            // Total Tax: 5 + 2.1 = 7.1
-            expect(result.taxAmount).toBeCloseTo(7.1, 2);
+            // Amounts are cents. State Tax: 10000 * 5% = 500
+            // City Tax: (10000 + 500) * 2% = 210
+            // Total Tax: 500 + 210 = 710 cents (7.1%).
+            expect(result.taxAmount).toBe(710);
             expect(result.taxRate).toBeCloseTo(7.1, 2);
             expect(result.taxComponents).toEqual(mockTaxComponents);
         });
@@ -325,17 +334,68 @@ describe('TaxService', () => {
         });
     });
 
-    it.todo('should handle overlapping tax holidays correctly');
-    it.todo('should apply the correct tax rate based on the transaction date');
-    it.todo('should handle tax exemptions correctly');
-    it.todo('should calculate taxes correctly for negative amounts (refunds)');
-    it.todo('should handle tax rounding correctly for small amounts');
-    it.todo('should apply the correct tax rate for international transactions');
-    it.todo('should handle tax calculation for multi-item invoices with different tax rates');
-    it.todo('should apply tax caps correctly when present');
-    it.todo('should handle tax calculation for different currencies correctly');
-    it.todo('should apply reverse charge mechanism correctly for B2B transactions');
-    it.todo('should handle tax calculation for subscriptions spanning multiple tax periods');
-    it.todo('should apply progressive tax rates correctly');
-    it.todo('should handle tax calculation for items with mixed taxable and non-taxable components');
+    it.each([
+        ['2023-05-31', 1000], ['2023-06-01', 0], ['2023-06-15', 0],
+        ['2023-06-30', 0], ['2023-07-01', 1000],
+    ] as const)('applies overlapping tax holidays once, including their boundaries (%s)', async (date, taxAmount) => {
+        db.rows['tax_rates'] = { tax_rate_id: 'rate1', is_composite: true };
+        mockClientTaxSettings.getCompositeTaxComponents.mockResolvedValue([{
+            tenant: 'test_tenant', tax_component_id: 'component1', tax_rate_id: 'rate1',
+            name: 'Tax', rate: 10, sequence: 1, is_compound: false,
+        }]);
+        mockClientTaxSettings.getTaxHolidays.mockResolvedValue([
+            { tenant: 'test_tenant', tax_holiday_id: 'h1', tax_rate_id: 'rate1', start_date: '2023-06-01', end_date: '2023-06-20' },
+            { tenant: 'test_tenant', tax_holiday_id: 'h2', tax_rate_id: 'rate1', start_date: '2023-06-10', end_date: '2023-06-30' },
+        ]);
+        const result = await taxService.calculateTax('client1', 10000, date);
+        expect(result.taxAmount).toBe(taxAmount);
+        expect(result.taxRate).toBe(taxAmount / 100);
+    });
+    // Transaction-date and currency SQL filtering run against PostgreSQL in
+    // packages/billing/src/services/taxService.rateSelection.db.test.ts.
+    // Three placeholders were removed here rather than left to read as coverage.
+    // International rates are region codes, already exercised by
+    // taxService.rateSelection.db.test.ts. Tax caps and period-spanning tax are
+    // not implemented at all -- calculateTax resolves a single date and no cap
+    // concept exists -- so they are product gaps tracked on the board, not
+    // missing tests for existing behavior.
+    it('does not tax an exempt client even when a default rate is available', async () => {
+        db.rows['clients'] = { is_tax_exempt: true };
+        expect(await taxService.calculateTax('client1', 10000, '2023-06-01')).toEqual({ taxAmount: 0, taxRate: 0 });
+        expect(db.queriedTables).toEqual(['clients']);
+    });
+    it.each([-10000, -1, 0])('applies the no-positive-base policy for a simple rate (%s cents)', async amount => {
+        expect(await taxService.calculateTax('client1', amount, '2023-06-01')).toEqual({ taxAmount: 0, taxRate: 10 });
+    });
+    it.each([[1, 1], [9, 1], [11, 2]])('rounds fractional tax cents upward (%s cents)', async (amount, taxAmount) => {
+        expect(await taxService.calculateTax('client1', amount, '2023-06-01')).toEqual({ taxAmount, taxRate: 10 });
+    });
+    // Multi-item invoice tax persistence is exercised in the infrastructure
+    // billing/invoices/billingInvoiceGeneration_tax.test.ts suite.
+    it('applies reverse charge before looking up an otherwise taxable default rate', async () => {
+        mockClientTaxSettings.get.mockResolvedValue({
+            tenant: 'test_tenant', client_id: 'client1', tax_rate_id: 'rate1',
+            is_reverse_charge_applicable: true,
+        });
+        expect(await taxService.calculateTax('client1', 10000, '2023-06-01')).toEqual({ taxAmount: 0, taxRate: 0 });
+        expect(db.queriedTables).toEqual(['clients']);
+    });
+    it.each([[10000, 500, 1], [10001, 501, 2], [25000, 2250, 3]])('taxes each reached progressive bracket separately (%s cents)', async (amount, taxAmount, reached) => {
+        mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue([
+            { tenant: 'test_tenant', tax_rate_threshold_id: 't1', tax_rate_id: 'rate1', min_amount: 0, max_amount: 10000, rate: 5 },
+            { tenant: 'test_tenant', tax_rate_threshold_id: 't2', tax_rate_id: 'rate1', min_amount: 10000, max_amount: 20000, rate: 10 },
+            { tenant: 'test_tenant', tax_rate_threshold_id: 't3', tax_rate_id: 'rate1', min_amount: 20000, rate: 15 },
+        ]);
+        const result = await taxService.calculateTax('client1', amount, '2023-06-01');
+        expect(result.taxAmount).toBe(taxAmount);
+        expect(result.taxRate).toBeCloseTo(taxAmount / amount * 100);
+        expect(result.appliedThresholds?.map(t => t.tax_rate_threshold_id)).toEqual(['t1', 't2', 't3'].slice(0, reached));
+    });
+    it('taxes only the taxable portion when callers calculate mixed components separately', async () => {
+        const taxable = await taxService.calculateTax('client1', 10000, '2023-06-01', undefined, true);
+        const exempt = await taxService.calculateTax('client1', 20000, '2023-06-01', undefined, false);
+        expect(taxable).toEqual({ taxAmount: 1000, taxRate: 10 });
+        expect(exempt).toEqual({ taxAmount: 0, taxRate: 0 });
+        expect(taxable.taxAmount + exempt.taxAmount).toBe(1000);
+    });
 });

@@ -1,0 +1,40 @@
+{
+  "scope": "Migrate server-rendered locale regression to production browser runner",
+  "baseRevision": "3de1c2a29e",
+  "workingTreeDirty": true,
+  "execution": {
+    "edition": "enterprise",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "headed": true,
+    "durationSeconds": 5.6
+  },
+  "covered": [
+    "German and French Accept-Language affect server title and HTML language",
+    "English baseline differs from translated titles",
+    "Polish locale cookie outranks browser English",
+    "Response does not plant guessed locale cookie",
+    "Hydrated browser preserves translated title and language"
+  ],
+  "limitations": [
+    "Cached local production image, not rebuilt candidate image.",
+    "Community collection only; native candidate CI remains unverified.",
+    "No authenticated tenant/user preference hierarchy coverage in this anonymous suite."
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-rendered-locale-browser.log",
+      "sha256": "2fb37fa8a84a832be1fe60d1898f0c6edacfd5ed0cedf7fd8b18f2f9c935f536"
+    },
+    {
+      "path": "/tmp/alga-locale-ce-collection.log",
+      "sha256": "88112e7bd584fff848ed277b1591dc1c3f5075f8cc786f96deb1c0e945b5da5b"
+    },
+    {
+      "path": "/tmp/alga-locale-ee-collection.log",
+      "sha256": "56860bfa76e8f57b58ba63b06d3eaf6c7a1641c981b1a515ad08b7aa53ebf739"
+    }
+  ]
+}

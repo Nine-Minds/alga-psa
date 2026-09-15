@@ -105,18 +105,26 @@ const SUBPROCESS_BOUNDS = { timeout: SUBPROCESS_TIMEOUT_MS, killSignal: 'SIGKILL
  * runner user) create the namespace but map only uid 0, so a chown to a
  * subordinate uid fails with EPERM. The ownership tests below need a real
  * `chown 1`, so the probe performs one end to end and only enables the tests
- * when it actually succeeds. Skipped where that capability is unavailable.
+ * when it actually succeeds. Local runs skip when it is unavailable; the
+ * explicit CI mode below requires a working root/sudo path instead.
  */
-const HAS_USERNS_CHOWN = (() => {
+// CI may explicitly use root/sudo for these test-created temporary stores.
+// Ordinary local runs retain the unprivileged user-namespace path.
+const REQUIRE_CHOWN_TESTS = process.env.ALGA_TEST_PRIVILEGED_CHOWN === '1';
+const ownershipRunner = REQUIRE_CHOWN_TESTS
+  ? process.getuid?.() === 0
+    ? { command: 'bash', args: [] as string[] }
+    : { command: 'sudo', args: ['-n', 'bash'] }
+  : { command: 'unshare', args: ['-r', '--map-auto', 'bash'] };
+const restoreOwner = REQUIRE_CHOWN_TESTS ? String(process.getuid?.() ?? 0) : '0';
+const HAS_CHOWN_TEST_CAPABILITY = (() => {
   try {
     execFileSync(
-      'unshare',
+      ownershipRunner.command,
       [
-        '-r',
-        '--map-auto',
-        'bash',
+        ...ownershipRunner.args,
         '-c',
-        'set -e; d=$(mktemp -d); f="$d/probe"; : > "$f"; chown 1 "$f"; chown 0 "$f"; rm -rf "$d"',
+        'set -e; d=$(mktemp -d); trap \'rm -rf "$d"\' EXIT; f="$d/probe"; : > "$f"; chown 1 "$f"; chown 0 "$f"',
       ],
       { stdio: 'ignore', ...SUBPROCESS_BOUNDS },
     );
@@ -125,6 +133,9 @@ const HAS_USERNS_CHOWN = (() => {
     return false;
   }
 })();
+if (REQUIRE_CHOWN_TESTS && !HAS_CHOWN_TEST_CAPABILITY) {
+  throw new Error('Fixture ownership tests were required but root/sudo chown capability is unavailable');
+}
 
 let rootDir: string;
 let previousUmask: number;
@@ -1032,7 +1043,7 @@ describe('repair script', () => {
     }
   });
 
-  it.runIf(HAS_USERNS_CHOWN)('--apply --uid as root fixes mode and ownership together, including the root itself', async () => {
+  it.runIf(HAS_CHOWN_TEST_CAPABILITY)('--apply --uid as root fixes mode and ownership together, including the root itself', async () => {
     const store = path.join(rootDir, 'chown-store');
     const secretFile = path.join(store, 'tenants', 't1', 'token');
     await mkdir(path.dirname(secretFile), { recursive: true });
@@ -1042,20 +1053,17 @@ describe('repair script', () => {
     await fsPromises.chmod(path.join(store, 'tenants'), 0o700);
     await fsPromises.chmod(store, 0o755);
 
-    // Inside `unshare -r --map-auto` the test uid maps to root (0) and a
-    // subordinate range is available, so chown to uid 1 really executes. All
-    // entries are owned by ns-uid 0 while the target is uid 1: every entry
-    // needs a chown, and the wrong-moded ones (including the root) need a
-    // chmod in the same pass. Ownership is restored to ns-uid 0 (the real
-    // test uid outside) before leaving the namespace so cleanup works.
+    // Run with real chown capability, supplied by a namespace or explicit CI
+    // root/sudo mode. The target owner differs from the fixture owner. Restore
+    // the original runner UID on every exit so ordinary cleanup still works.
     const script = [
       'set -e',
       'REPAIR="$0"; STORE="$1"',
+      'trap \'chown -R "$2" "$STORE"\' EXIT',
       'bash "$REPAIR" --apply --path "$STORE" --uid 1',
       'stat -c "%u %a" "$STORE" "$STORE/tenants" "$STORE/tenants/t1" "$STORE/tenants/t1/token"',
-      'chown -R 0 "$STORE"',
     ].join('\n');
-    const output = execFileSync('unshare', ['-r', '--map-auto', 'bash', '-c', script, REPAIR_SCRIPT, store], {
+    const output = execFileSync(ownershipRunner.command, [...ownershipRunner.args, '-c', script, REPAIR_SCRIPT, store, restoreOwner], {
       encoding: 'utf8',
       ...SUBPROCESS_BOUNDS,
     });
@@ -1073,7 +1081,7 @@ describe('repair script', () => {
     expect(await readFile(secretFile, 'utf-8')).toBe(SECRET_VALUE);
   });
 
-  it.runIf(HAS_USERNS_CHOWN)('--apply without --uid exits non-zero when ownership is mixed', async () => {
+  it.runIf(HAS_CHOWN_TEST_CAPABILITY)('--apply without --uid exits non-zero when ownership is mixed', async () => {
     const store = path.join(rootDir, 'mixed-owner-store');
     const secretFile = path.join(store, 'tenants', 't1', 'token');
     await mkdir(path.dirname(secretFile), { recursive: true });
@@ -1088,11 +1096,11 @@ describe('repair script', () => {
     // the mismatch and refuse to claim success.
     const script = [
       'REPAIR="$0"; STORE="$1"',
+      'trap \'chown -R "$2" "$STORE"\' EXIT',
       'chown 1 "$STORE/tenants/t1/token"',
       'if bash "$REPAIR" --apply --path "$STORE"; then echo "EXIT_ZERO"; else echo "EXIT_NONZERO"; fi',
-      'chown -R 0 "$STORE"',
     ].join('\n');
-    const output = execFileSync('unshare', ['-r', '--map-auto', 'bash', '-c', script, REPAIR_SCRIPT, store], {
+    const output = execFileSync(ownershipRunner.command, [...ownershipRunner.args, '-c', script, REPAIR_SCRIPT, store, restoreOwner], {
       encoding: 'utf8',
       ...SUBPROCESS_BOUNDS,
     });

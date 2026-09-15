@@ -65,6 +65,8 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   disableSave = false
 }: TimeEntryFormProps) {
   const { t } = useTranslation('msp/time-entry');
+  const latestEntry = useRef(entry);
+  latestEntry.current = entry;
   // Use work item times for ad-hoc entries - only update if values actually changed
   useEffect(() => {
     if (entry?.work_item_type === 'ad_hoc' && entry.start_time && entry.end_time) {
@@ -212,6 +214,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
   // Load eligible contract lines and set default tax region when service or client ID changes
   useEffect(() => {
+    let cancelled = false;
     const loadDataAndSetDefaults = async () => {
       // --- Removed Tax Region / Default Rate Logic ---
       // Tax details are now determined by the backend based on service_id's tax_rate_id
@@ -237,6 +240,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       }
 
       // 2. Load Eligible Contract Lines (dependent on service and client)
+      if (cancelled) return;
       if (!entry?.service_id) {
         console.log('No service ID available, cannot load contract lines');
         setEligibleContractLines([]);
@@ -251,6 +255,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
             entry.service_id,
             entry.start_time ?? selectedDate.toISOString()
           ) as EligiblePlanUI[];
+          if (cancelled) return;
           const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
 
           const filteredPlans = plans.filter(plan => {
@@ -265,7 +270,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           console.log('Eligible contract lines loaded:', currentEligiblePlans);
 
           // 3. Set Default Contract Line (only if lines were loaded)
-          const currentContractLineId = entry?.contract_line_id; // Use entry from closure
+          const currentContractLineId = latestEntry.current?.contract_line_id;
           if (!currentContractLineId && currentEligiblePlans.length > 0) {
             let defaultPlanId: string | null = null;
             if (currentEligiblePlans.length === 1) {
@@ -283,18 +288,17 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
             if (defaultPlanId) {
               const entryWithUpdatedPlan = {
-                ...entry, // Includes tax updates already applied
+                ...latestEntry.current, // Preserve edits made while the lookup was pending.
                 contract_line_id: defaultPlanId
               };
               onUpdateEntry(index, entryWithUpdatedPlan);
-              // Update the 'entry' variable in this scope
-              entry = entryWithUpdatedPlan;
             }
           } else {
             console.log('Contract line already set or no eligible lines found, skipping default selection.');
           }
 
         } catch (error) {
+          if (cancelled) return;
           console.error('Error loading eligible contract lines:', error);
           setEligibleContractLines([]); // Reset on error
         }
@@ -305,7 +309,8 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (entry) {
       loadDataAndSetDefaults();
     }
-  }, [entry?.service_id, clientId, entry?.start_time, entry?.contract_line_id, index, onUpdateEntry]);
+    return () => { cancelled = true; };
+  }, [entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, entry?.contract_line_id, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
   const durationToSet = Math.max(0, newDuration);

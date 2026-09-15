@@ -1022,23 +1022,30 @@ export const SurveyInvitationSentPayloadSchema = BasePayloadSchema.extend({
 
 export const SurveyResponseSubmittedPayloadSchema = BasePayloadSchema.extend({
   responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
+  ticketId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
   companyId: z.string().uuid().optional(),
   rating: z.number(),
   hasComment: z.boolean(),
-});
+}).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' });
 
 export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
   responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
-  ticketNumber: z.string(),
+  ticketId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+  ticketNumber: z.string().optional(),
+  projectNumber: z.string().optional(),
   companyId: z.string().uuid().optional(),
   companyName: z.string().optional(),
   contactName: z.string().optional(),
   rating: z.number(),
   comment: z.string().optional(),
   assignedTo: z.string().uuid().optional(),
-});
+}).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' })
+  .refine(value => value.projectId
+    ? value.projectNumber !== undefined && value.ticketNumber === undefined
+    : value.ticketNumber !== undefined && value.projectNumber === undefined,
+  { message: 'Survey subject number must match its subject type' });
 
 export const TicketResponseStateChangedPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),

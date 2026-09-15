@@ -36,7 +36,7 @@ export function MspSsoAdvancedSection(): React.JSX.Element {
     };
   }, [expanded, status]);
 
-  const showInertNotice = Boolean(status?.success && !status.google && !status.microsoft);
+  const showInertNotice = Boolean(status?.success && !status.google && !status.microsoft && !status.keycloak);
 
   return (
     <Card className="mt-6">

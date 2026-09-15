@@ -1320,6 +1320,12 @@
       },
       "skip": "Passer",
       "creating": "Création..."
+    },
+    "discardConfirmation": {
+      "title": "Abandonner le modèle non enregistré ?",
+      "message": "Votre modèle contient des modifications non enregistrées. Si vous quittez maintenant, ces modifications seront perdues.",
+      "keepEditing": "Continuer la modification",
+      "discard": "Abandonner le modèle"
     }
   },
   "documents": {

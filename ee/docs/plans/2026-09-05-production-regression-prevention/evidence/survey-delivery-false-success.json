@@ -1,0 +1,28 @@
+{
+  "scope": "Survey unverified-domain delivery failure must not report success",
+  "baseRevision": "1734b613c13fae0541687f2cbc9f12892b8c6d96",
+  "workingTreeDirty": true,
+  "validation": {
+    "before": {
+      "artifact": "/tmp/alga-survey-delivery-before.log",
+      "sha256": "8488b35fd74cde59a4eff0860f91b3ac131b22fbce6dde8b746881ae0e14893e",
+      "passed": 13,
+      "failed": 2
+    },
+    "after": {
+      "artifact": "/tmp/alga-survey-delivery-after.log",
+      "sha256": "7973ae1674c43da4ba09d260112464ec342ffac794668fe2ff8b6532d3a04c66",
+      "passed": 15,
+      "failed": 0
+    }
+  },
+  "behavior": [
+    "Ticket and project invitation service rejects an unverified-domain transport failure instead of returning a successful survey invitation.",
+    "Failed delivery removes the invitation and publishes no sent/reminder events.",
+    "A subsequent successful retry creates one invitation with a usable token and emits SURVEY_SENT without a false reminder."
+  ],
+  "limits": [
+    "Real PostgreSQL persistence and email template rendering are exercised; transport returns synthetic provider errors.",
+    "Native candidate CI and actual provider delivery are not established by this local run."
+  ]
+}

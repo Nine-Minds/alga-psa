@@ -22,6 +22,15 @@ describe('manual invoice error translation', () => {
     expect(message).not.toBe('Error generating invoice');
   });
 
+  it('renders approval remediation using a numeric plural count', () => {
+    const t = vi.fn((key: string, options?: Record<string, unknown>) =>
+      key === 'automaticInvoices.executionRows.blockedUntilApproval' && options?.count === 2
+        ? 'Two entries still require approval' : 'Wrong translation');
+    expect(translateManualInvoiceFailure(t, {
+      code: 'TIME_APPROVAL_REQUIRED', params: { count: '2' }, message: 'server fallback',
+    })).toBe('Two entries still require approval');
+  });
+
   it('renders the support reference for unexpected failures', () => {
     const t = vi.fn((_key: string, options?: Record<string, unknown>) => (
       `Something went wrong generating the invoice. Quote reference ${options?.ref} when contacting support.`

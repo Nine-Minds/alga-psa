@@ -48,7 +48,7 @@ describe('Telephony job wiring', () => {
       "import { renewTelephonyCallSubscriptions } from './handlers/telephonyCallNotificationHandler';",
     );
     expect(maintenanceFanoutSource).toContain(
-      "'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }) },",
+      "'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }), tenants: tenantsWithActiveTeamsPhone },",
     );
   });
 
@@ -60,7 +60,7 @@ describe('Telephony job wiring', () => {
 
   it('T078: the artifact sweep is registered and scheduled, since ad hoc calls have no artifact webhook', () => {
     expect(maintenanceFanoutSource).toContain(
-      "[TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }) },",
+      "[TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }), tenants: tenantsWithPendingCallArtifacts },",
     );
     expect(registerHandlersSource).toContain('name: TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,');
     expect(registerHandlersSource).toContain('await telephonyCallArtifactSweepHandler(data);');

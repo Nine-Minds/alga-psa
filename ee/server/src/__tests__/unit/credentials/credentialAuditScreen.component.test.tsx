@@ -246,11 +246,12 @@ afterEach(() => {
 });
 
 describe('CredentialAuditScreen — gating', () => {
-  it('renders nothing when the release flag is off', () => {
+  it('loads the released audit log independently of the retired flag', async () => {
     useFeatureFlagMock.mockReturnValue({ enabled: false });
-    const { container } = render(<CredentialAuditScreen />);
-    expect(container.firstChild).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+    getCredentialAuditEventsMock.mockResolvedValue({ events: [], nextCursor: null });
+    await renderScreen();
+    expect(document.getElementById('credentials-audit-empty')).toBeTruthy();
+    expect(getCredentialAuditEventsMock).toHaveBeenCalled();
   });
 
   it('shows the forbidden state when the viewer lacks credential:audit', async () => {

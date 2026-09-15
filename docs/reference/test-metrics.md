@@ -3,35 +3,79 @@
 CI appends one row per test run to a shared Google Sheet, so you can watch
 pass rates and coverage move over time instead of opening individual Actions
 runs. `scripts/record-test-metrics.mjs` does the recording, and also writes
-the same numbers as a table on the Actions run summary page. It never fails a
-build: the step runs with `continue-on-error` and exits quietly when the
-Google credentials are not configured.
+the same numbers as a table on the Actions run summary page. The writer reports errors with a nonzero exit; current workflow recording steps
+use `continue-on-error`, keeping reporting availability separate from required
+execution gates. Without Google credentials, the writer still produces its job
+summary and skips the external write.
+
+Transient header reads (HTTP 429/500/502/503/504 or transport failures) have four
+attempts, each with a 30-second timeout and exponential backoff with jitter.
+Persistent failures remain visible. Writes are attempted once: retrying an
+append after an uncertain response could duplicate rows. This follows Google's
+[Sheets error guidance](https://developers.google.com/workspace/sheets/api/troubleshoot-api-errors).
 
 ## Which runs record
 
-| Suite label | Workflow | When |
+| Suite label | Workflow | Recording condition |
 |---|---|---|
-| `unit-coverage` | `unit-tests.yml` (coverage job) | every push to main |
-| `integration-tier1` | `integration-tests.yml` | push to main |
-| `integration-full` | `integration-tests.yml` | nightly cron, manual `suite: full` dispatch |
-| `infrastructure-full` | `integration-tests.yml` | nightly cron, manual `suite: full` dispatch |
+| `unit-coverage` | `unit-tests.yml` | Always after the coverage job's steps, including PR runs |
+| `integration-tier1` | `integration-tests.yml` | Selected integration lane on push |
+| `integration-full` | `integration-tests.yml` | Selected full integration lane |
+| `infrastructure-full` | `integration-tests.yml` | Selected full infrastructure lane |
+| Browser readiness | `e2e-fresh-install-tests.yaml` | After successful installation setup, including failed browser execution; excluded under ACT |
 
-PR runs are not recorded. They would flood the sheet, and fork PRs cannot read
-the secret anyway.
+Credentials must be available for an external write; fork PRs generally cannot
+access them. Unit and integration recording use `always()` so failed or incomplete
+execution can remain visible. This cannot guarantee a row after a hard runner
+termination or a reporting outage. Missing data must not be interpreted as a
+passing run. Browser reporting still requires successful installation setup;
+its absence after setup failure is not browser success.
 
-Red runs still record — a drop in pass rate is the signal the sheet exists to
-show. Cancelled runs do not: each recording step is gated on the suite step's
-`outcome` being `success` or `failure`, so a run the job timeout killed leaves
-no row instead of a row covering the fraction of the suite that finished.
-
-The integration and infrastructure suites run in separate jobs. They shared one
-job until 2026-08-21, when their combined runtime hit the 90-minute job timeout
-and the cancellation of the integration suite produced the fake green described
-below.
+The integration and infrastructure suites run in separate jobs. Their reports
+and execution gates remain authoritative independently of Sheets availability.
 
 ## Column schema
 
+The production browser runner also writes
+`e2e-tests/execution-evidence/metrics.json` (schema version 2), retained by the
+existing Playwright diagnostics upload. It records each required journey's
+file/project/title identity, first attempt, retry count, attempt statuses,
+edition and lane outcome. Missing execution stays incomplete; retry-only passes
+stay failed. It omits raw error and attachment payloads. In CI, `artifactManifest`
+identifies the candidate build archives whose bytes were verified before loading,
+and the inspected loaded image IDs. It binds the revision, edition, run and attempt
+and covers candidate-built archives only. It does not attest registry publication,
+deployed artifacts or release readiness. Native runs without a configured manifest
+retain null; a configured missing or invalid manifest makes metrics incomplete.
+
+`scripts/record-browser-metrics.mjs` consumes this artifact through
+`TEST_METRICS_BROWSER`. The browser workflow invokes it after diagnostics and
+before API execution. With the existing Google metrics credentials it appends
+to `browser_readiness`; without them it still writes a job summary. Live tab
+creation and readback must be verified on the next candidate.
+
+The tab uses schema version 2. `row_kind=run` carries collected/executed totals
+once; `row_kind=journey` carries file/project/title identity, required/observed
+flags, outcome, first attempt and retry count. Both carry edition, full tested
+SHA, lane status and run URL. The appended `run_kind` and `event_name` columns
+(S:T) distinguish PR, main, nightly, branch, manual and local runs using the same
+classification as standard metrics. Columns U:Y append `project_id`, `run_id`,
+`run_attempt`, `authentication` and `server_lifecycle`, preserving the existing
+A:T order. Project IDs distinguish projects with the same display name; run attempts
+distinguish reruns of the same GitHub run. Missing optional metadata stays blank;
+historical rows without a category remain unclassified. Incomplete runs retain
+their triggering event so they remain visible in the corresponding trend. Missing, stale or wrong-edition evidence produces
+an incomplete run row with unknown counts blank. Filter by `row_kind` before
+aggregating. A PR's tested SHA may be GitHub's merge commit, rather than its
+branch head; mismatches are rejected. The run row carries the validated CI artifact
+manifest; journey rows reference the same run and attempt. `--dry-run` prints rows
+without accessing Google.
+
 Rows land on the `metrics` tab. The script writes the header row on first use.
+For an older schema, it verifies every existing heading and appends only the
+missing suffix. A reordered or renamed managed heading stops the write instead
+of putting values under the wrong columns. User-added trailing columns are
+preserved when all managed headings match.
 
 | Column | Meaning |
 |---|---|
@@ -46,11 +90,101 @@ Rows land on the `metrics` tab. The script writes the header row on first use.
 | `executed` | `passed + failed` — how many tests actually ran |
 | `run_status` | `complete` or `partial` (see below); blank when the run recorded coverage only |
 | `files_measured`, `files_total` | source files in the coverage report vs. on disk; blank without coverage |
+| `schema_version` | `2` for versioned rows; historical blank values are unversioned |
+| `run_kind` | `pr`, `main`, `branch`, `nightly`, `manual`, `local`, or `other`, derived from the triggering event |
+| `event_name` | original GitHub event name; blank for local invocations |
+| `coverage_methodology` | `v8-loaded-files/source-inventory-v1` when a coverage report is present; otherwise blank |
+| `expected_files`, `collected_tests` | declared file count and sum of collected assertion identities from current-revision execution evidence; blank when unavailable |
+| `execution_gate_status` | reported lane gate: `passed`, `failed`, `incomplete`, or `unverified` when no execution evidence was requested |
+| `tested_sha` | full GitHub tested SHA, or local evidence revision when available |
 
-For charts, add a second tab with `=QUERY(metrics!A:T, "select A, J where B = 'unit-coverage'")`
-style pulls and chart those ranges. Native Sheets charts update as rows arrive.
-Columns are appended at the end as the schema grows, so existing ranges keep
-their meaning — widen the range, don't reorder.
+The four version fields occupy U:X on `metrics` and N:Q on
+`coverage_by_dir`. All prior positions retain their meanings. The source
+inventory v1 denominator includes `server/src`, `shared`, and each
+`packages/*/src`, excluding generated/declaration/test files and the existing
+build, migration, seed and double-underscore directories. EE and service source
+roots are not comprehensively included; this is not whole-repository coverage.
+Keep historical unversioned rows separate when interpreting methodology changes.
+The event fields label recorded rows; they do not enable recording for workflows
+whose metrics steps are currently excluded.
+
+Execution counts, gate status and full SHA occupy Y:AB on `metrics`.
+These summarize the producer's declared lane evidence, not the global release
+gate. Unknown counts are blank; an unavailable evidence file is incomplete.
+The existing `executed` column remains the raw passed-plus-failed assertion count.
+Job summaries show the lane gate and collection counts before percentages.
+
+### Separate execution views from percentage charts
+
+The existing live `charts` and `chart_data` formulas were inspected on
+2026-09-08: they query `metrics!A2:P` by suite only. They therefore mix run kinds
+and do not read execution gate status or coverage methodology. These legacy
+charts are historical percentages, not readiness evidence. For example, the
+live integration summary showed 100% alongside 146 skipped tests.
+
+Use separate `readiness_pr`, `readiness_main`, and `readiness_nightly` views.
+The following formula was validated with synthetic rows in the approved
+isolated workbook copy; it has not been applied to the original live workbook.
+On each new view, set B1 to
+the exact run kind (`pr`, `main`, or `nightly`) and put this spill formula in A3:
+
+```gs
+=QUERY(metrics!A:AB,"select A,B,AB,R,AA,Y,Z,Q,F,G,H,S,T,X,P where A is not null and U=2 and V='"&B1&"' order by A desc label A 'Timestamp',B 'Suite',AB 'Tested SHA',R 'Report status',AA 'Lane gate',Y 'Expected files',Z 'Collected tests',Q 'Executed tests',F 'Failed',G 'Skipped',H 'TODO',S 'Measured files',T 'Source files',X 'Methodology',P 'Run URL'",1)
+```
+
+Keep all lane outcomes in these views. Filtering to passed rows would conceal
+failed or incomplete executions. Blank gate/count fields mean unknown, not zero
+or success. A passed lane is not the global production-readiness verdict;
+consult the parent gate for the same tested SHA. Do not derive readiness from
+`pass_pct`, or label a run ready solely because its legacy status is `complete`.
+
+Keep unversioned history in its own view without inferring a run kind from the
+branch name. A separate coverage trend must select one suite, one run kind,
+schema version 2, and one exact `coverage_methodology`; show measured/source
+file counts beside the percentage. Do not connect a trend line across method
+versions or silently omit missing-run observations. A run cancelled before its
+metrics step still requires external reconciliation to appear at all.
+
+The `Reconcile browser metrics exports` workflow defines read-only reconciliation
+after a `Production regression tests` run completes. Both entrypoints check out
+maintained default-branch code. The automatic path reads current-attempt CE/EE
+browser artifact manifests to identify the tested revision. ZIP reads are bounded
+to one manifest member, without extracting or executing artifact code. Missing,
+expired, stale, invalid or conflicting evidence leaves the revision unknown and
+the report non-green; Sheets rows cannot supply the missing source identity.
+
+For manual invocation, supply the run ID and full tested revision (the tested
+merge commit for a PR).
+It verifies GitHub run/attempt identities and reads the existing
+`browser_readiness` rows using the configured metrics credentials. It retains
+a JSON artifact and step summary, including missing exports, pending work,
+cancellations, stale attempts and conflicting identities. It does not write
+to the workbook. A recorder step succeeding without configured credentials
+can still leave a missing export; the report does not assume a network error.
+In manual mode the revision is supplied by the operator. For PRs, the collector checks
+that it is a two-parent merge containing the run's recorded head commit.
+Historical run responses can contain the PR's current head/base metadata, so
+those mutable fields cannot validate an older run's merge base. The parent
+relationship is not independent proof of which tree the runner checked out;
+use the original attempt-bound execution/build artifacts for that purpose.
+
+The report distinguishes the browser export outcome from the overall browser
+job outcome, which also includes later upgrade and Teams phases. An observed
+metrics pass is not independent release or deployment verification. Empty or
+incomplete journey identities cannot satisfy export completeness.
+
+For an already collected JSON snapshot, run
+`node scripts/reconcile-browser-metric-executions.mjs input.json report.json`.
+Non-green results retain their report and exit unsuccessfully. The automatic
+trigger requires this workflow and its scripts on the default branch; its live
+credentialed execution has not yet been verified. Scorecard publication and
+detection of workflows that were never created remain rollout work. This
+observed-run report does not by itself close those requirements.
+
+Validate these formulas and old readers with synthetic success, failure,
+cancelled, missing, and retry-only cases in an approved isolated copy before
+changing live charts. Existing A:P column positions retain their meanings;
+widen formula ranges without reordering them.
 
 Coverage percentages are only comparable while `coverage.include` in
 `server/vitest.config.ts` stays the same; widening or narrowing it changes
@@ -60,14 +194,35 @@ the denominator and steps the totals on that day.
 
 `pass_pct` over a run that never reached most of its tests is arithmetic, not
 information: on 2026-08-21 `infrastructure-full` executed 5 of its 354 tests and
-recorded **100%**. The recorder marks a run `partial` when either
+recorded **100%**. The recorder marks a run `partial` when any
 signal shows in the vitest JSON report:
 
 - an assertion left in `pending` — vitest maps a test still in `run`/`queued`
   state there when the process is cut short, while an intentional `describe.skip`
   maps to `skipped` and `it.todo` to `todo`;
 - fewer than half the collected tests executed (`MIN_EXECUTED_RATIO` in the
-  recorder), which is what a dead bootstrap looks like.
+  recorder), which is what a dead bootstrap looks like;
+- a suite failed without a failed assertion, indicating collection, setup or
+  teardown failure. Successful sibling assertions cannot make that lifecycle
+  successful;
+- an execution manifest explicitly reports incomplete required execution.
+
+The integration metrics steps set `TEST_METRICS_EXECUTION` to the runner's
+execution evidence. Missing, unsupported, failed, or wrong-revision evidence
+suppresses the percentage even if the raw Vitest assertions passed. This is a
+reporting safeguard; the execution gate remains responsible for independently
+reconciling the required identities and raw results.
+
+Missing or malformed requested test reports also produce a partial row, with
+blank test counts and pass percentage. A coverage report does not hide a
+missing test report. Intentional coverage-only invocations omit
+`TEST_METRICS_RESULTS` and retain blank execution status. Recording still
+depends on the metrics step running; workflow cancellation before that step
+requires an external reconciliation job to record the missing run.
+
+`complete` describes this legacy report check, not release readiness. It does
+not prove that every required test was discovered or that intentional skips
+are acceptable. Required execution reconciliation must establish those facts.
 
 Partial rows keep their raw counts but leave `pass_pct` blank, so no average or
 trendline silently absorbs them. Three rows predate the check and still carry a

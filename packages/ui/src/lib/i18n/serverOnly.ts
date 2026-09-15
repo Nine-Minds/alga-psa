@@ -17,6 +17,7 @@ import {
 } from './config';
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db/tenant';
+import { formatDateValue } from './formatDateValue';
 
 /**
  * Resolve the absolute path to the locales directory.
@@ -420,15 +421,17 @@ export async function getTenantAvailableLocales(
 }
 
 /**
- * Format a date according to the locale
+ * Format a date according to the locale.
+ *
+ * Date-only strings are calendar dates and must not shift through the server
+ * host's timezone; see formatDateValue.
  */
 export function formatDate(
   date: Date | string,
   locale: SupportedLocale,
   options?: Intl.DateTimeFormatOptions,
 ): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat(locale, options).format(dateObj);
+  return formatDateValue(date, locale, options);
 }
 
 /**

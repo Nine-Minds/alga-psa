@@ -4,7 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { resolveMicrosoftConsumerProfileConfig } from '../microsoftConsumerProfileResolution';
 
-export type MspSsoProviderId = 'google' | 'azure-ad';
+export type MspSsoProviderId = 'google' | 'azure-ad' | 'keycloak';
 export type MspSsoSource = 'tenant' | 'app';
 export type MspSsoDomainClaimStatus =
   | 'advisory'
@@ -31,7 +31,48 @@ export const MSP_SSO_CLAIM_STATUS_VALUES: MspSsoDomainClaimStatus[] = [
   'revoked',
 ];
 
-const PROVIDER_ORDER: MspSsoProviderId[] = ['google', 'azure-ad'];
+const PROVIDER_ORDER: MspSsoProviderId[] = ['google', 'azure-ad', 'keycloak'];
+export const KEYCLOAK_APP_SECRET_KEYS = [
+  'KEYCLOAK_CLIENT_ID',
+  'KEYCLOAK_CLIENT_SECRET',
+  'KEYCLOAK_URL',
+  'KEYCLOAK_REALM',
+] as const;
+// Tenant-owned Keycloak configuration (Settings → Security → Single Sign-On).
+export const KEYCLOAK_TENANT_SECRET_KEYS = {
+  url: 'keycloak_url',
+  realm: 'keycloak_realm',
+  clientId: 'keycloak_client_id',
+  clientSecret: 'keycloak_client_secret',
+} as const;
+
+export interface KeycloakSsoConfig {
+  url: string;
+  realm: string;
+  clientId: string;
+  clientSecret: string;
+}
+
+export function buildKeycloakIssuer(url: string, realm: string): string {
+  return `${url.trim().replace(/\/+$/, '')}/realms/${realm.trim()}`;
+}
+
+export async function readTenantKeycloakConfig(tenant: string): Promise<KeycloakSsoConfig | null> {
+  const secretProvider = await getSecretProviderInstance();
+  const [url, realm, clientId, clientSecret] = await Promise.all([
+    secretProvider.getTenantSecret(tenant, KEYCLOAK_TENANT_SECRET_KEYS.url),
+    secretProvider.getTenantSecret(tenant, KEYCLOAK_TENANT_SECRET_KEYS.realm),
+    secretProvider.getTenantSecret(tenant, KEYCLOAK_TENANT_SECRET_KEYS.clientId),
+    secretProvider.getTenantSecret(tenant, KEYCLOAK_TENANT_SECRET_KEYS.clientSecret),
+  ]);
+  if (![url, realm, clientId, clientSecret].every(isConfigured)) return null;
+  return {
+    url: (url as string).trim(),
+    realm: (realm as string).trim(),
+    clientId: (clientId as string).trim(),
+    clientSecret: (clientSecret as string).trim(),
+  };
+}
 const MSP_SSO_DOMAIN_DISCOVERY_CONTEXT = 'msp-sso-domain-discovery';
 const DOMAIN_PATTERN =
   /^(?=.{1,255}$)(?!-)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
@@ -105,8 +146,19 @@ function computeCookieSignature(payloadEncoded: string, secret: string): string 
   return toBase64Url(createHmac('sha256', secret).update(payloadEncoded).digest());
 }
 
-function isSupportedProvider(provider: string): provider is MspSsoProviderId {
-  return provider === 'google' || provider === 'azure-ad';
+export function isSupportedProvider(provider: string): provider is MspSsoProviderId {
+  return provider === 'google' || provider === 'azure-ad' || provider === 'keycloak';
+}
+
+// Community Edition offers Keycloak only; Google and Microsoft sign-in are Enterprise.
+// The sign-in buttons apply the same rule client-side.
+export function isProviderOfferedInEdition(provider: MspSsoProviderId, edition = getMspSsoEdition()): boolean {
+  return edition === 'ee' || provider === 'keycloak';
+}
+
+function filterProvidersForEdition(providers: MspSsoProviderId[]): MspSsoProviderId[] {
+  const edition = getMspSsoEdition();
+  return providers.filter((provider) => isProviderOfferedInEdition(provider, edition));
 }
 
 function normalizeProviders(values: unknown): MspSsoProviderId[] {
@@ -265,6 +317,10 @@ export async function hasTenantProviderCredentials(
     return isConfigured(clientId) && isConfigured(clientSecret);
   }
 
+  if (provider === 'keycloak') {
+    return (await readTenantKeycloakConfig(tenant)) !== null;
+  }
+
   const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'msp_sso');
   return microsoftProfile.status === 'ready';
 }
@@ -281,6 +337,15 @@ export async function hasAppFallbackProviderCredentials(
       process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
       (await secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_SECRET'));
     return isConfigured(clientId) && isConfigured(clientSecret);
+  }
+
+  if (provider === 'keycloak') {
+    const values = await Promise.all(
+      KEYCLOAK_APP_SECRET_KEYS.map(
+        async (key) => process.env[key] || (await secretProvider.getAppSecret(key))
+      )
+    );
+    return values.every(isConfigured);
   }
 
   const clientId =
@@ -355,34 +420,42 @@ export async function discoverMspSsoProviderOptions(
     !domainResolution.ambiguous &&
     domainResolution.eligibleForTakeover
   ) {
-    const [googleReady, microsoftReady] = await Promise.all([
+    // Keycloak prefers the tenant's own realm; a deployment-level KEYCLOAK_* env
+    // still offers it here, and the resolver then falls back to the 'app' source.
+    const [googleReady, microsoftReady, tenantKeycloakReady, appKeycloakReady] = await Promise.all([
       hasTenantProviderCredentials(domainResolution.tenantId, 'google'),
       hasTenantProviderCredentials(domainResolution.tenantId, 'azure-ad'),
+      hasTenantProviderCredentials(domainResolution.tenantId, 'keycloak'),
+      hasAppFallbackProviderCredentials('keycloak'),
     ]);
+    const keycloakReady = tenantKeycloakReady || appKeycloakReady;
 
     return {
       source: 'tenant',
       tenantId: domainResolution.tenantId,
-      providers: normalizeProviders([
+      providers: filterProvidersForEdition(normalizeProviders([
         ...(googleReady ? ['google'] : []),
         ...(microsoftReady ? ['azure-ad'] : []),
-      ]),
+        ...(keycloakReady ? ['keycloak'] : []),
+      ])),
       domain,
       ambiguous: false,
     };
   }
 
-  const [googleReady, microsoftReady] = await Promise.all([
+  const [googleReady, microsoftReady, keycloakReady] = await Promise.all([
     hasAppFallbackProviderCredentials('google'),
     hasAppFallbackProviderCredentials('azure-ad'),
+    hasAppFallbackProviderCredentials('keycloak'),
   ]);
 
   return {
     source: 'app',
-    providers: normalizeProviders([
+    providers: filterProvidersForEdition(normalizeProviders([
       ...(googleReady ? ['google'] : []),
       ...(microsoftReady ? ['azure-ad'] : []),
-    ]),
+      ...(keycloakReady ? ['keycloak'] : []),
+    ])),
     domain,
     ambiguous: domainResolution.ambiguous,
   };
@@ -391,6 +464,10 @@ export async function discoverMspSsoProviderOptions(
 export async function resolveMspSsoCredentialSource(
   inputs: ResolverInputs
 ): Promise<ResolverOutcome> {
+  if (!isProviderOfferedInEdition(inputs.provider)) {
+    return { resolved: false };
+  }
+
   const normalizedEmail = typeof inputs.email === 'string' ? normalizeResolverEmail(inputs.email) : '';
   const emailDomain = extractDomainFromEmail(normalizedEmail);
   const discovery = inputs.discovery;

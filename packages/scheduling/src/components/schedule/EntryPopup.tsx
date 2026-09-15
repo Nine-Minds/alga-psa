@@ -1,5 +1,7 @@
 'use client';
 
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
+import { calendarDisplayDates, calendarStoredDates, moveCalendarStart } from '../../lib/calendarDateDisplay';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -7,7 +9,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ExternalLink, Check, X, Download, FileText } from 'lucide-react';
+import { ExternalLink, Check, X, Download, FileText, Video } from 'lucide-react';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
@@ -29,6 +32,8 @@ import {
   declineAppointmentRequest as declineRequest,
   getTeamsMeetingCapability,
   getAppointmentRequestById,
+  getScheduleEntryTeamsMeeting,
+  scheduleTeamsMeeting,
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
 import toast from 'react-hot-toast';
@@ -69,6 +74,17 @@ interface EntryPopupProps {
     updateType?: string;
   }) => void;
   onDelete?: (entryId: string, deleteType?: IEditScope) => Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string; isPrivateError?: boolean }>;
+  /**
+   * Fired after a Teams meeting is attached to this entry. The server rewrote
+   * the entry's notes (and, for a recurring occurrence, materialized it into a
+   * new concrete entry), so events the parent fetched before the call are
+   * stale — closing and reopening this popup would otherwise resurrect
+   * pre-link notes or a virtual occurrence that no longer exists. The parent
+   * should refetch its events. Deliberately not routed through onSave: that
+   * path performs another update from the parent's stale selected event,
+   * which is unsafe for virtual occurrences.
+   */
+  onTeamsMeetingCreated?: (meeting: { entryId: string; notes?: string }) => void;
   canAssignMultipleAgents: boolean;
   users: IUser[];
   currentUserId: string;
@@ -88,12 +104,25 @@ interface EntryPopupProps {
   initialWorkItem?: Omit<IWorkItem, 'tenant'> | null;
 }
 
+// All-day recurrence dates share the entry's UTC calendar-date representation.
+// Date pickers work in local calendar dates, so convert only at the UI boundary.
+function recurrenceDateForDisplay(value: Date, allDay: boolean): Date {
+  const date = new Date(value);
+  return allDay ? new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) : date;
+}
+
+function recurrenceDateForStorage(value: Date): Date {
+  const date = new Date(value);
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+}
+
 const EntryPopup: React.FC<EntryPopupProps> = ({
   event,
   slot,
   onClose,
   onSave,
   onDelete,
+  onTeamsMeetingCreated,
   canAssignMultipleAgents,
   users,
   currentUserId,
@@ -111,8 +140,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     if (event) {
       return {
         ...event,
-        scheduled_start: new Date(event.scheduled_start),
-        scheduled_end: new Date(event.scheduled_end),
+        ...calendarDisplayDates(event),
         assigned_user_ids: event.assigned_user_ids,
         is_private: event.is_private || false,
       };
@@ -166,7 +194,16 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [generateTeamsMeeting, setGenerateTeamsMeeting] = useState(true);
   const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Teams meeting attached directly to this schedule entry (not via an appointment request)
+  const [entryTeamsMeeting, setEntryTeamsMeeting] = useState<{ meeting_id: string; join_url: string } | null>(null);
+  const [isCreatingTeamsMeeting, setIsCreatingTeamsMeeting] = useState(false);
+  // Set when creating a Teams meeting for a recurring occurrence materialized
+  // it into a standalone entry: the popup then edits that concrete entry, not
+  // the stale virtual occurrence id it was opened with.
+  const [materializedEntryId, setMaterializedEntryId] = useState<string | null>(null);
   const { t } = useTranslation('msp/schedule');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const { formatDate } = useFormatters();
 
   const endsBeforeStart = useMemo(() => {
@@ -252,12 +289,40 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           setAppointmentRequestData(null);
         }
     } else {
-        // Non-appointment entries no longer offer ad-hoc Teams meeting creation
-        // (meetings are created as interactions, not schedule entries).
         setIsAppointmentRequest(false);
         setAppointmentRequestData(null);
-        setTeamsMeetingCapability(null);
         setGenerateTeamsMeeting(false);
+
+        // Existing non-appointment entries can attach a Teams meeting directly
+        // (online_meetings.schedule_entry_id). Recurring entries can't — a
+        // meeting belongs to one concrete occurrence — but the capability is
+        // still loaded so the disabled button can explain itself.
+        if (event?.entry_id) {
+          try {
+            const capability = await getTeamsMeetingCapability();
+            setTeamsMeetingCapability(capability);
+          } catch (error) {
+            console.error('Failed to load Teams meeting capability:', error);
+            setTeamsMeetingCapability({ available: false, reason: 'not_configured' });
+          }
+
+          if (!event.is_recurring && !event.entry_id.includes('_')) {
+            const meetingResult = await getScheduleEntryTeamsMeeting(event.entry_id);
+            if (meetingResult.success) {
+              setEntryTeamsMeeting(meetingResult.data
+                ? { meeting_id: meetingResult.data.meeting_id, join_url: meetingResult.data.join_url }
+                : null);
+            } else {
+              console.error('Failed to load Teams meeting for schedule entry:', meetingResult.error);
+              setEntryTeamsMeeting(null);
+            }
+          } else {
+            setEntryTeamsMeeting(null);
+          }
+        } else {
+          setTeamsMeetingCapability(null);
+          setEntryTeamsMeeting(null);
+        }
       }
     };
 
@@ -313,19 +378,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       if (event) {
         setEntryData({
           ...event,
-          scheduled_start: new Date(event.scheduled_start),
-          scheduled_end: new Date(event.scheduled_end),
+          ...calendarDisplayDates(event),
           assigned_user_ids: event.assigned_user_ids,
           work_item_id: event.work_item_id,
         });
-        intendedDurationRef.current = durationBetween(event.scheduled_start, event.scheduled_end);
+        const displayDates = calendarDisplayDates(event);
+        intendedDurationRef.current = durationBetween(displayDates.scheduled_start, displayDates.scheduled_end);
 
         // Load recurrence pattern if it exists
         if (event.recurrence_pattern) {
           setRecurrencePattern({
             ...event.recurrence_pattern,
-            startDate: new Date(event.recurrence_pattern.startDate),
-            endDate: event.recurrence_pattern.endDate ? new Date(event.recurrence_pattern.endDate) : undefined,
+            startDate: recurrenceDateForDisplay(event.recurrence_pattern.startDate, displayDates.is_all_day === true),
+            endDate: event.recurrence_pattern.endDate
+              ? recurrenceDateForDisplay(event.recurrence_pattern.endDate, displayDates.is_all_day === true) : undefined,
           });
         }
 
@@ -471,7 +537,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [pendingDeleteScope, setPendingDeleteScope] = useState<IEditScope | undefined>(undefined);
   const [pendingUpdateData, setPendingUpdateData] = useState<Omit<IScheduleEntry, 'tenant'>>();
-  const deleteConfirmationMessage = appointmentRequestData?.online_meeting_url
+  const deleteConfirmationMessage = (appointmentRequestData?.online_meeting_url || entryTeamsMeeting)
     ? t('entryPopup.delete.confirmWithTeamsWarning', {
         defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting.',
       })
@@ -534,7 +600,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     const runValidation = async () => {
       setIsDeleteValidating(true);
       try {
-        const result = await preCheckDeletion('schedule_entry', event.entry_id);
+        const result = await preCheckDeletion('schedule_entry', materializedEntryId ?? event.entry_id);
         setDeleteValidation(result);
       } catch (error) {
         console.error('Failed to validate schedule entry deletion:', error);
@@ -553,7 +619,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     };
 
     void runValidation();
-  }, [event, isDeleteDialogOpen]);
+  }, [event, isDeleteDialogOpen, materializedEntryId]);
 
   const resetDeleteState = () => {
     setShowDeleteDialog(false);
@@ -580,7 +646,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
     setIsDeleteProcessing(true);
     try {
-      const result = await onDelete(event.entry_id, pendingDeleteScope);
+      const result = await onDelete(materializedEntryId ?? event.entry_id, pendingDeleteScope);
       if (result.success) {
         resetDeleteState();
         onClose();
@@ -695,6 +761,59 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
   };
 
+  // Attach a Teams meeting to this existing schedule entry. The server reads
+  // subject/times/attendees from the saved entry and appends the join link to
+  // its notes; the returned notes replace the local ones so a later Save
+  // doesn't clobber the link with a stale value. For a recurring occurrence
+  // the server materializes it into a standalone entry and links the meeting
+  // there — the popup rebinds to that entry so a later Save or Delete targets
+  // it instead of re-extracting the occurrence.
+  const handleCreateTeamsMeeting = async () => {
+    if (!event?.entry_id) return;
+
+    setIsCreatingTeamsMeeting(true);
+    try {
+      const result = await scheduleTeamsMeeting({ scheduleEntryId: event.entry_id });
+      if (result.success) {
+        setEntryTeamsMeeting({ meeting_id: result.data.meeting_id, join_url: result.data.join_url });
+        const linkedEntryId = result.data.schedule_entry_id;
+        if (linkedEntryId && linkedEntryId !== event.entry_id) {
+          setMaterializedEntryId(linkedEntryId);
+          setEntryData(prev => ({
+            ...prev,
+            entry_id: linkedEntryId,
+            is_recurring: false,
+            original_entry_id: undefined,
+          }));
+          setRecurrencePattern(null);
+        }
+        if (typeof result.data.schedule_entry_notes === 'string') {
+          const nextNotes = result.data.schedule_entry_notes;
+          setEntryData(prev => ({ ...prev, notes: nextNotes }));
+        }
+        onTeamsMeetingCreated?.({
+          entryId: linkedEntryId || event.entry_id,
+          notes: typeof result.data.schedule_entry_notes === 'string'
+            ? result.data.schedule_entry_notes
+            : undefined,
+        });
+        toast.success(t('entryPopup.teamsMeeting.created', {
+          defaultValue: 'Microsoft Teams meeting created',
+        }));
+      } else {
+        toast.error(result.error || t('entryPopup.teamsMeeting.createFailed', {
+          defaultValue: 'Failed to create Teams meeting',
+        }));
+      }
+    } catch (error) {
+      handleError(error, t('entryPopup.teamsMeeting.createFailed', {
+        defaultValue: 'Failed to create Teams meeting',
+      }));
+    } finally {
+      setIsCreatingTeamsMeeting(false);
+    }
+  };
+
   const handleSave = () => {
     if (!canEditFields && isEditing) return;
     
@@ -784,16 +903,24 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
 
     // Prepare entry data
+    const storedDates = calendarStoredDates(entryData, event);
+    const storedPattern = recurrencePattern && storedDates.is_all_day ? {
+      ...recurrencePattern,
+      startDate: recurrenceDateForStorage(recurrencePattern.startDate),
+      endDate: recurrencePattern.endDate ? recurrenceDateForStorage(recurrencePattern.endDate) : undefined,
+    } : recurrencePattern;
     const savedEntryData = {
       ...entryData,
-      recurrence_pattern: recurrencePattern || null,
+      ...storedDates,
+      recurrence_pattern: storedPattern || null,
       work_item_id: entryData.work_item_type === 'ad_hoc' ? null : entryData.work_item_id,
       status: entryData.status || 'scheduled',
       assigned_user_ids: Array.isArray(entryData.assigned_user_ids) ? entryData.assigned_user_ids : [],
     };
 
-    // Show recurrence options only for existing recurring events
-    if (event?.is_recurring) {
+    // Show recurrence options only for existing recurring events. A
+    // materialized occurrence is a standalone entry now — no scope to pick.
+    if (event?.is_recurring && !materializedEntryId) {
       setPendingUpdateData(savedEntryData);
       setShowRecurrenceDialog(true);
     } else {
@@ -832,7 +959,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               onClick={() => {
                 setDeleteValidation(null);
                 setPendingDeleteScope(undefined);
-                if (event.is_recurring) {
+                if (event.is_recurring && !materializedEntryId) {
                   setShowDeleteDialog(true);
                   return;
                 }
@@ -1295,7 +1422,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   setEntryData(prev => ({
                     ...prev,
                     scheduled_start: date,
-                    scheduled_end: new Date(date.getTime() + intendedDurationRef.current)
+                    scheduled_end: moveCalendarStart(date, prev, event, intendedDurationRef.current)
                   }));
                 }}
                 className="mt-1"
@@ -1353,6 +1480,57 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
+          {/* Teams meeting attached directly to this entry */}
+          {isEditing && !isAppointmentRequest && (
+            entryTeamsMeeting ? (
+              <div>
+                <Button
+                  id="join-entry-teams-meeting-button"
+                  type="button"
+                  variant="outline"
+                  onClick={() => window.open(entryTeamsMeeting.join_url, '_blank', 'noopener,noreferrer')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  {t('entryPopup.teamsMeeting.join', { defaultValue: 'Join Teams Meeting' })}
+                </Button>
+              </div>
+            ) : releaseV16Enabled && teamsMeetingCapability?.available && event?.is_recurring && !event.entry_id.includes('_') ? (
+              <div>
+                <Tooltip
+                  content={t('entryPopup.teamsMeeting.recurringUnsupported', {
+                    defaultValue: 'Teams meetings can only be added to standalone entries, not recurring series.',
+                  })}
+                >
+                  <span className="inline-block">
+                    <Button
+                      id="create-teams-meeting-button"
+                      type="button"
+                      variant="outline"
+                      disabled
+                    >
+                      <Video className="h-4 w-4 mr-2" />
+                      {t('entryPopup.teamsMeeting.create', { defaultValue: 'Create Teams meeting' })}
+                    </Button>
+                  </span>
+                </Tooltip>
+              </div>
+            ) : releaseV16Enabled && teamsMeetingCapability?.available && canEditFields ? (
+              <div>
+                <Button
+                  id="create-teams-meeting-button"
+                  type="button"
+                  variant="outline"
+                  onClick={handleCreateTeamsMeeting}
+                  disabled={isCreatingTeamsMeeting}
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  {isCreatingTeamsMeeting
+                    ? t('entryPopup.teamsMeeting.creating', { defaultValue: 'Creating Teams meeting…' })
+                    : t('entryPopup.teamsMeeting.create', { defaultValue: 'Create Teams meeting' })}
+                </Button>
+              </div>
+            ) : null
+          )}
         </div>
         <div className="space-y-4">
           <div className="relative z-10">
@@ -1517,6 +1695,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     onClose,
     onSave,
     onDelete,
+    onTeamsMeetingCreated,
     canAssignMultipleAgents,
     users,
     currentUserId,

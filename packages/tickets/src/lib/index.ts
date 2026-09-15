@@ -96,6 +96,8 @@ export type {
 export type { TicketMobileEditorRuntimeOptions } from './ticketMobileEditorRuntime';
 export { getTicketOrigin, TICKET_ORIGIN_OTHER } from './ticketOrigin';
 export type { ResolvedTicketOrigin } from './ticketOrigin';
+export { resolveDocumentViewUrl, documentViewUrl } from './documentViewUrl';
+export type { DocumentViewUrlInput } from './documentViewUrl';
 // Only the client-safe close-rule types/constants/error are exported from this
 // barrel. enforceTicketCloseRules / evaluateTicketCloseRules are server-only
 // (they import hasPermission + DB) and must be imported from the deep path

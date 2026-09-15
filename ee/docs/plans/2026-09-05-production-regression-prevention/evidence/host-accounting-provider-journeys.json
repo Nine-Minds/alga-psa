@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "scope": "host-accounting-provider-journeys",
+  "applicationRevision": "c5938cdad5",
+  "emulatorSourceRevision": "87dc0e748f",
+  "edition": "enterprise",
+  "initialRun": {
+    "stats": {
+      "startTime": "2026-09-08T03:06:29.788Z",
+      "duration": 91558.302,
+      "expected": 3,
+      "skipped": 0,
+      "unexpected": 2,
+      "flaky": 0
+    },
+    "cases": [
+      {
+        "title": "QuickBooks OAuth and UI mapping export to the selected company and recover without duplicate invoices",
+        "status": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "duration": 13511
+          }
+        ]
+      },
+      {
+        "title": "portal Checkout settles the invoice exactly once through signed webhook delivery and redelivery",
+        "status": "unexpected",
+        "results": [
+          {
+            "status": "failed",
+            "retry": 0,
+            "duration": 32569
+          }
+        ]
+      },
+      {
+        "title": "declined and cancelled Checkout leaves the invoice unpaid and creates no payment ledger entry",
+        "status": "unexpected",
+        "results": [
+          {
+            "status": "failed",
+            "retry": 0,
+            "duration": 32368
+          }
+        ]
+      },
+      {
+        "title": "Checkout creation failure offers a retry and recovers for the same unpaid invoice",
+        "status": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "duration": 3025
+          }
+        ]
+      },
+      {
+        "title": "Xero OAuth and UI mapping export to the selected organisation and recover without duplicate invoices",
+        "status": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "duration": 6751
+          }
+        ]
+      }
+    ]
+  },
+  "stripeAfterOriginCorrection": {
+    "stats": {
+      "startTime": "2026-09-08T03:09:32.858Z",
+      "duration": 12562.851,
+      "expected": 3,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "cases": [
+      {
+        "title": "portal Checkout settles the invoice exactly once through signed webhook delivery and redelivery",
+        "status": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "duration": 7461
+          }
+        ]
+      },
+      {
+        "title": "declined and cancelled Checkout leaves the invoice unpaid and creates no payment ledger entry",
+        "status": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "duration": 1954
+          }
+        ]
+      },
+      {
+        "title": "Checkout creation failure offers a retry and recovers for the same unpaid invoice",
+        "status": "expected",
+        "results": [
+          {
+            "status": "passed",
+            "retry": 0,
+            "duration": 2374
+          }
+        ]
+      }
+    ]
+  },
+  "configurationFix": "NEXT_PUBLIC_APP_URL=http://localhost:53010 on both host apps; PaymentService otherwise constructs Stripe return URLs on localhost3000",
+  "verified": [
+    "QuickBooks OAuth selected-company mapping/export and recovery without duplicates",
+    "Xero OAuth selected-organisation mapping/export and recovery without duplicates",
+    "Stripe settled invoice and signed webhook redelivery records one payment",
+    "Stripe decline/cancel leaves unpaid invoice and no payment ledger entries",
+    "Stripe Checkout creation failure and retry preserve same unpaid invoice"
+  ],
+  "artifacts": {
+    "alga-accounting-host-all.json": "40358472fc77a1d7015a57f85a4e515f3453fe815ee267ea5841ec499776d109",
+    "alga-stripe-host-origin.json": "2b18818657396cd18458a25e6c0b4878ac2431eb454b94ee193209a59f21e688"
+  },
+  "limits": [
+    "Two separate runs; initialrun contains2Stripefailures, afterfixall3Stripecasespass",
+    "Existing host application build, not current-source native CI or immutable release validation",
+    "No Temporal worker claim",
+    "No Docker builds or publication"
+  ]
+}

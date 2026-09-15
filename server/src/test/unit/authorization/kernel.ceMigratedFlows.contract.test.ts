@@ -11,6 +11,7 @@ describe('CE migrated flow kernel contracts', () => {
   it('T028: selected migrated ticket/document/time/project/asset/billing paths use shared builtin kernel entry points', () => {
     const ticketSource = readSource('packages/tickets/src/actions/ticketActions.ts');
     const documentSource = readSource('packages/documents/src/actions/documentActions.ts');
+    const documentAuthorizationSource = readSource('shared/lib/documentAuthorization.ts');
     const timeSource = readSource('packages/scheduling/src/actions/timeEntryDelegationAuth.ts');
     const projectSource = readSource('packages/projects/src/actions/projectActions.ts');
     const assetSource = readSource('packages/assets/src/actions/assetActions.ts');
@@ -19,8 +20,11 @@ describe('CE migrated flow kernel contracts', () => {
     expect(ticketSource).toContain('BuiltinAuthorizationKernelProvider');
     expect(ticketSource).toContain('createAuthorizationKernel({');
 
-    expect(documentSource).toContain('BuiltinAuthorizationKernelProvider');
+    // Document authorization is a shared engine (also used by the ticket
+    // Documents initial load), so the kernel lives one layer below the action.
+    expect(documentSource).toContain("from '@shared/lib/documentAuthorization'");
     expect(documentSource).toContain('authorizeAndRedactDocuments(');
+    expect(documentAuthorizationSource).toContain('BuiltinAuthorizationKernelProvider');
 
     expect(timeSource).toContain('BuiltinAuthorizationKernelProvider');
     expect(timeSource).toContain('createAuthorizationKernel({');

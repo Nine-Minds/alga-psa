@@ -54,6 +54,7 @@ export default class ContractLineServiceUsageConfig {
       enable_tiered_pricing: data.enable_tiered_pricing,
       minimum_usage: data.minimum_usage,
       base_rate: data.base_rate,
+      measurement_mode: data.measurement_mode ?? 'additive',
       tenant,
       created_at: now,
       updated_at: now

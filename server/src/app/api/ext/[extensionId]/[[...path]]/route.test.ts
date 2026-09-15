@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const assertSessionProductAccessMock = vi.fn();
+const assertAccessMock = vi.fn();
 const getTenantFromSessionAuthMock = vi.fn();
 const getTenantInstallMock = vi.fn();
 const resolveVersionMock = vi.fn();
@@ -16,6 +17,7 @@ vi.mock('server/src/lib/extensions/gateway/auth', async (importOriginal) => {
   const original = (await importOriginal()) as Record<string, unknown>;
   return {
     ...original,
+    assertAccess: (...args: unknown[]) => assertAccessMock(...args),
     getTenantFromSessionAuth: (...args: unknown[]) => getTenantFromSessionAuthMock(...args),
   };
 });
@@ -31,6 +33,11 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: (...args: unknown[]) => createTenantKnexMock(...args),
+}));
+
+vi.mock('server/src/lib/extensions/gateway/executionAudit', () => ({
+  startExtensionExecution: vi.fn(async () => 'execution-1'),
+  finishExtensionExecution: vi.fn(async () => undefined),
 }));
 
 const { GET, OPTIONS } = await import('./route');
@@ -99,6 +106,7 @@ describe('GET /api/ext/{extensionId}/{path}', () => {
     const { TenantAuthError } = await import('server/src/lib/extensions/gateway/auth');
     assertSessionProductAccessMock.mockResolvedValue(null);
     getTenantFromSessionAuthMock.mockResolvedValue('tenant-a');
+    assertAccessMock.mockResolvedValue({ tenantId: 'tenant-a', registryId: 'demo', installId: 'install-1', versionId: 'version-1', endpoint: { method: 'GET', path: '/ext/action' }, principal: { kind: 'msp', userId: 'user-1' } });
     getTenantInstallMock.mockResolvedValue({
       install_id: 'install-1',
       version_id: 'version-1',

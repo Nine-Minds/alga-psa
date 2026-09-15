@@ -454,7 +454,6 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             id: colId,
             accessorFn: (row) => getNestedValue(row, col.dataIndex),
             header: () => col.title,
-            cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
             sortingFn: caseInsensitiveSort,
             enableSorting: col.sortable !== false,
             enableResizing: true,
@@ -867,7 +866,12 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           style={{ width: cell.column.getSize() }}
                         >
                           <div className="min-w-0">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            {/* Render callbacks produce nodes, not component types. Wrapping
+                                them in a fresh TanStack cell function remounts interactive
+                                children whenever column definitions or sizing change. */}
+                            {columnDef?.render
+                              ? columnDef.render(cellValue, row.original, row.index)
+                              : cellValue as React.ReactNode}
                           </div>
                         </ReflectedTableCell>
                       );

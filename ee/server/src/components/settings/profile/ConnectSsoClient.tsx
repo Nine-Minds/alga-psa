@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { authorizeSsoLinkingAction } from "@ee/lib/actions/auth/connectSso";
+import {
+  authorizeSsoLinkingAction,
+  prepareSsoLinkResolutionAction,
+} from "@ee/lib/actions/auth/connectSso";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@alga-psa/ui/components/Card";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
@@ -12,7 +15,8 @@ import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import clsx from "clsx";
 import { Loader2, ShieldCheck, KeyRound, LogIn } from "lucide-react";
-import { SiGoogle } from "react-icons/si";
+import { SiKeycloak } from "react-icons/si";
+import { GoogleIcon } from '@alga-psa/ui/components/GoogleIcon';
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 type ProviderBranding = {
@@ -35,7 +39,7 @@ const MicrosoftMulticolorLogo = () => (
 
 const providerBranding: Record<string, ProviderBranding> = {
   google: {
-    icon: <SiGoogle className="h-16 w-16" style={{ color: "#34A853" }} aria-hidden />,
+    icon: <GoogleIcon className="h-16 w-16" style={{ color: "#34A853" }} aria-hidden />,
     iconBg: "bg-[#E8F0FE]",
     buttonLabelKey: "connectSso.providers.branding.google",
     buttonClass: "bg-[#34A853] hover:bg-[#2d8659] text-white",
@@ -57,6 +61,14 @@ const providerBranding: Record<string, ProviderBranding> = {
     buttonClass: "bg-[#0078D4] hover:bg-[#005a9e] text-white",
     buttonVariant: "default",
     cardClass: "hover:shadow-lg hover:shadow-[#0078D4]/10",
+  },
+  keycloak: {
+    icon: <SiKeycloak className="h-16 w-16" style={{ color: "#4D4D4D" }} aria-hidden />,
+    iconBg: "bg-[#F3F2F1]",
+    buttonLabelKey: "connectSso.providers.branding.keycloak",
+    buttonClass: "bg-[#4D4D4D] hover:bg-[#333333] text-white",
+    buttonVariant: "default",
+    cardClass: "hover:shadow-lg hover:shadow-[#4D4D4D]/10",
   },
   default: {
     icon: <LogIn className="h-16 w-16 text-primary" aria-hidden />,
@@ -98,6 +110,7 @@ export default function ConnectSsoClient({
   linkStatus,
 }: ConnectSsoClientProps) {
   const { t } = useTranslation("msp/profile");
+  const { t: tCommon } = useTranslation("common");
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -161,6 +174,24 @@ export default function ConnectSsoClient({
   const handleProviderClick = async (providerId: string) => {
     if (!reauthComplete || !reauthNonce || !reauthNonceIssuedAt || !reauthNonceSignature) {
       setFormError(t("connectSso.verify.verifyBeforeProvider"));
+      return;
+    }
+
+    const genericStartFailureMessage = tCommon("auth.sso.startFailed", {
+      defaultValue: "We couldn't start SSO sign-in. Please verify provider setup and try again.",
+    });
+
+    // Issues the MSP SSO resolution cookie for the session tenant so NextAuth registers
+    // the provider from the tenant profile when no app-level OAuth secrets exist.
+    let resolution: { success: boolean; error?: string };
+    try {
+      resolution = await prepareSsoLinkResolutionAction(providerId);
+    } catch {
+      resolution = { success: false };
+    }
+
+    if (!resolution.success) {
+      setFormError(resolution.error ?? genericStartFailureMessage);
       return;
     }
 
@@ -329,10 +360,12 @@ export default function ConnectSsoClient({
                     borderColor:
                       provider.id === "google" ? "#4285F4" :
                       provider.id === "azure-ad" || provider.id === "microsoft" ? "#6264A7" :
+                      provider.id === "keycloak" ? "#4D4D4D" :
                       "rgb(var(--color-primary-500))",
                     backgroundColor:
                       provider.id === "google" ? "rgba(66, 133, 244, 0.05)" :
                       provider.id === "azure-ad" || provider.id === "microsoft" ? "rgba(98, 100, 167, 0.05)" :
+                      provider.id === "keycloak" ? "rgba(77, 77, 77, 0.05)" :
                       "rgb(var(--color-primary-500) / 0.05)"
                   }}
                 >

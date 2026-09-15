@@ -1477,7 +1477,18 @@
         "unavailable": "A criação de reuniões do Teams não está disponível para este locatário."
       },
       "loadFailed": "Não foi possível carregar as opções de interação. Tente novamente.",
-      "saveFailed": "Não foi possível salvar a interação. Tente novamente."
+      "saveFailed": "Não foi possível salvar a interação. Tente novamente.",
+      "schedule": {
+        "addToggle": "Adicionar à agenda",
+        "addHelp": "Uma entrada de agendamento será adicionada ao seu calendário do AlgaPSA.",
+        "addHelpOthers": "Uma entrada de agendamento será adicionada aos calendários do AlgaPSA dos usuários selecionados.",
+        "assigneesLabel": "Agendar para",
+        "assigneesPlaceholder": "Selecionar usuários"
+      },
+      "assignedTo": {
+        "label": "Atribuído a",
+        "placeholder": "Selecionar usuário"
+      }
     },
     "feed": {
       "addInteraction": "Adicionar interação",
@@ -1781,7 +1792,9 @@
       "missingField": "Falta um campo obrigatório da interação.",
       "missingFieldNamed": "Falta um campo obrigatório da interação: {{field}}.",
       "referenceMissing": "A interação, o cliente, o contato, o usuário, o status ou o tipo selecionados não existem mais. Atualize a página e tente novamente.",
-      "duplicate": "Já existe uma interação com estes dados."
+      "duplicate": "Já existe uma interação com estes dados.",
+      "scheduleAssignDenied": "Permissão negada: não é possível atribuir entradas de agenda a outros usuários.",
+      "scheduleUsersMissing": "Não foi possível encontrar um ou mais usuários atribuídos."
     },
     "interactionType": {
       "notFound": "Tipo de interação não encontrado ou você não tem acesso a ele.",

@@ -146,7 +146,7 @@ describe.each(FAMILIES)('standard $family templates speak the recipient language
   });
 });
 
-describe('the catalog migration mirrors the catalog in code', () => {
+describe('the catalog migrations mirror the catalog in code', () => {
   it('maps every shipped English label to the same key', async () => {
     const migration = await import(
       /* @vite-ignore */ path.resolve(
@@ -154,9 +154,47 @@ describe('the catalog migration mirrors the catalog in code', () => {
         '../../../../../server/migrations/20260813120000_upsert_i18n_standard_document_template_asts.cjs'
       )
     );
-    const migrationKeys: Record<string, string> =
-      (migration as any).__LABEL_KEYS ?? (migration as any).default?.__LABEL_KEYS;
+    const initialKeys = (migration as any).__LABEL_KEYS ?? (migration as any).default?.__LABEL_KEYS;
+    expect(initialKeys).toBeTruthy();
+    const migrationKeys: Record<string, string> = { ...initialKeys };
     expect(migrationKeys).toBeTruthy();
+
+    // Later catalog migrations introduce labels that did not exist when the
+    // initial localization migration shipped. Exercise the actual upgrade of
+    // the old ticket nodes and include the labels it persists in this check.
+    const ticketMigration = await import(
+      /* @vite-ignore */ path.resolve(__dirname,
+        '../../../../../server/migrations/20260905031510_invoice_ticket_primary_template.cjs')
+    );
+    const oldTicketAst = {
+      bindings: { collections: {} },
+      layout: { id: 'root', type: 'document', children: [
+        { id: 'ticket-time-summary', type: 'dynamic-table',
+          repeat: { sourceBinding: { bindingId: 'ticketGroups' } },
+          columns: [{ header: 'Hours', value: { path: 'totalHours' } }] },
+        { id: 'billed-time-portal-note', type: 'text',
+          content: { type: 'literal', value: 'Legacy portal guidance' } },
+      ] },
+    };
+    let persistedAst: any;
+    await ticketMigration.up((table: string) => {
+      expect(table).toBe('standard_invoice_templates');
+      return { where(selector: unknown) {
+        expect(selector).toEqual({ standard_invoice_template_code: 'standard-invoice-by-ticket' });
+        return {
+          first: async () => ({ templateAst: structuredClone(oldTicketAst) }),
+          update: async (row: { templateAst: string }) => { persistedAst = JSON.parse(row.templateAst); },
+        };
+      } };
+    });
+    expect(persistedAst?.layout).toBeTruthy();
+    const introducedLabels = [
+      ...collectLabelSites(persistedAst.layout, '$.layout').map(site => site.value),
+      ...collectTextExpressions(persistedAst.layout, '$.layout').map(site => site.content),
+    ];
+    for (const label of introducedLabels) {
+      if (isTemplateI18nRef(label)) migrationKeys[label.defaultValue] = label.i18nKey;
+    }
 
     for (const { catalog } of FAMILIES) {
       for (const [code, ast] of Object.entries(catalog)) {

@@ -1,5 +1,7 @@
 'use server'
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
+import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type {
   ITicket,
   ITicketListItem,
@@ -84,6 +86,7 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
 
@@ -676,6 +679,13 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     if (suppressInternalNotifications && !suppressContactNotifications) {
       throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+    }
+
+    // MSP ticket write surface. A client-portal session can reach server actions
+    // through the page bundle it is rendered on, so block non-internal callers
+    // before they can update any tenant ticket by id.
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
     }
 
     const {knex: db} = await createTenantKnex();
@@ -1547,8 +1557,10 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         created_at: nowIso,
       }).returning('*');
 
+      await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);
+
       // Publish comment added event
-      await publishEvent({
+      await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -1563,7 +1575,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
             isInternal
           }
         }
-      });
+      }, publishEvent);
 
       // Publish workflow v2 ticket message events (additive).
       try {
@@ -2050,6 +2062,15 @@ export const bulkUpdateTicketStatus = withAuth(async (
 
   if (uniqueIds.length === 0) {
     return { updatedIds: [], failed: [] };
+  }
+
+  // MSP bulk status write surface. Reject client-portal callers before the
+  // permission lookup or any per-ticket transaction, mirroring updateTicket.
+  if (user.user_type !== 'internal') {
+    return {
+      updatedIds: [],
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: operation not available in client portal'),
+    };
   }
 
   // Authorize once up front instead of paying a permission lookup per ticket.

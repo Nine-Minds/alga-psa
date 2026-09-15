@@ -19,12 +19,15 @@ export function signStripePayload(payload: string, secret: string, timestamp?: n
 export async function deliverEvent(core: StripeEmulatorCore, event: StripeEvent, env: HostEnv): Promise<void> {
   const payload = JSON.stringify(event);
   for (const target of core.webhookTargets) {
-    const signature = signStripePayload(payload, core.webhookSecret, event.created);
+    // Sign delivery time, not event creation time. Old events and virtual-clock
+    // scenarios still pass the provider SDK's webhook timestamp tolerance.
+    const signature = signStripePayload(payload, core.webhookSecret);
     let status = 0;
     let response = '';
     try {
       const res = await fetch(target, {
         method: 'POST',
+        redirect: 'manual', // Stripe records redirects as delivery failures.
         headers: {
           'content-type': 'application/json',
           'stripe-signature': signature,
@@ -41,7 +44,7 @@ export async function deliverEvent(core: StripeEmulatorCore, event: StripeEvent,
       eventId: event.id,
       eventType: event.type,
       target,
-      attempt: 1,
+      attempt: core.deliveries.filter(delivery => delivery.eventId === event.id && delivery.target === target).length + 1,
       status,
       response,
     });

@@ -1,0 +1,43 @@
+{
+  "scope": "Portal discovery migration into production browser harness",
+  "baseRevision": "b7387dd290",
+  "workingTreeDirty": true,
+  "execution": {
+    "edition": "enterprise",
+    "headed": true,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "durationSeconds": 10.1,
+    "baseURL": "http://localhost:3000"
+  },
+  "limitations": [
+    "Existing cached local production image, not rebuilt from candidate source.",
+    "Community discovery collected only; native candidate CI remains unverified.",
+    "Generic unknown-address UI confirmation does not prove email delivery, server-action health, or equal responses for existing accounts.",
+    "Callback assertion covers browser URL preservation only, not links in delivered mail."
+  ],
+  "legacyMapping": {
+    "form and visual structure": "heading, explanatory copy and form visibility retained; arbitrary first SVG/body visibility removed as non-behavioral",
+    "tenant hint": "credential fields and discovery exclusion, without swallowed wait errors",
+    "success, unknown email, reset": "one unique reserved-domain submission and reset journey; no unsupported delivery claim",
+    "required/format": "disabled empty submission and actual browser rejection of malformed email",
+    "MSP link": "actual navigation and password-field visibility",
+    "dashboard/callback": "parsed URL return destination and discovery visibility"
+  },
+  "artifacts": [
+    {
+      "path": "/tmp/alga-portal-discovery-browser.log",
+      "sha256": "cfa09c82edc4da4f33ff28b9f6a23dd450b404f48d4d0e6ff01438bbc8b2995b"
+    },
+    {
+      "path": "/tmp/alga-portal-discovery-ce-collection.log",
+      "sha256": "7b75b45aa890d8da2e2128a56bc2ba770340ef6a3cd170ef913fd97fafe74715"
+    },
+    {
+      "path": "/tmp/alga-portal-discovery-ee-collection.log",
+      "sha256": "3e962db867797b636f879305394fa8e0a6ceaea841d3ccec1689c28a9aaa65f3"
+    }
+  ]
+}

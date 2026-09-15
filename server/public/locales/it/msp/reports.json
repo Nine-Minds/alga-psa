@@ -240,8 +240,9 @@
     },
     "summary": {
       "totalMRR": {
-        "title": "MRR totale",
-        "subtitle": "Ricavi ricorrenti mensili"
+        "title": "MRR fisso",
+        "subtitle": "Ricavi ricorrenti mensili fissi dei contratti attivi",
+        "variableUsageNote": "{{count}} contratti attivi fatturano anche utilizzo variabile (non incluso)"
       },
       "ytdRevenue": {
         "title": "Ricavi accumulati",
@@ -302,7 +303,9 @@
       "revenueYtd": "Ricavi (YTD)",
       "costYtd": "Costi (YTD)",
       "profit": "Profitto",
-      "margin": "Margine"
+      "margin": "Margine",
+      "plusVariableUsage": "+ utilizzo variabile",
+      "variableUsage": "Utilizzo variabile"
     },
     "statusValues": {
       "active": "Attivo",

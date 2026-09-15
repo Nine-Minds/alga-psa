@@ -10,12 +10,19 @@ import {
   IContractLineServiceUsageConfig,
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTierInput,
-  IUserTypeRate
+  IUserTypeRate,
+  UsageMeasurementMode
 } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  actionError,
+  permissionError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { setUsageMeasurementModeInTransaction } from '../lib/billing/usageMeasurementTransitions';
 
 export type ContractLineServiceConfigActionError = ActionMessageError | ActionPermissionError;
 
@@ -101,7 +108,8 @@ async function assertContractLineIsAuthorableByConfigId(
 export const getConfigurationWithDetails = withAuth(async (
   user,
   { tenant },
-  configId: string
+  configId: string,
+  effectiveDate?: string
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'read')) {
@@ -112,7 +120,7 @@ export const getConfigurationWithDetails = withAuth(async (
       throw new Error('tenant context not found');
     }
     const service = new ContractLineServiceConfigurationService(knex, tenant);
-    return service.getConfigurationWithDetails(configId);
+    return service.getConfigurationWithDetails(configId, effectiveDate ?? new Date().toISOString().slice(0, 10));
   } catch (error) {
     console.error(`Error fetching service configuration ${configId}:`, error);
     const expected = contractLineServiceConfigActionErrorFrom(error);
@@ -341,6 +349,14 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
   }
 });
 
+/** Rolls back a create-with-mode when the transition guard refuses it. */
+class RefusedMeasurementTransitionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RefusedMeasurementTransitionError';
+  }
+}
+
 type UsageConfigPayload = {
   contractLineId: string;
   serviceId: string;
@@ -348,6 +364,13 @@ type UsageConfigPayload = {
   unit_of_measure?: string;
   minimum_usage?: number;
   enable_tiered_pricing?: boolean;
+  /**
+   * Explicit measurement intent for this usage configuration. Omitted leaves
+   * the stored mode untouched (legacy configurations stay additive). A change
+   * is applied through {@link setUsageMeasurementMode} so the conversion guard
+   * — not this generic upsert — decides whether the transition is safe.
+   */
+  measurement_mode?: UsageMeasurementMode;
   tiers?: Array<{ min_quantity: number; max_quantity?: number; rate: number }>;
 };
 
@@ -383,23 +406,54 @@ export const upsertPlanServiceConfiguration = withAuth(async (
       }))
       : undefined;
 
-    if (existing) {
-      await service.updateConfiguration(existing.config_id, undefined, usageConfig, rateTiers as any);
-      return existing.config_id;
-    }
+    // One transaction for the transition guard AND the pricing writes: a
+    // refused measurement transition rolls back everything (no configuration
+    // half-saved under the old mode), and a failure after the transition
+    // rolls the mode back too — no partial pricing writes in either order.
+    return await knex.transaction(async (trx) => {
+      const txService = new ContractLineServiceConfigurationService(trx, tenant);
 
-    const baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-      contract_line_id: payload.contractLineId,
-      service_id: payload.serviceId,
-      configuration_type: 'Usage',
-      custom_rate: undefined,
-      quantity: undefined,
-      instance_name: undefined,
-      tenant
-    };
+      if (existing) {
+        await txService.updateConfiguration(existing.config_id, undefined,
+          {...usageConfig, measurement_mode: payload.measurement_mode}, rateTiers as any);
+        return existing.config_id;
+      }
 
-    return service.createConfiguration(baseConfig, usageConfig, rateTiers as any);
+      const baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+        contract_line_id: payload.contractLineId,
+        service_id: payload.serviceId,
+        configuration_type: 'Usage',
+        custom_rate: undefined,
+        quantity: undefined,
+        instance_name: undefined,
+        tenant
+      };
+
+      const createdConfigId = await txService.createConfiguration(baseConfig, usageConfig, rateTiers as any);
+      if (payload.measurement_mode) {
+        const transition = await setUsageMeasurementModeInTransaction({
+          trx,
+          tenant,
+          input: {
+            config_id: createdConfigId,
+            contract_line_id: payload.contractLineId,
+            service_id: payload.serviceId,
+            measurement_mode: payload.measurement_mode,
+          },
+        });
+        if (!transition.ok) {
+          // Refused transition on a fresh configuration: throw so the
+          // creation rolls back with it rather than leaving a config in the
+          // wrong mode (a return would commit the transaction).
+          throw new RefusedMeasurementTransitionError(transition.error);
+        }
+      }
+      return createdConfigId;
+    });
   } catch (error) {
+    if (error instanceof RefusedMeasurementTransitionError) {
+      return actionError(error.message);
+    }
     console.error(`Error upserting usage configuration for contract line ${payload.contractLineId} and service ${payload.serviceId}:`, error);
     const expected = contractLineServiceConfigActionErrorFrom(error);
     if (expected) {

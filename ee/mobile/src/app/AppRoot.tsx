@@ -5,6 +5,7 @@ import type { InitialState } from "@react-navigation/native";
 import { getAppConfig, hydrateAppConfig, setActiveBaseUrl } from "../config/appConfig";
 import { clearStoredHost, loadStoredHost, saveStoredHost } from "../config/hostStore";
 import { linking } from "../navigation/linking";
+import { stripTransientRouteParams } from "../navigation/navStatePersistence";
 import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
 import { LoadingState } from "../ui/states";
@@ -18,6 +19,7 @@ import { refreshSession as refreshSessionApi, revokeSession } from "../api/mobil
 import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
 import { unregisterPushToken } from "../api/pushToken";
+import { clearPushRegistration } from "../notifications/pushRegistration";
 import { getStableDeviceId } from "../device/clientMetadata";
 import { getBiometricGateEnabled, BIOMETRIC_GRACE_MS } from "../auth/biometricGate";
 import { BiometricLockView } from "./BiometricLockView";
@@ -120,7 +122,7 @@ export function AppRoot() {
       setNavStateLoaded(false);
       const stored = await getSecureJson<InitialState>(`alga.mobile.navState.${userId}`);
       if (canceled) return;
-      setNavInitialState(stored ?? undefined);
+      setNavInitialState(stripTransientRouteParams(stored ?? undefined));
       setNavStateLoaded(true);
     };
 
@@ -286,9 +288,8 @@ export function AppRoot() {
         // Unregister push token before revoking session
         const deviceId = await getStableDeviceId();
         if (deviceId) {
-          await unregisterPushToken(client, { deviceId }).catch((e) =>
-            logger.warn("Push token unregister failed", { error: e }),
-          );
+          const unregistered = await unregisterPushToken(client, { apiKey: currentSession.accessToken, deviceId });
+          if (!unregistered.ok) logger.warn("Push token unregister failed", { error: unregistered.error });
         }
 
         await revokeSession(client, { refreshToken: currentSession.refreshToken });
@@ -296,7 +297,7 @@ export function AppRoot() {
     } catch (e) {
       logger.warn("Logout revoke failed", { error: e });
     } finally {
-      await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt()]);
+      await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt(), clearPushRegistration()]);
       setSession(null);
     }
   }, [baseUrl, session, setSession]);
@@ -304,6 +305,7 @@ export function AppRoot() {
   const setHost = useCallback(
     async (url: string) => {
       const normalized = await saveStoredHost(url);
+      await clearPushRegistration();
       setActiveBaseUrl(normalized);
       const config = getAppConfig();
       setBaseUrl(config.ok ? config.baseUrl : null);
@@ -314,6 +316,7 @@ export function AppRoot() {
 
   const clearHost = useCallback(async () => {
     await clearStoredHost();
+    await clearPushRegistration();
     setActiveBaseUrl(null);
     const config = getAppConfig();
     setBaseUrl(config.ok ? config.baseUrl : null);
@@ -369,7 +372,7 @@ export function AppRoot() {
                   if (active === "SignIn" || active === "AuthCallback") return;
                   if (navPersistHandle.current) clearTimeout(navPersistHandle.current);
                   navPersistHandle.current = setTimeout(() => {
-                    void setSecureJson(`alga.mobile.navState.${userId}`, state);
+                    void setSecureJson(`alga.mobile.navState.${userId}`, stripTransientRouteParams(state));
                   }, 500);
                 }}
               >

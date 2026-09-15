@@ -24,21 +24,16 @@ export class TaxService {
       throw new Error('Tenant context is required for tax rate validation');
     }
 
-    // Check for overlapping date ranges in the same region
+    // Half-open intervals overlap when each starts before the other's end.
+    // A missing end is unbounded, so it must not become the proposed start.
     const query = tenantDb(knex, tenant).table('tax_rates')
       .where({
         region_code: regionCode
       })
       .andWhere(function() {
-        this.where(function() {
-          this.whereNull('end_date')
-            .andWhere('start_date', '<', endDate || startDate);
-        }).orWhere(function() {
-          this.whereNotNull('end_date')
-            .andWhere('start_date', '<', endDate || startDate)
-            .andWhere('end_date', '>', startDate);
-        });
+        this.whereNull('end_date').orWhere('end_date', '>', startDate);
       });
+    if (endDate) query.andWhere('start_date', '<', endDate);
 
     // Only add the excludeTaxRateId condition if it's provided
     if (excludeTaxRateId) {
@@ -217,20 +212,17 @@ export class TaxService {
   private async calculateCompositeTax(taxRate: ITaxRate, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
     const { knex } = await createTenantKnex();
     const components = await ClientTaxSettings.getCompositeTaxComponents(taxRate.tax_rate_id);
+    if (netAmount <= 0) return { taxAmount: 0, taxRate: 0, taxComponents: [] };
     let totalTaxAmount = 0;
-    let taxableAmount = netAmount;
     const appliedComponents: ITaxComponent[] = [];
 
     for (const component of components) {
       if (!this.isComponentApplicable(component, date)) continue;
 
+      const taxableAmount = component.is_compound ? netAmount + totalTaxAmount : netAmount;
       const componentTax = await this.calculateComponentTax(component, taxableAmount, date);
       totalTaxAmount += componentTax;
       appliedComponents.push(component);
-
-      if (component.is_compound) {
-        taxableAmount += componentTax;
-      }
     }
 
     const effectiveTaxRate = (totalTaxAmount / netAmount) * 100;
@@ -250,33 +242,33 @@ export class TaxService {
       return this.calculateThresholdBasedTax(thresholds, netAmount);
     }
 
+    // PostgreSQL numeric columns hydrate as strings even though the domain
+    // interface declares a number. Keep the result contract numeric on every path.
+    const taxPercentage = Number(taxRate.tax_percentage);
     // For negative or zero net amounts, no tax should be applied
     if (netAmount <= 0) {
-      return { taxAmount: 0, taxRate: taxRate.tax_percentage };
+      return { taxAmount: 0, taxRate: taxPercentage };
     }
 
-    const taxAmount = Math.ceil((netAmount * taxRate.tax_percentage) / 100);
-    return { taxAmount, taxRate: taxRate.tax_percentage };
+    const taxAmount = Math.ceil((netAmount * taxPercentage) / 100);
+    return { taxAmount, taxRate: taxPercentage };
   }
 
   private calculateThresholdBasedTax(thresholds: ITaxRateThreshold[], netAmount: number): ITaxCalculationResult {
     console.log(`Calculating threshold-based tax for net amount: ${netAmount}`);
     console.log(`Number of thresholds: ${thresholds.length}`);
 
+    if (netAmount <= 0) return { taxAmount: 0, taxRate: 0, appliedThresholds: [] };
     let taxAmount = 0;
-    let remainingAmount = netAmount;
     const appliedThresholds: ITaxRateThreshold[] = [];
 
     for (const threshold of thresholds) {
       console.log(`Processing threshold: ${JSON.stringify(threshold)}`);
-      if (remainingAmount <= 0) {
-        console.log('Remaining amount is 0 or less. Breaking out of threshold loop.');
-        break;
-      }
-
-      const taxableAmount = threshold.max_amount
-        ? Math.min(remainingAmount, threshold.max_amount - threshold.min_amount)
-        : remainingAmount;
+      // Bounds refer to the original base, not the remainder after earlier
+      // brackets. A nonzero first minimum or a gap must stay untaxed.
+      const taxableAmount = Math.max(0,
+        Math.min(netAmount, threshold.max_amount ?? netAmount) - threshold.min_amount);
+      if (taxableAmount === 0) continue;
 
       console.log(`Taxable amount for this threshold: ${taxableAmount}`);
 
@@ -284,11 +276,9 @@ export class TaxService {
       console.log(`Tax amount for this threshold: ${thresholdTax}`);
 
       taxAmount += thresholdTax;
-      remainingAmount -= taxableAmount;
       appliedThresholds.push(threshold);
 
       console.log(`Cumulative tax amount: ${taxAmount}`);
-      console.log(`Remaining amount: ${remainingAmount}`);
     }
 
     const effectiveTaxRate = (taxAmount / netAmount) * 100;

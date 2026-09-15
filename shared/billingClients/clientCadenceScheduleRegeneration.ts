@@ -134,6 +134,24 @@ function maxIsoDateOnly(left: ISO8601String, right: ISO8601String) {
   return compareIsoDateOnly(left, right) >= 0 ? left : right;
 }
 
+/**
+ * First eligible client-cadence obligation start. A newly added line inherits
+ * its assignment's start, but cannot reopen service already consumed in the
+ * client's ledger (including draft invoice detail links on sibling lines).
+ * Keep discovery, initial materialization and operator repairs on this rule.
+ */
+export function resolveClientCadenceObligationStart(input: {
+  assignmentStart: unknown;
+  billedBoundaryEnd: ISO8601String | null;
+  fallbackStart: ISO8601String;
+}): ISO8601String {
+  const assignmentStart = normalizeDateOnlyValue(input.assignmentStart)
+    ?? ensureUtcMidnightIsoDate(input.fallbackStart);
+  return input.billedBoundaryEnd
+    ? maxIsoDateOnly(assignmentStart, input.billedBoundaryEnd)
+    : assignmentStart;
+}
+
 function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
   switch ((contractLineType ?? 'fixed').toLowerCase()) {
     case 'fixed':
@@ -259,8 +277,8 @@ function buildScheduleSourceRuleVersion(
   ].join('|');
 }
 
-async function loadClientBilledLedgerBoundary(
-  trx: Knex.Transaction,
+export async function loadClientBilledLedgerBoundary(
+  trx: Knex | Knex.Transaction,
   params: { tenant: string; clientId: string },
 ) {
   const db = tenantDb(trx, params.tenant);
@@ -276,8 +294,8 @@ async function loadClientBilledLedgerBoundary(
         .orWhereNotNull('rsp.invoice_charge_detail_id');
     })
     .orderBy('rsp.service_period_end', 'desc')
-    .first()
-    .select({ service_period_end: 'rsp.service_period_end' });
+    .select({ service_period_end: 'rsp.service_period_end' })
+    .first();
 
   return lastBilled?.service_period_end
     ? normalizeDateOnlyValue(lastBilled.service_period_end)
@@ -430,9 +448,11 @@ async function computeClientCadenceRegeneration(
   for (const obligation of obligations) {
     const obligationStart =
       normalizeDateOnlyValue(obligation.start_date) ?? ensureUtcMidnightIsoDate(materializedAt);
-    const regenerationStart = billedBoundaryEnd
-      ? maxIsoDateOnly(obligationStart, billedBoundaryEnd)
-      : obligationStart;
+    const regenerationStart = resolveClientCadenceObligationStart({
+      assignmentStart: obligationStart,
+      billedBoundaryEnd,
+      fallbackStart: materializedAt,
+    });
     const obligationEnd = normalizeDateOnlyValue(obligation.end_date);
 
     if (obligationEnd && compareIsoDateOnly(obligationEnd, regenerationStart) <= 0) {

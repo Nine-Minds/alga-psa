@@ -9,12 +9,18 @@ import { ComponentPalette } from './ComponentPalette';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import { buildQuoteTemplateBindings } from '../../../lib/quote-template-ast/bindings';
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 afterEach(() => {
   cleanup();
 });
 
 describe('ComponentPalette quote fields tab', () => {
   beforeEach(() => {
+    releaseFlag.enabled = true;
     useInvoiceDesignerStore.getState().resetWorkspace();
     act(() => {
       useInvoiceDesignerStore.setState(

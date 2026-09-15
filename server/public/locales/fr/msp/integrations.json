@@ -14,6 +14,7 @@
         "manualEntryHelp": "Saisissez l'identifiant exactement tel qu'il apparaît dans votre système comptable.",
         "metadataLabel": "Métadonnées (JSON)",
         "metadataPlaceholder": "Métadonnées optionnelles au format JSON",
+        "noKindOptions": "Aucun enregistrement utilisable de ce type n'a été trouvé dans l'organisation connectée.",
         "realmIdLabel": "ID du Realm",
         "saveMapping": "Enregistrer le mappage",
         "saving": "Enregistrement…",
@@ -1697,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Gérez les profils Microsoft propres au tenant pour MSP SSO, la connexion Microsoft et la découverte des domaines de connexion.",
+        "descriptionCe": "Gérez les inscriptions d’applications Microsoft de votre entreprise pour la messagerie Outlook.",
         "descriptionEe": "Gérez les profils Microsoft propres au tenant pour MSP SSO, l'e-mail Outlook, la synchronisation du calendrier et Microsoft Teams.",
         "dialog": {
           "cancel": "Annuler",
@@ -1723,7 +1724,7 @@
         },
         "empty": {
           "createButton": "Créer un profil Microsoft",
-          "descriptionCe": "Créez d'abord un profil nommé, puis liez-le explicitement aux flux MSP SSO et de connexion par domaine.",
+          "descriptionCe": "Créez une inscription d’application Microsoft pour la messagerie Outlook.",
           "descriptionEe": "Créez d'abord un profil nommé, puis liez-le explicitement à MSP SSO, e-mail Outlook, synchronisation du calendrier et Teams.",
           "title": "Pas encore de profils Microsoft"
         },
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "Guide de configuration QuickBooks",
         "noPermissionDescription": "Vous n'avez pas l'autorisation d'afficher ou de configurer les intégrations comptables.",
-        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder."
-,
+        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder.",
         "disconnectPending": "QuickBooks est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
         "disconnectForceFinalized": "La déconnexion de QuickBooks a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
         "disconnect": {
@@ -2774,6 +2774,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Laissez le personnel se connecter via votre propre realm Keycloak. Les utilisateurs sont associés par e-mail aux comptes AlgaPSA existants ; Keycloak ne crée jamais d’utilisateurs ici.",
+        "status": {
+          "configured": "Configuré",
+          "notConfigured": "Non configuré"
+        },
+        "actions": {
+          "refresh": "Actualiser",
+          "save": "Vérifier et enregistrer",
+          "saving": "Vérification et enregistrement…",
+          "remove": "Supprimer"
+        },
+        "setup": {
+          "redirectUri": "Créez un client OpenID Connect confidentiel dans votre realm et autorisez cette URI de redirection :",
+          "domainsEe": "Revendiquez et vérifiez ensuite votre domaine de connexion sous « Avancé » afin que les e-mails de ce domaine soient dirigés vers ce realm.",
+          "domainsCe": "Ajoutez ensuite votre domaine de connexion sous « Avancé » afin que les e-mails de ce domaine soient dirigés vers ce realm.",
+          "issuer": "Émetteur : {{issuer}}"
+        },
+        "fields": {
+          "url": "URL du serveur Keycloak",
+          "realm": "Realm",
+          "clientId": "ID client",
+          "clientSecret": "Secret client",
+          "clientSecretKeep": "Laisser vide pour conserver {{masked}}"
+        },
+        "errors": {
+          "loadFailed": "Impossible de charger les paramètres Keycloak",
+          "saveFailed": "Impossible d’enregistrer les paramètres Keycloak",
+          "removeFailed": "Impossible de supprimer les paramètres Keycloak"
+        },
+        "toasts": {
+          "savedTitle": "Paramètres Keycloak enregistrés",
+          "savedDescription": "Le realm a répondu à la découverte OpenID ; le personnel peut désormais se connecter avec Keycloak.",
+          "saveFailedTitle": "Enregistrement des paramètres Keycloak impossible",
+          "removedTitle": "Paramètres Keycloak supprimés",
+          "removedDescription": "La connexion Keycloak n’est plus proposée pour ce locataire.",
+          "removeFailedTitle": "Suppression des paramètres Keycloak impossible"
+        },
+        "removeDialog": {
+          "title": "Supprimer la connexion Keycloak ?",
+          "message": "Le personnel ne verra plus le bouton Keycloak. La connexion par mot de passe reste inchangée.",
+          "confirm": "Supprimer",
+          "cancel": "Annuler"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Ajouter",
@@ -3528,8 +3574,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Vous n'avez pas l'autorisation d'afficher ou de configurer les intégrations comptables.",
-        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres Xero, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder."
-,
+        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres Xero, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder.",
         "disconnectPending": "Xero est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
         "disconnectForceFinalized": "La déconnexion de Xero a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
         "disconnect": {
@@ -3618,7 +3663,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "E-mails entrants Outlook pour l’inscription d’application Microsoft de votre entreprise.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },
@@ -3725,8 +3770,7 @@
       "notFound": "Correspondance introuvable. Actualisez les correspondances et réessayez.",
       "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer.",
       "invoiceCancelled": "La facture a été annulée et ne peut pas être mappée à l'intégration comptable.",
-      "invoiceNotFound": "La facture n'existe plus et ne peut pas être mappée à l'intégration comptable."
-,
+      "invoiceNotFound": "La facture n'existe plus et ne peut pas être mappée à l'intégration comptable.",
       "scopeRequired": "Les recherches de correspondances nécessitent une intégration, un type d'entité et une portée de realm."
     },
     "qbo": {
