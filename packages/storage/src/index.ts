@@ -10,4 +10,6 @@ export {
   getProviderConfig,
   getStorageConfig,
   validateFileUpload,
+  validateSystemArtifact,
 } from './config/storage';
+export type { StorageArtifactOrigin } from './config/storage';

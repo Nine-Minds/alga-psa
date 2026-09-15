@@ -37,7 +37,8 @@
       "delete": "Excluir",
       "addNew": "Adicionar nova taxa de imposto",
       "add": "Adicionar taxa de imposto",
-      "update": "Atualizar taxa de imposto"
+      "update": "Atualizar taxa de imposto",
+      "cancel": "Cancelar"
     },
     "dialog": {
       "addTitle": "Adicionar nova taxa de imposto",
@@ -48,13 +49,16 @@
         "percentage": "Porcentagem de imposto *",
         "description": "Descrição",
         "startDate": "Data de início *",
-        "endDate": "Data de término (opcional)"
+        "endDate": "Data de término (opcional)",
+        "active": "Ativa"
       },
       "placeholders": {
         "loadingRegions": "Carregando regiões...",
         "selectRegion": "Selecione a região fiscal",
         "percentage": "Insira a porcentagem"
-      }
+      },
+      "activeHint": "As taxas inativas são ignoradas ao tributar as faturas.",
+      "regionDescription": "Esta taxa aplica-se às faturas tributadas em {{region}}."
     }
   },
   "taxRateDetail": {

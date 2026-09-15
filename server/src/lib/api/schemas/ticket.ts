@@ -304,6 +304,39 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
   description_html: z.string().optional()
 });
 
+export function isValidIanaTimeZone(timeZone: string): boolean {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Scheduled publication mirrors the web composer rules: only client-visible
+// comments can be withheld, the instant must be in the future, and the IANA
+// zone the author scheduled in is stored alongside it.
+function validateScheduledCommentPublication(
+  data: { scheduled_publish_at?: string; scheduled_publish_tz?: string; is_internal?: boolean },
+  ctx: z.RefinementCtx
+): void {
+  if (!data.scheduled_publish_at) {
+    if (data.scheduled_publish_tz) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduled_publish_at'], message: 'scheduled_publish_at is required when scheduled_publish_tz is set' });
+    }
+    return;
+  }
+  if (new Date(data.scheduled_publish_at).getTime() <= Date.now()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduled_publish_at'], message: 'Scheduled publication time must be in the future' });
+  }
+  if (data.is_internal) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduled_publish_at'], message: 'Only client-visible comments can be scheduled' });
+  }
+  if (!data.scheduled_publish_tz || !isValidIanaTimeZone(data.scheduled_publish_tz)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduled_publish_tz'], message: 'A valid IANA time zone is required for scheduled comments' });
+  }
+}
+
 // Ticket comment schemas
 export const createTicketCommentSchema = z.object({
   comment_text: z.string()
@@ -319,8 +352,10 @@ export const createTicketCommentSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
   parent_comment_id: uuidSchema.optional(),
   external_links: inlineTicketExternalLinksSchema,
+  scheduled_publish_at: z.string().datetime({ offset: true }).optional(),
+  scheduled_publish_tz: z.string().min(1).max(64).optional(),
   ...ticketNotificationSuppressionSchema,
-}).superRefine(validateTicketNotificationSuppression);
+}).superRefine(validateTicketNotificationSuppression).superRefine(validateScheduledCommentPublication);
 
 export const updateTicketCommentSchema = z.object({
   comment_text: z.string()

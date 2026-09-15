@@ -14,6 +14,42 @@ const serverRoot = path.resolve(__dirname, '..');
 const PRODUCTION_DB_NAMES = ['sebastian_prod', 'production', 'prod', 'server'];
 
 /**
+ * Resolve a database password that may have arrived as a *path* rather than a
+ * value. `.env.localtest` (written by alga-local-wirein) sets
+ * `DB_PASSWORD_ADMIN=/run/secrets/postgres_password`, and every suite that
+ * vi.mocks the secrets provider makes `getSecret()` fall through to that env
+ * var. Passing the path string as a password fails with `28P01 password
+ * authentication failed for user "postgres"` and every test drops to skipped,
+ * which reads like a green run. When the resolved value looks like a file path,
+ * read it — first in place, then from the checkout's `secrets/` directory
+ * (the host path `.env.localtest` names does not exist outside the container).
+ */
+async function resolveDbSecret(
+  secretName: string,
+  envVar: string,
+  fallback: string,
+): Promise<string> {
+  const resolved = await getSecret(secretName, envVar, fallback);
+  if (!resolved) return fallback;
+  const looksLikePath = resolved.startsWith('/') || resolved.endsWith('.txt');
+  if (!looksLikePath) return resolved;
+  const candidates = [
+    resolved,
+    path.resolve(serverRoot, '..', 'secrets', path.basename(resolved)),
+    path.resolve(serverRoot, 'secrets', path.basename(resolved)),
+  ];
+  for (const candidate of candidates) {
+    try {
+      const value = fs.readFileSync(candidate, 'utf8').trim();
+      if (value) return value;
+    } catch {
+      // Try the next candidate; fall through to the literal value.
+    }
+  }
+  return resolved;
+}
+
+/**
  * The suite database, overridable per checkout via `TEST_DB_NAME`.
  *
  * Several worktrees of this repo share one PostgreSQL instance, and every suite
@@ -90,9 +126,9 @@ export async function createTestDbConnection(
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = parseInt(process.env.DB_PORT || '5432', 10);
   const adminUser = process.env.DB_USER_ADMIN || 'postgres';
-  const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
+  const adminPassword = await resolveDbSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
   const appUser = process.env.DB_USER_SERVER || 'app_user';
-  const appPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
+  const appPassword = await resolveDbSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
   const recreate = options.recreate ?? true;
 
   if (!recreate) {

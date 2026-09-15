@@ -31,7 +31,8 @@
       "advancedSettings": "Paramètres avancés",
       "addNew": "Ajouter un nouveau taux de taxe",
       "add": "Ajouter un taux de taxe",
-      "update": "Mettre à jour le taux de taxe"
+      "update": "Mettre à jour le taux de taxe",
+      "cancel": "Annuler"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Date de début *",
         "endDate": "Date de fin (facultatif)",
         "region": "Région fiscale *",
-        "percentage": "Pourcentage de taxe *"
+        "percentage": "Pourcentage de taxe *",
+        "active": "Actif"
       },
       "placeholders": {
         "loadingRegions": "Chargement des régions...",
@@ -48,7 +50,9 @@
       },
       "addTitle": "Ajouter un nouveau taux de taxe",
       "editTitle": "Modifier le taux de taxe",
-      "description": "Saisissez les détails du taux de taxe."
+      "description": "Saisissez les détails du taux de taxe.",
+      "activeHint": "Les taux inactifs sont ignorés lors de la taxation des factures.",
+      "regionDescription": "Ce taux s'applique aux factures taxées dans {{region}}."
     },
     "title": "Taux d'imposition",
     "loading": "Chargement des taux de taxe",

@@ -71,8 +71,8 @@ vi.mock("../src/components/settings/billing/CostRatesSettings", () => ({
 vi.mock("../src/components/settings/tax/TaxSourceSettings", () => ({
   TaxSourceSettings: () => null,
 }));
-vi.mock("../src/components/settings/tax/TaxRegionsManager", () => ({
-  TaxRegionsManager: () => null,
+vi.mock("../src/components/settings/tax/TaxRegionsAndRates", () => ({
+  TaxRegionsAndRates: () => null,
 }));
 vi.mock("../src/components/tax/TaxDelegationBanner", () => ({
   default: () => null,

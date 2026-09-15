@@ -148,8 +148,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       time_spent: zOpenApi.number().min(0).optional(),
       metadata: zOpenApi.record(zOpenApi.unknown()).optional(),
       parent_comment_id: zOpenApi.string().uuid().optional(),
+      scheduled_publish_at: zOpenApi.string().datetime({ offset: true }).optional().describe('Withhold this client-visible comment until this future instant (ISO 8601). Requires scheduled_publish_tz; not allowed with is_internal or when replying into an internal thread.'),
+      scheduled_publish_tz: zOpenApi.string().max(64).optional().describe('IANA time zone the author scheduled in, e.g. America/New_York.'),
       ...ticketNotificationSuppressionProperties,
-    }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history.'),
+    }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job.'),
   );
 
   const CreateTagBody = registry.registerSchema(
@@ -650,6 +652,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   });
 
   registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/{id}/comments/{commentId}/schedule',
+    summary: 'Cancel a scheduled comment',
+    description: 'Cancels a comment that was created with scheduled_publish_at and has not published yet. The row is retained with publish_state=canceled (soft-deleted) and its publication job is removed. Returns 400 for comments that are not scheduled.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketCommentParams },
+    responses: ticketStdResponses({ code: 200, description: 'Scheduled comment canceled.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
     method: 'get', path: '/api/v1/tickets/{id}/documents',
     summary: 'List ticket documents',
     description: 'Returns the documents (file attachments) associated with a ticket.',
@@ -765,6 +777,28 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     },
     extensions: ticketExt('read'), edition: 'both',
   });
+
+  for (const variant of [
+    { name: 'thumbnail', size: '200x200 cover-cropped' },
+    { name: 'preview', size: '800x600 fit-inside' },
+  ] as const) {
+    registry.registerRoute({
+      method: 'get', path: `/api/v1/tickets/{id}/documents/{documentId}/${variant.name}`,
+      summary: `Get a ticket document ${variant.name} image`,
+      description: `Serves the cached ${variant.size} JPEG ${variant.name} for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no ${variant.name}.`,
+      tags: [tag], security: [{ ApiKeyAuth: [] }],
+      request: { params: TicketDocumentParams },
+      responses: {
+        200: { description: `Binary ${variant.name} image (image/jpeg).`, schema: ApiSuccess },
+        304: { description: 'Not modified (ETag matched If-None-Match).', schema: ApiSuccess },
+        401: { description: 'API key missing/invalid.', schema: ApiError },
+        403: { description: 'RBAC denied for ticket resource action.', schema: ApiError },
+        404: { description: `Document not found or has no ${variant.name}.`, schema: ApiError },
+        500: { description: 'Unexpected failure.', schema: ApiError },
+      },
+      extensions: ticketExt('read'), edition: 'both',
+    });
+  }
 
   registry.registerRoute({
     method: 'delete', path: '/api/v1/tickets/{id}/documents/{documentId}',

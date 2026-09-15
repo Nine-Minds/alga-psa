@@ -83,6 +83,7 @@ type ManagedTicketStatus = {
   order_number: number;
   color?: string | null;
   icon?: string | null;
+  portal_selectable: boolean;
 };
 
 function createManagedTicketStatus(index: number): ManagedTicketStatus {
@@ -94,6 +95,7 @@ function createManagedTicketStatus(index: number): ManagedTicketStatus {
     order_number: (index + 1) * 10,
     color: null,
     icon: null,
+    portal_selectable: true,
   };
 }
 
@@ -151,6 +153,7 @@ function mapBoardStatusesToManagedStatuses(
     order_number?: number;
     color?: string | null;
     icon?: string | null;
+    portal_selectable?: boolean;
   }>
 ): ManagedTicketStatus[] {
   return statuses.map((status, index) => ({
@@ -162,6 +165,7 @@ function mapBoardStatusesToManagedStatuses(
     order_number: status.order_number || ((index + 1) * 10),
     color: status.color || null,
     icon: status.icon || null,
+    portal_selectable: status.portal_selectable ?? true,
   }));
 }
 
@@ -175,6 +179,7 @@ function normalizeManagedTicketStatuses(statuses: ManagedTicketStatus[]) {
       order_number: (index + 1) * 10,
       color: status.color || null,
       icon: status.icon || null,
+      portal_selectable: status.portal_selectable,
     }))
     .filter((status) => status.name.length > 0);
 }
@@ -2380,7 +2385,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 {isLoadingBoardStatuses ? (
                   <p className="text-sm text-muted-foreground">{t('ticketing.boards.fields.ticketStatuses.loading')}</p>
                 ) : formData.ticket_statuses.map((status, index) => (
-                  <div key={status.temp_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center">
+                  <div key={status.temp_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] md:items-center">
                     <div>
                       <Label htmlFor={`inline-ticket-status-name-${index}`}>{t('ticketing.boards.fields.ticketStatuses.statusName')}</Label>
                       <Input
@@ -2408,6 +2413,14 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                             setManagedDefaultStatus(status.temp_id);
                           }
                         }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`inline-ticket-status-portal-selectable-${index}`}>{t('ticketing.boards.fields.ticketStatuses.portalSelectable')}</Label>
+                      <Switch
+                        id={`inline-ticket-status-portal-selectable-${index}`}
+                        checked={status.portal_selectable}
+                        onCheckedChange={(checked) => updateManagedTicketStatus(status.temp_id, { portal_selectable: checked })}
                       />
                     </div>
                     <div className="flex gap-2">

@@ -225,6 +225,12 @@ interface TicketDetailsProps {
     renderCreateProjectTask?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
 
     /**
+     * Optional injected UI for quick-invoicing a ticket (e.g. billing package
+     * QuickInvoiceTicketDialog). Keeps @alga-psa/tickets from importing billing.
+     */
+    renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -300,6 +306,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     associatedAssets = null,
     renderContactDetails,
     renderCreateProjectTask,
+    renderQuickInvoice,
     renderClientDetails,
     renderIntervalManagement,
     hideSlaStatus = false,
@@ -3724,6 +3731,7 @@ const handleClose = () => {
                     tags={tags}
                     onTagsChange={handleTagsChange}
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
+                    quickInvoiceActions={hideBilling ? undefined : renderQuickInvoice?.({ ticket })}
                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                         ? () => setIsResolutionCloseDialogOpen(true)
                         : undefined}
@@ -3858,6 +3866,7 @@ const handleClose = () => {
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
+                                    renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                         ? () => setIsResolutionCloseDialogOpen(true)
                                         : undefined}
@@ -4082,6 +4091,7 @@ const handleClose = () => {
                             isBundledChild={Boolean(bundle?.isBundleChild)}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
+                            renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                             onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                 ? () => setIsResolutionCloseDialogOpen(true)
                                 : undefined}

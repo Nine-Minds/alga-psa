@@ -69,9 +69,30 @@ const loadWorkflow = async () => {
 };
 
 describe('workflowRuntimeV2RunWorkflow', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     workflowSignalHandlers.clear();
+
+    // vi.clearAllMocks() clears recorded calls but NOT queued once-implementations
+    // (mockImplementationOnce / mockResolvedValueOnce / mockRejectedValueOnce). The
+    // @temporalio/workflow doubles are module-level singletons that persist across
+    // tests, so an unconsumed "once" from one test would otherwise leak into the
+    // next whenever test/file execution order changes (as it does under CI's
+    // sequencer). Reset those mocks and restore their default behavior so each test
+    // starts from a clean, order-independent baseline.
+    const temporalWorkflow = await import('@temporalio/workflow');
+    vi.mocked(temporalWorkflow.condition).mockReset().mockImplementation(
+      async (predicate: () => boolean) => predicate()
+    );
+    vi.mocked(temporalWorkflow.continueAsNew).mockReset().mockImplementation(async () => undefined);
+    vi.mocked(temporalWorkflow.executeChild).mockReset().mockImplementation(async () => undefined);
+    vi.mocked(temporalWorkflow.sleep).mockReset().mockImplementation(async () => undefined);
+    vi.mocked(temporalWorkflow.setHandler).mockReset().mockImplementation(
+      (signalName: string, handler: (payload: unknown) => void) => {
+        workflowSignalHandlers.set(signalName, handler);
+      }
+    );
+
     let stepCounter = 0;
     mockActivities = {
       loadWorkflowRuntimeV2PinnedDefinition: vi.fn(),
@@ -2410,6 +2431,14 @@ describe('workflowRuntimeV2RunWorkflow', () => {
         status: 'RESOLVED',
       })
     );
+    // The signal payload must thread through vars.event so the authored assign
+    // (vars.approval := vars.event.approved) resolves to a concrete value and the
+    // run continues to completion instead of failing when the assignment reads an
+    // absent field.
+    expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
+      runId: 'run_19',
+      status: 'SUCCEEDED',
+    });
   });
 
   it('fails human.task when response validation activity rejects payload', async () => {

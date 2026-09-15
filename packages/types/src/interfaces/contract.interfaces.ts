@@ -57,6 +57,11 @@ export interface IContractLineMapping extends TenantEntity {
   contract_line_id: string;
   display_order?: number;
   custom_rate?: number | null;
+  /**
+   * Who owns `custom_rate`. `inherited` (custom_rate NULL) follows the catalog;
+   * `custom`/`unreviewed` take the stored number. See the rate-provenance plan.
+   */
+  rate_provenance?: 'custom' | 'inherited' | 'unreviewed' | null;
   billing_timing?: 'arrears' | 'advance';
   cadence_owner?: CadenceOwner;
   location_id?: string | null;
@@ -167,6 +172,12 @@ export interface IContractAssignmentSummary extends TenantEntity {
 export interface IContractPricingSchedule extends TenantEntity {
   schedule_id: string;
   contract_id: string;
+  /**
+   * Optional line scope. NULL keeps the original contract-wide meaning (the
+   * schedule applies to every line on the contract); a line id scopes the
+   * override to that line only.
+   */
+  contract_line_id?: string | null;
   effective_date: ISO8601String;
   end_date?: ISO8601String | null;
   duration_value?: number;

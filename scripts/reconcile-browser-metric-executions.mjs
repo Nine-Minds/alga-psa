@@ -11,7 +11,7 @@ try {
   if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY,
     `\nBrowser metric export reconciliation: **${result.status}**. Scope: observed executions only; not release readiness.\n\n`
     + result.records.map(record => `- ${record.edition}, attempt ${record.runAttempt}: ${record.status}; export=${record.exportStatus}; legacy run exports=${record.legacyRunExportCount}; unverified current-attempt exports=${record.unverifiedCurrentAttemptRunExportCount}; recorder=${record.recorderStatus ?? 'unknown'}/${record.recorderConclusion ?? 'unknown'}; reasons=${record.issues.join(',') || 'none'}\n`).join(''));
-  process.exitCode = result.status === 'passed' ? 0 : 1;
+  process.exitCode = ['passed', 'not-required'].includes(result.status) ? 0 : 1;
 } catch {
   if (safeOutput) await rm(output, { force: true }).catch(() => {});
   console.error('Browser metric execution reconciliation failed'); process.exitCode = 1;

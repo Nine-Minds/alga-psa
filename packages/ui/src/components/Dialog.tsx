@@ -530,6 +530,14 @@ export function Dialog({
             }
             handleDialogKeyDown(e);
           }}
+          onEscapeKeyDown={(event) => {
+            // A nested dialog renders inline inside this content. Radix listens
+            // for Escape on the document in the capture phase, so the nested
+            // dialog cannot stop it — let it keep its own Escape instead.
+            if (dialogRef.current?.querySelector('[role="dialog"]')) {
+              event.preventDefault();
+            }
+          }}
           onOpenAutoFocus={(event) => {
             if (onOpenAutoFocus) {
               onOpenAutoFocus(event);

@@ -141,3 +141,39 @@ export function getClientLocations(
     },
   });
 }
+
+// Client notes are a single BlockNote (rich-text) document per client, shared
+// with the web client page. Mobile flattens blockData to text for display and
+// appends paragraph blocks for new notes (see features/assets/blockNote).
+export type ClientNoteContent = {
+  document: unknown | null;
+  blockData: unknown | null;
+  lastUpdated: string | null;
+};
+
+export function getClientNotes(
+  client: ApiClient,
+  params: { apiKey: string; clientId: string; signal?: AbortSignal },
+): Promise<ApiResult<{ data: ClientNoteContent }>> {
+  return client.request<{ data: ClientNoteContent }>({
+    method: "GET",
+    path: `/api/v1/clients/${params.clientId}/notes`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+  });
+}
+
+/** Replace the client's notes document. Pass the full block array, including
+ *  any pre-existing blocks (appendNoteBlock handles that). */
+export function saveClientNotes(
+  client: ApiClient,
+  params: { apiKey: string; clientId: string; blockData: unknown; signal?: AbortSignal },
+): Promise<ApiResult<{ data: unknown }>> {
+  return client.request<{ data: unknown }>({
+    method: "PUT",
+    path: `/api/v1/clients/${params.clientId}/notes`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+    body: { blockData: params.blockData },
+  });
+}

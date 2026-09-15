@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { UpgradePrompt } from '@alga-psa/ui/components/UpgradePrompt';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { Palette, Sparkles } from 'lucide-react';
@@ -276,6 +277,22 @@ const AppearanceSettings = () => {
     primary: draft.customTheme[mode].primary,
     sidebar: draft.customTheme[mode].sidebarBg,
   });
+
+  // The route shell and the settings nav already keep Community away from this
+  // tab; this is the same boundary the tab body itself draws, so a stray mount
+  // never offers a theme the server will refuse to save.
+  if (!isEEAvailable) {
+    return (
+      <UpgradePrompt
+        featureName={t('appearance.title', { defaultValue: 'Theme' })}
+        pitch={t('appearance.upgrade.pitch', {
+          defaultValue:
+            'Organization-wide theme pairs, a custom palette editor and MSP white-labeling are part of Enterprise Edition.',
+        })}
+        ctaId="appearance-upgrade-link"
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

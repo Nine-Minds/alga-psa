@@ -86,7 +86,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
-import { actionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 
@@ -3152,6 +3152,12 @@ export const updateTicketWithCache = withAuth(async (
   >,
 ): Promise<'success' | TicketActionError> => {
   try {
+    // MSP cached ticket write surface. A client-portal session must not reach it;
+    // reject before the permission lookup or any ticket mutation.
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
+    }
+
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx) => {

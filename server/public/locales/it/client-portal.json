@@ -976,7 +976,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Ticket non trovato o accesso negato",
-      "invalidData": "Dati del ticket non validi"
+      "invalidData": "Dati del ticket non validi",
+      "statusNotPortalSelectable": "Questo stato non può essere selezionato dal portale clienti"
     },
     "visibilityGroups": {
       "checkDetails": "Verificare i dati del gruppo di visibilità e riprovare.",

@@ -81,7 +81,7 @@ describe('MSP core locale batch 2b-1', () => {
       'nav.billing.credits': 'Credits',
       'nav.billing.serviceCatalog': 'Services',
       'nav.billing.products': 'Products',
-      'nav.billing.taxRates': 'Tax Rates',
+      'nav.billing.taxRates': 'Tax',
       'nav.billing.usageTracking': 'Usage Tracking',
       'nav.billing.reports': 'Reports',
       'nav.billing.accountingExports': 'Accounting Exports',
