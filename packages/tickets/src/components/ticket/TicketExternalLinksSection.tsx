@@ -58,6 +58,12 @@ interface TicketExternalLinksSectionProps {
 
 const RELATIONSHIPS: ExternalLinkRelationship[] = ['origin', 'mirror', 'reference'];
 
+const RELATIONSHIP_DESCRIPTION_FALLBACKS: Record<ExternalLinkRelationship, string> = {
+  origin: "Where this ticket started. Each ticket can have one origin link, which sets its origin badge.",
+  mirror: 'Another record tracking the same work as this ticket.',
+  reference: 'Supporting information for this ticket.',
+};
+
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
 }
@@ -403,6 +409,15 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
     [t],
   );
 
+  const relationshipDescription = useCallback(
+    (relationship: ExternalLinkRelationship) =>
+      t(
+        `externalLinks.relationshipDescription.${relationship}`,
+        RELATIONSHIP_DESCRIPTION_FALLBACKS[relationship],
+      ),
+    [t],
+  );
+
   const relationshipOptions = useMemo(
     () =>
       RELATIONSHIPS.map((relationship) => ({
@@ -599,7 +614,11 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
               </p>
             ) : null}
 
-            <div className="mt-2 space-y-2">
+            <p className="text-sm text-[rgb(var(--color-text-600))]">
+              {t('externalLinks.dialog.intro', 'Adding a link does not sync data between systems.')}
+            </p>
+
+            <div className="space-y-2">
               <Label htmlFor={`${id}-system`}>
                 {t('externalLinks.fields.system', 'System')}
               </Label>
@@ -685,24 +704,28 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
                   setForm((prev) => ({ ...prev, relationship: value as ExternalLinkRelationship }))
                 }
               />
-              {hasOrigin && form.relationship !== 'origin' ? (
-                <p className="text-xs text-[rgb(var(--color-text-500))]">
-                  {t(
-                    'externalLinks.fields.originExistsHint',
-                    'This ticket already has an origin link.',
-                  )}
-                </p>
-              ) : null}
+              <p className="text-xs text-[rgb(var(--color-text-500))]">
+                {relationshipDescription(form.relationship)}
+                {hasOrigin && form.relationship !== 'origin'
+                  ? ` ${t('externalLinks.fields.originExistsHint', 'This ticket already has an origin link.')}`
+                  : null}
+              </p>
             </div>
 
             <details className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
               <summary className="cursor-pointer text-sm text-[rgb(var(--color-text-600))]">
-                {t('externalLinks.fields.actorGroup', 'Who acted there')}
+                {t('externalLinks.fields.actorGroup', 'Person or account (optional)')}
               </summary>
               <div className="mt-3 space-y-3">
+                <p className="text-xs text-[rgb(var(--color-text-500))]">
+                  {t(
+                    'externalLinks.fields.actorHint',
+                    'The person or account associated with the linked record in the external system.',
+                  )}
+                </p>
                 <div className="space-y-2">
                   <Label htmlFor={`${id}-actor-handle`}>
-                    {t('externalLinks.fields.actorHandle', 'Handle')}
+                    {t('externalLinks.fields.actorHandle', 'Username or handle')}
                   </Label>
                   <Input
                     id={`${id}-actor-handle`}

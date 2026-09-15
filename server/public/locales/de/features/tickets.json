@@ -1822,9 +1822,15 @@
       "mirror": "Spiegel",
       "reference": "Referenz"
     },
+    "relationshipDescription": {
+      "origin": "Wo dieses Ticket seinen Ursprung hat. Jedes Ticket kann einen Ursprungs-Link haben, der sein Ursprungs-Badge bestimmt.",
+      "mirror": "Ein weiterer Eintrag, der dieselbe Aufgabe wie dieses Ticket verfolgt.",
+      "reference": "Ergänzende Informationen zu diesem Ticket."
+    },
     "dialog": {
       "addTitle": "Externen Link hinzufügen",
-      "editTitle": "Externen Link bearbeiten"
+      "editTitle": "Externen Link bearbeiten",
+      "intro": "Das Hinzufügen eines Links synchronisiert keine Daten zwischen den Systemen."
     },
     "removeDialog": {
       "title": "Externen Link entfernen",
@@ -1842,8 +1848,9 @@
       "urlRequired": "https://...",
       "relationship": "Beziehung",
       "originExistsHint": "Dieses Ticket hat bereits einen Ursprungs-Link.",
-      "actorGroup": "Wer dort gehandelt hat",
-      "actorHandle": "Benutzername",
+      "actorGroup": "Person oder Konto (optional)",
+      "actorHint": "Die Person oder das Konto, die bzw. das mit dem verlinkten Eintrag im externen System verbunden ist.",
+      "actorHandle": "Benutzername oder Handle",
       "actorDisplay": "Anzeigename",
       "builtInGroup": "Integrierte Systeme",
       "customGroup": "Benutzerdefinierte Systeme",

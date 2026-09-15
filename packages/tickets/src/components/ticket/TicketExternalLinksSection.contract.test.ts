@@ -30,6 +30,17 @@ describe('ticket external links UI contract', () => {
     expect(source).toContain("externalLinks.errors.urlRequired");
   });
 
+  it('the add/edit dialog explains the selected relationship and that links do not sync data', () => {
+    const source = readRepoFile('packages/tickets/src/components/ticket/TicketExternalLinksSection.tsx');
+    const en = JSON.parse(readRepoFile('server/public/locales/en/features/tickets.json'));
+
+    expect(source).toContain('externalLinks.dialog.intro');
+    expect(source).toContain('externalLinks.relationshipDescription.${relationship}');
+    expect(source).toContain('relationshipDescription(form.relationship)');
+    expect(Object.keys(en.externalLinks.relationshipDescription).sort()).toEqual(['mirror', 'origin', 'reference']);
+    expect(en.externalLinks.dialog.intro).toBeTruthy();
+  });
+
   it('T121b: client components import the server-action module directly, never the barrel', () => {
     // The barrel re-exports externalLinkErrors, which imports the persistence
     // module and @alga-psa/db. Importing it from a client component drags

@@ -1964,9 +1964,15 @@
       "mirror": "Kopia",
       "reference": "Odwołanie"
     },
+    "relationshipDescription": {
+      "origin": "Skąd pochodzi to zgłoszenie. Każde zgłoszenie może mieć jedno łącze źródłowe, które określa jego oznaczenie pochodzenia.",
+      "mirror": "Inny rekord śledzący tę samą pracę co to zgłoszenie.",
+      "reference": "Informacje pomocnicze dotyczące tego zgłoszenia."
+    },
     "dialog": {
       "addTitle": "Dodaj łącze zewnętrzne",
-      "editTitle": "Edytuj łącze zewnętrzne"
+      "editTitle": "Edytuj łącze zewnętrzne",
+      "intro": "Dodanie łącza nie synchronizuje danych między systemami."
     },
     "removeDialog": {
       "title": "Usuń łącze zewnętrzne",
@@ -1984,8 +1990,9 @@
       "urlRequired": "https://...",
       "relationship": "Relacja",
       "originExistsHint": "To zgłoszenie ma już łącze źródłowe.",
-      "actorGroup": "Kto tam działał",
-      "actorHandle": "Identyfikator",
+      "actorGroup": "Osoba lub konto (opcjonalnie)",
+      "actorHint": "Osoba lub konto powiązane z połączonym rekordem w systemie zewnętrznym.",
+      "actorHandle": "Nazwa użytkownika lub identyfikator",
       "actorDisplay": "Wyświetlana nazwa",
       "builtInGroup": "Systemy wbudowane",
       "customGroup": "Systemy niestandardowe",

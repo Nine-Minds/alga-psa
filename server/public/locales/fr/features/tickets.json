@@ -1822,9 +1822,15 @@
       "mirror": "Miroir",
       "reference": "Référence"
     },
+    "relationshipDescription": {
+      "origin": "Où ce ticket a commencé. Chaque ticket peut avoir un lien d’origine, qui définit son badge d’origine.",
+      "mirror": "Un autre enregistrement qui suit le même travail que ce ticket.",
+      "reference": "Informations complémentaires pour ce ticket."
+    },
     "dialog": {
       "addTitle": "Ajouter un lien externe",
-      "editTitle": "Modifier le lien externe"
+      "editTitle": "Modifier le lien externe",
+      "intro": "Ajouter un lien ne synchronise pas les données entre les systèmes."
     },
     "removeDialog": {
       "title": "Supprimer le lien externe",
@@ -1842,8 +1848,9 @@
       "urlRequired": "https://...",
       "relationship": "Relation",
       "originExistsHint": "Ce ticket possède déjà un lien d'origine.",
-      "actorGroup": "Qui a agi là-bas",
-      "actorHandle": "Identifiant",
+      "actorGroup": "Personne ou compte (facultatif)",
+      "actorHint": "La personne ou le compte associé à l’enregistrement lié dans le système externe.",
+      "actorHandle": "Nom d’utilisateur ou identifiant",
       "actorDisplay": "Nom affiché",
       "builtInGroup": "Systèmes intégrés",
       "customGroup": "Systèmes personnalisés",

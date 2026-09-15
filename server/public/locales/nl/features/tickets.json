@@ -1822,9 +1822,15 @@
       "mirror": "Spiegel",
       "reference": "Referentie"
     },
+    "relationshipDescription": {
+      "origin": "Waar dit ticket begon. Elk ticket kan één oorsprongskoppeling hebben, die de oorsprongsbadge bepaalt.",
+      "mirror": "Een ander record dat hetzelfde werk als dit ticket bijhoudt.",
+      "reference": "Aanvullende informatie voor dit ticket."
+    },
     "dialog": {
       "addTitle": "Externe koppeling toevoegen",
-      "editTitle": "Externe koppeling bewerken"
+      "editTitle": "Externe koppeling bewerken",
+      "intro": "Een koppeling toevoegen synchroniseert geen gegevens tussen systemen."
     },
     "removeDialog": {
       "title": "Externe koppeling verwijderen",
@@ -1842,8 +1848,9 @@
       "urlRequired": "https://...",
       "relationship": "Relatie",
       "originExistsHint": "Dit ticket heeft al een oorsprongskoppeling.",
-      "actorGroup": "Wie handelde daar",
-      "actorHandle": "Gebruikersnaam",
+      "actorGroup": "Persoon of account (optioneel)",
+      "actorHint": "De persoon of het account dat bij het gekoppelde record in het externe systeem hoort.",
+      "actorHandle": "Gebruikersnaam of handle",
       "actorDisplay": "Weergavenaam",
       "builtInGroup": "Ingebouwde systemen",
       "customGroup": "Aangepaste systemen",

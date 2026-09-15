@@ -1822,9 +1822,15 @@
       "mirror": "Espelho",
       "reference": "Referência"
     },
+    "relationshipDescription": {
+      "origin": "Onde este ticket teve origem. Cada ticket pode ter um link de origem, que define seu selo de origem.",
+      "mirror": "Outro registro que acompanha o mesmo trabalho deste ticket.",
+      "reference": "Informações de apoio para este ticket."
+    },
     "dialog": {
       "addTitle": "Adicionar link externo",
-      "editTitle": "Editar link externo"
+      "editTitle": "Editar link externo",
+      "intro": "Adicionar um link não sincroniza dados entre sistemas."
     },
     "removeDialog": {
       "title": "Remover link externo",
@@ -1842,8 +1848,9 @@
       "urlRequired": "https://...",
       "relationship": "Relacionamento",
       "originExistsHint": "Este ticket já tem um link de origem.",
-      "actorGroup": "Quem agiu lá",
-      "actorHandle": "Identificador",
+      "actorGroup": "Pessoa ou conta (opcional)",
+      "actorHint": "A pessoa ou conta associada ao registro vinculado no sistema externo.",
+      "actorHandle": "Nome de usuário ou identificador",
       "actorDisplay": "Nome de exibição",
       "builtInGroup": "Sistemas integrados",
       "customGroup": "Sistemas personalizados",

@@ -1822,9 +1822,15 @@
       "mirror": "Mirror",
       "reference": "Reference"
     },
+    "relationshipDescription": {
+      "origin": "Where this ticket started. Each ticket can have one origin link, which sets its origin badge.",
+      "mirror": "Another record tracking the same work as this ticket.",
+      "reference": "Supporting information for this ticket."
+    },
     "dialog": {
       "addTitle": "Add external link",
-      "editTitle": "Edit external link"
+      "editTitle": "Edit external link",
+      "intro": "Adding a link does not sync data between systems."
     },
     "removeDialog": {
       "title": "Remove external link",
@@ -1842,8 +1848,9 @@
       "urlRequired": "https://...",
       "relationship": "Relationship",
       "originExistsHint": "This ticket already has an origin link.",
-      "actorGroup": "Who acted there",
-      "actorHandle": "Handle",
+      "actorGroup": "Person or account (optional)",
+      "actorHint": "The person or account associated with the linked record in the external system.",
+      "actorHandle": "Username or handle",
       "actorDisplay": "Display name",
       "builtInGroup": "Built-in systems",
       "customGroup": "Custom systems",
