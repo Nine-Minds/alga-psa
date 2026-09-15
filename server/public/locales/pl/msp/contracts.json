@@ -504,7 +504,8 @@
       "addFromPresets": "Dodaj z presetów",
       "collapseLine": "Zwiń linię kontraktową",
       "createCustom": "Utwórz niestandardowy",
-      "expandLine": "Rozwiń linię kontraktową"
+      "expandLine": "Rozwiń linię kontraktową",
+      "resetToStandard": "Przywróć standard"
     },
     "billingProfile": {
       "hint": "Opłaty z tej pozycji są rozliczane na tym profilu, nadpisując umowę.",
@@ -550,7 +551,8 @@
       "readOnly": "Ta domyślna umowa zarządzana przez system służy wyłącznie do atrybucji. Tworzenie linii kontraktowych jest wyłączone."
     },
     "dialogs": {
-      "confirmRemove": "Usunąć linię kontraktową „{{name}}”?"
+      "confirmRemove": "Usunąć linię kontraktową „{{name}}”?",
+      "confirmResetRate": "Przywrócić tę pozycję do standardowej ceny katalogowej? Zapisana cena niestandardowa zostanie usunięta."
     },
     "empty": {
       "noneAdded": "Nie dodano jeszcze żadnych linii kontraktowych.",
@@ -562,7 +564,8 @@
       "failedToLoad": "Nie udało się wczytać linii kontraktowych",
       "failedToRefresh": "Nie udało się odświeżyć linii kontraktowych",
       "failedToRemove": "Nie udało się usunąć linii kontraktowej",
-      "failedToUpdate": "Nie udało się zaktualizować linii kontraktowej"
+      "failedToUpdate": "Nie udało się zaktualizować linii kontraktowej",
+      "failedToResetRate": "Nie udało się przywrócić stawki pozycji"
     },
     "loading": {
       "contractLines": "Ładowanie linii kontraktowych",
@@ -601,7 +604,12 @@
       "semanticsEffectiveFrom": "Zmiany cen i sposobu pomiaru usługi obowiązują od",
       "prospectiveSemanticsHelp": "Zmiany obowiązują od tej granicy okresu usługi; wcześniejsze ilości, sposób pomiaru i ceny pozostają bez zmian. Zmiana daty ponownie wczytuje obowiązujące ustawienia do przeglądu."
     },
-    "title": "Linie kontraktowe"
+    "title": "Linie kontraktowe",
+    "rateProvenance": {
+      "standard": "Standardowy",
+      "custom": "Niestandardowy",
+      "unreviewed": "Nieprzejrzany"
+    }
   },
   "contractLineEdit": {
     "actions": {

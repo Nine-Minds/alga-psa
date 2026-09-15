@@ -66,13 +66,29 @@ export async function getProviderConfig(providerId: string): Promise<StorageProv
   return provider;
 }
 
-export async function validateFileUpload(mimeType: string, fileSize: number): Promise<void> {
+/**
+ * Who chose the MIME type of a stored object: the user behind an upload, or
+ * product code generating/fetching an artifact. The default when a caller
+ * omits the option is `user-upload`, so an un-migrated call site keeps the
+ * attachment allowlist and cannot silently bypass it.
+ */
+export type StorageArtifactOrigin = 'user-upload' | 'system-artifact';
+
+/** Shared size/provider ceiling check used by both validators. */
+async function validateFileSize(fileSize: number): Promise<StorageProviderConfig> {
   const config = await buildStorageConfig();
   const provider = config.providers[config.defaultProvider];
 
   if (fileSize > provider.maxFileSize) {
     throw new Error(`File size exceeds limit of ${provider.maxFileSize} bytes`);
   }
+
+  return provider;
+}
+
+/** Validate a user-supplied attachment: size ceiling plus the MIME allowlist. */
+export async function validateFileUpload(mimeType: string, fileSize: number): Promise<void> {
+  const provider = await validateFileSize(fileSize);
 
   // Check if all file types are allowed (via */* wildcard)
   const allowsAllTypes = provider.allowedMimeTypes.includes('*/*');
@@ -90,6 +106,15 @@ export async function validateFileUpload(mimeType: string, fileSize: number): Pr
       throw new Error('File type not allowed');
     }
   }
+}
+
+/**
+ * Validate a system-generated artifact. The MIME type is chosen by product
+ * code, not the user, so the attachment allowlist does not apply; size and
+ * provider limits still do.
+ */
+export async function validateSystemArtifact(fileSize: number): Promise<void> {
+  await validateFileSize(fileSize);
 }
 
 export function clearCachedStorageConfig(): void {

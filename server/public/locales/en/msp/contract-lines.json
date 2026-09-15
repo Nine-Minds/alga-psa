@@ -694,7 +694,10 @@
       "allServicesAssociated": "All available services are already associated with this contract line.",
       "badges": {
         "billingMismatch": "Billing mismatch",
-        "defaultConfigType": "Default"
+        "defaultConfigType": "Default",
+        "standard": "Standard",
+        "custom": "Custom",
+        "unreviewed": "Unreviewed"
       },
       "billingMethod": {
         "fixed": "Fixed Price",

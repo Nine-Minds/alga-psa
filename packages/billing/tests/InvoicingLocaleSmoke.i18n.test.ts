@@ -30,6 +30,7 @@ describe('Invoicing locale smoke', () => {
     expect(Object.keys(en)).toEqual([
       'automaticInvoices',
       'manualInvoices',
+      'quickInvoice',
       'draftsTab',
       'finalizedTab',
       'recurringServicePeriods',

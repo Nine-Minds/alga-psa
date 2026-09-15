@@ -8,7 +8,7 @@
 services:
   # MinIO - S3-compatible object storage for development
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: alga_minio_dev
     ports:
       - "9000:9000"  # MinIO API
@@ -29,7 +29,7 @@ services:
 
   # MinIO Client - for bucket initialization
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     container_name: alga_minio_init
     depends_on:
       minio:

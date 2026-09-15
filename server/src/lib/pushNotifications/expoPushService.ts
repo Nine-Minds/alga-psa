@@ -4,43 +4,84 @@ import { deactivateInvalidTokens } from './pushTokenService';
 
 const expo = new Expo();
 
+export type PushPriority = 'high' | 'normal' | 'low';
+
 export interface TicketPushParams {
   expoPushToken: string;
   title: string;
   body: string;
   ticketId: string;
   tenant: string;
-  /**
-   * Configured in-app notification priority (high|normal|low), carried to the
-   * mobile app as payload metadata only (task 29.8.46). This does NOT change
-   * Expo/OS delivery priority — that stays 'high' below.
-   */
-  priority?: 'high' | 'normal' | 'low';
+  /** Configured in-app notification priority (high|normal|low). */
+  priority?: PushPriority;
 }
 
+/**
+ * OS delivery per configured priority (mobile task 35.9.2). The mobile app
+ * creates the matching Android channels at startup so users can tune sound
+ * and vibration per level in system settings; iOS uses interruption levels.
+ */
+export const PUSH_PRIORITY_DELIVERY: Record<PushPriority, {
+  priority: 'high' | 'normal';
+  interruptionLevel: 'time-sensitive' | 'active' | 'passive';
+  channelId: string;
+  sound: 'default' | null;
+}> = {
+  high: { priority: 'high', interruptionLevel: 'time-sensitive', channelId: 'alga-priority-high', sound: 'default' },
+  normal: { priority: 'high', interruptionLevel: 'active', channelId: 'alga-priority-normal', sound: 'default' },
+  low: { priority: 'normal', interruptionLevel: 'passive', channelId: 'alga-priority-low', sound: null },
+};
+
 export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessage {
+  const priority = params.priority ?? 'normal';
+  const delivery = PUSH_PRIORITY_DELIVERY[priority];
   return {
     to: params.expoPushToken,
-    sound: 'default' as const,
+    sound: delivery.sound,
     title: params.title,
     body: params.body,
     data: {
       ticketId: params.ticketId,
       url: `alga://ticket/${params.ticketId}`,
       // Payload metadata so the mobile app can render/sort by priority.
-      priority: params.priority ?? 'normal',
+      priority,
     },
-    // Expo/OS delivery priority is intentionally unchanged (out of scope).
+    priority: delivery.priority,
+    interruptionLevel: delivery.interruptionLevel,
+    channelId: delivery.channelId,
+  };
+}
+
+export interface PushSendResult {
+  to: string;
+  status: 'ok' | 'error';
+  error?: string | null;
+}
+
+export function buildTestPushMessage(expoPushToken: string, serverHost: string): ExpoPushMessage {
+  return {
+    to: expoPushToken,
+    sound: 'default' as const,
+    title: 'AlgaPSA test notification',
+    body: `Push notifications from ${serverHost} are working.`,
+    data: { kind: 'push-test', priority: 'normal' },
     priority: 'high' as const,
+    interruptionLevel: 'active' as const,
+    channelId: PUSH_PRIORITY_DELIVERY.normal.channelId,
   };
 }
 
 export async function sendPushNotifications(
   messages: ExpoPushMessage[],
   tenant: string,
-): Promise<void> {
-  const valid = messages.filter((m) => Expo.isExpoPushToken(m.to as string));
-  if (valid.length === 0) return;
+): Promise<PushSendResult[]> {
+  const results: PushSendResult[] = [];
+  const valid = messages.filter((m) => {
+    const ok = Expo.isExpoPushToken(m.to as string);
+    if (!ok) results.push({ to: String(m.to), status: 'error', error: 'InvalidExpoPushToken' });
+    return ok;
+  });
+  if (valid.length === 0) return results;
 
   const chunks = expo.chunkPushNotifications(valid);
   const invalidTokens: string[] = [];
@@ -57,13 +98,20 @@ export async function sendPushNotifications(
             error: ticket.message,
             details: ticket.details,
           });
+          results.push({ to: chunk[i].to as string, status: 'error', error: ticket.details?.error ?? ticket.message ?? 'error' });
           if (ticket.details?.error === 'DeviceNotRegistered') {
             invalidTokens.push(chunk[i].to as string);
           }
+        } else {
+          results.push({ to: chunk[i].to as string, status: 'ok' });
         }
       }
     } catch (err) {
-      logger.error('[ExpoPush] Failed to send chunk', { err });
+      // Typically the server cannot reach exp.host (egress blocked, proxy,
+      // DNS); the message names it so a support bundle shows the cause.
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('[ExpoPush] Failed to send chunk', { err, message });
+      for (const m of chunk) results.push({ to: m.to as string, status: 'error', error: `ExpoUnreachable: ${message}` });
     }
   }
 
@@ -72,4 +120,6 @@ export async function sendPushNotifications(
       logger.error('[ExpoPush] Failed to deactivate invalid tokens', { err }),
     );
   }
+
+  return results;
 }

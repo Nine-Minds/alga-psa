@@ -104,8 +104,12 @@ export async function buildTelephonyCallArtifactDeps(): Promise<CaptureCallArtif
         content.buffer,
         `call-${call.provider_call_id}-${artifact.providerArtifactId}.mp4`,
         {
-          mime_type: content.contentType,
+          // content.contentType traces to the provider's response content-type
+          // header, which is untrusted and unchecked under the system-artifact
+          // bypass. State the type in code; the filename above is always .mp4.
+          mime_type: 'video/mp4',
           uploaded_by_id: actorUserId,
+          origin: 'system-artifact',
           metadata: {
             source: 'teams_phone_call_recording',
             call_record_id: call.call_record_id,

@@ -694,7 +694,10 @@
       "allServicesAssociated": "Tous les services disponibles sont déjà associés à cette ligne de contrat.",
       "badges": {
         "billingMismatch": "Incohérence de facturation",
-        "defaultConfigType": "Défaut"
+        "defaultConfigType": "Défaut",
+        "standard": "Standard",
+        "custom": "Personnalisé",
+        "unreviewed": "Non vérifié"
       },
       "billingMethod": {
         "fixed": "Prix ​​fixe",

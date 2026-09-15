@@ -299,6 +299,8 @@ interface CreateServiceOptions {
   tax_rate_id?: string | null;
   currency_code?: string;
   seedServicePrice?: boolean;
+  /** Effective date for the seeded `service_prices` row. Defaults to the epoch. */
+  effective_date?: string;
 }
 
 interface CreateFixedPlanOptions {
@@ -583,15 +585,28 @@ export async function createTestService(
   // Rate resolution reads currency-tagged service_prices, never the legacy
   // currency-untagged service_catalog.default_rate.
   if ((overrides.seedServicePrice ?? true) && await context.db.schema.hasTable('service_prices')) {
+    const rate = overrides.default_rate ?? 1000;
+    // `service_prices` is effective-dated (0630): the unique key widened to
+    // include `effective_date`. Seed the epoch row so it is simultaneously
+    // "the row" and "the row effective now" for callers that do not care.
+    const hasEffectiveDate = await context.db.schema.hasColumn('service_prices', 'effective_date');
+    const priceRow: Record<string, unknown> = {
+      tenant: context.tenantId,
+      service_id: serviceId,
+      currency_code: overrides.currency_code ?? 'USD',
+      rate,
+    };
+    if (hasEffectiveDate) {
+      priceRow.effective_date = overrides.effective_date ?? '1970-01-01';
+    }
     await tenantTable(context, 'service_prices')
-      .insert({
-        tenant: context.tenantId,
-        service_id: serviceId,
-        currency_code: overrides.currency_code ?? 'USD',
-        rate: overrides.default_rate ?? 1000
-      })
-      .onConflict(['tenant', 'service_id', 'currency_code'])
-      .merge({ rate: overrides.default_rate ?? 1000 });
+      .insert(priceRow)
+      .onConflict(
+        hasEffectiveDate
+          ? ['tenant', 'service_id', 'currency_code', 'effective_date']
+          : ['tenant', 'service_id', 'currency_code'],
+      )
+      .merge({ rate });
   }
 
   if (overrides.tax_region) {
@@ -599,6 +614,69 @@ export async function createTestService(
   }
 
   return serviceId;
+}
+
+/**
+ * Set a contract line's rate provenance (and stored rate) directly.
+ *
+ * Enforces the CHECK invariants the migration imposes: `inherited` clears the
+ * rate, `custom` / `unreviewed` require a non-null rate.
+ */
+export async function setLineProvenance(
+  context: BillingFixtureContext,
+  contractLineId: string,
+  provenance: 'custom' | 'inherited' | 'unreviewed',
+  rateCents?: number | null,
+): Promise<void> {
+  if (provenance === 'inherited') {
+    await tenantTable(context, 'contract_lines')
+      .where({ contract_line_id: contractLineId })
+      .update({ rate_provenance: 'inherited', custom_rate: null });
+    return;
+  }
+
+  if (rateCents === undefined || rateCents === null) {
+    throw new Error(
+      `setLineProvenance: rateCents is required for provenance "${provenance}"`,
+    );
+  }
+
+  await tenantTable(context, 'contract_lines')
+    .where({ contract_line_id: contractLineId })
+    .update({ rate_provenance: provenance, custom_rate: rateCents });
+}
+
+/**
+ * Upsert a catalog price (`service_prices`) for a service, optionally at a
+ * future effective date. Mirrors the app's effective-dated catalog write.
+ */
+export async function updateCatalogPrice(
+  context: BillingFixtureContext,
+  serviceId: string,
+  options: { rateCents: number; currency?: string; effectiveDate?: string },
+): Promise<void> {
+  const hasEffectiveDate = await context.db.schema.hasColumn(
+    'service_prices',
+    'effective_date',
+  );
+  const row: Record<string, unknown> = {
+    tenant: context.tenantId,
+    service_id: serviceId,
+    currency_code: options.currency ?? 'USD',
+    rate: options.rateCents,
+  };
+  if (hasEffectiveDate) {
+    row.effective_date = options.effectiveDate ?? '1970-01-01';
+  }
+
+  await tenantTable(context, 'service_prices')
+    .insert(row)
+    .onConflict(
+      hasEffectiveDate
+        ? ['tenant', 'service_id', 'currency_code', 'effective_date']
+        : ['tenant', 'service_id', 'currency_code'],
+    )
+    .merge({ rate: options.rateCents });
 }
 
 export async function createFixedPlanAssignment(

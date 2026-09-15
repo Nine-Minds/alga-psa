@@ -5,8 +5,18 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { infrastructureFloor } from '../lib/infrastructure-selection.mjs';
 
 const source = fileURLToPath(new URL('../../', import.meta.url));
+// The fixture repo must contain every mandatory floor file, or the runner
+// correctly refuses to collect. Derive the file set from the real floor list so
+// this self-test stays in sync when the floor grows, plus one non-floor
+// "extra" repository test that only full mode runs.
+const floorRelative = infrastructureFloor.map(file =>
+  file.replace('server/src/test/infrastructure/', ''));
+// Round-robin partition (position % total) shard size, derived independently of
+// the sharding implementation under test.
+const shardFileCount = (totalFiles, index, total) => Math.ceil((totalFiles - (index - 1)) / total);
 test('actual infrastructure runner partitions, executes and rejects missing or stale shard evidence', { timeout: 120_000 }, t => {
   const root = mkdtempSync(path.join(tmpdir(), 'alga-infrastructure-runner-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -21,9 +31,7 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   }
   write('.gitignore', 'node_modules/\ntest-results/\n');
   write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include: ['src/test/infrastructure/**/*.test.ts'], fileParallelism: false, maxWorkers: 1 } })};`);
-  const files = ['billing/invoices/invoiceDueDate.test.ts', 'billing/invoices/manualInvoice.test.ts',
-    'billing/invoices/billingInvoiceGeneration_tax.test.ts',
-    'billing/tax/taxRoundingBehavior.test.ts', 'billing/credits/creditApplication.test.ts', 'extra.test.ts'];
+  const files = [...floorRelative, 'extra.test.ts'];
   for (const file of files) write(`server/src/test/infrastructure/${file}`, "test('observes the result', () => expect(2 + 3).toBe(5));\n");
   symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
@@ -42,12 +50,12 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
     const evidence = read('test-results/infrastructure/evidence.json');
     assert.equal(evidence.status, 'passed');
     assert.equal(evidence.workingTreeDirty, false);
-    assert.equal(evidence.expectedFiles.length, 2);
+    assert.equal(evidence.expectedFiles.length, shardFileCount(files.length, index, 3));
     cpSync(path.join(root, 'test-results/infrastructure'), path.join(root, `test-results/infrastructure-shards/shard-${index}`), { recursive: true });
   }
   let combined = run('verify-infrastructure-shards.mjs');
   assert.equal(combined.status, 0, combined.stdout + combined.stderr);
-  assert.equal(read('test-results/infrastructure/aggregate.json').counts.passed, 6);
+  assert.equal(read('test-results/infrastructure/aggregate.json').counts.passed, files.length);
   assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'complete');
   assert.equal(run('verify-infrastructure-shards.mjs', 1, 'full', 3,
     { INFRA_EVENT: 'schedule', INFRA_SELECTION_RESULT: 'skipped' }).status, 0);
@@ -77,7 +85,7 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
 
   const tier1 = run('run-infrastructure-tests.mjs', 1, 'tier1', 1);
   assert.equal(tier1.status, 0, tier1.stdout + tier1.stderr);
-  assert.equal(read('test-results/infrastructure/evidence.json').counts.passed, 5);
+  assert.equal(read('test-results/infrastructure/evidence.json').counts.passed, infrastructureFloor.length);
   assert.ok(read('test-results/infrastructure/evidence.json').expectedFiles.includes(
     'server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts'));
   // These are genuine passing reports for every Tier-1 file. Relabelling the
@@ -148,4 +156,15 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   git('add', '.'); git('commit', '-qm', 'runtime change');
   assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1,
     { ...skipped, TIER1_BASE_SHA: beforeRuntime }).status, 1);
+
+  // Reproduce the CI failure: omitting a mandatory catalog-pricing suite must
+  // still fail collection even when every remaining fixture test passes.
+  const missingFloorFile = 'server/src/test/infrastructure/billing/catalogPricing/catalogPriceResolution.test.ts';
+  assert.ok(infrastructureFloor.includes(missingFloorFile));
+  rmSync(path.join(root, missingFloorFile));
+  git('add', '.'); git('commit', '-qm', 'omit mandatory catalog pricing test');
+  const missingFloor = run('run-infrastructure-tests.mjs', 1, 'tier1', 1);
+  assert.equal(missingFloor.status, 1);
+  assert.ok((missingFloor.stdout + missingFloor.stderr).includes(
+    `Mandatory infrastructure floor was not collected: ${missingFloorFile}`));
 });

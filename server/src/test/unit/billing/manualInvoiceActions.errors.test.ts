@@ -198,6 +198,18 @@ describe('generateManualInvoice structured errors', () => {
     expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ invoice_number: 'INV-001' }));
   });
 
+  it('persists the ticket association when the manual invoice is raised from a ticket', async () => {
+    const result = await generateManualInvoice({ ...request, ticket_id: 'ticket-9' });
+    expect(result.success).toBe(true);
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ ticket_id: 'ticket-9' }));
+  });
+
+  it('leaves the ticket association null for ordinary manual invoices', async () => {
+    const result = await generateManualInvoice(request);
+    expect(result.success).toBe(true);
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ ticket_id: null }));
+  });
+
   it('maps the invoice-number unique constraint to INVOICE_NUMBER_CONFLICT', async () => {
     mocks.insert.mockRejectedValueOnce(Object.assign(new Error('duplicate key'), {
       code: '23505',

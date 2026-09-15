@@ -88,6 +88,7 @@ interface TicketDetailsContainerProps {
   bootstrap?: TicketScreenBootstrap;
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
+  renderQuickInvoice?: React.ComponentProps<typeof TicketDetails>['renderQuickInvoice'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
   hideSlaStatus?: boolean;
@@ -117,6 +118,7 @@ export default function TicketDetailsContainer({
   bootstrap,
   renderContactDetails,
   renderCreateProjectTask,
+  renderQuickInvoice,
   renderClientDetails,
   renderIntervalManagement,
   hideSlaStatus = false,
@@ -338,6 +340,7 @@ export default function TicketDetailsContainer({
       bootstrap={bootstrap}
       renderContactDetails={renderContactDetails}
       renderCreateProjectTask={renderCreateProjectTask}
+      renderQuickInvoice={renderQuickInvoice}
       renderClientDetails={renderClientDetails}
       renderIntervalManagement={renderIntervalManagement}
       hideSlaStatus={hideSlaStatus}

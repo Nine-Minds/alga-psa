@@ -156,7 +156,7 @@ test('provider observations bind real-format attachments to verified archives wi
   }
   assert.equal(execute([]).journeys[0].attempts[0].providerObservations.reason, 'missing-observations');
   assert.equal(execute([attachment(data()), attachment(data())]).journeys[0].attempts[0].providerObservations.reason, 'duplicate-observations');
-  for (const override of [{ artifactManifest: null }, { runAttempt: 3 }, { evidence: { ...cleanEvidence(), workingTreeDirty: true } }, { revision: 'b'.repeat(40) }]) {
+  for (const override of [{ artifactManifest: null }, { runAttempt: 1 }, { evidence: { ...cleanEvidence(), workingTreeDirty: true } }, { revision: 'b'.repeat(40) }]) {
     assert.equal(execute([attachment(data())], override).journeys[0].attempts[0].providerObservations.reason, 'unverified-candidate-context');
   }
   const aborted = data(); aborted.requests.xero.requests[0].status = null; aborted.requests.xero.requests[0].aborted = true;

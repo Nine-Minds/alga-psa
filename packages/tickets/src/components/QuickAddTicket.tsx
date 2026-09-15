@@ -60,6 +60,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../lib/ticketRichText';
+import { resolveDocumentViewUrl } from '../lib/documentViewUrl';
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
@@ -804,9 +805,7 @@ export function QuickAddTicket({
       }
 
       const uploadedDocument = uploadResult.document;
-      const documentUrl = uploadedDocument.file_id
-        ? `/api/documents/view/${uploadedDocument.file_id}`
-        : `/api/documents/download/${uploadedDocument.document_id}`;
+      const documentUrl = resolveDocumentViewUrl(uploadedDocument);
 
       replacementUrls.set(stagedImage.url, documentUrl);
     }

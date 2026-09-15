@@ -46,10 +46,11 @@ async function renderAppearance(edition: string) {
     '@/components/settings/general/AppearanceSettings'
   );
   render(<AppearanceSettings />);
-  // The pair picker always renders, EE or not.
-  await waitFor(() => expect(
-    document.querySelector('[data-automation-id="theme-pair-alga"]'),
-  ).toBeTruthy());
+  if (edition === 'enterprise') {
+    await waitFor(() => expect(
+      document.querySelector('[data-automation-id="theme-pair-alga"]'),
+    ).toBeTruthy());
+  }
 }
 
 describe('AppearanceSettings edition gate', () => {
@@ -73,12 +74,13 @@ describe('AppearanceSettings edition gate', () => {
     expect(screen.getByText('Enable MSP UI customization')).toBeTruthy();
   });
 
-  it('hides both Enterprise sections in Community and keeps the pair picker', async () => {
+  it('draws the Enterprise boundary in Community instead of the pair picker', async () => {
     await renderAppearance('community');
 
     expect(screen.queryByText(CUSTOM_THEME_HEADING)).toBeNull();
     expect(screen.queryByText(WHITE_LABEL_HEADING)).toBeNull();
-    expect(screen.getByText('Slate')).toBeTruthy();
-    expect(screen.getByText('High contrast')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id="theme-pair-alga"]')).toBeNull();
+    expect(screen.queryByText('Slate')).toBeNull();
+    expect(document.querySelector('#appearance-upgrade-link')).toBeTruthy();
   });
 });

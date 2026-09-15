@@ -7,7 +7,7 @@ import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
 import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { validateData } from '@alga-psa/validation';
-import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
+import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -782,6 +782,84 @@ export const updateClientTicketComment = withAuth(async (
   }
 });
 
+/**
+ * Portal-facing ticket status read. Returns only the statuses a client portal
+ * user is allowed to SET for the given board, preserving the board's ordering.
+ *
+ * Kept separate from the shared `getTicketStatuses` (15 MSP call sites) so MSP
+ * behavior cannot change based on caller identity. `currentStatusId` is always
+ * included even when it is not selectable, so a ticket parked in a restricted
+ * status still renders its current value instead of a blank picker.
+ */
+export const getClientPortalTicketStatuses = withAuth(async (
+  user,
+  { tenant },
+  boardId: string,
+  currentStatusId?: string | null
+): Promise<ClientTicketActionResult<IStatus[]>> => {
+  try {
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
+    }
+
+    const db = await getConnection(tenant);
+
+    const userForPermission = {
+      user_id: userId,
+      email: user.email,
+      user_type: 'client',
+      is_inactive: false,
+      tenant
+    } as IUser;
+    const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
+    if (!canRead) {
+      return permissionError('Insufficient permissions to view ticket statuses', 'common:errors.permissions.tickets.read');
+    }
+
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const userRecord = await tenantDb(trx, tenant).table('users')
+        .where({
+          user_id: userId
+        })
+        .first();
+
+      if (!userRecord?.contact_id) {
+        throw expectedClientTicketActionError('User not associated with a contact');
+      }
+
+      const visibility = await getClientContactVisibilityContext(trx, tenant, userRecord.contact_id);
+      if (visibility.visibleBoardIds !== null && !visibility.visibleBoardIds.includes(boardId)) {
+        throw expectedClientTicketActionError(
+          'Ticket not found or access denied',
+          'client-portal:errors.tickets.notFoundOrDenied',
+        );
+      }
+
+      const query = tenantDb(trx, tenant).table<IStatus>('statuses')
+        .where({
+          board_id: boardId,
+          status_type: 'ticket',
+        })
+        .select('*')
+        .orderBy('order_number', 'asc')
+        .orderBy('name', 'asc');
+
+      if (currentStatusId) {
+        query.where((builder: Knex.QueryBuilder) => {
+          builder.where('portal_selectable', true).orWhere('status_id', currentStatusId);
+        });
+      } else {
+        query.where('portal_selectable', true);
+      }
+
+      return await query as IStatus[];
+    });
+  } catch (error) {
+    return expectedOrThrow(error, 'Failed to fetch client portal ticket statuses:');
+  }
+});
+
 export const updateTicketStatus = withAuth(async (
   user,
   { tenant },
@@ -838,10 +916,20 @@ export const updateTicketStatus = withAuth(async (
           status_type: 'ticket',
           board_id: ticket.board_id,
         })
-        .first('status_id', 'is_closed', 'name');
+        .first('status_id', 'is_closed', 'name', 'portal_selectable');
 
       if (!statusForBoard) {
         throw expectedClientTicketActionError('Selected status is not valid for the ticket board');
+      }
+
+      if (statusForBoard.portal_selectable === false) {
+        // Checked in the same lookup that proves board membership: there is one
+        // place a target status can be admitted from, and the rejection happens
+        // before any ticket mutation or event publication.
+        throw expectedClientTicketActionError(
+          'This status cannot be selected from the client portal',
+          'client-portal:errors.tickets.statusNotPortalSelectable',
+        );
       }
 
       // Get old status for change tracking
