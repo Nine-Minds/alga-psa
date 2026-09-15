@@ -314,7 +314,7 @@
   {
     "id": "F035",
     "description": "DocumentsSection preview overlay uses theme tokens for its text and controls; the black scrim stays literal",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "color-sweep",
     "prdRefs": [
       "FR18"
@@ -323,7 +323,7 @@
   {
     "id": "F036",
     "description": "ScanView chrome, SignInScreen, MentionSuggestionList and MaterialsSection replace hex literals with theme tokens",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "color-sweep",
     "prdRefs": [
       "FR18"
@@ -332,7 +332,7 @@
   {
     "id": "F037",
     "description": "ESLint restricts hex colour literals under src/** with an allow-list for themes.ts, colors.ts, tagColors.ts, Avatar.tsx and generatedEditorHtml.ts",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "color-sweep",
     "prdRefs": [
       "FR19"

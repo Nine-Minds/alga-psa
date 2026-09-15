@@ -428,7 +428,7 @@
   {
     "id": "T047",
     "description": "DocumentsSection preview controls render with theme colours; the scrim remains rgba black",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "color-sweep",
     "featureIds": [
       "F035"
@@ -437,7 +437,7 @@
   {
     "id": "T048",
     "description": "ScanView, SignInScreen, MentionSuggestionList and MaterialsSection contain no hex literals (grep-based test)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "color-sweep",
     "featureIds": [
       "F036"
@@ -446,7 +446,7 @@
   {
     "id": "T049",
     "description": "ESLint fails on a hex literal added to a component file and passes for the allow-listed files",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "color-sweep",
     "featureIds": [
       "F037"
