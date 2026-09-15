@@ -130,7 +130,7 @@ describe('TicketExternalLinksSection behaviour', () => {
 
     expect(screen.getByText(/This ticket already has an origin link\.$/)).toBeInTheDocument();
     await user.click(document.getElementById('ticket-external-links-relationship')!);
-    expect(screen.getByRole('option', { name: 'origin', exact: true })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('option', { name: 'origin' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   async function openEdit(initial: ITicketExternalLinkView) {
@@ -151,12 +151,14 @@ describe('TicketExternalLinksSection behaviour', () => {
     const user = await openEdit(link());
 
     await user.click(document.getElementById('ticket-external-links-relationship')!);
-    await user.click(screen.getByRole('option', { name: 'reference', exact: true }));
+    await user.click(screen.getByRole('option', { name: 'reference' }));
+    expect(document.getElementById('ticket-external-links-relationship')).toHaveTextContent(/^reference$/);
     expect(screen.queryByText(/This ticket already has an origin link\.$/)).not.toBeInTheDocument();
 
     await user.click(document.getElementById('ticket-external-links-relationship')!);
-    expect(screen.getByRole('option', { name: 'origin', exact: true })).not.toHaveAttribute('aria-disabled', 'true');
-    await user.click(screen.getByRole('option', { name: 'origin', exact: true }));
+    expect(screen.getByRole('option', { name: 'origin' })).not.toHaveAttribute('aria-disabled', 'true');
+    await user.click(screen.getByRole('option', { name: 'origin' }));
+    expect(document.getElementById('ticket-external-links-relationship')).toHaveTextContent(/^origin$/);
     await user.click(document.getElementById('ticket-external-links-dialog-save')!);
 
     await waitFor(() => expect(actionMocks.updateExternalLink).toHaveBeenCalledWith(
