@@ -80,9 +80,10 @@
       "servicePeriods": "Service Periods",
       "credits": "Credits",
       "serviceTypes": "Service Types",
+      "serviceCategories": "Service Categories",
       "serviceCatalog": "Services",
       "products": "Products",
-      "taxRates": "Tax Rates",
+      "taxRates": "Tax",
       "usageTracking": "Usage Tracking",
       "reports": "Reports",
       "accountingExports": "Accounting Exports"
@@ -466,7 +467,8 @@
     "collapseSidebar": "Collapse sidebar",
     "collapseSection": "Collapse {{section}}",
     "expandSection": "Expand {{section}}",
-    "appLogoAlt": "{{appName}} Logo"
+    "appLogoAlt": "{{appName}} Logo",
+    "poweredBy": "Powered by"
   },
   "settings": {
     "sections": {
@@ -556,6 +558,12 @@
           "description": "Add a new product to your catalog"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Resources and help",
+      "title": "Resources",
+      "documentation": "Documentation",
+      "support": "Contact Support"
     },
     "jobs": {
       "ariaLabel": "View background job activity",

@@ -1,5 +1,6 @@
 "use server"
 
+import { readUserEmailPreferenceState, saveUserEmailPreferences } from '../../notifications/userEmailPreferences';
 import { getEmailNotificationService } from "../../notifications/email";
 import { revalidatePath } from "next/cache";
 import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -12,6 +13,7 @@ import {
   NotificationCategory,
   NotificationSubtype,
   UserNotificationPreference,
+  UserEmailPreferenceCategoryState,
   isLockedCategory
 } from "../../types/notification";
 import {
@@ -514,21 +516,67 @@ function replaceVars(content: string, data: Record<string, string>): string {
   return result;
 }
 
-export async function getUserPreferencesAction(
-  tenant: string,
-  userId: string
-): Promise<UserNotificationPreference[]> {
-  const notificationService = getEmailNotificationService();
-  return notificationService.getUserPreferences(tenant, userId);
+/** Compatibility entry points reject caller identities that differ from the session. */
+export const getUserPreferencesAction = withAuth(async (
+  currentUser, { tenant }, callerTenant?: string, callerUserId?: string,
+): Promise<UserNotificationPreference[]> => {
+  assertPersonalIdentity(tenant, currentUser.user_id, callerTenant, callerUserId);
+  return getEmailNotificationService().getUserPreferences(tenant, currentUser.user_id);
+});
+
+function assertPersonalIdentity(tenant: string, userId: string, callerTenant?: string, callerUserId?: string) {
+  if ((callerTenant !== undefined && callerTenant !== tenant) || (callerUserId !== undefined && callerUserId !== userId)) {
+    throw new Error('Cannot access another user or tenant notification preferences');
+  }
 }
 
-export async function updateUserPreferenceAction(
-  tenant: string,
-  userId: string,
-  preference: Partial<UserNotificationPreference>
-): Promise<UserNotificationPreference> {
-  const notificationService = getEmailNotificationService();
-  const updated = await notificationService.updateUserPreference(tenant, userId, preference);
-  revalidatePath("/msp/settings/notifications");
-  return updated;
+export const updateUserPreferenceAction = withAuth(async (
+  currentUser, { tenant }, callerTenant: string, callerUserId: string,
+  preference: Partial<UserNotificationPreference> & { tenant?: string },
+): Promise<UserNotificationPreference> => {
+  assertPersonalIdentity(tenant, currentUser.user_id, callerTenant, callerUserId);
+  assertPersonalIdentity(tenant, currentUser.user_id, preference.tenant, preference.user_id);
+  const { knex } = await createTenantKnex();
+  const { preferences } = await saveUserEmailPreferences(knex, tenant, currentUser.user_id, {
+    kind: 'subtype', id: preference.subtype_id!, enabled: preference.is_enabled!,
+  });
+  revalidatePersonalPreferences();
+  // Preserve the legacy response contract for callers outside the profile UI.
+  return preferences[0];
+});
+
+export const getUserEmailPreferenceStateAction = withAuth(async (
+  currentUser, { tenant },
+): Promise<UserEmailPreferenceCategoryState[]> => {
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, trx => readUserEmailPreferenceState(trx, tenant, currentUser.user_id));
+});
+
+function revalidatePersonalPreferences() {
+  revalidatePath('/msp/profile');
+  revalidatePath('/client-portal/profile');
 }
+
+async function savePersonalPreferences(
+  tenant: string, userId: string, kind: 'category' | 'subtype', id: number, enabled: boolean,
+): Promise<UserEmailPreferenceCategoryState[] | NotificationActionError> {
+  try {
+    const { knex } = await createTenantKnex();
+    const { state } = await saveUserEmailPreferences(knex, tenant, userId, { kind, id, enabled });
+    // Invalidation only happens after commit. Failure is reconciled by the UI read.
+    revalidatePersonalPreferences();
+    return state;
+  } catch (error) {
+    const expected = notificationActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
+
+export const updateUserEmailSubtypePreferenceAction = withAuth(async (
+  currentUser, { tenant }, subtypeId: number, isEnabled: boolean,
+) => savePersonalPreferences(tenant, currentUser.user_id, 'subtype', subtypeId, isEnabled));
+
+export const updateUserEmailCategoryPreferencesAction = withAuth(async (
+  currentUser, { tenant }, categoryId: number, isEnabled: boolean,
+) => savePersonalPreferences(tenant, currentUser.user_id, 'category', categoryId, isEnabled));

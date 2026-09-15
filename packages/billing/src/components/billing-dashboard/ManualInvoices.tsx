@@ -725,7 +725,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
         const result = await generateManualInvoice({
           clientId: selectedClient || '',
-          // invoiceNumber: newInvoiceNumber, // Remove - ManualInvoiceRequest doesn't have this
+          invoiceNumber: newInvoiceNumber,
           isPrepayment,
           expirationDate: isPrepayment && expirationDate ? expirationDate : undefined,
           items: itemsToSave

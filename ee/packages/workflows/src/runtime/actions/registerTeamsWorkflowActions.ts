@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
-import { isFeatureFlagEnabled, RELEASE_V1_5_FEATURE_FLAG } from '@alga-psa/core/features';
 import { getActionRegistryV2 } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { throwActionError } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
@@ -37,12 +36,7 @@ const parseJsonish = (value: unknown): unknown => {
 const errorStatus = (error: unknown): number | undefined =>
   error instanceof Error ? (error as { status?: number }).status : undefined;
 
-export async function tenantHasTeamsFeatureAccess(tenantId: string): Promise<boolean> {
-  return isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, { tenantId });
-}
-
 export async function teamsIntegrationAvailability(knex: Knex, tenantId: string): Promise<boolean> {
-  if (!(await tenantHasTeamsFeatureAccess(tenantId))) return false;
   const integration = await workflowTenantTable(knex, tenantId, 'teams_integrations').first();
   return normalizeString(integration?.install_status) === 'active';
 }
@@ -59,14 +53,6 @@ async function requireTeamsIntegration(ctx: ActionContext): Promise<{
   const knex = ctx.knex;
   if (!knex) {
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
-  }
-
-  if (!(await tenantHasTeamsFeatureAccess(tenantId))) {
-    throwActionError(ctx, {
-      category: 'ActionError',
-      code: 'INTEGRATION_INACTIVE',
-      message: 'Microsoft Teams integration is not enabled for this tenant.'
-    });
   }
 
   const integration = await workflowTenantTable(knex, tenantId, 'teams_integrations').first();

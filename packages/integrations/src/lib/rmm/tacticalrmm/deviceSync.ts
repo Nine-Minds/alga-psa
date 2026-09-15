@@ -176,7 +176,63 @@ export function extractOsFields(agent: any): { os_type: string | null; os_versio
   return { os_type, os_version };
 }
 
-export function extractVitals(agent: any): {
+function isTacticalPosix(agent: any): boolean {
+  const plat = String(agent?.plat ?? '').toLowerCase();
+  return plat === 'linux' || plat === 'darwin';
+}
+
+const IPV4_RE = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+
+function firstIpv4(candidates: unknown[]): string | null {
+  for (const c of candidates) {
+    const ip = String(c ?? '').trim();
+    if (IPV4_RE.test(ip)) return ip;
+  }
+  return null;
+}
+
+/**
+ * LAN IP from what Tactical actually sends. The detail endpoint exposes
+ * `local_ips` (a comma-joined string, or an error sentinel); the list endpoint
+ * only carries the raw `wmi_detail` the property is derived from.
+ */
+function extractTacticalLanIp(agent: any): string | null {
+  const direct = agent?.lan_ip ?? agent?.local_ip ?? agent?.ip_address ?? null;
+  if (direct) return String(direct);
+
+  if (typeof agent?.local_ips === 'string') {
+    const ip = firstIpv4(agent.local_ips.split(','));
+    if (ip) return ip;
+  }
+
+  const wmi = agent?.wmi_detail;
+  if (!wmi || typeof wmi !== 'object') return null;
+
+  if (isTacticalPosix(agent)) {
+    return Array.isArray(wmi.local_ips) ? firstIpv4(wmi.local_ips) : null;
+  }
+
+  const configs = Array.isArray(wmi.network_config) ? wmi.network_config : [];
+  for (const cfg of configs) {
+    const entries = Array.isArray(cfg) ? cfg : [cfg];
+    for (const entry of entries) {
+      const addrs = entry && typeof entry === 'object' ? (entry as any).IPAddress : null;
+      const ip = firstIpv4(Array.isArray(addrs) ? addrs : [addrs]);
+      if (ip) return ip;
+    }
+  }
+  return null;
+}
+
+function bootTimeToDate(agent: any): Date | null {
+  const raw = agent?.boot_time ?? agent?.bootTime ?? null;
+  if (raw === null || typeof raw === 'undefined' || raw === '') return null;
+  const secs = Number(raw);
+  if (!Number.isFinite(secs) || secs <= 0) return null;
+  return new Date(secs * 1000);
+}
+
+export function extractVitals(agent: any, now: Date = new Date()): {
   current_user: string | null;
   uptime_seconds: number | null;
   lan_ip: string | null;
@@ -194,16 +250,15 @@ export function extractVitals(agent: any): {
     agent?.uptime ??
     null;
 
-  const uptimeSeconds = uptimeRaw === null || typeof uptimeRaw === 'undefined'
+  let uptimeSeconds = uptimeRaw === null || typeof uptimeRaw === 'undefined'
     ? null
     : Number(uptimeRaw);
 
-  const lanIp =
-    agent?.lan_ip ??
-    agent?.local_ip ??
-    agent?.localIp ??
-    agent?.ip_address ??
-    null;
+  // Tactical reports boot_time (epoch seconds) rather than an uptime.
+  if (!Number.isFinite(uptimeSeconds as any)) {
+    const booted = bootTimeToDate(agent);
+    uptimeSeconds = booted ? Math.max(0, Math.floor((now.getTime() - booted.getTime()) / 1000)) : null;
+  }
 
   const wanIp =
     agent?.wan_ip ??
@@ -214,9 +269,174 @@ export function extractVitals(agent: any): {
   return {
     current_user: currentUser ? String(currentUser) : null,
     uptime_seconds: Number.isFinite(uptimeSeconds as any) ? uptimeSeconds : null,
-    lan_ip: lanIp ? String(lanIp) : null,
+    lan_ip: extractTacticalLanIp(agent),
     wan_ip: wanIp ? String(wanIp) : null,
   };
+}
+
+const BYTE_UNIT_TO_GB: Record<string, number> = {
+  b: 1e-9,
+  kb: 1e-6,
+  mb: 1e-3,
+  gb: 1,
+  tb: 1e3,
+  pb: 1e6,
+};
+
+/** Tactical's agent formats disk sizes with ByteCountSI ("476.9 GB"); older payloads carry raw bytes. */
+export function parseTacticalSizeToGb(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.round((value / 1e9) * 10) / 10 : null;
+  }
+  const m = String(value ?? '').trim().match(/^([\d.]+)\s*([a-zA-Z]+)$/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  const factor = BYTE_UNIT_TO_GB[m[2].toLowerCase()];
+  if (!Number.isFinite(n) || factor === undefined) return null;
+  return Math.round(n * factor * 10) / 10;
+}
+
+export interface TacticalHardware {
+  cpu_model: string | null;
+  cpu_cores: number | null;
+  ram_gb: number | null;
+  disk_usage: Array<{ name: string; total_gb: number; free_gb: number; utilization_percent: number }> | null;
+  serial_number: string | null;
+  last_reboot_at: Date | null;
+}
+
+/**
+ * Hardware facts from either Tactical payload shape. The list endpoint
+ * (/beta/v1/agent/) serializes model fields only, so cpu_model, serial_number
+ * and local_ips — properties derived from wmi_detail — arrive only from the
+ * detail endpoint. Both shapes are read so bulk and single-agent syncs land
+ * the same columns.
+ */
+export function extractHardware(agent: any): TacticalHardware {
+  const wmi = agent?.wmi_detail && typeof agent.wmi_detail === 'object' ? agent.wmi_detail : null;
+  const posix = isTacticalPosix(agent);
+
+  let cpuModel: string | null = null;
+  let cpuCores: number | null = null;
+
+  if (Array.isArray(agent?.cpu_model) && agent.cpu_model.length) {
+    const names: string[] = agent.cpu_model.map((c: unknown) => String(c ?? '').trim()).filter(Boolean);
+    cpuModel = names.length ? names.join(', ') : null;
+    const cores = names.reduce((sum, n) => sum + Number(n.match(/,\s*(\d+)C\/\d+T$/)?.[1] ?? 0), 0);
+    cpuCores = cores > 0 ? cores : null;
+  } else if (wmi) {
+    if (posix) {
+      const cpus: string[] = Array.isArray(wmi.cpus)
+        ? wmi.cpus.map((c: unknown) => String(c ?? '').trim()).filter(Boolean)
+        : [];
+      cpuModel = cpus.length ? cpus.join(', ') : null;
+    } else {
+      const names: string[] = [];
+      let cores = 0;
+      for (const cpu of Array.isArray(wmi.cpu) ? wmi.cpu : []) {
+        const entries: any[] = Array.isArray(cpu) ? cpu : [cpu];
+        const name = entries.find((x) => x && typeof x === 'object' && 'Name' in x)?.Name;
+        const nc = entries.find((x) => x && typeof x === 'object' && 'NumberOfCores' in x)?.NumberOfCores;
+        if (name) names.push(String(name).trim());
+        if (Number.isFinite(Number(nc))) cores += Number(nc);
+      }
+      cpuModel = names.length ? names.join(', ') : null;
+      cpuCores = cores > 0 ? cores : null;
+    }
+  }
+
+  if (cpuModel && /^unknown cpu model$/i.test(cpuModel)) cpuModel = null;
+  if (cpuModel && cpuModel.length > 255) cpuModel = cpuModel.slice(0, 255);
+
+  const ramRaw = agent?.total_ram ?? agent?.ram_gb ?? null;
+  const ram = ramRaw === null || typeof ramRaw === 'undefined' ? NaN : Number(ramRaw);
+  const ramGb = Number.isFinite(ram) && ram > 0 ? Math.round(ram) : null;
+
+  let diskUsage: TacticalHardware['disk_usage'] = null;
+  if (Array.isArray(agent?.disks)) {
+    diskUsage = [];
+    for (const d of agent.disks) {
+      const total = parseTacticalSizeToGb(d?.total);
+      if (total === null) continue;
+      const free = parseTacticalSizeToGb(d?.free);
+      const percent = Number(d?.percent);
+      diskUsage.push({
+        name: String(d?.device ?? d?.mountpoint ?? d?.name ?? '').trim() || 'disk',
+        total_gb: total,
+        free_gb: free ?? 0,
+        utilization_percent: Number.isFinite(percent)
+          ? Math.round(percent)
+          : free !== null && total > 0
+            ? Math.round(((total - free) / total) * 100)
+            : 0,
+      });
+    }
+  }
+
+  let serial: string | null = null;
+  const direct = agent?.serial_number ?? agent?.serial;
+  if (typeof direct === 'string' && direct.trim()) {
+    serial = direct.trim();
+  } else if (wmi) {
+    const raw = posix
+      ? wmi.serialnumber
+      : wmi.bios?.[0]?.[0]?.SerialNumber ?? wmi.bios?.[0]?.SerialNumber;
+    serial = typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+  }
+
+  return {
+    cpu_model: cpuModel,
+    cpu_cores: cpuCores,
+    ram_gb: ramGb,
+    disk_usage: diskUsage,
+    serial_number: serial,
+    last_reboot_at: bootTimeToDate(agent),
+  };
+}
+
+/**
+ * Column patch for workstation_assets / server_assets. Hardware keys are only
+ * included when the payload actually carried them, so a thinner payload never
+ * blanks a column a richer one filled.
+ */
+export function buildTacticalExtensionPatch(agent: any, now: Date = new Date()): Record<string, unknown> {
+  const osFields = extractOsFields(agent);
+  const vitals = extractVitals(agent, now);
+  const hardware = extractHardware(agent);
+  const agentVersion = agent?.agent_version ?? agent?.version ?? null;
+
+  const patch: Record<string, unknown> = {
+    os_type: osFields.os_type,
+    os_version: osFields.os_version,
+    agent_version: agentVersion ? String(agentVersion) : null,
+    current_user: vitals.current_user,
+    uptime_seconds: vitals.uptime_seconds,
+    lan_ip: vitals.lan_ip,
+    wan_ip: vitals.wan_ip,
+  };
+
+  if (hardware.cpu_model !== null) patch.cpu_model = hardware.cpu_model;
+  if (hardware.cpu_cores !== null) patch.cpu_cores = hardware.cpu_cores;
+  if (hardware.ram_gb !== null) patch.ram_gb = hardware.ram_gb;
+  if (hardware.disk_usage !== null) patch.disk_usage = JSON.stringify(hardware.disk_usage);
+  if (hardware.last_reboot_at !== null) patch.last_reboot_at = hardware.last_reboot_at;
+
+  return patch;
+}
+
+export async function upsertTacticalAssetExtension(
+  conn: Knex | Knex.Transaction,
+  args: { tenant: string; assetType: string | null | undefined; assetId: string; patch: Record<string, unknown> }
+): Promise<void> {
+  const table = args.assetType === 'server' ? 'server_assets' : 'workstation_assets';
+  await tenantScopedTable(conn, table, args.tenant)
+    .insert({
+      tenant: args.tenant,
+      asset_id: conn.raw('?::uuid', [args.assetId]),
+      ...args.patch,
+    })
+    .onConflict(['tenant', 'asset_id'])
+    .merge(args.patch);
 }
 
 export async function createTacticalAssetRecord(
@@ -390,9 +610,8 @@ export async function runTacticalRmmDeviceSync(
           });
 
           const deviceName = String((agent as any).hostname || (agent as any).name || (agent as any).computer_name || agentId);
-          const osFields = extractOsFields(agent);
-          const agentVersion = (agent as any).agent_version ?? (agent as any).version ?? null;
-          const vitals = extractVitals(agent);
+          const extensionPatch = buildTacticalExtensionPatch(agent);
+          const hardware = extractHardware(agent);
 
           if (!mapping?.alga_entity_id) {
             const assetType = inferAssetTypeFromTacticalAgent(agent);
@@ -402,7 +621,7 @@ export async function runTacticalRmmDeviceSync(
               assetType,
               assetTag: `tactical:${agentId}`,
               name: deviceName,
-              serialNumber: String((agent as any).serial_number || (agent as any).serial || ''),
+              serialNumber: hardware.serial_number ?? '',
               location: siteName || '',
             });
 
@@ -417,53 +636,12 @@ export async function runTacticalRmmDeviceSync(
                 last_rmm_sync_at: knex.fn.now(),
               });
 
-            if (assetType === 'workstation') {
-              await tenantScopedTable(knex, 'workstation_assets', tenant)
-                .insert({
-                  tenant,
-                  asset_id: asset.asset_id,
-                  os_type: osFields.os_type,
-                  os_version: osFields.os_version,
-                  agent_version: agentVersion ? String(agentVersion) : null,
-                  current_user: vitals.current_user,
-                  uptime_seconds: vitals.uptime_seconds,
-                  lan_ip: vitals.lan_ip,
-                  wan_ip: vitals.wan_ip,
-                })
-                .onConflict(['tenant', 'asset_id'])
-                .merge({
-                  os_type: osFields.os_type,
-                  os_version: osFields.os_version,
-                  agent_version: agentVersion ? String(agentVersion) : null,
-                  current_user: vitals.current_user,
-                  uptime_seconds: vitals.uptime_seconds,
-                  lan_ip: vitals.lan_ip,
-                  wan_ip: vitals.wan_ip,
-                });
-            } else {
-              await tenantScopedTable(knex, 'server_assets', tenant)
-                .insert({
-                  tenant,
-                  asset_id: asset.asset_id,
-                  os_type: osFields.os_type,
-                  os_version: osFields.os_version,
-                  agent_version: agentVersion ? String(agentVersion) : null,
-                  current_user: vitals.current_user,
-                  uptime_seconds: vitals.uptime_seconds,
-                  lan_ip: vitals.lan_ip,
-                  wan_ip: vitals.wan_ip,
-                })
-                .onConflict(['tenant', 'asset_id'])
-                .merge({
-                  os_type: osFields.os_type,
-                  os_version: osFields.os_version,
-                  agent_version: agentVersion ? String(agentVersion) : null,
-                  current_user: vitals.current_user,
-                  uptime_seconds: vitals.uptime_seconds,
-                  lan_ip: vitals.lan_ip,
-                  wan_ip: vitals.wan_ip,
-                });
-            }
+            await upsertTacticalAssetExtension(knex, {
+              tenant,
+              assetType,
+              assetId: String(asset.asset_id),
+              patch: extensionPatch,
+            });
 
             await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant).insert({
               tenant,
@@ -499,55 +677,15 @@ export async function runTacticalRmmDeviceSync(
                 agent_status: status,
                 last_seen_at: lastSeen ? new Date(lastSeen) : null,
                 last_rmm_sync_at: knex.fn.now(),
+                ...(hardware.serial_number ? { serial_number: hardware.serial_number } : {}),
               });
 
-            if (assetRow?.asset_type === 'server') {
-              await tenantScopedTable(knex, 'server_assets', tenant)
-                .insert({
-                  tenant,
-                  asset_id: knex.raw('?::uuid', [assetIdText]),
-                  os_type: osFields.os_type,
-                  os_version: osFields.os_version,
-                  agent_version: agentVersion ? String(agentVersion) : null,
-                  current_user: vitals.current_user,
-                  uptime_seconds: vitals.uptime_seconds,
-                  lan_ip: vitals.lan_ip,
-                  wan_ip: vitals.wan_ip,
-                })
-                .onConflict(['tenant', 'asset_id'])
-                .merge({
-                  os_type: osFields.os_type,
-                  os_version: osFields.os_version,
-                  agent_version: agentVersion ? String(agentVersion) : null,
-                  current_user: vitals.current_user,
-                  uptime_seconds: vitals.uptime_seconds,
-                  lan_ip: vitals.lan_ip,
-                  wan_ip: vitals.wan_ip,
-                });
-            } else {
-              await tenantScopedTable(knex, 'workstation_assets', tenant)
-                .insert({
-                  tenant,
-                  asset_id: knex.raw('?::uuid', [assetIdText]),
-                  os_type: osFields.os_type,
-                  os_version: osFields.os_version,
-                  agent_version: agentVersion ? String(agentVersion) : null,
-                  current_user: vitals.current_user,
-                  uptime_seconds: vitals.uptime_seconds,
-                  lan_ip: vitals.lan_ip,
-                  wan_ip: vitals.wan_ip,
-                })
-                .onConflict(['tenant', 'asset_id'])
-                .merge({
-                  os_type: osFields.os_type,
-                  os_version: osFields.os_version,
-                  agent_version: agentVersion ? String(agentVersion) : null,
-                  current_user: vitals.current_user,
-                  uptime_seconds: vitals.uptime_seconds,
-                  lan_ip: vitals.lan_ip,
-                  wan_ip: vitals.wan_ip,
-                });
-            }
+            await upsertTacticalAssetExtension(knex, {
+              tenant,
+              assetType: assetRow?.asset_type,
+              assetId: assetIdText,
+              patch: extensionPatch,
+            });
 
             await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant)
               .where({ id: mapping.id })

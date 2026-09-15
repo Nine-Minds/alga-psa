@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "scope": "expanded fast Temporal readiness",
+  "files": 8,
+  "testsPassed": 96,
+  "durationSeconds": 3.01,
+  "before": "SLA suite could not import missing source aliases; stale mocks and a self-referencing mock initializer failed after import repair. Marketing already passed but lacked fast-readiness assignment.",
+  "changes": [
+    "Mirror SLA and workflow-streams TypeScript source aliases in Vitest.",
+    "Update SLA mocks to current tenant transaction and Redis event interfaces.",
+    "Assert notification stream/event payload and audit insert fields.",
+    "Assign SLA and marketing activity suites to fast readiness and discovery."
+  ],
+  "limits": [
+    "Native CI verification pending.",
+    "Activity seams use mocks; this does not establish real provider/database execution for these tests.",
+    "Other Temporal tests outside readiness remain unassigned."
+  ]
+}

@@ -7,25 +7,20 @@ import type { InternalNotification } from '../types/internalNotification';
 
 interface NotificationItemProps {
   notification: InternalNotification;
-  // Configurable notification priorities (task 29.8.46). When true, priority
-  // styles the row (high = muted attention-red left accent, low = dimmed).
-  priorityEnabled?: boolean;
   onClick: () => void;
 }
 
-export function NotificationItem({ notification, priorityEnabled = false, onClick }: NotificationItemProps) {
+export function NotificationItem({ notification, onClick }: NotificationItemProps) {
   const isUnread = !notification.is_read;
 
-  // Priority row styling (flag-gated). Priority styles the row; the `type` icon
-  // logic below is unchanged. Deliberately no tinted row background for high —
-  // an attention-red left accent only (attention-worthy, not emergency).
-  const priorityRowClass = priorityEnabled
-    ? notification.priority === 'high'
-      ? 'border-l-2 border-rose-500'
-      : notification.priority === 'low'
-        ? 'opacity-60'
-        : ''
-    : '';
+  // Priority styles the row; the `type` icon logic below is unchanged.
+  // Deliberately no tinted row background for high — an attention-red left
+  // accent only (attention-worthy, not emergency).
+  const priorityRowClass = notification.priority === 'high'
+    ? 'border-l-2 border-rose-500'
+    : notification.priority === 'low'
+      ? 'opacity-60'
+      : '';
 
   // Get icon based on notification type
   const getIcon = () => {

@@ -2,9 +2,11 @@ import { describe, expect, it, beforeEach, vi } from 'vitest';
 
 const {
   mockCreateTenantKnex,
-  mockRunWithTenant
+  mockRunWithTenant, mockRegisterWebhook, mockRenewWebhook
 } = vi.hoisted(() => {
   return {
+    mockRegisterWebhook: vi.fn(async () => undefined),
+    mockRenewWebhook: vi.fn(async () => undefined),
     mockCreateTenantKnex: vi.fn(),
     mockRunWithTenant: vi.fn((_tenant: string, cb: () => Promise<any>) => cb()),
   };
@@ -44,14 +46,16 @@ vi.mock('@alga-psa/core/secrets', () => ({
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter', () => ({
   GoogleCalendarAdapter: vi.fn().mockImplementation(() => ({
     connect: vi.fn(async () => undefined),
-    registerWebhookSubscription: vi.fn(async () => undefined),
+    registerWebhookSubscription: mockRegisterWebhook,
+    renewWebhookSubscription: mockRenewWebhook,
   })),
 }));
 
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter', () => ({
   MicrosoftCalendarAdapter: vi.fn().mockImplementation(() => ({
     connect: vi.fn(async () => undefined),
-    registerWebhookSubscription: vi.fn(async () => undefined),
+    registerWebhookSubscription: mockRegisterWebhook,
+    renewWebhookSubscription: mockRenewWebhook,
   })),
 }));
 
@@ -120,7 +124,7 @@ function setupKnex(mappings: any[], recentEntries: any[] = []) {
     }
     throw new Error(`Unexpected table: ${table}`);
   });
-  knexFn.raw = vi.fn().mockReturnValue('provider-id-binding');
+  Object.assign(knexFn, { raw: vi.fn().mockReturnValue('provider-id-binding') });
   mockCreateTenantKnex.mockResolvedValue({ knex: knexFn, tenant: 'tenant-1' });
   return { knexFn };
 }
@@ -130,6 +134,8 @@ describe('syncCalendarProvider manual flows', () => {
     process.env.EDITION = 'enterprise';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
+    mockRegisterWebhook.mockReset();
+    mockRenewWebhook.mockReset();
     mockCreateTenantKnex.mockReset();
     mockRunWithTenant.mockReset();
     mockGetProvider.mockReset();
@@ -215,4 +221,35 @@ describe('syncCalendarProvider manual flows', () => {
     // isn't ready yet, and onboarding renders status messages verbatim.
     expect(mockUpdateProviderStatus).not.toHaveBeenCalled();
   });
+  it.each([true, false])('preserves an existing Microsoft subscription during manual sync (existing=%s)', async existing => {
+    setupKnex([]);
+    mockGetProvider.mockResolvedValue({
+      id: 'provider-subscription', tenant: 'tenant-1', user_id: 'user-1',
+      provider_type: 'microsoft', sync_direction: 'from_external',
+      provider_config: { clientId: 'client', accessToken: 'access', refreshToken: 'refresh',
+        ...(existing ? { webhookSubscriptionId: 'original-subscription' } : {}) },
+    });
+    expect(await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-subscription'))
+      .toEqual({ success: true, started: true });
+    await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalledWith(
+      'provider-subscription', expect.objectContaining({ status: 'connected' })));
+    expect(mockRenewWebhook).toHaveBeenCalledTimes(existing ? 1 : 0);
+    expect(mockRegisterWebhook).toHaveBeenCalledTimes(existing ? 0 : 1);
+  });
+
+  it('reports a failed Microsoft renewal without replacing the live subscription', async () => {
+    setupKnex([]);
+    mockGetProvider.mockResolvedValue({
+      id: 'provider-subscription', tenant: 'tenant-1', user_id: 'user-1',
+      provider_type: 'microsoft', sync_direction: 'from_external',
+      provider_config: { clientId: 'client', accessToken: 'access', refreshToken: 'refresh',
+        webhookSubscriptionId: 'original-subscription' },
+    });
+    mockRenewWebhook.mockRejectedValueOnce(new Error('Temporary provider outage'));
+    await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-subscription');
+    await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalledWith(
+      'provider-subscription', expect.objectContaining({ status: 'error' })));
+    expect(mockRegisterWebhook).not.toHaveBeenCalled();
+  });
+
 });

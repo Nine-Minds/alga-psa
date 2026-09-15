@@ -13,6 +13,7 @@ import {
   writeRunAudit,
 } from './shared';
 import { buildOpportunityCreatedPayload } from '../../../streams/domainEventBuilders/opportunityEventBuilders';
+import { SharedNumberingService } from '../../../../services/numberingService';
 
 const withPicker = <T extends z.ZodTypeAny>(
   schema: T,
@@ -72,13 +73,7 @@ function summary(row: Record<string, any>) {
 }
 
 async function nextOpportunityNumber(trx: any, tenant: string): Promise<string> {
-  const result = await trx.raw(
-    'SELECT generate_next_number(:tenant::uuid, :type::text) as number',
-    { tenant, type: 'OPPORTUNITY' },
-  );
-  const number = result.rows?.[0]?.number;
-  if (!number) throw new Error('Failed to generate opportunity number');
-  return number;
+  return SharedNumberingService.getNextNumber('OPPORTUNITY', { knex: trx, tenant });
 }
 
 export function registerOpportunityActions(): void {

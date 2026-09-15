@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Falta información del plan o servicio"
       },
       "loading": "Cargando configuración del servicio...",
-      "title": "Editar configuración del servicio"
+      "title": "Editar configuración del servicio",
+      "effectiveFrom": "Cambio de cantidad o medición en vigor desde",
+      "effectiveHelp": "Los cambios entran en vigor en este límite del período de servicio. Los períodos anteriores conservan sus precios y su medición."
     },
     "tierEditor": {
       "actions": {
@@ -692,7 +694,10 @@
       "allServicesAssociated": "Todos los servicios disponibles ya están asociados con esta línea de contrato.",
       "badges": {
         "billingMismatch": "Falta de coincidencia de facturación",
-        "defaultConfigType": "Por defecto"
+        "defaultConfigType": "Por defecto",
+        "standard": "Estándar",
+        "custom": "Personalizado",
+        "unreviewed": "Sin revisar"
       },
       "billingMethod": {
         "fixed": "Precio fijo",

@@ -1,0 +1,25 @@
+{
+  "scope": "Required per-component source and build metadata for release evidence binding",
+  "baseline": "185a66d027",
+  "before": "releaseManifestDigest accepted a component with its source revision removed; new behavioral test failed with missing expected exception",
+  "after": "Every server/email/worker component requires full source SHA, nonempty build provider and runId; optional attempt must be positive",
+  "validation": {
+    "focusedTests": 66,
+    "log": "/tmp/alga-release-build-metadata-green.log"
+  },
+  "logs": [
+    {
+      "path": "/tmp/alga-release-build-metadata-red.log",
+      "sha256": "36e6a70ae5c297cbfcebaaa862708eb7b1c119338a02e499e25f1616880c9375"
+    },
+    {
+      "path": "/tmp/alga-release-build-metadata-green.log",
+      "sha256": "584405f63491ccc5fd205055b83f9e8d51011083055ecbaab782bb2b11a10906"
+    }
+  ],
+  "limitations": [
+    "Metadata validation and digest binding do not authenticate build provenance",
+    "CI must still emit actual source/build records and smoke evidence",
+    "No Docker builds, native workflow runs or live cluster changes"
+  ]
+}

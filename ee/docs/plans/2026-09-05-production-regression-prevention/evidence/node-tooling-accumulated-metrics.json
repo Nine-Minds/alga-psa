@@ -1,0 +1,34 @@
+{
+  "revision": "18487701f83d2ff20aebdb1a6872e3c90444e3eb",
+  "status": "passed",
+  "counts": {
+    "tests": 466,
+    "passed": 466,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "18487701f83d2ff20aebdb1a6872e3c90444e3eb",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "18487701f83d2ff20aebdb1a6872e3c90444e3eb",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "server/src/test/e2e/utils/e2eTestSetup.ts"
+        },
+        {
+          "status": "??",
+          "file": "server/src/test/e2e/api/fixtureCleanup.e2e.test.ts"
+        }
+      ]
+    }
+  },
+  "workingTreeDirty": true
+}

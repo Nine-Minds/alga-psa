@@ -5,6 +5,8 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getTeamsAvailability } from '../../lib/teamsAvailability';
+import { DEFAULT_MICROSOFT_GRAPH_BASE_URL, DEFAULT_MICROSOFT_LOGIN_BASE_URL,
+  getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import {
   TEAMS_ALLOWED_ACTIONS,
@@ -26,7 +28,14 @@ import type {
 
 type EeTeamsDiagnosticsActions = typeof import('@alga-psa/ee-microsoft-teams/actions');
 export type TeamsDiagnosticsReport = Awaited<ReturnType<EeTeamsDiagnosticsActions['runTeamsDiagnosticsImpl']>>;
-export type TeamsTestMessageResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['sendTeamsTestMessageImpl']>>;
+export type TeamsTestMessageResult =
+  | Awaited<ReturnType<EeTeamsDiagnosticsActions['sendTeamsTestMessageImpl']>>
+  | {
+      status: 'skipped';
+      reason: 'ee_unavailable';
+      detail: string;
+      deliveryId: null;
+    };
 
 // F054-F056 live-validation results (typed via the EE impls through the /actions facade).
 export type TeamsGraphCredentialValidationResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['validateTeamsGraphCredentialsImpl']>>;
@@ -176,12 +185,21 @@ function normalizeNullableString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+// Match the EE Teams gate without adding a dependency from this package to EE.
+// Email endpoint overrides alone must not redirect Teams profile credentials.
+function shouldUseTeamsEmulatorEndpoints(): boolean {
+  return process.env.NODE_ENV !== 'production'
+    && ['true', '1'].includes(process.env.TEAMS_EMULATOR_MODE?.trim().toLowerCase() ?? '');
+}
+
 async function fetchMicrosoftGraphAppToken(params: {
   tenantAuthority: string;
   clientId: string;
   clientSecret: string;
 }): Promise<string> {
-  const response = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(params.tenantAuthority)}/oauth2/v2.0/token`, {
+  const tokenUrl = shouldUseTeamsEmulatorEndpoints() ? getMicrosoftTokenUrl(params.tenantAuthority)
+    : `${DEFAULT_MICROSOFT_LOGIN_BASE_URL}/${encodeURIComponent(params.tenantAuthority)}/oauth2/v2.0/token`;
+  const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -304,7 +322,8 @@ async function resolveOrganizerObjectId(
     clientSecret,
   });
 
-  const response = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(organizerUpn)}`, {
+  const graphBaseUrl = shouldUseTeamsEmulatorEndpoints() ? getMicrosoftGraphBaseUrl() : DEFAULT_MICROSOFT_GRAPH_BASE_URL;
+  const response = await fetch(`${graphBaseUrl}/users/${encodeURIComponent(organizerUpn)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -613,8 +632,8 @@ export const runTeamsDiagnostics = withAuth(async (
       overallStatus: 'fail',
       steps: [
         {
-          id: 'feature_flag',
-          title: 'Teams feature availability',
+          id: 'availability',
+          title: 'Teams availability',
           status: 'fail',
           detail: availability.message,
           durationMs: 0,
@@ -638,10 +657,10 @@ export const sendTeamsTestMessage = withAuth(async (
   if (availability.enabled === false) {
     return {
       status: 'skipped',
-      reason: 'feature_disabled',
+      reason: 'ee_unavailable',
       detail: availability.message,
       deliveryId: null,
-    } as TeamsTestMessageResult;
+    };
   }
 
   const actions = await loadEeTeamsActions();

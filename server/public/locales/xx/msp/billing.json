@@ -43,13 +43,14 @@
       "contractTemplates": "⟦Ƈȯƞŧřȧƈŧ Ŧḗḿƥŀȧŧḗş⟧",
       "invoicing": "⟦Īƞṽȯīƈīƞɠ⟧",
       "invoiceLayouts": "⟦Īƞṽȯīƈḗ Ŀȧẏȯŭŧş⟧",
-      "taxRates": "⟦Ŧȧẋ řȧŧḗş⟧",
+      "taxRates": "⟦Ŧȧẋ⟧",
       "contractLinePresets": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƥřḗşḗŧş⟧",
       "billingCycles": "⟦Ɓīŀŀīƞɠ Ƈẏƈŀḗş⟧",
       "servicePeriods": "⟦Şḗřṽīƈḗ Ƥḗřīȯḓş⟧",
       "usageTracking": "⟦Ŭşȧɠḗ Ŧřȧƈķīƞɠ⟧",
       "reports": "⟦Řḗƥȯřŧş⟧",
       "serviceTypes": "⟦Şḗřṽīƈḗ Ŧẏƥḗş⟧",
+      "serviceCategories": "⟦Şḗřṽīƈḗ Ƈȧŧḗɠȯřīḗş⟧",
       "serviceCatalog": "⟦Şḗřṽīƈḗş⟧",
       "products": "⟦Ƥřȯḓŭƈŧş⟧"
     }
@@ -140,6 +141,8 @@
     }
   },
   "usage": {
+    "bucketLoadError": "⟦Ɓŭƈķḗŧ ƀȧŀȧƞƈḗş ƈȯŭŀḓ ƞȯŧ ƀḗ ŀȯȧḓḗḓ. Řḗŧřẏ ŧȯ şḗḗ ŧħḗ ƈŭřřḗƞŧ ƀȧŀȧƞƈḗş.⟧",
+    "retryBucketBalances": "⟦Řḗŧřẏ ƀŭƈķḗŧ ƀȧŀȧƞƈḗş⟧",
     "bucketHoursOverview": "⟦Ɓŭƈķḗŧ Ħȯŭřş Ȯṽḗřṽīḗẇ⟧",
     "usageRecords": "⟦Ŭşȧɠḗ Řḗƈȯřḓş⟧",
     "actions": {
@@ -211,6 +214,12 @@
       "updateError": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŭşȧɠḗ řḗƈȯřḓ⟧",
       "deleteSuccess": "⟦Ŭşȧɠḗ řḗƈȯřḓ ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
       "deleteError": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ŭşȧɠḗ řḗƈȯřḓ⟧"
+    },
+    "periodReport": "⟦Ƥḗřīȯḓ ŭşȧɠḗ řḗƥȯřŧ⟧",
+    "periodAlreadyInvoiced": "⟦Ŧħīş ƥḗřīȯḓ īş ȧŀřḗȧḓẏ īƞṽȯīƈḗḓ. Ƈȯřřḗƈŧ īŧ ŧħřȯŭɠħ ŧħḗ īƞṽȯīƈḗ ȧḓĵŭşŧḿḗƞŧ ƥřȯƈḗşş.⟧",
+    "periodFilter": {
+      "notice": "⟦Şħȯẇīƞɠ ŭşȧɠḗ ƒȯř ŧħḗ şḗřṽīƈḗ ƥḗřīȯḓ {{start}} ŧȯ {{end}}⟧",
+      "clear": "⟦Ƈŀḗȧř⟧"
     }
   },
   "lineItem": {
@@ -387,7 +396,10 @@
       "loadingBatches": "⟦Ŀȯȧḓīƞɠ ƀȧŧƈħḗş...⟧",
       "empty": "⟦Ƞȯ ḗẋƥȯřŧ ƀȧŧƈħḗş ẏḗŧ.⟧",
       "loadingDetails": "⟦Ŀȯȧḓīƞɠ ƀȧŧƈħ ḓḗŧȧīŀş...⟧",
-      "batchNotFound": "⟦Ɓȧŧƈħ ƞȯŧ ƒȯŭƞḓ.⟧"
+      "batchNotFound": "⟦Ɓȧŧƈħ ƞȯŧ ƒȯŭƞḓ.⟧",
+      "checkingAccess": "⟦Ƈħḗƈķīƞɠ ȧƈƈḗşş...⟧",
+      "accessDeniedTitle": "⟦Ȧƈƈḗşş ḓḗƞīḗḓ⟧",
+      "accessDeniedDescription": "⟦Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ȧƈƈḗşş ȧƈƈȯŭƞŧīƞɠ ḗẋƥȯřŧş.⟧"
     },
     "createDialog": {
       "title": "⟦Ƞḗẇ Ȧƈƈȯŭƞŧīƞɠ Ḗẋƥȯřŧ⟧",
@@ -663,7 +675,9 @@
     },
     "recurringRun": {
       "selectPeriods": "⟦Şḗŀḗƈŧ ȧŧ ŀḗȧşŧ ȯƞḗ řḗƈŭřřīƞɠ ƀīŀŀīƞɠ ƥḗřīȯḓ ŧȯ ɠḗƞḗřȧŧḗ.⟧",
-      "invoicePermission": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ ƈřḗȧŧḗ ȯř ɠḗƞḗřȧŧḗ řḗʠŭīřḗḓ⟧"
+      "invoicePermission": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ ƈřḗȧŧḗ ȯř ɠḗƞḗřȧŧḗ řḗʠŭīřḗḓ⟧",
+      "monthEndCloseNotMaterialized": "⟦Řḗƈŭřřīƞɠ şḗřṽīƈḗ ƥḗřīȯḓş ẇḗřḗ ƞȯŧ ḿȧŧḗřīȧŀīẑḗḓ ƒȯř ŧħīş řḗƈŭřřīƞɠ ḗẋḗƈŭŧīȯƞ ẇīƞḓȯẇ.⟧",
+      "monthEndCloseNotEligible": "⟦Ŧħḗ {{servicePeriod}} ƥḗřīȯḓ ƈȧƞ ȯƞŀẏ ƀḗ ƈŀȯşḗḓ ȧŧ ḿȯƞŧħ ḗƞḓ ȯƞ {{finalCalendarDay}}. Ȯƞŀẏ ƈȧŀḗƞḓȧř-ḿȯƞŧħ ȧřřḗȧřş şḗřṽīƈḗ ƥḗřīȯḓş ƈȧƞ ƀḗ ƈŀȯşḗḓ ḗȧřŀẏ ȯƞ ŧħḗīř ƒīƞȧŀ ƈȧŀḗƞḓȧř ḓȧẏ.⟧"
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "⟦Ȧ şƈħḗḓŭŀḗ ķḗẏ īş řḗʠŭīřḗḓ ŧȯ īƞşƥḗƈŧ řḗƈŭřřīƞɠ şḗřṽīƈḗ ƥḗřīȯḓş.⟧",

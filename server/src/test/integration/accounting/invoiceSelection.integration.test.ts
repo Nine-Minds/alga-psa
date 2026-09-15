@@ -311,6 +311,25 @@ describe('Accounting export invoice selection integration', () => {
     } satisfies SeededDataset;
   }
 
+  it('includes the entire UTC end date and excludes adjacent dates', async () => {
+    const data = await seedInvoices();
+    const dated = [
+      [data.manual.invoiceId, '2025-01-15T00:00:00.000Z'],
+      [data.multiPeriod.invoiceId, '2025-01-15T23:59:59.999Z'],
+      [data.credit.invoiceId, '2025-01-14T23:59:59.999Z'],
+      [data.zeroAmount.invoiceId, '2025-01-16T00:00:00.000Z'],
+    ];
+    for (const [invoiceId, invoiceDate] of dated) {
+      await tenantTable(ctx, 'invoices').where({ invoice_id: invoiceId }).update({ invoice_date: invoiceDate });
+    }
+    const lines = await selector.previewInvoiceLines({ startDate: '2025-01-15', endDate: '2025-01-15' });
+    expect(lines.map(line => line.invoiceId).sort()).toEqual([data.manual.invoiceId, data.multiPeriod.invoiceId].sort());
+    const midnightOnly = await selector.previewInvoiceLines({
+      startDate: '2025-01-15T00:00:00.000Z', endDate: '2025-01-15T00:00:00.000Z'
+    });
+    expect(midnightOnly.map(line => line.invoiceId)).toEqual([data.manual.invoiceId]);
+  });
+
   it('previews invoice selection with metadata annotations', async () => {
     const seeded = await seedInvoices();
 

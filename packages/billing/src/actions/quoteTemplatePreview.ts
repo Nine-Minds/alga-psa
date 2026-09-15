@@ -122,7 +122,7 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
       const evaluation = evaluateTemplateAst(validation.ast, input.quoteData as unknown as Record<string, unknown>);
       // Same seam the PDF path uses, so the preview is authoritative.
       const localized = await localizeTemplateAstForLocale(validation.ast, input.locale);
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale, t: localized.t });
       return {
         success: true,
         sourceHash,

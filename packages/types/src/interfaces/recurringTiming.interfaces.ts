@@ -597,6 +597,13 @@ export interface IRecurringDueWorkInvoiceCandidate {
   notYetDue?: boolean;
   /** Date the invoice window opens for a notYetDue candidate (earliest member window start). */
   availableOnDate?: ISO8601String | null;
+  /**
+   * True when this candidate is a calendar-month arrears period sitting on its
+   * FINAL calendar day, so a billing admin may deliberately close it early
+   * (month-end close) instead of waiting for the window to open the next day.
+   * A UI convenience only — generation re-validates against the same policy.
+   */
+  monthEndCloseEligible?: boolean;
   approvalBlockedEntryCount?: number;
   hasApprovalBlockers?: boolean;
   warnings?: IRecurringDueWorkWarning[];

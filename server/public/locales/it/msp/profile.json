@@ -112,7 +112,7 @@
       "advanced": {
         "title": "Avanzate: instradamento del provider di identità personalizzato",
         "description": "Instrada l'accesso SSO MSP al tuo provider di identità usando domini di accesso verificati. È necessario solo nelle installazioni personalizzate o locali.",
-        "inertNotice": "Non sono configurate credenziali del provider di identità del tenant, quindi le attestazioni sui domini non hanno attualmente effetto. Gli utenti accedono con i provider Google/Microsoft ospitati. Le credenziali del tenant vengono predisposte nelle installazioni personalizzate e locali."
+        "inertNotice": "Nessun provider di identità del tenant è configurato, quindi le attestazioni sui domini non hanno attualmente effetto. Configura Keycloak qui sopra, oppure nella Enterprise Edition le credenziali della tua app Google/Microsoft, e poi rivendica qui il dominio di accesso."
       }
     },
     "userRoles": {
@@ -749,6 +749,7 @@
       "branding": {
         "google": "Continua con Google",
         "microsoft": "Continua con Microsoft",
+        "keycloak": "Continua con Keycloak",
         "default": "Continua"
       }
     },

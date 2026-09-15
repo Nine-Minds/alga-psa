@@ -6,6 +6,8 @@
  * On client, it uses standard console.
  */
 
+import { sanitizeLogMeta } from './providerErrors';
+
 const isServer = typeof window === 'undefined';
 
 // Define custom log levels
@@ -43,15 +45,27 @@ const getLogger = () => {
   return internalLogger;
 };
 
+// Defense in depth: structured meta passes through key-based redaction so
+// credential-shaped fields (tokens, secrets, Authorization headers, Axios
+// request configs) never reach the log backend even if a call site forwards
+// a raw error object.
+const safeMeta = (meta: unknown): unknown => {
+  try {
+    return sanitizeLogMeta(meta);
+  } catch {
+    return '[Unserializable log meta]';
+  }
+};
+
 const logger = {
-  error: (msg: string, meta?: any) => meta !== undefined ? getLogger().error(msg, meta) : getLogger().error(msg),
-  warn: (msg: string, meta?: any) => meta !== undefined ? getLogger().warn(msg, meta) : getLogger().warn(msg),
-  info: (msg: string, meta?: any) => meta !== undefined ? getLogger().info(msg, meta) : getLogger().info(msg),
-  http: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, meta) : getLogger().log(msg),
-  verbose: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, meta) : getLogger().log(msg),
-  debug: (msg: string, meta?: any) => meta !== undefined ? getLogger().debug(msg, meta) : getLogger().debug(msg),
-  trace: (msg: string, meta?: any) => meta !== undefined ? getLogger().debug(msg, meta) : getLogger().debug(msg),
-  system: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, meta) : getLogger().log(msg),
+  error: (msg: string, meta?: any) => meta !== undefined ? getLogger().error(msg, safeMeta(meta)) : getLogger().error(msg),
+  warn: (msg: string, meta?: any) => meta !== undefined ? getLogger().warn(msg, safeMeta(meta)) : getLogger().warn(msg),
+  info: (msg: string, meta?: any) => meta !== undefined ? getLogger().info(msg, safeMeta(meta)) : getLogger().info(msg),
+  http: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, safeMeta(meta)) : getLogger().log(msg),
+  verbose: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, safeMeta(meta)) : getLogger().log(msg),
+  debug: (msg: string, meta?: any) => meta !== undefined ? getLogger().debug(msg, safeMeta(meta)) : getLogger().debug(msg),
+  trace: (msg: string, meta?: any) => meta !== undefined ? getLogger().debug(msg, safeMeta(meta)) : getLogger().debug(msg),
+  system: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, safeMeta(meta)) : getLogger().log(msg),
 };
 
 export default logger;

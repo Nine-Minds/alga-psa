@@ -8,7 +8,6 @@ import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, RotateCcw } from "lucide-react";
-import { useFeatureFlag } from "@alga-psa/ui/hooks";
 import { toast } from "react-hot-toast";
 import { getErrorMessage, handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
@@ -109,9 +108,6 @@ function InternalNotificationCategoriesContent({
   initialCategories: InternalNotificationCategory[];
 }) {
   const { t } = useTranslation('msp/settings');
-  // Priority configuration is gated behind the v1.5 release flag. With the flag
-  // off this component renders exactly as before (switches only).
-  const { enabled: priorityEnabled } = useFeatureFlag('release-v1-5-feature');
   // Current state (what's displayed)
   const [categories, setCategories] = useState(initialCategories);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, InternalNotificationSubtype[]>>({});
@@ -586,66 +582,62 @@ function InternalNotificationCategoriesContent({
     },
   ];
 
-  // Priority selector column (feature-flagged). Inserted before the Actions
-  // column so the flag-off layout stays byte-for-byte identical to today.
-  if (priorityEnabled) {
-    const priorityOptions = [
-      { value: 'high', label: t('notifications.internalCategoriesUi.priority.high', 'High') },
-      { value: 'normal', label: t('notifications.internalCategoriesUi.priority.normal', 'Normal') },
-      { value: 'low', label: t('notifications.internalCategoriesUi.priority.low', 'Low') },
-    ];
+  // Priority selector column, inserted before the trailing Actions column.
+  const priorityOptions = [
+    { value: 'high', label: t('notifications.internalCategoriesUi.priority.high', 'High') },
+    { value: 'normal', label: t('notifications.internalCategoriesUi.priority.normal', 'Normal') },
+    { value: 'low', label: t('notifications.internalCategoriesUi.priority.low', 'Low') },
+  ];
 
-    const priorityColumn: ColumnDefinition<NotificationRow> = {
-      title: t('notifications.internalCategoriesUi.columns.priority', 'Priority'),
-      dataIndex: 'id',
-      width: '18%',
-      render: (_value: string, record: NotificationRow) => {
-        // Priority is a subtype-level concept; category rows have none.
-        if (record.isCategory) {
-          return null;
-        }
-        const category = categories.find(c => c.internal_notification_category_id === record.categoryId);
-        const subtype = subtypesByCategory[record.categoryId!]?.find(
-          s => s.internal_notification_subtype_id === record.originalId
-        );
-        if (!subtype) return null;
+  const priorityColumn: ColumnDefinition<NotificationRow> = {
+    title: t('notifications.internalCategoriesUi.columns.priority', 'Priority'),
+    dataIndex: 'id',
+    width: '18%',
+    render: (_value: string, record: NotificationRow) => {
+      // Priority is a subtype-level concept; category rows have none.
+      if (record.isCategory) {
+        return null;
+      }
+      const category = categories.find(c => c.internal_notification_category_id === record.categoryId);
+      const subtype = subtypesByCategory[record.categoryId!]?.find(
+        s => s.internal_notification_subtype_id === record.originalId
+      );
+      if (!subtype) return null;
 
-        const effectivePriority = subtype.tenant_priority ?? subtype.default_priority ?? 'normal';
-        const hasOverride = subtype.tenant_priority != null;
+      const effectivePriority = subtype.tenant_priority ?? subtype.default_priority ?? 'normal';
+      const hasOverride = subtype.tenant_priority != null;
 
-        return (
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            <CustomSelect
-              id={`internal-subtype-priority-${record.id}`}
+      return (
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <CustomSelect
+            id={`internal-subtype-priority-${record.id}`}
+            size="sm"
+            value={effectivePriority}
+            options={priorityOptions}
+            disabled={!category?.is_enabled}
+            onValueChange={(v) =>
+              handleChangeSubtypePriority(subtype, record.categoryId!, v as InternalNotificationPriority)
+            }
+          />
+          {hasOverride && (
+            <Button
+              id={`reset-internal-subtype-priority-${record.id}`}
+              variant="ghost"
               size="sm"
-              value={effectivePriority}
-              options={priorityOptions}
-              disabled={!category?.is_enabled}
-              onValueChange={(v) =>
-                handleChangeSubtypePriority(subtype, record.categoryId!, v as InternalNotificationPriority)
-              }
-            />
-            {hasOverride && (
-              <Button
-                id={`reset-internal-subtype-priority-${record.id}`}
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                title={t('notifications.internalCategoriesUi.actions.resetToDefault', 'Reset to default')}
-                aria-label={t('notifications.internalCategoriesUi.actions.resetToDefault', 'Reset to default')}
-                onClick={() => handleChangeSubtypePriority(subtype, record.categoryId!, null)}
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        );
-      },
-    };
+              className="h-8 w-8 p-0"
+              title={t('notifications.internalCategoriesUi.actions.resetToDefault', 'Reset to default')}
+              aria-label={t('notifications.internalCategoriesUi.actions.resetToDefault', 'Reset to default')}
+              onClick={() => handleChangeSubtypePriority(subtype, record.categoryId!, null)}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      );
+    },
+  };
 
-    // Insert before the trailing Actions column.
-    columns.splice(columns.length - 1, 0, priorityColumn);
-  }
+  columns.splice(columns.length - 1, 0, priorityColumn);
 
   return (
     <div className="space-y-4">

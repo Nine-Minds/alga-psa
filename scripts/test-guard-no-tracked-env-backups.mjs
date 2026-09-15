@@ -49,6 +49,9 @@ const expectFail = (cwd, expectedStderrIncludes) => {
 };
 
 const main = () => {
+  // A failed Git command must never be interpreted as an empty clean index.
+  expectFail(mkdtempSync(join(tmpdir(), 'alga-env-guard-no-git-')), ['Unable to inspect tracked filenames']);
+
   // Empty repo: should pass.
   const emptyRepo = initRepo();
   writeFileSync(join(emptyRepo, 'README.md'), '# test\n', 'utf8');
@@ -63,6 +66,21 @@ const main = () => {
   run('git', ['add', offender], { cwd: badRepo });
   run('git', ['commit', '-m', 'add offender'], { cwd: badRepo });
   expectFail(badRepo, ['Tracked env-backup files detected', offender]);
+
+  // Exercise a real index whose NUL-delimited output exceeds execFileSync's
+  // default 1 MiB buffer, including an offender after the large safe prefix.
+  const largeRepo = initRepo();
+  const blob = run('git', ['hash-object', '-w', '--stdin'], { cwd: largeRepo, input: 'fixture' }).trim();
+  const entries = Array.from({ length: 9000 }, (_, index) =>
+    `100644 ${blob}\tfiles/${String(index).padStart(5, '0')}-${'x'.repeat(130)}.txt\0`).join('');
+  run('git', ['update-index', '-z', '--index-info'], { cwd: largeRepo, input: entries });
+  expectPass(largeRepo);
+  const lateOffender = 'zz-last/.env.local.bak.fixture';
+  run('git', ['update-index', '-z', '--index-info'], {
+    cwd: largeRepo, input: `100644 ${blob}\t${lateOffender}\0`,
+  });
+  expectFail(largeRepo, ['Tracked env-backup files detected', lateOffender]);
+
 };
 
 main();

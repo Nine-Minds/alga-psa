@@ -629,7 +629,8 @@
           "loading": "Cargando estados de tickets del tablero…",
           "statusName": "Nombre del estado",
           "closed": "Cerrado",
-          "default": "Predeterminado"
+          "default": "Predeterminado",
+          "portalSelectable": "Los usuarios del portal de clientes pueden seleccionar este estado"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reabrir tickets cerrados con respuestas entrantes",
@@ -1051,7 +1052,8 @@
         "name": "Nombre",
         "status": "Estado",
         "order": "Orden",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "default": "Predeterminado"
       },
       "statusLabels": {
         "closedHelp": "Las interacciones con este estado se marcarán como cerradas",
@@ -1067,14 +1069,21 @@
         "success": {
           "updated": "Estado actualizado correctamente",
           "deleted": "Estado eliminado correctamente",
-          "imported": "Se importaron {{count}} estados correctamente"
+          "imported": "Se importaron {{count}} estados correctamente",
+          "defaultUpdated": "Estado de interacción predeterminado actualizado"
         },
         "error": {
           "lastClosed": "Al menos un estado debe permanecer marcado como cerrado",
           "deleteLastClosed": "No se puede eliminar el último estado cerrado para este tipo.",
           "skipped": "Se omitieron {{count}} estados ({{reason}})",
-          "importFailed": "No se pudieron importar los estados"
+          "importFailed": "No se pudieron importar los estados",
+          "defaultRequired": "Un estado debe seguir siendo el predeterminado: establezca otro estado como predeterminado.",
+          "closedCannotBeDefault": "Un estado cerrado no puede ser el predeterminado para las interacciones nuevas."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Predeterminado para las interacciones nuevas",
+        "setDefault": "Usar como predeterminado"
       }
     },
     "quickAdd": {
@@ -1132,6 +1141,8 @@
         "companyName": "Nombre de la empresa",
         "companyLogo": "Logotipo de la empresa",
         "companyLogoDark": "Logotipo para fondos oscuros",
+        "companyLogoWide": "Logotipo ancho (opcional)",
+        "companyLogoWideDark": "Logotipo ancho para fondos oscuros (opcional)",
         "colorPalette": "Paleta de colores",
         "primaryColor": "Color primario",
         "secondaryColor": "Color secundario",
@@ -1148,6 +1159,8 @@
         "companyLogo": "Recomendado: PNG o SVG, máximo 2 MB, fondo transparente",
         "companyLogoMsp": "Este logotipo también sustituye la marca de Alga en el menú lateral MSP.",
         "companyLogoDark": "Opcional. Se usa en el panel lateral del portal y en las pantallas en modo oscuro. Si se deja vacío, se usa el logotipo de la empresa.",
+        "companyLogoWide": "Se muestra en la parte superior del panel lateral expandido del portal, con 32 px de alto. Incluya el nombre de su empresa en la imagen: el panel deja de escribirlo por separado.",
+        "companyLogoWideDark": "Opcional. Se usa mientras el fondo del panel lateral sea oscuro. Recurre al logotipo ancho.",
         "primaryColor": "Se utiliza para botones, enlaces y elementos destacados",
         "secondaryColor": "Se utiliza para acentos y acciones secundarias",
         "supportEmail": "Se muestra a los clientes en las confirmaciones de citas y otros correos salientes como dirección de contacto para obtener ayuda.",
@@ -1177,7 +1190,11 @@
         "previewSignIn": "Vista previa de la página de inicio de sesión",
         "hideSignIn": "Ocultar página de inicio de sesión"
       },
-      "customDomainRequired": "Debe tener configurado un dominio personalizado"
+      "customDomainRequired": "Debe tener configurado un dominio personalizado",
+      "warnings": {
+        "expectSquare": "Esa imagen es mucho más ancha que alta. Este espacio rellena zonas cuadradas; probablemente busque el espacio del logotipo ancho.",
+        "expectWide": "Esa imagen es casi cuadrada. El espacio del logotipo ancho espera un logotipo apaisado; una marca cuadrada va en el espacio de arriba."
+      }
     },
     "dashboardPreview": {
       "title": "Su portal del cliente",
@@ -1282,11 +1299,11 @@
         "canonicalHostFallback": "host canónico"
       },
       "appliance": {
-        "helpText": "Apunte este nombre de host a su appliance y haga que su proxy inverso reenvíe el encabezado Host original antes de guardar.",
+        "helpText": "Apunte este nombre de host a su servidor y haga que su proxy inverso reenvíe el encabezado Host original antes de guardar.",
         "checklistTitle": "Configuración del proxy inverso",
         "step1Prefix": "Apunte ",
-        "step1Suffix": " a este appliance (un registro A a su dirección o un CNAME a su host de appliance).",
-        "step2": "En su proxy inverso, termine TLS para el dominio y reenvíe a este appliance en el puerto 3000, preservando el encabezado Host original (p. ej. proxy_set_header Host $host) y enviando X-Forwarded-Proto: https.",
+        "step1Suffix": " a este servidor (un registro A a su dirección o un CNAME al nombre de host de su servidor).",
+        "step2": "En su proxy inverso, termine TLS para el dominio y reenvíe a este servidor en el puerto 3000, preservando el encabezado Host original (p. ej. proxy_set_header Host $host) y enviando X-Forwarded-Proto: https.",
         "step3": "Obtenga y mantenga el certificado TLS para el dominio en su proxy.",
         "step4": "Guarde el dominio aquí — se activa de inmediato. Configure primero el DNS y su proxy, ya que los enlaces del portal cambian a este dominio de inmediato.",
         "docLinkText": "Guía de configuración y resolución de problemas del proxy inverso",
@@ -1423,10 +1440,24 @@
     "whiteLabel": {
       "title": "Marca propia en la aplicación MSP",
       "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
-      "logoHelp": "El menú lateral MSP es oscuro en ambos temas, así que usa el logotipo para fondos oscuros cuando lo proporciona y, si no, el logotipo principal.",
+      "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral se adapta a su propio fondo: usa las variantes para fondos oscuros cuando el menú es oscuro y las claras cuando es claro, y recurre a la variante que haya subido.",
       "fields": {
-        "logo": "Logotipo",
-        "logoDark": "Logotipo para fondos oscuros"
+        "mark": "Marca cuadrada",
+        "markDark": "Marca cuadrada para fondos oscuros",
+        "wide": "Logotipo ancho (opcional)",
+        "wideDark": "Logotipo ancho para fondos oscuros (opcional)",
+        "favicon": "Icono del navegador (favicon)"
+      },
+      "hints": {
+        "mark": "Se usa en el menú lateral contraído y en todos los marcos circulares. Lo cuadrado funciona mejor.",
+        "markDark": "Opcional. Recurre a la marca cuadrada.",
+        "wide": "Solo se muestra en el menú lateral expandido, con 32 px de alto. Incluya el nombre de su empresa en la imagen.",
+        "wideDark": "Opcional. Se usa mientras el fondo del menú lateral sea oscuro, como ocurre en todos los temas incluidos.",
+        "favicon": "PNG, SVG o ICO. Las imágenes de mapa de bits se redimensionan a 32x32. Se aplica a la aplicación MSP y al portal de clientes de su organización."
+      },
+      "warnings": {
+        "expectSquare": "Esa imagen es mucho más ancha que alta. El espacio de la marca cuadrada se usa en zonas cuadradas; probablemente busque el espacio del logotipo ancho.",
+        "expectWide": "Esa imagen es casi cuadrada. El espacio ancho espera un logotipo apaisado; probablemente busque el espacio de la marca cuadrada."
       },
       "colors": {
         "label": "Usar sus colores de marca en la aplicación MSP",
@@ -1443,6 +1474,9 @@
       "notice": "Está viendo una vista previa de un tema sin guardar. El resto conserva el tema guardado hasta que lo aplique.",
       "save": "Aplicar para todos",
       "discard": "Descartar"
+    },
+    "upgrade": {
+      "pitch": "Los pares de temas para toda la organización, el editor de paleta personalizada y la marca blanca de la aplicación MSP forman parte de la edición Enterprise."
     }
   },
   "mspLanguage": {
@@ -1470,6 +1504,7 @@
     "emailTabs": {
       "settings": "Configuración",
       "emailTemplates": "Plantillas de correo electrónico",
+      "emailBranding": "Marca de los correos electrónicos",
       "categories": "Categorías",
       "telemetry": "Telemetría"
     },
@@ -1526,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Vista previa del asunto",
         "iframeTitle": "Vista previa de la plantilla de correo electrónico",
-        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales."
+        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales.",
+        "sourceSyncNote": "Haga clic en cualquier elemento de la vista previa para seleccionar su código; al mover el cursor en el código, el elemento se resalta aquí."
       },
       "errors": {
         "loadFailed": "Error al cargar las plantillas"
@@ -1575,7 +1611,8 @@
       },
       "tabs": {
         "source": "Código fuente",
-        "preview": "Vista previa"
+        "preview": "Vista previa",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1592,6 +1629,110 @@
         "it": "Italiano",
         "pl": "Polaco",
         "pt": "Portugués"
+      }
+    },
+    "emailBranding": {
+      "title": "Marca de los correos electrónicos",
+      "description": "Aplique sus colores a todos los correos electrónicos salientes. Véalos aquí en vista previa y luego elija a qué plantillas aplicarlos.",
+      "unsavedHint": "Guarde la paleta antes de aplicarla.",
+      "source": {
+        "saved": "Guardada",
+        "custom-theme": "De su tema personalizado",
+        "theme-pair": "De su tema",
+        "portal-branding": "De la marca de su portal de clientes",
+        "default": "Predeterminado de AlgaPSA"
+      },
+      "fields": {
+        "primary": "Color principal",
+        "secondary": "Color secundario",
+        "singleColor": "Color único (el degradado se deriva del color principal)"
+      },
+      "tokens": {
+        "dark": "Acento oscuro",
+        "outerBg": "Fondo exterior",
+        "footerBg": "Fondo del pie de página",
+        "cardBorder": "Borde de la tarjeta",
+        "infoBoxBg": "Fondo del cuadro informativo",
+        "infoBoxBorder": "Borde del cuadro informativo"
+      },
+      "preview": {
+        "title": "Vista previa"
+      },
+      "actions": {
+        "save": "Guardar paleta",
+        "saving": "Guardando...",
+        "useSuggested": "Usar los colores sugeridos",
+        "adjust": "Ajustar los colores derivados",
+        "apply": "Aplicar a las plantillas",
+        "applying": "Aplicando...",
+        "applyCount": "Aplicar a {{count}} plantillas",
+        "applyToTemplate": "Aplicar mi paleta",
+        "remove": "Quitar la marca de todas las plantillas",
+        "removing": "Quitando...",
+        "cancel": "Cancelar",
+        "done": "Listo"
+      },
+      "apply": {
+        "title": "Aplicar la marca a las plantillas",
+        "languages": "Idiomas",
+        "selectAll": "Seleccionar todo",
+        "selectNone": "Deseleccionar todo",
+        "differs": "Difiere en {{parts}}",
+        "differsParts": {
+          "colors": "colores",
+          "text": "texto",
+          "subject": "asunto"
+        },
+        "overwrite": "Sobrescribir",
+        "overwriteHint": "Sobrescribir reconstruye una plantilla a partir de la estándar con su paleta y descarta sus ediciones.",
+        "preview": {
+          "open": "Ver el resultado",
+          "title": "Vista previa: {{name}}",
+          "loading": "Generando la vista previa...",
+          "captions": {
+            "create": "Se creará una copia con su marca a partir de la plantilla estándar.",
+            "update": "Su copia con la marca se volverá a crear desde la plantilla estándar con la paleta guardada.",
+            "customized": "Sus cambios se conservan palabra por palabra. Solo se reemplazan los colores originales que quedan en esta plantilla.",
+            "overwrite": "Se descartarán sus ediciones de esta plantilla. Se reconstruirá a partir de la plantilla estándar con su paleta.",
+            "skipped": "No se escribirá nada: {{reason}}. Esta es la plantilla tal como está hoy."
+          }
+        },
+        "summary": "{{written}} con su marca, {{skipped}} omitidas, {{failed}} con errores",
+        "groups": {
+          "system": {
+            "title": "Sin personalizar",
+            "action": "Crear una copia con su marca"
+          },
+          "branded": {
+            "title": "Con su marca",
+            "action": "Actualizar los colores"
+          },
+          "customized": {
+            "title": "Personalizadas",
+            "action": "Reemplazar solo los colores originales restantes"
+          },
+          "no-stock-colors": {
+            "title": "Sin colores originales",
+            "action": "Nada que reemplazar"
+          }
+        },
+        "skipReasons": {
+          "customized": "Personalizada: no seleccionada",
+          "nothing-to-replace": "Nada que reemplazar",
+          "unchanged": "Ya está actualizada"
+        }
+      },
+      "newTemplates": {
+        "message": "Se agregaron {{count}} plantillas desde la última vez que aplicó su paleta.",
+        "action": "Aplicar la paleta a las plantillas nuevas",
+        "dismiss": "Descartar"
+      },
+      "enterprise": {
+        "useLogo": "Usar mi logo en el encabezado del correo electrónico",
+        "logoWide": "Logo ancho",
+        "logoDefault": "Logo cuadrado",
+        "noLogo": "Cargue un logo en Configuración → Portal de clientes → Marca para usarlo aquí.",
+        "showAttribution": "Mostrar «Powered by AlgaPSA» en el pie de página"
       }
     },
     "categoriesUi": {
@@ -1989,7 +2130,17 @@
         "upload": "Subir paquete"
       },
       "errors": {
-        "noImportableRecords": "Este paquete no contenía registros importables."
+        "noImportableRecords": "Este paquete no contenía registros importables.",
+        "permissionDenied": "No tiene permiso para importar o exportar datos.",
+        "invalidSpreadsheet": "No se pudo leer esa hoja de cálculo. Compruebe que sea un archivo CSV o XLSX válido e inténtelo de nuevo.",
+        "notAmpPackage": "Ese archivo no es un paquete AMP. Suba un archivo .amp o .sqlite.",
+        "tooLarge": "Esta carga supera el tamaño máximo permitido.",
+        "sizeMismatch": "La carga no se completó. Inténtelo de nuevo.",
+        "noRecognizedHeaders": "No se reconoció ninguna de las columnas de esa hoja de cálculo. Compruebe la fila de encabezados e inténtelo de nuevo.",
+        "storageRejected": "El servidor rechazó esta carga. Pida a su administrador que revise la configuración de tipos de archivo del almacenamiento.",
+        "spreadsheetFailed": "No se pudo importar la hoja de cálculo. Inténtelo de nuevo.",
+        "uploadFailed": "No se pudo subir el paquete. Inténtelo de nuevo.",
+        "unknown": "La carga falló. Inténtelo de nuevo."
       },
       "preflight": {
         "title": "Verificación previa"
@@ -1997,6 +2148,19 @@
       "run": {
         "queued": "Migración en cola",
         "applying": "Migración en curso"
+      },
+      "badges": {
+        "nothingImported": "No se importó nada"
+      },
+      "results": {
+        "skippedSamePackage": "Los registros omitidos ya se migraron en una ejecución anterior del mismo paquete.",
+        "skippedOtherPackage": "Los registros omitidos coincidieron con entidades creadas por una migración anterior de un paquete diferente: {{packages}}.",
+        "skippedExistingEntity": "Los registros omitidos coincidieron con entidades existentes.",
+        "nothingImportedTitle": "No se importó nada",
+        "nothingImportedBody": "Esta ejecución no creó registros nuevos. Cada fila coincidió con algo que ya existía, así que no se cambió nada.",
+        "claimedBySamePackage": "Ya migrado por este paquete",
+        "claimedByOtherPackage": "Ya migrado por {{file}}",
+        "claimedByExistingEntity": "Coincide con una entidad existente"
       }
     },
     "jobDetails": {
@@ -2846,7 +3010,8 @@
         "fieldCount": "Campos",
         "order": "Orden",
         "actions": "Acciones",
-        "openMenu": "Abrir menú"
+        "openMenu": "Abrir menú",
+        "searchPlaceholder": "Buscar tipos de activos…"
       },
       "actions": {
         "addType": "Agregar tipo de activo",
@@ -3141,7 +3306,9 @@
       "nameRequired": "El nombre del estado es obligatorio",
       "nameEmpty": "El nombre del estado no puede estar vacío",
       "idRequired": "El ID del estado es obligatorio",
-      "manageFromBoard": "Los estados de ticket deben gestionarse desde la configuración del tablero"
+      "manageFromBoard": "Los estados de ticket deben gestionarse desde la configuración del tablero",
+      "closedCannotBeDefault": "Un estado cerrado no puede ser el estado predeterminado",
+      "defaultMustStayOpen": "Establezca otro estado como predeterminado antes de cerrar este"
     },
     "priority": {
       "notFound": "No se encontró la prioridad.",
@@ -3236,7 +3403,7 @@
       "needsDot": "El dominio debe incluir al menos un punto.",
       "notCanonicalHost": "Elija un dominio distinto del host canónico.",
       "noLeadingTrailingDot": "El dominio no puede empezar ni terminar con un punto.",
-      "notApplianceHost": "Elija un dominio distinto del host principal de este dispositivo. El dominio personalizado del portal debe ser otro nombre de host que su proxy inverso reenvíe aquí.",
+      "notApplianceHost": "Elija un dominio distinto del host principal de este servidor. El dominio personalizado del portal debe ser otro nombre de host que su proxy inverso reenvíe aquí.",
       "nothingToRetry": "No hay ningún registro de dominio personalizado fallido que reintentar.",
       "retryOnlyAfterFailure": "El reintento solo está disponible después de un registro fallido."
     }

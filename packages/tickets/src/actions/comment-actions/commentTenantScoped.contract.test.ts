@@ -68,7 +68,7 @@ describe('ticket comment tenant facade contract', () => {
   });
 
   it('uses facade joins for migrated comment and portal tenant-table joins', () => {
-    expect(sources.commentModel).toContain("tenantScopedTable(knexOrTrx, 'comments as parent', tenant)");
+    expect(sources.commentModel).toContain("tenantScopedTable(trx, 'comments as parent', tenant)");
     expect(sources.commentModel).toContain("'comment_threads as thread'");
 
     expect(sources.commentActions).toContain("tenantScopedTable(trx, 'users as u', tenant)");
@@ -82,10 +82,10 @@ describe('ticket comment tenant facade contract', () => {
   });
 
   it('keeps raw generated and computed values on the connection', () => {
-    expect(sources.commentModel).toContain("knexOrTrx.raw('SELECT gen_random_uuid() AS comment_id')");
-    expect(sources.commentModel).toContain("knexOrTrx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id')");
-    expect(sources.commentModel).toContain("knexOrTrx.raw('reply_count + 1')");
-    expect(sources.commentModel).toContain("knexOrTrx.raw('GREATEST(reply_count - 1, 0)')");
+    expect(sources.commentModel).toContain("trx.raw('SELECT gen_random_uuid() AS comment_id')");
+    expect(sources.commentModel).toContain("trx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id')");
+    expect(sources.commentModel).toContain("trx.raw('reply_count + 1')");
+    expect(sources.commentModel).toContain("trx.raw('GREATEST(reply_count - 1, 0)')");
     expect(sources.deleteTicketChildRecords).toContain('trx.raw(');
   });
 });

@@ -1,0 +1,90 @@
+{
+  "validatedAt": "2026-09-05T02:26:00.967Z",
+  "runtime": {
+    "pid": 543133,
+    "consumer": "consumer-543133",
+    "cwd": "/home/robert/alga-copies/feature-support-ticket-comment-attachments-with-email-de/server",
+    "commit": "214a805b7bce5f6f6e95c5543f1351f7dacbf8f9",
+    "environment": {
+      "PORT": "3654",
+      "REDIS_EVENT_STREAM_PREFIX": "t016-20260905-event-stream:",
+      "REDIS_EVENT_CONSUMER_GROUP": "t016-20260905-processors",
+      "NEXT_DIST_DIR": ".next-t016",
+      "APP_EDITION": null,
+      "EDITION": null,
+      "NEXT_PUBLIC_EDITION": null,
+      "E2E_SKIP_APP_INIT": null
+    },
+    "editionEnvFile": [
+      "APP_EDITION=enterprise",
+      "NEXT_PUBLIC_EDITION=enterprise"
+    ]
+  },
+  "results": [
+    {
+      "file": "t016-msp-valid.pdf",
+      "commentId": "7bf3ef5c-86a8-4915-873d-16eccff34936",
+      "eventId": "edb00a68-829e-4725-8298-87849f9fff6a",
+      "documentId": "a7f43c9d-eaf3-4686-a3b6-b77a75f4c505",
+      "fileId": "890d09c8-ed0a-4406-985c-4b03f4cdd5d3",
+      "parentCommentId": null,
+      "recipient": "attachment-recipient@example.test",
+      "deliveryCount": 1,
+      "ledgerState": "sent",
+      "ledgerAttempts": 1,
+      "mimeMessageId": "<b5f60854-b9dc-476e-b4ad-cbabca5fdcdc@localhost>",
+      "size": 638,
+      "sha256": "b9ef4c34b1c23875b13ddbfd92fd77177786077e8a046d0c969635364c97f282",
+      "ack": [
+        {
+          "streamId": "1788574847376-0",
+          "connection": "172.19.0.1:37494",
+          "consumer": "consumer-543133"
+        },
+        {
+          "streamId": "1788575035140-0",
+          "connection": "172.19.0.1:37494",
+          "consumer": "consumer-543133"
+        }
+      ]
+    },
+    {
+      "file": "t016-portal.pdf",
+      "commentId": "ba69e15e-1cab-44ed-9bbf-43ac8b89e909",
+      "eventId": "e064bad2-baaa-4b05-8807-86dc34191ab2",
+      "documentId": "8a38b40a-0dd0-4db0-87a2-ad106326b537",
+      "fileId": "5e4c754f-8788-484f-947a-761277566f20",
+      "parentCommentId": "7bf3ef5c-86a8-4915-873d-16eccff34936",
+      "recipient": "attachment-smoke-2134722f@example.test",
+      "deliveryCount": 1,
+      "ledgerState": "sent",
+      "ledgerAttempts": 1,
+      "mimeMessageId": "<00c1c514-5d40-4c94-847d-a00ac3091934@localhost>",
+      "size": 635,
+      "sha256": "b74b8ade3cfa9e46ea36e49d2f3050b145c40fe943feeac2b03b84bdef161f9a",
+      "ack": [
+        {
+          "streamId": "1788574986858-0",
+          "connection": "172.19.0.1:37494",
+          "consumer": "consumer-543133"
+        },
+        {
+          "streamId": "1788575035140-1",
+          "connection": "172.19.0.1:37494",
+          "consumer": "consumer-543133"
+        }
+      ]
+    }
+  ],
+  "exclusion": {
+    "internalCommentId": "04ac0a4c-6e10-46f9-9336-317235eb53ec",
+    "internalEventId": "85a1c8e4-4107-49bf-90f0-d741b0f67eea",
+    "internalDeliveryCount": 0,
+    "canceledAttachmentId": "cc411bec-9c37-4bd1-809c-fc8a5153d9b3",
+    "canceledState": "removed",
+    "canceledCommentId": null,
+    "canceledDeliveryCount": 0,
+    "portalHidden": true
+  },
+  "checksPassed": true
+}

@@ -1,6 +1,7 @@
 import { allAuthenticatedClientUsersVisibilityProvider } from './builtins/allAuthenticatedClientUsersVisibilityProvider';
 import { basicFormBehaviorProvider } from './builtins/basicFormBehaviorProvider';
 import { starterTemplateProvider } from './builtins/starterTemplateProvider';
+import { storeOnlyExecutionProvider } from './builtins/storeOnlyExecutionProvider';
 import { ticketOnlyExecutionProvider } from './builtins/ticketOnlyExecutionProvider';
 import type {
   ServiceRequestAdminExtensionProvider,
@@ -20,7 +21,7 @@ interface ServiceRequestProviderRegistryStore {
 }
 
 const builtInRegistrations: ServiceRequestProviderRegistrations = {
-  executionProviders: [ticketOnlyExecutionProvider],
+  executionProviders: [ticketOnlyExecutionProvider, storeOnlyExecutionProvider],
   formBehaviorProviders: [basicFormBehaviorProvider],
   visibilityProviders: [allAuthenticatedClientUsersVisibilityProvider],
   templateProviders: [starterTemplateProvider],

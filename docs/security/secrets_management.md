@@ -171,6 +171,108 @@ The `.env.example` file indicates which values are managed via Docker secrets. W
 2. Fill in non-sensitive values in `.env`
 3. Create corresponding secret files for sensitive values
 
+## Tenant Secrets on the Filesystem
+
+Tenant-scoped secrets (OAuth tokens for QBO/Xero, Gmail service-account keys, and
+similar runtime credentials) are written by the application through the secret
+provider abstraction. When `SECRET_WRITE_PROVIDER=filesystem`, they are stored
+under the filesystem secret root as:
+
+```
+<SECRET_FS_BASE_PATH>/tenants/<tenantId>/<secretName>
+```
+
+The filesystem provider maintains strict permissions on this store,
+independent of the process umask:
+
+- Every directory (`<root>`, `tenants/`, and each tenant directory) is
+  `0700`. Directories are created with an explicit `0700` mode and re-checked
+  with `chmod` where they may already exist.
+- Every secret file is `0600`. Writes go through an exclusively-created
+  (`O_EXCL`) temporary file in the same directory, are `fsync`ed, and are then
+  atomically `rename()`d over the target — a crash or interruption mid-write
+  never leaves a partial file at the final path, and a rewrite always ends at
+  `0600`.
+- Tenant IDs and secret names are validated as single path components; the
+  resolved path must stay under the secret root.
+- Writes and deletes anchor the directory chain (`<root>`, `tenants/`, tenant
+  directory) for the duration of the operation: each component is opened with
+  `O_DIRECTORY|O_NOFOLLOW`, children resolve through the held descriptor
+  (via `/proc/self/fd` where the platform provides it), and the chain is
+  re-verified against the anchored identity at the write, rename, and unlink
+  boundaries. Missing `tenants/` and tenant directories are created the same
+  way — a non-recursive `mkdir` resolved through the parent's descriptor,
+  followed by an `O_NOFOLLOW` open and a handle `chmod` — so directory
+  preparation resolves through the same anchors as the write. A component that
+  changes mid-operation aborts the operation; a change after the final check
+  cannot redirect it, because the syscalls resolve through the descriptor
+  rather than the path.
+- The provider refuses to write through symlinks or non-regular files, and
+  validates the secret root before the first write. A root the service **owns**
+  but that is merely too permissive (e.g. `0755` from a looser umask or a
+  volume mounted world-readable) is tightened to `0700` in place before the
+  first write — the same non-destructive correction applied to `tenants/` and
+  per-tenant directories, and it only ever removes group/other access. Writes
+  fail closed with a precise operator message only when the root cannot be made
+  safe automatically: it is a **symlink**, **not a directory**, or **owned by a
+  different user** (re-owning another user's directory is a deployment decision
+  the provider will not make silently). Reads are unaffected in every case.
+- Secret values are never written to logs; only paths are logged.
+
+### Operator message on refused writes
+
+When the secret root cannot be made safe automatically (a symlink, a
+non-directory, or a directory owned by a different user), writes fail with a
+message naming the exact path and the fix, for example:
+
+```
+Filesystem secret store at /var/lib/alga/tenant-secrets is not safe for secret
+writes: it is owned by uid 0 and the process runs as uid 1000. Expected a real
+directory owned by uid 1000 with mode 0700. Refusing secret writes; reads
+continue. Fix with: sudo chown 1000 /var/lib/alga/tenant-secrets && sudo chmod
+700 /var/lib/alga/tenant-secrets, or run scripts/repair-secret-permissions.sh
+--apply --path /var/lib/alga/tenant-secrets (see
+docs/security/secrets_management.md).
+```
+
+### Repairing an existing store
+
+Installs created before the strict-modes behavior (or restored from a backup
+that preserved a permissive umask or a different volume owner) may hold `0755`
+directories, `0644` secret files, or entries owned by another uid. Run the
+non-destructive repair script to bring the store in line. It never deletes,
+rewrites, or reads out secret contents, and never follows symlinks:
+
+```bash
+# 1. Report what would change (no changes made). Exits 0 only when the store
+#    is already fully safe; exits 1 when anything needs fixing:
+scripts/repair-secret-permissions.sh --path <SECRET_FS_BASE_PATH>
+
+# 2a. Modes only wrong (owner already correct) — run as the service user:
+scripts/repair-secret-permissions.sh --apply --path <SECRET_FS_BASE_PATH>
+
+# 2b. Ownership also wrong — run as root with the service uid; this chowns
+#     every entry, including the store root itself, to that uid:
+sudo scripts/repair-secret-permissions.sh --apply --path <SECRET_FS_BASE_PATH> --uid 1000
+
+# 3. Verify: the dry run now reports a clean store and exits 0:
+scripts/repair-secret-permissions.sh --path <SECRET_FS_BASE_PATH>
+```
+
+`--apply` repeats its walk until nothing more can be fixed, so directories that
+were untraversable before their own repair (e.g. mode `0000`) are descended
+into and their contents repaired too. It exits `0` only when the store ends
+fully safe for provider writes — correct modes **and** uniform ownership; any
+remaining issue (a symlink, a non-regular entry, or ownership that needs
+root + `--uid`) is reported and the exit status is `1`, so the script never
+claims success while the provider would still refuse writes.
+
+Without `--path`, the script uses `SECRET_FS_BASE_PATH` (or `<repo>/secrets`).
+Without `--uid`, the store root's current owner is treated as the expected
+owner and mismatched entries are reported (fixing them requires root +
+`--uid`). Symlinks and non-regular entries are reported for manual
+intervention and are never changed.
+
 ## Best Practices
 
 1. Always use secrets for sensitive data, never environment variables

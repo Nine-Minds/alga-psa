@@ -11,7 +11,7 @@ import {
   setDefaultClientLocation 
 } from '@alga-psa/clients/actions';
 import { getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
+import { getAllCountries, getTenantDefaultCountry, ICountry } from '@alga-psa/clients/actions';
 import { ITaxRegion } from '@alga-psa/types';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -317,6 +317,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
   const [isLoading, setIsLoading] = useState(false);
   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState<IClientLocation | null>(null);
@@ -476,8 +477,13 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
     if (isLoadingCountries || countries.length > 0) return;
     setIsLoadingCountries(true);
     try {
-      const countriesData = await getAllCountries();
+      // A missing tenant default must not empty the picker, so it fails soft.
+      const [countriesData, tenantCountry] = await Promise.all([
+        getAllCountries(),
+        getTenantDefaultCountry().catch(() => null),
+      ]);
       setCountries(countriesData);
+      setTenantDefaultCountry(tenantCountry);
     } catch (error) {
       console.error('Error loading countries:', error);
       toast({
@@ -520,6 +526,9 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
     setEditingLocation(null);
     setFormData({
       ...initialFormData,
+      ...(tenantDefaultCountry
+        ? { country_code: tenantDefaultCountry.code, country_name: tenantDefaultCountry.name }
+        : {}),
       is_default: locations.length === 0 // First location should be default
     });
     setIsDialogOpen(true);

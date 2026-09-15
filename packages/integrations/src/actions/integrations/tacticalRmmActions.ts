@@ -1001,6 +1001,8 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
       authMode,
     });
 
+    // GET /software/ returns one row per agent: { id, agent: <numeric pk>, software: [...] }.
+    // The pk is not the agent_id our mappings key on, so the agent list bridges the two.
     const res = await client.request<any>({ method: 'GET', path: '/software/' });
 
     const rows: any[] = Array.isArray(res)
@@ -1009,7 +1011,6 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
         ? (res as any).results
         : [];
 
-    // Build agent_id -> asset_id map
     const mappings = await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant)
       .where({ integration_type: PROVIDER, alga_entity_type: 'asset' })
       .select(['external_entity_id', 'alga_entity_id']);
@@ -1019,21 +1020,36 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
       assetIdByAgentId.set(String((m as any).external_entity_id), String((m as any).alga_entity_id));
     }
 
-    // Group by agent
+    const agentIdByPk = new Map<string, string>();
+    if (rows.some((r) => r && typeof r === 'object' && !('agent_id' in r) && 'agent' in r)) {
+      const agents = await client.listAllBeta<any>({ path: '/beta/v1/agent/' });
+      for (const a of agents) {
+        const pk = a?.id ?? a?.pk;
+        const agentId = a?.agent_id;
+        if (pk !== undefined && pk !== null && agentId) agentIdByPk.set(String(pk), String(agentId));
+      }
+    }
+
     const softwareByAgent = new Map<string, Array<{ name: string; version?: string | null; publisher?: string | null; installPath?: string | null }>>();
     for (const r of rows) {
-      const agentId = String(r?.agent_id ?? r?.agent ?? r?.device_id ?? r?.device ?? '');
-      const name = String(r?.name ?? r?.software_name ?? r?.product_name ?? '').trim();
-      if (!agentId || !name) continue;
+      const agentId = r?.agent_id
+        ? String(r.agent_id)
+        : agentIdByPk.get(String(r?.agent ?? r?.device_id ?? r?.device ?? '')) ?? '';
+      if (!agentId) continue;
 
+      const items: any[] = Array.isArray(r?.software) ? r.software : [r];
       const list = softwareByAgent.get(agentId) || [];
-      list.push({
-        name,
-        version: r?.version ? String(r.version) : null,
-        publisher: r?.publisher ? String(r.publisher) : null,
-        installPath: r?.install_path ? String(r.install_path) : (r?.location ? String(r.location) : null),
-      });
-      softwareByAgent.set(agentId, list);
+      for (const item of items) {
+        const name = String(item?.name ?? item?.software_name ?? item?.product_name ?? '').trim();
+        if (!name) continue;
+        list.push({
+          name,
+          version: item?.version ? String(item.version) : null,
+          publisher: item?.publisher ? String(item.publisher) : null,
+          installPath: item?.install_path ? String(item.install_path) : (item?.location ? String(item.location) : null),
+        });
+      }
+      if (list.length) softwareByAgent.set(agentId, list);
     }
 
     const syncTs = new Date();

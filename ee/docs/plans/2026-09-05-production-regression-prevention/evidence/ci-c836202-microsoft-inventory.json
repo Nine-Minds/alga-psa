@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "scope": "current-source Microsoft coverage inventory",
+  "runId": "34367564576",
+  "candidateRevision": "c836202979",
+  "note": "Merge commit bringing origin/main into the branch. Browser figures are read from the run's own fresh-install-playwright-enterprise artifact; wire-level figures are read from the server unit job log of the same run.",
+  "productionBrowserLane": {
+    "edition": "enterprise",
+    "releaseValidation": true,
+    "cases": 13,
+    "allFirstAttempt": true,
+    "specs": {
+      "microsoft-calendar.spec.ts": 4,
+      "microsoft-mailbox.spec.ts": 1,
+      "microsoft-oauth-rejection.spec.ts": 4,
+      "microsoft-webhook-validation.spec.ts": 4
+    }
+  },
+  "wireLevel": {
+    "runner": "server unit lane",
+    "cases": 86,
+    "files": {
+      "packages/emulators/msgraph/tests/calendar.test.ts": 45,
+      "packages/emulators/msgraph/tests/smoke.test.ts": 15,
+      "packages/emulators/msgraph/tests/callRecords.test.ts": 12,
+      "packages/emulators/msgraph/tests/teamsBotAdapters.test.ts": 6,
+      "packages/emulators/msgraph/tests/teamsOrganizerRouting.test.ts": 4,
+      "packages/emulators/msgraph/tests/teamsMeetingAdapter.test.ts": 3,
+      "packages/emulators/msgraph/tests/tokenIdentity.test.ts": 1
+    }
+  },
+  "deferred": {
+    "surface": "Teams browser journey only",
+    "reason": "Teams emulator overrides are denied under NODE_ENV=production by design, so the journey needs a development server.",
+    "quarantine": "teams-development-execution, expires 2026-10-21, F034/T028",
+    "unaffected": "Teams bot adapters, meeting adapters and organizer routing run at the wire level on every candidate."
+  },
+  "limitations": [
+    "Emulator success is not live Microsoft parity; no sandbox credentials exist in this plan's evidence.",
+    "Recurring-series and non-UTC timezone delta expansion are unmodelled and answered 400 Request_UnsupportedQuery; that exclusion is asserted by calendar.test.ts rather than assumed.",
+    "The callback lane result is recorded separately as microsoft-callback-execution and carries releaseValidation:false.",
+    "Wire-level counts are read from a job log rather than a machine-verified verdict artifact."
+  ]
+}

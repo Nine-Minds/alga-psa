@@ -1,6 +1,18 @@
 import type { ApiClient } from "./client";
 import type { ApiResult } from "./types";
-import type { PaginatedResponse } from "./tickets";
+import type { PaginatedResponse, SuccessResponse } from "./tickets";
+
+export function getUserPermissions(
+  client: ApiClient,
+  params: { apiKey: string; userId: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<{ effective_permissions: string[] }>>> {
+  return client.request({
+    method: "GET",
+    path: `/api/v1/users/${encodeURIComponent(params.userId)}/permissions`,
+    headers: { "x-api-key": params.apiKey },
+    signal: params.signal,
+  });
+}
 
 export type UserListItem = {
   user_id: string;

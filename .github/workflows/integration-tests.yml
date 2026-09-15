@@ -1,6 +1,7 @@
 name: Integration Tests
 
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       suite:
@@ -11,10 +12,6 @@ on:
         options:
           - tier1
           - full
-  pull_request:
-  push:
-    branches:
-      - main
   schedule:
     # Nightly full run at 04:30 UTC.
     - cron: '30 4 * * *'
@@ -26,42 +23,36 @@ jobs:
     if: github.event_name != 'schedule'
     outputs:
       should_run: ${{ steps.filter.outputs.should_run }}
+      full: ${{ steps.filter.outputs.full }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Check for changes that affect DB-backed tests
         id: filter
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE_SHA="${{ github.event.before }}"
-          fi
-
-          CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }} 2>/dev/null || echo "")
-
-          if echo "$CHANGED_FILES" | grep -qE '^(server/|packages/|shared/|ee/server/|\.github/workflows/integration-tests\.yml)'; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "Relevant changes detected - will run integration tests"
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "No relevant changes - skipping integration tests"
-          fi
+        env:
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          TIER1_HEAD_SHA: ${{ github.sha }}
+        # Manual dispatch has no base, deliberately selecting full coverage.
+        # The same conservative policy drives selection inside the Tier-1 job.
+        run: node scripts/select-integration-tests.mjs
 
   integration-tests:
-    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full') && 'Full integration suite' || 'Tier-1 integration subset' }}
+    name: Integration shard ${{ matrix.shard }}
     needs: check-changes
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '[1,2,3,4]' || '[1]') }}
 
     services:
       postgres:
@@ -77,6 +68,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      comment-smtp:
+        image: greenmail/standalone:2.1.8
+        env:
+          GREENMAIL_OPTS: '-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled'
+        ports:
+          - 33025:3025
+          - 38080:8080
       # Event-bus integration paths need real Redis streams; the suite-wide
       # `redis` stub alias is skipped via REAL_REDIS below.
       redis:
@@ -90,6 +88,11 @@ jobs:
           --health-retries 5
 
     env:
+      INTEGRATION_SHARD_INDEX: ${{ matrix.shard }}
+      INTEGRATION_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '4' || '1' }}
+      COMMENT_SMTP_ISOLATED: 'true'
+      COMMENT_SMTP_PORT: '33025'
+      COMMENT_SMTP_API_PORT: '38080'
       DB_HOST: localhost
       DB_PORT: '5432'
       DB_USER_ADMIN: postgres
@@ -110,11 +113,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The Tier-1 gate diffs against TIER1_BASE_SHA to pick affected suites.
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Cache Nx computation cache
@@ -134,6 +140,12 @@ jobs:
       # loudly instead.
       - name: Install dependencies
         run: npm ci
+
+      - name: Install PDF comparison tools
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Install locked collaboration server for integration tests
+        run: npm ci --prefix hocuspocus --ignore-scripts
 
       # Same step as unit-tests.yml: vitest aliases @alga-psa/* to src for test
       # files, but code loaded natively at runtime resolves package "exports" ->
@@ -161,46 +173,90 @@ jobs:
           echo -n "test_password" > secrets/db_password_server
           chmod 600 secrets/*
 
+      # Manifest floor + every suite whose import graph reaches the diff
+      # (scripts/run-tier1-integration.mjs). Schema/harness changes widen this
+      # to the full directory; unavailable change evidence also requires full coverage.
       - name: Run Tier-1 integration subset
         id: tier1
-        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
+        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full' && needs.check-changes.outputs.full != 'true'
         working-directory: ./server
-        run: npm run test:integration:tier1 -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
+        run: npm run test:integration:tier1 -- --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results-integration.json
         env:
+          TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
 
       - name: Run full integration suite
         id: full
-        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
+        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true'
         working-directory: ./server
-        run: npm run test:integration:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
+        # Use the same runner as Tier-1 so the mandatory floor is validated
+        # against actual collection even when the entire directory is selected.
+        run: npm run test:integration:tier1 -- --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results-integration.json
         env:
+          TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
+          TIER1_BASE_SHA: ''
 
-      # Append this run's numbers to the shared metrics sheet
-      # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
-      # Tier-1 rows are recorded on push to main only — PR runs would be noisy
-      # and fork PRs don't get secrets anyway.
-      # Recording is gated on the suite step's *outcome* rather than always():
-      # a run the job timeout cancelled reports whatever fraction of the suite
-      # had finished, which lands in the sheet as a vacuous green.
-      - name: Record Tier-1 metrics to Google Sheet
-        if: always() && github.event_name == 'push' && (steps.tier1.outcome == 'success' || steps.tier1.outcome == 'failure')
+      - name: Upload integration execution diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-integration-shard-${{ matrix.shard }}
+          path: test-results/integration/
+          retention-days: 30
+
+  integration-execution-complete:
+    name: Integration execution complete
+    needs: [check-changes, integration-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      INTEGRATION_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '4' || '1' }}
+      INTEGRATION_FULL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') }}
+      INTEGRATION_JOB_RESULT: ${{ needs.integration-tests.result }}
+      INTEGRATION_SELECTION_RESULT: ${{ needs.check-changes.result }}
+      INTEGRATION_EVENT: ${{ github.event_name }}
+      REAL_REDIS: '1'
+      TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install tooling for independent affected collection
+        if: env.INTEGRATION_FULL != 'true' && needs.integration-tests.result == 'success'
+        run: |
+          npm install -g npm@11
+          npm ci
+      - name: Download every integration shard
+        if: always() && needs.integration-tests.result != 'skipped'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: server-integration-shard-*
+          path: test-results/integration-shards
+      - name: Require complete combined integration execution
+        if: always()
+        run: node scripts/verify-integration-shards.mjs
+      - name: Preserve combined integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-execution-gate
+          path: test-results/integration-aggregate/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Record combined integration metrics
+        if: always() && needs.integration-tests.result != 'skipped' && (env.INTEGRATION_FULL == 'true' || github.event_name == 'push')
         continue-on-error: true
         run: node scripts/record-test-metrics.mjs
         env:
-          TEST_METRICS_SUITE: integration-tier1
-          TEST_METRICS_RESULTS: server/test-results-integration.json
-          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
-          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
-
-      - name: Record full-suite metrics to Google Sheet
-        if: always() && (steps.full.outcome == 'success' || steps.full.outcome == 'failure')
-        continue-on-error: true
-        run: node scripts/record-test-metrics.mjs
-        env:
-          TEST_METRICS_SUITE: integration-full
-          TEST_METRICS_RESULTS: server/test-results-integration.json
+          TEST_METRICS_SUITE: ${{ env.INTEGRATION_FULL == 'true' && 'integration-full' || 'integration-tier1' }}
+          TEST_METRICS_RESULTS: test-results/integration-aggregate/results.json
+          TEST_METRICS_EXECUTION: test-results/integration-aggregate/aggregate.json
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 
@@ -210,15 +266,174 @@ jobs:
   # timeout cancelled the integration suite mid-run (2026-08-21). Its own job
   # gives each suite independent duration headroom and keeps infra's pool
   # problems out of the integration run.
-  # Non-blocking until it has a green baseline; drop continue-on-error once
-  # stable — that is the whole point of collecting the baseline.
+  # Full coverage is partitioned across independent service instances. The
+  # aggregate rejects missing, stale or failed shard evidence.
   infrastructure-tests:
-    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full') && 'Full infrastructure suite' || 'Tier-1 infrastructure subset' }}
+    name: Infrastructure shard ${{ matrix.shard }}
     needs: check-changes
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '[1,2,3]' || '[1]') }}
+
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      INFRA_MODE: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'full' || 'tier1' }}
+      INFRA_SHARD_INDEX: ${{ matrix.shard }}
+      INFRA_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '3' || '1' }}
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: test_password
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: test_password
+      APP_ENV: test
+      NODE_ENV: test
+      REQUIRE_DB: '1'
+      VITEST_SEED: '20260610'
+      REAL_REDIS: '1'
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Cache Nx computation cache
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-cache-${{ runner.os }}-${{ hashFiles('package-lock.json', 'nx.json', 'tsconfig.base.json', '**/project.json') }}
+          restore-keys: |
+            nx-cache-${{ runner.os }}-
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      - name: Create secrets files
+        run: |
+          mkdir -p secrets
+          echo -n "test_password" > secrets/postgres_password
+          echo -n "test_password" > secrets/db_password_server
+          chmod 600 secrets/*
+
+      - name: Run and reconcile assigned infrastructure files
+        id: run
+        timeout-minutes: 35
+        run: node scripts/run-infrastructure-tests.mjs
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Upload infrastructure shard evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infrastructure-shard-${{ matrix.shard }}
+          path: test-results/infrastructure/
+          if-no-files-found: error
+          retention-days: 7
+
+  infrastructure-complete:
+    name: Infrastructure execution complete
+    needs: [check-changes, infrastructure-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      INFRA_JOB_RESULT: ${{ needs.infrastructure-tests.result }}
+      INFRA_SELECTION_RESULT: ${{ needs.check-changes.result }}
+      INFRA_EVENT: ${{ github.event_name }}
+      TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      INFRA_MODE: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'full' || 'tier1' }}
+      INFRA_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '3' || '1' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download all infrastructure shards
+        if: always() && needs.infrastructure-tests.result != 'skipped'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: infrastructure-shard-*
+          path: test-results/infrastructure-shards
+      - name: Verify all required infrastructure files and assertions executed
+        if: always()
+        run: node scripts/verify-infrastructure-shards.mjs
+      - name: Upload combined infrastructure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infrastructure-execution-evidence
+          path: test-results/infrastructure/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Record full infrastructure metrics to Google Sheet
+        if: always() && env.INFRA_MODE == 'full' && needs.infrastructure-tests.result != 'skipped'
+        continue-on-error: true
+        run: node scripts/record-test-metrics.mjs
+        env:
+          TEST_METRICS_SUITE: infrastructure-full
+          TEST_METRICS_RESULTS: test-results/infrastructure/results.json
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
+  workspace-db-tests:
+    name: Workspace database tests
+    needs: check-changes
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     services:
       postgres:
@@ -266,7 +481,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Cache Nx computation cache
@@ -282,6 +497,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify discovery and selection against the installed Vitest runner
+        run: node --test scripts/tests/test-discovery.vitest.test.mjs scripts/tests/integration-selection.vitest.test.mjs scripts/tests/infrastructure-runner.vitest.test.mjs scripts/tests/vitest-progress-reporter.test.mjs
 
       - name: Build shared libraries
         run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
@@ -303,32 +521,64 @@ jobs:
           echo -n "test_password" > secrets/db_password_server
           chmod 600 secrets/*
 
-      # timeout-minutes bounds a hang below the job budget so the recording
-      # step still gets to run.
-      - name: Run Tier-1 infrastructure subset
-        id: tier1
-        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
-        timeout-minutes: 15
-        working-directory: ./server
-        run: npm run test:infrastructure:tier1
+      - name: Run and reconcile workspace database tests
+        timeout-minutes: 75
+        run: node scripts/run-workspace-db-tests.mjs
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
 
-      - name: Run full infrastructure suite
-        id: full
-        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
-        timeout-minutes: 35
-        working-directory: ./server
-        run: npm run test:infrastructure:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-infrastructure.json
-        env:
-          NODE_OPTIONS: '--max-old-space-size=8192'
+      - name: Collect small manual suites without executing test bodies
+        if: always()
+        run: node scripts/collect-manual-vitest-inventory.mjs
 
-      - name: Record infrastructure metrics to Google Sheet
-        if: always() && (steps.full.outcome == 'success' || steps.full.outcome == 'failure')
-        continue-on-error: true
-        run: node scripts/record-test-metrics.mjs
-        env:
-          TEST_METRICS_SUITE: infrastructure-full
-          TEST_METRICS_RESULTS: server/test-results-infrastructure.json
-          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
-          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+      - name: Preserve manual collection and review metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-test-inventory
+          path: test-results/repository-discovery/manual-vitest/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload workspace database execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-db-evidence
+          path: test-results/workspace-db/
+          if-no-files-found: error
+          retention-days: 14
+
+  workspace-db-complete:
+    name: Workspace database execution complete
+    needs: [check-changes, workspace-db-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DB_SELECTOR_RESULT: ${{ needs.check-changes.result }}
+      DB_JOB_RESULT: ${{ needs.workspace-db-tests.result }}
+      TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download database execution evidence
+        if: always() && needs.workspace-db-tests.result != 'skipped'
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace-db-evidence
+          path: test-results/workspace-db-input
+      - name: Independently verify database coverage and execution
+        if: always()
+        run: node scripts/verify-workspace-db-execution.mjs
+      - name: Upload database aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-db-aggregate
+          path: test-results/workspace-db-gate/
+          if-no-files-found: error

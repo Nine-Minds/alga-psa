@@ -9,18 +9,17 @@ exports.seed = async function seed(knex) {
 
     const dorothyContactId = randomUUID();
     const aliceContactId = randomUUID();
+    const [emeraldCity, wonderland] = await Promise.all([
+        db.table('clients').where({ client_name: 'Emerald City' }).select('client_id').first(),
+        db.table('clients').where({ client_name: 'Wonderland' }).select('client_id').first(),
+    ]);
 
     await db.table('contacts').insert([
         {
             tenant: tenantId,
             contact_name_id: dorothyContactId,
             full_name: 'Dorothy Gale',
-            client_id: db.table('clients')
-                .where({
-                    client_name: 'Emerald City'
-                })
-                .select('client_id')
-                .first(),
+            client_id: emeraldCity?.client_id ?? null,
             email: 'dorothy@oz.com',
             primary_email_canonical_type: 'work',
             created_at: knex.fn.now(),
@@ -30,12 +29,7 @@ exports.seed = async function seed(knex) {
             tenant: tenantId,
             contact_name_id: aliceContactId,
             full_name: 'Alice in Wonderland',
-            client_id: db.table('clients')
-                .where({
-                    client_name: 'Wonderland'
-                })
-                .select('client_id')
-                .first(),
+            client_id: wonderland?.client_id ?? null,
             email: 'alice@wonderland.com',
             primary_email_canonical_type: 'personal',
             created_at: knex.fn.now(),

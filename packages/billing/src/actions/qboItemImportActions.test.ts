@@ -4,7 +4,7 @@
  * Covers the guard chain for both server actions:
  *  - EE edition gate (assertEnterpriseEdition)
  *  - PostHog flag gate (`qbo-item-import`) — typed "not enabled" error, never silent success
- *  - RBAC permissions (billing_settings:read for preview; billing_settings:update + service:create for execute)
+ *  - RBAC permissions (accounting_integrations:catalog_read for preview; accounting_integrations:exports_execute + service:create for execute)
  *  - Realm resolution (connected company required)
  *  - Delegation to the import service on the happy path
  */
@@ -109,15 +109,15 @@ describe('qboItemImportActions', () => {
     expect(previewForTenant).not.toHaveBeenCalled();
   });
 
-  it('preview requires billing_settings:read and nothing more', async () => {
+  it('preview requires accounting catalog_read and nothing more', async () => {
     (hasPermission as any).mockImplementation(async (_u: any, resource: string, action: string) =>
-      !(resource === 'billing_settings' && action === 'read')
+      !(resource === 'accounting_integrations' && action === 'catalog_read')
     );
     await expect(previewQboItemImport(OPTIONS as any)).rejects.toThrow('Forbidden');
     expect(previewForTenant).not.toHaveBeenCalled();
   });
 
-  it('execute requires both billing_settings:update and service:create', async () => {
+  it('execute requires both accounting exports_execute and service:create', async () => {
     // Deny service:create only.
     (hasPermission as any).mockImplementation(async (_u: any, resource: string, action: string) =>
       !(resource === 'service' && action === 'create')
@@ -125,9 +125,9 @@ describe('qboItemImportActions', () => {
     await expect(executeQboItemImport(OPTIONS as any)).rejects.toThrow('Forbidden');
     expect(executeForTenant).not.toHaveBeenCalled();
 
-    // Deny billing_settings:update only.
+    // Deny accounting exports_execute only.
     (hasPermission as any).mockImplementation(async (_u: any, resource: string, action: string) =>
-      !(resource === 'billing_settings' && action === 'update')
+      !(resource === 'accounting_integrations' && action === 'exports_execute')
     );
     await expect(executeQboItemImport(OPTIONS as any)).rejects.toThrow('Forbidden');
     expect(executeForTenant).not.toHaveBeenCalled();

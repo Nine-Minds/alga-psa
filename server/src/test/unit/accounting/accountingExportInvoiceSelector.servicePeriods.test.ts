@@ -202,6 +202,9 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
       if (table === 'tenant_external_entity_mappings as map') {
         return buildThenableQuery([]);
       }
+      if (table === 'tenant_external_entity_mappings as qmap') {
+        return buildThenableQuery([]);
+      }
       throw new Error(`Unexpected table ${table}`);
     });
     knex.raw = vi.fn((sql: string) => sql);

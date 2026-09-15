@@ -1,0 +1,23 @@
+{
+  "status": "verified_locally",
+  "nativeRun": 34097042847,
+  "nativeFailure": "Browser collection failed: missing @js-temporal/polyfill imported through recurringRunExecutionIdentity.ts by invoice-ticket-ownership.spec.ts. Browser assertions did not execute.",
+  "fix": "Use an explicit client-cadence API request fixture in the browser spec; require standalone collection for both editions before image builds.",
+  "verification": {
+    "before": "Original spec reproduced the native missing-polyfill error without root node_modules.",
+    "after": {
+      "community": 23,
+      "enterprise": 25,
+      "filesPerEdition": 14
+    },
+    "logs": [
+      "/tmp/alga-browser-standalone-before.log",
+      "/tmp/alga-browser-standalone-community.log",
+      "/tmp/alga-browser-standalone-enterprise.log"
+    ]
+  },
+  "limits": [
+    "Native rerun pending publication.",
+    "Collection verifies module loading and discovery, not browser journey execution."
+  ]
+}

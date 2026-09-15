@@ -51,7 +51,7 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('updates.renewal_cycle_key = nextCycleKey;');
     expect(renewalHandlerSource).toContain('updates.created_ticket_id = null;');
     expect(renewalHandlerSource).toContain('updates.created_draft_contract_id = null;');
-    expect(renewalHandlerSource).toContain("await knex('client_contracts')");
+    expect(renewalHandlerSource).toContain("await tenantScopedTable(knex, 'client_contracts', tenantId)");
     expect(renewalHandlerSource).toContain('.update({');
     expect(renewalHandlerSource).toContain('upsertedCount += 1;');
   });
@@ -64,7 +64,7 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('updates.renewal_cycle_start = nextCycleStart;');
     expect(renewalHandlerSource).toContain('updates.renewal_cycle_end = nextCycleEnd;');
     expect(renewalHandlerSource).toContain('updates.renewal_cycle_key = nextCycleKey;');
-    expect(renewalHandlerSource).toContain("await knex('client_contracts')");
+    expect(renewalHandlerSource).toContain("await tenantScopedTable(knex, 'client_contracts', tenantId)");
     expect(renewalHandlerSource).toContain('client_contract_id: (row as any).client_contract_id,');
   });
 
@@ -146,7 +146,7 @@ describe('renewal queue scheduling wiring', () => {
   it('persists created ticket id on renewal work item after successful ticket creation', () => {
     expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'created_ticket_id') ?? false");
     expect(renewalHandlerSource).toContain('updates.created_ticket_id = createdTicketId;');
-    expect(renewalHandlerSource).toContain("await knex('client_contracts')");
+    expect(renewalHandlerSource).toContain("await tenantScopedTable(knex, 'client_contracts', tenantId)");
     expect(renewalHandlerSource).toContain('...updates,');
   });
 
@@ -338,12 +338,11 @@ describe('renewal queue scheduling wiring', () => {
 
     expect(renewalHandlerSource).toContain("const tenantId = typeof data.tenantId === 'string' ? data.tenantId : '';");
     expect(renewalHandlerSource).toContain("throw new Error('Tenant ID is required for renewal queue processing job');");
-    expect(renewalHandlerSource).toContain("'cc.tenant': tenantId,");
-    expect(renewalHandlerSource).toContain(".where({ tenant: tenantId })");
-    expect(renewalHandlerSource).toContain('tenant: tenantId,');
+    expect(renewalHandlerSource).toContain("const db = tenantDb(knex, tenantId);");
+    expect(renewalHandlerSource).toContain("tenantDb(conn, tenant).table(table)");
 
     expect(temporalRunnerSource).toContain("throw new Error('tenantId is required in job data');");
     expect(temporalRunnerSource).toContain('tenantId: data.tenantId,');
-    expect(temporalRunnerSource).toContain('.where({ tenant: data.tenantId })');
+    expect(temporalRunnerSource).toContain('tenantDb(conn, tenant).table(table)');
   });
 });

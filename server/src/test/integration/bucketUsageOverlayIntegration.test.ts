@@ -9,37 +9,25 @@
  * failing shape — an Hourly contract line carrying a Bucket overlay on the same
  * service, i.e. "7 hours included, overage above that".
  *
- * Opt-in: needs a reachable database, so it is skipped unless RUN_DB_TESTS=1.
+ * Required integration coverage against the isolated migrated test database.
  * Everything runs inside one transaction that is always rolled back.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import knexFactory, { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 import {
   findOrCreateCurrentBucketUsageRecord,
   updateBucketUsageMinutes,
 } from '@alga-psa/shared/billingClients/bucketUsageService';
 
-const ENABLED = process.env.RUN_DB_TESTS === '1';
 const TOTAL_MINUTES = 420; // 7 hours included
 
 let db: Knex;
 
-describe.skipIf(!ENABLED)('bucket usage with an Hourly + Bucket overlay (real DB)', () => {
-  beforeAll(() => {
-    // The shared vitest setup loads .env.localtest and overwrites DB_*, so read
-    // dedicated BUCKET_TEST_DB_* overrides that nothing else touches.
-    db = knexFactory({
-      client: 'pg',
-      connection: {
-        host: process.env.BUCKET_TEST_DB_HOST || process.env.DB_HOST || '127.0.0.1',
-        port: Number(process.env.BUCKET_TEST_DB_PORT || process.env.DB_PORT || 5432),
-        database: process.env.BUCKET_TEST_DB_NAME || process.env.DB_NAME_SERVER || 'server',
-        user: process.env.BUCKET_TEST_DB_USER || process.env.DB_USER_SERVER || 'app_user',
-        password: process.env.BUCKET_TEST_DB_PASSWORD || process.env.DB_PASSWORD_SERVER,
-      },
-      pool: { min: 0, max: 2 },
-    });
+describe('bucket usage with an Hourly + Bucket overlay (real DB)', () => {
+  beforeAll(async () => {
+    db = await createTestDbConnection();
   });
 
   afterAll(async () => {

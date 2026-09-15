@@ -80,9 +80,10 @@
       "servicePeriods": "〖Şḗřṽīƈḗ Ƥḗřīȯḓş ······〗",
       "credits": "〖Ƈřḗḓīŧş ···〗",
       "serviceTypes": "〖Şḗřṽīƈḗ Ŧẏƥḗş ······〗",
+      "serviceCategories": "〖Şḗřṽīƈḗ Ƈȧŧḗɠȯřīḗş ········〗",
       "serviceCatalog": "〖Şḗřṽīƈḗş ····〗",
       "products": "〖Ƥřȯḓŭƈŧş ····〗",
-      "taxRates": "〖Ŧȧẋ Řȧŧḗş ····〗",
+      "taxRates": "〖Ŧȧẋ ··〗",
       "usageTracking": "〖Ŭşȧɠḗ Ŧřȧƈķīƞɠ ······〗",
       "reports": "〖Řḗƥȯřŧş ···〗",
       "accountingExports": "〖Ȧƈƈȯŭƞŧīƞɠ Ḗẋƥȯřŧş ········〗"
@@ -466,7 +467,8 @@
     "collapseSidebar": "〖Ƈȯŀŀȧƥşḗ şīḓḗƀȧř ·······〗",
     "collapseSection": "〖Ƈȯŀŀȧƥşḗ {{section}} ········〗",
     "expandSection": "〖Ḗẋƥȧƞḓ {{section}} ········〗",
-    "appLogoAlt": "〖{{appName}} Ŀȯɠȯ ·······〗"
+    "appLogoAlt": "〖{{appName}} Ŀȯɠȯ ·······〗",
+    "poweredBy": "〖Ƥȯẇḗřḗḓ ƀẏ ····〗"
   },
   "settings": {
     "sections": {
@@ -556,6 +558,12 @@
           "description": "〖Ȧḓḓ ȧ ƞḗẇ ƥřȯḓŭƈŧ ŧȯ ẏȯŭř ƈȧŧȧŀȯɠ ··············〗"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "〖Řḗşȯŭřƈḗş ȧƞḓ ħḗŀƥ ········〗",
+      "title": "〖Řḗşȯŭřƈḗş ····〗",
+      "documentation": "〖Ḓȯƈŭḿḗƞŧȧŧīȯƞ ······〗",
+      "support": "〖Ƈȯƞŧȧƈŧ Şŭƥƥȯřŧ ······〗"
     },
     "jobs": {
       "ariaLabel": "〖Ṽīḗẇ ƀȧƈķɠřȯŭƞḓ ĵȯƀ ȧƈŧīṽīŧẏ ············〗",

@@ -1320,6 +1320,12 @@
         "templateNameRequired": "Template name is required",
         "createFailed": "Failed to create template"
       }
+    },
+    "discardConfirmation": {
+      "title": "Discard unsaved template?",
+      "message": "Your template has unsaved changes. If you leave now, those changes will be lost.",
+      "keepEditing": "Keep editing",
+      "discard": "Discard template"
     }
   },
   "documents": {

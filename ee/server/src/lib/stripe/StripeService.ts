@@ -1147,12 +1147,14 @@ export class StripeService {
       line_items = [{ price: algadeskPriceId, quantity }];
       logger.info(`[StripeService] Using AlgaDesk per-user-only checkout (interval: ${interval})`);
     } else {
-      const perSeatPriceId = tenant?.plan ? this.getTierPerSeatPriceId(tenant.plan, interval) : null;
-      if (!perSeatPriceId) {
-        throw new Error(`Per-seat pricing not configured for ${tenant?.plan || 'unknown'} tier (${interval})`);
+      const tierItems = tenant?.plan
+        ? this.buildSubscriptionLineItemsForTier(tenant.plan, quantity, interval)
+        : null;
+      if (!tierItems) {
+        throw new Error(`Pricing not configured for ${tenant?.plan || 'unknown'} tier (${interval})`);
       }
-      line_items = [{ price: perSeatPriceId, quantity }];
-      logger.info(`[StripeService] Using per-seat checkout (tier: ${tenant.plan}, interval: ${interval})`);
+      line_items = tierItems;
+      logger.info(`[StripeService] Using tier checkout (tier: ${tenant.plan}, interval: ${interval})`);
     }
 
     // Create checkout session in embedded mode
@@ -1917,12 +1919,18 @@ export class StripeService {
     product: 'ALGADESK' | 'ALGAPSA',
     interval: 'month' | 'year',
   ): string {
-    const envName = `STRIPE_${product}_USER_${interval === 'year' ? 'ANNUAL_' : ''}PRICE_ID`;
+    const annual = interval === 'year';
+    // The AlgaPSA per-seat price is the Pro price; STRIPE_ALGAPSA_USER_* only overrides it.
     const priceId = product === 'ALGADESK'
-      ? (interval === 'year' ? this.config.algadeskUserAnnualPriceId : this.config.algadeskUserPriceId)
-      : (interval === 'year' ? this.config.algapsaUserAnnualPriceId : this.config.algapsaUserPriceId);
+      ? (annual ? this.config.algadeskUserAnnualPriceId : this.config.algadeskUserPriceId)
+      : (annual
+        ? (this.config.algapsaUserAnnualPriceId || this.config.proAnnualPriceId)
+        : (this.config.algapsaUserPriceId || this.config.proPriceId));
 
     if (!priceId) {
+      const envName = product === 'ALGADESK'
+        ? `STRIPE_ALGADESK_USER_${annual ? 'ANNUAL_' : ''}PRICE_ID`
+        : `STRIPE_PRO_${annual ? 'ANNUAL_' : ''}PRICE_ID`;
       throw new Error(`${envName} environment variable is not configured`);
     }
 

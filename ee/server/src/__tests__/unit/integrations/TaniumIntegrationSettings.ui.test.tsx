@@ -14,6 +14,16 @@ const actions = vi.hoisted(() => ({
   updateTaniumOrganizationMapping: vi.fn(),
 }));
 
+vi.mock('@alga-psa/clients/actions', () => ({
+  getAllClients: vi.fn(async () => [{ client_id: 'client_1', client_name: 'Client One' }]),
+  getAllContacts: vi.fn(async () => []),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('@ee/__tests__/utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/integrations');
+});
+
 vi.mock('../../../lib/actions/integrations/taniumActions', () => actions);
 
 import TaniumIntegrationSettings from '../../../components/settings/integrations/TaniumIntegrationSettings';

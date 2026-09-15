@@ -104,7 +104,7 @@ export const getContractLines = withAuth(async (
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermission(user, 'billing', 'read')) {
+            if (!isBypass && !await hasPermission(user, 'billing', 'read', trx)) {
                 throw new Error('Permission denied: Cannot read contract lines');
             }
 
@@ -138,7 +138,7 @@ export const getContractLineById = withAuth(async (
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermission(user, 'billing', 'read')) {
+            if (!isBypass && !await hasPermission(user, 'billing', 'read', trx)) {
                 throw new Error('Permission denied: Cannot read contract lines');
             }
 
@@ -201,7 +201,7 @@ export const createContractLine = withAuth(async (
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'create')) {
+            if (!await hasPermission(user, 'billing', 'create', trx)) {
                 throw new Error('Permission denied: Cannot create contract lines');
             }
 
@@ -258,7 +258,7 @@ export const updateContractLine = withAuth(async (
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'update')) {
+            if (!await hasPermission(user, 'billing', 'update', trx)) {
                 throw new Error('Permission denied: Cannot update contract lines');
             }
 
@@ -332,7 +332,7 @@ export const upsertContractLineTerms = withAuth(async (
         }
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'update')) {
+            if (!await hasPermission(user, 'billing', 'update', trx)) {
                 throw new Error('Permission denied: Cannot update contract line terms');
             }
 
@@ -389,7 +389,7 @@ export const deleteContractLine = withAuth(async (
         }
 
         const contractsWithClients = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'delete')) {
+            if (!await hasPermission(user, 'billing', 'delete', trx)) {
                 throw new Error('Permission denied: Cannot delete contract lines');
             }
 
@@ -467,7 +467,7 @@ export const getCombinedFixedPlanConfiguration = withAuth(async (
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'read')) {
+            if (!await hasPermission(user, 'billing', 'read', trx)) {
                 throw new Error('Permission denied: Cannot read contract line configurations');
             }
 
@@ -536,7 +536,7 @@ export const getContractLineFixedConfig = withAuth(async (
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!isBypass && !await hasPermission(user, 'billing', 'read')) {
+            if (!isBypass && !await hasPermission(user, 'billing', 'read', trx)) {
                 throw new Error('Permission denied: Cannot read contract line configurations');
             }
 
@@ -571,7 +571,7 @@ export const updateContractLineFixedConfig = withAuth(async (
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'update')) {
+            if (!await hasPermission(user, 'billing', 'update', trx)) {
                 throw new Error('Permission denied: Cannot update contract line configurations');
             }
 
@@ -635,7 +635,7 @@ export const updatePlanServiceFixedConfigRate = withAuth(async (
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'update')) {
+            if (!await hasPermission(user, 'billing', 'update', trx)) {
                 throw new Error('Permission denied: Cannot update contract line configurations');
             }
 

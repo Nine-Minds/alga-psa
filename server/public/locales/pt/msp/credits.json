@@ -77,7 +77,6 @@
     "invoiceAmount": "Valor da fatura:",
     "selectCreditToApply": "Selecione crédito para aplicar",
     "amountToApply": "Valor a aplicar",
-    "creditOrderNote": "Os créditos são aplicados em ordem de data de vencimento (os mais antigos primeiro)",
     "creditOrderNoteExpirationFirst": "Os créditos são aplicados em ordem de data de vencimento (vencimento mais próximo primeiro)",
     "creditOrderNoteOldestFirst": "Os créditos são aplicados em ordem de data de criação (crédito mais antigo primeiro)",
     "creditOrderNoteNewestFirst": "Os créditos são aplicados em ordem de data de criação (crédito mais recente primeiro)",

@@ -1,7 +1,7 @@
 {
   "catalog": {
     "title": "Zgłoszenia serwisowe",
-    "description": "Wyślij ustrukturyzowane zgłoszenie, a my automatycznie utworzymy zgłoszenie.",
+    "description": "Wyślij ustrukturyzowane zgłoszenie, a my zajmiemy się resztą.",
     "myRequests": "Moje zgłoszenia",
     "empty": "Obecnie nie są dostępne żadne usługi zgłoszeń.",
     "fallbackCategory": "Usługa",
@@ -56,7 +56,16 @@
     "attachmentsTitle": "Załączniki",
     "noAttachments": "Brak załączników.",
     "fileIdLabel": "ID pliku: {{id}}",
-    "fileTypeLabel": "Typ: {{mime}}"
+    "fileTypeLabel": "Typ: {{mime}}",
+    "versionLabel": "Wersja {{version}}",
+    "historyTitle": "Historia",
+    "historyEmpty": "Nie zarejestrowano jeszcze historii.",
+    "historyActor": "przez {{actor}}",
+    "historyOperations": {
+      "service_request_submission_created": "Zgłoszenie wysłane",
+      "service_request_submission_execution_succeeded": "Przetwarzanie zakończone",
+      "service_request_submission_execution_failed": "Przetwarzanie nie powiodło się"
+    }
   },
   "recent": {
     "title": "Twoje ostatnie zgłoszenia",

@@ -144,6 +144,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Ticket bundle mirrors (must be before comments due to FK on comments)
   'ticket_bundle_mirrors',
 
+  // Ticket comment attachment lifecycle (no FKs; rows reference comments,
+  // documents and tickets by id, so delete them before those tables)
+  'ticket_comment_attachment_challenges', 'ticket_comment_attachments',
+  'ticket_comment_email_deliveries',
+
   // Messages and comments
   // vectors and email_reply_tokens reference comments with NO ACTION, so they
   // must be deleted before comments to avoid FK violations.
@@ -303,6 +308,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'credit_allocations', 'credit_tracking',
   // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
   // outlive whatever made a usage row unmappable), so it can drop anywhere.
+  // Usage semantics stores are FK-less leaves (they reference contract lines,
+  // clients, and configs by id only), as are the seat-pricing revision store
+  // and the per-tenant billing-semantics lock row.
+  'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
+  'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
@@ -348,6 +358,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // but delete it explicitly so cleanup doesn't rely on the cascade). Hudu
   // mappings live in tenant_external_entity_mappings (deleted below).
   'hudu_integrations',
+
+  // Accounting provider disconnect state machine: one row per (tenant, provider)
+  // tracking QBO/Xero revocation progress. A leaf table — its only FK is to
+  // tenants (CASCADE) and nothing references it — so position is free; kept with
+  // the other integration rows for readability.
+  'provider_disconnect_records',
 
   // Project billing: schedule entries and cap usage reference project_billing_configs;
   // configs reference projects; phase rate overrides reference project_phases and
@@ -1865,7 +1881,7 @@ export async function cancelTenantStripeSubscription(
     log.info('Found active subscription, canceling', { subscriptionExternalId });
 
     // Dynamically import Stripe to avoid issues in environments where it's not available
-    const { default: Stripe } = await import('stripe');
+    const { createWorkerStripeClient } = await import('../config/stripeClient.js');
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
 
     const secretProvider = await getSecretProviderInstance();
@@ -1879,10 +1895,7 @@ export async function cancelTenantStripeSubscription(
       return { canceled: false, error: 'Stripe secret key not configured' };
     }
 
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    });
+    const stripe = createWorkerStripeClient(secretKey);
 
     // Cancel the subscription immediately
     const canceledSubscription = await stripe.subscriptions.cancel(subscriptionExternalId);

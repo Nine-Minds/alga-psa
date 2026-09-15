@@ -1,0 +1,22 @@
+{
+  "status": "partial_port_activity_behavior_verified",
+  "scope": "Real shipped action config, mapping/expression resolver and executeWorkflowRuntimeV2ActionStep; mocked registry handlers and invocation persistence",
+  "scenarios": [
+    "Existing comment input fields and tenant-prefixed message:ticket key",
+    "New ticket defaults/client inputs and tenant-prefixed provider:message key",
+    "Attachment inputs and tenant-prefixed message:ticket:attachments key",
+    "Successful invocation replay returns prior output without another handler call or invocation creation"
+  ],
+  "result": {
+    "files": 6,
+    "passed": 69,
+    "failed": 0,
+    "skipped": 0
+  },
+  "log": "/tmp/alga-temporal-email-mapping-final.log",
+  "remaining": [
+    "Real invocation persistence and concurrent duplicate protection",
+    "Real email action side effects",
+    "Live Temporal worker test and legacy requirement mapping"
+  ]
+}

@@ -13,9 +13,13 @@ export type { ISecretProvider } from './lib/secrets/ISecretProvider';
 
 // Date/time utilities
 export * from './lib/dateTimeUtils';
+export { parseCalendarDateTime } from './lib/calendarDateTime';
 
 // Error utilities
 export * from './lib/errors';
+
+// Safe accounting-provider error serialization + log meta redaction
+export * from './lib/providerErrors';
 
 // Edition / feature gating
 export * from './lib/features';

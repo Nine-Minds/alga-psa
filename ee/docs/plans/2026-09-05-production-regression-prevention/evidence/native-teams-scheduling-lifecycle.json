@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "scope": "Native scheduling-mediated Teams lifecycle with subsequent complete Teams scenario pass",
+  "sourceHeadAfter": "a4462d1333f0865899ded82b81e62d2a1448acf3",
+  "sourceDirty": true,
+  "testFile": "e2e-tests/development-tests/teams-profile.spec.ts",
+  "testSha256": "d2a6e6728a14e64ce9b3cdd71da77164797d6470663d3b725d2080d1b6916340",
+  "collection": {
+    "status": "passed",
+    "tests": 1,
+    "command": "cd e2e-tests && E2E_EDITION=enterprise playwright test --config playwright.teams-development.config.ts --list",
+    "log": "/tmp/alga-teams-lifecycle-collection.log"
+  },
+  "nativeExecution": {
+    "status": "failed-after-lifecycle-assertions",
+    "report": "/tmp/alga-native-teams-lp69MO/lifecycle.log",
+    "trace": "/tmp/alga-teams-lifecycle-secondtrace",
+    "newAssertionsCompleted": [
+      "UI reschedule changes start and title",
+      "Same meeting/provider-event/provider-meeting/joinURL identities",
+      "Persisted meeting times match rescheduled entry",
+      "Graph event times and subject match persisted entry",
+      "Reload and reopen retains join button, updated title and single meeting row",
+      "UI delete removes schedule entry and Graph event",
+      "Persisted meeting status cancelled with stable provider event identity",
+      "Reload removes calendar item",
+      "Provider journal contains PATCH200 and DELETE204"
+    ],
+    "terminalFailure": {
+      "line": 172,
+      "operation": "Existing prelinked bot delivery after new lifecycle checks",
+      "expected": {
+        "delivered": true,
+        "status": 200
+      },
+      "observed": {
+        "delivered": false,
+        "status": null
+      },
+      "cause": "Not established from retained diagnostic output; not attributed to lifecycle/product code."
+    }
+  },
+  "isolation": {
+    "sourceDatabase": "host_ee_test_82cc",
+    "sourceReadOnly": true,
+    "ownedDatabase": "teams_native_1788932491298",
+    "ownedDatabaseDropped": true,
+    "ownedNativeRedisTemporalServerStopped": true,
+    "graphHost": "Existing compiled Graph/host packages on ephemeral loopback ports",
+    "secretConfiguration": "env,filesystem reads and filesystem writes under owned private root"
+  },
+  "priorHarnessFailure": {
+    "cause": "env-only secret read chain could not read UI-created profile credentials written to filesystem",
+    "repair": "Temporary native harness uses env,filesystem matching CI; no product changes"
+  },
+  "limits": [
+    "No SSO: bot identity linking is explicitly preseeded, real login is local credentials.",
+    "Native source/cache/dependencies reused; root committed unrelated files during first attempt. No clean-source attestation.",
+    "No production behavior changed.",
+    "First execution failed after lifecycle checks; later full scenario passed with additional native transport probes. No clean CI proof."
+  ],
+  "subsequentFullScenario": {
+    "status": "passed",
+    "sourceHeadAfter": "66d59767065e48af2aac3d0a266313c2b074ffc1",
+    "testSha256": "d2a6e6728a14e64ce9b3cdd71da77164797d6470663d3b725d2080d1b6916340",
+    "sourceCleanClaim": false,
+    "expected": 1,
+    "unexpected": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "durationMs": 193833.683,
+    "report": "/tmp/alga-native-teams-yckqLo/lifecycle.log",
+    "startTime": "2026-09-09T05:51:31.421Z",
+    "ownedDatabase": "teams_native_1788933032684",
+    "ownedDatabaseDropped": true,
+    "ownedProcessesStopped": true,
+    "additionalNativeDiagnostics": [
+      "GET exact bot endpoint via localhost, IPv4 and IPv6 returned405",
+      "Empty unauthenticated POST returned401 before signed scenario delivery",
+      "Harness fetch error-cause instrumentation observed no failure during this run"
+    ],
+    "coverage": "Whole existing Teams profile recovery, meeting creation/reschedule/deletion and prelinked same-tenant/foreign-tenant bot scenario passed.",
+    "limits": [
+      "Earlier generic fetchfailed cause was not reproduced with additional read-only/auth-rejection probes; no product root cause or permanent transport fix claimed.",
+      "Native source/cache reused; source commits changed unrelated files during execution.",
+      "No SSO or production-container claim."
+    ]
+  }
+}

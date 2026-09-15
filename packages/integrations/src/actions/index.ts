@@ -10,6 +10,7 @@ export {
   getQboConnectionStatus,
   saveQboCredentials,
   disconnectQbo,
+  forceFinalizeQboDisconnect,
   getQboTaxCodes,
   getQboAutomatedSalesTaxMode,
   setQboAutomatedSalesTaxMode,
@@ -279,6 +280,7 @@ export {
   getXeroIntegrationStatus,
   saveXeroCredentials,
   disconnectXero,
+  forceFinalizeXeroDisconnect,
   getXeroAccounts,
   getXeroItems,
   getXeroTaxRates,
@@ -297,3 +299,12 @@ export {
 export {
   getTaxRegions
 } from './taxRegionActions';
+
+export {
+  getAssetRmmData,
+  refreshAssetRmmData,
+  triggerRmmReboot,
+  triggerRmmScript,
+  getAssetRemoteControlUrl,
+  type RmmCommandResult,
+} from './integrations/assetRmmActions';

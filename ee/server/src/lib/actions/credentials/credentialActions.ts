@@ -77,10 +77,12 @@ export interface CredentialsContext {
   state: CredentialsContextState;
   /** Kept for symmetry with getHuduClientContext; the release flag is a client concern. */
   flagIrrelevantHere: true;
+  /** Whether the viewer may see the vault audit log (`credential:audit`). */
+  canAudit: boolean;
 }
 
 function hiddenContext(state: Exclude<CredentialsContextState, 'ok'>): CredentialsContext {
-  return { tierOk: false, huduConnected: false, state, flagIrrelevantHere: true };
+  return { tierOk: false, huduConnected: false, state, flagIrrelevantHere: true, canAudit: false };
 }
 
 /**
@@ -117,6 +119,7 @@ export const getCredentialsContext = withAuth(
         huduConnected: row?.is_active === true,
         state: 'ok',
         flagIrrelevantHere: true,
+        canAudit: await hasPermission(user, 'credential', 'audit'),
       };
     } catch (error) {
       logger.error('[CredentialActions] getCredentialsContext failed', {

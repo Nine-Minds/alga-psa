@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 
 type FakeRedisClient = EventEmitter & {
+  executeIsolated: <T>(callback: (reader: FakeRedisClient) => Promise<T>) => Promise<T>;
   connect: () => Promise<void>;
   disconnect: () => void;
   quit: () => Promise<void>;
@@ -71,6 +72,7 @@ describe('EventBus pending message recovery', () => {
       return {
         createClient: () => {
           const client = new EventEmitter() as FakeRedisClient;
+          client.executeIsolated = async callback => callback(client);
 
           client.connect = vi.fn(async () => {
             client.emit('connect');

@@ -22,11 +22,9 @@ import {
   sendBotActivity,
 } from '../../teams/bot/teamsBotConnector';
 import type { TeamsBotResponseActivity } from '../../teams/bot/teamsBotHandler';
-import { getTeamsAvailability } from '../../teams/teamsAvailability';
 import { resolveTeamsRecordingsWebhookUrl } from '../../meetings/artifactSubscriptions';
 
 type TeamsTestMessageSkipReason =
-  | 'feature_disabled'
   | 'integration_inactive'
   | 'capability_disabled'
   | 'bot_not_configured'
@@ -251,8 +249,6 @@ async function getLatestDelivery(knex: any, tenant: string, statuses?: string[])
 
 function mapSkipReasonToErrorCode(reason: TeamsTestMessageSkipReason): TeamsDeliveryErrorCode {
   switch (reason) {
-    case 'feature_disabled':
-      return 'feature_disabled';
     case 'integration_inactive':
       return 'integration_inactive';
     case 'missing_user_linkage':
@@ -342,21 +338,6 @@ export async function sendTeamsTestMessageImpl(
   await assertCanManageTeamsSettings(user as any);
 
   const userId = normalizeString((user as any)?.user_id);
-  const availability = await getTeamsAvailability({
-    tenantId: tenant,
-    userId,
-  });
-
-  if (availability.enabled === false) {
-    const delivery = await recordTeamsTestDelivery({
-      tenant,
-      userId,
-      status: 'skipped',
-      reason: 'feature_disabled',
-      retryable: false,
-    });
-    return skippedResult('feature_disabled', availability.message, delivery.deliveryId);
-  }
 
   const { knex } = await createTenantKnex(tenant);
   const integration = await getTeamsIntegrationRow(knex, tenant);
@@ -520,19 +501,6 @@ export async function runTeamsDiagnosticsImpl(
       });
     }
   }
-
-  await runStep('feature_flag', 'Teams feature availability', async () => {
-    const availability = await getTeamsAvailability({ tenantId: tenant, userId });
-    if (availability.enabled === false) {
-      return {
-        status: 'fail',
-        detail: availability.message,
-        data: { reason: availability.reason },
-        recommendations: ['Enable release-v1-5-feature for this tenant.'],
-      };
-    }
-    return { status: 'pass', detail: 'The Teams release feature is enabled.' };
-  });
 
   await runStep('integration_status', 'Teams integration status', async () => {
     integration = await getTeamsIntegrationRow(knex, tenant);

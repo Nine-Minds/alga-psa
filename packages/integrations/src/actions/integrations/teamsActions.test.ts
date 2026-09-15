@@ -120,14 +120,13 @@ const hoisted = vi.hoisted(() => {
 	  return {
 	    state,
 	    hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
-	    isFeatureFlagEnabledMock: vi.fn(async (..._args: unknown[]) => true),
 	    fetchMock: vi.fn(),
 	    knexMock,
 	  };
 	});
 
 const { microsoftProfiles, teamsIntegrations, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
-const { hasPermissionMock, isFeatureFlagEnabledMock, fetchMock, knexMock } = hoisted;
+const { hasPermissionMock, fetchMock, knexMock } = hoisted;
 
 const DEFAULT_MEETING_SETTINGS = {
   defaultMeetingOrganizerUpn: null,
@@ -155,11 +154,6 @@ vi.mock('@alga-psa/db', () => ({
     table: (table: string) => conn(table).where({ tenant }),
     unscoped: (table: string) => conn(table),
   }),
-}));
-
-vi.mock('@alga-psa/core/features', () => ({
-  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
-  isFeatureFlagEnabled: hoisted.isFeatureFlagEnabledMock,
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -232,8 +226,6 @@ describe('Teams integration actions', () => {
     tenantSecrets.clear();
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
-    isFeatureFlagEnabledMock.mockClear();
-    isFeatureFlagEnabledMock.mockResolvedValue(true);
     fetchMock.mockReset();
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ access_token: 'graph-token' }), {
       status: 200,
@@ -263,7 +255,6 @@ describe('Teams integration actions', () => {
       success: false,
       error: 'Microsoft Teams integration is only available in Enterprise Edition.',
     });
-    expect(isFeatureFlagEnabledMock).not.toHaveBeenCalled();
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
@@ -276,29 +267,18 @@ describe('Teams integration actions', () => {
     expect(diagnostics.overallStatus).toBe('fail');
     expect(diagnostics.steps).toEqual([
       expect.objectContaining({
-        id: 'feature_flag',
+        id: 'availability',
         status: 'fail',
         detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
       }),
     ]);
     expect(testMessage).toEqual({
       status: 'skipped',
-      reason: 'feature_disabled',
+      reason: 'ee_unavailable',
       detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
       deliveryId: null,
     });
     expect(hasPermissionMock).not.toHaveBeenCalled();
-  });
-
-  it('returns a disabled result when release-v1-5-feature is off', async () => {
-    isFeatureFlagEnabledMock.mockResolvedValue(false);
-
-    const result = await getTeamsIntegrationStatus();
-
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft Teams integration is not enabled for this tenant.',
-    });
   });
 
   it('T083/T084: keeps the Teams integration record tenant-scoped and returns defaults when missing', async () => {
@@ -377,6 +357,30 @@ describe('Teams integration actions', () => {
 
     const reloaded = await getTeamsIntegrationStatus();
     expect(reloaded).toEqual(saved);
+  });
+
+  it.each([
+    ['production', 'true'], ['development', undefined], ['development', 'false'], ['staging', 'staging'],
+  ])('workspace keeps live Microsoft defaults in %s with emulator gate %s', async (nodeEnv, gate) => {
+    try {
+      vi.stubEnv('NODE_ENV', nodeEnv);
+      vi.stubEnv('TEAMS_EMULATOR_MODE', gate);
+      vi.stubEnv('MICROSOFT_GRAPH_BASE_URL', 'http://untrusted.invalid/v1.0');
+      vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', 'http://untrusted.invalid');
+      addMicrosoftProfile({ tenant: 'tenant-1', profileId: 'profile-1', clientId: 'organizer-client',
+        tenantId: 'organizer-tenant', secretRef: 'organizer-secret-ref' });
+      tenantSecrets.set('tenant-1:organizer-secret-ref', 'organizer-secret');
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'graph-token' }), { status: 200 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'organizer-object' }), { status: 200 }));
+      expect(await saveTeamsIntegrationSettings({ selectedProfileId: 'profile-1', installStatus: 'install_pending',
+        defaultMeetingOrganizerUpn: 'scheduler@acme.com' })).toMatchObject({ success: true });
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+        'https://login.microsoftonline.com/organizer-tenant/oauth2/v2.0/token',
+        'https://graph.microsoft.com/v1.0/users/scheduler%40acme.com',
+      ]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('T072/T073: resolves the meeting organizer object id and stores recording toggles', async () => {

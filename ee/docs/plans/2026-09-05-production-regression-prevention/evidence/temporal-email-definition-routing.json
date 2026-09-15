@@ -1,0 +1,27 @@
+{
+  "status": "partial_port_local_verified",
+  "source": "shared/workflow/runtime/workflows/email-processing-workflow.v2.json",
+  "execution": "Current workflowRuntimeV2RunWorkflow with real registered node handlers; mocked Temporal transport, projections and external action outputs",
+  "scenarios": [
+    "existing-ticket reply returns without creation",
+    "missing defaults returns without creation",
+    "new ticket with matched contact acknowledgement",
+    "attachment failure continues",
+    "acknowledgement failure continues",
+    "required-action failure routes to human task/manual resolution"
+  ],
+  "result": {
+    "readiness_files": 6,
+    "passed": 66,
+    "failed": 0,
+    "skipped": 0,
+    "new_cases": 6
+  },
+  "log": "/tmp/alga-temporal-email-routing-final.log",
+  "remaining": [
+    "Real action input mapping and idempotency assertions",
+    "Database invocation/run persistence and action effects",
+    "Live Temporal worker execution",
+    "Full legacy email requirements mapping and removal only after replacement evidence"
+  ]
+}

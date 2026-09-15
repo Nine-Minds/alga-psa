@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 
 type TestScenario = {
   allowTicketAccess: boolean;
+  fileMissing?: boolean;
 };
 
 const scenario = vi.hoisted<TestScenario>(() => ({
@@ -15,11 +16,21 @@ const getCurrentUserMock = vi.hoisted(() => vi.fn());
 const createProviderMock = vi.hoisted(() => vi.fn());
 const fileStoreFindByIdMock = vi.hoisted(() => vi.fn());
 const getAuthorizedDocumentByFileIdMock = vi.hoisted(() => vi.fn());
+// Models the real helper: the tenant is only visible to code running inside the callback.
+const tenantScope = vi.hoisted(() => ({ active: null as string | null }));
+const runWithTenantMock = vi.hoisted(() => vi.fn(async (tenant: string, callback: () => Promise<unknown>) => {
+  tenantScope.active = tenant;
+  try {
+    return await callback();
+  } finally {
+    tenantScope.active = null;
+  }
+}));
 
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
   withTransaction: async (knex: any, callback: (trx: any) => Promise<unknown>) => callback(knex),
-  runWithTenant: async (_tenant: string, callback: () => Promise<unknown>) => callback(),
+  runWithTenant: runWithTenantMock,
 }));
 
 vi.mock('@/lib/db/db', () => ({
@@ -122,6 +133,9 @@ function makeKnexMock(testScenario: TestScenario) {
 
 function resolveQueryResult(table: string, state: QueryState, testScenario: TestScenario): any {
   if (table === 'external_files') {
+    if (testScenario.fileMissing) {
+      return null;
+    }
     return {
       file_id: 'file-1',
       tenant: 'tenant-1',
@@ -133,7 +147,7 @@ function resolveQueryResult(table: string, state: QueryState, testScenario: Test
   }
 
   if (table === 'documents') {
-    return { document_id: 'doc-1' };
+    return { document_id: 'doc-1', file_id: 'file-1' };
   }
 
   if (table === 'document_associations') {
@@ -173,6 +187,7 @@ function makeReadableStream(): ReadableStream<Uint8Array> {
 describe('documents view route ticket authorization contract', () => {
   beforeEach(() => {
     scenario.allowTicketAccess = true;
+    scenario.fileMissing = false;
     vi.clearAllMocks();
 
     getCurrentUserMock.mockResolvedValue({
@@ -214,6 +229,65 @@ describe('documents view route ticket authorization contract', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('image/png');
+  });
+
+  it('returns 404, not 500, when no live file record exists', async () => {
+    scenario.fileMissing = true;
+    // FileStoreModel.findById resolves its tenant from async context and throws without one.
+    fileStoreFindByIdMock.mockImplementation(async () => {
+      if (!tenantScope.active) throw new Error('tenant context not found');
+      return null;
+    });
+    const { GET } = await import('server/src/app/api/documents/view/[fileId]/route');
+    const response = await GET(
+      new NextRequest('http://localhost:3000/api/documents/view/file-1'),
+      { params: Promise.resolve({ fileId: 'file-1' }) } as any
+    );
+    expect(response.status).toBe(404);
+    // The fallback lookup resolves its tenant from async context, so it must run inside it.
+    expect(runWithTenantMock).toHaveBeenCalledWith('tenant-1', expect.any(Function));
+    expect(fileStoreFindByIdMock).toHaveBeenCalledWith(expect.anything(), 'file-1');
+  });
+
+  it('serves a file the tenant-scoped fallback finds when the unscoped lookup misses', async () => {
+    scenario.fileMissing = true;
+    fileStoreFindByIdMock.mockImplementation(async () => {
+      if (!tenantScope.active) throw new Error('tenant context not found');
+      return {
+      file_id: 'file-1',
+      tenant: 'tenant-1',
+      is_deleted: false,
+      mime_type: 'image/png',
+      file_size: 4,
+      storage_path: 'tenant-1/file-1.png',
+      };
+    });
+    const { GET } = await import('server/src/app/api/documents/view/[fileId]/route');
+    const response = await GET(
+      new NextRequest('http://localhost:3000/api/documents/view/file-1'),
+      { params: Promise.resolve({ fileId: 'file-1' }) } as any
+    );
+    expect(response.status).toBe(200);
+  });
+
+  it('resolves a document id to the document\'s current file', async () => {
+    scenario.fileMissing = true;
+    fileStoreFindByIdMock.mockImplementation(async (_knex: unknown, id: string) => {
+      if (!tenantScope.active) throw new Error('tenant context not found');
+      return id === 'file-1'
+        ? { file_id: 'file-1', tenant: 'tenant-1', is_deleted: false, mime_type: 'image/png', file_size: 4, storage_path: 'tenant-1/file-1.png' }
+        : null;
+    });
+    const { GET } = await import('server/src/app/api/documents/view/[fileId]/route');
+    const response = await GET(
+      new NextRequest('http://localhost:3000/api/documents/view/doc-1'),
+      { params: Promise.resolve({ fileId: 'doc-1' }) } as any
+    );
+    expect(response.status).toBe(200);
+    expect(fileStoreFindByIdMock).toHaveBeenCalledWith(expect.anything(), 'doc-1');
+    expect(fileStoreFindByIdMock).toHaveBeenCalledWith(expect.anything(), 'file-1');
+    // Authorization runs against the resolved file, not the id in the URL.
+    expect(getAuthorizedDocumentByFileIdMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', expect.anything(), 'file-1');
   });
 
   it('T013: rejects ticket file view when contact/client user lacks ticket association access', async () => {

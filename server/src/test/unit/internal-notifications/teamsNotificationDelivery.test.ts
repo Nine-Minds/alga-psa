@@ -116,8 +116,6 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/core/features', () => ({
-  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
-  isFeatureFlagEnabled: vi.fn(async () => true),
   get isEnterprise() {
     return hoisted.enterpriseState.value;
   },

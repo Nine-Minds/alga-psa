@@ -79,6 +79,9 @@ exports.seed = async function (knex) { // Changed to async function
         }
     }
 
+    const categories = await db.table('service_categories').select('category_id', 'category_name');
+    const categoryIds = new Map(categories.map(category => [category.category_name, category.category_id]));
+
     // If the check passes, proceed with insertion
     console.log(`[SEED 23_service_catalog] Found all required service types for tenant ${tenantId}. Proceeding with insert.`);
     return db.table('service_catalog').insert([
@@ -90,7 +93,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'hourly',
             default_rate: 7500,
             unit_of_measure: 'Hour',
-            category_id: db.table('service_categories').where({ category_name: 'Network Services' }).select('category_id').first()
+            category_id: categoryIds.get('Network Services') ?? null
         },
         {
             tenant: tenantId,
@@ -100,7 +103,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'fixed', // Add required billing_method
             default_rate: 15000,
             unit_of_measure: 'Service',
-            category_id: db.table('service_categories').where({ category_name: 'Security Services' }).select('category_id').first()
+            category_id: categoryIds.get('Security Services') ?? null
         },
         {
             tenant: tenantId,
@@ -110,7 +113,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'usage',
             default_rate: 2500,
             unit_of_measure: 'Dose',
-            category_id: db.table('service_categories').where({ category_name: 'Cloud Services' }).select('category_id').first()
+            category_id: categoryIds.get('Cloud Services') ?? null
         },
         {
             tenant: tenantId,
@@ -120,7 +123,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'hourly',
             default_rate: 10000,
             unit_of_measure: 'Hour',
-            category_id: db.table('service_categories').where({ category_name: 'Network Services' }).select('category_id').first()
+            category_id: categoryIds.get('Network Services') ?? null
         },
         {
             tenant: tenantId,
@@ -130,7 +133,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'fixed', // Add required billing_method
             default_rate: 500000,
             unit_of_measure: 'Month',
-            category_id: db.table('service_categories').where({ category_name: 'Security Services' }).select('category_id').first()
+            category_id: categoryIds.get('Security Services') ?? null
         },
         {
             tenant: tenantId,
@@ -140,7 +143,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'hourly',
             default_rate: 10000,
             unit_of_measure: 'Hour',
-            category_id: db.table('service_categories').where({ category_name: 'Support Services' }).select('category_id').first()
+            category_id: categoryIds.get('Support Services') ?? null
         },
         {
             tenant: tenantId, // Corrected tenant reference
@@ -150,7 +153,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'hourly',
             default_rate: 15000,
             unit_of_measure: 'Hour',
-            category_id: db.table('service_categories').where({ category_name: 'Support Services' }).select('category_id').first() // Corrected tenant reference in subquery
+            category_id: categoryIds.get('Support Services') ?? null // Corrected tenant reference in subquery
         }
     ]);
 // }); // Removed extra closing from previous .then structure

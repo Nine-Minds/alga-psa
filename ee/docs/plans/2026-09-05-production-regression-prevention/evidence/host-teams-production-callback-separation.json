@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "description": "Fresh native Teams gate after separating production callback checks",
+  "gate": {
+    "schemaVersion": 1,
+    "suite": "teams-development-browser",
+    "revision": "401b76904f5b015f6f700627ccde43baae827ab0",
+    "status": "passed",
+    "expectedTests": [
+      {
+        "identity": [
+          "e2e-tests/development-tests/teams-profile.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Teams profile recovery and calendar meeting creation preserve saved identities"
+          ]
+        ],
+        "count": 1
+      }
+    ],
+    "executedTests": [
+      {
+        "identity": [
+          "e2e-tests/development-tests/teams-profile.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Teams profile recovery and calendar meeting creation preserve saved identities"
+          ]
+        ],
+        "count": 1
+      }
+    ],
+    "counts": {
+      "passed": 1,
+      "failed": 0,
+      "flaky": 0,
+      "skipped": 0,
+      "interrupted": 0,
+      "missing": 0
+    },
+    "failures": [],
+    "releaseValidation": false,
+    "configuration": {
+      "edition": "enterprise",
+      "buildFeatureFlags": "release-v1-6-feature:true",
+      "sourceRevision": "401b76904f5b015f6f700627ccde43baae827ab0",
+      "authentication": "real-credentials",
+      "serverLifecycle": "externally-started-host-development-server",
+      "releaseValidation": false,
+      "integrationSurface": "teams",
+      "requiredServerNodeEnv": "development"
+    },
+    "selection": {
+      "mode": "full",
+      "filters": []
+    },
+    "source": {
+      "before": {
+        "revision": "401b76904f5b015f6f700627ccde43baae827ab0",
+        "dirty": false,
+        "changes": []
+      },
+      "after": {
+        "revision": "401b76904f5b015f6f700627ccde43baae827ab0",
+        "dirty": false,
+        "changes": []
+      }
+    },
+    "workingTreeDirty": false
+  },
+  "runtime": {
+    "node": "25.5",
+    "heapMiB": 12288,
+    "dockerBuild": false,
+    "appLog": "/tmp/alga-teams-fresh-401b-app.log",
+    "runnerLog": "/tmp/alga-teams-full-401b.log",
+    "memoryRestartObserved": false
+  },
+  "browserCollection": {
+    "community": {
+      "tests": 42,
+      "files": 20
+    },
+    "enterprise": {
+      "tests": 46,
+      "files": 20
+    }
+  },
+  "rawArtifacts": {
+    "collected.json": {
+      "path": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa/test-results/teams-development/collected.json",
+      "sha256": "497b85d3bebac135617ef6600e54e51160f93d1964a38e89248baded6e53f430"
+    },
+    "results.json": {
+      "path": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa/test-results/teams-development/results.json",
+      "sha256": "db6044fb333c64f7ef701c7012a1ed29e525dfd16d33ea27180634a1c249eb3d"
+    },
+    "evidence.json": {
+      "path": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa/test-results/teams-development/evidence.json",
+      "sha256": "7ce4130bf26454bc54cfa36e34e125c9addf6377f94f0b4d5b2133faa2331e59"
+    }
+  },
+  "limitations": [
+    "Native development gate, not production-image or GitHub CI evidence.",
+    "Production callback checks passed separately using local development config; both production editions collected, community execution remains unverified.",
+    "The previous combined five-case development gate failed with memory restart; preserved separately."
+  ]
+}

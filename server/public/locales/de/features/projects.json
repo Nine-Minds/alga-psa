@@ -1320,6 +1320,12 @@
       },
       "skip": "Überspringen",
       "creating": "Wird erstellt..."
+    },
+    "discardConfirmation": {
+      "title": "Nicht gespeicherte Vorlage verwerfen?",
+      "message": "Ihre Vorlage enthält nicht gespeicherte Änderungen. Wenn Sie jetzt verlassen, gehen diese Änderungen verloren.",
+      "keepEditing": "Weiter bearbeiten",
+      "discard": "Vorlage verwerfen"
     }
   },
   "documents": {

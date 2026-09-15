@@ -14,6 +14,7 @@
         "manualEntryHelp": "Inserisci l'identificatore esattamente come appare nel tuo sistema contabile.",
         "metadataLabel": "Metadati (JSON)",
         "metadataPlaceholder": "Metadati opzionali in formato JSON",
+        "noKindOptions": "Nessun record utilizzabile di questo tipo è stato trovato nell’organizzazione collegata.",
         "realmIdLabel": "ID realm",
         "saveMapping": "Salva mappatura",
         "saving": "Salvataggio…",
@@ -73,6 +74,10 @@
         "unavailable": {
           "description": "Questa integrazione non è ancora disponibile. Seleziona QuickBooks CSV o Xero CSV per configurare le esportazioni manuali.",
           "title": "Configurazione non disponibile"
+        },
+        "noPermission": {
+          "title": "Nessun accesso alle integrazioni contabili",
+          "description": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili. Richiedi l'accesso a un amministratore."
         }
       },
       "modules": {
@@ -215,11 +220,13 @@
           "intro": "Questa integrazione offre un'alternativa alla connettività QuickBooks basata su OAuth:",
           "mappings": {
             "description": "Mappa i clienti, i servizi, i codici fiscali e i termini di pagamento di Alga agli identificatori utilizzati nella tua azienda QuickBooks. Questi valori vengono utilizzati durante la generazione dell'esportazione CSV.",
-            "title": "Mappature CSV QuickBooks"
+            "title": "Mappature CSV QuickBooks",
+            "permissionNotice": "La modifica delle mappature CSV richiede la capacità manage-mappings. Chiedi a un amministratore di concederla."
           },
           "note": "Nota: configura le mappature qui sotto prima di esportare. Le esportazioni CSV e le importazioni fiscali sono gestite da Fatturazione → Esportazioni contabili.",
           "title": "Integrazione CSV QuickBooks"
-        }
+        },
+        "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili."
       },
       "taxImport": {
         "actions": {
@@ -1691,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Gestisci profili Microsoft di proprietà del tenant per MSP SSO, accesso Microsoft e discovery dei domini di accesso.",
+        "descriptionCe": "Gestisci le registrazioni app Microsoft della tua azienda per la posta Outlook.",
         "descriptionEe": "Gestisci profili Microsoft di proprietà del tenant per MSP SSO, e-mail Outlook, sincronizzazione del calendario e Microsoft Teams.",
         "dialog": {
           "cancel": "Annulla",
@@ -1717,7 +1724,7 @@
         },
         "empty": {
           "createButton": "Crea profilo Microsoft",
-          "descriptionCe": "Crea prima un profilo con nome, poi collegalo esplicitamente ai flussi MSP SSO e di accesso per dominio.",
+          "descriptionCe": "Crea una registrazione app Microsoft per la posta Outlook.",
           "descriptionEe": "Crea prima un profilo con nome, poi collegalo esplicitamente a MSP SSO, e-mail Outlook, sincronizzazione del calendario e Teams.",
           "title": "Nessun profilo Microsoft ancora"
         },
@@ -1840,7 +1847,9 @@
           "reconnect": "Riconnetti QuickBooks",
           "refresh": "Aggiorna",
           "saveCredentials": "Salva credenziali QuickBooks",
-          "saving": "Salvataggio…"
+          "saving": "Salvataggio…",
+          "retryDisconnect": "Riprova disconnessione",
+          "forceFinalizeDisconnect": "Finalizza forzatamente"
         },
         "badges": {
           "connectionExpired": "La connessione richiede attenzione",
@@ -1852,11 +1861,17 @@
         "callback": {
           "accessDenied": "L'accesso a QuickBooks è stato negato prima del completamento della connessione.",
           "configMissing": "Impossibile avviare QuickBooks OAuth perché il client ID e il client secret non erano completamente configurati.",
+          "disconnectInProgress": "QuickBooks è in fase di disconnessione. Completa o finalizza la disconnessione prima di riconnetterti.",
+          "forbidden": "Non disponi più dell'autorizzazione per gestire le connessioni contabili. Richiedi l'accesso a un amministratore.",
           "generic": "QuickBooks ha restituito un errore OAuth: {{code}}",
           "invalidState": "Lo stato OAuth di QuickBooks non era valido o è scaduto. Riavvia il flusso di connessione.",
           "missingParams": "Il callback QuickBooks mancava dei parametri richiesti. Riavvia il flusso di connessione.",
           "oauthFailed": "Il callback OAuth di QuickBooks non è riuscito. Prova a connetterti di nuovo. Se il problema persiste, controlla il redirect URI e gli scope.",
-          "tokenExchangeFailed": "Intuit non ha restituito i token attesi. Prova a connetterti di nuovo."
+          "sessionExpired": "La tua sessione non è più valida. Accedi e riavvia la connessione QuickBooks.",
+          "stateReplayed": "Questa richiesta di connessione QuickBooks è già stata utilizzata. Riavvia il flusso di connessione.",
+          "tenantMismatch": "Questa richiesta di connessione QuickBooks appartiene a un altro spazio di lavoro. Accedi allo spazio di lavoro corretto e ricomincia.",
+          "tokenExchangeFailed": "Intuit non ha restituito i token attesi. Prova a connetterti di nuovo.",
+          "userMismatch": "Questa richiesta di connessione QuickBooks appartiene a un altro utente. Accedi come l'utente che l'ha avviata e riprova."
         },
         "clientIdLabel": "ID client QuickBooks",
         "clientIdPlaceholder": "Incolla il client ID della tua applicazione Intuit",
@@ -1894,7 +1909,8 @@
           "descriptionPrefix": "Configura le mappature QuickBooks live per l'azienda connessa. Queste mappature sono limitate a",
           "placeholderAlert": "Il gestore delle mappature diventa disponibile dopo la connessione della prima azienda QuickBooks e la sua impostazione come contesto QuickBooks live predefinito.",
           "placeholderDescription": "Connetti un'azienda QuickBooks prima di configurare le mappature di articoli e imposte QuickBooks live.",
-          "title": "Mappatura e configurazione QuickBooks live"
+          "title": "Mappatura e configurazione QuickBooks live",
+          "permissionNotice": "Puoi visualizzare l'azienda connessa, ma la modifica delle mappature richiede la capacità manage-mappings. Chiedi a un amministratore di concederla."
         },
         "noClientId": "Nessun client ID ancora memorizzato per questo tenant.",
         "noClientSecret": "Nessun client secret ancora memorizzato per questo tenant.",
@@ -1917,7 +1933,20 @@
           "none": "Non è ancora disponibile alcuna app Intuit. Registrane una nel portale Intuit Developer e incolla qui sotto client ID e secret: la guida alla configurazione spiega come fare.",
           "tenant": "Questo tenant si collega tramite la propria app Intuit, con le credenziali salvate qui sotto."
         },
-        "setupGuideLink": "Guida alla configurazione di QuickBooks"
+        "setupGuideLink": "Guida alla configurazione di QuickBooks",
+        "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di QuickBooks, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla.",
+        "disconnectPending": "QuickBooks è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
+        "disconnectForceFinalized": "La disconnessione di QuickBooks è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo della finalizzazione forzata della disconnessione di QuickBooks (registrato nel registro di audit):",
+          "inProgressTitle": "Disconnessione di QuickBooks in corso",
+          "inProgressDescription": "Le concessioni lato provider sono in fase di revoca. La sincronizzazione e le esportazioni restano in pausa finché ogni azienda connessa non risulta revocata.",
+          "targetRevoked": "revocata",
+          "targetFailed": "richiede attenzione",
+          "targetPending": "in sospeso",
+          "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit."
+        }
       },
       "sync": {
         "healthCardTitle": "Stato della sincronizzazione",
@@ -2745,6 +2774,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Consenti al personale di accedere tramite il tuo realm Keycloak. Gli utenti vengono associati per e-mail agli account AlgaPSA esistenti; Keycloak non crea mai utenti qui.",
+        "status": {
+          "configured": "Configurato",
+          "notConfigured": "Non configurato"
+        },
+        "actions": {
+          "refresh": "Aggiorna",
+          "save": "Verifica e salva",
+          "saving": "Verifica e salvataggio…",
+          "remove": "Rimuovi"
+        },
+        "setup": {
+          "redirectUri": "Crea un client OpenID Connect confidenziale nel tuo realm e consenti questo URI di reindirizzamento:",
+          "domainsEe": "Poi rivendica e verifica il dominio di accesso del personale in «Avanzate» in modo che le e-mail di quel dominio vengano indirizzate a questo realm.",
+          "domainsCe": "Poi aggiungi il dominio di accesso del personale in «Avanzate» in modo che le e-mail di quel dominio vengano indirizzate a questo realm.",
+          "issuer": "Emittente: {{issuer}}"
+        },
+        "fields": {
+          "url": "URL del server Keycloak",
+          "realm": "Realm",
+          "clientId": "ID client",
+          "clientSecret": "Segreto client",
+          "clientSecretKeep": "Lascia vuoto per mantenere {{masked}}"
+        },
+        "errors": {
+          "loadFailed": "Impossibile caricare le impostazioni Keycloak",
+          "saveFailed": "Impossibile salvare le impostazioni Keycloak",
+          "removeFailed": "Impossibile rimuovere le impostazioni Keycloak"
+        },
+        "toasts": {
+          "savedTitle": "Impostazioni Keycloak salvate",
+          "savedDescription": "Il realm ha risposto alla discovery OpenID e il personale può ora accedere con Keycloak.",
+          "saveFailedTitle": "Impossibile salvare le impostazioni Keycloak",
+          "removedTitle": "Impostazioni Keycloak rimosse",
+          "removedDescription": "L’accesso con Keycloak non è più offerto per questo tenant.",
+          "removeFailedTitle": "Impossibile rimuovere le impostazioni Keycloak"
+        },
+        "removeDialog": {
+          "title": "Rimuovere l’accesso con Keycloak?",
+          "message": "Il personale non vedrà più il pulsante Keycloak. L’accesso con password resta invariato.",
+          "confirm": "Rimuovi",
+          "cancel": "Annulla"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Aggiungi",
@@ -3018,7 +3093,6 @@
           "test": {
             "sent": "Messaggio di prova di Teams inviato.",
             "failed": "Messaggio di prova di Teams non riuscito.",
-            "featureDisabled": "Microsoft Teams non è abilitato per questo tenant.",
             "integrationInactive": "Attiva l'integrazione di Teams prima di inviare un messaggio di prova.",
             "capabilityDisabled": "Abilita la funzionalità bot personale prima di inviare un messaggio di prova.",
             "botNotConfigured": "Configura le credenziali del bot di Teams prima di inviare un messaggio di prova.",
@@ -3027,7 +3101,6 @@
             "skipped": "Il messaggio di prova di Teams è stato ignorato."
           },
           "steps": {
-            "featureFlag": "Abilitazione della funzionalità Microsoft Teams",
             "integrationStatus": "Stato dell'integrazione di Teams",
             "capabilities": "Funzionalità di Teams",
             "microsoftProfile": "Disponibilità del profilo Microsoft",
@@ -3039,7 +3112,6 @@
             "recentDeliveryHealth": "Stato recente della consegna di Teams"
           },
           "recommendation": {
-            "featureFlag": "Abilita Microsoft Teams per questo tenant.",
             "activate": "Attiva l'integrazione di Teams nelle impostazioni.",
             "capabilities": "Abilita il bot personale e le notifiche di attività per Teams.",
             "profile": "Seleziona un profilo Microsoft pronto per Teams.",
@@ -3230,8 +3302,8 @@
               "remedy": "Fai in modo che l'utente acceda con Microsoft (SSO del portale MSP o la scheda Teams) affinché il suo account venga associato."
             },
             "feature_disabled": {
-              "cause": "Microsoft Teams non è abilitato per questo tenant, pertanto gli invii vengono ignorati mentre la configurazione viene conservata.",
-              "remedy": "Abilita la funzionalità della versione 1.5 per questo tenant."
+              "cause": "La funzionalità Teams era disabilitata per questo tenant al momento del tentativo di consegna (prima della 1.5).",
+              "remedy": "Teams è ora disponibile per tutti; riprova l'invio."
             },
             "integration_inactive": {
               "cause": "L'integrazione di Teams non è attiva per questo tenant.",
@@ -3332,7 +3404,8 @@
             "s3": "Dopo le modifiche in Xero, esporta i contatti da Xero",
             "s4": "Importa il CSV dei contatti Xero di nuovo in Alga per sincronizzare gli aggiornamenti"
           },
-          "workflowTitle": "Flusso di sincronizzazione clienti"
+          "workflowTitle": "Flusso di sincronizzazione clienti",
+          "permissionNotice": "L'esportazione e l'importazione dei clienti richiedono la capacità execute-exports. Chiedi a un amministratore di concederla."
         },
         "settings": {
           "dateFormat": "Formato data",
@@ -3356,7 +3429,8 @@
           "managedSuffix": "per selezionare le fatture, generare esportazioni CSV di Xero, importare report fiscali e gestire i batch.",
           "mappings": {
             "description": "Mappa i clienti, i servizi e i codici fiscali di Alga agli identificatori utilizzati nella tua organizzazione Xero. Questi valori vengono utilizzati durante la generazione dell'esportazione CSV.",
-            "title": "Mappature CSV Xero"
+            "title": "Mappature CSV Xero",
+            "permissionNotice": "La modifica delle mappature CSV richiede la capacità manage-mappings. Chiedi a un amministratore di concederla."
           },
           "overview": {
             "description": "Esporta le fatture in CSV per l'importazione manuale in Xero e importa i dati fiscali dai report Xero.",
@@ -3408,7 +3482,9 @@
             "title": "Flusso CSV",
             "trackingDescription": "L'esportazione CSV include colonne delle categorie di tracciamento che collegano ogni fattura Xero alla sua origine Alga. Quando importi le imposte da Xero, queste categorie di tracciamento vengono utilizzate per abbinare automaticamente le fatture, senza alcuna riconciliazione manuale.",
             "trackingTitle": "Categorie di tracciamento per la riconciliazione"
-          }
+          },
+          "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
+          "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di Xero CSV, ma la loro modifica richiede la capacità manage-connections. Chiedi a un amministratore di concederla."
         }
       },
       "live": {
@@ -3422,7 +3498,9 @@
           "reconnect": "Riconnetti Xero",
           "refresh": "Aggiorna",
           "saveCredentials": "Salva credenziali Xero",
-          "saving": "Salvataggio…"
+          "saving": "Salvataggio…",
+          "retryDisconnect": "Riprova disconnessione",
+          "forceFinalizeDisconnect": "Finalizza forzatamente"
         },
         "badges": {
           "connectionExpired": "Connessione scaduta",
@@ -3435,11 +3513,17 @@
           "accessDenied": "L'accesso a Xero è stato negato prima del completamento della connessione.",
           "configMissing": "Impossibile avviare Xero OAuth perché il client ID e il client secret del tenant non erano completamente configurati.",
           "connectionsUnmapped": "Xero ha restituito organizzazioni, ma nessuna includeva gli identificatori richiesti per salvare una connessione.",
+          "disconnectInProgress": "Xero è in fase di disconnessione. Completa o finalizza la disconnessione prima di riconnetterti.",
+          "forbidden": "Non disponi più dell'autorizzazione per gestire le connessioni contabili. Richiedi l'accesso a un amministratore.",
           "generic": "Xero ha restituito un errore OAuth: {{code}}",
           "invalidState": "Lo stato OAuth di Xero non era valido o è scaduto. Riavvia il flusso di connessione.",
           "missingParams": "Il callback Xero mancava dei parametri richiesti. Riavvia il flusso di connessione.",
           "noConnections": "Xero non ha restituito organizzazioni per questo accesso. Controlla la tua app Xero e l'accesso all'organizzazione, quindi riprova.",
-          "oauthFailed": "Il callback OAuth di Xero non è riuscito. Prova a connetterti di nuovo. Se il problema persiste, controlla il redirect URI e gli scope."
+          "oauthFailed": "Il callback OAuth di Xero non è riuscito. Prova a connetterti di nuovo. Se il problema persiste, controlla il redirect URI e gli scope.",
+          "sessionExpired": "La tua sessione non è più valida. Accedi e riavvia la connessione Xero.",
+          "stateReplayed": "Questa richiesta di connessione Xero è già stata utilizzata. Riavvia il flusso di connessione.",
+          "tenantMismatch": "Questa richiesta di connessione Xero appartiene a un altro spazio di lavoro. Accedi allo spazio di lavoro corretto e ricomincia.",
+          "userMismatch": "Questa richiesta di connessione Xero appartiene a un altro utente. Accedi come l'utente che l'ha avviata e riprova."
         },
         "clientIdLabel": "ID client Xero",
         "clientIdPlaceholder": "Incolla il tuo Xero Client ID di proprietà del tenant",
@@ -3473,18 +3557,36 @@
           "descriptionPrefix": "Configura le mappature Xero live per l'organizzazione connessa predefinita. Queste mappature sono limitate a",
           "placeholderAlert": "Il gestore delle mappature diventa disponibile dopo la connessione della prima organizzazione Xero e la sua impostazione come contesto Xero live predefinito.",
           "placeholderDescription": "Connetti un'organizzazione Xero live prima di configurare le mappature di articoli e imposte Xero live.",
-          "title": "Mappatura e configurazione Xero live"
+          "title": "Mappatura e configurazione Xero live",
+          "permissionNotice": "Puoi visualizzare l'organizzazione connessa predefinita, ma la modifica delle mappature richiede la capacità manage-mappings. Chiedi a un amministratore di concederla."
         },
         "noClientId": "Nessun client ID ancora memorizzato per questo tenant.",
         "noClientSecret": "Nessun client secret ancora memorizzato per questo tenant.",
         "redirectUri": "URI di reindirizzamento",
         "requiredScopes": "Scope richiesti",
+        "scopeOverride": "Override della distribuzione (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "L'override XERO_OAUTH_SCOPES è stato ignorato perché contiene voci non valide ({{scopes}}). Vengono invece utilizzati gli scope predefiniti.",
+        "scopeReconnectNote": "Questi scope si applicano alle nuove autorizzazioni. Una connessione esistente mantiene gli scope concessi originariamente. Per applicare l'insieme corrente, disconnetti e riconnetti Xero. Puoi anche rimuovere questa app da Connected apps in Xero per revocare le autorizzazioni precedenti.",
         "storedClientId": "Client ID memorizzato: {{value}}",
         "storedClientSecret": "Client secret memorizzato: {{value}}",
         "tenantOauthDescription": "Incolla le credenziali dell'app Xero registrate per questo tenant. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
         "tenantOauthTitle": "App OAuth di proprietà del tenant",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di Xero, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla.",
+        "disconnectPending": "Xero è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
+        "disconnectForceFinalized": "La disconnessione di Xero è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo della finalizzazione forzata della disconnessione di Xero (registrato nel registro di audit):",
+          "inProgressTitle": "Disconnessione di Xero in corso",
+          "inProgressDescription": "Le connessioni lato provider sono in fase di revoca. La sincronizzazione e le esportazioni restano in pausa finché ogni connessione non risulta rimossa.",
+          "grantTarget": "Revoca della concessione OAuth",
+          "targetRevoked": "revocata",
+          "targetFailed": "richiede attenzione",
+          "targetPending": "in sospeso",
+          "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit."
+        }
       }
     },
     "stripe": {
@@ -3561,7 +3663,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "E-mail in entrata di Outlook per la registrazione app Microsoft della tua azienda.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },
@@ -3666,7 +3768,10 @@
       "updateFailed": "Impossibile aggiornare la mappatura. Riprovare.",
       "idRequiredForDelete": "Per l’eliminazione è necessario l’ID della mappatura.",
       "notFound": "Mappatura non trovata. Aggiornare le mappature e riprovare.",
-      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare."
+      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare.",
+      "invoiceCancelled": "La fattura è stata annullata e non può essere mappata all'integrazione contabile.",
+      "invoiceNotFound": "La fattura non esiste più e non può essere mappata all'integrazione contabile.",
+      "scopeRequired": "Le ricerche di mappature richiedono un'integrazione, un tipo di entità e un ambito realm."
     },
     "qbo": {
       "enterpriseOnly": "L’integrazione con QuickBooks Online è disponibile solo nella Enterprise Edition.",

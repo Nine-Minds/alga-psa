@@ -6,8 +6,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2, MapPin } from 'lucide-react';
-import { IContract } from '@alga-psa/types';
+import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2, MapPin, RotateCcw } from 'lucide-react';
+import { IContract, IContractLineServiceRateTier } from '@alga-psa/types';
+import { UsageServiceConfigPanel } from '../service-configurations/UsageServiceConfigPanel';
+import { getNextContractServiceBoundary } from '@alga-psa/billing/actions/contractLineSemanticsActions';
 import { updateContractLine } from '@alga-psa/billing/actions/contractLineAction';
 import {
   getDetailedContractLines,
@@ -15,6 +17,7 @@ import {
   updateContractLineAssociation,
 } from '@alga-psa/billing/actions/contractLineMappingActions';
 import { checkContractHasInvoices } from '@alga-psa/billing/actions/contractActions';
+import { resetContractLineRateToStandard, previewContractLineRateReset } from '@alga-psa/billing/actions/rateReviewActions';
 import {
   applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations,
@@ -23,6 +26,7 @@ import {
 } from '@alga-psa/billing/actions/contractLineServiceActions';
 import {
   updateConfiguration,
+  getConfigurationWithDetails,
   upsertPlanServiceBucketConfigurationAction as upsertContractLineServiceBucketConfigurationAction
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
 import {
@@ -30,13 +34,13 @@ import {
   type BillingLocationSummary,
 } from '@alga-psa/billing/actions/billingClientLocationActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { BucketPoolEditor } from './BucketPoolEditor';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import {
   ServiceSelectionDialog,
@@ -74,6 +78,8 @@ interface DetailedContractLineMapping {
   contract_line_id: string;
   display_order: number;
   custom_rate?: number | null;
+  /** Who owns `custom_rate`; drives the Standard/Custom/Unreviewed badge. */
+  rate_provenance?: 'custom' | 'inherited' | 'unreviewed' | null;
   created_at: string | Date;
   contract_line_name: string;
   billing_frequency: string;
@@ -130,6 +136,7 @@ interface ServiceConfiguration {
     quantity?: number;
   };
   typeConfig: any;
+  rateTiers?: IContractLineServiceRateTier[];
   bucketConfig?: any; // Add bucketConfig property for merged bucket data
 }
 
@@ -161,11 +168,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const { formatCurrency } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
   const formatContractLineType = useFormatContractLineType();
-  // Flag-on line-level bucket pools (weighted-burn model). Flag off keeps the
-  // existing per-service overlay UI served by the compat layer.
-  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
   const [bucketSchedules, setBucketSchedules] = useState<Array<{
     schedule_id: string;
     schedule_name: string;
@@ -204,10 +206,23 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [savingLineId, setSavingLineId] = useState<string | null>(null);
   const [editLineData, setEditLineData] = useState<Partial<DetailedContractLineMapping>>({});
+  const [effectiveBoundary, setEffectiveBoundary] = useState('');
+  const [requiresEffectiveBoundary, setRequiresEffectiveBoundary] = useState(false);
+  const [pricingOnly, setPricingOnly] = useState(false);
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
   const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
   const [pendingServiceAdditions, setPendingServiceAdditions] = useState<PendingServiceAddition[]>([]);
   const [pendingServiceRemovalIds, setPendingServiceRemovalIds] = useState<string[]>([]);
+  // "Reset to standard" confirmation (plan §3.3): shows the current rate and the
+  // catalog rate it will fall back to. Fetched from the resolver so the dialog
+  // and the apply cannot disagree.
+  const [resetConfirmation, setResetConfirmation] = useState<{
+    line: DetailedContractLineMapping;
+    currentRateCents: number | null;
+    targetRateCents: number | null;
+  } | null>(null);
+  const [isPreparingReset, setIsPreparingReset] = useState(false);
+  const [isResettingLine, setIsResettingLine] = useState(false);
 
   // Location grouping state
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
@@ -225,7 +240,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   }, [contract.contract_id]);
 
   useEffect(() => {
-    if (!bucketPoolEditorEnabled) return;
     let isActive = true;
     void (async () => {
       try {
@@ -246,7 +260,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       isActive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bucketPoolEditorEnabled]);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -452,8 +466,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         quantity: serviceConfig.configuration.quantity ?? 1,
         custom_rate: serviceConfig.configuration.custom_rate,
         hourly_rate: serviceConfig.typeConfig?.hourly_rate,
-        base_rate: serviceConfig.typeConfig?.base_rate,
+        base_rate: serviceConfig.configuration.configuration_type === 'Usage'
+          ? serviceConfig.configuration.custom_rate ?? serviceConfig.typeConfig?.base_rate
+          : serviceConfig.typeConfig?.base_rate,
         unit_of_measure: serviceConfig.typeConfig?.unit_of_measure,
+        measurement_mode: serviceConfig.typeConfig?.measurement_mode ?? 'additive',
+        minimum_usage: serviceConfig.typeConfig?.minimum_usage ?? 0,
+        enable_tiered_pricing: serviceConfig.typeConfig?.enable_tiered_pricing ?? false,
+        rateTiers: serviceConfig.rateTiers ?? [],
       };
 
       bucketConfigsData[serviceId] = serviceConfig.bucketConfig
@@ -529,6 +549,61 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
   };
 
+  const openResetConfirmation = async (line: DetailedContractLineMapping) => {
+    setIsPreparingReset(true);
+    try {
+      const preview = await previewContractLineRateReset(line.contract_line_id);
+      if (isReturnedActionError(preview)) {
+        setError(getErrorMessage(preview));
+        return;
+      }
+      if (preview.targetRateCents === null) {
+        setError(preview.reason ?? t('contractLines.errors.failedToResetRate', {
+          defaultValue: 'Failed to reset the line rate',
+        }));
+        return;
+      }
+      setResetConfirmation({
+        line,
+        currentRateCents: preview.currentRateCents,
+        targetRateCents: preview.targetRateCents,
+      });
+    } catch (err) {
+      console.error('Error preparing line rate reset:', err);
+      setError(err instanceof Error
+        ? err.message
+        : t('contractLines.errors.failedToResetRate', { defaultValue: 'Failed to reset the line rate' }));
+    } finally {
+      setIsPreparingReset(false);
+    }
+  };
+
+  const confirmResetLineRateToStandard = async () => {
+    if (!resetConfirmation) return;
+    setIsResettingLine(true);
+    try {
+      const result = await resetContractLineRateToStandard(resetConfirmation.line.contract_line_id);
+      if ('refused' in result && result.refused.length > 0) {
+        setError(result.refused[0].reason);
+        return;
+      }
+      if (!('applied' in result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      await fetchData();
+      onContractLinesChanged?.();
+      setResetConfirmation(null);
+    } catch (err) {
+      console.error('Error resetting line rate:', err);
+      setError(err instanceof Error
+        ? err.message
+        : t('contractLines.errors.failedToResetRate', { defaultValue: 'Failed to reset the line rate' }));
+    } finally {
+      setIsResettingLine(false);
+    }
+  };
+
   const handleEditContractLine = async (line: DetailedContractLineMapping) => {
     if (!contract.contract_id) return;
 
@@ -536,13 +611,22 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       // Check if contract has invoices
       const hasInvoices = await checkContractHasInvoices(contract.contract_id);
 
-      if (hasInvoices) {
-        setError(t('contractLines.errors.cannotEditWithInvoices', {
-          defaultValue: 'Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.',
-        }));
+      const services = await loadServicesForLine(line.contract_line_id);
+      if (hasInvoices && !services.some(service => service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage')) {
+        setError(t('contractLines.errors.cannotEditWithInvoices', {defaultValue: 'This contract has invoices. Use a prospective service configuration change to preserve billed history.'}));
         return;
       }
-
+      setPricingOnly(Boolean(hasInvoices));
+      const boundary = await getNextContractServiceBoundary(line.contract_line_id);
+      if (isReturnedActionError(boundary)) { setError(getErrorMessage(boundary)); return; }
+      setEffectiveBoundary(typeof boundary === 'string' ? boundary : '');
+      setRequiresEffectiveBoundary(typeof boundary === 'string');
+      const effectiveServices = typeof boundary === 'string' ? await Promise.all(services.map(async service => {
+        if (service.typeConfig?.pricing_basis !== 'unit' && service.configuration.configuration_type !== 'Usage') return service;
+        const details = await getConfigurationWithDetails(service.configuration.config_id, boundary);
+        if (isReturnedActionError(details)) throw new Error(getErrorMessage(details));
+        return {...service, configuration: {...service.configuration, ...details.baseConfig}, typeConfig: details.typeConfig, rateTiers: details.rateTiers};
+      })) : services;
       // Expand the line if not already expanded (like clicking the caret)
       const isCurrentlyExpanded = expandedLines[line.contract_line_id];
       if (!isCurrentlyExpanded) {
@@ -553,8 +637,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       }
 
       // Load services for the line (returns cached if already loaded)
-      const services = await loadServicesForLine(line.contract_line_id);
-
       // Start editing - populate edit data from the line
       setEditingLineId(line.contract_line_id);
       setEditLineData({
@@ -564,13 +646,34 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         round_up_to_nearest: line.round_up_to_nearest,
         location_id: line.location_id ?? defaultLocationId ?? null,
       });
-      initializeServiceConfigEdits(services);
+      initializeServiceConfigEdits(effectiveServices);
       resetServiceMembershipDraft();
     } catch (err) {
       console.error('Error checking contract invoices:', err);
       setError(t('contractLines.errors.failedToCheckEditable', {
         defaultValue: 'Failed to check if contract can be edited',
       }));
+    }
+  };
+
+  const handleEffectiveBoundaryChange = async (contractLineId: string, boundary: string) => {
+    setEffectiveBoundary(boundary);
+    if (!boundary) return;
+    setSavingLineId(contractLineId);
+    try {
+      const services = lineServices[contractLineId] ?? [];
+      const effectiveServices = await Promise.all(services.map(async service => {
+        if (service.typeConfig?.pricing_basis !== 'unit' && service.configuration.configuration_type !== 'Usage') return service;
+        const details = await getConfigurationWithDetails(service.configuration.config_id, boundary);
+        if (isReturnedActionError(details)) throw new Error(getErrorMessage(details));
+        return { ...service, configuration: { ...service.configuration, ...details.baseConfig }, typeConfig: details.typeConfig, rateTiers: details.rateTiers };
+      }));
+      initializeServiceConfigEdits(effectiveServices);
+    } catch (err) {
+      setEffectiveBoundary('');
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingLineId(null);
     }
   };
 
@@ -657,11 +760,12 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   };
 
   const handleSaveContractLine = async (contractLineId: string) => {
+    if (requiresEffectiveBoundary && !effectiveBoundary) return;
     setSavingLineId(contractLineId);
     try {
       // Persist recurring authoring fields in one mutation so service periods
       // are rematerialized once from the final contract-line state.
-      const updateResult = await updateContractLine(contractLineId, {
+      const updateResult = pricingOnly ? true : await updateContractLine(contractLineId, {
         billing_timing: editLineData.billing_timing,
         cadence_owner: editLineData.cadence_owner,
         minimum_billable_time: editLineData.minimum_billable_time,
@@ -693,14 +797,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       for (const [configId, editData] of Object.entries(editServiceConfigs)) {
         // Find the matching service config to get configuration_type
         const serviceConfig = services.find(s => s.configuration.config_id === configId);
-        if (!serviceConfig) continue;
+        if (!serviceConfig || (pricingOnly && serviceConfig.typeConfig?.pricing_basis !== 'unit' && serviceConfig.configuration.configuration_type !== 'Usage')) continue;
 
         const baseConfig: any = {
           quantity: editData.quantity,
           custom_rate: editData.custom_rate,
         };
 
-        const typeConfig: any = {};
+        const typeConfig: any = effectiveBoundary && (serviceConfig.typeConfig?.pricing_basis === 'unit' || serviceConfig.configuration.configuration_type === 'Usage') ? {effective_period_start: effectiveBoundary} : {};
 
         // Build type-specific config based on configuration type
         if (serviceConfig.configuration.configuration_type === 'Hourly') {
@@ -708,6 +812,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             typeConfig.hourly_rate = editData.hourly_rate;
           }
         } else if (serviceConfig.configuration.configuration_type === 'Usage') {
+          // updateConfiguration invokes the transactional effective-period
+          // transition, preserving historical measurement and pricing together.
+          delete baseConfig.quantity;
+          baseConfig.custom_rate = editData.base_rate;
+          typeConfig.measurement_mode = editData.measurement_mode;
+          typeConfig.minimum_usage = editData.minimum_usage;
+          typeConfig.enable_tiered_pricing = editData.enable_tiered_pricing;
           if (editData.base_rate !== undefined) {
             typeConfig.base_rate = editData.base_rate;
           }
@@ -720,7 +831,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
           }
         }
 
-        const updateConfigResult = await updateConfiguration(configId, baseConfig, typeConfig);
+        const updateConfigResult = serviceConfig.configuration.configuration_type === 'Usage'
+          ? await updateConfiguration(configId, baseConfig, typeConfig, editData.rateTiers)
+          : await updateConfiguration(configId, baseConfig, typeConfig);
         if (isReturnedActionError(updateConfigResult)) {
           setError(getErrorMessage(updateConfigResult));
           return;
@@ -734,6 +847,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
           : addition.selection.configurationType === 'Usage'
             ? {
                 base_rate: editData.base_rate ?? addition.selection.customRate,
+                measurement_mode: editData.measurement_mode ?? 'additive',
+                minimum_usage: editData.minimum_usage ?? 0,
+                enable_tiered_pricing: editData.enable_tiered_pricing ?? false,
                 unit_of_measure:
                   editData.unit_of_measure || addition.selection.service.unit_of_measure || 'unit',
               }
@@ -742,13 +858,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         return {
           serviceId: addition.selection.service.service_id,
           quantity: editData.quantity ?? addition.selection.quantity,
-          customRate: editData.custom_rate ?? addition.selection.customRate,
+          customRate: addition.selection.configurationType === 'Usage'
+            ? editData.base_rate ?? addition.selection.customRate
+            : editData.custom_rate ?? addition.selection.customRate,
           configurationType: addition.selection.configurationType,
           typeConfig,
+          ...(addition.selection.configurationType === 'Usage' ? { rateTiers: editData.rateTiers ?? [] } : {}),
         };
       });
 
-      if (additions.length > 0 || pendingServiceRemovalIds.length > 0) {
+      if (!pricingOnly && (additions.length > 0 || pendingServiceRemovalIds.length > 0)) {
         const membershipResult = await applyContractLineServiceMembershipChanges(
           contractLineId,
           {
@@ -764,7 +883,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
 
       // Persist memberships before bucket overlays so a newly selected service
       // has its primary configuration available to the bucket upsert.
-      for (const [serviceId, bucketConfig] of Object.entries(editBucketConfigs)) {
+      for (const [serviceId, bucketConfig] of Object.entries(pricingOnly ? {} : editBucketConfigs)) {
         if (pendingServiceRemovalIds.includes(serviceId)) {
           continue;
         }
@@ -805,7 +924,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       onContractLinesChanged?.();
     } catch (err) {
       console.error('Error updating contract line:', err);
-      setError(t('contractLines.errors.failedToUpdate', { defaultValue: 'Failed to update contract line' }));
+      setError(err instanceof Error ? err.message : t('contractLines.errors.failedToUpdate', { defaultValue: 'Failed to update contract line' }));
     } finally {
       setSavingLineId((current) => (current === contractLineId ? null : current));
     }
@@ -1107,14 +1226,51 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                             </span>
                           </>
                         )}
-                        {line.custom_rate !== null && line.custom_rate !== undefined && (
-                          <>
-                            <span>•</span>
-                            <span className="text-blue-600 font-medium">
-                              {t('contractLines.customRate', { defaultValue: 'Custom' })}: {formatRate(line.custom_rate)}
-                            </span>
-                          </>
-                        )}
+                        {(() => {
+                          const provenance = line.rate_provenance ?? null;
+                          if (provenance === 'inherited') {
+                            return (
+                              <>
+                                <span>•</span>
+                                <Badge variant="default-muted">
+                                  {t('contractLines.rateProvenance.standard', { defaultValue: 'Standard' })}
+                                </Badge>
+                              </>
+                            );
+                          }
+                          if (provenance === 'unreviewed') {
+                            return (
+                              <>
+                                <span>•</span>
+                                <Badge variant="warning">
+                                  {t('contractLines.rateProvenance.unreviewed', { defaultValue: 'Unreviewed' })}
+                                </Badge>
+                              </>
+                            );
+                          }
+                          // A stored rate with no label is a pre-migration row;
+                          // the resolver treats it as custom/unreviewed by rate
+                          // presence, so the badge does the same.
+                          const isCustom =
+                            provenance === 'custom' ||
+                            (provenance === null &&
+                              line.custom_rate !== null &&
+                              line.custom_rate !== undefined);
+                          if (!isCustom) {
+                            return null;
+                          }
+                          return (
+                            <>
+                              <span>•</span>
+                              <span className="inline-flex items-center gap-1 font-medium text-[rgb(var(--color-primary-700))]">
+                                <Badge variant="secondary">
+                                  {t('contractLines.rateProvenance.custom', { defaultValue: 'Custom' })}
+                                </Badge>
+                                {formatRate(line.custom_rate)}
+                              </span>
+                            </>
+                          );
+                        })()}
                         {line.location_id && (
                           <>
                             <span>•</span>
@@ -1147,6 +1303,23 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                         <Edit className="h-4 w-4 mr-1" />
                         {t('common.actions.edit', { defaultValue: 'Edit' })}
                       </Button>
+                      {line.custom_rate !== null && line.custom_rate !== undefined && (
+                        <Button
+                          id={`reset-line-rate-to-standard-${line.contract_line_id}`}
+                          data-line-id={line.contract_line_id}
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void openResetConfirmation(line);
+                          }}
+                          className="h-8 text-muted-foreground hover:text-[rgb(var(--color-text-700))] hover:bg-muted"
+                          disabled={isReadOnly || isPreparingReset || isResettingLine}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-1" />
+                          {t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
+                        </Button>
+                      )}
                       <Button
                         id={`remove-${line.contract_line_id}`}
                         variant="ghost"
@@ -1203,7 +1376,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                     size="sm"
                                     onClick={() => handleSaveContractLine(line.contract_line_id)}
                                     className="gap-2"
-                                    disabled={isSavingLine}
+                                    disabled={isSavingLine || (requiresEffectiveBoundary && !effectiveBoundary)}
                                   >
                                     {isSavingLine ? (
                                       <>
@@ -1246,7 +1419,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                   <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                     {t('contractLines.location.label', { defaultValue: 'Location' })}
                                   </Label>
-                                  {editingLineId === line.contract_line_id ? (
+                                  {editingLineId === line.contract_line_id && !pricingOnly ? (
                                     <CustomSelect
                                       id={`location-${line.contract_line_id}`}
                                       value={editLineData.location_id ?? ''}
@@ -1304,7 +1477,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   {t('billing.labels.timing', { defaultValue: 'Billing Timing' })}
                                 </Label>
-                                {editingLineId === line.contract_line_id ? (
+                                {editingLineId === line.contract_line_id && !pricingOnly ? (
                                   <CustomSelect
                                     id={`billing-timing-${line.contract_line_id}`}
                                     value={editLineData.billing_timing || line.billing_timing || 'arrears'}
@@ -1327,7 +1500,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   {t('billing.labels.cadenceOwner', { defaultValue: 'Cadence Owner' })}
                                 </Label>
-                                {editingLineId === line.contract_line_id ? (
+                                {editingLineId === line.contract_line_id && !pricingOnly ? (
                                   <CustomSelect
                                     id={`cadence-owner-${line.contract_line_id}`}
                                     value={editLineData.cadence_owner || line.cadence_owner || 'client'}
@@ -1358,7 +1531,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                         defaultValue: 'Minimum Billable Time (minutes)',
                                       })}
                                     </Label>
-                                    {editingLineId === line.contract_line_id ? (
+                                    {editingLineId === line.contract_line_id && !pricingOnly ? (
                                       <Input
                                         id={`min-billable-${line.contract_line_id}`}
                                         type="number"
@@ -1386,7 +1559,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                         defaultValue: 'Round Up To Nearest (minutes)',
                                       })}
                                     </Label>
-                                    {editingLineId === line.contract_line_id ? (
+                                    {editingLineId === line.contract_line_id && !pricingOnly ? (
                                       <Input
                                         id={`round-up-${line.contract_line_id}`}
                                         type="number"
@@ -1412,7 +1585,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               )}
 
                               {/* Fixed contract line - show info message */}
-                              {line.contract_line_type === 'Fixed' && (
+                              {line.contract_line_type === 'Fixed' && !services.some(service => service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage') && (
                                 <div className="col-span-2 space-y-2">
                                   <p className="text-sm text-muted-foreground">
                                     {t('contractLines.configuration.fixedInfo', {
@@ -1434,6 +1607,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 </div>
                               )}
 
+                              {editingLineId === line.contract_line_id && services.some(service => service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage') && (
+                                <div className="col-span-2">
+                                  <Label htmlFor={`quantity-effective-${line.contract_line_id}`}>{t('contractLines.services.semanticsEffectiveFrom', {defaultValue: 'Service pricing and measurement changes effective from'})}</Label>
+                                  <Input id={`quantity-effective-${line.contract_line_id}`} type="date" disabled={isSavingLine} value={effectiveBoundary} onChange={event => void handleEffectiveBoundaryChange(line.contract_line_id, event.target.value)} />
+                                  <p className="text-sm text-muted-foreground">{t('contractLines.services.prospectiveSemanticsHelp', {defaultValue: 'Changes apply at this service-period boundary; earlier quantities, measurement and pricing are preserved. Changing the date reloads the applicable settings for review.'})}</p>
+                                </div>
+                              )}
                               {/* Usage contract line - show info message */}
                               {line.contract_line_type === 'Usage' && (
                                 <div className="col-span-2">
@@ -1456,7 +1636,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                   defaultValue: 'Services ({{count}})',
                                 })}
                               </h4>
-                              {editingLineId === line.contract_line_id && (
+                              {editingLineId === line.contract_line_id && !pricingOnly && (
                                 <Button
                                   id={`add-service-${line.contract_line_id}`}
                                   type="button"
@@ -1481,7 +1661,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                             ) : (
                               <div className="space-y-3">
                                 {services.filter(s => s.configuration.configuration_type !== 'Bucket').map((serviceConfig, idx) => {
-                                  const isEditing = editingLineId === line.contract_line_id;
+                                  const isUnitPriced = serviceConfig.typeConfig?.pricing_basis === 'unit';
+                                  const isEditing = editingLineId === line.contract_line_id && (!pricingOnly || isUnitPriced || serviceConfig.configuration.configuration_type === 'Usage');
                                   const configId = serviceConfig.configuration.config_id;
                                   const editData = editServiceConfigs[configId] || {};
 
@@ -1503,18 +1684,21 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                               })}
                                             </p>
                                           </div>
-                                          {serviceConfig.configuration.configuration_type !== 'Hourly' && (
+                                          {/* Usage configs bill recorded usage, not a configured
+                                              quantity — never badge a number billing ignores. */}
+                                          {serviceConfig.configuration.configuration_type !== 'Hourly'
+                                            && serviceConfig.configuration.configuration_type !== 'Usage' && (
                                             <Badge className="chip-primary border-[rgb(var(--color-primary-200))]">
                                               {t('contractLines.services.quantityShort', {
                                                 defaultValue: 'Qty: {{quantity}}',
                                                 quantity: isEditing
                                                   ? (editData.quantity ?? serviceConfig.configuration.quantity ?? 1)
-                                                  : (serviceConfig.configuration.quantity || 1),
+                                                  : (serviceConfig.configuration.quantity ?? 1),
                                               })}
                                             </Badge>
                                           )}
                                         </div>
-                                        {isEditing && (
+                                        {isEditing && !pricingOnly && (
                                           <Button
                                             id={`remove-service-${serviceConfig.configuration.config_id}`}
                                             type="button"
@@ -1535,11 +1719,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                       </div>
 
                                       <div className="grid gap-4 md:grid-cols-2">
-                                        {/* Quantity - Fixed and Usage only (not used for Hourly billing) */}
-                                        {serviceConfig.configuration.configuration_type !== 'Hourly' && (
+                                        {/* Quantity - Fixed-style allocations only. Hourly bills time
+                                            entries and Usage bills recorded usage_tracking records, so
+                                            neither consumes a configured quantity. */}
+                                        {serviceConfig.configuration.configuration_type !== 'Hourly'
+                                          && serviceConfig.configuration.configuration_type !== 'Usage' && (
                                           <div>
                                             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                              {line.contract_line_type === 'Fixed'
+                                              {isUnitPriced ? t('contractLines.services.recurringUnits', {defaultValue: 'Recurring seats/units'}) : line.contract_line_type === 'Fixed'
                                                 ? t('contractLines.services.quantityTaxAllocation', {
                                                   defaultValue: 'Quantity (for tax allocation)',
                                                 })
@@ -1549,7 +1736,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                               <Input
                                                 id={`quantity-${serviceConfig.configuration.config_id}`}
                                                 type="number"
-                                                min="1"
+                                                min={isUnitPriced ? "0" : "1"}
                                                 value={editData.quantity ?? ''}
                                                 onChange={(e) => setEditServiceConfigs({
                                                   ...editServiceConfigs,
@@ -1562,7 +1749,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                               />
                                             ) : (
                                               <p className="mt-1 text-sm text-[rgb(var(--color-text-800))] font-semibold">
-                                                {serviceConfig.configuration.quantity || 1}
+                                                {serviceConfig.configuration.quantity ?? 1}
                                               </p>
                                             )}
                                           </div>
@@ -1573,7 +1760,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                             {serviceConfig.configuration.configuration_type === 'Hourly'
                                               ? t('contractLines.services.hourlyRate', { defaultValue: 'Hourly Rate' })
-                                              : serviceConfig.configuration.configuration_type === 'Usage'
+                                              : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced
                                               ? t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })
                                               : t('contractLines.services.rateTaxAllocation', { defaultValue: 'Rate (for tax allocation)' })}
                                           </Label>
@@ -1620,39 +1807,24 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           )}
                                         </div>
 
-                                        {/* Unit of Measure - Usage only */}
-                                        {serviceConfig.configuration.configuration_type === 'Usage' && (
-                                          <div>
-                                            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                              {t('contractLines.services.unitOfMeasure', { defaultValue: 'Unit of Measure' })}
-                                            </Label>
-                                            {isEditing ? (
-                                              <Input
-                                                id={`unit-${serviceConfig.configuration.config_id}`}
-                                                type="text"
-                                                value={editData.unit_of_measure ?? ''}
-                                                onChange={(e) => setEditServiceConfigs({
-                                                  ...editServiceConfigs,
-                                                  [configId]: {
-                                                    ...editData,
-                                                    unit_of_measure: e.target.value
-                                                  }
-                                                })}
-                                                placeholder={t('contractLines.services.unitPlaceholder', { defaultValue: 'unit' })}
-                                                className="mt-1"
-                                              />
-                                            ) : (
-                                              <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                                {serviceConfig.typeConfig?.unit_of_measure
-                                                  || t('contractLines.services.unitPlaceholder', { defaultValue: 'unit' })}
-                                              </p>
-                                            )}
-                                          </div>
-                                        )}
                                       </div>
+                                      {serviceConfig.configuration.configuration_type === 'Usage' && (
+                                        <UsageServiceConfigPanel
+                                          idPrefix={`${configId}-`}
+                                          configuration={isEditing ? editData : serviceConfig.typeConfig ?? {}}
+                                          rateTiers={isEditing ? editData.rateTiers : serviceConfig.rateTiers}
+                                          onConfigurationChange={updates => setEditServiceConfigs(current => ({
+                                            ...current, [configId]: { ...current[configId], ...updates },
+                                          }))}
+                                          onRateTiersChange={isEditing ? tiers => setEditServiceConfigs(current => ({
+                                            ...current, [configId]: { ...current[configId], rateTiers: tiers },
+                                          })) : undefined}
+                                          disabled={!isEditing || isSavingLine}
+                                        />
+                                      )}
 
                                       {/* Bucket Configuration - Hourly and Usage services only */}
-                                      {isEditing && (serviceConfig.configuration.configuration_type === 'Hourly' || serviceConfig.configuration.configuration_type === 'Usage') && (
+                                      {isEditing && !pricingOnly && (serviceConfig.configuration.configuration_type === 'Hourly' || serviceConfig.configuration.configuration_type === 'Usage') && (
                                         <div className="col-span-2 pt-4 border-t border-dashed border-[rgb(var(--color-border-200))]">
                                           <SwitchWithLabel
                                             label={t('contractLines.bucket.enableTracking', {
@@ -1763,27 +1935,25 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                           </div>
                         </div>
                       )}
-                      {/* Flag-on line-level bucket pools (weighted-burn model). */}
-                      {bucketPoolEditorEnabled && (
-                        <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
-                          <BucketPoolEditor
-                            contractLineId={line.contract_line_id}
-                            lineServices={services
-                              .map((serviceConfig) => ({
-                                service_id: serviceConfig.service.service_id,
-                                service_name: serviceConfig.service.service_name,
-                              }))}
-                            allServices={services.map((serviceConfig) => ({
+                      {/* Line-level bucket pools (weighted-burn model). */}
+                      <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
+                        <BucketPoolEditor
+                          contractLineId={line.contract_line_id}
+                          lineServices={services
+                            .map((serviceConfig) => ({
                               service_id: serviceConfig.service.service_id,
                               service_name: serviceConfig.service.service_name,
                             }))}
-                            schedules={bucketSchedules}
-                            onChanged={() => {
-                              void loadServicesForLine(line.contract_line_id, true);
-                            }}
-                          />
-                        </div>
-                      )}
+                          allServices={services.map((serviceConfig) => ({
+                            service_id: serviceConfig.service.service_id,
+                            service_name: serviceConfig.service.service_name,
+                          }))}
+                          schedules={bucketSchedules}
+                          onChanged={() => {
+                            void loadServicesForLine(line.contract_line_id, true);
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1811,6 +1981,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             isOpen={showCreateCustomDialog}
             onClose={() => setShowCreateCustomDialog(false)}
             contractId={contract.contract_id}
+            currencyCode={contract.currency_code}
             onCreated={handleAddContractLines}
           />
 
@@ -1828,6 +1999,33 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
           )}
         </>
       ) : null}
+
+      <ConfirmationDialog
+        isOpen={resetConfirmation !== null}
+        onClose={() => setResetConfirmation(null)}
+        onConfirm={confirmResetLineRateToStandard}
+        isConfirming={isResettingLine}
+        title={t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
+        message={
+          <div className="space-y-2">
+            <p>
+              {t('contractLines.dialogs.confirmResetRate', {
+                defaultValue: 'Reset this line to the standard catalog rate? The stored custom rate will be removed.',
+              })}
+            </p>
+            {resetConfirmation && (
+              <p className="font-medium text-foreground">
+                {t('contractLines.columns.rate', { defaultValue: 'Rate' })}:{' '}
+                {formatRate(resetConfirmation.currentRateCents)} &rarr;{' '}
+                {formatRate(resetConfirmation.targetRateCents)}
+              </p>
+            )}
+          </div>
+        }
+        confirmLabel={t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        id="reset-line-rate-to-standard-confirmation"
+      />
     </Card>
   );
 };

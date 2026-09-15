@@ -224,7 +224,8 @@ export async function satisfyExportOpsForManualBatch(
   knex: Knex,
   tenantId: string,
   adapterType: string,
-  invoiceIds: string[]
+  invoiceIds: string[],
+  targetRealm: string | null
 ): Promise<void> {
   try {
     if (invoiceIds.length === 0) {
@@ -234,7 +235,8 @@ export async function satisfyExportOpsForManualBatch(
       tenantId,
       adapterType,
       'export_invoice',
-      invoiceIds
+      invoiceIds,
+      targetRealm
     );
     if (satisfied > 0) {
       logger.debug('[accountingSync] Manual batch satisfied queued export ops', { tenantId, satisfied });
@@ -251,14 +253,30 @@ export async function satisfyExportOpsForManualBatch(
  * Enqueue a void_invoice op for the given invoice. Unlike auto-export, this
  * fires regardless of the auto-sync toggle because voids must propagate to
  * keep the books consistent. Only fires when EE + connected realm + mapping.
+ *
+ * The remote-affecting branch is additionally gated on the actor's
+ * remote-mutate capability (`allowRemoteMutate`): a mapping created by a
+ * concurrent export between the void action's gate check and this enqueue
+ * must not turn a local-only void into a remote mutation the actor was not
+ * authorized to perform. The actor is carried through to the applier so the
+ * remote-void audit row records the real user, not the sync service.
  */
 export async function enqueueInvoiceVoid(
   knex: Knex,
   tenantId: string,
-  invoiceId: string
+  invoiceId: string,
+  options: { actorUserId?: string; allowRemoteMutate?: boolean } = {}
 ): Promise<void> {
   try {
     if (!isEnterpriseEdition()) {
+      return;
+    }
+
+    if (options.allowRemoteMutate === false) {
+      logger.debug('[accountingSync] Skipping invoice void enqueue — actor lacks remote-mutate', {
+        tenantId,
+        invoiceId,
+      });
       return;
     }
 
@@ -267,12 +285,15 @@ export async function enqueueInvoiceVoid(
       return;
     }
 
-    // Only enqueue when a mapping exists (otherwise there's nothing to void in QBO)
+    // Only enqueue when a mapping exists in the operation realm (otherwise
+    // there's nothing to void in this QBO company; a mapping in another realm
+    // or a legacy realm-less row must not produce a void against this one).
     const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
         integration_type: QBO_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
-        alga_entity_id: invoiceId
+        alga_entity_id: invoiceId,
+        external_realm_id: realm
       })
       .first('id');
 
@@ -286,7 +307,8 @@ export async function enqueueInvoiceVoid(
       targetRealm: realm,
       operation: 'void_invoice',
       algaEntityType: 'invoice',
-      algaEntityId: invoiceId
+      algaEntityId: invoiceId,
+      payload: { requestedByUserId: options.actorUserId ?? null }
     });
 
     logger.debug('[accountingSync] Queued invoice void', { tenantId, invoiceId, realm });
@@ -338,12 +360,15 @@ export async function enqueueExternalPaymentPush(
       return;
     }
 
-    // Skip invoices that don't have a QBO mapping yet (pre-go-live invoices).
+    // Skip invoices that don't have a QBO mapping in the operation realm
+    // (pre-go-live invoices, or invoices mapped to a different company —
+    // neither may drive a payment into this realm).
     const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
         integration_type: QBO_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
-        alga_entity_id: params.invoiceId
+        alga_entity_id: params.invoiceId,
+        external_realm_id: realm
       })
       .first('id');
 
@@ -391,6 +416,13 @@ export async function enqueueExternalPaymentPush(
  * fire-and-forget after applyCreditToInvoice commits. The op stays pending
  * until both the credit-note invoice and the target invoice are mapped in QBO,
  * at which point the creditApplicationApplier drains it.
+ *
+ * The `decision` is the authoritative in-transaction decision computed by
+ * applyCreditToInvoiceInternal (creditActions.ts): whether to enqueue and which
+ * realm to target. The enqueue derives STRICTLY from it — this function never
+ * re-evaluates edition, auto-sync, or connection state at enqueue time, because
+ * a config or permission change between the credit transaction and this call
+ * must not flip a decision that was made atomically with the credit write.
  */
 export async function enqueueCreditApplication(
   knex: Knex,
@@ -400,27 +432,18 @@ export async function enqueueCreditApplication(
     creditNoteInvoiceId: string;
     targetInvoiceId: string;
     amountCents: number;
-  }
+  },
+  decision: { shouldEnqueue: boolean; realm: string | null }
 ): Promise<void> {
   try {
-    if (!isEnterpriseEdition()) {
-      return;
-    }
-
-    const settings = await getAccountingSyncSettings(knex, tenantId);
-    if (!settings.autoSyncEnabled) {
-      return;
-    }
-
-    const realm = await resolveDefaultRealm(knex, tenantId);
-    if (!realm) {
+    if (!decision.shouldEnqueue || !decision.realm) {
       return;
     }
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
       adapterType: QBO_ADAPTER_TYPE,
-      targetRealm: realm,
+      targetRealm: decision.realm,
       operation: 'apply_credit',
       algaEntityType: 'credit_allocation',
       algaEntityId: params.allocationId,
@@ -436,7 +459,7 @@ export async function enqueueCreditApplication(
       allocationId: params.allocationId,
       creditNoteInvoiceId: params.creditNoteInvoiceId,
       targetInvoiceId: params.targetInvoiceId,
-      realm
+      realm: decision.realm
     });
   } catch (error) {
     logger.warn('[accountingSync] Failed to queue credit application (apply unaffected)', {

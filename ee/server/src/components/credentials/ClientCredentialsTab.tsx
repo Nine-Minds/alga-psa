@@ -1,13 +1,11 @@
 'use client';
 
 /**
- * Unified client Passwords tab (EE-only, Pro tier, flag-gated).
+ * Unified client Passwords tab (EE-only, Pro tier).
  *
  * The shared CredentialsScreen scoped to the client: native + Hudu rows merged
  * (Hudu rows keep their reveal-proxy behavior inside the unified list). The
- * screen re-checks the `release-v1-5-feature` flag and tier, rendering nothing
- * when the feature is off — so flag-off preserves the legacy Hudu-only tab
- * (registered separately in ClientDetails).
+ * screen re-checks the tier, rendering nothing when unavailable.
  */
 
 import React from 'react';

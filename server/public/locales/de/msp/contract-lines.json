@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Fehlende Plan- oder Serviceinformationen"
       },
       "loading": "Dienstkonfiguration wird geladen...",
-      "title": "Bearbeiten Sie die Dienstkonfiguration"
+      "title": "Bearbeiten Sie die Dienstkonfiguration",
+      "effectiveFrom": "Mengen- oder Messänderung wirksam ab",
+      "effectiveHelp": "Änderungen werden an dieser Leistungszeitraumgrenze wirksam. Frühere Zeiträume behalten ihre Preise und Messweise."
     },
     "tierEditor": {
       "actions": {
@@ -692,7 +694,10 @@
       "allServicesAssociated": "Alle verfügbaren Leistungen sind bereits mit dieser Vertragszeile verknüpft.",
       "badges": {
         "billingMismatch": "Abrechnungskonflikt",
-        "defaultConfigType": "Standard"
+        "defaultConfigType": "Standard",
+        "standard": "Standard",
+        "custom": "Individuell",
+        "unreviewed": "Nicht geprüft"
       },
       "billingMethod": {
         "fixed": "Festpreis",

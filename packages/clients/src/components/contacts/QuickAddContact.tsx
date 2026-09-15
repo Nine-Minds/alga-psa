@@ -16,7 +16,7 @@ import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useToast } from '@alga-psa/ui';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
+import { getAllCountries, getTenantDefaultCountry, ICountry } from '@alga-psa/clients/actions/countryActions';
 import {
   validateContactNameField,
   validateEmailAddressField,
@@ -117,6 +117,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   // Plausibility warnings. Rendered beneath the field; never gate the save.
   const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [localClients, setLocalClients] = useState<IClient[]>([]);
@@ -131,12 +132,14 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       const fetchFormMetadata = async () => {
         try {
-          const [countriesData, suggestionLabels] = await Promise.all([
+          const [countriesData, suggestionLabels, tenantCountry] = await Promise.all([
             countries.length > 0 ? Promise.resolve(countries) : getAllCountries(),
             listContactPhoneTypeSuggestions(),
+            getTenantDefaultCountry(),
           ]);
           setCountries(countriesData);
           setCustomPhoneTypeSuggestions(suggestionLabels);
+          setTenantDefaultCountry(tenantCountry);
         } catch (fetchError: any) {
           console.error('Error fetching contact form metadata:', fetchError);
         }
@@ -601,6 +604,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                   }
                 }}
                 countries={countries}
+                defaultCountryCode={tenantDefaultCountry?.code}
                 customTypeSuggestions={customPhoneTypeSuggestions}
                 allowEmpty={false}
                 errorMessages={hasAttemptedSubmit ? phoneValidationErrors : undefined}

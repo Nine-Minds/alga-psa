@@ -3,11 +3,12 @@ import type { NextFunction, Request, Response, Router } from 'express';
 import { QboSimError } from '@alga-psa/billing/testing/qboSimulator';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
-import { QboWireError } from './core';
+import { QboOAuthError, QboWireError } from './core';
 import type { QboEmulatorCore } from './core';
 
 const ENTITY_PATHS: Record<string, string> = {
   customer: 'Customer',
+  item: 'Item',
   invoice: 'Invoice',
   creditmemo: 'CreditMemo',
   payment: 'Payment',
@@ -24,7 +25,7 @@ function entityTypeFromPath(pathSegment: string): string {
 function parseBasicAuth(req: Request): { clientId: string; clientSecret: string } {
   const header = String(req.headers.authorization ?? '');
   if (!header.startsWith('Basic ')) {
-    throw new QboWireError(401, '3200', 'invalid_client: Basic authorization required');
+    throw new QboOAuthError(401, 'invalid_client', 'Basic authorization required');
   }
   const decoded = Buffer.from(header.slice('Basic '.length), 'base64').toString('utf8');
   const separator = decoded.indexOf(':');
@@ -36,7 +37,7 @@ function parseBasicAuth(req: Request): { clientId: string; clientSecret: string 
  * appcenter authorize (GET /connect/oauth2), the OAuth token endpoint
  * (POST /oauth2/v1/tokens/bearer), and the v3 accounting API
  * (/v3/company/:realmId/...). Point QBO_OAUTH_AUTHORIZE_URL,
- * QBO_OAUTH_TOKEN_URL, and QBO_API_BASE_URL here.
+ * QBO_OAUTH_TOKEN_URL, QBO_OAUTH_REVOKE_URL, and QBO_API_BASE_URL here.
  */
 export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void {
   router.use(express.json());
@@ -48,10 +49,15 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     if (!clientId || !redirectUri) {
       throw new QboWireError(400, '3200', 'client_id and redirect_uri are required');
     }
-    const code = core.authorize(clientId, redirectUri);
+    // Intuit's company picker equivalent: ?realmId=... on the request, else the
+    // control-selected company, else the default realm. Must be a known realm.
+    const chosenRealm = req.query.realmId
+      ? String(req.query.realmId)
+      : core.authorizeRealmId ?? core.realmId;
+    const code = core.authorize(clientId, redirectUri, chosenRealm);
     const callback = new URL(redirectUri);
     callback.searchParams.set('code', code);
-    callback.searchParams.set('realmId', core.realmId);
+    callback.searchParams.set('realmId', chosenRealm);
     if (req.query.state) {
       callback.searchParams.set('state', String(req.query.state));
     }
@@ -63,25 +69,37 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     res.json(core.grantToken(clientId, clientSecret, req.body ?? {}));
   });
 
+  router.post('/v2/oauth2/tokens/revoke', (req, res) => {
+    const { clientId, clientSecret } = parseBasicAuth(req);
+    core.revokeToken(clientId, clientSecret, req.body?.token);
+    res.status(200).end();
+  });
+
   const company = express.Router({ mergeParams: true });
   router.use('/v3/company/:realmId', company);
 
   company.use((req, res, next) => {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
     res.locals.access = core.authenticate(bearer);
-    if (req.params.realmId !== core.realmId) {
-      throw new QboWireError(403, '3202', `Realm ${req.params.realmId} is not authorized for this connection`);
+    // Throws the existing 403 when the realm has no company file.
+    res.locals.sim = core.simFor(String(req.params.realmId));
+    // Explicit emulator mismatch guard: the exact Intuit denial envelope is
+    // not independently verified. A grant cannot authorize a different company.
+    if (res.locals.access.realmId !== String(req.params.realmId)) {
+      throw new QboWireError(403, 'SIM_REALM_MISMATCH', 'Token does not authorize the requested company');
     }
     next();
   });
 
+  const simOf = (res: Response) => res.locals.sim as QboEmulatorCore['sim'];
+
   company.get('/query', route(async (req, res) => {
     const selectQuery = String(req.query.query ?? '');
     if (/FROM\s+Preferences/i.test(selectQuery)) {
-      res.json({ QueryResponse: { Preferences: [await core.sim.client.getPreferences()] } });
+      res.json({ QueryResponse: { Preferences: [await simOf(res).client.getPreferences()] } });
       return;
     }
-    const rows = await core.sim.client.query(selectQuery);
+    const rows = await simOf(res).client.query(selectQuery);
     if (rows.length === 0) {
       res.json({ QueryResponse: {} });
       return;
@@ -90,15 +108,20 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     res.json({ QueryResponse: { [entityMatch![1]]: rows } });
   }));
 
-  company.get('/companyinfo/:companyId', (_req, res) => {
+  company.get('/companyinfo/:companyId', (req, res) => {
     res.json({
-      CompanyInfo: { Id: core.realmId, CompanyName: 'Alga Emulated Co', Country: 'US', CompanyStartDate: '2020-01-01' },
+      CompanyInfo: {
+        Id: simOf(res).options.realmId,
+        CompanyName: simOf(res).options.companyName,
+        Country: 'US',
+        CompanyStartDate: '2020-01-01',
+      },
     });
   });
 
   company.get('/cdc', route(async (req, res) => {
     const since = String(req.query.changedSince ?? new Date(0).toISOString());
-    const { changes } = await core.sim.client.fetchChanges(since);
+    const { changes } = await simOf(res).client.fetchChanges(since);
     const grouped: Record<string, unknown[]> = {};
     for (const change of changes) {
       const row = change.deleted ? { Id: change.externalId, status: 'Deleted' } : change.payload;
@@ -109,7 +132,7 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
 
   company.get('/:entityPath/:id', route(async (req, res) => {
     const entityType = entityTypeFromPath(String(req.params.entityPath));
-    const entity = await core.sim.client.read(entityType, String(req.params.id));
+    const entity = await simOf(res).client.read(entityType, String(req.params.id));
     if (!entity || (entity as { deleted?: boolean }).deleted) {
       throw new QboWireError(400, '610', `Object Not Found: ${entityType} ${req.params.id}`);
     }
@@ -122,25 +145,29 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     const body = req.body ?? {};
 
     if (operation === 'create') {
-      res.json({ [entityType]: await core.sim.client.create(entityType, body) });
+      res.json({ [entityType]: await simOf(res).client.create(entityType, body) });
       return;
     }
     if (operation === 'update') {
-      res.json({ [entityType]: await core.sim.client.update(entityType, body) });
+      res.json({ [entityType]: await simOf(res).client.update(entityType, body) });
       return;
     }
     if (operation === 'void' && entityType === 'Invoice') {
-      res.json({ [entityType]: await core.sim.client.voidInvoice(String(body.Id), String(body.SyncToken)) });
+      res.json({ [entityType]: await simOf(res).client.voidInvoice(String(body.Id), String(body.SyncToken)) });
       return;
     }
     if (operation === 'delete' && entityType === 'CreditMemo') {
-      res.json({ [entityType]: await core.sim.client.deleteCreditMemo(String(body.Id), String(body.SyncToken)) });
+      res.json({ [entityType]: await simOf(res).client.deleteCreditMemo(String(body.Id), String(body.SyncToken)) });
       return;
     }
     throw new QboWireError(400, 'SIM_UNSUPPORTED', `Unsupported operation "${operation}" on ${entityType}`);
   }));
 
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if (err instanceof QboOAuthError) {
+      res.status(err.status).json({ error: err.error, error_description: err.message });
+      return;
+    }
     if (err instanceof QboWireError) {
       res.status(err.status).json(err.toFault());
       return;

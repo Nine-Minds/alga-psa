@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "scope": "Native Graph emulator suite with real Teams meeting HTTP adapters",
+  "counts": {
+    "tests": 62,
+    "passed": 62,
+    "files": 6
+  },
+  "baseRevision": "7bee1f2480",
+  "workingTreeDirty": true,
+  "logSha256": "c3745f7d82e4e47a49efbff0d029ee4d504451e3debafbe25ac6c3fbe9af99c5",
+  "limitations": [
+    "Tenant configuration and background artifact subscription scheduling are mocked.",
+    "No database, browser, bot or user SSO coverage is claimed.",
+    "Local execution only; current-source GitHub CI is not established."
+  ]
+}

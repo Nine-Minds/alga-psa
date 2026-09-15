@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { listUsers, getUserDisplayName, type UserListItem } from "./users";
+import { listUsers, getUserDisplayName, getUserPermissions, type UserListItem } from "./users";
 import type { ApiClient } from "./client";
 
 // --- Helpers ---------------------------------------------------------------
@@ -21,6 +21,19 @@ function makeUser(overrides: Partial<UserListItem> = {}): UserListItem {
 function mockClient(response: unknown): ApiClient {
   return { request: vi.fn().mockResolvedValue(response) } as unknown as ApiClient;
 }
+
+describe("getUserPermissions", () => {
+  it("reads effective permissions for the authenticated user", async () => {
+    const response = { ok: true, data: { data: { effective_permissions: ["user_schedule:update"] } } };
+    const client = mockClient(response);
+    const controller = new AbortController();
+    expect(await getUserPermissions(client, { apiKey: "key", userId: "user-1", signal: controller.signal })).toBe(response);
+    expect(client.request).toHaveBeenCalledWith({
+      method: "GET", path: "/api/v1/users/user-1/permissions",
+      headers: { "x-api-key": "key" }, signal: controller.signal,
+    });
+  });
+});
 
 // --- getUserDisplayName ----------------------------------------------------
 

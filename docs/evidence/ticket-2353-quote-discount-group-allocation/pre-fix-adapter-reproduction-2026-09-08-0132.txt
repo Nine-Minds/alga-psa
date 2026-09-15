@@ -1,0 +1,45 @@
+
+ FAIL  ../packages/billing/src/lib/adapters/quoteAdapters.test.ts > quoteAdapters discount group allocation > T008 caps a fixed discount at its eligible base so group totals cannot go negative
+AssertionError: expected 2500 to be +0 // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 2500[39m
+
+ ❯ ../packages/billing/src/lib/adapters/quoteAdapters.test.ts:573:42
+    571|     const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenan…
+    572| 
+    573|     expect(viewModel.recurring_subtotal).toBe(0);
+       |                                          ^
+    574|     const discountRow = viewModel.recurring_items?.find((item) => item…
+    575|     expect(discountRow?.total_price).toBe(-2500);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  ../packages/billing/src/lib/adapters/quoteAdapters.test.ts > quoteAdapters discount group allocation > T008 resolves a percentage service discount from target bases with existing rounding
+AssertionError: expected 6000 to be 5400 // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 5400[39m
+[31m+ 6000[39m
+
+ ❯ ../packages/billing/src/lib/adapters/quoteAdapters.test.ts:623:42
+    621|     const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenan…
+    622| 
+    623|     expect(viewModel.recurring_subtotal).toBe(6000 - 600);
+       |                                          ^
+    624|     const discountRows = viewModel.recurring_items?.filter((item) => i…
+    625|     expect(discountRows.length).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 6 passed (12)
+   Start at  01:32:42
+   Duration  1.36s (transform 421ms, setup 52ms, collect 974ms, tests 12ms, environment 0ms, prepare 27ms)
+

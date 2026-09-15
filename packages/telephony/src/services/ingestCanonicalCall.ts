@@ -4,7 +4,6 @@ import type { CanonicalCallRecord, CallMatchResult, TelephonyCallRecordRow } fro
 import { canonicalCallRecordSchema } from '../types';
 import { matchCallParty } from '../lib/callMatching';
 import { normalizeCountryCode, normalizeToE164 } from '../lib/phoneNumbers';
-import { tenantHasTelephonyFeatureAccess } from '../lib/telephonyFeatureGate';
 import {
   buildCallInteractionNotes,
   buildCallInteractionTitle,
@@ -22,7 +21,7 @@ export interface IngestCanonicalCallInput {
 }
 
 export type IngestCanonicalCallOutcome =
-  | { status: 'skipped'; reason: 'feature_disabled' | 'invalid_payload' }
+  | { status: 'skipped'; reason: 'invalid_payload' }
   | {
       status: 'ingested';
       callRecordId: string;
@@ -123,13 +122,6 @@ export async function ingestCanonicalCall(
   const call = parsed.data;
   const knex = input.knex ?? (await createTenantKnex(input.tenantId)).knex;
 
-  if (!(await tenantHasTelephonyFeatureAccess(input.tenantId))) {
-    logger.info('[Telephony] Skipping call ingestion: release feature disabled', {
-      tenantId: input.tenantId,
-      provider: call.provider,
-    });
-    return { status: 'skipped', reason: 'feature_disabled' };
-  }
 
   const defaultCountryCode = normalizeCountryCode(input.defaultCountryCode)
     ?? await resolveTenantPhoneCountryCode(knex, input.tenantId);

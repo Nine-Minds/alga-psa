@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "07f6d43f2c",
+  "workingTreeDirty": true,
+  "checks": [
+    {
+      "scope": "QBO revocation",
+      "beforeFailed": 6,
+      "packagePassed": 23,
+      "typecheck": "passed",
+      "testFile": "packages/emulators/qbo/tests/tokenRevocation.test.ts",
+      "assertions": [
+        "JSON token and Basic client authentication",
+        "Revoked access and refresh credentials rejected",
+        "Rotated grant invalidated while independent grants survive",
+        "Foreign client cannot revoke another grant"
+      ],
+      "limits": [
+        "Unknown/repeated success and grant-wide policy are RFC-based, not live Intuit parity",
+        "Existing immediate refresh rotation consumption is unchanged"
+      ]
+    },
+    {
+      "scope": "Xero revocation",
+      "beforeFailed": 4,
+      "packagePassed": 20,
+      "typecheck": "passed",
+      "testFile": "packages/emulators/xero/tests/tokenLifecycle.test.ts",
+      "assertions": [
+        "Form token and Basic client authentication",
+        "Connections and rotated credentials cleared",
+        "Invalid clients rejected before token lookup",
+        "Unknown/repeated and foreign-client requests cannot mutate unrelated grants"
+      ],
+      "limits": [
+        "One resource owner per application",
+        "Immediate access invalidation does not model live JWT propagation",
+        "Unknown/repeat behavior follows RFC 7009; no live sandbox verification"
+      ]
+    },
+    {
+      "scope": "Temporal Stripe endpoint routing",
+      "newTestsPassed": 2,
+      "relatedTestsPassed": 20,
+      "relatedFiles": 3,
+      "buildGraphTypecheck": "passed",
+      "testFile": "ee/temporal-workflows/src/config/__tests__/stripe-client-routing.test.ts",
+      "migratedConstructors": 5,
+      "assertions": [
+        "Actual subscription metadata service sends SDK POST to configured receiver",
+        "Actual tenant deletion sends SDK DELETE and persists cancellation at mocked DB seam",
+        "Deletion-only regression attempts are blocked before network connection",
+        "No override preserves live endpoint; malformed overrides rejected"
+      ],
+      "limits": [
+        "Only two migrated clients have individual HTTP journeys",
+        "Database, secret and activity context seams are mocked",
+        "Actual running Temporal worker topology still requires validation"
+      ]
+    },
+    {
+      "scope": "Combined integration and environment review",
+      "accountingPassed": 43,
+      "accountingFiles": 5,
+      "composeEditions": [
+        "community",
+        "enterprise"
+      ],
+      "renderedServices": [
+        "server",
+        "email-service",
+        "workflow-worker"
+      ],
+      "revocationVariables": [
+        "QBO_OAUTH_REVOKE_URL",
+        "XERO_OAUTH_REVOKE_URL",
+        "XERO_REVOCATION_URL"
+      ],
+      "probeSyntax": "passed",
+      "workflowLint": "passed",
+      "limits": [
+        "Rendered configuration proves values, not a running process",
+        "Workflow-worker and Temporal are not yet started in the browser topology",
+        "New real-process revocation probes remain unverified in CI"
+      ]
+    }
+  ],
+  "ci": {
+    "runId": 34256378317,
+    "testedRevision": "e0bc8af8aa1c5aaacfbb4bf456812fefde2da768",
+    "statusAtReview": "in_progress",
+    "remainingJob": "Server unit suite + coverage"
+  },
+  "planStatus": "F031 and F037 remain open; this batch closes specific routing and protocol gaps only."
+}

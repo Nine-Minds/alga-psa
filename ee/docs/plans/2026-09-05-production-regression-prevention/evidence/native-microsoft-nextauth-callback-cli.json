@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-microsoft-nextauth-callback-cli",
+  "releaseValidation": false,
+  "result": "passed",
+  "report": {
+    "schemaVersion": 1,
+    "scope": "microsoft-nextauth-callback-development",
+    "status": "passed",
+    "releaseValidation": false,
+    "configuration": {
+      "edition": "enterprise",
+      "serverLifecycle": "next-development",
+      "provider": "microsoft",
+      "authority": "synthetic-loopback",
+      "applicationAuthentication": "nextauth"
+    },
+    "stage": "completed",
+    "sourceRevision": "521c9c94d6b34fa2c06a9bf600fe5fa59b79fb4b",
+    "sourceRevisionOrigin": "git",
+    "fixtureCleanup": "removed",
+    "processCleanup": "stopped",
+    "execution": {
+      "status": "passed",
+      "rejected": {
+        "stateAccepted": false,
+        "nonceRequested": false
+      },
+      "accepted": {
+        "stateAccepted": true,
+        "nonceRequested": false
+      },
+      "tokenRequests": 1,
+      "jwksRequests": 0,
+      "limitations": [
+        "Synthetic authority replaces transport only; no live Microsoft consent proof.",
+        "Only configured checks are exercised; reported nonce/JWKS use must not be inferred."
+      ]
+    },
+    "sourceRevisionAfter": "521c9c94d6b34fa2c06a9bf600fe5fa59b79fb4b"
+  },
+  "source": {
+    "revisionBefore": "521c9c94d6b34fa2c06a9bf600fe5fa59b79fb4b",
+    "revisionAfter": "521c9c94d6b34fa2c06a9bf600fe5fa59b79fb4b",
+    "clean": false,
+    "reason": "The four tested auth harness files were untracked; other coordinated work may also have been in progress. This is not clean candidate or built-image attestation.",
+    "files": [
+      {
+        "path": "packages/auth/test-harness/check-microsoft-callback.mjs",
+        "sha256": "1a593667d031285cbc2cdc586487a1ae99ddae4f8750375713fd70ccd8b9504e",
+        "state": "untracked-at-execution"
+      },
+      {
+        "path": "packages/auth/test-harness/microsoft-oidc-authority.mjs",
+        "sha256": "8a6c6bcb77a0f7b785a2b2061168dddd38bce61af52493a6af4ef31deb1a8446",
+        "state": "untracked-at-execution"
+      },
+      {
+        "path": "packages/auth/test-harness/microsoft-oidc-preload.mjs",
+        "sha256": "f8552373fcac39b6422869117c6659c7149de6562d349263827030eeaef939bb",
+        "state": "untracked-at-execution"
+      },
+      {
+        "path": "packages/auth/test-harness/run-microsoft-callback.mjs",
+        "sha256": "6b189e101fc47b789211f2dda3b979f773bc388ea66b28bd70cbff4e12c30f56",
+        "state": "untracked-at-execution"
+      }
+    ]
+  },
+  "execution": {
+    "command": "/opt/homebrew/opt/node@25/bin/node /tmp/alga-native-callback-runner.cjs",
+    "permanentRunner": "packages/auth/test-harness/run-microsoft-callback.mjs",
+    "session": 82482,
+    "privateReport": "/tmp/alga-native-teams-3Ifju0/callback-evidence.json",
+    "runtime": "Actual Next development server, webpack, --disable-source-maps; native Node25; explicit 24GiB maximum old-space on a 48GiB Mac; reused installed dependencies and namespaced Next cache.",
+    "fixture": "Read-only pg_dump of existing initialized source into an owned disposable database, then new unique tenant/user inserted after app startup. Real production NextAuth provider/options, account-link and session callbacks. Synthetic Microsoft canonical-authority HTTP transport only; no production provider override.",
+    "assertions": [
+      "Successful callback returns dashboard redirect and session with exact fixture tenant/user/email.",
+      "Exactly one Microsoft user_auth_accounts row is persisted with the fixture OID rather than the distinct pairwise subject.",
+      "A fresh sign-in with invalid state creates no session and makes no additional token request.",
+      "Invalid-state rejection leaves the previously linked account record unchanged."
+    ],
+    "observed": {
+      "tokenRequests": 1,
+      "jwksRequests": 0,
+      "nonceRequested": false
+    }
+  },
+  "fixtureQualityTests": {
+    "command": "node --test scripts/tests/microsoft-oidc-harness.test.mjs",
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "durationMs": 1190.613666,
+    "scope": "Behavioral discovery, Basic/form token exchange, PKCE/client/redirect/grant rejection, real fixture JWT verification, and preload isolation/external-destination rejection. Fixture JWT verification is not application signature-verification evidence."
+  },
+  "failedAttempts": [
+    {
+      "session": 31836,
+      "result": "failed",
+      "reason": "Exact callback redirect URI mismatch; additional fixture cleanup failed because startup registered a jobs row for the fixture tenant. Outer owned database was dropped.",
+      "repair": "Insert the fixture only after the owned Next auth endpoint is ready; retain strict scoped cleanup."
+    },
+    {
+      "session": 37885,
+      "result": "failed",
+      "reason": "Exact callback redirect URI mismatch remained. Scoped fixture removal and process shutdown succeeded; outer owned database dropped."
+    },
+    {
+      "session": 30053,
+      "result": "failed",
+      "reason": "Sanitized diagnostics established actual http://localhost:<port>/api/auth/callback/azure-ad versus expected http://127.0.0.1:<same-port>/api/auth/callback/azure-ad.",
+      "repair": "Use localhost consistently in runner app origin and auth environment, preserving exact redirect assertion. Owned database dropped."
+    }
+  ],
+  "cleanup": {
+    "fixtureRows": "removed by scoped transaction after owned Next shutdown; tenant name/email ownership checked",
+    "ownedDatabase": "oidc_native_1788938775671",
+    "ownedDatabaseDropped": true,
+    "ownedPorts": [
+      {
+        "service": "Next",
+        "port": 56270,
+        "acceptingConnectionsAfterCleanup": false
+      },
+      {
+        "service": "Redis",
+        "port": 56254,
+        "acceptingConnectionsAfterCleanup": false
+      },
+      {
+        "service": "Temporal",
+        "port": 56255,
+        "acceptingConnectionsAfterCleanup": false
+      }
+    ],
+    "sourceDatabaseMutated": false,
+    "dockerUsed": false,
+    "privateArtifacts": "Raw application logs and credentials remain private temporary diagnostics and are not embedded here."
+  },
+  "limitations": [
+    "No live Microsoft/Entra authentication, tenant consent, or production SSO certification.",
+    "The application made zero JWKS requests; signed fixture tokens alone do not prove application signature verification.",
+    "No nonce was requested; nonce rejection and issuer rejection were not exercised by this callback run.",
+    "The native development runtime reuses local dependencies/cache and is not a clean-install, Docker image, CI, or production-runtime proof.",
+    "A single final successful run does not establish repeated or cold-start reliability.",
+    "The canonical Node fixture suite verifies the synthetic authority, not the complete NextAuth/DB callback; that boundary requires the actual runner.",
+    "This successful execution preceded the subsequent SIGTERM/SIGINT cleanup repair. The source hashes identify the executed files; external cancellation cleanup is separate validation, not covered by this pass."
+  ]
+}

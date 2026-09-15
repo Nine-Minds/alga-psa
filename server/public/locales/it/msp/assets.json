@@ -406,11 +406,17 @@
       "refreshing": "Aggiornamento in corso...",
       "refreshData": "Aggiorna dati",
       "rebootDevice": "Riavvia il dispositivo",
+      "rebooting": "Riavvio in corso...",
       "editAsset": "Modifica asset",
       "deleteAsset": "Elimina asset"
     },
     "values": {
       "unknownClient": "Cliente sconosciuto"
+    },
+    "reboot": {
+      "title": "Riavviare il dispositivo?",
+      "message": "{{name}} verrà riavviato immediatamente tramite {{provider}}. Chiunque sia connesso perderà il lavoro non salvato.",
+      "confirm": "Riavvia ora"
     }
   },
   "assetDetailTabs": {
@@ -1160,14 +1166,6 @@
       "nextMaintenanceRequired": "È richiesta la prossima data di manutenzione",
       "frequencyIntervalMin": "L'intervallo di frequenza deve essere almeno 1",
       "saveFailed": "Impossibile creare il programma di manutenzione"
-    }
-  },
-  "documentsPasswordsTab": {
-    "title": "Documenti e password",
-    "description": "Scheda combinata per documenti relativi agli asset, credenziali e relativi record protetti",
-    "passwords": {
-      "title": "Password e segreti",
-      "comingSoon": "Presto disponibile la gestione sicura delle password."
     }
   },
   "maintenanceSchedulesTab": {

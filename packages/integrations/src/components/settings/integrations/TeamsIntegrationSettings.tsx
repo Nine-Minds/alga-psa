@@ -235,8 +235,6 @@ function getTestMessageResultText(result: TeamsTestMessageResult, t: TranslateFn
   }
 
   switch (result.reason) {
-    case 'feature_disabled':
-      return t('integrations.teams.settings.diagnostics.test.featureDisabled', { defaultValue: 'Microsoft Teams integration is not enabled for this tenant.' });
     case 'integration_inactive':
       return t('integrations.teams.settings.diagnostics.test.integrationInactive', { defaultValue: 'Activate the Teams integration before sending a test message.' });
     case 'capability_disabled':
@@ -254,8 +252,6 @@ function getTestMessageResultText(result: TeamsTestMessageResult, t: TranslateFn
 
 function getDiagnosticsStepTitle(step: TeamsDiagnosticsStep, t: TranslateFn): string {
   switch (step.id) {
-    case 'feature_flag':
-      return t('integrations.teams.settings.diagnostics.steps.featureFlag', { defaultValue: 'Teams feature availability' });
     case 'integration_status':
       return t('integrations.teams.settings.diagnostics.steps.integrationStatus', { defaultValue: 'Teams integration status' });
     case 'capabilities':
@@ -281,8 +277,6 @@ function getDiagnosticsStepTitle(step: TeamsDiagnosticsStep, t: TranslateFn): st
 
 function getDiagnosticsRecommendationText(recommendation: string, t: TranslateFn): string {
   switch (recommendation) {
-    case 'Enable release-v1-5-feature for this tenant.':
-      return t('integrations.teams.settings.diagnostics.recommendation.featureFlag', { defaultValue: recommendation });
     case 'Activate the Teams integration in settings.':
       return t('integrations.teams.settings.diagnostics.recommendation.activate', { defaultValue: recommendation });
     case 'Enable personal bot and activity notifications for Teams.':

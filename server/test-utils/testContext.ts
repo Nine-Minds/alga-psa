@@ -116,7 +116,10 @@ export class TestContext {
       // when the test file mocks '@alga-psa/db' (a factory object); on the raw
       // ESM namespace vi.spyOn throws, which the catch below swallows.
       try {
-        const pkgDbModule = await import('@alga-psa/db') as Record<string, any>;
+        const pkgDbModule = await import('@alga-psa/db') as typeof import('@alga-psa/db') & {
+          // Some older test factories expose this compatibility helper.
+          getCurrentTenantId?: () => Promise<string | null>;
+        };
         if (typeof pkgDbModule.createTenantKnex === 'function') {
           vi.spyOn(pkgDbModule, 'createTenantKnex').mockImplementation(async () => ({
             knex: this.db,
@@ -124,12 +127,13 @@ export class TestContext {
           }));
         }
         if (typeof pkgDbModule.getCurrentTenantId === 'function') {
-          vi.spyOn(pkgDbModule, 'getCurrentTenantId').mockImplementation(async () => this.tenantId ?? null);
+          const legacyModule = pkgDbModule as { getCurrentTenantId: () => Promise<string | null> };
+          vi.spyOn(legacyModule, 'getCurrentTenantId').mockImplementation(async () => this.tenantId ?? null);
         }
         if (typeof pkgDbModule.runWithTenant === 'function') {
           const realRunWithTenant = pkgDbModule.runWithTenant;
           vi.spyOn(pkgDbModule, 'runWithTenant').mockImplementation(
-            async (tenant: string, fn: () => unknown) => realRunWithTenant(this.tenantId ?? tenant, fn)
+            async (tenant, fn) => realRunWithTenant(this.tenantId ?? tenant, fn)
           );
         }
       } catch {
@@ -137,11 +141,11 @@ export class TestContext {
         // whatever connection the real module provides.
       }
 
-      if (tenantModule?.getTenantForCurrentRequest) {
+      if (typeof tenantModule?.getTenantForCurrentRequest === 'function') {
         vi.spyOn(tenantModule, 'getTenantForCurrentRequest').mockImplementation(async () => this.tenantId ?? null);
       }
 
-      if (tenantModule?.getTenantFromHeaders) {
+      if (typeof tenantModule?.getTenantFromHeaders === 'function') {
         vi.spyOn(tenantModule, 'getTenantFromHeaders').mockImplementation(() => this.tenantId ?? null);
       }
 

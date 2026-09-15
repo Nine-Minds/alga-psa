@@ -94,6 +94,7 @@ export default function TicketResolutionDialog({
   }, [onClose]);
 
   const uploadSession = useTicketRichTextUploadSession({
+    commentAttachments: true,
     componentLabel: "TicketResolutionDialog",
     ticketId,
     userId: currentUserId,
@@ -120,7 +121,7 @@ export default function TicketResolutionDialog({
     JSON.stringify(content) !== JSON.stringify(DEFAULT_RESOLUTION_BLOCK);
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!statusId || !hasContent || isSubmitting) return;
+    if (!statusId || !hasContent || isSubmitting || uploadSession.isUploading) return;
     const resolutionSaved = await onConfirm(
       statusId,
       content,
@@ -145,7 +146,7 @@ export default function TicketResolutionDialog({
       <Button
         id={`${id}-confirm`}
         type="button"
-        disabled={!statusId || !hasContent || isSubmitting}
+        disabled={!statusId || !hasContent || isSubmitting || uploadSession.isUploading}
         onClick={() =>
           (
             document.getElementById(formId) as HTMLFormElement | null
@@ -197,6 +198,7 @@ export default function TicketResolutionDialog({
                 }
               >
                 <TextEditor
+            allowFileAttachments
                   id={`${id}-resolution`}
                   key={editorKey}
                   initialContent={DEFAULT_RESOLUTION_BLOCK}

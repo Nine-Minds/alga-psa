@@ -201,6 +201,7 @@ const TENANT_TABLE_METADATA = {
   ext_storage_usage: { scope: 'tenant' },
   external_files: { scope: 'tenant' },
   provider_events: { scope: 'tenant' },
+  provider_disconnect_records: { scope: 'tenant' },
   storage_configurations: { scope: 'tenant' },
   storage_providers: { scope: 'tenant' },
   storage_records: { scope: 'tenant' },

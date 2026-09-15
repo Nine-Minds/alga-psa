@@ -56,13 +56,34 @@ export type XeroCsvClientMappingsActionResult = Array<{
   lastSyncedAt: string | null;
 }> | XeroCsvActionError;
 
+async function requireAccountingCapability(
+  user: IUserWithRoles,
+  action: 'catalog_read' | 'connections_manage' | 'exports_execute',
+  message: string,
+  messageKey: string,
+): Promise<XeroCsvActionError | null> {
+  const allowed = await hasPermission(user, 'accounting_integrations', action);
+  if (!allowed) {
+    return permissionError(message, messageKey);
+  }
+  return null;
+}
+
 /**
  * Get Xero CSV integration settings for the current tenant.
  */
 export const getXeroCsvSettings = withAuth(async (
-  _user,
+  user,
   { tenant }
-): Promise<XeroCsvSettings> => {
+): Promise<XeroCsvSettings | XeroCsvActionError> => {
+  const denied = await requireAccountingCapability(
+    user,
+    'catalog_read',
+    'User does not have permission to view integration settings',
+    'msp/integrations:errors.xeroCsv.viewSettingsPermission',
+  );
+  if (denied) return denied;
+
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
 
@@ -87,13 +108,16 @@ export const updateXeroCsvSettings = withAuth(async (
   { tenant },
   updates: Partial<XeroCsvSettings>
 ): Promise<XeroCsvSettingsActionResult> => {
+  const denied = await requireAccountingCapability(
+    user,
+    'connections_manage',
+    'User does not have permission to manage integration settings',
+    'msp/integrations:errors.xeroCsv.manageIntegrationsPermission',
+  );
+  if (denied) return denied;
+
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
-
-  const canManageIntegrations = await hasPermission(user, 'billing_settings', 'update');
-  if (!canManageIntegrations) {
-    return permissionError('User does not have permission to manage integration settings', 'msp/integrations:errors.xeroCsv.manageIntegrationsPermission');
-  }
 
   // Get current settings
   const existingRow = await db.table('tenant_settings')
@@ -153,10 +177,13 @@ export const previewXeroCsvTaxImport = withAuth(async (
   { tenant },
   csvContent: string
 ): Promise<XeroCsvTaxImportPreviewActionResult> => {
-  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
-  if (!canManageBilling) {
-    return permissionError('User does not have permission to manage billing', 'msp/integrations:errors.xeroCsv.manageBillingPermission');
-  }
+  const denied = await requireAccountingCapability(
+    user,
+    'exports_execute',
+    'User does not have permission to manage billing',
+    'msp/integrations:errors.xeroCsv.manageBillingPermission',
+  );
+  if (denied) return denied;
 
   if (!csvContent || csvContent.trim().length === 0) {
     return actionError('CSV content is required', 'msp/integrations:errors.xeroCsv.contentRequired');
@@ -184,10 +211,13 @@ export const executeXeroCsvTaxImport = withAuth(async (
   { tenant },
   csvContent: string
 ): Promise<XeroCsvTaxImportActionResult> => {
-  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
-  if (!canManageBilling) {
-    return permissionError('User does not have permission to manage billing', 'msp/integrations:errors.xeroCsv.manageBillingPermission');
-  }
+  const denied = await requireAccountingCapability(
+    user,
+    'exports_execute',
+    'User does not have permission to manage billing',
+    'msp/integrations:errors.xeroCsv.manageBillingPermission',
+  );
+  if (denied) return denied;
 
   if (!csvContent || csvContent.trim().length === 0) {
     return actionError('CSV content is required', 'msp/integrations:errors.xeroCsv.contentRequired');
@@ -228,10 +258,13 @@ export const exportClientsToXeroCsv = withAuth(async (
   { tenant },
   clientIds?: string[]
 ): Promise<XeroCsvClientExportActionResult> => {
-  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
-  if (!canManageBilling) {
-    return permissionError('User does not have permission to manage billing', 'msp/integrations:errors.xeroCsv.manageBillingPermission');
-  }
+  const denied = await requireAccountingCapability(
+    user,
+    'exports_execute',
+    'User does not have permission to manage billing',
+    'msp/integrations:errors.xeroCsv.manageBillingPermission',
+  );
+  if (denied) return denied;
 
   const service = getXeroCsvClientSyncService();
   const result = await service.exportClientsToXeroCsv(clientIds);
@@ -254,10 +287,13 @@ export const previewXeroCsvClientImport = withAuth(async (
   csvContent: string,
   options?: Partial<ClientImportOptions>
 ): Promise<XeroCsvClientImportPreviewActionResult> => {
-  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
-  if (!canManageBilling) {
-    return permissionError('User does not have permission to manage billing', 'msp/integrations:errors.xeroCsv.manageBillingPermission');
-  }
+  const denied = await requireAccountingCapability(
+    user,
+    'exports_execute',
+    'User does not have permission to manage billing',
+    'msp/integrations:errors.xeroCsv.manageBillingPermission',
+  );
+  if (denied) return denied;
 
   if (!csvContent || csvContent.trim().length === 0) {
     return actionError('CSV content is required', 'msp/integrations:errors.xeroCsv.contentRequired');
@@ -286,10 +322,13 @@ export const executeXeroCsvClientImport = withAuth(async (
   csvContent: string,
   options?: Partial<ClientImportOptions>
 ): Promise<XeroCsvClientImportActionResult> => {
-  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
-  if (!canManageBilling) {
-    return permissionError('User does not have permission to manage billing', 'msp/integrations:errors.xeroCsv.manageBillingPermission');
-  }
+  const denied = await requireAccountingCapability(
+    user,
+    'exports_execute',
+    'User does not have permission to manage billing',
+    'msp/integrations:errors.xeroCsv.manageBillingPermission',
+  );
+  if (denied) return denied;
 
   if (!csvContent || csvContent.trim().length === 0) {
     return actionError('CSV content is required', 'msp/integrations:errors.xeroCsv.contentRequired');
@@ -318,10 +357,13 @@ export const getXeroCsvClientMappings = withAuth(async (
   user,
   _ctx
 ): Promise<XeroCsvClientMappingsActionResult> => {
-  const canReadBilling = await hasPermission(user, 'billing_settings', 'read');
-  if (!canReadBilling) {
-    return permissionError('User does not have permission to view billing settings', 'msp/integrations:errors.xeroCsv.viewBillingPermission');
-  }
+  const denied = await requireAccountingCapability(
+    user,
+    'catalog_read',
+    'User does not have permission to view billing settings',
+    'msp/integrations:errors.xeroCsv.viewBillingPermission',
+  );
+  if (denied) return denied;
 
   const service = getXeroCsvClientSyncService();
   return service.getClientMappings();

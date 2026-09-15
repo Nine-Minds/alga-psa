@@ -502,15 +502,15 @@ export async function registerCalendarSyncSubscriber(): Promise<void> {
 
     const eventBus = getEventBus();
 
-    // Subscribe to schedule entry events
+    // Stable IDs preserve per-subscriber deduplication across minified bundles.
     // @ts-ignore - Calendar events are extensions to the core EventType
-    await eventBus.subscribe('SCHEDULE_ENTRY_CREATED', handleScheduleEntryCreated);
+    await eventBus.subscribe('SCHEDULE_ENTRY_CREATED', handleScheduleEntryCreated, { subscriberId: 'calendar-sync:created' });
     // @ts-ignore - Calendar events are extensions to the core EventType
-    await eventBus.subscribe('SCHEDULE_ENTRY_UPDATED', handleScheduleEntryUpdated);
+    await eventBus.subscribe('SCHEDULE_ENTRY_UPDATED', handleScheduleEntryUpdated, { subscriberId: 'calendar-sync:updated' });
     // @ts-ignore - Calendar events are extensions to the core EventType
-    await eventBus.subscribe('SCHEDULE_ENTRY_DELETED', handleScheduleEntryDeleted);
+    await eventBus.subscribe('SCHEDULE_ENTRY_DELETED', handleScheduleEntryDeleted, { subscriberId: 'calendar-sync:deleted' });
     // @ts-ignore - Calendar events are extensions to the core EventType
-    await eventBus.subscribe('CALENDAR_CONFLICT_DETECTED', handleCalendarConflictDetected);
+    await eventBus.subscribe('CALENDAR_CONFLICT_DETECTED', handleCalendarConflictDetected, { subscriberId: 'calendar-sync:conflict' });
 
     logger.info('[CalendarSyncSubscriber] Successfully registered all calendar sync event handlers');
   } catch (error: any) {

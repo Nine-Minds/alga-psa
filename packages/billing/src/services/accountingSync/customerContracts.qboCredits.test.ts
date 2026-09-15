@@ -90,6 +90,7 @@ function makeFakeLedger() {
   const ledger: any = {
     findByExternalId: vi.fn(async () => null),
     findByAlgaId: vi.fn(async () => undefined),
+    findByAlgaIdAnyRealm: vi.fn(async () => []),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn()
@@ -299,6 +300,8 @@ describe('Contract 4 — applying Alga credit in Alga reconciles QBO', () => {
       return undefined;
     });
     qboReadMock.mockResolvedValueOnce({ Id: 'qbo-cm-42', Balance: cmBalance });
+    // Target invoice revalidation read (Contract 4 success path reaches it).
+    qboReadMock.mockResolvedValueOnce({ Id: 'qbo-inv-99', CustomerRef: { value: 'customer-77' } });
     return { ops, ledger };
   }
 

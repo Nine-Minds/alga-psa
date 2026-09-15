@@ -20,7 +20,12 @@ import {
   XeroTrackingCategoryOption,
   XeroTaxComponentPayload
 } from '@alga-psa/integrations/lib/xero/xeroClientService';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import {
+  readXeroServiceTargetKind,
+  XeroServiceTargetKind
+} from '@alga-psa/integrations/lib/xero/xeroServiceMappingTarget';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { CompanyAccountingSyncService } from '../../services/companySync/companySyncService';
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
@@ -146,6 +151,10 @@ export class XeroAdapter implements AccountingExportAdapter {
     if (!tenantId) {
       throw new AppError('XERO_TENANT_REQUIRED', 'Xero export requires batch tenant identifier');
     }
+    const targetRealm = context.batch.target_realm;
+    if (!targetRealm) {
+      throw new AppError('XERO_REALM_REQUIRED', 'Xero export requires an immutable batch target realm');
+    }
 
     const { knex } = await createTenantKnex();
     const companySyncService = CompanyAccountingSyncService.create({
@@ -177,8 +186,27 @@ export class XeroAdapter implements AccountingExportAdapter {
         tenantId,
         adapterType: this.type,
         invoiceId,
-        targetRealm: context.batch.target_realm ?? null
+        targetRealm
       });
+
+      // Export suppression: a tombstoned (unlinked) mapping must never be
+      // re-exported as a brand-new remote document. Unlink is an explicit
+      // stop — a later export requires an explicit relink-or-recreate choice.
+      if (!existingMapping) {
+        const unlinked = await invoiceMappingRepository.findUnlinkedInvoiceMapping({
+          tenantId,
+          adapterType: this.type,
+          invoiceId,
+          targetRealm: context.batch.target_realm ?? null
+        });
+        if (unlinked) {
+          throw new AppError(
+            'XERO_EXPORT_UNLINKED_DOCUMENT',
+            `Invoice ${invoiceId} was unlinked from Xero (external id ${unlinked.externalInvoiceId}). ` +
+              'Relink it or explicitly re-create it before exporting — nothing was written to Xero.'
+          );
+        }
+      }
       const storedChargeLineMappings = Array.isArray(
         (existingMapping?.metadata as any)?.chargeLineMappings
       )
@@ -221,7 +249,7 @@ export class XeroAdapter implements AccountingExportAdapter {
           adapterType: this.type,
           companyId: clientId,
           payload: companyPayload,
-          targetRealm: context.batch.target_realm ?? null
+          targetRealm
         });
 
         if (!mappingResolution) {
@@ -232,7 +260,7 @@ export class XeroAdapter implements AccountingExportAdapter {
           clientId,
           mappingResolution,
           this.type,
-          context.batch.target_realm ?? null
+          targetRealm
         );
         clientData.mappings.set(clientId, clientMapping);
       }
@@ -338,6 +366,46 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         const servicePeriod = resolveXeroLineServicePeriod(line);
 
+        // The mapping's target kind is explicit metadata, never inferred from
+        // the shape of the stored code: an Item Code and an Account Code can
+        // hold identical strings, and guessing would silently change the
+        // accounting classification. Legacy mappings without a kind are item
+        // mappings — that is the only semantics they ever had.
+        const targetKind: XeroServiceTargetKind | null = readXeroServiceTargetKind(
+          serviceMapping.metadata ?? null
+        );
+        if (targetKind === null) {
+          throw new AppError(
+            'XERO_SERVICE_MAPPING_KIND_INVALID',
+            `Service ${charge.service_id} has a Xero mapping with an unrecognised target kind; ` +
+              're-save the mapping as a Xero Item or a Xero Revenue Account.'
+          );
+        }
+
+        let itemCode: string | undefined;
+        let accountCode: string | undefined;
+        if (targetKind === 'account') {
+          // Account-code-only line: AccountCode is sent and ItemCode is
+          // omitted ENTIRELY — an empty ItemCode or a display name would be
+          // rejected by Xero (support case alga0002321).
+          accountCode =
+            safeString(lineResolution.accountCode) ??
+            safeString(serviceMapping.external_entity_id);
+          if (!accountCode) {
+            throw new AppError(
+              'XERO_ACCOUNT_CODE_MISSING',
+              `Service ${charge.service_id} is mapped to a Xero revenue account but no account code is stored.`
+            );
+          }
+        } else {
+          itemCode =
+            safeString(lineResolution.itemCode) ??
+            safeString(serviceMetadata.itemCode) ??
+            safeString(serviceMapping.external_entity_id);
+          accountCode =
+            safeString(lineResolution.accountCode) ?? safeString(serviceMetadata.accountCode);
+        }
+
         const payload: XeroInvoiceLinePayload = {
           lineId: line.line_id,
           externalLineItemId: knownChargeToXeroLineItemId.get(line.document_line_id) ?? null,
@@ -345,12 +413,8 @@ export class XeroAdapter implements AccountingExportAdapter {
           description,
           quantity: coerceChargeDecimal(charge.quantity) ?? 1,
           unitAmountCents,
-          itemCode:
-            safeString(lineResolution.itemCode) ??
-            safeString(serviceMetadata.itemCode) ??
-            safeString(serviceMapping.external_entity_id),
-          accountCode:
-            safeString(lineResolution.accountCode) ?? safeString(serviceMetadata.accountCode),
+          itemCode,
+          accountCode,
           taxType: taxType ?? undefined,
           taxAmountCents,
           taxComponents: taxComponents ?? null,
@@ -358,6 +422,27 @@ export class XeroAdapter implements AccountingExportAdapter {
           servicePeriodStart: servicePeriod.servicePeriodStart,
           servicePeriodEnd: servicePeriod.servicePeriodEnd
         };
+
+        // Export evidence: snapshot how this line's service mapping resolved
+        // (kind, code, realm) onto the stored line so a failed batch can be
+        // diagnosed later without reconstructing mutable mapping state. This
+        // is evidence, not an input — transform re-resolves from the current
+        // mapping on every run, so a retry after remediation picks up the fix
+        // while the refreshed snapshot keeps recording what was actually used.
+        await tenantDb(knex, tenantId).table('accounting_export_lines')
+          .where({ line_id: line.line_id })
+          .update({
+            mapping_resolution: JSON.stringify({
+              ...lineResolution,
+              serviceTarget: {
+                kind: targetKind,
+                code: targetKind === 'account' ? accountCode : itemCode ?? null,
+                realm: targetRealm,
+                source: serviceMapping.source
+              }
+            }),
+            updated_at: new Date().toISOString()
+          });
 
         lineItems.push(payload);
         chargeIds.push(line.document_line_id);
@@ -431,10 +516,13 @@ export class XeroAdapter implements AccountingExportAdapter {
     if (!tenantId) {
       throw new AppError('XERO_TENANT_REQUIRED', 'Xero export requires batch tenant identifier');
     }
+    const targetRealm = context.batch.target_realm;
+    if (!targetRealm) {
+      throw new AppError('XERO_REALM_REQUIRED', 'Xero export requires an immutable batch target realm');
+    }
 
     const { knex } = await createTenantKnex();
-    const client = await XeroClientService.create(tenantId, context.batch.target_realm ?? null);
-    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
+    const client = await XeroClientService.create(tenantId, targetRealm);
 
     const documents = transformResult.documents;
     logger.info('[XeroAdapter] delivering invoices to Xero', {
@@ -448,75 +536,91 @@ export class XeroAdapter implements AccountingExportAdapter {
       return payload.invoice;
     });
 
-    const deliveryResults = await client.createInvoices(payloads);
-    if (deliveryResults.length !== documents.length) {
-      throw new AppError('XERO_DELIVERY_MISMATCH', 'Xero returned unexpected number of invoices', {
-        expected: documents.length,
-        actual: deliveryResults.length
-      });
-    }
+    // Serialize against invoice void on the shared invoice row lock
+    // (invoiceExternalSyncLock.ts). Xero delivers the whole batch in one remote
+    // call, so every invoice row is locked FOR UPDATE and confirmed not
+    // cancelled BEFORE any remote mutation, and the mapping writes commit with
+    // those locks held. A void that already committed cancels its invoice and
+    // refuses this batch; a void that starts later queues on the same lock and
+    // re-reads the mapping under its own lock once this batch commits.
+    return withTransaction(knex, async (trx) => {
+      const invoiceIds = Array.from(new Set(documents.map((document) => document.documentId))).sort();
+      for (const invoiceId of invoiceIds) {
+        await lockInvoiceForExternalSync(trx, tenantId, invoiceId);
+      }
 
-    const deliveredLines: { lineId: string; externalDocumentRef: string }[] = [];
-
-    for (let i = 0; i < documents.length; i++) {
-      const document = documents[i];
-      const result = deliveryResults[i];
-      const payload = document.payload as unknown as XeroDocumentPayload;
-      const externalRef = result.invoiceId ?? result.documentId;
-
-      if (!externalRef) {
-        throw new AppError('XERO_DELIVERY_NO_ID', 'Xero did not return an invoice identifier', {
-          documentId: document.documentId
+      const deliveryResults = await client.createInvoices(payloads);
+      if (deliveryResults.length !== documents.length) {
+        throw new AppError('XERO_DELIVERY_MISMATCH', 'Xero returned unexpected number of invoices', {
+          expected: documents.length,
+          actual: deliveryResults.length
         });
       }
 
-      // Build charge-to-Xero-line mapping from response
-      // Xero may return line IDs in the raw response - extract if available
-      const rawInvoice = result.raw as Record<string, any> | undefined;
-      const xeroLines = rawInvoice?.LineItems ?? [];
-      const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> = [];
+      const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
 
-      for (let j = 0; j < payload.chargeIds.length && j < xeroLines.length; j++) {
-        const xeroLineItemId = xeroLines[j]?.LineItemID;
-        if (xeroLineItemId) {
-          chargeLineMappings.push({
-            chargeId: payload.chargeIds[j],
-            xeroLineItemId
+      const deliveredLines: { lineId: string; externalDocumentRef: string }[] = [];
+
+      for (let i = 0; i < documents.length; i++) {
+        const document = documents[i];
+        const result = deliveryResults[i];
+        const payload = document.payload as unknown as XeroDocumentPayload;
+        const externalRef = result.invoiceId ?? result.documentId;
+
+        if (!externalRef) {
+          throw new AppError('XERO_DELIVERY_NO_ID', 'Xero did not return an invoice identifier', {
+            documentId: document.documentId
           });
         }
+
+        // Build charge-to-Xero-line mapping from response
+        // Xero may return line IDs in the raw response - extract if available
+        const rawInvoice = result.raw as Record<string, any> | undefined;
+        const xeroLines = rawInvoice?.LineItems ?? [];
+        const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> = [];
+
+        for (let j = 0; j < payload.chargeIds.length && j < xeroLines.length; j++) {
+          const xeroLineItemId = xeroLines[j]?.LineItemID;
+          if (xeroLineItemId) {
+            chargeLineMappings.push({
+              chargeId: payload.chargeIds[j],
+              xeroLineItemId
+            });
+          }
+        }
+
+        // Store invoice mapping with charge line mappings
+        const metadata = {
+          last_exported_at: new Date().toISOString(),
+          invoiceNumber: result.invoiceNumber,
+          chargeLineMappings // Store mapping for tax import
+        };
+
+        await invoiceMappingRepository.upsertInvoiceMapping({
+          tenantId,
+          adapterType: this.type,
+          invoiceId: document.documentId,
+          externalInvoiceId: externalRef,
+          targetRealm,
+          metadata
+        });
+
+        deliveredLines.push(
+          ...document.lineIds.map((lineId) => ({
+            lineId,
+            externalDocumentRef: externalRef
+          }))
+        );
       }
 
-      // Store invoice mapping with charge line mappings
-      const metadata = {
-        last_exported_at: new Date().toISOString(),
-        invoiceNumber: result.invoiceNumber,
-        chargeLineMappings // Store mapping for tax import
+      return {
+        deliveredLines,
+        metadata: {
+          adapter: this.type,
+          deliveredInvoices: documents.length
+        }
       };
-
-      await invoiceMappingRepository.upsertInvoiceMapping({
-        tenantId,
-        adapterType: this.type,
-        invoiceId: document.documentId,
-        externalInvoiceId: externalRef,
-        targetRealm: context.batch.target_realm ?? undefined,
-        metadata
-      });
-
-      deliveredLines.push(
-        ...document.lineIds.map((lineId) => ({
-          lineId,
-          externalDocumentRef: externalRef
-        }))
-      );
-    }
-
-    return {
-      deliveredLines,
-      metadata: {
-        adapter: this.type,
-        deliveredInvoices: documents.length
-      }
-    };
+    });
   }
 
   private async loadInvoices(
@@ -610,13 +714,13 @@ export class XeroAdapter implements AccountingExportAdapter {
       .where('integration_type', this.type)
       .whereIn('alga_entity_type', ['client'])
       .whereIn('alga_entity_id', Array.from(clientIds))
+      .whereNull('deleted_at')
       .modify((qb) => {
+        // Realm-exact: a contact mapping from another Xero organisation (or a
+        // legacy realm-less row) must not select the contact this batch
+        // exports against.
         if (context.batch.target_realm) {
-          qb.andWhere((builder) => {
-            builder
-              .where('external_realm_id', context.batch.target_realm as string)
-              .orWhereNull('external_realm_id');
-          });
+          qb.andWhere('external_realm_id', context.batch.target_realm);
         } else {
           qb.andWhere((builder) => builder.whereNull('external_realm_id'));
         }
@@ -647,7 +751,14 @@ export class XeroAdapter implements AccountingExportAdapter {
       }
       const tenantId = tenant;
 
-      const client = await XeroClientService.create(tenantId, targetRealm ?? null);
+      if (!targetRealm) {
+        return {
+          success: false,
+          error: 'Xero adapter requires targetRealm to fetch invoices'
+        };
+      }
+
+      const client = await XeroClientService.create(tenantId, targetRealm);
       const xeroInvoice = await client.getInvoice(externalInvoiceRef);
 
       if (!xeroInvoice) {
@@ -663,7 +774,8 @@ export class XeroAdapter implements AccountingExportAdapter {
         .where({
           integration_type: this.type,
           alga_entity_type: 'invoice',
-          external_entity_id: externalInvoiceRef
+          external_entity_id: externalInvoiceRef,
+          external_realm_id: targetRealm
         })
         .first();
 

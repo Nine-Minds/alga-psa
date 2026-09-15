@@ -608,7 +608,7 @@ export function MicrosoftIntegrationSettings({
                   ? t('integrations.microsoft.settings.platform.description', { defaultValue: 'Connect Microsoft 365 with the application supplied by AlgaPSA. No Entra app registration is required.' })
                   : isEnterpriseEdition
                     ? t('integrations.microsoft.settings.descriptionEe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams." })
-                  : t('integrations.microsoft.settings.descriptionCe', { defaultValue: "Manage your company's Microsoft app registrations for staff sign-in and Outlook email." })}
+                  : t('integrations.microsoft.settings.descriptionCe', { defaultValue: "Manage your company's Microsoft app registrations for Outlook email." })}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -893,7 +893,7 @@ export function MicrosoftIntegrationSettings({
               <div className="mt-2 text-sm text-muted-foreground">
                 {isEnterpriseEdition
                   ? t('integrations.microsoft.settings.empty.descriptionEe', { defaultValue: 'Create a Microsoft app registration, then choose which services can use it.' })
-                  : t('integrations.microsoft.settings.empty.descriptionCe', { defaultValue: 'Create a Microsoft app registration for staff sign-in.' })}
+                  : t('integrations.microsoft.settings.empty.descriptionCe', { defaultValue: 'Create a Microsoft app registration for Outlook email.' })}
               </div>
               <Button className="mt-4" id="microsoft-empty-state-create" type="button" onClick={openCreateDialog}>
                 <Plus className="mr-2 h-4 w-4" />

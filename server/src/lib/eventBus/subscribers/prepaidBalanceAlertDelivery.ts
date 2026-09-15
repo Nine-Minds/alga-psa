@@ -1020,6 +1020,10 @@ async function processDelivery(
     // delivery-status updates go through the tenant-scoped facade inside the
     // transaction so the (tenant, delivery_id) predicate is always applied
     // (Citus shard pruning relies on it).
+    const locale = await resolveEmailLocale(tenantId, {
+      email: delivery.recipient_email ?? '',
+      userId: delivery.recipient_user_id as string,
+    });
     await knex.transaction(async (trx) => {
       const db = tenantDb(trx, tenantId);
       const authorizedRoles = await authorizedRolesForClaim(trx, tenantId, delivery);
@@ -1031,10 +1035,6 @@ async function processDelivery(
         return;
       }
       const link = managerAlertLink(delivery.alert.client_id);
-      const locale = await resolveEmailLocale(tenantId, {
-        email: delivery.recipient_email ?? '',
-        userId: delivery.recipient_user_id as string,
-      });
       // The internal channel is account-manager-only (asserted just above), so
       // the replenishment notice is always the right one here.
       const data = buildInternalAlertContextForDelivery(delivery.alert, locale, link, hasReplenishment);

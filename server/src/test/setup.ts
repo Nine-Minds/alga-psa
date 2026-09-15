@@ -63,6 +63,21 @@ afterEach(async () => {
   loadRootRtl()?.configure?.({ testIdAttribute: 'data-testid' });
 });
 
+// Testing Library's async utilities (waitFor/findBy*) default to a 1s timeout.
+// This single fork runs ~2700 files serially with v8 coverage instrumentation,
+// which stretches a render + effect settle well past 1s on CI runners — a
+// legitimately-passing waitFor then times out (a flake, not a real failure).
+// The scheduling/clients packages already raise this in their own setups for
+// the same reason; mirror it here so package component tests under the server
+// suite get the same headroom. Both RTL copies are configured (the 16.x copy
+// this file resolves and the hoisted 14.x root copy package tests resolve);
+// configure() merges, so the testIdAttribute reset above never clears it.
+if (typeof document !== 'undefined') {
+  const { configure } = await import('@testing-library/react');
+  configure({ asyncUtilTimeout: 10_000 });
+  loadRootRtl()?.configure?.({ asyncUtilTimeout: 10_000 });
+}
+
 // Edition-gated suites set EDITION / NEXT_PUBLIC_EDITION per test and not all
 // restore; in the shared fork a leaked edition flips later suites' code paths
 // (Temporal-vs-PgBoss SLA backend, Microsoft consumer availability, ...).
@@ -232,13 +247,44 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
-// Mock UI reflection hooks
-vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
-  useAutomationIdAndRegister: () => ({
-    automationIdProps: {},
-    updateMetadata: vi.fn(),
-  }),
-}));
+// jsdom does not implement scrollIntoView; components (e.g. scheduling's
+// AvailabilitySettings) call it inside requestAnimationFrame on selection
+// changes. Unstubbed, that rAF throws asynchronously AFTER the test settles,
+// and vitest reports it as an unhandled error that fails the whole run. The
+// packages' own vitest setups stub it, but under this single server suite only
+// this file's setup applies — and because the suite reuses one jsdom across
+// files with shuffled ordering, whether some earlier file happened to define it
+// was pure luck. Define it unconditionally so ordering can never expose the gap.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
+
+// Mock UI reflection hooks. The stubs sever registration (context/websocket)
+// but must stay faithful to the real hook's rendered-DOM contract: the real
+// useAutomationIdAndRegister always emits { id, 'data-automation-id' }
+// (overrideId || component.id || a useId-derived fallback), and component
+// tests locate elements via document.getElementById(...). Returning {}
+// here silently stripped ids from every @alga-psa/ui control under the
+// server suite while the packages' own vitest targets kept them.
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', async () => {
+  const { useId } = await import('react');
+  return {
+    useAutomationIdAndRegister: (
+      component: { id?: string; type?: string },
+      _actionsOrShouldRegister?: unknown,
+      overrideId?: string
+    ) => {
+      const reactId = useId();
+      const finalId =
+        overrideId || component?.id || `${component?.type ?? 'component'}-${reactId}`;
+      return {
+        automationIdProps: { id: finalId, 'data-automation-id': finalId },
+        updateMetadata: vi.fn(),
+        updateActions: vi.fn(),
+      };
+    },
+  };
+});
 
 vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
   useRegisterUIComponent: () => vi.fn(),
@@ -359,6 +405,7 @@ vi.mock('@alga-psa/auth', async () => {
   const getApiKeyUserOverride = () => apiKeyUserStorage.getStore();
 
   const getCurrentUser = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
+  const getCurrentUserWithRevocationCheck = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
   const hasPermission = vi.fn().mockResolvedValue(true);
 
   const resolveTenant = async (user: any): Promise<string> => {
@@ -416,6 +463,7 @@ vi.mock('@alga-psa/auth', async () => {
     getSession: vi.fn().mockResolvedValue(null),
     getSessionWithRevocationCheck: vi.fn().mockResolvedValue(null),
     getCurrentUser,
+    getCurrentUserWithRevocationCheck,
     hasPermission,
     withAuth,
     withAuthCheck,

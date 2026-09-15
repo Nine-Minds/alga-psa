@@ -27,10 +27,11 @@ const FOLLOW_UP_CARD = '63db81a4-76cf-4486-aca3-a09f7c02efb1';
  * Six entries left it when the 2026-08-27 usage audit promoted
  * billing_profile_report:read, credential:read, cycle_count:approve,
  * import_export:manage, import_export:read and marketing:manage into the
- * catalog.
+ * catalog. billing:manage then left it once the Xero CSV export/import routes
+ * moved to the granular accounting_integrations:exports_execute permission and
+ * no production code checked billing:manage any longer.
  */
 const KNOWN_UNDECLARED = [
-  'billing.manage',
   'role.read',
   'tenant.create',
   'user.admin',
@@ -73,7 +74,7 @@ describe('permission catalog contract', () => {
 
     expect(missing, `Add new production permissions to the catalog; never extend KNOWN_UNDECLARED (${FOLLOW_UP_CARD})`).toEqual([]);
     expect(stale, `Remove stale quarantine entries tracked by ${FOLLOW_UP_CARD}`).toEqual([]);
-    expect(KNOWN_UNDECLARED).toHaveLength(5);
+    expect(KNOWN_UNDECLARED).toHaveLength(4);
   });
 
   it('retains product-specific grants and the secrets screen grants', () => {
@@ -91,5 +92,21 @@ describe('permission catalog contract', () => {
     }
     expect(ACTIVE_PERMISSIONS.filter((permission: { resource: string }) => permission.resource === 'secrets')
       .map((permission: { action: string }) => permission.action).sort()).toEqual(['manage', 'view']);
+  });
+
+  it('declares credential:audit with supervisory default grants (msp only)', () => {
+    const audit = ACTIVE_PERMISSIONS.find(
+      (permission: { resource: string; action: string }) =>
+        permission.resource === 'credential' && permission.action === 'audit'
+    );
+    expect(audit).toBeDefined();
+    expect(audit.msp).toBe(true);
+    expect(audit.client).toBe(false);
+    expect(audit.products).toEqual(expect.arrayContaining(['algadesk', 'psa']));
+    // The audit trail is an oversight surface: technicians can reveal but do
+    // not see the report of who else did. Admin on both products; Manager on
+    // PSA.
+    expect(audit.defaultGrants.algadesk).toEqual(['msp:Admin']);
+    expect(audit.defaultGrants.psa).toEqual(['msp:Admin', 'msp:Manager']);
   });
 });

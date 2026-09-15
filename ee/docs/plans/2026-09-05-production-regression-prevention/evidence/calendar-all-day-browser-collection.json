@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "scope": "Microsoft all-day browser recovery journey",
+  "file": "e2e-tests/tests/microsoft-calendar.spec.ts",
+  "sourceSha256": "d83c183628489780310e61c6d263ec948d91e0c1312e182265ecca4e1cd2011a",
+  "collection": {
+    "edition": "enterprise",
+    "cases": 4,
+    "status": "passed"
+  },
+  "executionVerified": false,
+  "assertions": [
+    "Europe/Berlin browser timezone.",
+    "Inbound exclusive midnight boundaries persisted.",
+    "Real editor time fields show midnight.",
+    "Title edit preserves dates while provider returns 429.",
+    "Retry preserves isAllDay and start/end without duplicating mapping."
+  ],
+  "limitations": [
+    "Collection is not browser execution.",
+    "Existing native app listeners are present but current source/emulator build freshness has not been established.",
+    "Current production browser CI runs the earlier published b0 revision, not this follow-up."
+  ]
+}

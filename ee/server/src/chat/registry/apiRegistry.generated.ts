@@ -16095,7 +16095,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/email/webhooks/microsoft",
     "displayName": "Receive Microsoft Graph email webhook",
     "summary": "Receive Microsoft Graph email webhook",
-    "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, validates clientState against the stored webhook_verification_token when configured, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
+    "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, requires a timing-safe clientState match against the stored webhook_verification_token, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
     "tags": [
       "Email"
     ],
@@ -16210,6 +16210,382 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "tenant"
       ]
     }
+  },
+  {
+    "id": "get-_api_v1_email_templates",
+    "method": "get",
+    "path": "/api/v1/email/templates",
+    "displayName": "List email templates",
+    "summary": "List email templates",
+    "description": "Returns every notification email template available to the tenant, with the system default and the tenant override merged into one row per name and language. Use is_customized to tell which templates the tenant has edited.",
+    "tags": [
+      "Email Templates",
+      "Notifications"
+    ],
+    "rbacResource": "settings",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "name",
+        "in": "query",
+        "required": false,
+        "description": "Filter to a single template name.",
+        "schema": {
+          "type": "string",
+          "description": "Filter to a single template name."
+        }
+      },
+      {
+        "name": "language",
+        "in": "query",
+        "required": false,
+        "description": "Filter to one language code.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "en",
+            "en-AU",
+            "fr",
+            "es",
+            "de",
+            "nl",
+            "it",
+            "pl",
+            "pt",
+            "xx",
+            "yy"
+          ],
+          "description": "Filter to one language code."
+        }
+      },
+      {
+        "name": "category",
+        "in": "query",
+        "required": false,
+        "description": "Filter by notification category name.",
+        "schema": {
+          "type": "string",
+          "description": "Filter by notification category name."
+        }
+      },
+      {
+        "name": "customized",
+        "in": "query",
+        "required": false,
+        "description": "Filter to templates the tenant has customized (true) or not (false).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Filter to templates the tenant has customized (true) or not (false)."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/EmailTemplateSummary"
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Find the templates this tenant has customized",
+        "request": {
+          "query": {
+            "language": "en",
+            "customized": "true"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_email_templates_name",
+    "method": "get",
+    "path": "/api/v1/email/templates/{name}",
+    "displayName": "Get email template",
+    "summary": "Get email template",
+    "description": "Returns one email template: the read-only system default, the tenant override when there is one, and the effective content that would be sent.",
+    "tags": [
+      "Email Templates",
+      "Notifications"
+    ],
+    "rbacResource": "settings",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+        "schema": {
+          "type": "string",
+          "description": "Kebab-case template name, such as ticket-created or invoice-email."
+        }
+      },
+      {
+        "name": "language",
+        "in": "query",
+        "required": false,
+        "description": "Language code to read. Defaults to the first language the template exists in.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "en",
+            "en-AU",
+            "fr",
+            "es",
+            "de",
+            "nl",
+            "it",
+            "pl",
+            "pt",
+            "xx",
+            "yy"
+          ],
+          "description": "Language code to read. Defaults to the first language the template exists in."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/EmailTemplateDetail"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Read a template before editing it",
+        "request": {
+          "query": {
+            "language": "en"
+          },
+          "params": {
+            "name": "ticket-created"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "put-_api_v1_email_templates_name",
+    "method": "put",
+    "path": "/api/v1/email/templates/{name}",
+    "displayName": "Update email template",
+    "summary": "Update email template",
+    "description": "Writes the tenant override for one template and language. The first write clones the system default, then applies only the fields provided, so anything left out keeps the standard content. System templates are never modified, and other languages of the same template are untouched. Read the template first so existing customizations are not overwritten by accident.",
+    "tags": [
+      "Email Templates",
+      "Notifications"
+    ],
+    "rbacResource": "settings",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+        "schema": {
+          "type": "string",
+          "description": "Kebab-case template name, such as ticket-created or invoice-email."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "language_code": {
+          "type": "string",
+          "enum": [
+            "en",
+            "en-AU",
+            "fr",
+            "es",
+            "de",
+            "nl",
+            "it",
+            "pl",
+            "pt",
+            "xx",
+            "yy"
+          ],
+          "description": "Language of the template being edited."
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 998,
+          "description": "New subject line. Supports {{variable}} placeholders."
+        },
+        "html_content": {
+          "type": "string",
+          "minLength": 1,
+          "description": "New HTML body. Supports {{variable}} placeholders."
+        },
+        "text_content": {
+          "type": "string",
+          "minLength": 1,
+          "description": "New plain-text body."
+        }
+      },
+      "required": [
+        "language_code"
+      ],
+      "description": "Fields to write onto the tenant override. At least one of subject, html_content or text_content is required."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/EmailTemplateDetail"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Reword the subject of the ticket-created email",
+        "request": {
+          "body": {
+            "language_code": "en",
+            "subject": "New ticket {{ticket.ticketNumber}}: {{ticket.title}}"
+          },
+          "params": {
+            "name": "ticket-created"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "delete-_api_v1_email_templates_name",
+    "method": "delete",
+    "path": "/api/v1/email/templates/{name}",
+    "displayName": "Reset email template",
+    "summary": "Reset email template",
+    "description": "Discards the tenant override for one template and language, so the standard template is sent again. Any hand-written customization for that language is lost.",
+    "tags": [
+      "Email Templates",
+      "Notifications"
+    ],
+    "rbacResource": "settings",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+        "schema": {
+          "type": "string",
+          "description": "Kebab-case template name, such as ticket-created or invoice-email."
+        }
+      },
+      {
+        "name": "language",
+        "in": "query",
+        "required": true,
+        "description": "Language code whose tenant override is removed.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "en",
+            "en-AU",
+            "fr",
+            "es",
+            "de",
+            "nl",
+            "it",
+            "pl",
+            "pt",
+            "xx",
+            "yy"
+          ],
+          "description": "Language code whose tenant override is removed."
+        }
+      }
+    ]
   },
   {
     "id": "get-_api_ext_extensionid_path",
@@ -24090,7 +24466,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/xero-csv/client-export",
     "displayName": "Export clients as Xero Contacts CSV",
     "summary": "Export clients as Xero Contacts CSV",
-    "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires billing:manage.",
+    "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -24141,7 +24517,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/xero-csv/client-import",
     "displayName": "Import Xero Contacts CSV",
     "summary": "Import Xero Contacts CSV",
-    "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires billing:manage.",
+    "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -24226,7 +24602,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/xero-csv/tax-import",
     "displayName": "Import Xero invoice tax CSV",
     "summary": "Import Xero invoice tax CSV",
-    "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires billing:manage.",
+    "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -24279,7 +24655,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/{batchId}/download",
     "displayName": "Download an accounting export batch",
     "summary": "Download an accounting export batch",
-    "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires billing_settings:update.",
+    "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -33879,6 +34255,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "icon": {
           "type": "string",
           "maxLength": 50
+        },
+        "portal_selectable": {
+          "type": "boolean"
         }
       },
       "description": "Payload for updating a status. All fields are optional."
@@ -55908,6 +56287,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/interactions",
     "displayName": "Create an interaction",
     "summary": "Create an interaction",
+    "description": "Optionally creates a linked AlgaPSA calendar entry in the same transaction. Set create_schedule_entry and start_time; end_time defaults to start_time plus duration (or 30 minutes). schedule_assigned_user_ids defaults to the API key owner; booking other users requires user_schedule:update. This does not create a Teams meeting.",
     "tags": [
       "Interactions v1"
     ],
@@ -55962,6 +56342,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "interaction_date": {
           "type": "string",
           "format": "date-time"
+        },
+        "create_schedule_entry": {
+          "type": "boolean",
+          "description": "Also book an AlgaPSA calendar entry. Requires start_time; defaults to false."
+        },
+        "schedule_assigned_user_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Calendar assignees; omitted or empty defaults to the API key owner. Assigning others requires user_schedule:update."
         }
       },
       "required": [

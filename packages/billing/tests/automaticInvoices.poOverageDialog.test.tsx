@@ -9,7 +9,7 @@
  *   formatCurrency, overstating the overage 100x ($612.50 rendered as "$61,250.00").
  */
 import React from 'react';
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
@@ -20,6 +20,11 @@ const mockGetPurchaseOrderOverageForSelectionInput = vi.fn();
 const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn();
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 const mockGenerateInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
+
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -112,32 +117,7 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ containerClassName: _containerClassName, ...props }: any) => <input {...props} />,
 }));
-vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  // The component drives parent-row selection through onClick (for shift-range
-  // support) and calls event.preventDefault(). On a native jsdom checkbox that
-  // cancels the click activation and reverts `.checked`, so we hand the
-  // component a no-op preventDefault instead.
-  Checkbox: ({ indeterminate: _indeterminate, onClick, ...props }: any) => (
-    <input
-      type="checkbox"
-      data-indeterminate={_indeterminate ? 'true' : 'false'}
-      {...props}
-      onClick={
-        onClick
-          ? (event: any) => {
-            onClick({
-              shiftKey: event.shiftKey,
-              metaKey: event.metaKey,
-              ctrlKey: event.ctrlKey,
-              stopPropagation: () => event.stopPropagation(),
-              preventDefault: () => {},
-            });
-          }
-          : undefined
-      }
-    />
-  ),
-}));
+
 vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
 }));
@@ -234,8 +214,16 @@ function buildMember(index: number) {
   };
 }
 
+let AutomaticInvoices: typeof import('../src/components/billing-dashboard/AutomaticInvoices').default;
+
+// Compile the component graph once in explicit setup. On cold parallel CI this
+// consumed the first regression's entire 20s budget; the UI assertions below
+// still retain their original test and polling limits.
+beforeAll(async () => {
+  AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+}, 60_000);
+
 async function selectParentAndClickGenerate() {
-  const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
   render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
   const parentCheckbox = await waitFor(() => {
@@ -252,7 +240,6 @@ async function selectParentAndClickGenerate() {
 }
 
 async function selectParentAndClickPreview() {
-  const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
   render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
   const parentCheckbox = await waitFor(() => {
@@ -294,7 +281,6 @@ function buildSinglePreviewSuccess() {
 }
 
 async function selectSingleChildAndOpenPreview() {
-  const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
   render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
   const toggle = await waitFor(() => {
@@ -330,6 +316,7 @@ describe('AutomaticInvoices PO overage dialog', () => {
   });
 
   beforeEach(() => {
+    releaseFlag.enabled = true;
     cleanup();
     mockGetAvailableRecurringDueWork.mockReset();
     mockGetPurchaseOrderOverageForSelectionInput.mockReset();

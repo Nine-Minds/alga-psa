@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyFieldRangeRequests } from '../utils/fieldRange';
 import { ZodSchema, ZodError } from 'zod';
-import { ApiKeyService } from '@alga-psa/auth';
+import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
 import { hasPermission } from '../../auth/rbac';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import type { SafeApiUser } from '@alga-psa/users';
@@ -265,6 +265,13 @@ export interface ApiKeyAuthOptions {
   requireTenantForNmStore?: boolean;
 }
 
+function validateRequestApiKey(req: ApiRequest, apiKey: string) {
+  const tenantId = req.headers.get('x-tenant-id');
+  return tenantId
+    ? ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId)
+    : ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+}
+
 let CACHED_NM_STORE_KEY: string | null = null;
 let LAST_NM_STORE_FETCH = 0;
 const NM_STORE_CACHE_TTL_MS = 60_000; // 1 minute
@@ -317,7 +324,7 @@ export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
         }
 
         // Default tenant API key path
-        const keyRecord = await ApiKeyService.validateApiKey(apiKey);
+        const keyRecord = await validateRequestApiKey(req, apiKey);
         if (!keyRecord) {
           throw new UnauthorizedError('Invalid API key');
         }
@@ -344,7 +351,7 @@ export async function withAuth(handler: (req: ApiRequest) => Promise<NextRespons
         throw new UnauthorizedError('API key required');
       }
 
-      const keyRecord = await ApiKeyService.validateApiKey(apiKey);
+      const keyRecord = await validateRequestApiKey(req, apiKey);
 
       if (!keyRecord) {
         throw new UnauthorizedError('Invalid API key');

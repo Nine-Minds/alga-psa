@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { Temporal } from '@js-temporal/polyfill';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
 /** Vendor-shaped error the wire shell turns into an HTTP response. */
@@ -10,6 +12,8 @@ export class GraphApiError extends Error {
 
 export interface GraphMessage {
   id: string;
+  parentFolderId: string;
+  internetMessageHeaders: Array<{ name: string; value: string }>;
   receivedDateTime: string;
   subject: string;
   bodyPreview: string;
@@ -117,7 +121,30 @@ export interface GraphCalendarEvent {
   body: unknown;
   attendees: unknown[];
   createdDateTime: string;
+  location?: unknown;
+  showAs?: unknown;
+  sensitivity?: unknown;
+  isAllDay?: unknown;
+  singleValueExtendedProperties?: unknown;
+  lastModifiedDateTime?: string;
+  recurrence?: unknown;
 }
+
+type CalendarDeltaItem = GraphCalendarEvent | { id: string; '@removed': { reason: 'deleted' } };
+type CalendarDeltaSnapshot = {
+  clientId: string;
+  organizerUserId: string;
+  start: number;
+  end: number;
+  fingerprints: Map<string, string>;
+};
+type CalendarDeltaPage = {
+  clientId: string;
+  items: CalendarDeltaItem[];
+  offset: number;
+  pageSize: number;
+  deltaToken: string;
+};
 
 export type MeetingArtifactKind = 'recording' | 'transcript';
 
@@ -313,6 +340,7 @@ export interface SeedMessageInput {
   from?: string;
   to?: string;
   receivedDateTime?: string;
+  authenticationResults?: string;
 }
 
 export interface SeedOrganizationInput {
@@ -375,7 +403,7 @@ export class MsGraphCore implements EmulatorCore {
     nonce?: string;
     scope?: string;
   }>();
-  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean }>();
+  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string }>();
   private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
   readonly messages = new Map<string, GraphMessage>();
   readonly subscriptions = new Map<string, GraphSubscription>();
@@ -387,6 +415,8 @@ export class MsGraphCore implements EmulatorCore {
   readonly chats = new Map<string, GraphChat>();
   readonly chatMessages = new Map<string, GraphChatMessage[]>();
   readonly calendarEvents = new Map<string, GraphCalendarEvent>();
+  private readonly calendarDeltaSnapshots = new Map<string, CalendarDeltaSnapshot>();
+  private readonly calendarDeltaPages = new Map<string, CalendarDeltaPage>();
   readonly onlineMeetings = new Map<string, GraphOnlineMeeting>();
   /** Keyed by meeting id; holds both recordings and transcripts. */
   readonly meetingArtifacts = new Map<string, GraphMeetingArtifact[]>();
@@ -425,6 +455,8 @@ export class MsGraphCore implements EmulatorCore {
     this.chats.clear();
     this.chatMessages.clear();
     this.calendarEvents.clear();
+    this.calendarDeltaSnapshots.clear();
+    this.calendarDeltaPages.clear();
     this.onlineMeetings.clear();
     this.meetingArtifacts.clear();
     this.callRecords.clear();
@@ -477,7 +509,7 @@ export class MsGraphCore implements EmulatorCore {
 
   grantToken(input: TokenGrantInput): {
     access_token: string;
-    /** Absent for the app-only client_credentials grant, exactly like Entra. */
+    /** Delegated grants require offline_access; app-only grants never include it. */
     refresh_token?: string;
     expires_in: number;
     token_type: 'Bearer';
@@ -502,19 +534,17 @@ export class MsGraphCore implements EmulatorCore {
       if (!refresh || refresh.revoked || refresh.clientId !== input.client_id) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
-      return this.issueTokens(String(input.client_id), String(input.refresh_token));
+      return this.issueTokens(String(input.client_id), String(input.refresh_token), { scope: refresh.scope });
     }
     if (input.grant_type === 'client_credentials') {
       // App-only flow used by the Teams bot connector
       // (scope https://api.botframework.com/.default) and by Graph
       // app tokens. No user, so no refresh token is issued.
-      const { refresh_token: issuedRefreshToken, ...appOnly } = this.issueTokens(
+      return this.issueTokens(
         String(input.client_id),
         undefined,
         { scope: input.scope || 'https://graph.microsoft.com/.default', appOnly: true },
       );
-      this.refreshTokens.delete(issuedRefreshToken);
-      return appOnly;
     }
     throw new GraphApiError(400, { error: 'unsupported_grant_type' });
   }
@@ -531,31 +561,42 @@ export class MsGraphCore implements EmulatorCore {
     claims?: { nonce?: string; scope?: string; appOnly?: boolean }
   ) {
     const tenantId = EMULATED_TENANT_ID;
+    // OAuth requests accept resource-qualified Graph scopes; Graph access
+    // tokens expose permission names in scp, which the application validates.
+    const scope = (claims?.scope || 'Mail.Read Mail.Read.Shared offline_access')
+      .split(/\s+/).filter(Boolean)
+      .map(value => value.replace(/^https:\/\/graph\.microsoft\.com\//i, ''))
+      .join(' ');
     // App-only tokens carry the consented application permissions in `roles`
     // and no `scp`; delegated tokens are the other way round. Setup probes
     // read `roles` straight off the token, exactly as Entra issues it.
     const accessToken = this.encodeJwt({
+      // Expiry has second precision. Distinguish every grant so simultaneous
+      // refreshes and clients cannot overwrite another token's stored identity.
+      jti: this.newId('access'),
       tid: tenantId,
       iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
       ...(claims?.appOnly
         ? { roles: this.clients.get(clientId)?.appRoles ?? [] }
-        : { scp: claims?.scope || 'Mail.Read Mail.Read.Shared offline_access' }),
+        : { scp: scope }),
       aud: '00000003-0000-0000-c000-000000000000',
       exp: Math.floor((this.nowMs() + this.accessTokenTtlSeconds * 1000) / 1000),
     });
-    const refreshToken =
-      existingRefreshToken && !this.rotateRefreshTokens ? existingRefreshToken : this.newId('refresh');
+    const allowRefresh = !claims?.appOnly && scope.split(/\s+/).includes('offline_access');
+    const refreshToken = allowRefresh
+      ? (existingRefreshToken && !this.rotateRefreshTokens ? existingRefreshToken : this.newId('refresh'))
+      : undefined;
     this.accessTokens.set(accessToken, {
       clientId,
       expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000,
     });
-    this.refreshTokens.set(refreshToken, { clientId, revoked: false });
+    if (refreshToken) this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope });
     if (existingRefreshToken && existingRefreshToken !== refreshToken) {
       this.refreshTokens.delete(existingRefreshToken);
     }
     return {
       access_token: accessToken,
-      refresh_token: refreshToken,
+      ...(refreshToken ? { refresh_token: refreshToken } : {}),
       expires_in: this.accessTokenTtlSeconds,
       token_type: 'Bearer' as const,
       ...(claims?.nonce
@@ -731,10 +772,23 @@ export class MsGraphCore implements EmulatorCore {
 
   // --- Mail ---
 
+  getMailFolder(id: string): { id: string; displayName: string } {
+    // Only Inbox is modeled. Its opaque ID is also accepted by the folder
+    // routes; unknown folders must never silently read Inbox messages.
+    if (id.toLowerCase() !== 'inbox' && id !== 'emulated-inbox-folder') {
+      throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound', message: 'Mailbox folder not found' } });
+    }
+    return { id: 'emulated-inbox-folder', displayName: 'Inbox' };
+  }
+
   addMessage(input: SeedMessageInput): GraphMessage {
     const id = input.id ?? this.newId('message');
     const message: GraphMessage = {
       id,
+      parentFolderId: this.getMailFolder('inbox').id,
+      internetMessageHeaders: input.authenticationResults
+        ? [{ name: 'Authentication-Results', value: input.authenticationResults }]
+        : [],
       receivedDateTime: input.receivedDateTime ?? this.env.clock.now().toISOString(),
       subject: input.subject ?? 'Emulated support email',
       bodyPreview: input.body ?? 'Hello from the Graph emulator',
@@ -769,6 +823,7 @@ export class MsGraphCore implements EmulatorCore {
       `From: ${message.from.emailAddress.address}`,
       `To: ${message.toRecipients.map((r) => r.emailAddress.address).join(', ')}`,
       `Subject: ${message.subject}`,
+      ...message.internetMessageHeaders.map(header => `${header.name}: ${header.value}`),
       'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=utf-8',
       '',
@@ -779,7 +834,11 @@ export class MsGraphCore implements EmulatorCore {
   // --- Subscriptions ---
 
   createSubscription(clientId: string, input: Omit<GraphSubscription, 'id' | 'clientId'>): GraphSubscription {
-    const subscription: GraphSubscription = { ...input, id: this.newId('subscription'), clientId };
+    // Graph exposes subscription IDs as GUIDs. Derive one from the seeded ID
+    // stream so reset/replay stays deterministic without loosening the wire shape.
+    const hash = createHash('sha256').update(this.newId('subscription')).digest('hex');
+    const id = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+    const subscription: GraphSubscription = { ...input, id, clientId };
     this.subscriptions.set(subscription.id, subscription);
     return subscription;
   }
@@ -920,6 +979,7 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   createCalendarEvent(organizerUserId: string, body: Record<string, unknown>): GraphCalendarEvent {
+    this.validateCalendarBoundaries(body);
     const isOnlineMeeting = body.isOnlineMeeting === true;
     const subject = typeof body.subject === 'string' ? body.subject : null;
     const start = (body.start as { dateTime?: string } | undefined) ?? null;
@@ -942,6 +1002,13 @@ export class MsGraphCore implements EmulatorCore {
       onlineMeetingId: meeting?.id ?? null,
       body: body.body ?? null,
       attendees: Array.isArray(body.attendees) ? body.attendees : [],
+      location: body.location,
+      showAs: body.showAs,
+      sensitivity: body.sensitivity,
+      isAllDay: body.isAllDay,
+      singleValueExtendedProperties: body.singleValueExtendedProperties,
+      recurrence: body.recurrence,
+      lastModifiedDateTime: this.env.clock.now().toISOString(),
       createdDateTime: this.env.clock.now().toISOString(),
     };
     this.calendarEvents.set(event.id, event);
@@ -958,12 +1025,32 @@ export class MsGraphCore implements EmulatorCore {
 
   updateCalendarEvent(eventId: string, patch: Record<string, unknown>): GraphCalendarEvent {
     const event = this.getCalendarEvent(eventId);
+    this.validateCalendarBoundaries({ ...event, ...patch });
     if (typeof patch.subject === 'string') event.subject = patch.subject;
     if (patch.start !== undefined) event.start = patch.start;
     if (patch.end !== undefined) event.end = patch.end;
     if (patch.body !== undefined) event.body = patch.body;
     if (Array.isArray(patch.attendees)) event.attendees = patch.attendees;
+    for (const key of ['location', 'showAs', 'sensitivity', 'isAllDay', 'singleValueExtendedProperties', 'recurrence'] as const) {
+      if (patch[key] !== undefined) event[key] = patch[key];
+    }
+    event.lastModifiedDateTime = this.env.clock.now().toISOString();
     return event;
+  }
+
+  private validateCalendarBoundaries(body: Record<string, unknown>): void {
+    const boundaries = ['start', 'end'].map(key => {
+      const value = body[key] as { dateTime?: unknown; timeZone?: unknown; date?: unknown } | undefined;
+      if (!value || typeof value.dateTime !== 'string' || typeof value.timeZone !== 'string'
+        || !value.timeZone || value.date !== undefined || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value.dateTime)) {
+        throw new GraphApiError(400, { error: { code: 'UnableToDeserializePostBody', message: `${key} must be a dateTimeTimeZone value.` } });
+      }
+      return { dateTime: value.dateTime, timeZone: value.timeZone };
+    });
+    if (body.isAllDay === true && (boundaries[0].timeZone !== boundaries[1].timeZone
+      || boundaries.some(value => !/T00:00:00(?:\.0+)?(?:Z|[+-]00:00)?$/.test(value.dateTime)))) {
+      throw new GraphApiError(400, { error: { code: 'ErrorInvalidRequest', message: 'All-day start and end must be midnight in the same time zone.' } });
+    }
   }
 
   deleteCalendarEvent(eventId: string): void {
@@ -973,6 +1060,84 @@ export class MsGraphCore implements EmulatorCore {
       this.onlineMeetings.delete(event.onlineMeetingId);
       this.meetingArtifacts.delete(event.onlineMeetingId);
     }
+  }
+
+  /** Primary-calendar, single-instance UTC delta model. Tokens are per-run and
+   * client-bound; pages freeze one sync round while later writes await the next.
+   * Recurrence expansion and non-UTC zone conversion are explicitly unsupported.
+   */
+  calendarDelta(clientId: string, organizerUserId: string, input: {
+    start?: string; end?: string; deltaToken?: string; skipToken?: string; pageSize?: number;
+  }): { value: CalendarDeltaItem[]; deltaToken?: string; skipToken?: string } {
+    const invalidToken = () => new GraphApiError(410, { error: { code: 'SyncStateNotFound', message: 'Restart calendar synchronization' } });
+    const page = (state: CalendarDeltaPage) => {
+      const value = structuredClone(state.items.slice(state.offset, state.offset + state.pageSize));
+      const offset = state.offset + state.pageSize;
+      if (offset < state.items.length) {
+        const skipToken = this.newId('calendar-page');
+        this.calendarDeltaPages.set(skipToken, { ...state, offset });
+        return { value, skipToken };
+      }
+      return { value, deltaToken: state.deltaToken };
+    };
+    if (input.skipToken) {
+      const state = this.calendarDeltaPages.get(input.skipToken);
+      if (!state || state.clientId !== clientId) throw invalidToken();
+      return page(state);
+    }
+    const previous = input.deltaToken ? this.calendarDeltaSnapshots.get(input.deltaToken) : undefined;
+    if (input.deltaToken && (!previous || previous.clientId !== clientId || previous.organizerUserId !== organizerUserId)) throw invalidToken();
+    const parseWindow = (value = '') => Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`);
+    const start = previous?.start ?? parseWindow(input.start);
+    const end = previous?.end ?? parseWindow(input.end);
+    const pageSize = input.pageSize ?? 100;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) {
+      throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Provide an ordered date window and page size from 1 to 1000' } });
+    }
+    const eventTime = (value: unknown) => {
+      const date = value as { dateTime?: string; timeZone?: string } | null;
+      let zone: Temporal.TimeZone;
+      try { zone = Temporal.TimeZone.from(date?.timeZone || 'UTC') as Temporal.TimeZone; }
+      catch {
+        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Calendar delta requires a supported IANA timezone or UTC' } });
+      }
+      try {
+        const text = date?.dateTime ?? '';
+        // Explicit offsets identify an instant. Offset-free dateTime values are
+        // wall clocks in the supplied zone, never in the host machine timezone.
+        return /(?:Z|[+-]\d{2}:\d{2})$/i.test(text)
+          ? Temporal.Instant.from(text).epochMilliseconds
+          : Temporal.PlainDateTime.from(text).toZonedDateTime(zone, { disambiguation: 'reject' }).epochMilliseconds;
+      } catch {
+        throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Invalid or ambiguous calendar event date' } });
+      }
+    };
+    const fingerprints = new Map<string, string>();
+    const items: CalendarDeltaItem[] = [];
+    for (const event of this.calendarEvents.values()) {
+      if (event.organizerUserId !== organizerUserId) continue;
+      if (event.recurrence) throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Recurring calendar delta is not modeled' } });
+      // calendarView includes events overlapping its window, not only those
+      // entirely contained in it.
+      const eventStart = eventTime(event.start);
+      const eventEnd = eventTime(event.end);
+      if (eventStart >= end || eventEnd <= start) continue;
+      const fingerprint = JSON.stringify(event);
+      fingerprints.set(event.id, fingerprint);
+      if (previous?.fingerprints.get(event.id) !== fingerprint) items.push({
+        ...structuredClone(event),
+        // Graph calendarView/delta defaults response dates to UTC. Keep stored
+        // vendor state intact so token comparisons track actual source edits.
+        start: { dateTime: new Date(eventStart).toISOString(), timeZone: 'UTC' },
+        end: { dateTime: new Date(eventEnd).toISOString(), timeZone: 'UTC' },
+      });
+    }
+    for (const id of previous?.fingerprints.keys() ?? []) {
+      if (!fingerprints.has(id)) items.push({ id, '@removed': { reason: 'deleted' } });
+    }
+    const deltaToken = this.newId('calendar-delta');
+    this.calendarDeltaSnapshots.set(deltaToken, { clientId, organizerUserId, start, end, fingerprints });
+    return page({ clientId, items, offset: 0, pageSize, deltaToken });
   }
 
   addMeetingArtifact(
@@ -1254,6 +1419,8 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   restore(state: unknown): void {
+    this.calendarDeltaSnapshots.clear();
+    this.calendarDeltaPages.clear();
     const snapshot = (state ?? {}) as Record<string, any>;
     const load = <V>(target: Map<string, V>, rows: unknown, key: (row: any) => string) => {
       target.clear();

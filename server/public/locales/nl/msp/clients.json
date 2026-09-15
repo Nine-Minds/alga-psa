@@ -1477,7 +1477,18 @@
         "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
       },
       "loadFailed": "Interactieopties konden niet worden geladen. Probeer het opnieuw.",
-      "saveFailed": "De interactie kon niet worden opgeslagen. Probeer het opnieuw."
+      "saveFailed": "De interactie kon niet worden opgeslagen. Probeer het opnieuw.",
+      "schedule": {
+        "addToggle": "Toevoegen aan planning",
+        "addHelp": "Er wordt een planningsinvoer toegevoegd aan uw AlgaPSA-agenda.",
+        "addHelpOthers": "Er wordt een planningsinvoer toegevoegd aan de AlgaPSA-agenda's van de geselecteerde gebruikers.",
+        "assigneesLabel": "Plannen voor",
+        "assigneesPlaceholder": "Gebruikers selecteren"
+      },
+      "assignedTo": {
+        "label": "Toegewezen aan",
+        "placeholder": "Gebruiker selecteren"
+      }
     },
     "feed": {
       "addInteraction": "Interactie toevoegen",
@@ -1773,7 +1784,9 @@
       "missingField": "Er ontbreekt een verplicht interactieveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht interactieveld: {{field}}.",
       "referenceMissing": "De geselecteerde interactie, klant, contactpersoon, gebruiker, status of het type bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
-      "duplicate": "Er bestaat al een interactie met deze gegevens."
+      "duplicate": "Er bestaat al een interactie met deze gegevens.",
+      "scheduleAssignDenied": "Toestemming geweigerd: planningsinvoeren kunnen niet aan andere gebruikers worden toegewezen.",
+      "scheduleUsersMissing": "Een of meer toegewezen gebruikers konden niet worden gevonden."
     },
     "interactionType": {
       "notFound": "Interactietype niet gevonden of u hebt er geen toegang toe.",

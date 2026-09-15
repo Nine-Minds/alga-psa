@@ -105,6 +105,10 @@
     "./hooks/useDeletionValidation": {
       "import": "./src/hooks/useDeletionValidation.ts",
       "types": "./src/hooks/useDeletionValidation.ts"
+    },
+    "./hooks/useAccountingCapabilities": {
+      "import": "./src/hooks/useAccountingCapabilities.ts",
+      "types": "./src/hooks/useAccountingCapabilities.ts"
     }
   },
   "scripts": {

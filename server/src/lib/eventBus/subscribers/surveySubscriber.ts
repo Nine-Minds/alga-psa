@@ -220,7 +220,7 @@ async function handleProjectClosedEvent(event: unknown): Promise<void> {
       try {
         await sendSurveyInvitation({
           tenantId,
-          ticketId: projectId,
+          projectId,
           templateId,
           clientId: project.client_id,
           contactId: project.contact_name_id,

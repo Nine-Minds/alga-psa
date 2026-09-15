@@ -22,6 +22,7 @@ import {
   levelIoTransportOverride,
   startLevelIoDeviceSyncWorkflow,
 } from '../../../../lib/integrations/levelio/sync/transport';
+import { resolveLevelIoWebhookOrganization } from '../../../../lib/integrations/levelio/webhookAlertOrganization';
 
 export const runtime = 'nodejs';
 
@@ -94,7 +95,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, recorded: false, reason: 'integration_not_configured' }, { status: 200 });
     }
 
-    // Associate to asset when possible via external entity mapping.
+    // Associate to asset when possible via external entity mapping. The same
+    // row's external_realm_id holds the device's canonicalized (deepest-mapped)
+    // Level group from the sync engine; it is used below to backfill the org
+    // when the copied automation payload has no group_id.
     let assetId: string | undefined;
     const mapping = await db.table('tenant_external_entity_mappings')
       .where({
@@ -102,7 +106,7 @@ export async function POST(req: Request) {
         alga_entity_type: 'asset',
         external_entity_id: deviceId,
       })
-      .first(['alga_entity_id']);
+      .first(['alga_entity_id', 'external_realm_id']);
     assetId = mapping?.alga_entity_id;
 
     // Best-effort observability event.
@@ -124,6 +128,20 @@ export async function POST(req: Request) {
       // ignore
     }
 
+    // Resolve the event's organization for org-scoped rule matching before the
+    // shared pipeline evaluates rules: explicit group_id → device mapping
+    // external_realm_id (sync-engine canonicalized) → bounded Level hierarchy
+    // lookup → null (group-scoped rules then simply don't match).
+    const externalOrganizationId = await resolveLevelIoWebhookOrganization(
+      { knex, deviceMapping: mapping, createClient: () => createLevelIoClient(tenant) },
+      {
+        tenant,
+        integrationId: integration.integration_id,
+        deviceId,
+        explicitGroupId: body.group_id != null ? String(body.group_id) : null,
+      },
+    );
+
     // Alert handling (windows, rules, dedup, ticketing, lifecycle) lives in
     // the shared provider-agnostic pipeline.
     const normalized: NormalizedRmmAlertEvent = {
@@ -140,7 +158,7 @@ export async function POST(req: Request) {
       severity,
       message,
       deviceName: body.hostname ? String(body.hostname) : null,
-      externalOrganizationId: body.group_id != null ? String(body.group_id) : null,
+      externalOrganizationId,
       occurredAt: parseOccurredAt(body.alert_time ? String(body.alert_time) : ''),
       raw: body as Record<string, unknown>,
     };

@@ -1,3 +1,5 @@
+import { ActivityFailure } from '@temporalio/common';
+import { buildWorkflowDiagnosticSnapshot } from '@alga-psa/workflows/runtime/utils/redactionUtils';
 import { ApplicationFailure, condition, continueAsNew, defineQuery, defineSignal, executeChild, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
 import {
   WORKFLOW_RUNTIME_V2_EVENT_SIGNAL,
@@ -54,6 +56,7 @@ const activities = proxyActivities<{
     stepPath: string;
     status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
     errorMessage?: string;
+    snapshot?: Record<string, unknown>;
   }): Promise<void>;
   executeWorkflowRuntimeV2ActionStep(input: {
     runId: string;
@@ -355,6 +358,7 @@ export async function workflowRuntimeV2RunWorkflow(
     try {
       if (current.step.type === 'control.return') {
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -375,6 +379,7 @@ export async function workflowRuntimeV2RunWorkflow(
           totalSteps: branchSteps.length,
         });
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -393,6 +398,7 @@ export async function workflowRuntimeV2RunWorkflow(
           totalSteps: tryCatchStep.try.length,
         });
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -443,6 +449,7 @@ export async function workflowRuntimeV2RunWorkflow(
           state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         }
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -520,6 +527,7 @@ export async function workflowRuntimeV2RunWorkflow(
 
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -584,6 +592,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -667,6 +676,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -746,6 +756,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -800,6 +811,7 @@ export async function workflowRuntimeV2RunWorkflow(
                 },
               };
               await activities.projectWorkflowRuntimeV2StepCompletion({
+                snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
                 runId: input.runId,
                 stepId: stepProjection.stepId,
                 stepPath: current.path,
@@ -822,6 +834,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -850,6 +863,7 @@ export async function workflowRuntimeV2RunWorkflow(
       };
       state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
       await activities.projectWorkflowRuntimeV2StepCompletion({
+        snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
         runId: input.runId,
         stepId: stepProjection.stepId,
         stepPath: current.path,
@@ -887,6 +901,7 @@ export async function workflowRuntimeV2RunWorkflow(
       }
       if (isCancellationRuntimeError(runtimeError)) {
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -899,6 +914,7 @@ export async function workflowRuntimeV2RunWorkflow(
 
       if (isInterpreterCorruptionRuntimeError(runtimeError)) {
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -910,6 +926,7 @@ export async function workflowRuntimeV2RunWorkflow(
       }
 
       await activities.projectWorkflowRuntimeV2StepCompletion({
+        snapshot: buildWorkflowDiagnosticSnapshot(state.scopes),
         runId: input.runId,
         stepId: stepProjection.stepId,
         stepPath: current.path,
@@ -1033,6 +1050,8 @@ function assignToScopePath(
 ): WorkflowRuntimeV2InterpreterState {
   const normalized = normalizeAssignmentPath(saveAs);
   const scopes = {
+    ...state.scopes,
+    meta: cloneRecord(state.scopes.meta ?? {}),
     payload: cloneRecord(state.scopes.payload),
     workflow: cloneRecord(state.scopes.workflow),
     lexical: state.scopes.lexical.map((scope) => cloneRecord(scope)),
@@ -1051,7 +1070,7 @@ function assignToScopePath(
       setNestedValue(scopes.workflow, normalized.slice('local.'.length), output);
     }
   } else if (normalized.startsWith('meta.')) {
-    setNestedValue(scopes.workflow, normalized.slice('meta.'.length), output);
+    setNestedValue(scopes.meta, normalized.slice('meta.'.length), output);
   } else {
     setNestedValue(scopes.workflow, normalized, output);
   }
@@ -1748,9 +1767,14 @@ function normalizeRuntimeError(error: unknown, stepPath: string): RuntimeErrorLi
     };
   }
 
+  // Temporal wraps activity failures with a generic transport message. Preserve
+  // the actionable activity cause for catch handlers and human-task diagnostics.
+  const diagnosticError = error instanceof ActivityFailure && error.cause instanceof Error
+    ? error.cause
+    : error;
   return {
     category: isCancellationLikeError(error) ? 'Cancellation' : 'ActionError',
-    message: error instanceof Error ? error.message : String(error),
+    message: diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError),
     nodePath: stepPath,
     at: new Date().toISOString(),
   };

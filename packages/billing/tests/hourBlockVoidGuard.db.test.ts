@@ -251,9 +251,18 @@ describe.runIf(enabled)('hour block durable void guard', () => {
     const entry = await insertEntry(serviceId, ticketId, entryUser, 60);
 
     try {
+      // FIFO needs distinct purchase times; millisecond ties fall back to UUID
+      // order and can legitimately allocate the other block.
+      await db('hour_blocks').where({ tenant, block_id: usedBlock })
+        .update({ purchased_at: '2026-08-01T00:00:00Z' });
+      await db('hour_blocks').where({ tenant, block_id: neverBlock })
+        .update({ purchased_at: '2026-08-02T00:00:00Z' });
       await db.transaction(async (trx: Knex.Transaction) => {
         await allocateTimeEntry(trx, tenant, clientId, entry);
       });
+      const allocations = await db('hour_block_time_allocations')
+        .where({ tenant, time_entry_id: entry.entry_id }).select('block_id');
+      expect(allocations.map((row) => row.block_id)).toEqual([usedBlock]);
       await db.transaction(async (trx: Knex.Transaction) => {
         await reverseTimeEntryAllocations(trx, tenant, entry.entry_id);
       });

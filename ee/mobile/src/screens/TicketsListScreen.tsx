@@ -12,7 +12,7 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient, type ApiClient } from "../api";
-import { getTicketById, getTicketPriorities, getTicketStats, getTicketStatuses, listTickets, type TicketListItem, type TicketPriority, type TicketStats, type TicketStatus } from "../api/tickets";
+import { getTicketById, getTicketPriorities, getTicketStats, listTickets, type TicketListItem, type TicketPriority, type TicketStats, type TicketStatus } from "../api/tickets";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
@@ -20,8 +20,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type Dispatch,
 import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
+import { useTicketStatusOptions } from "../features/ticketsList/useTicketStatusOptions";
+import { groupStatusesByName, resolveStatusIdsByName, statusNamesFromIds } from "./ticketsStatusFilter";
 import { getCachedTicketDetail, getCachedTicketsList, setCachedTicketDetail, setCachedTicketsList } from "../cache/ticketsCache";
-import { getCachedTicketStatuses, setCachedTicketStatuses, getCachedTicketPriorities, setCachedTicketPriorities } from "../cache/referenceDataCache";
+import { getCachedTicketPriorities, setCachedTicketPriorities } from "../cache/referenceDataCache";
 import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
@@ -43,7 +45,9 @@ type Props = CompositeScreenProps<
 
 type TicketListFilters = {
   status: "any" | "open" | "closed";
+  /** Legacy id-based selection; migrated to statusNames once statuses load. */
   statusIds: string[];
+  statusNames: string[];
   assignee: "any" | "me" | "unassigned" | "agent";
   assigneeUserId?: string;
   assigneeName?: string;
@@ -65,6 +69,7 @@ type TicketsListCacheValue = {
 const DEFAULT_FILTERS: TicketListFilters = {
   status: "open",
   statusIds: [],
+  statusNames: [],
   assignee: "any",
   priorityName: "",
   tags: [],
@@ -144,8 +149,9 @@ export function TicketsListScreen({ navigation, route }: Props) {
       if (canceled) return;
       if (saved) {
         const statusIds = Array.isArray((saved as any).statusIds) ? ((saved as any).statusIds as string[]) : [];
+        const statusNames = Array.isArray((saved as any).statusNames) ? ((saved as any).statusNames as string[]) : [];
         const tags = normalizeSavedTags((saved as any).tags);
-        setFilters({ ...DEFAULT_FILTERS, ...saved, statusIds, tags });
+        setFilters({ ...DEFAULT_FILTERS, ...saved, statusIds, statusNames, tags });
       }
       setFiltersLoaded(true);
     };
@@ -160,6 +166,25 @@ export function TicketsListScreen({ navigation, route }: Props) {
     if (!filtersLoaded || !userId) return;
     void setSecureJson(`alga.mobile.tickets.filters.${userId}`, filters);
   }, [filters, filtersLoaded, session?.user?.id]);
+
+  const { statusOptions, statusOptionsLoaded, statusOptionsLoading, statusOptionsError } = useTicketStatusOptions({
+    client,
+    apiKey: session?.accessToken,
+    tenantId: session?.tenantId,
+    enabled: Boolean(client && session?.accessToken),
+    errorMessage: t("filters.unableToLoadStatuses"),
+  });
+
+  // Saved filters from before statuses were stored by name carry board-specific
+  // ids; convert them once so every board's matching status is included.
+  useEffect(() => {
+    if (!filtersLoaded || !statusOptionsLoaded || statusOptions.length === 0) return;
+    if (filters.statusNames.length > 0 || filters.statusIds.length === 0) return;
+    setFilters((current) => ({ ...current, statusNames: statusNamesFromIds(statusOptions, current.statusIds), statusIds: [] }));
+  }, [filters.statusIds.length, filters.statusNames.length, filtersLoaded, statusOptions, statusOptionsLoaded]);
+
+  // A name-based selection cannot be sent until statuses are known.
+  const statusResolutionPending = filters.statusNames.length > 0 && !statusOptionsLoaded;
 
   const commitSearch = useCallback(() => {
     setSearch(searchInput.trim());
@@ -180,7 +205,9 @@ export function TicketsListScreen({ navigation, route }: Props) {
   const apiFilters = useMemo(() => {
     if (!session) return undefined;
     const out: Record<string, unknown> = {};
-    const statusIds = (filters.statusIds ?? []).filter(Boolean);
+    const statusIds = filters.statusNames.length > 0
+      ? resolveStatusIdsByName(statusOptions, filters.statusNames)
+      : (filters.statusIds ?? []).filter(Boolean);
     if (statusIds.length > 0) {
       out.status_ids = statusIds.join(",");
     } else {
@@ -209,7 +236,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
     }
 
     return withContactFilter(withClientFilter(withTagsFilter(out, filters.tags), clientFilterId), contactFilterId);
-  }, [clientFilterId, contactFilterId, filters, session]);
+  }, [clientFilterId, contactFilterId, filters, session, statusOptions]);
 
   const clearClientFilter = useCallback(() => {
     navigation.setParams({ clientId: undefined, clientName: undefined });
@@ -219,8 +246,16 @@ export function TicketsListScreen({ navigation, route }: Props) {
     navigation.setParams({ contactId: undefined, contactName: undefined });
   }, [navigation]);
 
+  // "Clear all" must also drop the client/contact drill-down that arrived as
+  // route params, or the list stays scoped to that client with no visible filter.
+  const clearAllFilters = useCallback(() => {
+    setFilters({ ...DEFAULT_FILTERS });
+    clearClientFilter();
+    clearContactFilter();
+  }, [clearClientFilter, clearContactFilter]);
+
   const listCacheKey = useMemo(() => {
-    if (!session) return null;
+    if (!session || statusResolutionPending) return null;
     const userId = session.user?.id ?? "anon";
     return `alga.mobile.tickets.list.${userId}.${JSON.stringify({
       search,
@@ -228,7 +263,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
       order: filters.sortOrder,
       filters: apiFilters ?? {},
     })}`;
-  }, [apiFilters, filters.sortField, filters.sortOrder, search, session]);
+  }, [apiFilters, filters.sortField, filters.sortOrder, search, session, statusResolutionPending]);
 
   useEffect(() => {
     if (!listCacheKey) return;
@@ -485,6 +520,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
     Boolean(contactFilterId) ||
     filters.status !== DEFAULT_FILTERS.status ||
     filters.statusIds.length > 0 ||
+    filters.statusNames.length > 0 ||
     filters.assignee !== DEFAULT_FILTERS.assignee ||
     filters.priorityName.trim() !== "" ||
     filters.tags.length > 0 ||
@@ -583,7 +619,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
             filters={filters}
             onPress={() => setFiltersOpen(true)}
             onClearAll={() => {
-              setFilters({ ...DEFAULT_FILTERS });
+              clearAllFilters();
               clearSearch();
             }}
           />
@@ -593,7 +629,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
           description={t("list.noTicketsDescription")}
           action={
             <PrimaryButton onPress={() => {
-              setFilters({ ...DEFAULT_FILTERS });
+              clearAllFilters();
               setSearchInput("");
             }}>
               {t("filters.clearAll")}
@@ -676,7 +712,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
         theme={theme}
         filters={filters}
         onPress={() => setFiltersOpen(true)}
-        onClearAll={() => setFilters({ ...DEFAULT_FILTERS })}
+        onClearAll={clearAllFilters}
       />
       {lastRefreshedAtIso ? (
         <Text style={{ ...theme.typography.caption, marginTop: theme.spacing.sm, color: theme.colors.textSecondary }}>
@@ -736,6 +772,10 @@ export function TicketsListScreen({ navigation, route }: Props) {
         tenantId={session.tenantId ?? null}
         filters={filters}
         setFilters={setFilters}
+        statusOptions={statusOptions}
+        statusOptionsLoading={statusOptionsLoading}
+        statusOptionsError={statusOptionsError}
+        onClearAll={clearAllFilters}
         canFilterMe={Boolean(session?.user?.id)}
         baseUrl={config.ok ? config.baseUrl : null}
         resultsTotal={total}
@@ -759,7 +799,8 @@ function FilterChipBar({
 }) {
   const { t } = useTranslation("tickets");
   const chips: string[] = [];
-  if (filters.statusIds.length > 0) chips.push(t("filters.statusesCount", { count: filters.statusIds.length }));
+  const statusCount = filters.statusNames.length || filters.statusIds.length;
+  if (statusCount > 0) chips.push(t("filters.statusesCount", { count: statusCount }));
   else if (filters.status !== "any") chips.push(t("filters.statusLabel", { status: filters.status === "open" ? t("filters.open") : t("filters.closed") }));
   if (filters.assignee !== "any") chips.push(t("filters.assigneeLabel", { assignee: filters.assignee === "me" ? t("filters.me") : filters.assignee === "agent" ? (filters.assigneeName ?? "Agent") : t("quickFilters.unassigned") }));
   if (filters.priorityName.trim()) chips.push(t("filters.priorityLabel", { priority: filters.priorityName.trim() }));
@@ -867,47 +908,27 @@ function QuickChip({ theme, label, onPress }: { theme: Theme; label: string; onP
  */
 function GroupedStatusChips({
   statusOptions,
-  selectedStatusIds,
+  selectedNames,
   theme,
   onToggle,
 }: {
   statusOptions: TicketStatus[];
-  selectedStatusIds: string[];
+  selectedNames: string[];
   theme: Theme;
-  onToggle: (nextIds: string[]) => void;
+  onToggle: (nextNames: string[]) => void;
 }) {
-  const grouped = useMemo(() => {
-    const map = new Map<string, TicketStatus[]>();
-    for (const s of statusOptions) {
-      const existing = map.get(s.name);
-      if (existing) existing.push(s);
-      else map.set(s.name, [s]);
-    }
-    return Array.from(map.entries()).map(([name, statuses]) => ({
-      name,
-      ids: statuses.map((s) => s.status_id),
-      isClosed: statuses[0].is_closed,
-    }));
-  }, [statusOptions]);
-
-  const selectedSet = useMemo(() => new Set(selectedStatusIds), [selectedStatusIds]);
+  const grouped = useMemo(() => groupStatusesByName(statusOptions), [statusOptions]);
+  const selectedSet = useMemo(() => new Set(selectedNames), [selectedNames]);
 
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
       {grouped.map((group) => {
-        const selected = group.ids.some((id) => selectedSet.has(id));
+        const selected = selectedSet.has(group.name);
         return (
           <View key={group.name} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
             <Pressable
               onPress={() => {
-                let next: string[];
-                if (selected) {
-                  const removeSet = new Set(group.ids);
-                  next = selectedStatusIds.filter((id) => !removeSet.has(id));
-                } else {
-                  next = [...selectedStatusIds, ...group.ids];
-                }
-                onToggle(next);
+                onToggle(selected ? selectedNames.filter((name) => name !== group.name) : [...selectedNames, group.name]);
               }}
               accessibilityRole="button"
               accessibilityLabel={group.name}
@@ -941,6 +962,10 @@ function FiltersModal({
   tenantId,
   filters,
   setFilters,
+  statusOptions,
+  statusOptionsLoading,
+  statusOptionsError,
+  onClearAll,
   canFilterMe,
   baseUrl,
   resultsTotal,
@@ -954,6 +979,10 @@ function FiltersModal({
   tenantId: string | null;
   filters: TicketListFilters;
   setFilters: Dispatch<SetStateAction<TicketListFilters>>;
+  statusOptions: TicketStatus[];
+  statusOptionsLoading: boolean;
+  statusOptionsError: string | null;
+  onClearAll: () => void;
   canFilterMe: boolean;
   baseUrl: string | null;
   resultsTotal: number | null;
@@ -962,47 +991,11 @@ function FiltersModal({
 }) {
   const { t } = useTranslation("tickets");
   const insets = useSafeAreaInsets();
-  const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
-  const [statusOptionsLoading, setStatusOptionsLoading] = useState(false);
-  const [statusOptionsError, setStatusOptionsError] = useState<string | null>(null);
   const [priorityOptions, setPriorityOptions] = useState<TicketPriority[]>([]);
   const [priorityOptionsLoading, setPriorityOptionsLoading] = useState(false);
   const [priorityOptionsError, setPriorityOptionsError] = useState<string | null>(null);
   const [agentFilterPickerOpen, setAgentFilterPickerOpen] = useState(false);
   const [tagFilterPickerOpen, setTagFilterPickerOpen] = useState(false);
-
-  useEffect(() => {
-    let canceled = false;
-    const run = async () => {
-      if (!visible) return;
-      if (!client || !apiKey) return;
-      if (statusOptions.length > 0) return;
-      const cacheKey = tenantId ?? "unknownTenant";
-      const cached = getCachedTicketStatuses(cacheKey);
-      if (Array.isArray(cached) && cached.length > 0) {
-        setStatusOptions(cached as TicketStatus[]);
-        return;
-      }
-      setStatusOptionsLoading(true);
-      setStatusOptionsError(null);
-      try {
-        const res = await getTicketStatuses(client, { apiKey });
-        if (canceled) return;
-        if (!res.ok) {
-          setStatusOptionsError(t("filters.unableToLoadStatuses"));
-          return;
-        }
-        setStatusOptions(res.data.data);
-        setCachedTicketStatuses(cacheKey, res.data.data);
-      } finally {
-        if (!canceled) setStatusOptionsLoading(false);
-      }
-    };
-    void run();
-    return () => {
-      canceled = true;
-    };
-  }, [apiKey, client, statusOptions.length, tenantId, visible]);
 
   useEffect(() => {
     let canceled = false;
@@ -1077,7 +1070,7 @@ function FiltersModal({
             { label: t("filters.closed"), value: "closed" },
           ]}
           value={filters.status}
-          onChange={(status) => setFilters({ ...filters, status, statusIds: [] })}
+          onChange={(status) => setFilters({ ...filters, status, statusIds: [], statusNames: [] })}
         />
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.md }}>{t("filters.specificStatuses")}</Text>
@@ -1092,9 +1085,9 @@ function FiltersModal({
         ) : statusOptions.length > 0 ? (
           <GroupedStatusChips
             statusOptions={statusOptions}
-            selectedStatusIds={filters.statusIds}
+            selectedNames={filters.statusNames.length > 0 ? filters.statusNames : statusNamesFromIds(statusOptions, filters.statusIds)}
             theme={theme}
-            onToggle={(nextIds) => setFilters({ ...filters, status: "any", statusIds: nextIds })}
+            onToggle={(nextNames) => setFilters({ ...filters, status: "any", statusIds: [], statusNames: nextNames })}
           />
         ) : (
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
@@ -1338,7 +1331,7 @@ function FiltersModal({
         }}
       >
         <Pressable
-          onPress={() => setFilters({ ...DEFAULT_FILTERS })}
+          onPress={onClearAll}
           accessibilityRole="button"
           accessibilityLabel={t("filters.clearAll")}
           style={({ pressed }) => ({

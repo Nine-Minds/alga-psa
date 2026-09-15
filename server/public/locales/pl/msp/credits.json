@@ -79,7 +79,6 @@
     "invoiceAmount": "Kwota faktury:",
     "selectCreditToApply": "Wybierz kredyt do zastosowania",
     "amountToApply": "Kwota do zastosowania",
-    "creditOrderNote": "Kredyty są stosowane według daty wygaśnięcia (najstarsze najpierw)",
     "creditOrderNoteExpirationFirst": "Kredyty są stosowane według daty wygaśnięcia (najpierw wygasające najwcześniej)",
     "creditOrderNoteOldestFirst": "Kredyty są stosowane według daty utworzenia (najpierw najstarszy kredyt)",
     "creditOrderNoteNewestFirst": "Kredyty są stosowane według daty utworzenia (najpierw najnowszy kredyt)",

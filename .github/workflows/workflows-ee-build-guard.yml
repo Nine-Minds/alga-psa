@@ -6,6 +6,11 @@ on:
       - server/**
       - ee/server/**
       - packages/workflows/**
+      - ee/packages/workflows/**
+      - packages/ee/**
+      - package.json
+      - package-lock.json
+      - nx.json
       - scripts/guard-ee-workflows-next-build.mjs
       - scripts/guard-no-legacy-workflows-shims.mjs
       - .github/workflows/workflows-ee-build-guard.yml
@@ -16,6 +21,11 @@ on:
       - server/**
       - ee/server/**
       - packages/workflows/**
+      - ee/packages/workflows/**
+      - packages/ee/**
+      - package.json
+      - package-lock.json
+      - nx.json
       - scripts/guard-ee-workflows-next-build.mjs
       - scripts/guard-no-legacy-workflows-shims.mjs
       - .github/workflows/workflows-ee-build-guard.yml
@@ -32,18 +42,23 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
 
       - name: Install dependencies
+        run: npm ci
+
+      - name: Provide production build memory headroom
         run: |
-          if ! npm ci; then
-            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install --legacy-peer-deps
-          fi
+          free -h
+          sudo fallocate -l 8G /swapfile-alga-ee-guard
+          sudo chmod 600 /swapfile-alga-ee-guard
+          sudo mkswap /swapfile-alga-ee-guard
+          sudo swapon /swapfile-alga-ee-guard
+          free -h
 
       - name: Provide build-time env
         run: |
@@ -57,8 +72,13 @@ jobs:
           # NODE_OPTIONS below is inherited by forked children, so each "Collecting
           # page data" worker also gets a 14 GB heap allowance. Four of those on a
           # 16 GB runner OOM'd the host — every failure of this job has died there.
-          # Costs ~1m of a ~20m build (that phase is only ~1m45s at 4 workers).
-          NEXT_BUILD_CPUS: '2'
+          # Dropping to 2 workers was not enough: 2 × 14 GB still overcommits the
+          # 16 GB runner, and the host was killed again during "Collecting page data
+          # using 2 workers" (abrupt "operation was canceled", no build error).
+          # Serialize to a single worker: 1 × 14 GB fits, so this phase can no longer
+          # OOM. Costs ~a few minutes of build time (page-data runs serially) — well
+          # within the 30 min job timeout.
+          NEXT_BUILD_CPUS: '1'
         run: |
           npx nx build-deps server --output-style=static
           # Override the 8 GB cap baked into server/package.json's build script;

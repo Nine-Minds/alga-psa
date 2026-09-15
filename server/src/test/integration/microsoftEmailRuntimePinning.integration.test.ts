@@ -77,6 +77,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
+const MONITORED_FOLDER_ID = vi.hoisted(() => 'monitored-inbox-folder-id');
+
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => ({
   MicrosoftSubscriptionError: class MicrosoftSubscriptionError extends Error {
     constructor(public kind: string, message: string) {
@@ -96,6 +98,14 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
         'From: sender@example.com\r\nTo: support@example.com\r\nSubject: Hello\r\n\r\nbody',
         'utf8'
       );
+    }
+    // fetchMicrosoftMessageForPointer rejects any message outside a monitored
+    // folder; the resolver/token path under test assumes an in-scope message.
+    async getMessageParentFolderId() {
+      return MONITORED_FOLDER_ID;
+    }
+    async resolveFolderIds() {
+      return new Set([MONITORED_FOLDER_ID]);
     }
   },
 }));

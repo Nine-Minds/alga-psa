@@ -9,18 +9,8 @@ import '@testing-library/jest-dom';
 // ──────────────────────────────────────────────────────────────────────────────
 // Hoisted mocks
 // ──────────────────────────────────────────────────────────────────────────────
-const featureFlagState = vi.hoisted(() => ({
-  enabled: false,
-  loading: false,
-  error: null as Error | null,
-}));
-
 const getPricingSchedulesByContractMock = vi.hoisted(() => vi.fn());
 const deletePricingScheduleMock = vi.hoisted(() => vi.fn());
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => featureFlagState,
-}));
 
 vi.mock('@alga-psa/billing/actions/contractPricingScheduleActions', () => ({
   getPricingSchedulesByContract: async (...args: unknown[]) => getPricingSchedulesByContractMock(...args),
@@ -98,29 +88,19 @@ function renderList(props: { currencyCode?: string } = {}) {
       <PricingSchedules contractId="contract-1" currencyCode={props.currencyCode} />
     </CurrencyFormatProvider>
   );
-  const utils = render(tree());
-  return {
-    ...utils,
-    // Re-render the same tree so the component re-reads the (mutated) mocked
-    // feature-flag state — simulates a late flag resolution.
-    rerenderList: () => utils.rerender(tree()),
-  };
+  return render(tree());
 }
 
-describe('PricingSchedules contract-currency custom rate (release-v1-5-feature)', () => {
+describe('PricingSchedules contract-currency custom rate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    featureFlagState.enabled = false;
-    featureFlagState.loading = false;
-    featureFlagState.error = null;
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it('flag on: renders the custom rate in a two-decimal non-default contract currency (EUR)', async () => {
-    featureFlagState.enabled = true;
+  it('renders the custom rate in a two-decimal non-default contract currency (EUR)', async () => {
     getPricingSchedulesByContractMock.mockResolvedValue([schedule({ custom_rate: 12345 })]);
 
     renderList({ currencyCode: 'EUR' });
@@ -130,8 +110,7 @@ describe('PricingSchedules contract-currency custom rate (release-v1-5-feature)'
     expect(screen.queryByText('$123.45')).not.toBeInTheDocument();
   });
 
-  it('flag on: renders a zero-decimal currency (JPY) from minor units without dividing by 100', async () => {
-    featureFlagState.enabled = true;
+  it('renders a zero-decimal currency (JPY) from minor units without dividing by 100', async () => {
     getPricingSchedulesByContractMock.mockResolvedValue([schedule({ custom_rate: 5000 })]);
 
     renderList({ currencyCode: 'JPY' });
@@ -140,53 +119,4 @@ describe('PricingSchedules contract-currency custom rate (release-v1-5-feature)'
     expect(screen.queryByText('¥50')).not.toBeInTheDocument();
   });
 
-  it('flag off: preserves the legacy ambient two-decimal rendering even when a contract currency is supplied', async () => {
-    featureFlagState.enabled = false;
-    getPricingSchedulesByContractMock.mockResolvedValue([schedule({ custom_rate: 5000 })]);
-
-    renderList({ currencyCode: 'JPY' });
-
-    expect((await screen.findAllByText('$50.00')).length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText('¥5,000')).not.toBeInTheDocument();
-  });
-
-  it('flag loading: shows the neutral placeholder instead of any formatted value, then resolves flag-on', async () => {
-    featureFlagState.loading = true;
-    featureFlagState.enabled = false;
-    getPricingSchedulesByContractMock.mockResolvedValue([schedule({ custom_rate: 5000 })]);
-
-    const { rerenderList } = renderList({ currencyCode: 'JPY' });
-
-    // Once the rows arrive, both the timeline and the table cell render the
-    // neutral skeleton for the custom rate.
-    expect((await screen.findAllByTestId('custom-rate-skeleton')).length).toBe(2);
-    // While the flag is unresolved the stored minor units must not be rendered
-    // through the ambient-USD /100 formatting (nor the contract currency).
-    expect(screen.queryByText('$50.00')).not.toBeInTheDocument();
-    expect(screen.queryByText('¥5,000')).not.toBeInTheDocument();
-
-    featureFlagState.loading = false;
-    featureFlagState.enabled = true;
-    rerenderList();
-
-    expect((await screen.findAllByText('¥5,000')).length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByTestId('custom-rate-skeleton')).not.toBeInTheDocument();
-  });
-
-  it('flag loading: keeps the custom rate neutral until the flag resolves to the flag-off legacy rendering', async () => {
-    featureFlagState.loading = true;
-    featureFlagState.enabled = false;
-    getPricingSchedulesByContractMock.mockResolvedValue([schedule({ custom_rate: 5000 })]);
-
-    const { rerenderList } = renderList({ currencyCode: 'JPY' });
-
-    expect((await screen.findAllByTestId('custom-rate-skeleton')).length).toBe(2);
-    expect(screen.queryByText('$50.00')).not.toBeInTheDocument();
-
-    featureFlagState.loading = false;
-    rerenderList();
-
-    expect((await screen.findAllByText('$50.00')).length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByTestId('custom-rate-skeleton')).not.toBeInTheDocument();
-  });
 });

@@ -1,0 +1,47 @@
+{
+  "status": "Microsoft manual-sync subscription lifecycle repaired locally; rebuilt browser acceptance pending",
+  "native": {
+    "run": 34078331062,
+    "enterpriseJob": 101612274786,
+    "result": "22 passed, 2 flaky; strict gate rejected retries",
+    "flakyCases": [
+      "Microsoft calendar vendor correction timed out on first attempt; retry passed",
+      "Technician role escalation case could not open administrator Edit menu on first attempt; retry passed"
+    ],
+    "log": "/tmp/alga-browser-ee-df9b.log",
+    "artifacts": "/tmp/alga-ee-browser-df9b-artifacts"
+  },
+  "calendarFinding": {
+    "observed": "Manual sync unconditionally POSTed a new subscription after repairing event synchronization. Failed-attempt history ended at that POST; vendor update did not trigger another delta fetch. Webhook routing resolves only the currently stored subscription ID.",
+    "inference": "Replacement can strand a notification delivered for the previous subscription while manual sync finishes. Rebuilt browser validation is still required to establish the native failure is resolved.",
+    "repair": "For an existing Microsoft webhookSubscriptionId, renew it instead of registering a replacement. First-time registration and other provider behavior remain as before. Renewal failure is surfaced as a sync error.",
+    "browserAssertions": [
+      "Persisted subscription ID remains equal to initial OAuth registration ID",
+      "Vendor update delivers exactly one successful webhook before checking DB/UI state"
+    ]
+  },
+  "validation": {
+    "before": {
+      "passed": 4,
+      "failed": 2,
+      "log": "/tmp/alga-calendar-subscription-before.log"
+    },
+    "after": {
+      "passed": 6,
+      "failed": 0,
+      "durationSeconds": 0.839,
+      "log": "/tmp/alga-calendar-subscription-after.log"
+    },
+    "scope": "EE manual-sync orchestration with mocked adapter, DB and sync-service boundaries; not a claim of rebuilt HTTP/browser execution",
+    "types": [
+      "Focused action and unit types passed after correcting pre-existing mock function property typing",
+      "Browser spec types passed"
+    ]
+  },
+  "remaining": [
+    "Run the updated calendar browser journey against the rebuilt application",
+    "Diagnose and repair the user-actions menu flake from native trace",
+    "Native full integration job 101608767833 remains live at last observation; preserve before pushing",
+    "Other plan requirements remain open"
+  ]
+}

@@ -98,6 +98,28 @@ export interface UserNotificationPreference {
   updated_at: string;
 }
 
+/**
+ * Read model for a user's email notification preferences.
+ *
+ * `is_enabled` on categories/subtypes carries the tenant-effective enablement
+ * (the administrator's gate); `user_is_enabled` carries the resolved personal
+ * value, mirroring delivery semantics: an explicit saved row wins, absence
+ * means enabled. A subtype is only actually delivered when the tenant gates
+ * AND the personal value all allow it.
+ */
+export interface UserEmailPreferenceSubtypeState extends NotificationSubtype {
+  /** Resolved personal value: saved override if present, otherwise enabled. */
+  user_is_enabled: boolean;
+  /** Whether the user has an explicit saved preference row for this subtype. */
+  has_user_override: boolean;
+  /** Personal selection after all tenant delivery gates. */
+  effective_is_enabled: boolean;
+}
+
+export interface UserEmailPreferenceCategoryState extends NotificationCategory {
+  subtypes: UserEmailPreferenceSubtypeState[];
+}
+
 export interface NotificationLog {
   id: number;
   tenant: string;

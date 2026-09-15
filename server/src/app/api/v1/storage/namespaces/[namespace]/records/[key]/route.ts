@@ -12,17 +12,18 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { namespace: string; key: string } },
+  { params }: { params: Promise<{ namespace: string; key: string }> },
 ) {
   try {
+    const resolvedParams = await params;
     const authContext = await resolveStorageAuthContext(req);
     const { service, knex } = await getStorageServiceForTenant(authContext.tenantId);
     await ensureStoragePermission('read', authContext, knex);
 
     const ifRevisionHeader = req.headers.get('if-revision-match');
     const result = await service.get({
-      namespace: params.namespace,
-      key: params.key,
+      namespace: resolvedParams.namespace,
+      key: resolvedParams.key,
       ifRevision: ifRevisionHeader ? Number(ifRevisionHeader) : undefined,
     });
     const headers = {
@@ -37,17 +38,18 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { namespace: string; key: string } },
+  { params }: { params: Promise<{ namespace: string; key: string }> },
 ) {
   try {
+    const resolvedParams = await params;
     const body = await req.json();
     const authContext = await resolveStorageAuthContext(req);
     const { service, knex } = await getStorageServiceForTenant(authContext.tenantId);
     await ensureStoragePermission('write', authContext, knex);
 
     const result = await service.put({
-      namespace: params.namespace,
-      key: params.key,
+      namespace: resolvedParams.namespace,
+      key: resolvedParams.key,
       value: body.value,
       metadata: body.metadata,
       ttlSeconds: body.ttlSeconds,
@@ -67,9 +69,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { namespace: string; key: string } },
+  { params }: { params: Promise<{ namespace: string; key: string }> },
 ) {
   try {
+    const resolvedParams = await params;
     const url = new URL(req.url);
     const search = Object.fromEntries(url.searchParams.entries());
     const input = deleteQuerySchema.parse(search);
@@ -78,7 +81,7 @@ export async function DELETE(
     const { service, knex } = await getStorageServiceForTenant(authContext.tenantId);
     await ensureStoragePermission('write', authContext, knex);
 
-    await service.delete({ namespace: params.namespace, key: params.key, ifRevision: input.ifRevision });
+    await service.delete({ namespace: resolvedParams.namespace, key: resolvedParams.key, ifRevision: input.ifRevision });
     return appendRateLimitHeaders(new NextResponse(null, {
       status: 204,
       headers: {

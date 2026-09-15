@@ -184,6 +184,7 @@ export function ServiceConfigurationPanel({
         <FixedServiceConfigPanel
           configuration={fixedConfig}
           planFixedConfig={planFixedConfig}
+          quantity={configuration.quantity ?? null}
           onConfigurationChange={handleFixedConfigChange}
           onPlanFixedConfigChange={onPlanFixedConfigChange}
           disabled={disabled}

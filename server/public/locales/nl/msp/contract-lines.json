@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Ontbrekende abonnements- of service-informatie"
       },
       "loading": "Serviceconfiguratie laden...",
-      "title": "Serviceconfiguratie bewerken"
+      "title": "Serviceconfiguratie bewerken",
+      "effectiveFrom": "Wijziging van hoeveelheid of meting geldt vanaf",
+      "effectiveHelp": "Wijzigingen gaan in op deze serviceperiodegrens. Eerdere perioden behouden hun prijzen en meting."
     },
     "tierEditor": {
       "actions": {
@@ -692,7 +694,10 @@
       "allServicesAssociated": "Alle beschikbare services zijn al aan deze contractregel gekoppeld.",
       "badges": {
         "billingMismatch": "Facturering komt niet overeen",
-        "defaultConfigType": "Standaard"
+        "defaultConfigType": "Standaard",
+        "standard": "Standaard",
+        "custom": "Aangepast",
+        "unreviewed": "Niet beoordeeld"
       },
       "billingMethod": {
         "fixed": "Vaste prijs",

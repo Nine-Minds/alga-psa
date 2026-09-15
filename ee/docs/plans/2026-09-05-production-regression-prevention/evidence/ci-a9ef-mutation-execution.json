@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "kind": "scoped-mutation-pilot",
+  "enforcement": "report-only-score",
+  "revision": "16264b7e71ade1ec39a1caf1654e81d860f95ba3",
+  "workingTreeDirty": false,
+  "runtime": "v22.23.2",
+  "files": [
+    {
+      "file": "packages/authorization/src/kernel/scope.ts",
+      "sourceSha256": "4e076c87dbe1def07059d9b05252517842963f1b40dcf3f82062ed8efb278453",
+      "statuses": {
+        "NoCoverage": 1,
+        "Killed": 23
+      },
+      "remaining": [
+        {
+          "id": "20",
+          "status": "NoCoverage",
+          "mutator": "ArrayDeclaration",
+          "location": {
+            "end": {
+              "column": 72,
+              "line": 24
+            },
+            "start": {
+              "column": 70,
+              "line": 24
+            }
+          },
+          "replacement": "[\"Stryker was here\"]"
+        }
+      ]
+    },
+    {
+      "file": "shared/billingClients/calendarMonthEndClosePolicy.ts",
+      "sourceSha256": "7aefb6dae922956af13b14cd60fd2f3647a7c5714767082e921ded2bc363e1a3",
+      "statuses": {
+        "Killed": 56,
+        "Survived": 3
+      },
+      "remaining": [
+        {
+          "id": "29",
+          "status": "Survived",
+          "mutator": "ConditionalExpression",
+          "location": {
+            "end": {
+              "column": 12,
+              "line": 66
+            },
+            "start": {
+              "column": 7,
+              "line": 66
+            }
+          },
+          "replacement": "false"
+        },
+        {
+          "id": "31",
+          "status": "Survived",
+          "mutator": "StringLiteral",
+          "location": {
+            "end": {
+              "column": 29,
+              "line": 67
+            },
+            "start": {
+              "column": 24,
+              "line": 67
+            }
+          },
+          "replacement": "\"\""
+        },
+        {
+          "id": "37",
+          "status": "Survived",
+          "mutator": "BlockStatement",
+          "location": {
+            "end": {
+              "column": 4,
+              "line": 81
+            },
+            "start": {
+              "column": 11,
+              "line": 79
+            }
+          },
+          "replacement": "{}"
+        }
+      ]
+    }
+  ],
+  "runId": "34339167186",
+  "jobId": "102425609859",
+  "artifactId": 10099063143,
+  "artifactSha256": "d22d8ee2620e455e3a489f619d7a216bc4a249448c4fd7716277352e5144b874",
+  "framework": {
+    "name": "StrykerJS",
+    "version": "10.0.0"
+  },
+  "counts": {
+    "total": 83,
+    "killed": 79,
+    "survived": 3,
+    "noCoverage": 1,
+    "timeouts": 0,
+    "errors": 0
+  },
+  "score": 95.18,
+  "breakThreshold": 0,
+  "transientInstallRetryExercised": false,
+  "limitations": [
+    "Report-only mutation score; workflow success does not mean all mutants were detected.",
+    "Summary reports one clean source snapshot, not independent before/after source binding.",
+    "Actual publisher/deployment and the full regression run remain separate."
+  ],
+  "survivorReview": {
+    "billing": {
+      "file": "shared/billingClients/calendarMonthEndClosePolicy.ts",
+      "classification": "observationally-equivalent-through-public-policy",
+      "mutants": [
+        {
+          "id": "29",
+          "reason": "Skipping the missing-instant early return still yields a caught parse failure and the same rejected policy outcome."
+        },
+        {
+          "id": "31",
+          "reason": "An empty default timezone triggers the existing invalid-timezone fallback to UTC, preserving the outcome."
+        },
+        {
+          "id": "37",
+          "reason": "Removing the catch return yields undefined instead of null; both follow the same falsy rejection branch."
+        }
+      ],
+      "testsAdded": false,
+      "thresholdChanged": false
+    },
+    "authorization": {
+      "mutantId": "20",
+      "status": "two-behavioral-cases-added",
+      "limit": "Runtime compatibility of intentionally nullish constraints; no production security incident claim.",
+      "currentSourceAuthTests": {
+        "passed": 11,
+        "failed": 0
+      },
+      "exactMutantReplay": {
+        "newCasesFailed": 2,
+        "existingCasesPassed": 9,
+        "temporaryCopy": true,
+        "productionSourceChanged": false,
+        "logSha256": "5e414260d4647dc0d8992c18405f293d436a367ce8d98975761586617baad7b0"
+      },
+      "combinedPilotTests": {
+        "passed": 33,
+        "failed": 0
+      }
+    }
+  }
+}

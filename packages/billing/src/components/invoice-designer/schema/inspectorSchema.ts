@@ -127,4 +127,11 @@ export type DesignerInspectorField =
       path: string;
       domId?: string;
       visibleWhen?: DesignerInspectorVisibleWhen;
+    }
+  | {
+      kind: 'widget';
+      id: string;
+      widget: 'totals-rows-editor';
+      domId?: string;
+      visibleWhen?: DesignerInspectorVisibleWhen;
     };

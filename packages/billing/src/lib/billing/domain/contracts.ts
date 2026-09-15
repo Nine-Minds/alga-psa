@@ -1,3 +1,5 @@
+import type { ProjectCapContext, ProjectCapThresholdCrossing } from './projectCapAdjustments';
+import type { TimeBasedPhaseRateOverride, TimeBasedProjectChargeConfig } from '../compute/computeTimeBasedCharges';
 import type {
   ChargeExplanation,
   IAdjustment,
@@ -95,6 +97,11 @@ export type ResolvedContractBillingChargeFacts =
         serviceId: string;
         serviceName: string;
         defaultRate: number | string | null;
+        /**
+         * Effective `service_prices.rate` in the contract currency; preferred
+         * over the currency-untagged `defaultRate` when present.
+         */
+        currencyRate?: number | string | null;
         taxRateId: string | null;
         configurationId: string;
         serviceQuantity?: number | string | null;
@@ -104,6 +111,8 @@ export type ResolvedContractBillingChargeFacts =
         baseRate: number | string | null;
         enableProration?: boolean | null;
         quantity?: number | string | null;
+        /** Explicit fixed pricing basis ('unit' recurring seats vs 'bundle'/NULL). */
+        pricingBasis?: 'unit' | 'bundle' | string | null;
       }>;
       fallbackService?: {
         serviceId: string;
@@ -139,6 +148,16 @@ export type ResolvedContractBillingChargeFacts =
         customRate?: number | null;
         currencyRate?: number | string | null;
         billableMinutes: number;
+        workItemId?: string | null;
+        workItemType?: string | null;
+        ticketNumber?: string | null;
+        ticketTitle?: string | null;
+        ticketDescription?: string | null;
+        projectTaskName?: string | null;
+        projectId?: string | null;
+        projectPhaseId?: string | null;
+        phaseRateOverride?: TimeBasedPhaseRateOverride | null;
+        projectChargeConfig?: TimeBasedProjectChargeConfig;
         billingProfileId?: string | null;
       }>;
     })
@@ -163,6 +182,10 @@ export type ResolvedContractBillingChargeFacts =
         quantity: number | string;
         taxRateId?: string | null;
         currencyRate?: number | string | null;
+        /** Period-total report identity + revision (usage_period_totals) when
+         * this activity item is a period total rather than a dated entry. */
+        periodTotalId?: string | null;
+        periodTotalRevision?: number | string | null;
       }>;
     })
   | (ContractChargeFactsBase & {
@@ -180,6 +203,18 @@ export type ResolvedContractBillingChargeFacts =
         allowRollover?: boolean | null;
         weighted?: boolean | null;
       };
+      periodContributions?: Array<{
+        start: string;
+        end: string;
+        services: Array<{
+          serviceId: string;
+          serviceName?: string;
+          taxRateId?: string | null;
+          unitOfMeasure?: string | null;
+          billingMethod?: string | null;
+          weightedMinutes: number;
+        }>;
+      }>;
       periods: Array<{
         start?: string | null;
         end?: string | null;
@@ -291,6 +326,7 @@ export interface ContractBillingCalculationInput {
   taxContexts: Record<string, ResolvedChargeTaxPolicy>;
   /** Explicit non-contract carve-out (materials/projects/manual activity). */
   supplementalCharges?: IBillingCharge[];
+  projectCaps?: ProjectCapContext;
   discountsAndAdjustments?: {
     billingPeriod: IBillingPeriod;
     discountCandidates: DiscountComputeCandidate[];
@@ -313,6 +349,7 @@ export interface ContractBillingCalculationResult {
   diagnostics: { code: string; message: string }[];
   /** Rich compute results used only by the guarded production commit adapter. */
   sourceCharges: IBillingCharge[];
+  projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
 }
 
 export type LiveContractBillingCalculationResult =

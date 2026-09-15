@@ -14,6 +14,7 @@
         "manualEntryHelp": "Geben Sie die Kennung genau so ein, wie sie in Ihrem Buchhaltungssystem erscheint.",
         "metadataLabel": "Metadaten (JSON)",
         "metadataPlaceholder": "Optionale Metadaten als JSON",
+        "noKindOptions": "In der verbundenen Organisation wurden keine verwendbaren Datensätze dieses Typs gefunden.",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Zuordnung speichern",
         "saving": "Speichern…",
@@ -73,6 +74,10 @@
         "unavailable": {
           "description": "Diese Integration ist noch nicht verfügbar. Wählen Sie QuickBooks CSV oder Xero CSV aus, um manuelle Exporte zu konfigurieren.",
           "title": "Konfiguration nicht verfügbar"
+        },
+        "noPermission": {
+          "title": "Kein Zugriff auf Buchhaltungsintegrationen",
+          "description": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren. Bitten Sie einen Administrator um Zugriff."
         }
       },
       "modules": {
@@ -215,11 +220,13 @@
           "intro": "Diese Integration bietet eine Alternative zur OAuth-basierten QuickBooks-Anbindung:",
           "mappings": {
             "description": "Ordnen Sie Alga-Kunden, Dienstleistungen, Steuercodes und Zahlungsbedingungen den in Ihrer QuickBooks-Firma verwendeten Kennungen zu. Diese Werte werden beim Generieren des CSV-Exports verwendet.",
-            "title": "QuickBooks-CSV-Zuordnungen"
+            "title": "QuickBooks-CSV-Zuordnungen",
+            "permissionNotice": "Zum Bearbeiten von CSV-Zuordnungen ist die Berechtigung manage-mappings erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
           },
           "note": "Hinweis: Konfigurieren Sie die Zuordnungen unten, bevor Sie exportieren. CSV-Exporte und Steuerimporte werden über Abrechnung → Buchhaltungsexporte verwaltet.",
           "title": "QuickBooks-CSV-Integration"
-        }
+        },
+        "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren."
       },
       "taxImport": {
         "actions": {
@@ -1691,7 +1698,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Verwalten Sie tenant-eigene Microsoft-Profile für MSP SSO, Microsoft-Anmeldung und die Erkennung von Anmeldedomänen.",
+        "descriptionCe": "Verwalten Sie die Microsoft-App-Registrierungen Ihres Unternehmens für Outlook-E-Mail.",
         "descriptionEe": "Verwalten Sie tenant-eigene Microsoft-Profile für MSP SSO, Outlook-E-Mail, Kalendersynchronisation und Microsoft Teams.",
         "dialog": {
           "cancel": "Abbrechen",
@@ -1717,7 +1724,7 @@
         },
         "empty": {
           "createButton": "Microsoft-Profil erstellen",
-          "descriptionCe": "Erstellen Sie zunächst ein benanntes Profil und binden Sie es anschließend explizit an MSP-SSO und Anmeldungsflüsse mit Anmeldedomänen.",
+          "descriptionCe": "Erstellen Sie eine Microsoft-App-Registrierung für Outlook-E-Mail.",
           "descriptionEe": "Erstellen Sie zunächst ein benanntes Profil und binden Sie es anschließend explizit an MSP SSO, Outlook-E-Mail, Kalendersynchronisation und Teams.",
           "title": "Noch keine Microsoft-Profile"
         },
@@ -1840,7 +1847,9 @@
           "reconnect": "QuickBooks erneut verbinden",
           "refresh": "Aktualisieren",
           "saveCredentials": "QuickBooks-Anmeldedaten speichern",
-          "saving": "Speichern…"
+          "saving": "Speichern…",
+          "retryDisconnect": "Trennung wiederholen",
+          "forceFinalizeDisconnect": "Abschluss erzwingen"
         },
         "badges": {
           "connectionExpired": "Verbindung benötigt Aufmerksamkeit",
@@ -1852,11 +1861,17 @@
         "callback": {
           "accessDenied": "Der QuickBooks-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
           "configMissing": "QuickBooks OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret nicht vollständig konfiguriert waren.",
+          "disconnectInProgress": "QuickBooks wird gerade getrennt. Schließen Sie die Trennung ab, bevor Sie erneut eine Verbindung herstellen.",
+          "forbidden": "Sie haben keine Berechtigung mehr, Buchhaltungsverbindungen zu verwalten. Bitten Sie einen Administrator um Zugriff.",
           "generic": "QuickBooks hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der QuickBooks-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
           "missingParams": "Dem QuickBooks-Callback fehlten erforderliche Parameter. Starten Sie den Verbindungs-Flow erneut.",
           "oauthFailed": "Der QuickBooks-OAuth-Callback ist fehlgeschlagen. Versuchen Sie, die Verbindung erneut herzustellen. Bei weiterhin bestehendem Problem überprüfen Sie Ihre Redirect-URI und Scopes.",
-          "tokenExchangeFailed": "Intuit hat die erwarteten Token nicht zurückgegeben. Versuchen Sie, die Verbindung erneut herzustellen."
+          "sessionExpired": "Ihre Sitzung ist nicht mehr gültig. Melden Sie sich an und starten Sie die QuickBooks-Verbindung erneut.",
+          "stateReplayed": "Diese QuickBooks-Verbindungsanfrage wurde bereits verwendet. Starten Sie den Verbindungs-Flow erneut.",
+          "tenantMismatch": "Diese QuickBooks-Verbindungsanfrage gehört zu einem anderen Arbeitsbereich. Melden Sie sich im richtigen Arbeitsbereich an und starten Sie erneut.",
+          "tokenExchangeFailed": "Intuit hat die erwarteten Token nicht zurückgegeben. Versuchen Sie, die Verbindung erneut herzustellen.",
+          "userMismatch": "Diese QuickBooks-Verbindungsanfrage gehört einem anderen Benutzer. Melden Sie sich als der Benutzer an, der sie gestartet hat, und versuchen Sie es erneut."
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Fügen Sie Ihre Intuit-App-Client-ID ein",
@@ -1894,7 +1909,8 @@
           "descriptionPrefix": "Konfigurieren Sie Live-QuickBooks-Zuordnungen für das verbundene Unternehmen. Diese Zuordnungen sind begrenzt auf",
           "placeholderAlert": "Der Zuordnungsmanager wird verfügbar, nachdem das erste QuickBooks-Unternehmen verbunden und als Standard-Live-QuickBooks-Kontext festgelegt wurde.",
           "placeholderDescription": "Verbinden Sie ein QuickBooks-Unternehmen, bevor Sie Live-QuickBooks-Artikel- und Steuer-Zuordnungen konfigurieren.",
-          "title": "Live-QuickBooks-Zuordnung & -Konfiguration"
+          "title": "Live-QuickBooks-Zuordnung & -Konfiguration",
+          "permissionNotice": "Sie können das verbundene Unternehmen anzeigen, zum Bearbeiten von Zuordnungen ist jedoch die Berechtigung manage-mappings erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
         },
         "noClientId": "Für diesen Mandanten ist noch keine Client ID gespeichert.",
         "noClientSecret": "Für diesen Mandanten ist noch kein Client Secret gespeichert.",
@@ -1917,7 +1933,20 @@
           "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine im Intuit-Developer-Portal und fügen Sie Client-ID und Secret unten ein — die Einrichtungsanleitung führt Sie durch die Schritte.",
           "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten."
         },
-        "setupGuideLink": "QuickBooks-Einrichtungsanleitung"
+        "setupGuideLink": "QuickBooks-Einrichtungsanleitung",
+        "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
+        "connectionsPermissionNotice": "Sie können die QuickBooks-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen.",
+        "disconnectPending": "QuickBooks wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
+        "disconnectForceFinalized": "Die Trennung von QuickBooks wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
+        "disconnect": {
+          "forceFinalizePrompt": "Grund für den zwangsweisen Abschluss der QuickBooks-Trennung (wird im Audit-Log erfasst):",
+          "inProgressTitle": "QuickBooks-Trennung läuft",
+          "inProgressDescription": "Anbieterberechtigungen werden widerrufen. Synchronisierung und Exporte bleiben pausiert, bis für jedes verbundene Unternehmen der Widerruf bestätigt ist.",
+          "targetRevoked": "widerrufen",
+          "targetFailed": "benötigt Aufmerksamkeit",
+          "targetPending": "ausstehend",
+          "failedPermanentDescription": "Bei der Anbieterbereinigung ist ein dauerhafter Fehler aufgetreten. Sie können es erneut versuchen oder den Abschluss erzwingen, um die gespeicherten Anmeldedaten mit einem Audit-Eintrag zu entfernen."
+        }
       },
       "sync": {
         "healthCardTitle": "Synchronisierungsstatus",
@@ -2745,6 +2774,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Lassen Sie Mitarbeitende sich über Ihren eigenen Keycloak-Realm anmelden. Benutzer werden per E-Mail bestehenden AlgaPSA-Konten zugeordnet; Keycloak legt hier nie Benutzer an.",
+        "status": {
+          "configured": "Konfiguriert",
+          "notConfigured": "Nicht konfiguriert"
+        },
+        "actions": {
+          "refresh": "Aktualisieren",
+          "save": "Prüfen und speichern",
+          "saving": "Wird geprüft und gespeichert…",
+          "remove": "Entfernen"
+        },
+        "setup": {
+          "redirectUri": "Erstellen Sie in Ihrem Realm einen vertraulichen OpenID-Connect-Client und erlauben Sie diese Redirect-URI:",
+          "domainsEe": "Beanspruchen und verifizieren Sie anschließend unter „Erweitert“ Ihre Anmeldedomäne, damit E-Mails dieser Domäne zu diesem Realm geleitet werden.",
+          "domainsCe": "Fügen Sie anschließend unter „Erweitert“ Ihre Anmeldedomäne hinzu, damit E-Mails dieser Domäne zu diesem Realm geleitet werden.",
+          "issuer": "Aussteller: {{issuer}}"
+        },
+        "fields": {
+          "url": "Keycloak-Server-URL",
+          "realm": "Realm",
+          "clientId": "Client-ID",
+          "clientSecret": "Client-Secret",
+          "clientSecretKeep": "Leer lassen, um {{masked}} beizubehalten"
+        },
+        "errors": {
+          "loadFailed": "Keycloak-Einstellungen konnten nicht geladen werden",
+          "saveFailed": "Keycloak-Einstellungen konnten nicht gespeichert werden",
+          "removeFailed": "Keycloak-Einstellungen konnten nicht entfernt werden"
+        },
+        "toasts": {
+          "savedTitle": "Keycloak-Einstellungen gespeichert",
+          "savedDescription": "Der Realm hat auf die OpenID-Discovery geantwortet; Mitarbeitende können sich jetzt mit Keycloak anmelden.",
+          "saveFailedTitle": "Keycloak-Einstellungen können nicht gespeichert werden",
+          "removedTitle": "Keycloak-Einstellungen entfernt",
+          "removedDescription": "Die Keycloak-Anmeldung wird für diesen Mandanten nicht mehr angeboten.",
+          "removeFailedTitle": "Keycloak-Einstellungen können nicht entfernt werden"
+        },
+        "removeDialog": {
+          "title": "Keycloak-Anmeldung entfernen?",
+          "message": "Mitarbeitende sehen die Keycloak-Schaltfläche nicht mehr. Die Anmeldung mit Passwort bleibt unverändert.",
+          "confirm": "Entfernen",
+          "cancel": "Abbrechen"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Hinzufügen",
@@ -3018,7 +3093,6 @@
           "test": {
             "sent": "Teams-Testnachricht gesendet.",
             "failed": "Teams-Testnachricht fehlgeschlagen.",
-            "featureDisabled": "Microsoft Teams ist für diesen Mandanten nicht aktiviert.",
             "integrationInactive": "Aktivieren Sie die Teams-Integration, bevor Sie eine Testnachricht senden.",
             "capabilityDisabled": "Aktivieren Sie die Funktion für den persönlichen Bot, bevor Sie eine Testnachricht senden.",
             "botNotConfigured": "Konfigurieren Sie die Teams-Bot-Anmeldedaten, bevor Sie eine Testnachricht senden.",
@@ -3027,7 +3101,6 @@
             "skipped": "Die Teams-Testnachricht wurde übersprungen."
           },
           "steps": {
-            "featureFlag": "Microsoft Teams-Funktionsfreigabe",
             "integrationStatus": "Status der Teams-Integration",
             "capabilities": "Teams-Funktionen",
             "microsoftProfile": "Bereitschaft des Microsoft-Profils",
@@ -3039,7 +3112,6 @@
             "recentDeliveryHealth": "Aktueller Zustand der Teams-Zustellung"
           },
           "recommendation": {
-            "featureFlag": "Aktivieren Sie Microsoft Teams für diesen Mandanten.",
             "activate": "Aktivieren Sie die Teams-Integration in den Einstellungen.",
             "capabilities": "Aktivieren Sie den persönlichen Bot und Aktivitätsbenachrichtigungen für Teams.",
             "profile": "Wählen Sie ein bereites Microsoft-Profil für Teams aus.",
@@ -3230,8 +3302,8 @@
               "remedy": "Lassen Sie den Benutzer sich mit Microsoft anmelden (MSP-Portal-SSO oder die Teams-Registerkarte), damit sein Konto zugeordnet wird."
             },
             "feature_disabled": {
-              "cause": "Microsoft Teams ist für diesen Mandanten nicht aktiviert, daher werden Sendungen übersprungen, während die Konfiguration erhalten bleibt.",
-              "remedy": "Aktivieren Sie die Version-1.5-Funktionsfreigabe für diesen Mandanten."
+              "cause": "Die Teams-Funktion war für diesen Mandanten deaktiviert, als die Zustellung versucht wurde (vor 1.5).",
+              "remedy": "Teams ist jetzt allgemein verfügbar; wiederholen Sie den Versand."
             },
             "integration_inactive": {
               "cause": "Die Teams-Integration ist für diesen Mandanten nicht aktiv.",
@@ -3332,7 +3404,8 @@
             "s3": "Nach Änderungen in Xero Kontakte aus Xero exportieren",
             "s4": "Die Xero-Kontakte-CSV zurück in Alga importieren, um Aktualisierungen zu synchronisieren"
           },
-          "workflowTitle": "Workflow zur Kundensynchronisation"
+          "workflowTitle": "Workflow zur Kundensynchronisation",
+          "permissionNotice": "Zum Exportieren und Importieren von Kunden ist die Berechtigung execute-exports erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
         },
         "settings": {
           "dateFormat": "Datumsformat",
@@ -3356,7 +3429,8 @@
           "managedSuffix": "um Rechnungen auszuwählen, Xero-CSV-Exporte zu generieren, Steuerberichte zu importieren und Batches zu verwalten.",
           "mappings": {
             "description": "Ordnen Sie Alga-Kunden, Dienstleistungen und Steuercodes den in Ihrer Xero-Organisation verwendeten Kennungen zu. Diese Werte werden beim Generieren des CSV-Exports verwendet.",
-            "title": "Xero-CSV-Zuordnungen"
+            "title": "Xero-CSV-Zuordnungen",
+            "permissionNotice": "Zum Bearbeiten von CSV-Zuordnungen ist die Berechtigung manage-mappings erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
           },
           "overview": {
             "description": "Rechnungen als CSV für den manuellen Import in Xero exportieren und Steuerdaten aus Xero-Berichten importieren.",
@@ -3408,7 +3482,9 @@
             "title": "CSV-Workflow",
             "trackingDescription": "Der CSV-Export enthält Tracking-Kategorie-Spalten, die jede Xero-Rechnung mit ihrer Alga-Quelle verknüpfen. Beim Import von Steuern aus Xero werden diese Tracking-Kategorien verwendet, um Rechnungen automatisch zuzuordnen – ohne manuelle Abgleichung.",
             "trackingTitle": "Tracking-Kategorien zur Abgleichung"
-          }
+          },
+          "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
+          "connectionsPermissionNotice": "Sie können die Xero-CSV-Einstellungen anzeigen, zum Ändern ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
         }
       },
       "live": {
@@ -3422,7 +3498,9 @@
           "reconnect": "Xero erneut verbinden",
           "refresh": "Aktualisieren",
           "saveCredentials": "Xero-Anmeldedaten speichern",
-          "saving": "Speichern…"
+          "saving": "Speichern…",
+          "retryDisconnect": "Trennung wiederholen",
+          "forceFinalizeDisconnect": "Abschluss erzwingen"
         },
         "badges": {
           "connectionExpired": "Verbindung abgelaufen",
@@ -3435,11 +3513,17 @@
           "accessDenied": "Der Xero-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
           "configMissing": "Xero OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret des Mandanten nicht vollständig konfiguriert waren.",
           "connectionsUnmapped": "Xero hat Organisationen zurückgegeben, aber keine enthielt die zum Speichern einer Verbindung erforderlichen Kennungen.",
+          "disconnectInProgress": "Xero wird gerade getrennt. Schließen Sie die Trennung ab, bevor Sie erneut eine Verbindung herstellen.",
+          "forbidden": "Sie haben keine Berechtigung mehr, Buchhaltungsverbindungen zu verwalten. Bitten Sie einen Administrator um Zugriff.",
           "generic": "Xero hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der Xero-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
           "missingParams": "Dem Xero-Callback fehlten erforderliche Parameter. Starten Sie den Verbindungs-Flow erneut.",
           "noConnections": "Xero hat für dieses Login keine Organisationen zurückgegeben. Überprüfen Sie Ihre Xero-App und den Organisationszugriff und versuchen Sie es erneut.",
-          "oauthFailed": "Der Xero-OAuth-Callback ist fehlgeschlagen. Versuchen Sie, die Verbindung erneut herzustellen. Bei weiterhin bestehendem Problem überprüfen Sie Ihre Redirect-URI und Scopes."
+          "oauthFailed": "Der Xero-OAuth-Callback ist fehlgeschlagen. Versuchen Sie, die Verbindung erneut herzustellen. Bei weiterhin bestehendem Problem überprüfen Sie Ihre Redirect-URI und Scopes.",
+          "sessionExpired": "Ihre Sitzung ist nicht mehr gültig. Melden Sie sich an und starten Sie die Xero-Verbindung erneut.",
+          "stateReplayed": "Diese Xero-Verbindungsanfrage wurde bereits verwendet. Starten Sie den Verbindungs-Flow erneut.",
+          "tenantMismatch": "Diese Xero-Verbindungsanfrage gehört zu einem anderen Arbeitsbereich. Melden Sie sich im richtigen Arbeitsbereich an und starten Sie erneut.",
+          "userMismatch": "Diese Xero-Verbindungsanfrage gehört einem anderen Benutzer. Melden Sie sich als der Benutzer an, der sie gestartet hat, und versuchen Sie es erneut."
         },
         "clientIdLabel": "Xero Client ID",
         "clientIdPlaceholder": "Fügen Sie Ihre mandanteneigene Xero Client ID ein",
@@ -3473,18 +3557,36 @@
           "descriptionPrefix": "Konfigurieren Sie Live-Xero-Zuordnungen für die verbundene Standardorganisation. Diese Zuordnungen sind begrenzt auf",
           "placeholderAlert": "Der Zuordnungsmanager wird verfügbar, nachdem die erste Xero-Organisation verbunden und als Standard-Live-Xero-Kontext festgelegt wurde.",
           "placeholderDescription": "Verbinden Sie eine Live-Xero-Organisation, bevor Sie Live-Xero-Artikel- und Steuer-Zuordnungen konfigurieren.",
-          "title": "Live-Xero-Zuordnung & -Konfiguration"
+          "title": "Live-Xero-Zuordnung & -Konfiguration",
+          "permissionNotice": "Sie können die standardmäßig verbundene Organisation anzeigen, zum Bearbeiten von Zuordnungen ist jedoch die Berechtigung manage-mappings erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
         },
         "noClientId": "Für diesen Mandanten ist noch keine Client ID gespeichert.",
         "noClientSecret": "Für diesen Mandanten ist noch kein Client Secret gespeichert.",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Erforderliche Scopes",
+        "scopeOverride": "Bereitstellungsüberschreibung (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "Die Überschreibung XERO_OAUTH_SCOPES wurde ignoriert, da sie ungültige Einträge enthält ({{scopes}}). Stattdessen werden die Standard-Scopes verwendet.",
+        "scopeReconnectNote": "Diese Scopes gelten für neue Autorisierungen. Eine bestehende Verbindung behält die ursprünglich gewährten Scopes. Um die aktuelle Auswahl anzuwenden, trennen Sie Xero und stellen Sie die Verbindung erneut her. Sie können diese App auch unter „Connected apps“ in Xero entfernen, um frühere Berechtigungen zu widerrufen.",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
         "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Xero-App-Anmeldedaten ein. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
         "tenantOauthTitle": "Mandanteneigene OAuth-App",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
+        "connectionsPermissionNotice": "Sie können die Xero-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen.",
+        "disconnectPending": "Xero wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
+        "disconnectForceFinalized": "Die Trennung von Xero wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
+        "disconnect": {
+          "forceFinalizePrompt": "Grund für den zwangsweisen Abschluss der Xero-Trennung (wird im Audit-Log erfasst):",
+          "inProgressTitle": "Xero-Trennung läuft",
+          "inProgressDescription": "Anbieterverbindungen werden widerrufen. Synchronisierung und Exporte bleiben pausiert, bis für jede Verbindung die Entfernung bestätigt ist.",
+          "grantTarget": "Widerruf der OAuth-Berechtigung",
+          "targetRevoked": "widerrufen",
+          "targetFailed": "benötigt Aufmerksamkeit",
+          "targetPending": "ausstehend",
+          "failedPermanentDescription": "Bei der Anbieterbereinigung ist ein dauerhafter Fehler aufgetreten. Sie können es erneut versuchen oder den Abschluss erzwingen, um die gespeicherten Anmeldedaten mit einem Audit-Eintrag zu entfernen."
+        }
       }
     },
     "stripe": {
@@ -3561,7 +3663,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "Outlook-Posteingang über die Microsoft-App-Registrierung Ihres Unternehmens.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },
@@ -3666,7 +3768,10 @@
       "updateFailed": "Die Zuordnung kann nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
       "idRequiredForDelete": "Für das Löschen ist die Zuordnungs-ID erforderlich.",
       "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie die Zuordnungen und versuchen Sie es erneut.",
-      "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut."
+      "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+      "invoiceCancelled": "Die Rechnung wurde storniert und kann nicht der Buchhaltungsintegration zugeordnet werden.",
+      "invoiceNotFound": "Die Rechnung existiert nicht mehr und kann nicht der Buchhaltungsintegration zugeordnet werden.",
+      "scopeRequired": "Zuordnungsabfragen erfordern eine Integration, einen Entitätstyp und einen Bereichs-Scope."
     },
     "qbo": {
       "enterpriseOnly": "Die QuickBooks-Online-Integration ist nur in der Enterprise Edition verfügbar.",

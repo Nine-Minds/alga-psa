@@ -711,6 +711,10 @@ export class AssetService extends BaseService<any> {
     const db = tenantDb(knex, context.tenant);
     const query = db.table('document_associations');
     db.tenantJoin(query, 'documents', 'document_associations.document_id', 'documents.document_id');
+    // documents has no original_filename/uploaded_at: the upload name and time
+    // live on external_files (absent for in-app documents), so fall back to the
+    // document's own name and timestamps.
+    db.tenantJoin(query, 'external_files', 'documents.file_id', 'external_files.file_id', { type: 'left' });
     return query
       .where({
         'document_associations.entity_type': 'asset',
@@ -718,10 +722,10 @@ export class AssetService extends BaseService<any> {
       })
       .select(
         'document_associations.*',
-        'documents.original_filename',
+        knex.raw('COALESCE(external_files.original_name, documents.document_name) AS original_filename'),
         'documents.file_size',
         'documents.mime_type',
-        'documents.uploaded_at'
+        knex.raw('COALESCE(external_files.created_at, documents.entered_at, documents.updated_at) AS uploaded_at')
       );
   }
 

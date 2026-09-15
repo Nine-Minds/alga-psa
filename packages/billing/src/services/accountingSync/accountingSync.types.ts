@@ -27,7 +27,8 @@ export interface AccountingSyncOperation {
 export interface EnqueueSyncOperationInput {
   tenant: string;
   adapterType: string;
-  targetRealm?: string | null;
+  /** Immutable target realm — every queued operation is exact to one realm. */
+  targetRealm: string;
   operation: SyncOperationType;
   algaEntityType: string;
   algaEntityId: string;

@@ -118,21 +118,38 @@ const SOURCE_FILE = /\.(t|j)sx?$/;
 // adding a currency to CURRENCY_OPTIONS automatically extends this guard
 // (including multi-character symbols like "C$" and "Fr.").
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const SYMBOL_ALT = [...new Set(CURRENCY_OPTIONS.map((option) => option.symbol))]
-  .sort((a, b) => b.length - a.length)
-  .map(escapeRegex)
-  .join("|");
+const SYMBOLS = [
+  ...new Set(CURRENCY_OPTIONS.map((option) => option.symbol)),
+].sort((a, b) => b.length - a.length);
+const alternation = (symbols: string[]) => symbols.map(escapeRegex).join("|");
+const SYMBOL_ALT = alternation(SYMBOLS);
 
 // A literal currency amount: a symbol followed by a digit (one optional
 // space). Bare symbols ('¥' in a currency map) are fine; symbol+digit is a
 // hardcoded price. $ is the only symbol with regex/template homonyms; the
 // others are unambiguous everywhere.
-const AMOUNT = new RegExp(`(?:${SYMBOL_ALT}) ?\\d`);
+//
+// Letter-only symbols ("R" for ZAR) are the exception: unanchored they read
+// base64 blobs, opaque ids and "Portland, OR 97205" as prices, so they only
+// count when nothing alphanumeric precedes the symbol and no letter follows
+// the digit — which still catches R500, R 1,250.00 and R299/mo.
+const isAlphaSymbol = (s: string) => /^[A-Za-z]+$/.test(s);
+const SYMBOLIC = SYMBOLS.filter((s) => !isAlphaSymbol(s));
+const ALPHABETIC = SYMBOLS.filter(isAlphaSymbol);
+const AMOUNT_SOURCE = [
+  SYMBOLIC.length ? `(?:${alternation(SYMBOLIC)}) ?\\d` : null,
+  ALPHABETIC.length
+    ? `(?<![A-Za-z0-9])(?:${alternation(ALPHABETIC)}) ?\\d(?![A-Za-z])`
+    : null,
+]
+  .filter(Boolean)
+  .join("|");
+const AMOUNT = new RegExp(AMOUNT_SOURCE);
 // Cheap prefilter so only files that could possibly violate get AST-parsed.
 // symbol+digit catches strings/JSX amounts; "$" before "{" catches both the
 // `$${x}` template shape and the JSX `<span>${x}</span>` shape.
 const CANDIDATE = new RegExp(
-  `(?:${SYMBOL_ALT}) ?\\d|\\$\\$?\\{|(?:${SYMBOL_ALT})\\s*<|['"](?:${SYMBOL_ALT})['"]`,
+  `${AMOUNT_SOURCE}|\\$\\$?\\{|(?:${SYMBOL_ALT})\\s*<|['"](?:${SYMBOL_ALT})['"]`,
 );
 // Exactly one bare currency symbol (an input adornment or symbol fallback).
 const BARE_SYMBOL = new RegExp(`^(?:${SYMBOL_ALT})$`);

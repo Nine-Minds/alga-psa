@@ -1,12 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const featureFlagState = vi.hoisted(() => ({ enabled: true }));
-
-vi.mock('@alga-psa/core/features', () => ({
-  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
-  isFeatureFlagEnabled: vi.fn(async () => featureFlagState.enabled),
-}));
-
 vi.mock('../teamsWorkflowRuntimeSupport', async (importOriginal) => {
   const original = await importOriginal<typeof import('../teamsWorkflowRuntimeSupport')>();
   return {
@@ -131,7 +124,6 @@ const getSupportMocks = async () => {
 
 afterEach(() => {
   vi.clearAllMocks();
-  featureFlagState.enabled = true;
 });
 
 describe('Teams workflow action handlers (T011)', () => {
@@ -294,14 +286,10 @@ describe('Teams availability resolver (T012)', () => {
     return teamsIntegrationAvailability;
   };
 
-  it('is available only when release-v1-5-feature is enabled AND the integration is installed', async () => {
+  it('is available only when the integration is installed', async () => {
     const resolver = await loadResolver();
     await expect(resolver(buildKnex(), 'tenant-1')).resolves.toBe(true);
 
-    featureFlagState.enabled = false;
-    await expect(resolver(buildKnex(), 'tenant-1')).resolves.toBe(false);
-
-    featureFlagState.enabled = true;
     await expect(resolver(buildKnex({ installStatus: 'install_pending' }), 'tenant-1')).resolves.toBe(false);
     await expect(resolver(buildKnex({ installStatus: null }), 'tenant-1')).resolves.toBe(false);
   });

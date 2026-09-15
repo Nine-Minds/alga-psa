@@ -10,6 +10,7 @@ services:
       - "4030:4030" # webhook-sink
       - "4040:4040" # smtp-sink (SMTP protocol)
       - "4050:4050" # stripe (Stripe /v1 API + simulated hosted Checkout)
+      - "4060:4060" # xero (Xero identity OAuth + connections + api.xro/2.0)
       - "9500:9500" # control API + console
     environment:
       # Seeds (clients, users, meetings, calls) survive a container restart.
