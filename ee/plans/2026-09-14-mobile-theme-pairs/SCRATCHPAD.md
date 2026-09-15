@@ -111,3 +111,57 @@ tests live in `src/test/unit/app/{customThemePresets,themeContract}` and
 `../packages/tenancy`, which is what was run instead. A full `server` typecheck
 still OOMs V8 on this repo (pre-existing); the four touched server files were
 typechecked in a scoped project instead and are clean.
+
+## Live round-trip against a running app
+
+A browser can only reach the MSP web app — the mobile UI is React Native and has
+no web target in this repo (no `react-dom` / `react-native-web`), so screens
+themselves still want the device pass above. What *was* closed live, end to end,
+against a running server on a per-card database:
+
+1. Each pair applied through the real Settings → Appearance UI (Playwright:
+   sign in, click `#theme-pair-<id>`, `#save-appearance`), then the authenticated
+   `GET /api/v1/mobile/me/capabilities` read back with an API key.
+
+   | Applied | pairId | label | light bg / primary | dark bg | version |
+   |---|---|---|---|---|---|
+   | Alga | alga | Alga | `#f7f8fa` / `#8a4dea` | `#0c0a18` | `5a5d1a50…` |
+   | Forest | forest | Forest | `#f7fbf8` / `#16a34a` | `#0a120d` | `f1157782…` |
+   | Vice | vice | Vice | `#fefafd` / `#be00fe` | `#0d0221` | `295f6bd0…` |
+   | High contrast | high-contrast | High contrast | `#ffffff` / `#1a1a1a` | `#000000` | `ab5069e6…` |
+   | Custom (secondary authored as `#247024` in the editor) | custom | Custom | secondary `#247024` | — | `9fbcc0ba…` |
+
+2. Corrupting one saved custom token in the database
+   (`theme.customTheme.light.primary = "not-a-color"`) made the endpoint serve
+   the Alga pair with the *same* version as the real Alga pair — the fallback
+   and the version hash both behave. The tenant row was restored afterwards.
+
+3. Every captured payload was pushed through the real app code with
+   `react-test-renderer`: `parseMobileTheme` → `ThemeProvider` +
+   `TenantThemeBridge` → `useTheme`, in both modes. The resolved theme equalled
+   `buildTheme(tokens, mode)`, a real `Card` rendered the tenant's `card`
+   background (and the high-contrast `borderStrong`), the block round-tripped
+   through the secure-storage cache, `TicketRichTextEditor` injected
+   `--editor-bg`/`--editor-text` from the live tokens and posted one `set-theme`
+   message per load, and the Settings row named the live pair. Text-on-surface
+   and every badge tone cleared 4.5:1 on all five live palettes.
+
+These probes were throwaway (temporary test files plus a Playwright script, all
+deleted); the committed equivalents are `src/ui/themePairs.contract.test.ts` and
+friends, which run the same assertions against the web-generated fixture.
+
+### Not ours: the custom palette "reverting" in the web editor
+
+Reported from a browser pass: switching presets and returning to Custom showed
+`#1a1a1a` (the high-contrast seed) instead of the tenant's `#247024`. That is
+pre-existing web behaviour in `AppearanceSettings.tsx` — `selectPair` reseeds
+the editor from the previewed pair *while the editor is on seeded colours*
+(`customSeedPairId !== null`), which is the state after loading the tab on a
+predefined pair; the "These colors start from the X theme" note and the "Use my
+saved colors" button both mark it. This branch changes no file under
+`server/src/components/` or `packages/` (`git diff 431f6cc..HEAD` touches four
+server files, all mobile-capabilities), and the live run confirms the saved
+palette survives: with the tenant on `custom`, a detour through High contrast
+left the editor and the server both at `#247024`. The `localhost:1234` socket
+errors in the same pass are the Hocuspocus collaboration server, which is not
+running for this card, and are likewise unrelated.
