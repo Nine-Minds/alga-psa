@@ -43,13 +43,14 @@
       "contractTemplates": "Contractsjablonen",
       "invoicing": "Facturering",
       "invoiceLayouts": "Factuurlay-outs",
-      "taxRates": "Belastingtarieven",
+      "taxRates": "Belastingen",
       "contractLinePresets": "Voorinstellingen voor contractregels",
       "billingCycles": "Factureringscycli",
       "servicePeriods": "Serviceperioden",
       "usageTracking": "Gebruik volgen",
       "reports": "Rapporten",
       "serviceTypes": "Servicetypen",
+      "serviceCategories": "Servicecategorieën",
       "serviceCatalog": "Diensten",
       "products": "Producten"
     }

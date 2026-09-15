@@ -4,7 +4,6 @@
  * Note: Some modules have overlapping exports. Consumers should import
  * from specific action files when there are conflicts:
  * - contractActions vs contractLineMappingActions (contract line functions)
- * - categoryActions vs serviceCategoryActions (service category functions)
  * - taxRateActions vs taxSettingsActions (getTaxRates)
  * - invoiceActions vs manualInvoiceActions (ManualInvoiceUpdate)
  * - billingSettingsActions vs billingSettingsTypes (BillingSettings)
@@ -55,6 +54,7 @@ export {
 } from './invoiceGeneration';
 export * from './invoiceTemplates';
 export * from './manualInvoiceActions';
+export * from './ticketInvoiceActions';
 export * from './salesOrderInvoicingActions';
 export * from './rmaChargeActions';
 export * from './restockingFeeActions';

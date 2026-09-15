@@ -5,10 +5,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { ColumnDefinition } from '@alga-psa/types';
+import toast from 'react-hot-toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +43,10 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+
+// Bulk archive/restore composes the single-item action, so the selection is
+// issued in small batches instead of one request per row all at once.
+const BULK_CHUNK_SIZE = 10;
 
 const ProductsManager: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
@@ -75,6 +83,10 @@ const ProductsManager: React.FC = () => {
   const [isCheckingDelete, setIsCheckingDelete] = useState(false);
 
   const [editingProduct, setEditingProduct] = useState<IService | null>(null);
+
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
 
   const categoryNameById = useMemo(() => {
@@ -178,17 +190,46 @@ const ProductsManager: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // The rows behind the selection are about to change, so the selection is no
+    // longer something the operator can see or verify.
+    setSelectedProductIds(new Set());
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize]);
 
   useEffect(() => {
     setPage(1);
+    setSelectedProductIds(new Set());
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilter, selectedServiceType, selectedCategoryId]);
 
   const memoizedProducts = useMemo(() => products, [JSON.stringify(products)]);
+  const rangeSelect = useRangeSelection<IService>({
+    items: memoizedProducts,
+    getId: (product) => product.service_id,
+    selectedIds: selectedProductIds,
+    onSelectedIdsChange: setSelectedProductIds,
+  });
+  const visibleProductIds = useMemo(
+    () =>
+      memoizedProducts
+        .map((product) => product.service_id)
+        .filter((serviceId): serviceId is string => Boolean(serviceId)),
+    [memoizedProducts]
+  );
+  const selectedVisibleCount = useMemo(
+    () => visibleProductIds.filter((serviceId) => selectedProductIds.has(serviceId)).length,
+    [visibleProductIds, selectedProductIds]
+  );
+  const allVisibleSelected =
+    visibleProductIds.length > 0 && selectedVisibleCount === visibleProductIds.length;
+  const clearSelection = () => setSelectedProductIds(new Set());
+
+  const handleSelectAllVisible = (checked: boolean) => {
+    setSelectedProductIds(checked ? new Set(visibleProductIds) : new Set());
+    rangeSelect.resetAnchor();
+  };
 
   const openEdit = (product: IService) => {
     setEditingProduct(product);
@@ -203,6 +244,52 @@ const ProductsManager: React.FC = () => {
   };
 
   const columns: ColumnDefinition<IService>[] = [
+    // The selection cell must swallow its own clicks: the row click opens the
+    // edit dialog, which is not what ticking a checkbox asks for.
+    {
+      title: (
+        <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
+          <Checkbox
+            id="products-select-all"
+            checked={allVisibleSelected}
+            indeterminate={selectedVisibleCount > 0 && !allVisibleSelected}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              event.stopPropagation();
+              handleSelectAllVisible(event.target.checked);
+            }}
+            aria-label={t('products.bulk.selectAll', { defaultValue: 'Select all products' })}
+            className="m-0"
+            skipRegistration
+          />
+        </div>
+      ),
+      dataIndex: 'selection',
+      width: '4%',
+      sortable: false,
+      render: (_value, record) => {
+        const serviceId = record.service_id;
+        if (!serviceId) return null;
+        const isChecked = rangeSelect.isSelected(serviceId);
+        return (
+          <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
+            <Checkbox
+              id={`products-select-${serviceId}`}
+              checked={isChecked}
+              onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+                event.stopPropagation();
+                rangeSelect.handleSelect(serviceId, {
+                  shiftKey: event.shiftKey,
+                  selected: !isChecked,
+                });
+              }}
+              onChange={() => { /* controlled via onClick for shift-range support */ }}
+              className="m-0"
+              skipRegistration
+            />
+          </div>
+        );
+      },
+    },
     { title: t('products.table.product', { defaultValue: 'Product' }), dataIndex: 'service_name' },
     {
       title: t('products.table.sku', { defaultValue: 'SKU' }),
@@ -426,6 +513,158 @@ const ProductsManager: React.FC = () => {
     }
   };
 
+  const runBulkActiveUpdate = async (isActive: boolean) => {
+    const ids = Array.from(selectedProductIds);
+    if (ids.length === 0) return;
+
+    setIsBulkProcessing(true);
+    let updated = 0;
+    let failed = 0;
+    try {
+      for (let index = 0; index < ids.length; index += BULK_CHUNK_SIZE) {
+        const chunk = ids.slice(index, index + BULK_CHUNK_SIZE);
+        // Each id is its own request, so one refusal must not hide the rest of
+        // the chunk's outcomes.
+        const results = await Promise.all(
+          chunk.map(async (serviceId) => {
+            try {
+              const result = await updateService(serviceId, { is_active: isActive } as any);
+              return !(isActionMessageError(result) || isActionPermissionError(result));
+            } catch (e) {
+              console.error(`[ProductsManager] Failed to update product ${serviceId}:`, e);
+              return false;
+            }
+          })
+        );
+        for (const ok of results) {
+          if (ok) updated += 1;
+          else failed += 1;
+        }
+      }
+
+      const feedback = isActive
+        ? {
+            success: t('products.bulk.feedback.restoreSuccess', {
+              defaultValue: '{{count}} product(s) restored',
+              count: updated,
+            }),
+            partial: t('products.bulk.feedback.restorePartial', {
+              defaultValue: 'Restored {{count}} product(s); {{failed}} could not be restored',
+              count: updated,
+              failed,
+            }),
+            error: t('products.bulk.feedback.restoreError', {
+              defaultValue: 'Failed to restore {{count}} product(s)',
+              count: failed,
+            }),
+          }
+        : {
+            success: t('products.bulk.feedback.archiveSuccess', {
+              defaultValue: '{{count}} product(s) archived',
+              count: updated,
+            }),
+            partial: t('products.bulk.feedback.archivePartial', {
+              defaultValue: 'Archived {{count}} product(s); {{failed}} could not be archived',
+              count: updated,
+              failed,
+            }),
+            error: t('products.bulk.feedback.archiveError', {
+              defaultValue: 'Failed to archive {{count}} product(s)',
+              count: failed,
+            }),
+          };
+
+      if (failed === 0) {
+        toast.success(feedback.success);
+      } else if (updated > 0) {
+        toast.error(feedback.partial);
+      } else {
+        toast.error(feedback.error);
+      }
+    } finally {
+      clearSelection();
+      setIsBulkProcessing(false);
+      await fetchProducts();
+    }
+  };
+
+  const runBulkPermanentDelete = async () => {
+    const ids = Array.from(selectedProductIds);
+    if (ids.length === 0) return;
+
+    setIsBulkProcessing(true);
+    let deleted = 0;
+    let failed = 0;
+    // Association checks refuse individual products; naming them with their
+    // reason is the only way the operator learns what survived and why.
+    const blocked: string[] = [];
+    try {
+      for (const serviceId of ids) {
+        const name =
+          products.find((product) => product.service_id === serviceId)?.service_name ?? serviceId;
+        try {
+          const check = await checkProductCanBeDeleted(serviceId);
+          if (isActionMessageError(check) || isActionPermissionError(check)) {
+            blocked.push(`${name} (${getErrorMessage(check)})`);
+            continue;
+          }
+          if (!check.canDelete) {
+            blocked.push(`${name} (${check.associations.map((a) => a.description).join(', ')})`);
+            continue;
+          }
+
+          const result = await deleteProductPermanently(serviceId);
+          if (isActionMessageError(result) || isActionPermissionError(result)) {
+            blocked.push(`${name} (${getErrorMessage(result)})`);
+            continue;
+          }
+          deleted += 1;
+        } catch (e) {
+          console.error(`[ProductsManager] Failed to delete product ${serviceId}:`, e);
+          failed += 1;
+        }
+      }
+
+      const names = blocked.join('; ');
+      const unresolved = blocked.length + failed;
+      if (unresolved === 0) {
+        toast.success(t('products.bulk.feedback.deleteSuccess', {
+          defaultValue: '{{count}} product(s) deleted permanently',
+          count: deleted,
+        }));
+      } else if (deleted > 0) {
+        toast.error(names
+          ? t('products.bulk.feedback.deletePartialBlocked', {
+              defaultValue: 'Deleted {{count}} product(s); {{failed}} could not be deleted: {{names}}',
+              count: deleted,
+              failed: unresolved,
+              names,
+            })
+          : t('products.bulk.feedback.deletePartial', {
+              defaultValue: 'Deleted {{count}} product(s); {{failed}} could not be deleted',
+              count: deleted,
+              failed: unresolved,
+            }));
+      } else {
+        toast.error(names
+          ? t('products.bulk.feedback.deleteBlocked', {
+              defaultValue: 'Could not delete {{count}} product(s) — still in use: {{names}}',
+              count: unresolved,
+              names,
+            })
+          : t('products.bulk.feedback.deleteError', {
+              defaultValue: 'Failed to delete {{count}} product(s)',
+              count: unresolved,
+            }));
+      }
+    } finally {
+      clearSelection();
+      setIsBulkProcessing(false);
+      setIsBulkDeleteOpen(false);
+      await fetchProducts();
+    }
+  };
+
   const closePermanentDeleteDialog = () => {
     setIsPermanentDeleteOpen(false);
     setProductToPermanentDelete(null);
@@ -529,6 +768,11 @@ const ProductsManager: React.FC = () => {
                   setPageSize(n);
                   setPage(1);
                 }}
+                rowClassName={(record) =>
+                  record.service_id && selectedProductIds.has(record.service_id)
+                    ? 'bg-table-selected'
+                    : ''
+                }
                 onRowClick={(record) => openEdit(record)}
                 key={`products-table-${page}`}
               />
@@ -536,6 +780,57 @@ const ProductsManager: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <BulkActionBar
+        idPrefix="products-bulk-action-bar"
+        count={selectedProductIds.size}
+        selectedLabel={t('products.bulk.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedProductIds.size,
+        })}
+        actions={[
+          {
+            id: 'archive',
+            label: t('products.bulk.actions.archive', { defaultValue: 'Archive' }),
+            icon: <Archive className="h-4 w-4" />,
+            disabled: isBulkProcessing,
+            onClick: () => { void runBulkActiveUpdate(false); },
+          },
+          {
+            id: 'restore',
+            label: t('products.bulk.actions.restore', { defaultValue: 'Restore' }),
+            icon: <RotateCcw className="h-4 w-4" />,
+            disabled: isBulkProcessing,
+            onClick: () => { void runBulkActiveUpdate(true); },
+          },
+          {
+            id: 'delete',
+            label: t('products.bulk.actions.delete', { defaultValue: 'Delete' }),
+            icon: <Trash2 className="h-4 w-4" />,
+            destructive: true,
+            disabled: isBulkProcessing,
+            onClick: () => setIsBulkDeleteOpen(true),
+          },
+        ]}
+        onClear={clearSelection}
+        clearLabel={t('products.bulk.clear', { defaultValue: 'Clear' })}
+      />
+
+      <ConfirmationDialog
+        id="products-bulk-delete-dialog"
+        isOpen={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        onConfirm={runBulkPermanentDelete}
+        title={t('products.bulk.deleteDialog.title', { defaultValue: 'Delete Products Permanently' })}
+        message={t('products.bulk.deleteDialog.message', {
+          defaultValue:
+            'Permanently delete {{count}} selected product(s)? Products associated with existing data are skipped. This action cannot be undone.',
+          count: selectedProductIds.size,
+        })}
+        confirmLabel={t('products.bulk.actions.delete', { defaultValue: 'Delete' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        isConfirming={isBulkProcessing}
+      />
 
       <QuickAddProduct
         isOpen={isCreateOpen}

@@ -218,6 +218,12 @@ export async function getContractMonthlyFixedValuesByContract(
     }
   }
 
+  // LEVERAGE: pattern fixed-rate-resolution — this valuation still re-derives
+  // the fixed/unit member rate chain (base_rate → custom_rate → default_rate)
+  // instead of calling resolveFixedLineRate, so it does not yet see effective
+  // service_prices or the (service_id, config_id) revision keying the resolver
+  // unifies. Catalog-price-changes plan §0.5 schedules this collapse; the
+  // deferred-revenue loader and the EE simulator already call the resolver.
   const lineMonthlyCents = (line: (typeof lines)[number]): number => {
     if (line.contract_line_type === 'Usage') return 0;
     if (line.contract_line_type === 'Fixed') {

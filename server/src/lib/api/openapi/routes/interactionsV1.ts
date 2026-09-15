@@ -4,6 +4,8 @@ import {
   interactionListResponseSchema,
   interactionSuccessResponseSchema,
   interactionTypeListResponseSchema,
+  interactionStatusListResponseSchema,
+  updateInteractionApiSchema,
 } from '../../schemas/interactionSchemas';
 
 export function registerInteractionsV1Routes(registry: ApiOpenApiRegistry) {
@@ -23,6 +25,8 @@ export function registerInteractionsV1Routes(registry: ApiOpenApiRegistry) {
       project_id: zOpenApi.string().uuid().optional(),
       user_id: zOpenApi.string().uuid().optional(),
       type_id: zOpenApi.string().uuid().optional(),
+      status_id: zOpenApi.string().uuid().optional(),
+      is_closed: zOpenApi.enum(['true', 'false']).optional().describe("Filter by status closure; 'false' also matches interactions with no status."),
       date_from: zOpenApi.string().datetime().optional(),
       date_to: zOpenApi.string().datetime().optional(),
       page: zOpenApi.string().regex(/^\d+$/).optional(),
@@ -33,6 +37,8 @@ export function registerInteractionsV1Routes(registry: ApiOpenApiRegistry) {
   const InteractionSuccess = registry.registerSchema('InteractionSuccessV1', interactionSuccessResponseSchema);
   const InteractionList = registry.registerSchema('InteractionListV1', interactionListResponseSchema);
   const InteractionTypeList = registry.registerSchema('InteractionTypeListV1', interactionTypeListResponseSchema);
+  const InteractionStatusList = registry.registerSchema('InteractionStatusListV1', interactionStatusListResponseSchema);
+  const UpdateBody = registry.registerSchema('UpdateInteractionBodyV1', updateInteractionApiSchema);
   const ApiError = registry.registerSchema(
     'InteractionApiErrorV1',
     zOpenApi.object({
@@ -93,6 +99,29 @@ export function registerInteractionsV1Routes(registry: ApiOpenApiRegistry) {
     request: { params: InteractionIdParam },
     responses: {
       200: { description: 'Tenant interaction.', schema: InteractionSuccess },
+      ...errors,
+    },
+  });
+  registry.registerRoute({
+    ...common,
+    method: 'put',
+    path: '/api/v1/interactions/{id}',
+    summary: 'Update an interaction status or notes',
+    description: 'Closes/reopens an interaction (status_id must be an interaction status) or replaces its notes. Title and timing are not editable here because they also re-sync the linked calendar entry.',
+    request: { params: InteractionIdParam, body: { schema: UpdateBody } },
+    responses: {
+      200: { description: 'Updated interaction.', schema: InteractionSuccess },
+      ...errors,
+    },
+  });
+  registry.registerRoute({
+    ...common,
+    method: 'get',
+    path: '/api/v1/interaction-statuses',
+    summary: 'List interaction statuses',
+    description: 'Tenant statuses of type interaction, in display order.',
+    responses: {
+      200: { description: 'Interaction statuses.', schema: InteractionStatusList },
       ...errors,
     },
   });

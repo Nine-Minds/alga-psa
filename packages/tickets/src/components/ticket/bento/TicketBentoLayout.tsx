@@ -92,6 +92,8 @@ export interface TicketBentoLayoutProps {
   tags?: any[];
   onTagsChange?: (tags: any[]) => void;
   taskActions?: React.ReactNode;
+  /** Injected quick-invoice-a-ticket action (billing package). */
+  quickInvoiceActions?: React.ReactNode;
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
   liveHighlightedFields?: string[];
@@ -881,6 +883,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           tags={props.tags}
           onTagsChange={props.onTagsChange}
           taskActions={props.taskActions}
+          quickInvoiceActions={props.quickInvoiceActions}
           onResolveAndClose={props.onResolveAndClose}
           resolveAndCloseDisabled={props.resolveAndCloseDisabled}
           liveHighlightedFields={props.liveHighlightedFields}

@@ -276,7 +276,13 @@ describe('Contact API E2E Tests', () => {
       assertSuccess(response);
 
       const names = response.data.data.map((c: any) => c.full_name);
-      const sortedNames = [...names].sort();
+      // The API orders in SQL, so the expectation has to use the database
+      // collation instead of JavaScript's code-unit ordering.
+      const { rows } = await env.db.raw(
+        'SELECT value FROM json_array_elements_text(?::json) AS value ORDER BY value',
+        [JSON.stringify(names)]
+      );
+      const sortedNames = rows.map((row: any) => row.value);
       expect(names).toEqual(sortedNames);
     });
   });

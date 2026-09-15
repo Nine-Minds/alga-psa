@@ -14,6 +14,9 @@ vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importO
 
 const buildStaticQuery = (firstResult: any, selectResult: any = []) => {
   const builder: any = {};
+  builder.distinctOn = vi.fn().mockImplementation(() => builder);
+  builder.orderByRaw = vi.fn().mockImplementation(() => builder);
+  builder.as = vi.fn().mockImplementation(() => builder);
   builder.where = vi.fn().mockImplementation(() => builder);
   builder.andWhere = vi.fn().mockImplementation(() => builder);
   builder.whereNull = vi.fn().mockImplementation(() => builder);
@@ -38,6 +41,9 @@ const buildPricingScheduleQuery = (rows: Array<Record<string, any>>) => {
   } = {};
 
   const builder: any = {};
+  builder.distinctOn = vi.fn().mockImplementation(() => builder);
+  builder.orderByRaw = vi.fn().mockImplementation(() => builder);
+  builder.as = vi.fn().mockImplementation(() => builder);
   builder.where = vi.fn().mockImplementation((arg1: any, arg2?: any, arg3?: any) => {
     if (typeof arg1 === "function") {
       const nestedBuilder = {
@@ -87,6 +93,9 @@ const buildDiscountQuery = (rows: Array<Record<string, any>>) => {
   } = {};
 
   const builder: any = {};
+  builder.distinctOn = vi.fn().mockImplementation(() => builder);
+  builder.orderByRaw = vi.fn().mockImplementation(() => builder);
+  builder.as = vi.fn().mockImplementation(() => builder);
   builder.join = vi.fn().mockImplementation(() => builder);
   builder.where = vi.fn().mockImplementation(() => builder);
   builder.andWhere = vi.fn().mockImplementation((arg1: any, arg2?: any, arg3?: any) => {
@@ -232,8 +241,7 @@ describe("BillingEngine discount and pricing timing parity", () => {
       "contract_pricing_schedules.tenant",
       "test_tenant",
     );
-    expect(pricingScheduleBuilder.where).toHaveBeenNthCalledWith(
-      3,
+    expect(pricingScheduleBuilder.where).toHaveBeenCalledWith(
       "effective_date",
       "<",
       "2025-02-01",

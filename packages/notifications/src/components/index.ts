@@ -6,6 +6,7 @@ export { default as CreditExpirationNotification } from './CreditExpirationNotif
 
 export { NotificationSettings } from './settings/NotificationSettings';
 export { EmailTemplates } from './settings/EmailTemplates';
+export { EmailBrandingTab } from './settings/EmailBrandingTab';
 export { NotificationCategories } from './settings/NotificationCategories';
 export { InternalNotificationCategories } from './settings/InternalNotificationCategories';
 export { InternalNotificationPreferences } from './settings/InternalNotificationPreferences';

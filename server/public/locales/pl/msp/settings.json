@@ -633,7 +633,8 @@
           "loading": "Ładowanie statusów zgłoszeń tablicy…",
           "statusName": "Nazwa statusu",
           "closed": "Zamknięte",
-          "default": "Domyślne"
+          "default": "Domyślne",
+          "portalSelectable": "Użytkownicy portalu klienta mogą wybrać ten status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Otwórz ponownie zamknięte zgłoszenia przy przychodzących odpowiedziach",
@@ -1479,6 +1480,9 @@
       "notice": "Oglądasz podgląd niezapisanego motywu. Pozostali widzą zapisany motyw, dopóki go nie zastosujesz.",
       "save": "Zastosuj dla wszystkich",
       "discard": "Odrzuć"
+    },
+    "upgrade": {
+      "pitch": "Pary motywów dla całej organizacji, edytor własnej palety kolorów oraz white-labeling aplikacji MSP są częścią edycji Enterprise."
     }
   },
   "mspLanguage": {
@@ -1506,6 +1510,7 @@
     "emailTabs": {
       "settings": "Ustawienia",
       "emailTemplates": "Szablony e-mail",
+      "emailBranding": "Branding e-maili",
       "categories": "Kategorie",
       "telemetry": "Telemetria"
     },
@@ -1562,7 +1567,8 @@
       "preview": {
         "subjectLabel": "Podgląd tematu",
         "iframeTitle": "Podgląd szablonu e-maila",
-        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości."
+        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości.",
+        "sourceSyncNote": "Kliknij element w podglądzie, aby zaznaczyć odpowiadający mu kod; przesunięcie kursora w kodzie obrysowuje ten element tutaj."
       },
       "errors": {
         "loadFailed": "Nie udało się załadować szablonów"
@@ -1611,7 +1617,8 @@
       },
       "tabs": {
         "source": "Kod źródłowy",
-        "preview": "Podgląd"
+        "preview": "Podgląd",
+        "variables": "Zmienne"
       },
       "common": {
         "notAvailable": "Nd."
@@ -1628,6 +1635,110 @@
         "it": "Włoski",
         "pl": "Polski",
         "pt": "Portugalski"
+      }
+    },
+    "emailBranding": {
+      "title": "Branding e-maili",
+      "description": "Nadaj wszystkim wychodzącym e-mailom swoje kolory. Zobacz tutaj podgląd, a następnie wybierz szablony, do których je zastosować.",
+      "unsavedHint": "Zapisz paletę przed jej zastosowaniem.",
+      "source": {
+        "saved": "Zapisana",
+        "custom-theme": "Z motywu niestandardowego",
+        "theme-pair": "Z wybranego motywu",
+        "portal-branding": "Z brandingu portalu klienta",
+        "default": "Domyślne AlgaPSA"
+      },
+      "fields": {
+        "primary": "Kolor podstawowy",
+        "secondary": "Kolor dodatkowy",
+        "singleColor": "Jeden kolor (gradient wyprowadzony z koloru podstawowego)"
+      },
+      "tokens": {
+        "dark": "Ciemny akcent",
+        "outerBg": "Tło zewnętrzne",
+        "footerBg": "Tło stopki",
+        "cardBorder": "Obramowanie karty",
+        "infoBoxBg": "Tło ramki informacyjnej",
+        "infoBoxBorder": "Obramowanie ramki informacyjnej"
+      },
+      "preview": {
+        "title": "Podgląd"
+      },
+      "actions": {
+        "save": "Zapisz paletę",
+        "saving": "Zapisywanie...",
+        "useSuggested": "Użyj sugerowanych kolorów",
+        "adjust": "Dostosuj kolory pochodne",
+        "apply": "Zastosuj do szablonów",
+        "applying": "Stosowanie...",
+        "applyCount": "Zastosuj do {{count}} szablonów",
+        "applyToTemplate": "Zastosuj moją paletę",
+        "remove": "Usuń branding ze wszystkich szablonów",
+        "removing": "Usuwanie...",
+        "cancel": "Anuluj",
+        "done": "Gotowe"
+      },
+      "apply": {
+        "title": "Zastosuj branding do szablonów",
+        "languages": "Języki",
+        "selectAll": "Zaznacz wszystkie",
+        "selectNone": "Odznacz wszystkie",
+        "differs": "Różni się: {{parts}}",
+        "differsParts": {
+          "colors": "kolory",
+          "text": "tekst",
+          "subject": "temat"
+        },
+        "overwrite": "Nadpisz",
+        "overwriteHint": "Nadpisanie odtwarza szablon na podstawie standardowego z Twoją paletą i usuwa Twoje zmiany.",
+        "preview": {
+          "open": "Zobacz podgląd wyniku",
+          "title": "Podgląd: {{name}}",
+          "loading": "Tworzenie podglądu...",
+          "captions": {
+            "create": "Ze standardowego szablonu powstanie kopia w Państwa kolorystyce.",
+            "update": "Państwa kopia zostanie zbudowana na nowo ze standardowego szablonu z zapisaną paletą.",
+            "customized": "Państwa zmiany pozostają słowo w słowo. Zamieniane są tylko kolory standardowe, które jeszcze zostały w tym szablonie.",
+            "overwrite": "Twoje zmiany w tym szablonie zostaną usunięte. Szablon zostanie odtworzony na podstawie standardowego z Twoją paletą.",
+            "skipped": "Nic nie zostanie zapisane — {{reason}}. Tak wygląda ten szablon dzisiaj."
+          }
+        },
+        "summary": "{{written}} z brandingiem, {{skipped}} pominiętych, {{failed}} nieudanych",
+        "groups": {
+          "system": {
+            "title": "Niedostosowane",
+            "action": "Utwórz kopię z brandingiem"
+          },
+          "branded": {
+            "title": "Z Twoim brandingiem",
+            "action": "Zaktualizuj kolory"
+          },
+          "customized": {
+            "title": "Dostosowane",
+            "action": "Zamień tylko pozostałe kolory standardowe"
+          },
+          "no-stock-colors": {
+            "title": "Brak kolorów standardowych",
+            "action": "Nie ma czego zamienić"
+          }
+        },
+        "skipReasons": {
+          "customized": "Dostosowany — niezaznaczony",
+          "nothing-to-replace": "Nie ma czego zamienić",
+          "unchanged": "Już aktualny"
+        }
+      },
+      "newTemplates": {
+        "message": "Od ostatniego zastosowania palety dodano {{count}} szablonów.",
+        "action": "Zastosuj paletę do nowych szablonów",
+        "dismiss": "Odrzuć"
+      },
+      "enterprise": {
+        "useLogo": "Używaj mojego logo w nagłówku e-maili",
+        "logoWide": "Szerokie logo",
+        "logoDefault": "Kwadratowe logo",
+        "noLogo": "Prześlij logo w Ustawienia → Portal klienta → Branding, aby użyć go tutaj.",
+        "showAttribution": "Pokazuj „Powered by AlgaPSA” w stopce"
       }
     },
     "categoriesUi": {
@@ -2025,7 +2136,17 @@
         "upload": "Prześlij pakiet"
       },
       "errors": {
-        "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania."
+        "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania.",
+        "permissionDenied": "Nie masz uprawnień do importowania lub eksportowania danych.",
+        "invalidSpreadsheet": "Nie udało się odczytać tego arkusza. Sprawdź, czy to prawidłowy plik CSV lub XLSX, i spróbuj ponownie.",
+        "notAmpPackage": "Ten plik nie jest pakietem AMP. Prześlij plik .amp lub .sqlite.",
+        "tooLarge": "To przesłanie przekracza maksymalny dozwolony rozmiar.",
+        "sizeMismatch": "Przesyłanie nie zostało ukończone. Spróbuj ponownie.",
+        "noRecognizedHeaders": "Nie rozpoznano żadnej z kolumn tego arkusza. Sprawdź wiersz nagłówka i spróbuj ponownie.",
+        "storageRejected": "Serwer odrzucił to przesłanie. Poproś administratora o sprawdzenie konfiguracji typów plików magazynu.",
+        "spreadsheetFailed": "Nie udało się zaimportować arkusza. Spróbuj ponownie.",
+        "uploadFailed": "Nie udało się przesłać pakietu. Spróbuj ponownie.",
+        "unknown": "Przesyłanie nie powiodło się. Spróbuj ponownie."
       },
       "preflight": {
         "title": "Kontrola wstępna"
@@ -2033,6 +2154,19 @@
       "run": {
         "queued": "Migracja w kolejce",
         "applying": "Migracja w toku"
+      },
+      "badges": {
+        "nothingImported": "Nic nie zaimportowano"
+      },
+      "results": {
+        "skippedSamePackage": "Pominięte rekordy zostały już zmigrowane przez poprzednie uruchomienie tego samego pakietu.",
+        "skippedOtherPackage": "Pominięte rekordy dopasowano do encji utworzonych przez wcześniejszą migrację innego pakietu: {{packages}}.",
+        "skippedExistingEntity": "Pominięte rekordy dopasowano do istniejących encji.",
+        "nothingImportedTitle": "Nic nie zaimportowano",
+        "nothingImportedBody": "To uruchomienie nie utworzyło żadnych nowych rekordów. Każdy wiersz odpowiadał czemuś, co już istniało, więc nic nie zmieniono.",
+        "claimedBySamePackage": "Już zmigrowane przez ten pakiet",
+        "claimedByOtherPackage": "Już zmigrowane przez {{file}}",
+        "claimedByExistingEntity": "Dopasowano do istniejącej encji"
       }
     },
     "jobDetails": {
