@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "MobileCapabilitiesService.getMyCapabilities returns a theme block { pairId, label, light, dark, version } alongside features",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "prdRefs": [
       "FR1"
@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "Predefined pair: light/dark token sets are taken from CUSTOM_THEME_PRESETS for the tenant's pairId",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "prdRefs": [
       "FR2"
@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "Custom pair (Enterprise): light/dark token sets are the tenant's saved custom tokens",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "prdRefs": [
       "FR2"
@@ -29,7 +29,7 @@
   {
     "id": "F004",
     "description": "Custom pair with tokens failing findInvalidCustomThemeTokens falls back to the Alga preset and reports pairId 'alga'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "prdRefs": [
       "FR2"
@@ -38,7 +38,7 @@
   {
     "id": "F005",
     "description": "Tenant with no saved theme resolves to the default pair (alga) rather than omitting the block",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "prdRefs": [
       "FR2"
@@ -47,7 +47,7 @@
   {
     "id": "F006",
     "description": "theme.label is the pair's English label from THEME_PAIRS ('Custom' for custom)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "prdRefs": [
       "FR1",
@@ -56,8 +56,8 @@
   },
   {
     "id": "F007",
-    "description": "theme.version is a stable hash of pairId plus both token sets (same input \u2192 same hash, any token change \u2192 new hash)",
-    "implemented": false,
+    "description": "theme.version is a stable hash of pairId plus both token sets (same input → same hash, any token change → new hash)",
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "prdRefs": [
       "FR3"
@@ -66,7 +66,7 @@
   {
     "id": "F008",
     "description": "OpenAPI entry for /api/v1/mobile/me/capabilities documents the theme block and a MobileThemeSeedTokens schema with the 15 keys",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "prdRefs": [
       "FR4",
@@ -285,7 +285,7 @@
   },
   {
     "id": "F032",
-    "description": "Settings gains an Appearance section with a row cycling System \u2192 Light \u2192 Dark bound to useThemePreference",
+    "description": "Settings gains an Appearance section with a row cycling System → Light → Dark bound to useThemePreference",
     "implemented": false,
     "commitGroup": "settings-appearance",
     "prdRefs": [

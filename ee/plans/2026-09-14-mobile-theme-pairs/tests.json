@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "capabilities service: tenant with pairId 'forest' returns theme.light/dark equal to CUSTOM_THEME_PRESETS.forest and label 'Forest'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "featureIds": [
       "F001",
@@ -13,7 +13,7 @@
   {
     "id": "T002",
     "description": "capabilities service: tenant with no saved theme returns pairId 'alga' with the Alga preset",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "featureIds": [
       "F005"
@@ -22,7 +22,7 @@
   {
     "id": "T003",
     "description": "capabilities service: tenant with a valid custom pair returns pairId 'custom', label 'Custom', and the saved tokens verbatim",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "featureIds": [
       "F003",
@@ -32,7 +32,7 @@
   {
     "id": "T004",
     "description": "capabilities service: custom pair with an invalid hex token falls back to Alga and reports pairId 'alga'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "featureIds": [
       "F004"
@@ -41,7 +41,7 @@
   {
     "id": "T005",
     "description": "capabilities service: version is identical across two calls with unchanged tokens and differs when one token changes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "featureIds": [
       "F007"
@@ -50,7 +50,7 @@
   {
     "id": "T006",
     "description": "capabilities service: features block is unchanged in shape and values when theme is added",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "featureIds": [
       "F001"
@@ -59,7 +59,7 @@
   {
     "id": "T007",
     "description": "OpenAPI registry: the capabilities response schema includes theme with a 15-key seed token object for light and dark",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "featureIds": [
       "F008"
@@ -68,7 +68,7 @@
   {
     "id": "T008",
     "description": "capabilities service: errors resolving the tenant theme do not fail the request; features still return and theme falls back to Alga",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "server-theme-api",
     "featureIds": [
       "F001",
@@ -77,7 +77,7 @@
   },
   {
     "id": "T009",
-    "description": "themeMath.mix blends two colours by ratio and clamps to 0\u2013255",
+    "description": "themeMath.mix blends two colours by ratio and clamps to 0–255",
     "implemented": false,
     "commitGroup": "theme-math",
     "featureIds": [
@@ -124,7 +124,7 @@
   },
   {
     "id": "T014",
-    "description": "The fixture covers all nine presets \u00d7 two modes and each entry lists neutral, primary, secondary and accent ramps",
+    "description": "The fixture covers all nine presets × two modes and each entry lists neutral, primary, secondary and accent ramps",
     "implemented": false,
     "commitGroup": "theme-math",
     "featureIds": [
@@ -218,7 +218,7 @@
   },
   {
     "id": "T024",
-    "description": "buildTheme badge backgrounds differ between a light pair and a dark pair while badge text keeps \u22654.5:1 contrast on its background",
+    "description": "buildTheme badge backgrounds differ between a light pair and a dark pair while badge text keeps ≥4.5:1 contrast on its background",
     "implemented": false,
     "commitGroup": "theme-engine",
     "featureIds": [
@@ -382,7 +382,7 @@
   },
   {
     "id": "T042",
-    "description": "Settings Appearance row shows the current preference and cycles System \u2192 Light \u2192 Dark \u2192 System on press",
+    "description": "Settings Appearance row shows the current preference and cycles System → Light → Dark → System on press",
     "implemented": false,
     "commitGroup": "settings-appearance",
     "featureIds": [
