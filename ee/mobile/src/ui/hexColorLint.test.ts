@@ -1,17 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
+import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
 import { HEX_COLOR_ALLOW_LIST } from "../../eslint.config.mjs";
 
 const projectRoot = path.resolve(__dirname, "../..");
 const SAMPLE = 'export const style = { color: "#ff0000" };\n';
 
-async function lint(filePath: string) {
-  const mod = await import("eslint/use-at-your-own-risk");
-  const { FlatESLint } = (mod as any).default ?? mod;
-  const eslint = new FlatESLint({ cwd: projectRoot });
+async function lint(filePath: string): Promise<Array<string | null>> {
+  const eslint = new ESLint({ cwd: projectRoot });
   const [result] = await eslint.lintText(SAMPLE, { filePath });
-  return result.messages.map((message: { ruleId: string }) => message.ruleId);
+  return result.messages.map((message) => message.ruleId);
 }
 
 describe("hex colour lint rule", () => {
