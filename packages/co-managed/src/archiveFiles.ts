@@ -3,7 +3,7 @@ import { projectTaskAudienceSql } from './projectTaskAudience';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
+import { coManagedArchiveStorageProvider } from './archiveStorageProvider';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { assertCoManagedAttachmentPath } from './attachmentStoragePath';
 import { hasEffectiveSharedGrant } from './effectiveSharedGrant';
@@ -99,7 +99,7 @@ async function stageFiles(trx: Knex.Transaction, tenant: string, clientId: strin
       continue;
     }
     const path = assertCoManagedAttachmentPath(file);
-    const bytes = supplied ? Buffer.from(supplied) : Buffer.from(await (await StorageProviderFactory.createProvider()).download(path));
+    const bytes = supplied ? Buffer.from(supplied) : Buffer.from(await (await coManagedArchiveStorageProvider()).download(path));
     if (bytes.length !== file.file_size || checksum(bytes) !== file.content_hash) throw new Error('Archive source attachment failed integrity verification');
     await owner.table(TABLE).insert({ tenant, archive_file_id: randomUUID(), ...key,
       client_id: clientId, ticket_id: file.ticket_id, project_task_id: file.project_task_id ?? null, thread_id: file.thread_id, comment_id: file.comment_id,
@@ -123,7 +123,7 @@ export async function storeCoManagedArchiveFiles(db: Knex, tenant: string, limit
           .where('next_attempt_at', '<=', trx.raw('clock_timestamp()')).forUpdate().skipLocked().first();
         if (!row) return false;
         if (!Buffer.isBuffer(row.staged_bytes) || row.staged_bytes.length !== row.file_size || checksum(row.staged_bytes) !== row.content_hash) throw new Error('Archive staging failed integrity verification');
-        const path = coManagedArchiveFilePath(tenant, row.archive_file_id), provider = await StorageProviderFactory.createProvider();
+        const path = coManagedArchiveFilePath(tenant, row.archive_file_id), provider = await coManagedArchiveStorageProvider();
         const uploaded = await provider.upload(row.staged_bytes, path, { mime_type: row.mime_type });
         if (uploaded.path !== path || uploaded.size !== row.file_size) throw new Error('Archive storage did not confirm the complete object');
         await owner.table(TABLE).where('archive_file_id', row.archive_file_id).update({ status: 'ready', staged_bytes: null, stored_at: trx.raw('now()'), error_code: null });

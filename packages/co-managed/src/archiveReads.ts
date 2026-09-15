@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { buildAuthorizationAwarePage, type AuthorizationRecord } from '@alga-psa/authorization';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
+import { coManagedArchiveStorageProvider } from './archiveStorageProvider';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { authorizeCoManagedLocalRecord, authorizeCoManagedWorkRecord, CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
@@ -180,7 +180,7 @@ export async function downloadCoManagedArchiveFile(db: Knex, inputActor: CoManag
     if (filesHidden(fields)) throw new CoManagedSharedWorkError();
     const row = await tenantDb(trx, actor.tenant).table('co_managed_archive_files').where({ ...fileKey(resource), archive_file_id: fileId }).forShare().first();
     if (!row || hidden(fields, fileNoteSources(row.source_tenant === actor.tenant, resource.kind === 'project_task'))) throw new CoManagedSharedWorkError();
-    const content = row.status === 'pending' ? Buffer.from(row.staged_bytes) : Buffer.from(await (await StorageProviderFactory.createProvider()).download(coManagedArchiveFilePath(actor.tenant, row.archive_file_id)));
+    const content = row.status === 'pending' ? Buffer.from(row.staged_bytes) : Buffer.from(await (await coManagedArchiveStorageProvider()).download(coManagedArchiveFilePath(actor.tenant, row.archive_file_id)));
     if (content.length !== row.file_size || createHash('sha256').update(content).digest('hex') !== row.content_hash) throw new Error('Retained archive file failed integrity verification');
     await credential.assertCurrent();
     return { attachment: { fileName: row.file_name }, content };
