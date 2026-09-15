@@ -378,7 +378,7 @@
   {
     "id": "F042",
     "description": "Theme carries a contrast flag derived from pairId === 'high-contrast'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "high-contrast",
     "prdRefs": [
       "FR22"
@@ -387,7 +387,7 @@
   {
     "id": "F043",
     "description": "Card, KeyValue and list rows use the strong border token when the contrast flag is set",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "high-contrast",
     "prdRefs": [
       "FR22"
@@ -396,7 +396,7 @@
   {
     "id": "F044",
     "description": "Badge draws a one-pixel border in its status colour when the contrast flag is set",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "high-contrast",
     "prdRefs": [
       "FR22"

@@ -501,7 +501,7 @@
   {
     "id": "T055",
     "description": "Theme built with pairId 'high-contrast' has highContrast true; all other pairs false",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "high-contrast",
     "featureIds": [
       "F042"
@@ -510,7 +510,7 @@
   {
     "id": "T056",
     "description": "Card and KeyValue use borderStrong when highContrast is true and border otherwise",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "high-contrast",
     "featureIds": [
       "F043"
@@ -519,7 +519,7 @@
   {
     "id": "T057",
     "description": "Badge renders a 1px border in its tone colour when highContrast is true and no border otherwise",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "high-contrast",
     "featureIds": [
       "F044"
