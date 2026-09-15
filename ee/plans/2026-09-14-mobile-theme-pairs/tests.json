@@ -134,7 +134,7 @@
   {
     "id": "T015",
     "description": "parseMobileTheme accepts a well-formed theme block and rejects missing keys, non-hex values, and unknown pairIds without throwing",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F012"
@@ -143,7 +143,7 @@
   {
     "id": "T016",
     "description": "buildTheme returns spacing, borderRadius, shadows and typography deep-equal to the current lightTheme values",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F013"
@@ -152,7 +152,7 @@
   {
     "id": "T017",
     "description": "buildTheme(alga light) equals the previous hand-written lightTheme colours for background, card, text, textSecondary, border, primary",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F014",
@@ -163,7 +163,7 @@
   {
     "id": "T018",
     "description": "buildTheme(alga dark) equals the previous hand-written darkTheme colours for the same tokens",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F014",
@@ -174,7 +174,7 @@
   {
     "id": "T019",
     "description": "buildTheme(forest light) uses the Forest primary for primary and its ramp stops for primaryLight/primaryDark",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F015"
@@ -183,7 +183,7 @@
   {
     "id": "T020",
     "description": "buildTheme(vice dark) keeps borderLight darker than card, proving the dark-mode low-stop capping ported correctly",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F014"
@@ -192,7 +192,7 @@
   {
     "id": "T021",
     "description": "buildTheme picks textInverse white for Alga primary and textPrimary for a pale custom primary",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F017"
@@ -201,7 +201,7 @@
   {
     "id": "T022",
     "description": "buildTheme secondary and cyan come from the secondary ramp at the documented stops per mode",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F016"
@@ -210,7 +210,7 @@
   {
     "id": "T023",
     "description": "buildTheme status colours are identical across all nine pairs within a mode",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F018"
@@ -219,7 +219,7 @@
   {
     "id": "T024",
     "description": "buildTheme badge backgrounds differ between a light pair and a dark pair while badge text keeps ≥4.5:1 contrast on its background",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F019"
@@ -228,7 +228,7 @@
   {
     "id": "T025",
     "description": "buildTheme toast sets are derived from status colours and the card colour",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F020"
@@ -237,7 +237,7 @@
   {
     "id": "T026",
     "description": "buildTheme with an invalid 'border' token substitutes the Alga border for that mode and leaves other tokens intact",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F021"
@@ -246,7 +246,7 @@
   {
     "id": "T027",
     "description": "buildTheme with invalid tokens logs exactly once for the same version across repeated builds",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F021"
@@ -255,7 +255,7 @@
   {
     "id": "T028",
     "description": "themes.ts still exports lightTheme and darkTheme and every existing test that imports them passes unchanged",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F022"
@@ -264,7 +264,7 @@
   {
     "id": "T029",
     "description": "No file under src/ other than themes.ts embeds a non-Alga preset (grep-based test over the source tree)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-engine",
     "featureIds": [
       "F023"

@@ -44,6 +44,23 @@
 
 Unused seed tokens on mobile: surface (only feeds the neutral ramp), sidebarBg, sidebarText, sidebarHover, headerBg.
 
+### Badge / toast mix ratios (decided in theme-engine)
+
+`STATUS_MIX` in `ui/themes.ts`, measured so every tone clears 4.5:1 on every pair:
+
+| Mode | bg (card → status) | border (card → status) | text (status → black/white) |
+|---|---|---|---|
+| light | 0.16 | 0.45 | 0.45 toward black |
+| dark | 0.26 | 0.45 | 0.60 toward white |
+
+Neutral badges skip the mix and use the neutral ramp: bg 100, border 200, text 700 (light) / 600 (dark). `toast.info` is the plain card (bg card, border border, text textPrimary), which is what the hand-written themes did; `toast.success` / `toast.error` reuse the success and danger badge sets.
+
+Lowest measured badge label contrast across 9 pairs × 2 modes: 4.87 (high-contrast light, neutral).
+
+### textInverse deviation from FR7
+
+FR7 says "white when the primary is dark enough for 4.5:1, else textPrimary". Taken literally that makes dark pairs *worse*: their `textPrimary` is a near-white, so Forest dark went from 3.29:1 (white) to 2.85:1. Implemented rule: white when it reaches 4.5:1, otherwise whichever of white / textPrimary reads better — the web validates its own button labels at 3:1, and every pair clears that (worst case Forest dark 3.3:1).
+
 ## Commands
 
 ```bash
