@@ -42,12 +42,6 @@ export function mix(a: Rgb, b: Rgb, t: number): Rgb {
 
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
 
-/** Index of a shade in a ramp, e.g. shadeIndex(700) === 7. */
-export const SHADE_INDEX: Record<number, number> = SHADES.reduce((acc, shade, index) => {
-  acc[shade] = index;
-  return acc;
-}, {} as Record<number, number>);
-
 /** Interpolate a 10-step ramp through positioned anchors (0 = shade 50, 1 = shade 900). */
 export function rampFromStops(stops: Array<[number, Rgb]>): Rgb[] {
   return SHADES.map((_, index) => {
