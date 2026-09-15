@@ -441,7 +441,8 @@
       "boards": "Tableros",
       "priorities": "Prioridades",
       "categories": "Categorías",
-      "checklistTemplates": "Plantillas de lista de verificación"
+      "checklistTemplates": "Plantillas de lista de verificación",
+      "externalSystems": "Sistemas externos"
     },
     "numbering": {
       "title": "Formato de numeración",
@@ -986,6 +987,47 @@
           "updateStatusFailed": "Error al actualizar el estado de la plantilla",
           "itemSaveFailed": "Error al guardar el elemento de la lista de verificación",
           "ruleSaveFailed": "Error al guardar la regla de aplicación automática"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Sistemas externos",
+      "subtitle": "Agregue sistemas externos personalizados para que los tickets puedan vincularse a registros fuera del catálogo integrado.",
+      "addButton": "Agregar sistema",
+      "builtInTitle": "Sistemas integrados",
+      "builtInSubtitle": "Disponibles para todos los inquilinos; sus URL se generan a partir de la plantilla del sistema.",
+      "table": {
+        "label": "Etiqueta",
+        "key": "Clave",
+        "urlTemplate": "Plantilla de URL",
+        "actions": "Acciones"
+      },
+      "actions": {
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "cancel": "Cancelar",
+        "save": "Guardar"
+      },
+      "fields": {
+        "key": "Clave",
+        "keyHint": "Debe coincidir con custom:<slug> usando letras minúsculas, dígitos o guiones bajos.",
+        "label": "Etiqueta",
+        "urlTemplate": "Plantilla de URL",
+        "urlTemplateHint": "Opcional. Use los marcadores {realm} y {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Agregar sistema externo",
+        "editTitle": "Editar sistema externo"
+      },
+      "deleteDialog": {
+        "title": "Eliminar sistema externo",
+        "message": "¿Eliminar \"{{label}}\"? Los sistemas que aún usan los vínculos no se pueden eliminar."
+      },
+      "messages": {
+        "success": {
+          "created": "Sistema externo creado.",
+          "updated": "Sistema externo actualizado.",
+          "deleted": "Sistema externo eliminado."
         }
       }
     }

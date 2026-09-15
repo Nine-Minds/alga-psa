@@ -441,7 +441,8 @@
       "boards": "Boards",
       "priorities": "Prioritäten",
       "categories": "Kategorien",
-      "checklistTemplates": "Checklisten-Vorlagen"
+      "checklistTemplates": "Checklisten-Vorlagen",
+      "externalSystems": "Externe Systeme"
     },
     "numbering": {
       "title": "Nummernformat",
@@ -986,6 +987,47 @@
           "updateStatusFailed": "Vorlagenstatus konnte nicht aktualisiert werden",
           "itemSaveFailed": "Checklisten-Element konnte nicht gespeichert werden",
           "ruleSaveFailed": "Regel für automatische Anwendung konnte nicht gespeichert werden"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Externe Systeme",
+      "subtitle": "Fügen Sie benutzerdefinierte externe Systeme hinzu, damit Tickets auf Datensätze außerhalb des integrierten Katalogs verweisen können.",
+      "addButton": "System hinzufügen",
+      "builtInTitle": "Integrierte Systeme",
+      "builtInSubtitle": "Für jeden Mandanten verfügbar; URLs werden aus der Systemvorlage erzeugt.",
+      "table": {
+        "label": "Bezeichnung",
+        "key": "Schlüssel",
+        "urlTemplate": "URL-Vorlage",
+        "actions": "Aktionen"
+      },
+      "actions": {
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Abbrechen",
+        "save": "Speichern"
+      },
+      "fields": {
+        "key": "Schlüssel",
+        "keyHint": "Muss custom:<slug> entsprechen (Kleinbuchstaben, Ziffern oder Unterstriche).",
+        "label": "Bezeichnung",
+        "urlTemplate": "URL-Vorlage",
+        "urlTemplateHint": "Optional. Verwenden Sie die Platzhalter {realm} und {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Externes System hinzufügen",
+        "editTitle": "Externes System bearbeiten"
+      },
+      "deleteDialog": {
+        "title": "Externes System löschen",
+        "message": "\"{{label}}\" löschen? Systeme, die noch von Links verwendet werden, können nicht gelöscht werden."
+      },
+      "messages": {
+        "success": {
+          "created": "Externes System erstellt.",
+          "updated": "Externes System aktualisiert.",
+          "deleted": "Externes System gelöscht."
         }
       }
     }

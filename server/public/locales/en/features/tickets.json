@@ -1802,5 +1802,79 @@
       "collapseActivity": "Collapse older activity",
       "replyingToComment": "Replying to {{name}}"
     }
+  },
+  "externalLinks": {
+    "title": "External links",
+    "empty": "No external links",
+    "loading": "Loading external links...",
+    "noUrl": "No URL available for this reference",
+    "customSystemOption": "{{label}} (custom)",
+    "actions": {
+      "add": "Add link",
+      "edit": "Edit",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "menu": "Link actions"
+    },
+    "relationship": {
+      "origin": "Origin",
+      "mirror": "Mirror",
+      "reference": "Reference"
+    },
+    "relationshipDescription": {
+      "origin": "Where this ticket started. Each ticket can have one origin link, which sets its origin badge.",
+      "mirror": "Another record tracking the same work as this ticket.",
+      "reference": "Supporting information for this ticket."
+    },
+    "dialog": {
+      "addTitle": "Add external link",
+      "editTitle": "Edit external link",
+      "intro": "Adding a link does not sync data between systems."
+    },
+    "removeDialog": {
+      "title": "Remove external link",
+      "message": "Remove this external link from the ticket?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Loading systems...",
+      "selectSystem": "Select a system",
+      "externalId": "External ID",
+      "externalIdPlaceholder": "e.g. 42 or 1234567890",
+      "realm": "Realm",
+      "url": "URL",
+      "urlOptional": "Optional override",
+      "urlRequired": "https://...",
+      "relationship": "Relationship",
+      "originExistsHint": "This ticket already has an origin link.",
+      "actorGroup": "Person or account (optional)",
+      "actorHint": "The person or account associated with the linked record in the external system.",
+      "actorHandle": "Username or handle",
+      "actorDisplay": "Display name",
+      "builtInGroup": "Built-in systems",
+      "customGroup": "Custom systems",
+      "urlPreview": "Opens:",
+      "urlPreviewIncomplete": "Fill in the fields above to preview the link."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket not found",
+      "commentNotFound": "Comment not found on this ticket",
+      "linkNotFound": "External link not found",
+      "systemNotFound": "Unknown external system",
+      "externalIdRequired": "External ID is required",
+      "invalidUrl": "URL must be a valid http(s) URL",
+      "invalidRelationship": "Invalid relationship",
+      "invalidEntityType": "Invalid entity type",
+      "originExists": "This entity already has an origin link",
+      "duplicateExternalLink": "That external record is already linked",
+      "systemInUse": "This external system is used by existing links",
+      "systemInUseCount": "This external system is used by {{count}} link(s)",
+      "invalidSystemKey": "Custom system keys must match custom:<slug> with lowercase letters, digits, or underscores",
+      "systemLabelRequired": "System label is required",
+      "permissionDenied": "Permission denied: Cannot manage external systems",
+      "systemRequired": "Choose an external system.",
+      "urlRequired": "A URL is required for systems without a URL template."
+    }
   }
 }

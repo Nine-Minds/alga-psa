@@ -96,6 +96,18 @@ export type {
 export type { TicketMobileEditorRuntimeOptions } from './ticketMobileEditorRuntime';
 export { getTicketOrigin, TICKET_ORIGIN_OTHER } from './ticketOrigin';
 export type { ResolvedTicketOrigin } from './ticketOrigin';
+export {
+  isBuiltInExternalSystemKey,
+  isCustomExternalSystemKey,
+  findBuiltInExternalSystem,
+  customExternalSystemToDefinition,
+  resolveExternalSystem,
+  listExternalSystems,
+  safeExternalUrl,
+  isValidExternalUrl,
+  renderExternalLinkUrl,
+  resolveExternalSystemOrigin,
+} from './externalSystems';
 export { resolveDocumentViewUrl, documentViewUrl } from './documentViewUrl';
 export type { DocumentViewUrlInput } from './documentViewUrl';
 // Only the client-safe close-rule types/constants/error are exported from this

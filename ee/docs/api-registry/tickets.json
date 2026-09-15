@@ -800,6 +800,71 @@
           }
         ]
       }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/{id}/external-links"
+      },
+      "metadata": {
+        "displayName": "List Ticket External Links",
+        "summary": "List external links for a ticket",
+        "description": "Returns structured references from the ticket to records in external systems (Discord, Slack, GitHub, Jira, email, custom systems). Each entry carries the registry key, external id, realm, relationship (origin/mirror/reference), actor, and a resolved display object with a readable label and link-out href. The origin link, when present, is how the ticket arrived in Alga.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/{id}/external-links"
+      },
+      "metadata": {
+        "displayName": "Add Ticket External Link",
+        "summary": "Add an external link to a ticket",
+        "description": "Creates an external-system reference for a ticket. Defaults to a ticket-level link; set entity_type to 'comment' with a comment_id to attach the reference to one of the ticket's comments. Only one origin link per entity is permitted; a duplicate external record is rejected. Provide an http(s) url when the system has no URL template. Use GET /api/v1/tickets/by-external-link to find an existing ticket for the same external record before creating one.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "patch",
+        "path": "/api/v1/tickets/{id}/external-links/{linkId}"
+      },
+      "metadata": {
+        "displayName": "Update Ticket External Link",
+        "summary": "Update a ticket external link",
+        "description": "Updates mutable fields on an existing link belonging to the ticket: relationship, url, actor, external_status, external_updated_at, last_synced_at, and metadata. system and external_id are immutable.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "delete",
+        "path": "/api/v1/tickets/{id}/external-links/{linkId}"
+      },
+      "metadata": {
+        "displayName": "Remove Ticket External Link",
+        "summary": "Remove an external link from a ticket",
+        "description": "Deletes a link belonging to the ticket and records a ticket activity entry. Any inbound integration that relies on the link for deduplication should stop using it after removal.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/by-external-link"
+      },
+      "metadata": {
+        "displayName": "Find Ticket By External Link",
+        "summary": "Find a ticket by its external record",
+        "description": "Returns the ticket and matching link for a system/external_id pair, with an optional external_parent_id for comment-level records. Returns 404 when no ticket carries the external record. Use this as the dedupe check before creating a ticket from an external source.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
+      }
     }
   ]
 }

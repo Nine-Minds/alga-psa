@@ -441,7 +441,8 @@
       "boards": "Boards",
       "priorities": "Priorities",
       "categories": "Categories",
-      "checklistTemplates": "Checklist Templates"
+      "checklistTemplates": "Checklist Templates",
+      "externalSystems": "External systems"
     },
     "numbering": {
       "title": "Number Format",
@@ -986,6 +987,47 @@
           "updateStatusFailed": "Failed to update template status",
           "itemSaveFailed": "Failed to save checklist item",
           "ruleSaveFailed": "Failed to save auto-apply rule"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "External systems",
+      "subtitle": "Add custom external systems so tickets can link to records outside the built-in catalog.",
+      "addButton": "Add system",
+      "builtInTitle": "Built-in systems",
+      "builtInSubtitle": "Available to every tenant; their URLs are rendered from the system template.",
+      "table": {
+        "label": "Label",
+        "key": "Key",
+        "urlTemplate": "URL template",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "fields": {
+        "key": "Key",
+        "keyHint": "Must match custom:<slug> using lowercase letters, digits, or underscores.",
+        "label": "Label",
+        "urlTemplate": "URL template",
+        "urlTemplateHint": "Optional. Use {realm} and {external_id} placeholders."
+      },
+      "dialog": {
+        "addTitle": "Add external system",
+        "editTitle": "Edit external system"
+      },
+      "deleteDialog": {
+        "title": "Delete external system",
+        "message": "Delete \"{{label}}\"? Systems still used by links cannot be deleted."
+      },
+      "messages": {
+        "success": {
+          "created": "External system created.",
+          "updated": "External system updated.",
+          "deleted": "External system deleted."
         }
       }
     }

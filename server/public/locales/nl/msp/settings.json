@@ -441,7 +441,8 @@
       "boards": "Borden",
       "priorities": "Prioriteiten",
       "categories": "Categorieën",
-      "checklistTemplates": "Checklistsjablonen"
+      "checklistTemplates": "Checklistsjablonen",
+      "externalSystems": "Externe systemen"
     },
     "numbering": {
       "title": "Nummerformaat",
@@ -986,6 +987,47 @@
           "updateStatusFailed": "Kan sjabloonstatus niet bijwerken",
           "itemSaveFailed": "Kan checklistitem niet opslaan",
           "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Externe systemen",
+      "subtitle": "Voeg aangepaste externe systemen toe zodat tickets kunnen verwijzen naar records buiten de ingebouwde catalogus.",
+      "addButton": "Systeem toevoegen",
+      "builtInTitle": "Ingebouwde systemen",
+      "builtInSubtitle": "Beschikbaar voor elke tenant; URL's worden uit de systeemsjabloon opgebouwd.",
+      "table": {
+        "label": "Label",
+        "key": "Sleutel",
+        "urlTemplate": "URL-sjabloon",
+        "actions": "Acties"
+      },
+      "actions": {
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "save": "Opslaan"
+      },
+      "fields": {
+        "key": "Sleutel",
+        "keyHint": "Moet overeenkomen met custom:<slug> (kleine letters, cijfers of underscores).",
+        "label": "Label",
+        "urlTemplate": "URL-sjabloon",
+        "urlTemplateHint": "Optioneel. Gebruik de plaatsaanduidingen {realm} en {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Extern systeem toevoegen",
+        "editTitle": "Extern systeem bewerken"
+      },
+      "deleteDialog": {
+        "title": "Extern systeem verwijderen",
+        "message": "\"{{label}}\" verwijderen? Systemen die nog door koppelingen worden gebruikt, kunnen niet worden verwijderd."
+      },
+      "messages": {
+        "success": {
+          "created": "Extern systeem aangemaakt.",
+          "updated": "Extern systeem bijgewerkt.",
+          "deleted": "Extern systeem verwijderd."
         }
       }
     }
