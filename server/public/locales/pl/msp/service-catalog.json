@@ -75,7 +75,7 @@
       "taxType": "Rodzaj podatku",
       "isComposite": "Jest kompozytowy",
       "isActive": "Jest aktywny",
-      "isDefault": "Domyślny dla najemcy"
+      "isDefault": "Domyślny dla organizacji"
     },
     "values": {
       "dash": "-",
