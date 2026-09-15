@@ -1836,6 +1836,7 @@
       "selectSystem": "Kies een systeem",
       "externalId": "Externe ID",
       "externalIdPlaceholder": "bv. 42 of 1234567890",
+      "realm": "Domein",
       "url": "URL",
       "urlOptional": "Optionele overschrijving",
       "urlRequired": "https://...",

@@ -1978,6 +1978,7 @@
       "selectSystem": "Wybierz system",
       "externalId": "Identyfikator zewnętrzny",
       "externalIdPlaceholder": "np. 42 lub 1234567890",
+      "realm": "Obszar",
       "url": "URL",
       "urlOptional": "Opcjonalne zastąpienie",
       "urlRequired": "https://...",

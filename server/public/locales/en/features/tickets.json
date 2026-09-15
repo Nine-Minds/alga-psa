@@ -1836,6 +1836,7 @@
       "selectSystem": "Select a system",
       "externalId": "External ID",
       "externalIdPlaceholder": "e.g. 42 or 1234567890",
+      "realm": "Realm",
       "url": "URL",
       "urlOptional": "Optional override",
       "urlRequired": "https://...",

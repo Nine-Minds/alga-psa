@@ -30,7 +30,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { ExternalLinkRelationship, ExternalSystemDefinition } from '@alga-psa/types';
+import type { ExternalLinkRelationship, ExternalSystemActor, ExternalSystemDefinition } from '@alga-psa/types';
 import { renderExternalLinkUrl } from '../../lib/externalSystems';
 import {
   addExternalLink,
@@ -95,6 +95,29 @@ const EMPTY_FORM: LinkFormState = {
   actorHandle: '',
   actorDisplay: '',
 };
+
+/**
+ * The dialog edits only the actor's handle and display name. Any other actor
+ * fields supplied through the API (id, url) are not editable here, so they are
+ * carried forward from the existing link rather than dropped on save.
+ */
+function mergeActor(
+  existing: ExternalSystemActor | null | undefined,
+  handle: string,
+  displayName: string,
+): ExternalSystemActor | null {
+  const nextHandle = handle.trim() || null;
+  const nextDisplayName = displayName.trim() || null;
+  const id = existing?.id ?? null;
+  const url = existing?.url ?? null;
+  if (!nextHandle && !nextDisplayName && !id && !url) {
+    return null;
+  }
+  const actor: ExternalSystemActor = { handle: nextHandle, display_name: nextDisplayName };
+  if (id) actor.id = id;
+  if (url) actor.url = url;
+  return actor;
+}
 
 const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
   id = 'ticket-external-links-section',
@@ -234,6 +257,19 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
     [systems, form.system],
   );
 
+  // A realm input is shown when the definition names one, or when its template
+  // consumes `{realm}` even though no human label was declared (custom systems).
+  // Without this, a `custom:<slug>` template with `{realm}` could never be
+  // completed in the dialog and would demand an explicit URL override.
+  const realmField = useMemo(() => {
+    if (!selectedSystem) return null;
+    const needsRealm = selectedSystem.urlTemplate?.includes('{realm}') ?? false;
+    if (!selectedSystem.realmLabel && !needsRealm) return null;
+    return {
+      label: selectedSystem.realmLabel ?? t('externalLinks.fields.realm', 'Realm'),
+    };
+  }, [selectedSystem, t]);
+
   const previewHref = useMemo(() => {
     if (!selectedSystem) return null;
     return renderExternalLinkUrl(
@@ -304,13 +340,11 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
     }
     setSaving(true);
     try {
-      const actor =
-        form.actorHandle.trim() || form.actorDisplay.trim()
-          ? {
-              handle: form.actorHandle.trim() || null,
-              display_name: form.actorDisplay.trim() || null,
-            }
-          : null;
+      const actor = mergeActor(
+        editingLink?.actor,
+        form.actorHandle,
+        form.actorDisplay,
+      );
 
       let result;
       if (editingLink) {
@@ -597,9 +631,9 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
               />
             </div>
 
-            {selectedSystem?.realmLabel ? (
+            {realmField ? (
               <div className="space-y-2">
-                <Label htmlFor={`${id}-realm`}>{selectedSystem.realmLabel}</Label>
+                <Label htmlFor={`${id}-realm`}>{realmField.label}</Label>
                 <Input
                   id={`${id}-realm`}
                   value={form.realm}

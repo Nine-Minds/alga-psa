@@ -1836,6 +1836,7 @@
       "selectSystem": "System auswählen",
       "externalId": "Externe ID",
       "externalIdPlaceholder": "z. B. 42 oder 1234567890",
+      "realm": "Bereich",
       "url": "URL",
       "urlOptional": "Optionale Überschreibung",
       "urlRequired": "https://...",

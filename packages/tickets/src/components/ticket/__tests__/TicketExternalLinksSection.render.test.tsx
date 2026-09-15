@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const actionMocks = vi.hoisted(() => ({
@@ -113,5 +113,73 @@ describe('TicketExternalLinksSection behaviour', () => {
     await user.click(screen.getByRole('button', { name: 'Add link' }));
 
     expect(screen.getByText('This ticket already has an origin link.')).toBeInTheDocument();
+  });
+
+  async function openEdit(initial: ITicketExternalLinkView) {
+    const user = userEvent.setup();
+    render(
+      <TicketExternalLinksSection
+        id="ticket-external-links"
+        ticketId="t1"
+        initialLinks={[initial]}
+      />,
+    );
+    await user.click(document.getElementById(`ticket-external-links-actions-${initial.link_id}`)!);
+    await user.click(await screen.findByText('Edit'));
+    return user;
+  }
+
+  it('T133: editing preserves actor id and url alongside the edited handle/display name', async () => {
+    const user = await openEdit(
+      link({
+        actor: {
+          id: 'user-1',
+          handle: 'octocat',
+          display_name: 'The Octocat',
+          url: 'https://github.com/octocat',
+        },
+      }),
+    );
+
+    const urlInput = document.getElementById('ticket-external-links-url') as HTMLInputElement;
+    await user.clear(urlInput);
+    await user.type(urlInput, 'https://github.com/Nine-Minds/alga-psa/issues/43');
+    await user.click(document.getElementById('ticket-external-links-dialog-save')!);
+
+    await waitFor(() => expect(actionMocks.updateExternalLink).toHaveBeenCalledTimes(1));
+    expect(actionMocks.updateExternalLink).toHaveBeenCalledWith(
+      'l1',
+      expect.objectContaining({
+        url: 'https://github.com/Nine-Minds/alga-psa/issues/43',
+        actor: {
+          id: 'user-1',
+          handle: 'octocat',
+          display_name: 'The Octocat',
+          url: 'https://github.com/octocat',
+        },
+      }),
+    );
+  });
+
+  it('T134: editing preserves an actor that carries only id and url', async () => {
+    const user = await openEdit(
+      link({ actor: { id: 'user-2', url: 'https://sso.example/user-2' } }),
+    );
+
+    // The dialog has no handle/display to edit, but saving must not drop id/url.
+    await user.click(document.getElementById('ticket-external-links-dialog-save')!);
+
+    await waitFor(() => expect(actionMocks.updateExternalLink).toHaveBeenCalledTimes(1));
+    expect(actionMocks.updateExternalLink).toHaveBeenCalledWith(
+      'l1',
+      expect.objectContaining({
+        actor: {
+          handle: null,
+          display_name: null,
+          id: 'user-2',
+          url: 'https://sso.example/user-2',
+        },
+      }),
+    );
   });
 });
