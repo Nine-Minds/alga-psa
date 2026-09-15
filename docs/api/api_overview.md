@@ -132,6 +132,7 @@ The following REST API groups are available in the Community Edition under the b
 - **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below).
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
+- **Email Templates** — Read, create, and delete per-language notification email templates. `GET /api/v1/email/templates` lists all effective templates, merging system defaults with tenant overrides, and is filterable by `name`, `language`, `category`, and `customized` (pass `customized=true` to list only templates the tenant has overridden). `GET`, `PUT`, and `DELETE` on `/api/v1/email/templates/{name}` read, upsert, and remove individual tenant overrides; on the first `PUT` the system default is cloned as the baseline. Write and delete operations require the `settings` write permission and are flagged as requiring approval in the AI/MCP tool registry.
 - Additional endpoints: companies (clients), contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
 
 #### Ticket Bundling
@@ -172,7 +173,7 @@ Assets and tickets can be linked to each other (the same association surfaced in
 Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can have additional agents and a team. These sub-resources were previously only accessible as server actions (through the AlgaPSA UI) and are now available via REST.
 
 | Method | Path | Purpose |
-|--------|------|---------|
+|--------|------|------|
 | `GET` | `/tickets/{id}/agents` | List all additional agents assigned to the ticket |
 | `POST` | `/tickets/{id}/agents` | Add an additional agent. Requires `agent_id` (UUID) in the request body |
 | `DELETE` | `/tickets/{id}/agents/{userId}` | Remove an additional agent; returns `400` if `userId` is not a valid UUID |
