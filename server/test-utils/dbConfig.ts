@@ -1,4 +1,5 @@
 import { Knex, knex } from 'knex';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -53,8 +54,7 @@ async function resolveDbSecret(
  * The suite database, overridable per checkout via `TEST_DB_NAME`.
  *
  * Several worktrees of this repo share one PostgreSQL instance, and every suite
- * that uses `TestContext` drops, recreates and re-migrates this database on
- * startup. Two worktrees running at once therefore migrate the same database to
+ * that uses `TestContext` drops and recreates this database on startup. Two worktrees running at once therefore migrate the same database to
  * two different schemas and tear each other's connections down mid-test — which
  * surfaces as `Connection terminated unexpectedly`, `terminating connection due
  * to administrator command`, or constraint errors from a schema the branch under
@@ -149,7 +149,16 @@ export async function createTestDbConnection(
     });
   }
 
-  await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
+  const template = await resolveSchemaTemplate({
+    dbHost, dbPort, adminUser, adminPassword, appUser, appPassword, migrationsDir, seedsDir, runSeeds,
+  });
+
+  const cloned = template
+    ? await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword, template)
+    : false;
+  if (!cloned) {
+    await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
+  }
 
   // Point the app's connection layers (tenant/admin pools read DB_* env at
   // call time) at the suite database — but only for the standard one. Scratch
@@ -164,49 +173,11 @@ export async function createTestDbConnection(
     process.env.DB_USER_ADMIN = adminUser;
   }
 
-  const adminKnex = knex({
-    client: 'pg',
-    connection: {
-      host: dbHost,
-      port: dbPort,
-      user: adminUser,
-      password: adminPassword,
-      database: databaseName,
-    },
-    migrations: {
-      directory: migrationsDir,
-    },
-    seeds: {
-      directory: seedsDir,
-    },
-  });
-
-  // Citus-distribution probes (SELECT ... FROM pg_dist_partition) run inside
-  // dozens of migrations; on plain Postgres each one ERRORs server-side before
-  // its try/catch concludes "not Citus". An empty stand-in catalog makes every
-  // probe succeed with is_distributed=false — same behavior, silent logs.
-  if (process.env.TEST_DB_BACKEND === 'citus') {
-    await adminKnex.raw('CREATE EXTENSION IF NOT EXISTS citus');
-    await adminKnex.raw('ALTER DATABASE ?? SET citus.shard_count = 4', [databaseName]);
-    await adminKnex.raw('SET citus.shard_count = 4');
-  } else {
-    await adminKnex.raw('CREATE TABLE IF NOT EXISTS public.pg_dist_partition (logicalrelid regclass)');
+  const adminKnex = adminConnection(databaseName, dbHost, dbPort, adminUser, adminPassword, migrationsDir, seedsDir);
+  if (!cloned) {
+    await bootstrapSchema(adminKnex, databaseName, runSeeds);
   }
-
-  await adminKnex.migrate.latest();
-  if (runSeeds) {
-    await adminKnex.seed.run();
-  }
-
-  // The DB-guardrail migration sets cluster-wide role GUCs
-  // (idle_in_transaction_session_timeout, lock_timeout) on the app role.
-  // They are production insurance; in tests they turn legitimate lock waits
-  // and slow in-transaction work into spurious timeouts. Reset them after
-  // every bootstrap (the migration re-sets them each run).
-  const safeAppUser = appUser.replace(/[^a-zA-Z0-9_]/g, '');
-  await adminKnex.raw(`ALTER ROLE ${safeAppUser} RESET idle_in_transaction_session_timeout`);
-  await adminKnex.raw(`ALTER ROLE ${safeAppUser} RESET lock_timeout`);
-
+  await resetAppRoleGucs(adminKnex, appUser);
   await adminKnex.destroy();
 
   const db = knex({
@@ -228,6 +199,197 @@ export async function createTestDbConnection(
   return db;
 }
 
+function adminConnection(
+  databaseName: string,
+  dbHost: string,
+  dbPort: number,
+  adminUser: string,
+  adminPassword: string,
+  migrationsDir: string,
+  seedsDir: string,
+): Knex {
+  return knex({
+    client: 'pg',
+    connection: {
+      host: dbHost,
+      port: dbPort,
+      user: adminUser,
+      password: adminPassword,
+      database: databaseName,
+    },
+    migrations: {
+      directory: migrationsDir,
+    },
+    seeds: {
+      directory: seedsDir,
+    },
+  });
+}
+
+/** Migrate (and seed) an empty database. Runs once per template, or per file without one. */
+async function bootstrapSchema(adminKnex: Knex, databaseName: string, runSeeds: boolean): Promise<void> {
+  // Citus-distribution probes (SELECT ... FROM pg_dist_partition) run inside
+  // dozens of migrations; on plain Postgres each one ERRORs server-side before
+  // its try/catch concludes "not Citus". An empty stand-in catalog makes every
+  // probe succeed with is_distributed=false — same behavior, silent logs.
+  if (process.env.TEST_DB_BACKEND === 'citus') {
+    await adminKnex.raw('CREATE EXTENSION IF NOT EXISTS citus');
+    await adminKnex.raw('ALTER DATABASE ?? SET citus.shard_count = 4', [databaseName]);
+    await adminKnex.raw('SET citus.shard_count = 4');
+  } else {
+    await adminKnex.raw('CREATE TABLE IF NOT EXISTS public.pg_dist_partition (logicalrelid regclass)');
+  }
+
+  await adminKnex.migrate.latest();
+  if (runSeeds) {
+    await adminKnex.seed.run();
+  }
+}
+
+/**
+ * The DB-guardrail migration sets cluster-wide role GUCs
+ * (idle_in_transaction_session_timeout, lock_timeout) on the app role.
+ * They are production insurance; in tests they turn legitimate lock waits
+ * and slow in-transaction work into spurious timeouts. Reset them after
+ * every bootstrap (the migration re-sets them each time it runs).
+ */
+async function resetAppRoleGucs(adminKnex: Knex, appUser: string): Promise<void> {
+  const safeAppUser = appUser.replace(/[^a-zA-Z0-9_]/g, '');
+  await adminKnex.raw(`ALTER ROLE ${safeAppUser} RESET idle_in_transaction_session_timeout`);
+  await adminKnex.raw(`ALTER ROLE ${safeAppUser} RESET lock_timeout`);
+}
+
+// ---------------------------------------------------------------------------
+// Schema templates
+//
+// Every suite file recreates its database, which used to mean replaying ~1000
+// migrations plus the dev seeds per file (~15s healthy, >60s on a starved CI
+// runner — enough to blow beforeAll timeouts). Instead, the migrated+seeded
+// schema is built once per Postgres instance into a template database named
+// after a content hash of the migration and seed sources, and each file gets
+// `CREATE DATABASE ... TEMPLATE <that>`: a file-level copy that takes about a
+// second and yields the identical schema, seed rows and knex_migrations log.
+//
+// Not used for Citus (distribution metadata does not survive a template copy)
+// and can be disabled with TEST_DB_TEMPLATE_CLONE=0. Any failure while building
+// or cloning falls back to the per-file rebuild, so it can only be slower, not
+// wrong. Note seeds are copied as built: a seed that inserts now() carries the
+// template's build time, which is minutes old in CI and refreshed locally when
+// any migration or seed changes.
+// ---------------------------------------------------------------------------
+
+const TEMPLATE_PREFIX = 'test_schema_tpl_';
+const readyTemplates = new Map<string, string | null>();
+
+interface TemplateParams {
+  dbHost: string;
+  dbPort: number;
+  adminUser: string;
+  adminPassword: string;
+  appUser: string;
+  appPassword: string;
+  migrationsDir: string;
+  seedsDir: string;
+  runSeeds: boolean;
+}
+
+function templateCloningEnabled(): boolean {
+  return process.env.TEST_DB_TEMPLATE_CLONE !== '0' && process.env.TEST_DB_BACKEND !== 'citus';
+}
+
+function hashDirectory(hash: ReturnType<typeof createHash>, dir: string): void {
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    hash.update(`missing:${dir}`);
+    return;
+  }
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    if (entry.name === '__tests__' || entry.name === 'node_modules') continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      hash.update(`dir:${entry.name}/`);
+      hashDirectory(hash, full);
+    } else if (entry.isFile()) {
+      hash.update(`file:${entry.name}:`);
+      hash.update(fs.readFileSync(full));
+    }
+  }
+}
+
+/** Template name for this exact schema source set; sources are hashed by content. */
+export function schemaTemplateName(migrationsDir: string, seedsDir: string, runSeeds: boolean): string {
+  const hash = createHash('sha1');
+  hash.update(`seeds:${runSeeds ? 1 : 0};`);
+  hashDirectory(hash, migrationsDir);
+  if (runSeeds) hashDirectory(hash, seedsDir);
+  return `${TEMPLATE_PREFIX}${hash.digest('hex').slice(0, 16)}`;
+}
+
+/** Returns a ready template name, building it on first use, or null when templates are unavailable. */
+async function resolveSchemaTemplate(params: TemplateParams): Promise<string | null> {
+  if (!templateCloningEnabled()) return null;
+  const name = schemaTemplateName(params.migrationsDir, params.seedsDir, params.runSeeds);
+  if (readyTemplates.has(name)) return readyTemplates.get(name) ?? null;
+
+  const admin = knex({
+    client: 'pg',
+    connection: {
+      host: params.dbHost,
+      port: params.dbPort,
+      user: params.adminUser,
+      password: params.adminPassword,
+      database: 'postgres',
+    },
+    pool: { min: 1, max: 2 },
+  });
+  // Two processes (worktrees, parallel runners) may build the same template
+  // concurrently; each builds under a private name and renames at the end,
+  // so a template that exists under its final name is always complete.
+  const building = `${name}_building_${process.pid}`;
+  try {
+    if (!(await databaseExists(admin, name))) {
+      await admin.raw(`DROP DATABASE IF EXISTS "${building}"`);
+      await admin.raw(`CREATE DATABASE "${building}"`);
+      const builder = adminConnection(building, params.dbHost, params.dbPort, params.adminUser, params.adminPassword, params.migrationsDir, params.seedsDir);
+      try {
+        await bootstrapSchema(builder, building, params.runSeeds);
+      } finally {
+        await builder.destroy();
+      }
+      try {
+        await admin.raw(`ALTER DATABASE "${building}" RENAME TO "${name}"`);
+      } catch (error) {
+        // Lost the race: another process finished first. Use theirs.
+        if (!(await databaseExists(admin, name))) throw error;
+        await admin.raw(`DROP DATABASE IF EXISTS "${building}"`);
+      }
+      console.log(`[test-db] built schema template ${name}`);
+    }
+    readyTemplates.set(name, name);
+    return name;
+  } catch (error) {
+    console.warn(`[test-db] schema template unavailable, falling back to per-file migrate+seed: ${error instanceof Error ? error.message : String(error)}`);
+    await admin.raw(`DROP DATABASE IF EXISTS "${building}"`).catch(() => undefined);
+    readyTemplates.set(name, null);
+    return null;
+  } finally {
+    await admin.destroy().catch(() => undefined);
+  }
+}
+
+async function databaseExists(admin: Knex, name: string): Promise<boolean> {
+  const result = await admin.raw('SELECT 1 FROM pg_database WHERE datname = ?', [name]);
+  return result.rows.length > 0;
+}
+
+/**
+ * Drop and recreate a suite database, from `template` when given. Returns
+ * false (and leaves no database behind) when the template copy fails —
+ * typically because another session still holds the template open — so the
+ * caller can rebuild from migrations instead.
+ */
 async function recreateDatabase(
   databaseName: string,
   dbHost: string,
@@ -235,9 +397,10 @@ async function recreateDatabase(
   adminUser: string,
   adminPassword: string,
   appUser: string,
-  appPassword: string
-): Promise<void> {
-  const adminConnection = knex({
+  appPassword: string,
+  template?: string,
+): Promise<boolean> {
+  const admin = knex({
     client: 'pg',
     connection: {
       host: dbHost,
@@ -254,13 +417,22 @@ async function recreateDatabase(
 
   try {
     const safeDbName = databaseName.replace(/"/g, '""');
-    await adminConnection.raw(
+    await admin.raw(
       'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()',
       [databaseName]
     );
-    await adminConnection.raw(`DROP DATABASE IF EXISTS "${safeDbName}"`);
-    await adminConnection.raw(`CREATE DATABASE "${safeDbName}"`);
-    await adminConnection.raw(`DO $$
+    await admin.raw(`DROP DATABASE IF EXISTS "${safeDbName}"`);
+    if (template) {
+      try {
+        await admin.raw(`CREATE DATABASE "${safeDbName}" TEMPLATE "${template}"`);
+      } catch (error) {
+        console.warn(`[test-db] template clone of ${template} failed, rebuilding from migrations: ${error instanceof Error ? error.message : String(error)}`);
+        return false;
+      }
+    } else {
+      await admin.raw(`CREATE DATABASE "${safeDbName}"`);
+    }
+    await admin.raw(`DO $$
       BEGIN
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${appUser}') THEN
           CREATE ROLE ${appUser} WITH LOGIN PASSWORD '${appPassword}';
@@ -269,17 +441,18 @@ async function recreateDatabase(
         END IF;
       END;
     $$;`);
-    await adminConnection.raw(`ALTER DATABASE "${safeDbName}" OWNER TO ${appUser}`);
-    await adminConnection.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO ${appUser}`);
+    await admin.raw(`ALTER DATABASE "${safeDbName}" OWNER TO ${appUser}`);
+    await admin.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO ${appUser}`);
     // Some migrations and test helpers run CREATE ROLE / ALTER ... OWNER TO postgres
     // as the app user; make the app role a member of the admin role so those
     // succeed (resetDatabase used to do this before initialize was collapsed to a
     // single bootstrap).
     if (adminUser !== appUser) {
-      await adminConnection.raw(`GRANT ${adminUser} TO ${appUser}`);
+      await admin.raw(`GRANT ${adminUser} TO ${appUser}`);
     }
+    return true;
   } finally {
-    await adminConnection.destroy().catch(() => undefined);
+    await admin.destroy().catch(() => undefined);
   }
 }
 
