@@ -350,6 +350,7 @@ async function resolveSchemaTemplate(params: TemplateParams): Promise<string | n
   const building = `${name}_building_${process.pid}`;
   try {
     if (!(await databaseExists(admin, name))) {
+      await ensureAppRole(admin, params.appUser, params.appPassword);
       await admin.raw(`DROP DATABASE IF EXISTS "${building}"`);
       await admin.raw(`CREATE DATABASE "${building}"`);
       const builder = adminConnection(building, params.dbHost, params.dbPort, params.adminUser, params.adminPassword, params.migrationsDir, params.seedsDir);
@@ -377,6 +378,19 @@ async function resolveSchemaTemplate(params: TemplateParams): Promise<string | n
   } finally {
     await admin.destroy().catch(() => undefined);
   }
+}
+
+/** The first migration GRANTs to the app role, so it must exist before any migrate. */
+async function ensureAppRole(admin: Knex, appUser: string, appPassword: string): Promise<void> {
+  await admin.raw(`DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${appUser}') THEN
+        CREATE ROLE ${appUser} WITH LOGIN PASSWORD '${appPassword}';
+      ELSE
+        ALTER ROLE ${appUser} WITH LOGIN PASSWORD '${appPassword}';
+      END IF;
+    END;
+  $$;`);
 }
 
 async function databaseExists(admin: Knex, name: string): Promise<boolean> {
@@ -432,15 +446,7 @@ async function recreateDatabase(
     } else {
       await admin.raw(`CREATE DATABASE "${safeDbName}"`);
     }
-    await admin.raw(`DO $$
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${appUser}') THEN
-          CREATE ROLE ${appUser} WITH LOGIN PASSWORD '${appPassword}';
-        ELSE
-          ALTER ROLE ${appUser} WITH LOGIN PASSWORD '${appPassword}';
-        END IF;
-      END;
-    $$;`);
+    await ensureAppRole(admin, appUser, appPassword);
     await admin.raw(`ALTER DATABASE "${safeDbName}" OWNER TO ${appUser}`);
     await admin.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO ${appUser}`);
     // Some migrations and test helpers run CREATE ROLE / ALTER ... OWNER TO postgres
