@@ -3,10 +3,24 @@
   "sections": {
     "account": "Account",
     "about": "About",
+    "appearance": "Appearance",
     "security": "Security",
     "data": "Data",
     "legal": "Legal",
     "notifications": "Notifications"
+  },
+  "appearance": {
+    "mode": "Appearance",
+    "modes": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "modeHint": "Tap to switch between System, Light and Dark.",
+    "theme": "Theme",
+    "themeDefault": "Default",
+    "themeCustom": "Custom",
+    "themeHint": "Set by your administrator in AlgaPSA settings"
   },
   "account": {
     "status": "Status",

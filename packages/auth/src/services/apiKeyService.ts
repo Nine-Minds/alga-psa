@@ -19,6 +19,15 @@ interface ApiKey {
   usage_count: number;
 }
 
+/** Writing last_used_at on every request made each API call a DB write; once a minute is plenty for the admin UI. */
+export const API_KEY_LAST_USED_WRITE_INTERVAL_MS = 60_000;
+
+export function shouldTouchApiKeyLastUsed(lastUsedAt: Date | string | null | undefined, nowMs: number = Date.now()): boolean {
+  if (!lastUsedAt) return true;
+  const last = new Date(lastUsedAt).getTime();
+  return Number.isNaN(last) || nowMs - last >= API_KEY_LAST_USED_WRITE_INTERVAL_MS;
+}
+
 export class ApiKeyService {
   private static apiKeysQuery(knex: Knex, tenant: string) {
     return tenantDb(knex, tenant).table<ApiKey>('api_keys');
@@ -215,15 +224,16 @@ export class ApiKeyService {
         return null;
       }
 
-      // Update last_used_at timestamp
-      await this.apiKeysQuery(knex, tenant)
-        .where({
-          api_key_id: record.api_key_id,
-        })
-        .update({
-          updated_at: knex.fn.now(),
-          last_used_at: knex.fn.now(),
-        });
+      if (shouldTouchApiKeyLastUsed(record.last_used_at)) {
+        await this.apiKeysQuery(knex, tenant)
+          .where({
+            api_key_id: record.api_key_id,
+          })
+          .update({
+            updated_at: knex.fn.now(),
+            last_used_at: knex.fn.now(),
+          });
+      }
 
       return record;
     } catch (error) {
@@ -258,6 +268,35 @@ export class ApiKeyService {
     } catch (error) {
       console.error(`Error deactivating API key ${apiKeyId} in tenant ${tenant}:`, error);
       throw new Error(`Failed to deactivate API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Cap a key's remaining life at `graceMs` from now, never extending it.
+   * Rotation keeps the superseded key briefly valid so requests that were
+   * already in flight with it finish instead of failing and retrying.
+   */
+  static async expireApiKeyAfter(apiKeyId: string, graceMs: number, tenantId?: string): Promise<void> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for expiring API key');
+    }
+
+    const expiresAt = new Date(Date.now() + graceMs);
+    try {
+      await this.apiKeysQuery(knex, tenant)
+        .where({ api_key_id: apiKeyId })
+        .where((builder) => {
+          builder.whereNull('expires_at').orWhere('expires_at', '>', expiresAt);
+        })
+        .update({
+          expires_at: expiresAt,
+          updated_at: knex.fn.now(),
+        });
+    } catch (error) {
+      console.error(`Error expiring API key ${apiKeyId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to expire API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

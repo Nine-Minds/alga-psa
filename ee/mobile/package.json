@@ -1,6 +1,6 @@
 {
   "name": "mobile",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -62,10 +62,10 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "@types/react-test-renderer": "^19.1.0",
-    "@typescript-eslint/eslint-plugin": "^8.8.0",
-    "@typescript-eslint/parser": "^8.8.0",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.0",
     "esbuild": "^0.27.2",
-    "eslint": "^8.57.0",
+    "eslint": "^9.39.2",
     "patch-package": "^8.0.1",
     "react-test-renderer": "^19.1.0",
     "typescript": "~5.9.2",
@@ -84,7 +84,7 @@
     "@tiptap/core": "^3.30.5",
     "vitest": "^4.1.11",
     "@vitest/mocker": ">=4.1.11 <5",
-    "@xmldom/xmldom": ">=0.8.15",
+    "@xmldom/xmldom": ">=0.8.15 <0.9",
     "baseline-browser-mapping": ">=2.11.0",
     "browserslist": ">=4.28.7",
     "decode-uri-component": ">=0.5.0",

@@ -5,7 +5,8 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
-import { useTheme } from "../ui/ThemeContext";
+import { useTenantTheme, useTheme, useThemePreference } from "../ui/ThemeContext";
+import { describeThemePair, nextThemePreference } from "./settingsAppearance";
 import { authenticateForUnlock, canUseBiometrics, getBiometricGateEnabled, setBiometricGateEnabled } from "../auth/biometricGate";
 import { useAuth } from "../auth/AuthContext";
 import { clearTicketsCache } from "../cache/ticketsCache";
@@ -44,6 +45,8 @@ import { logger } from "../logging/logger";
 export function SettingsScreen() {
   const { t } = useTranslation("settings");
   const theme = useTheme();
+  const { preference, setPreference } = useThemePreference();
+  const { label: themePairLabel } = useTenantTheme();
   const config = getAppConfig();
   const navigation = useNavigation<any>();
   const { session, logout } = useAuth();
@@ -393,6 +396,30 @@ export function SettingsScreen() {
         <Row theme={theme} label={t("about.environment")} value={config.ok ? config.env : t("about.invalid")} />
         <View style={{ height: theme.spacing.sm }} />
         <Row theme={theme} label={t("about.baseUrl")} value={config.ok ? config.baseUrl : t("about.missing")} />
+      </View>
+
+      <View style={{ marginTop: theme.spacing.xl }}>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
+          {t("sections.appearance", "Appearance")}
+        </Text>
+        <ToggleRow
+          theme={theme}
+          label={t("appearance.mode", "Appearance")}
+          value={t(`appearance.modes.${preference}`, preference)}
+          onPress={() => setPreference(nextThemePreference(preference))}
+        />
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+          {t("appearance.modeHint", "Tap to switch between System, Light and Dark.")}
+        </Text>
+        <View style={{ height: theme.spacing.sm }} />
+        <Row
+          theme={theme}
+          label={t("appearance.theme", "Theme")}
+          value={describeThemePair(themePairLabel, t)}
+        />
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+          {t("appearance.themeHint", "Set by your administrator in AlgaPSA settings")}
+        </Text>
       </View>
 
       <View style={{ marginTop: theme.spacing.xl }}>

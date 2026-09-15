@@ -8,9 +8,12 @@ import type {
   TicketMobileEditorCommand,
   TicketMobileEditorMentionQueryPayload,
   TicketMobileEditorStatePayload,
+  TicketMobileEditorThemePayload,
 } from "./types";
+import { editorThemeCss } from "./editorTheme";
 import { MentionSuggestionList, type MentionSuggestionItem } from "./MentionSuggestionList";
 import { useTheme } from "../../ui/ThemeContext";
+import type { Theme } from "../../ui/themes";
 import {
   createTicketRichTextInjectionScript,
   getTicketRichTextNavigationDecision,
@@ -21,26 +24,29 @@ import {
 } from "./generatedEditorHtml";
 import { TicketRichTextToolbar } from "./TicketRichTextToolbar";
 
+/** The active theme as the payload the web view's CSS variables expect. */
+function toEditorThemePayload(theme: Theme): TicketMobileEditorThemePayload {
+  return {
+    mode: theme.mode,
+    background: theme.colors.card,
+    text: theme.colors.text,
+    textSecondary: theme.colors.textSecondary,
+    link: theme.colors.primary,
+    mentionBackground: theme.colors.badge.info.bg,
+    mentionText: theme.colors.badge.info.text,
+  };
+}
+
 /**
- * Build a dark-mode style block to inject into the editor HTML source.
+ * Build a theme style block to inject into the editor HTML source.
  * By embedding it directly in the HTML (before `</head>`), we avoid the
  * flash-of-white that happens when styles are injected asynchronously
  * via `injectJavaScript` after the WebView finishes loading.
  */
-function buildDarkModeStyleTag(colors: {
-  card: string;
-  text: string;
-  primary: string;
-  border: string;
-}): string {
-  return `<style id="rn-dark-mode">
-    :root { color-scheme: dark; }
-    html, body, #editor-root { background-color: ${colors.card} !important; color: ${colors.text} !important; }
-    .ProseMirror, .bn-editor, [class*="editor"] { background-color: transparent !important; color: ${colors.text} !important; }
-    a { color: ${colors.primary} !important; }
-    code { background-color: rgba(255,255,255,0.1) !important; }
-    blockquote { border-left-color: ${colors.border} !important; }
-    .mention-badge { background-color: rgba(59,130,246,0.2) !important; color: #93c5fd !important; }
+function buildThemeStyleTag(payload: TicketMobileEditorThemePayload): string {
+  return `<style id="rn-editor-theme">
+    ${editorThemeCss(payload)}
+    code { background-color: rgba(127,127,127,0.18); }
   </style>`;
 }
 
@@ -384,22 +390,30 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       loadStartedAtRef.current = Date.now();
     };
 
-    // Pre-build themed HTML so the WebView renders with the correct
-    // background color from the very first paint (no flash of white).
-    const themedHtml = useMemo(() => {
-      if (theme.mode !== "dark") {
-        return TICKET_MOBILE_EDITOR_HTML;
-      }
+    const editorThemePayload = useMemo(() => toEditorThemePayload(theme), [theme]);
 
-      const darkStyle = buildDarkModeStyleTag(theme.colors);
-      return TICKET_MOBILE_EDITOR_HTML.replace("</head>", `${darkStyle}\n</head>`);
-    }, [theme.mode, theme.colors]);
+    // Pre-build themed HTML so the WebView renders with the tenant's colours
+    // from the very first paint (no flash of white).
+    const themedHtml = useMemo(
+      () => TICKET_MOBILE_EDITOR_HTML.replace(
+        "</head>",
+        `${buildThemeStyleTag(editorThemePayload)}\n</head>`,
+      ),
+      [editorThemePayload],
+    );
+
+    // A theme change while the view is already loaded is repainted in place.
+    useEffect(() => {
+      if (!hasLoadedRef.current) return;
+      bridgeRef.current?.sendTheme(editorThemePayload);
+    }, [editorThemePayload]);
 
     const handleLoadEnd = () => {
       hasLoadedRef.current = true;
       lastContentRef.current = content;
       lastEditableRef.current = editable;
 
+      bridgeRef.current?.sendTheme(editorThemePayload);
       bridgeRef.current?.initialize({
         content,
         editable,
