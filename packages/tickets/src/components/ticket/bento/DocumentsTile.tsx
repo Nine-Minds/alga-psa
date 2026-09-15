@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { FileText, Plus, Eye } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IDocument } from '@alga-psa/types';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ContentCardVariantProvider } from '@alga-psa/ui/components';
@@ -57,21 +59,24 @@ function DocumentRow({
   id,
   doc,
   resolveDocumentViewUrl,
+  onView,
   t,
 }: {
   id: string;
   doc: IDocument;
   resolveDocumentViewUrl?: DocumentsTileProps['resolveDocumentViewUrl'];
+  onView: (document: IDocument) => void;
   t: (key: string, defaultValue: string) => string;
 }) {
   const size = formatFileSize(doc.file_size);
+  const RowAction = doc.file_id ? 'a' : 'button';
   return (
     <BentoRow id={id} stacked>
-      <a
-        href={documentViewUrl(doc, resolveDocumentViewUrl)}
-        target="_blank"
-        rel="noreferrer"
-        className="group flex items-center gap-2 min-w-0 text-sm"
+      <RowAction
+        {...(doc.file_id
+          ? { href: documentViewUrl(doc, resolveDocumentViewUrl), target: '_blank', rel: 'noreferrer' }
+          : { type: 'button' as const, onClick: () => onView(doc) })}
+        className="group flex items-center gap-2 min-w-0 text-sm w-full text-left"
         title={doc.document_name}
       >
         <BentoMicroBadge>{documentExtension(doc)}</BentoMicroBadge>
@@ -85,7 +90,7 @@ function DocumentRow({
           />
         ) : null}
         {size ? <BentoRowMeta>{size}</BentoRowMeta> : null}
-      </a>
+      </RowAction>
     </BentoRow>
   );
 }
@@ -109,6 +114,9 @@ export function DocumentsTile({
   allowBlockDocuments,
 }: DocumentsTileProps) {
   const { t } = useTranslation('features/tickets');
+  const { data: session } = useSession();
+  const { renderDocuments } = useDocumentsCrossFeature();
+  const [viewingDocument, setViewingDocument] = useState<IDocument | null>(null);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const visible = documents.slice(0, MAX_ROWS);
   const overflow = documents.length - visible.length;
@@ -153,6 +161,7 @@ export function DocumentsTile({
                   id={`${id}-row-${doc.document_id}`}
                   doc={doc}
                   resolveDocumentViewUrl={resolveDocumentViewUrl}
+                  onView={setViewingDocument}
                   t={t}
                 />
               ))}
@@ -170,6 +179,18 @@ export function DocumentsTile({
           </div>
         )}
       </BentoTile>
+
+      {viewingDocument && renderDocuments({
+        id: `${id}-view-drawer`,
+        documents,
+        userId: session?.user?.id || '',
+        entityId: ticketId,
+        entityType: 'ticket',
+        documentToOpen: viewingDocument,
+        drawerOnly: true,
+        onDocumentClosed: () => setViewingDocument(null),
+        onDocumentCreated,
+      })}
 
       <Dialog
         id={`${id}-manager-dialog`}

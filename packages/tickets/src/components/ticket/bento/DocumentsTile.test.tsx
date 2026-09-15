@@ -2,10 +2,14 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { IDocument } from '@alga-psa/types';
 import { DocumentsTile } from './DocumentsTile';
+
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: { user: { id: 'user-1' } } }),
+}));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
@@ -17,6 +21,16 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 // asserted without mounting the documents cross-feature context.
 vi.mock('./../TicketDocumentsSection', () => ({
   default: () => null,
+}));
+
+vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
+  useDocumentsCrossFeature: () => ({
+    renderDocuments: ({ documentToOpen, onDocumentClosed }: any) => (
+      <div role="dialog" aria-label={documentToOpen.document_name} data-document-id={documentToOpen.document_id}>
+        <button onClick={onDocumentClosed}>Close viewer</button>
+      </div>
+    ),
+  }),
 }));
 
 const documents = [
@@ -47,9 +61,15 @@ describe('DocumentsTile grid document cells', () => {
       '/api/documents/view/file-1',
     );
 
-    const fileLessHref = screen.getByText('Runbook').closest('a')?.getAttribute('href');
-    expect(fileLessHref).toBe('/msp/documents?doc=doc-block');
-    expect(fileLessHref).not.toContain('/api/documents/download/');
+    const internalDocument = screen.getByRole('button', { name: /Runbook/ });
+    expect(internalDocument).not.toHaveAttribute('href');
+    expect(internalDocument).not.toHaveAttribute('target');
+    fireEvent.click(internalDocument);
+    expect(screen.getByRole('dialog', { name: 'Runbook' })).toHaveAttribute('data-document-id', 'doc-block');
+    fireEvent.click(screen.getByText('Close viewer'));
+    expect(screen.queryByRole('dialog', { name: 'Runbook' })).not.toBeInTheDocument();
+    fireEvent.click(internalDocument);
+    expect(screen.getByRole('dialog', { name: 'Runbook' })).toBeInTheDocument();
   });
 
   it('honours a host resolver for file-backed documents only', () => {
@@ -67,9 +87,8 @@ describe('DocumentsTile grid document cells', () => {
       'href',
       '/portal/documents/file-1',
     );
-    expect(screen.getByText('Runbook').closest('a')).toHaveAttribute(
-      'href',
-      '/msp/documents?doc=doc-block',
-    );
+    expect(screen.getByText('notes.pdf').closest('a')).toHaveAttribute('target', '_blank');
+    fireEvent.click(screen.getByRole('button', { name: /Runbook/ }));
+    expect(screen.getByRole('dialog', { name: 'Runbook' })).toHaveAttribute('data-document-id', 'doc-block');
   });
 });
