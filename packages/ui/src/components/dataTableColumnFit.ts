@@ -8,7 +8,7 @@ const DEFAULT_COLUMN_SIZE = 160;
 // container (which would needlessly hide its last column). minWidth: 100% stretches the slack
 // back out when the table renders.
 const CONTAINER_GUTTER = 12;
-const COMPACT_COLUMN_IDS = new Set(['selection', 'checkbox', 'select', 'actions', 'action', 'tags']);
+const COMPACT_COLUMN_IDS = new Set(['selection', 'checkbox', 'select', 'expand', 'actions', 'action', 'tags']);
 const SELECTION_COLUMN_IDS = new Set(['selection', 'checkbox', 'select']);
 
 export const getColumnId = (dataIndex: string | string[]): string => (

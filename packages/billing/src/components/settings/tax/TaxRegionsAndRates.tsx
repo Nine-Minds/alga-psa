@@ -11,8 +11,10 @@ import {
   Layers,
   MapPin,
   MoreVertical,
+  Pencil,
   PlusCircle,
   Settings,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
@@ -332,8 +334,9 @@ export function TaxRegionsAndRates({
   const columns: ColumnDefinition<RegionRow>[] = [
     {
       title: '',
-      dataIndex: 'region_code',
-      width: '3%',
+      dataIndex: 'expand',
+      width: '56px',
+      sortable: false,
       render: (_, row) => {
         const expanded = expandedCodes.has(row.region_code);
         return (
@@ -564,6 +567,7 @@ export function TaxRegionsAndRates({
                             setRateDialog({ region: row, rate });
                           }}
                         >
+                          <Pencil className="mr-2 h-4 w-4" />
                           {t('tax.regions.rates.actions.edit', { defaultValue: 'Edit' })}
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -584,6 +588,7 @@ export function TaxRegionsAndRates({
                             requestDelete(rate);
                           }}
                         >
+                          <Trash2 className="mr-2 h-4 w-4" />
                           {t('tax.regions.rates.actions.delete', { defaultValue: 'Delete' })}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
