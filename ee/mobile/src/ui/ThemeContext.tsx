@@ -14,7 +14,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const THEME_PREF_KEY = "alga.mobile.theme.preference";
-type ThemePreference = "light" | "dark" | "system";
+export type ThemePreference = "light" | "dark" | "system";
 
 // ---------------------------------------------------------------------------
 // Context

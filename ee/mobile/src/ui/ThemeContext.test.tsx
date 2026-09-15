@@ -11,11 +11,13 @@ vi.mock("react-native", () => ({
   useColorScheme: () => colorScheme.value,
 }));
 
-vi.mock("expo-secure-store", () => ({
+const secureStore = vi.hoisted(() => ({
   getItemAsync: vi.fn().mockResolvedValue(null),
   setItemAsync: vi.fn().mockResolvedValue(undefined),
   deleteItemAsync: vi.fn().mockResolvedValue(undefined),
 }));
+
+vi.mock("expo-secure-store", () => secureStore);
 
 import { ThemeProvider, useTenantTheme, useTheme, useThemePreference } from "./ThemeContext";
 import { lightTheme, darkTheme } from "./themes";
@@ -70,6 +72,8 @@ describe("ThemeProvider", () => {
   beforeEach(() => {
     colorScheme.value = "light";
     renders.length = 0;
+    secureStore.getItemAsync.mockResolvedValue(null);
+    secureStore.setItemAsync.mockClear();
   });
 
   it("T033 renders the built-in Alga pair when no tenant theme is present", () => {
@@ -133,6 +137,24 @@ describe("ThemeProvider", () => {
     colorScheme.value = "dark";
     renderProvider(null);
     expect(probe.theme).toBe(darkTheme);
+  });
+
+  it("T043 persists the preference to the existing key and reads it back on remount", async () => {
+    renderProvider(forestTheme());
+    act(() => probe.setPreference("dark"));
+
+    expect(secureStore.setItemAsync).toHaveBeenCalledWith("alga.mobile.theme.preference", "dark");
+
+    secureStore.getItemAsync.mockResolvedValue("dark");
+    await act(async () => {
+      create(
+        <ThemeProvider initialTenantTheme={forestTheme()}>
+          <ProbeComponent />
+        </ThemeProvider>,
+      );
+    });
+
+    expect(probe.theme.mode).toBe("dark");
   });
 
   it("T041 exposes the active pairId and label for Settings", () => {

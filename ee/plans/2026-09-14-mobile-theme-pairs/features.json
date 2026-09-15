@@ -286,7 +286,7 @@
   {
     "id": "F032",
     "description": "Settings gains an Appearance section with a row cycling System → Light → Dark bound to useThemePreference",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-appearance",
     "prdRefs": [
       "FR16"
@@ -295,7 +295,7 @@
   {
     "id": "F033",
     "description": "Settings shows a read-only Theme row with the pair label and the hint 'Set by your administrator in AlgaPSA settings', or 'Default' when no theme was sent",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-appearance",
     "prdRefs": [
       "FR17"
@@ -304,7 +304,7 @@
   {
     "id": "F034",
     "description": "settings.json gains the appearance and theme strings; no hard-coded English in the rows",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "settings-appearance",
     "prdRefs": [
       "FR16",
