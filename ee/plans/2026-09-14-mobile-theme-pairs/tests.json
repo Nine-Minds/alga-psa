@@ -78,7 +78,7 @@
   {
     "id": "T009",
     "description": "themeMath.mix blends two colours by ratio and clamps to 0–255",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-math",
     "featureIds": [
       "F009"
@@ -87,7 +87,7 @@
   {
     "id": "T010",
     "description": "themeMath.rampFromStops interpolates the ten palette stops from anchor stops exactly as the fixture generated from the web",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-math",
     "featureIds": [
       "F009",
@@ -97,7 +97,7 @@
   {
     "id": "T011",
     "description": "themeMath.brandRamp for the Alga primary matches the web ramp fixture in light and dark",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-math",
     "featureIds": [
       "F009",
@@ -107,7 +107,7 @@
   {
     "id": "T012",
     "description": "themeMath.hexToRgb accepts 3- and 6-digit hex with or without # and returns null for anything else",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-math",
     "featureIds": [
       "F009"
@@ -116,7 +116,7 @@
   {
     "id": "T013",
     "description": "themeMath.contrastRatio returns 21 for black on white and ~4.5 for a known pair",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-math",
     "featureIds": [
       "F010"
@@ -125,7 +125,7 @@
   {
     "id": "T014",
     "description": "The fixture covers all nine presets × two modes and each entry lists neutral, primary, secondary and accent ramps",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-math",
     "featureIds": [
       "F011"

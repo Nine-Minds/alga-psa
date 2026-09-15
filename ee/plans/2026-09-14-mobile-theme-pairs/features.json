@@ -76,7 +76,7 @@
   {
     "id": "F009",
     "description": "ee/mobile/src/ui/themeMath.ts ports hexToRgb, mix, rampFromStops and brandRamp with the same signatures and numeric behaviour as packages/tenancy customTheme.ts",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-math",
     "prdRefs": [
       "FR6"
@@ -85,7 +85,7 @@
   {
     "id": "F010",
     "description": "themeMath exports rgbToHex and contrastRatio (WCAG relative luminance) for textInverse selection",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-math",
     "prdRefs": [
       "FR7"
@@ -94,7 +94,7 @@
   {
     "id": "F011",
     "description": "A committed fixture (themeMath.fixture.json) holds ramp outputs generated from the web implementation for all nine presets in both modes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "theme-math",
     "prdRefs": [
       "FR6"
