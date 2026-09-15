@@ -1856,7 +1856,8 @@
           "credentialsReady": "Anmeldedaten bereit",
           "credentialsRequired": "Anmeldedaten erforderlich",
           "defaultConnected": "Unternehmen verbunden",
-          "noCompany": "Kein Unternehmen verbunden"
+          "noCompany": "Kein Unternehmen verbunden",
+          "sharedApp": "Gemeinsame Intuit-App"
         },
         "callback": {
           "accessDenied": "Der QuickBooks-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
@@ -1880,11 +1881,12 @@
         "connectSuccess": "QuickBooks erfolgreich verbunden. Das verbundene Unternehmen ist nun der Standard-Live-QuickBooks-Kontext.",
         "connection": {
           "defaultCompany": "Verbundenes Unternehmen",
-          "description": "Starten Sie OAuth erst, nachdem die QuickBooks-App-Anmeldedaten konfiguriert sind. Beim Trennen werden gespeicherte QuickBooks-Zugriffstoken entfernt, die mandanteneigenen App-Anmeldedaten bleiben jedoch erhalten.",
-          "notConnected": "Es ist noch kein QuickBooks-Unternehmen verbunden. Speichern Sie die Anmeldedaten und klicken Sie anschließend auf „QuickBooks verbinden“.",
+          "description": "„QuickBooks verbinden“ wird verfügbar, sobald eine Intuit-App vorhanden ist (siehe Karte „Intuit-App“ oben). Beim Trennen werden gespeicherte QuickBooks-Zugriffstoken entfernt, die eigenen Intuit-App-Zugangsdaten dieses Mandanten bleiben erhalten.",
+          "notConnected": "Es ist noch kein QuickBooks-Unternehmen verbunden. Klicken Sie auf „QuickBooks verbinden“, um sich bei Intuit anzumelden und ein Unternehmen auszuwählen.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live-QuickBooks-Verbindung",
-          "unknown": "unbekannt"
+          "unknown": "unbekannt",
+          "descriptionShared": "Klicken Sie auf „QuickBooks verbinden“, melden Sie sich bei Intuit an und wählen Sie das zu verknüpfende Unternehmen. Es muss vorher nichts weiter konfiguriert werden. Beim Trennen werden die gespeicherten QuickBooks-Zugriffstoken entfernt."
         },
         "credentialsSaved": "QuickBooks-Anmeldedaten gespeichert. Sie können jetzt den QuickBooks-OAuth-Flow starten.",
         "csvAvailableMiddle": "in diesem Buchhaltungsbereich und verwalten Sie Exporte über",
@@ -1901,7 +1903,7 @@
           "load": "QuickBooks-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden."
         },
-        "howItWorksDescription": "Speichern Sie hier QuickBooks-App-Anmeldedaten, schließen Sie den Intuit-OAuth-Flow ab, und AlgaPSA verwendet das verbundene QuickBooks-Unternehmen als Standard-Live-Kontext für Exporte und Zuordnungen.",
+        "howItWorksDescription": "Verbinden Sie Ihr QuickBooks-Unternehmen, indem Sie sich bei Intuit anmelden. AlgaPSA verwendet es dann als Standard-Live-Kontext für Exporte und Zuordnungen. Die Karte „Intuit-App“ unten zeigt, ob Ihre Installation die App für diese Anmeldung bereits bereitstellt oder ob Sie zuerst eine registrieren müssen.",
         "howItWorksTitle": "So funktioniert Live-QuickBooks in dieser Version",
         "loading": "QuickBooks-Einstellungen werden geladen…",
         "mapping": {
@@ -1919,8 +1921,8 @@
         "requiredScopes": "Erforderliche Scopes",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
-        "tenantOauthDescription": "Über welche Intuit-App sich dieser Mandant verbindet. Secrets werden nach dem Speichern nie an den Browser zurückgegeben.",
-        "tenantOauthTitle": "Intuit-App-Zugangsdaten",
+        "tenantOauthDescription": "AlgaPSA erreicht QuickBooks über eine Intuit-App: eine Entwicklerregistrierung auf developer.intuit.com, keine Einstellung in QuickBooks oder AlgaPSA. Diese Karte zeigt, ob bereits eine für Sie bereitgestellt wird.",
+        "tenantOauthTitle": "Intuit-App",
         "title": "QuickBooks Online",
         "automatedSalesTax": {
           "disabledMessage": "Der Automated-Sales-Tax-Modus ist aus. Alga berechnet die Steuer für dieses Unternehmen weiterhin selbst.",
@@ -1929,9 +1931,10 @@
           "label": "QuickBooks berechnet die Umsatzsteuer"
         },
         "credentialSource": {
-          "app": "Diese Installation stellt eine gemeinsame Intuit-App bereit — Sie können QuickBooks verbinden, ohne selbst eine zu registrieren. Füllen Sie die Felder unten nur aus, wenn dieser Mandant stattdessen eine eigene Intuit-App verwenden soll.",
-          "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine im Intuit-Developer-Portal und fügen Sie Client-ID und Secret unten ein — die Einrichtungsanleitung führt Sie durch die Schritte.",
-          "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten."
+          "app": "Diese Installation stellt eine gemeinsame Intuit-App bereit, sodass Sie QuickBooks verbinden können, ohne selbst eine zu registrieren. Überspringen Sie diese Karte und klicken Sie unten auf „QuickBooks verbinden“.",
+          "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine bei Intuit, bevor Sie verbinden können.",
+          "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten. Zum Rotieren eines Schlüssels den neuen Wert einfügen und speichern.",
+          "appTitle": "Keine Zugangsdaten erforderlich"
         },
         "setupGuideLink": "QuickBooks-Einrichtungsanleitung",
         "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
@@ -1946,6 +1949,19 @@
           "targetFailed": "benötigt Aufmerksamkeit",
           "targetPending": "ausstehend",
           "failedPermanentDescription": "Bei der Anbieterbereinigung ist ein dauerhafter Fehler aufgetreten. Sie können es erneut versuchen oder den Abschluss erzwingen, um die gespeicherten Anmeldedaten mit einem Audit-Eintrag zu entfernen."
+        },
+        "registerSteps": {
+          "createApp": "Melden Sie sich an bei",
+          "createAppSuffix": "und erstellen Sie eine App für QuickBooks Online and Payments mit dem Accounting-Scope. Ihr QuickBooks-Login funktioniert dort.",
+          "openKeys": "Öffnen Sie die Seite „Keys & credentials“ der App. Verwenden Sie die Development-Schlüssel, wenn die Intuit-Umgebung unten „Sandbox“ anzeigt, oder die Production-Schlüssel bei „Produktion“.",
+          "addRedirect": "Fügen Sie die unten angezeigte Redirect-URI exakt so in die Redirect-URI-Liste der App ein.",
+          "pasteKeys": "Kopieren Sie Client-ID und Client-Secret von dieser Seite in die beiden Felder unten und klicken Sie auf „QuickBooks-Zugangsdaten speichern“.",
+          "connect": "Klicken Sie auf „QuickBooks verbinden“ und melden Sie sich bei dem QuickBooks-Unternehmen an, das Sie verknüpfen möchten."
+        },
+        "ownApp": {
+          "show": "Stattdessen eigene Intuit-App verwenden (erweitert)",
+          "hide": "Einstellungen für eigene App ausblenden",
+          "intro": "Nur nötig, wenn dieser Mandant über eine von Ihnen kontrollierte Intuit-App autorisieren soll. Registrieren Sie die App wie in der Einrichtungsanleitung beschrieben und fügen Sie hier ihre Schlüssel ein. Bis beide gespeichert sind, wird weiterhin die gemeinsame App verwendet."
         }
       },
       "sync": {

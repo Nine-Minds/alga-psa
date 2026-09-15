@@ -1879,7 +1879,8 @@
           "credentialsReady": "Credentials Ready",
           "credentialsRequired": "Credentials Required",
           "defaultConnected": "Company Connected",
-          "noCompany": "No Company Connected"
+          "noCompany": "No Company Connected",
+          "sharedApp": "Shared Intuit App"
         },
         "callback": {
           "accessDenied": "QuickBooks access was denied before the connection completed.",
@@ -1903,11 +1904,12 @@
         "connectSuccess": "QuickBooks connected successfully. The connected company is now the default live QuickBooks context.",
         "connection": {
           "defaultCompany": "Connected company",
-          "description": "Start OAuth only after QuickBooks app credentials are configured. Disconnecting removes stored QuickBooks access tokens but keeps the tenant-owned app credentials in place.",
-          "notConnected": "No QuickBooks company is connected yet. Save credentials, then click Connect QuickBooks.",
+          "description": "Connect QuickBooks becomes available once an Intuit app is in place (see the Intuit App card above). Disconnecting removes stored QuickBooks access tokens but keeps this tenant's own Intuit app credentials in place.",
+          "notConnected": "No QuickBooks company is connected yet. Click Connect QuickBooks to sign in to Intuit and choose a company.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live QuickBooks Connection",
-          "unknown": "unknown"
+          "unknown": "unknown",
+          "descriptionShared": "Click Connect QuickBooks, sign in to Intuit, and choose the company to link. Nothing else needs to be configured first. Disconnecting removes the stored QuickBooks access tokens."
         },
         "credentialsSaved": "QuickBooks credentials saved. You can now start the QuickBooks OAuth flow.",
         "csvAvailableMiddle": "in this same Accounting section and manage exports from",
@@ -1924,7 +1926,7 @@
           "load": "Failed to load QuickBooks settings.",
           "saveCredentials": "Failed to save QuickBooks credentials."
         },
-        "howItWorksDescription": "Save QuickBooks app credentials here, complete the Intuit OAuth flow, and AlgaPSA will use the connected QuickBooks company as the default live context for exports and mappings.",
+        "howItWorksDescription": "Connect your QuickBooks company by signing in to Intuit, and AlgaPSA will use it as the default live context for exports and mappings. The Intuit App card below tells you whether your deployment already provides the app that sign-in goes through, or whether you need to register one first.",
         "howItWorksTitle": "How live QuickBooks works in this release",
         "loading": "Loading QuickBooks settings…",
         "mapping": {
@@ -1942,8 +1944,8 @@
         "requiredScopes": "Required Scopes",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
-        "tenantOauthDescription": "Which Intuit app this tenant connects through. Secret values are never returned to the browser after they are saved.",
-        "tenantOauthTitle": "Intuit App Credentials",
+        "tenantOauthDescription": "AlgaPSA reaches QuickBooks through an Intuit app: a developer registration at developer.intuit.com, not a setting inside QuickBooks or AlgaPSA. This card tells you whether one is already provided for you.",
+        "tenantOauthTitle": "Intuit App",
         "title": "QuickBooks Online",
         "automatedSalesTax": {
           "disabledMessage": "Automated Sales Tax mode is off. Alga keeps calculating tax for this company.",
@@ -1952,9 +1954,10 @@
           "label": "QuickBooks calculates sales tax"
         },
         "credentialSource": {
-          "app": "This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Fill in the fields below only if you want this tenant to use its own Intuit app instead.",
-          "none": "No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.",
-          "tenant": "This tenant connects through its own Intuit app, using the credentials stored below."
+          "app": "This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Skip this card and click Connect QuickBooks below.",
+          "none": "No Intuit app is available yet. Register one with Intuit before you can connect.",
+          "tenant": "This tenant connects through its own Intuit app, using the credentials stored below. To rotate a key, paste the new value and save.",
+          "appTitle": "No credentials needed"
         },
         "setupGuideLink": "QuickBooks setup guide",
         "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
@@ -1969,6 +1972,19 @@
           "targetFailed": "needs attention",
           "targetPending": "pending",
           "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
+        },
+        "registerSteps": {
+          "createApp": "Sign in at",
+          "createAppSuffix": "and create an app for QuickBooks Online and Payments with the Accounting scope. Your QuickBooks login works there.",
+          "openKeys": "Open the app's Keys & credentials page. Use the Development keys when the Intuit Environment below says Sandbox, or the Production keys when it says Production.",
+          "addRedirect": "Add the Redirect URI shown below to the app's redirect URI list, exactly as displayed.",
+          "pasteKeys": "Copy the Client ID and Client Secret from that page into the two fields below, then click Save QuickBooks Credentials.",
+          "connect": "Click Connect QuickBooks and sign in to the QuickBooks company you want to link."
+        },
+        "ownApp": {
+          "show": "Use your own Intuit app instead (advanced)",
+          "hide": "Hide own-app settings",
+          "intro": "Only do this if you want this tenant to authorize through an Intuit app you control. Register the app as described in the setup guide, then paste its keys here. Until both are saved, the shared app keeps being used."
         }
       },
       "sync": {
