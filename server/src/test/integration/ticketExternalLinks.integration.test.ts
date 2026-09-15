@@ -49,13 +49,22 @@ vi.mock('server/src/lib/eventBus/publishers', async (importOriginal) => ({
 // resource-denial tests: coarse RBAC stays granted, the kernel says no.
 const authorizationKernelMock = vi.hoisted(() => ({
   authorizeResource: vi.fn(async () => ({ allowed: true })),
+  useRealKernel: false,
 }));
-vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@alga-psa/authorization/kernel')>()),
-  createAuthorizationKernel: () => ({
-    authorizeResource: authorizationKernelMock.authorizeResource,
-  }),
+const bundleRulesMock = vi.hoisted(() => vi.fn<() => Promise<import('@alga-psa/authorization/kernel').BundleNarrowingRule[]>>(async () => []));
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: bundleRulesMock,
 }));
+vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/authorization/kernel')>();
+  return {
+    ...actual,
+    createAuthorizationKernel: (input: Parameters<typeof actual.createAuthorizationKernel>[0]) =>
+      authorizationKernelMock.useRealKernel
+        ? actual.createAuthorizationKernel(input)
+        : { authorizeResource: authorizationKernelMock.authorizeResource },
+  };
+});
 
 vi.mock('@alga-psa/event-bus', () => ({
   getEventBus: vi.fn(() => ({ publish: vi.fn() })),
@@ -144,6 +153,9 @@ describe('ticket external system links', () => {
     publishEventMock.mockResolvedValue(undefined);
     publishWorkflowEventMock.mockReset();
     publishWorkflowEventMock.mockResolvedValue(undefined);
+    authorizationKernelMock.useRealKernel = false;
+    bundleRulesMock.mockReset();
+    bundleRulesMock.mockResolvedValue([]);
     authorizationKernelMock.authorizeResource.mockReset();
     authorizationKernelMock.authorizeResource.mockResolvedValue({ allowed: true });
   });
@@ -703,4 +715,52 @@ describe('ticket external system links', () => {
       publishEventMock.mock.calls.some((call: any[]) => call[0].eventType === 'TICKET_EXTERNAL_LINK_ADDED'),
     ).toBe(false);
   });
+
+  it.each(['read', 'update'] as const)(
+    'T319: real %s narrowing blocks link mutations without side effects',
+    async (restrictedAction) => {
+      const ticketId = await insertTicket(db, fixture);
+      const link = expectActionSuccess(await addExternalLink({
+        ticket_id: ticketId,
+        system: 'github',
+        realm: 'acme/repo',
+        external_id: `real-kernel-${restrictedAction}`,
+      }));
+      const linksBefore = await scopedDbFor(fixture.tenantId)
+        .table('external_entity_links').where({ ticket_id: ticketId }).orderBy('link_id');
+      const auditsBefore = await scopedDbFor(fixture.tenantId)
+        .table('ticket_audit_logs').where({ ticket_id: ticketId }).orderBy('audit_id');
+
+      // Use the actual kernel and providers: rules match their action exactly.
+      // This read-only rule must also protect mutations, even with update RBAC.
+      authorizationKernelMock.useRealKernel = true;
+      bundleRulesMock.mockResolvedValue([{
+        id: 'restricted-board',
+        resource: 'ticket',
+        action: restrictedAction,
+        templateKey: 'selected_boards',
+        selectedBoardIds: [uuidv4()],
+      }]);
+      publishEventMock.mockClear();
+      publishWorkflowEventMock.mockClear();
+
+      const denied = { permissionError: expect.stringMatching(/Permission denied/) };
+      expect(await addExternalLink({
+        ticket_id: ticketId,
+        system: 'github',
+        realm: 'acme/repo',
+        external_id: `denied-real-kernel-${restrictedAction}`,
+      })).toMatchObject(denied);
+      expect(await updateExternalLink(link.link_id, { external_status: 'denied' })).toMatchObject(denied);
+      expect(await removeExternalLink(link.link_id)).toMatchObject(denied);
+
+      expect(await scopedDbFor(fixture.tenantId).table('external_entity_links')
+        .where({ ticket_id: ticketId }).orderBy('link_id')).toEqual(linksBefore);
+      expect(await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+        .where({ ticket_id: ticketId }).orderBy('audit_id')).toEqual(auditsBefore);
+      expect(publishEventMock).not.toHaveBeenCalled();
+      expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    },
+  );
+
 });

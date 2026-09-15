@@ -122,13 +122,18 @@ async function authorizeTicketAccess(
   action: 'read' | 'update',
 ): Promise<void> {
   try {
+    // Bundle rules match actions exactly. Ticket read restrictions must also
+    // protect link mutations, even when no update-specific rule is configured.
     await authorizeTicketRecordAccess({
       trx,
       tenant,
       user,
       ticketId,
-      action,
+      action: 'read',
     });
+    if (action === 'update') {
+      await authorizeTicketRecordAccess({ trx, tenant, user, ticketId, action });
+    }
   } catch (error) {
     // Preserve the structured not-found result the action layer already exposes;
     // `Permission denied` errors are mapped to permissionError by the caller.
