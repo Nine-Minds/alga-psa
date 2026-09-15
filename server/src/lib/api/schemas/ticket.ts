@@ -46,6 +46,70 @@ function getVisibleCommentLength(value: string): number {
 // Ticket attributes schema (flexible JSON object)
 const ticketAttributesSchema = z.record(z.unknown()).optional();
 
+// External system links. `url` is constrained to http(s) so javascript:/data:
+// links can never be persisted; the action layer revalidates.
+const httpUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => /^https?:\/\//i.test(value), 'URL must use http or https');
+
+export const externalLinkRelationshipSchema = z.enum(['origin', 'mirror', 'reference']);
+
+export const externalLinkActorSchema = z.object({
+  id: z.string().nullable().optional(),
+  handle: z.string().nullable().optional(),
+  display_name: z.string().nullable().optional(),
+  url: httpUrlSchema.nullable().optional(),
+});
+
+export const createExternalLinkSchema = z.object({
+  entity_type: z.enum(['ticket', 'comment']).optional(),
+  comment_id: uuidSchema.optional(),
+  system: z.string().trim().min(1, 'System is required'),
+  external_id: z.string().trim().min(1, 'External ID is required'),
+  external_parent_id: z.string().nullable().optional(),
+  realm: z.string().nullable().optional(),
+  url: httpUrlSchema.nullable().optional(),
+  relationship: externalLinkRelationshipSchema.optional(),
+  actor: externalLinkActorSchema.nullable().optional(),
+  external_status: z.string().nullable().optional(),
+  external_updated_at: z.string().datetime().nullable().optional(),
+  metadata: z.record(z.unknown()).nullable().optional(),
+}).strict();
+
+/**
+ * Ticket-level link shape for inline `external_links` arrays on ticket create.
+ * The POST /tickets/{id}/external-links endpoint uses the full
+ * `createExternalLinkSchema` so integrations can also attach comment-level
+ * references by supplying `entity_type`/`comment_id`.
+ */
+export const createTicketExternalLinkSchema = createExternalLinkSchema.omit({
+  entity_type: true,
+  comment_id: true,
+});
+
+export const updateExternalLinkSchema = z.object({
+  relationship: externalLinkRelationshipSchema.optional(),
+  url: httpUrlSchema.nullable().optional(),
+  actor: externalLinkActorSchema.nullable().optional(),
+  external_status: z.string().nullable().optional(),
+  external_updated_at: z.string().datetime().nullable().optional(),
+  last_synced_at: z.string().datetime().nullable().optional(),
+  metadata: z.record(z.unknown()).nullable().optional(),
+}).strict();
+
+export const externalLinkLookupQuerySchema = z.object({
+  system: z.string().trim().min(1, 'system is required'),
+  external_id: z.string().trim().min(1, 'external_id is required'),
+  external_parent_id: z.string().optional(),
+});
+
+/** Ticket-level links accepted inline on ticket create. */
+export const inlineTicketExternalLinksSchema = z.array(createTicketExternalLinkSchema).optional();
+
+export type CreateExternalLinkData = z.infer<typeof createExternalLinkSchema>;
+export type UpdateExternalLinkData = z.infer<typeof updateExternalLinkSchema>;
+
 // Create ticket schema
 export const createTicketSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
@@ -60,7 +124,8 @@ export const createTicketSchema = z.object({
   assigned_to: uuidSchema.optional(),
   priority_id: uuidSchema,
   attributes: ticketAttributesSchema,
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  external_links: inlineTicketExternalLinksSchema,
 });
 
 // Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared)
@@ -143,6 +208,8 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   priority_name: z.string().optional(),
   category_name: z.string().optional(),
   board_name: z.string().optional(),
+  external_system: z.string().optional(),
+  external_id: z.string().optional(),
   tags: z.union([
     z.array(z.string()),
     arrayTransform(z.string())
@@ -248,6 +315,7 @@ export const createTicketCommentSchema = z.object({
   time_spent: z.number().min(0).optional(),
   metadata: z.record(z.unknown()).optional(),
   parent_comment_id: uuidSchema.optional(),
+  external_links: inlineTicketExternalLinksSchema,
   ...ticketNotificationSuppressionSchema,
 }).superRefine(validateTicketNotificationSuppression);
 

@@ -15446,6 +15446,168 @@ components:
           description: True to complete the item; false to remove its completion signoff.
       required:
         - completed
+    WorkV1TicketExternalLinkParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Ticket UUID.
+        linkId:
+          type: string
+          format: uuid
+          description: External link UUID.
+      required:
+        - id
+        - linkId
+    WorkV1TicketExternalLinkCreateBody:
+      type: object
+      properties:
+        entity_type:
+          type: string
+          enum:
+            - ticket
+            - comment
+          description: Defaults to 'ticket'.
+        comment_id:
+          type: string
+          format: uuid
+          description: Required when entity_type is 'comment'.
+        system:
+          type: string
+          minLength: 1
+          description: Built-in system key or custom:<slug>.
+        external_id:
+          type: string
+          minLength: 1
+        external_parent_id:
+          type:
+            - string
+            - "null"
+        realm:
+          type:
+            - string
+            - "null"
+        url:
+          type:
+            - string
+            - "null"
+          format: uri
+          description: Optional explicit link-out; must be http(s).
+        relationship:
+          type: string
+          enum:
+            - origin
+            - mirror
+            - reference
+        actor:
+          type:
+            - object
+            - "null"
+          properties:
+            id:
+              type:
+                - string
+                - "null"
+            handle:
+              type:
+                - string
+                - "null"
+            display_name:
+              type:
+                - string
+                - "null"
+            url:
+              type:
+                - string
+                - "null"
+              format: uri
+        external_status:
+          type:
+            - string
+            - "null"
+        external_updated_at:
+          type:
+            - string
+            - "null"
+        metadata:
+          type:
+            - object
+            - "null"
+          additionalProperties: {}
+      required:
+        - system
+        - external_id
+    WorkV1TicketExternalLinkUpdateBody:
+      type: object
+      properties:
+        relationship:
+          type: string
+          enum:
+            - origin
+            - mirror
+            - reference
+        url:
+          type:
+            - string
+            - "null"
+          format: uri
+        actor:
+          type:
+            - object
+            - "null"
+          properties:
+            id:
+              type:
+                - string
+                - "null"
+            handle:
+              type:
+                - string
+                - "null"
+            display_name:
+              type:
+                - string
+                - "null"
+            url:
+              type:
+                - string
+                - "null"
+              format: uri
+        external_status:
+          type:
+            - string
+            - "null"
+        external_updated_at:
+          type:
+            - string
+            - "null"
+        last_synced_at:
+          type:
+            - string
+            - "null"
+        metadata:
+          type:
+            - object
+            - "null"
+          additionalProperties: {}
+    WorkV1TicketExternalLinkLookupQuery:
+      type: object
+      properties:
+        system:
+          type: string
+          minLength: 1
+          description: Registry key of the external system.
+        external_id:
+          type: string
+          minLength: 1
+          description: External record identifier.
+        external_parent_id:
+          type: string
+          description: Ticket-level external id, for comment-level records.
+      required:
+        - system
+        - external_id
     WorkV1TicketAgentParams:
       type: object
       properties:
@@ -31661,11 +31823,12 @@ paths:
         handler supports validation token echo, parses Microsoft notification
         batches, resolves provider and tenant by matching notification
         subscriptionId to
-        microsoft_email_provider_config.webhook_subscription_id, validates
-        clientState against the stored webhook_verification_token when
-        configured, extracts message IDs, and enqueues pointer-only jobs into
-        the unified inbound email queue. The tenantId in the Microsoft payload
-        is informational and is not trusted for tenant resolution.
+        microsoft_email_provider_config.webhook_subscription_id, requires a
+        timing-safe clientState match against the stored
+        webhook_verification_token, extracts message IDs, and enqueues
+        pointer-only jobs into the unified inbound email queue. The tenantId in
+        the Microsoft payload is informational and is not trusted for tenant
+        resolution.
       tags:
         - Email
       security: []
@@ -38651,15 +38814,15 @@ paths:
       summary: Export clients as Xero Contacts CSV
       description: Generates a Xero Contacts import CSV from the tenant clients
         (optionally limited to clientIds). Returns a CSV file. Requires
-        billing:manage.
+        accounting_integrations:exports_execute.
       tags:
         - Accounting Exports
       security:
         - ApiKeyAuth: []
       extensions:
         x-tenant-scoped: true
-        x-rbac-resource: billing
-        x-rbac-action: manage
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-response-content-type: text/csv
       x-alga-products:
         - psa
@@ -38708,15 +38871,15 @@ paths:
       description: Ingests a Xero Contacts CSV and matches/creates/updates clients.
         Accepts multipart file, JSON csvContent, or raw CSV. Supports preview
         mode and createNew/updateExisting/matchBy options. Requires
-        billing:manage.
+        accounting_integrations:exports_execute.
       tags:
         - Accounting Exports
       security:
         - ApiKeyAuth: []
       extensions:
         x-tenant-scoped: true
-        x-rbac-resource: billing
-        x-rbac-action: manage
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-request-content-type: multipart/form-data or application/json or text/csv
       x-alga-products:
         - psa
@@ -38781,15 +38944,15 @@ paths:
       description: Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax
         amounts, and updates the matching Alga invoices. Accepts multipart file,
         JSON csvContent, or raw CSV; supports preview mode. Requires
-        billing:manage.
+        accounting_integrations:exports_execute.
       tags:
         - Accounting Exports
       security:
         - ApiKeyAuth: []
       extensions:
         x-tenant-scoped: true
-        x-rbac-resource: billing
-        x-rbac-action: manage
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
         x-request-content-type: multipart/form-data or application/json or text/csv
       x-alga-products:
         - psa
@@ -38836,15 +38999,15 @@ paths:
       summary: Download an accounting export batch
       description: Regenerates and returns the export file (CSV/IIF) for a stored
         export batch using its registered adapter (xero_csv,
-        quickbooks_desktop). Requires billing_settings:update.
+        quickbooks_desktop). Requires accounting_integrations:exports_execute.
       tags:
         - Accounting Exports
       security:
         - ApiKeyAuth: []
       extensions:
         x-tenant-scoped: true
-        x-rbac-resource: billing_settings
-        x-rbac-action: update
+        x-rbac-resource: accounting_integrations
+        x-rbac-action: exports_execute
       x-alga-products:
         - psa
       parameters:
@@ -64325,6 +64488,358 @@ paths:
       responses:
         "200":
           description: Checklist item completion updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/{id}/external-links:
+    get:
+      summary: List ticket external links
+      description: Returns structured external-system references for the ticket, each
+        with a resolved display label, icon, and link-out href.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Ticket external links.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    post:
+      summary: Add a ticket external link
+      description: Adds a ticket-level external-system reference. Only one origin link
+        is allowed per ticket. URL must be http(s).
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketExternalLinkCreateBody"
+      responses:
+        "201":
+          description: External link created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/{id}/external-links/{linkId}:
+    patch:
+      summary: Update a ticket external link
+      description: Updates mutable fields (relationship, url, actor, external
+        status/timestamps, metadata) on a link belonging to the ticket.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket UUID.
+          required: true
+          description: Ticket UUID.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: External link UUID.
+          required: true
+          description: External link UUID.
+          name: linkId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketExternalLinkUpdateBody"
+      responses:
+        "200":
+          description: External link updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    delete:
+      summary: Remove a ticket external link
+      description: Removes a link belonging to the ticket and writes a ticket activity
+        entry.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket UUID.
+          required: true
+          description: Ticket UUID.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: External link UUID.
+          required: true
+          description: External link UUID.
+          name: linkId
+          in: path
+      responses:
+        "200":
+          description: External link removed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/by-external-link:
+    get:
+      summary: Find a ticket by external link
+      description: Returns the ticket and matching external link for a given
+        system/external_id (and optional external_parent_id); 404 when no ticket
+        carries it.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            description: Registry key of the external system.
+          required: true
+          description: Registry key of the external system.
+          name: system
+          in: query
+        - schema:
+            type: string
+            minLength: 1
+            description: External record identifier.
+          required: true
+          description: External record identifier.
+          name: external_id
+          in: query
+        - schema:
+            type: string
+            description: Ticket-level external id, for comment-level records.
+          required: false
+          description: Ticket-level external id, for comment-level records.
+          name: external_parent_id
+          in: query
+      responses:
+        "200":
+          description: Matching ticket and link.
           content:
             application/json:
               schema:

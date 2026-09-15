@@ -153,6 +153,7 @@ import {
   ticketCreatedEventPayloadSchema,
   ticketCustomerRepliedEventPayloadSchema,
   ticketEscalatedEventPayloadSchema,
+  ticketExternalLinkEventPayloadSchema,
   ticketInternalNoteAddedEventPayloadSchema,
   ticketMergedEventPayloadSchema,
   ticketMessageAddedEventPayloadSchema,
@@ -230,6 +231,9 @@ export const EVENT_TYPES = [
   'TICKET_APPROVAL_REQUESTED',
   'TICKET_APPROVAL_GRANTED',
   'TICKET_APPROVAL_REJECTED',
+  'TICKET_EXTERNAL_LINK_ADDED',
+  'TICKET_EXTERNAL_LINK_UPDATED',
+  'TICKET_EXTERNAL_LINK_REMOVED',
 
   // Scheduling (legacy requests)
   'APPOINTMENT_REQUEST_CREATED',
@@ -553,6 +557,7 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(), // The user being assigned to the ticket
   assignedByUserId: z.string().uuid().optional(), // The user who performed the action
   changes: z.record(z.unknown()).optional(),
+  externalLinks: z.array(z.record(z.unknown())).optional(),
   ...TicketNotificationSuppressionSchema,
   comment: z.object({
     id: z.string().uuid(),
@@ -1228,6 +1233,9 @@ export const EventPayloadSchemas = {
   TICKET_APPROVAL_REQUESTED: ticketApprovalRequestedEventPayloadSchema,
   TICKET_APPROVAL_GRANTED: ticketApprovalGrantedEventPayloadSchema,
   TICKET_APPROVAL_REJECTED: ticketApprovalRejectedEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_ADDED: ticketExternalLinkEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_UPDATED: ticketExternalLinkEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_REMOVED: ticketExternalLinkEventPayloadSchema,
 
   // Scheduling (legacy requests)
   APPOINTMENT_REQUEST_CREATED: AppointmentRequestEventPayloadSchema,

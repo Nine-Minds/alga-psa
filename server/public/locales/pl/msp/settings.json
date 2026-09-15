@@ -445,7 +445,8 @@
       "boards": "Tablice",
       "priorities": "Priorytety",
       "categories": "Kategorie",
-      "checklistTemplates": "Szablony list kontrolnych"
+      "checklistTemplates": "Szablony list kontrolnych",
+      "externalSystems": "Systemy zewnętrzne"
     },
     "numbering": {
       "title": "Format numeru",
@@ -991,6 +992,48 @@
           "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania"
         }
       }
+    },
+    "externalSystems": {
+      "title": "Systemy zewnętrzne",
+      "subtitle": "Dodaj niestandardowe systemy zewnętrzne, aby zgłoszenia mogły odwoływać się do rekordów spoza wbudowanego katalogu.",
+      "addButton": "Dodaj system",
+      "builtInTitle": "Systemy wbudowane",
+      "builtInSubtitle": "Dostępne dla każdej organizacji; ich adresy URL są generowane na podstawie szablonu systemu.",
+      "table": {
+        "label": "Etykieta",
+        "key": "Klucz",
+        "urlTemplate": "Szablon adresu URL",
+        "actions": "Działania"
+      },
+      "actions": {
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj",
+        "save": "Zapisz"
+      },
+      "fields": {
+        "key": "Klucz",
+        "keyHint": "Musi być zgodny z custom:<slug> przy użyciu małych liter, cyfr lub podkreśleń.",
+        "label": "Etykieta",
+        "urlTemplate": "Szablon adresu URL",
+        "urlTemplateHint": "Opcjonalne. Użyj symboli zastępczych {realm} i {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Dodaj system zewnętrzny",
+        "editTitle": "Edytuj system zewnętrzny"
+      },
+      "deleteDialog": {
+        "title": "Usuń system zewnętrzny",
+        "message": "Usunąć \"{{label}}\"? Systemy nadal używane przez łącza nie mogą zostać usunięte."
+      },
+      "messages": {
+        "success": {
+          "created": "Utworzono system zewnętrzny.",
+          "updated": "Zaktualizowano system zewnętrzny.",
+          "deleted": "Usunięto system zewnętrzny."
+        }
+      },
+      "tab": "Systemy zewnętrzne"
     }
   },
   "interactions": {

@@ -1802,5 +1802,71 @@
       "internalLabel": "Non notificare anche agenti e osservatori",
       "internalHelper": "Salta anche le loro e-mail e notifiche in-app"
     }
+  },
+  "externalLinks": {
+    "title": "Collegamenti esterni",
+    "empty": "Nessun collegamento esterno",
+    "loading": "Caricamento dei collegamenti esterni...",
+    "noUrl": "Nessun URL disponibile per questo riferimento",
+    "customSystemOption": "{{label}} (personalizzato)",
+    "actions": {
+      "add": "Aggiungi collegamento",
+      "edit": "Modifica",
+      "remove": "Rimuovi",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "menu": "Azioni del collegamento"
+    },
+    "relationship": {
+      "origin": "Origine",
+      "mirror": "Specchio",
+      "reference": "Riferimento"
+    },
+    "dialog": {
+      "addTitle": "Aggiungi collegamento esterno",
+      "editTitle": "Modifica collegamento esterno"
+    },
+    "removeDialog": {
+      "title": "Rimuovi collegamento esterno",
+      "message": "Rimuovere questo collegamento esterno dal ticket?"
+    },
+    "fields": {
+      "system": "Sistema",
+      "loadingSystems": "Caricamento dei sistemi...",
+      "selectSystem": "Seleziona un sistema",
+      "externalId": "ID esterno",
+      "externalIdPlaceholder": "ad es. 42 o 1234567890",
+      "url": "URL",
+      "urlOptional": "Sostituzione facoltativa",
+      "urlRequired": "https://...",
+      "relationship": "Relazione",
+      "originExistsHint": "Questo ticket ha già un collegamento di origine.",
+      "actorGroup": "Chi ha agito lì",
+      "actorHandle": "Identificativo",
+      "actorDisplay": "Nome visualizzato",
+      "builtInGroup": "Sistemi integrati",
+      "customGroup": "Sistemi personalizzati",
+      "urlPreview": "Apre:",
+      "urlPreviewIncomplete": "Compila i campi sopra per visualizzare l'anteprima del collegamento."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket non trovato",
+      "commentNotFound": "Commento non trovato in questo ticket",
+      "linkNotFound": "Collegamento esterno non trovato",
+      "systemNotFound": "Sistema esterno sconosciuto",
+      "externalIdRequired": "L'ID esterno è obbligatorio",
+      "invalidUrl": "L'URL deve essere un URL http(s) valido",
+      "invalidRelationship": "Relazione non valida",
+      "invalidEntityType": "Tipo di entità non valido",
+      "originExists": "Questa entità ha già un collegamento di origine",
+      "duplicateExternalLink": "Quel record esterno è già collegato",
+      "systemInUse": "Questo sistema esterno è utilizzato da collegamenti esistenti",
+      "systemInUseCount": "Questo sistema esterno è utilizzato da {{count}} collegamento/i",
+      "invalidSystemKey": "Le chiavi dei sistemi personalizzati devono corrispondere a custom:<slug> usando lettere minuscole, cifre o trattini bassi",
+      "systemLabelRequired": "L'etichetta del sistema è obbligatoria",
+      "permissionDenied": "Autorizzazione negata: impossibile gestire i sistemi esterni",
+      "systemRequired": "Scegli un sistema esterno.",
+      "urlRequired": "Per i sistemi senza modello di URL è necessario un URL."
+    }
   }
 }

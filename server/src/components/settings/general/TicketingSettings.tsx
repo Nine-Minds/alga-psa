@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import ChecklistTemplatesSettings from './ChecklistTemplatesSettings';
+import ExternalSystemsSettings from './ExternalSystemsSettings';
 import BoardsSettings from '@alga-psa/tickets/components/settings/BoardsSettings';
 import CategoriesSettings from '@alga-psa/tickets/components/settings/CategoriesSettings';
 import DisplaySettings from '@alga-psa/tickets/components/settings/DisplaySettings';
@@ -14,7 +15,7 @@ import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useProduct } from '@/context/ProductContext';
 
-const TICKETING_TAB_IDS = ['display', 'ticket-numbering', 'boards', 'priorities', 'categories', 'checklist-templates'] as const;
+const TICKETING_TAB_IDS = ['display', 'ticket-numbering', 'boards', 'priorities', 'categories', 'checklist-templates', 'external-systems'] as const;
 const DEFAULT_TICKETING_TAB = 'display';
 
 const TicketingSettingsRefactored = (): React.JSX.Element => {
@@ -72,6 +73,11 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
       id: 'checklist-templates',
       label: t('ticketing.tabs.checklistTemplates'),
       content: <ChecklistTemplatesSettings />
+    },
+    {
+      id: 'external-systems',
+      label: t('ticketing.tabs.externalSystems'),
+      content: <ExternalSystemsSettings />
     }
   ];
 

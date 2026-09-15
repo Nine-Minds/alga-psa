@@ -16095,7 +16095,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/email/webhooks/microsoft",
     "displayName": "Receive Microsoft Graph email webhook",
     "summary": "Receive Microsoft Graph email webhook",
-    "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, validates clientState against the stored webhook_verification_token when configured, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
+    "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, requires a timing-safe clientState match against the stored webhook_verification_token, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
     "tags": [
       "Email"
     ],
@@ -24090,7 +24090,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/xero-csv/client-export",
     "displayName": "Export clients as Xero Contacts CSV",
     "summary": "Export clients as Xero Contacts CSV",
-    "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires billing:manage.",
+    "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -24141,7 +24141,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/xero-csv/client-import",
     "displayName": "Import Xero Contacts CSV",
     "summary": "Import Xero Contacts CSV",
-    "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires billing:manage.",
+    "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -24226,7 +24226,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/xero-csv/tax-import",
     "displayName": "Import Xero invoice tax CSV",
     "summary": "Import Xero invoice tax CSV",
-    "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires billing:manage.",
+    "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -24279,7 +24279,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/{batchId}/download",
     "displayName": "Download an accounting export batch",
     "summary": "Download an accounting export batch",
-    "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires billing_settings:update.",
+    "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -49626,6 +49626,503 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_id_externallinks",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/external-links",
+    "displayName": "List Ticket External Links",
+    "summary": "List external links for a ticket",
+    "description": "Returns structured references from the ticket to records in external systems (Discord, Slack, GitHub, Jira, email, custom systems). Each entry carries the registry key, external id, realm, relationship (origin/mirror/reference), actor, and a resolved display object with a readable label and link-out href. The origin link, when present, is how the ticket arrived in Alga.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_externallinks",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/external-links",
+    "displayName": "Add Ticket External Link",
+    "summary": "Add an external link to a ticket",
+    "description": "Creates an external-system reference for a ticket. Defaults to a ticket-level link; set entity_type to 'comment' with a comment_id to attach the reference to one of the ticket's comments. Only one origin link per entity is permitted; a duplicate external record is rejected. Provide an http(s) url when the system has no URL template. Use GET /api/v1/tickets/by-external-link to find an existing ticket for the same external record before creating one.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "comment"
+          ],
+          "description": "Defaults to 'ticket'."
+        },
+        "comment_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required when entity_type is 'comment'."
+        },
+        "system": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Built-in system key or custom:<slug>."
+        },
+        "external_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "external_parent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "realm": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri",
+          "description": "Optional explicit link-out; must be http(s)."
+        },
+        "relationship": {
+          "type": "string",
+          "enum": [
+            "origin",
+            "mirror",
+            "reference"
+          ]
+        },
+        "actor": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "handle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "display_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri"
+            }
+          }
+        },
+        "external_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "external_updated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "system",
+        "external_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_tickets_id_externallinks_linkid",
+    "method": "patch",
+    "path": "/api/v1/tickets/{id}/external-links/{linkId}",
+    "displayName": "Update Ticket External Link",
+    "summary": "Update a ticket external link",
+    "description": "Updates mutable fields on an existing link belonging to the ticket: relationship, url, actor, external_status, external_updated_at, last_synced_at, and metadata. system and external_id are immutable.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "linkId",
+        "in": "path",
+        "required": true,
+        "description": "External link UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "External link UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "relationship": {
+          "type": "string",
+          "enum": [
+            "origin",
+            "mirror",
+            "reference"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "actor": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "handle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "display_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri"
+            }
+          }
+        },
+        "external_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "external_updated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_synced_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_externallinks_linkid",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/external-links/{linkId}",
+    "displayName": "Remove Ticket External Link",
+    "summary": "Remove an external link from a ticket",
+    "description": "Deletes a link belonging to the ticket and records a ticket activity entry. Any inbound integration that relies on the link for deduplication should stop using it after removal.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "linkId",
+        "in": "path",
+        "required": true,
+        "description": "External link UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "External link UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_byexternallink",
+    "method": "get",
+    "path": "/api/v1/tickets/by-external-link",
+    "displayName": "Find Ticket By External Link",
+    "summary": "Find a ticket by its external record",
+    "description": "Returns the ticket and matching link for a system/external_id pair, with an optional external_parent_id for comment-level records. Returns 404 when no ticket carries the external record. Use this as the dedupe check before creating a ticket from an external source.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "system",
+        "in": "query",
+        "required": true,
+        "description": "Registry key of the external system.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Registry key of the external system."
+        }
+      },
+      {
+        "name": "external_id",
+        "in": "query",
+        "required": true,
+        "description": "External record identifier.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "description": "External record identifier."
+        }
+      },
+      {
+        "name": "external_parent_id",
+        "in": "query",
+        "required": false,
+        "description": "Ticket-level external id, for comment-level records.",
+        "schema": {
+          "type": "string",
+          "description": "Ticket-level external id, for comment-level records."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_documents_documentid",
     "method": "get",
     "path": "/api/v1/tickets/{id}/documents/{documentId}",
@@ -55908,6 +56405,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/interactions",
     "displayName": "Create an interaction",
     "summary": "Create an interaction",
+    "description": "Optionally creates a linked AlgaPSA calendar entry in the same transaction. Set create_schedule_entry and start_time; end_time defaults to start_time plus duration (or 30 minutes). schedule_assigned_user_ids defaults to the API key owner; booking other users requires user_schedule:update. This does not create a Teams meeting.",
     "tags": [
       "Interactions v1"
     ],
@@ -55962,6 +56460,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "interaction_date": {
           "type": "string",
           "format": "date-time"
+        },
+        "create_schedule_entry": {
+          "type": "boolean",
+          "description": "Also book an AlgaPSA calendar entry. Requires start_time; defaults to false."
+        },
+        "schedule_assigned_user_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Calendar assignees; omitted or empty defaults to the API key owner. Assigning others requires user_schedule:update."
         }
       },
       "required": [

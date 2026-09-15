@@ -34,6 +34,7 @@ import {
 } from '@alga-psa/tickets/lib/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { persistExternalLinksForCreate } from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -1442,7 +1443,7 @@ export class TicketService extends BaseService<ITicket> {
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
       const { knex } = await this.getKnex();
   
-      const fullTicket = await withTransaction(knex, async (trx) => {
+      const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -1496,6 +1497,17 @@ export class TicketService extends BaseService<ITicket> {
           await this.handleTags(ticketResult.ticket_id, data.tags, context, trx);
         }
 
+        // Persist ticket-level external links in the same transaction so a bot's
+        // create-with-links is atomic. Invalid links roll back the whole create;
+        // exact duplicates / an already-present origin are skipped idempotently.
+        const externalLinks = await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketResult.ticket_id,
+          data.external_links ?? null,
+          context.userId,
+        );
+
         // Get the full ticket data for return
         const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
           .where({ ticket_id: ticketResult.ticket_id })
@@ -1533,7 +1545,7 @@ export class TicketService extends BaseService<ITicket> {
           },
         });
 
-        return fullTicket as ITicket;
+        return { fullTicket, externalLinks };
       });
 
       await this.safePublishEvent('TICKET_CREATED', context, {
@@ -1547,6 +1559,21 @@ export class TicketService extends BaseService<ITicket> {
         board_id: fullTicket.board_id,
         priority_id: fullTicket.priority_id,
         client_id: fullTicket.client_id,
+        ...(externalLinks.length > 0
+          ? {
+              externalLinks: externalLinks.map((link) => ({
+                linkId: link.link_id,
+                entityType: link.entity_type,
+                entityId: link.entity_id,
+                system: link.system,
+                externalId: link.external_id,
+                externalParentId: link.external_parent_id ?? null,
+                realm: link.realm ?? null,
+                url: link.url ?? null,
+                relationship: link.relationship,
+              })),
+            }
+          : {}),
       });
 
       return fullTicket;
@@ -2166,6 +2193,22 @@ export class TicketService extends BaseService<ITicket> {
 
       await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
 
+      // Persist comment-level external links in the same transaction as the
+      // comment they describe. Invalid links roll back the comment create.
+      if (data.external_links && data.external_links.length > 0) {
+        await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketId,
+          data.external_links.map((link) => ({
+            ...link,
+            entity_type: 'comment' as const,
+            comment_id: comment.comment_id,
+          })),
+          context.userId,
+        );
+      }
+
       if (apiIsReply) {
         await tenantScopedTable(trx, 'comment_threads', context.tenant)
           .where({ thread_id: apiThreadId })
@@ -2625,6 +2668,24 @@ export class TicketService extends BaseService<ITicket> {
             scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
             query.whereExists(tagSubquery);
           }
+          break;
+        case 'external_system':
+          query.whereExists(
+            scopedDb.subquery('external_entity_links as eel')
+              .select('*')
+              .whereRaw('eel.ticket_id = t.ticket_id')
+              .andWhere('eel.entity_type', 'ticket')
+              .andWhere('eel.system', value)
+          );
+          break;
+        case 'external_id':
+          query.whereExists(
+            scopedDb.subquery('external_entity_links as eel')
+              .select('*')
+              .whereRaw('eel.ticket_id = t.ticket_id')
+              .andWhere('eel.entity_type', 'ticket')
+              .andWhere('eel.external_id', value)
+          );
           break;
         case 'search':
           if (this.searchableFields.length > 0) {

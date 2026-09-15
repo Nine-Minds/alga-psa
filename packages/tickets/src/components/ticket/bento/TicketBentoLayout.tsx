@@ -26,8 +26,10 @@ import type {
   ITeam,
 } from '@alga-psa/types';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
+import type { ITicketExternalLinkView } from '../../../actions/externalLinks/externalLinkActions';
 import TicketChecklistSection from './../TicketChecklistSection';
 import { TicketCredentialsSection } from './../TicketCredentialsSection';
+import { TicketExternalLinksSection } from './../TicketExternalLinksSection';
 import { DocumentsTile } from './DocumentsTile';
 import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
@@ -175,6 +177,8 @@ export interface TicketBentoLayoutProps {
   // Checklist
   checklistItems: any[];
   onChecklistItemsChanged: (items: any[]) => void;
+  // External system links
+  externalLinks?: ITicketExternalLinkView[];
   // Timer / time entries
   hideTimeEntry?: boolean;
   isLiveTicketTimerEnabled?: boolean;
@@ -846,6 +850,12 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       {/* Flag-gated; adapts to the bento variant via useContentCardVariant.
           Mirrors the Entry view's placement after Documents. */}
       <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} />
+
+      <TicketExternalLinksSection
+        id={`${id}-external-links-section`}
+        ticketId={ticketId}
+        initialLinks={props.externalLinks}
+      />
     </div>
   );
 
