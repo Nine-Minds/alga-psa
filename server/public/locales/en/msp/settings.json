@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Subject Preview",
         "iframeTitle": "Email template preview",
-        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values."
+        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values.",
+        "sourceSyncNote": "Click anything in the preview to select the markup behind it; moving the cursor in the source outlines it here."
       },
       "errors": {
         "loadFailed": "Failed to load templates"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Source",
-        "preview": "Preview"
+        "preview": "Preview",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/A"
@@ -1680,6 +1682,20 @@
           "colors": "colors",
           "text": "text",
           "subject": "subject"
+        },
+        "overwrite": "Overwrite",
+        "overwriteHint": "Overwrite rebuilds a template from the standard one in your palette and discards your edits.",
+        "preview": {
+          "open": "Preview the result",
+          "title": "Preview: {{name}}",
+          "loading": "Building the preview...",
+          "captions": {
+            "create": "A branded copy of the standard template will be created for you.",
+            "update": "Your branded copy will be rebuilt from the standard template with the saved palette.",
+            "customized": "Your edits are kept word for word. Only the stock colors still left in this template are replaced.",
+            "overwrite": "Your edits to this template will be discarded. It will be rebuilt from the standard template in your palette.",
+            "skipped": "Nothing will be written — {{reason}}. This is the template as it stands today."
+          }
         },
         "summary": "{{written}} branded, {{skipped}} skipped, {{failed}} failed",
         "groups": {

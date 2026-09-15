@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Anteprima oggetto",
         "iframeTitle": "Anteprima del modello di email",
-        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali."
+        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali.",
+        "sourceSyncNote": "Fai clic su un elemento dell’anteprima per selezionare il codice corrispondente; spostando il cursore nel codice, l’elemento viene evidenziato qui."
       },
       "errors": {
         "loadFailed": "Impossibile caricare i modelli"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Codice sorgente",
-        "preview": "Anteprima"
+        "preview": "Anteprima",
+        "variables": "Variabili"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1680,6 +1682,20 @@
           "colors": "colori",
           "text": "testo",
           "subject": "oggetto"
+        },
+        "overwrite": "Sovrascrivi",
+        "overwriteHint": "La sovrascrittura ricrea un modello da quello standard con la tua palette ed elimina le tue modifiche.",
+        "preview": {
+          "open": "Vedi il risultato in anteprima",
+          "title": "Anteprima: {{name}}",
+          "loading": "Creazione dell’anteprima...",
+          "captions": {
+            "create": "Verrà creata una copia con il suo marchio a partire dal modello standard.",
+            "update": "La sua copia con il marchio verrà ricreata dal modello standard con la palette salvata.",
+            "customized": "Le sue modifiche restano parola per parola. Vengono sostituiti solo i colori originali rimasti in questo modello.",
+            "overwrite": "Le tue modifiche a questo modello verranno eliminate. Sarà ricreato dal modello standard con la tua palette.",
+            "skipped": "Non verrà scritto nulla: {{reason}}. Questo è il modello così com’è oggi."
+          }
         },
         "summary": "{{written}} con il tuo branding, {{skipped}} ignorati, {{failed}} non riusciti",
         "groups": {

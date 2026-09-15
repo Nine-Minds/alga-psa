@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Aperçu de l'objet",
         "iframeTitle": "Aperçu du modèle d'e-mail",
-        "sampleDataNote": "L'aperçu utilise des données d'exemple. Les e-mails réels contiendront des valeurs réelles."
+        "sampleDataNote": "L'aperçu utilise des données d'exemple. Les e-mails réels contiendront des valeurs réelles.",
+        "sourceSyncNote": "Cliquez sur un élément de l’aperçu pour sélectionner le code correspondant ; déplacer le curseur dans le code l’encadre ici."
       },
       "errors": {
         "loadFailed": "Échec du chargement des modèles"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Source",
-        "preview": "Aperçu"
+        "preview": "Aperçu",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1680,6 +1682,20 @@
           "colors": "couleurs",
           "text": "texte",
           "subject": "objet"
+        },
+        "overwrite": "Écraser",
+        "overwriteHint": "L'écrasement reconstruit un modèle à partir du modèle standard avec votre palette et supprime vos modifications.",
+        "preview": {
+          "open": "Aperçu du résultat",
+          "title": "Aperçu : {{name}}",
+          "loading": "Création de l’aperçu...",
+          "captions": {
+            "create": "Une copie à vos couleurs sera créée à partir du modèle standard.",
+            "update": "Votre copie personnalisée sera recréée à partir du modèle standard avec la palette enregistrée.",
+            "customized": "Vos modifications sont conservées mot pour mot. Seules les couleurs d’origine encore présentes dans ce modèle sont remplacées.",
+            "overwrite": "Vos modifications de ce modèle seront supprimées. Il sera reconstruit à partir du modèle standard avec votre palette.",
+            "skipped": "Rien ne sera écrit — {{reason}}. Voici le modèle tel qu’il est aujourd’hui."
+          }
         },
         "summary": "{{written}} traités, {{skipped}} ignorés, {{failed}} en échec",
         "groups": {

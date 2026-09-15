@@ -1561,7 +1561,8 @@
       "preview": {
         "subjectLabel": "Vista previa del asunto",
         "iframeTitle": "Vista previa de la plantilla de correo electrónico",
-        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales."
+        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales.",
+        "sourceSyncNote": "Haga clic en cualquier elemento de la vista previa para seleccionar su código; al mover el cursor en el código, el elemento se resalta aquí."
       },
       "errors": {
         "loadFailed": "Error al cargar las plantillas"
@@ -1610,7 +1611,8 @@
       },
       "tabs": {
         "source": "Código fuente",
-        "preview": "Vista previa"
+        "preview": "Vista previa",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1680,6 +1682,20 @@
           "colors": "colores",
           "text": "texto",
           "subject": "asunto"
+        },
+        "overwrite": "Sobrescribir",
+        "overwriteHint": "Sobrescribir reconstruye una plantilla a partir de la estándar con su paleta y descarta sus ediciones.",
+        "preview": {
+          "open": "Ver el resultado",
+          "title": "Vista previa: {{name}}",
+          "loading": "Generando la vista previa...",
+          "captions": {
+            "create": "Se creará una copia con su marca a partir de la plantilla estándar.",
+            "update": "Su copia con la marca se volverá a crear desde la plantilla estándar con la paleta guardada.",
+            "customized": "Sus cambios se conservan palabra por palabra. Solo se reemplazan los colores originales que quedan en esta plantilla.",
+            "overwrite": "Se descartarán sus ediciones de esta plantilla. Se reconstruirá a partir de la plantilla estándar con su paleta.",
+            "skipped": "No se escribirá nada: {{reason}}. Esta es la plantilla tal como está hoy."
+          }
         },
         "summary": "{{written}} con su marca, {{skipped}} omitidas, {{failed}} con errores",
         "groups": {

@@ -125,11 +125,18 @@ describe('email branding panel markup', () => {
     expect(panelSource).toContain('id={`email-branding-override-${TOKEN_IDS[token]}`}');
   });
 
-  it('renders previews client-side from the system HTML with no server call', () => {
+  it('renders the preview client-side from the system HTML with no server call', () => {
     expect(panelSource).toContain('applyEmailPalette(html, STOCK_EMAIL_PALETTE, resolved)');
-    expect(panelSource).toContain('htmlContent={previewHtml(template.html_content)}');
-    const previewBlock = panelSource.slice(panelSource.indexOf('previewTemplates.map'));
+    expect(panelSource).toContain('htmlContent={previewHtml(previewTemplate.html_content)}');
+    const previewBlock = panelSource.slice(panelSource.indexOf('{previewTemplate && ('));
     expect(previewBlock.slice(0, previewBlock.indexOf('</div>'))).not.toContain('Action(');
+  });
+
+  it('shows exactly one template preview, since the apply dialog previews each one', () => {
+    expect(panelSource).toContain('const previewTemplate = useMemo');
+    expect(panelSource).toContain('return preferred ?? pool[0] ?? null;');
+    expect(panelSource).not.toContain('previewTemplates');
+    expect(panelSource.match(/<EmailTemplatePreview/g)).toHaveLength(1);
   });
 
   it('registers with the unsaved-changes provider while dirty', () => {
