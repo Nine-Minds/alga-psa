@@ -952,6 +952,12 @@ export class ApiTicketController extends ApiBaseController {
           if (!result) {
             throw new NotFoundError('No ticket found for that external link');
           }
+
+          // Authorize against the resolved ticket before leaking any link data:
+          // a plain `ticket:read` grant is not enough for restricted principals.
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertTicketReadAllowed(apiRequest, result.ticket_id, knex);
+
           return createSuccessResponse(result, 200, undefined, apiRequest);
         });
       } catch (error) {

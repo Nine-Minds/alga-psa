@@ -290,7 +290,10 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
         return;
       }
     }
-    if (selectedSystem && !selectedSystem.urlTemplate && !form.url.trim()) {
+    // The saved link must resolve to a clickable destination: an explicit URL,
+    // or a template with every placeholder it needs (e.g. a realm). This blocks
+    // a GitHub link with neither realm nor URL, same as the server.
+    if (selectedSystem && !previewHref) {
       setDialogError(
         t(
           'externalLinks.errors.urlRequired',

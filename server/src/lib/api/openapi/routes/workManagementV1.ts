@@ -75,6 +75,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       board_id: zOpenApi.string().uuid().optional(),
       priority_id: zOpenApi.string().uuid().optional(),
       status_id: zOpenApi.string().uuid().optional(),
+      external_links: zOpenApi.array(zOpenApi.object({
+        system: zOpenApi.string().min(1).describe('Built-in system key or custom:<slug>.'),
+        external_id: zOpenApi.string().min(1).describe('Identifier of the record in the external system.'),
+        external_parent_id: zOpenApi.string().nullable().optional(),
+        realm: zOpenApi.string().nullable().optional().describe('Repo, server, or workspace the record lives in.'),
+        url: zOpenApi.string().url().nullable().optional().describe('Explicit link-out; must be http(s).'),
+        relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
+        actor: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+        external_status: zOpenApi.string().nullable().optional(),
+      })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
     }),
   );
 

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 
 const dbRef = vi.hoisted(() => ({
   knex: null as Knex | null,
@@ -38,6 +38,13 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: publishWorkflowEventMock,
 }));
 
+// TicketService emits its workflow events through the server-local publisher,
+// not the @alga-psa/event-bus shim, so capture those too.
+vi.mock('server/src/lib/eventBus/publishers', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../src/lib/eventBus/publishers')>()),
+  publishWorkflowEvent: publishWorkflowEventMock,
+}));
+
 vi.mock('@alga-psa/event-bus', () => ({
   getEventBus: vi.fn(() => ({ publish: vi.fn() })),
   ServerEventPublisher: class {},
@@ -58,7 +65,8 @@ import {
   upsertTenantExternalSystem,
 } from '../../../../packages/tickets/src/actions/externalLinks/externalLinkActions';
 import { persistExternalLinksForCreate } from '../../../../packages/tickets/src/actions/externalLinks/externalLinkPersistence';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, runWithTenant } from '@alga-psa/db';
+import { TicketService } from '../../lib/api/services/TicketService';
 import { insertResolutionComment, insertTicket, createCloseRulesFixture, type CloseRulesFixture } from './helpers/closeRulesFixture';
 import {
   getErrorMessage,
@@ -90,6 +98,9 @@ function expectActionSuccess<T>(result: T | ActionMessageError | ActionPermissio
 
 describe('ticket external system links', () => {
   beforeAll(async () => {
+    // TicketService resolves its own knex through the real tenant context, so
+    // point the DB env at the local test Postgres before bootstrapping.
+    wireLocalTestDbEnv();
     db = await createTestDbConnection();
     dbRef.knex = db;
 
@@ -161,12 +172,13 @@ describe('ticket external system links', () => {
   it('T301: only one origin link per entity, structured origin_exists otherwise', async () => {
     const ticketId = await insertTicket(db, fixture);
     expectActionSuccess(
-      await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: '1', relationship: 'origin' }),
+      await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: '1', relationship: 'origin' }),
     );
 
     const conflict = await addExternalLink({
       ticket_id: ticketId,
       system: 'jira',
+      realm: 'acme.atlassian.net',
       external_id: 'OPS-1',
       relationship: 'origin',
     });
@@ -177,10 +189,10 @@ describe('ticket external system links', () => {
   it('T311: promoting a second link to origin through update is refused', async () => {
     const ticketId = await insertTicket(db, fixture);
     expectActionSuccess(
-      await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: 'origin-promote-1', relationship: 'origin' }),
+      await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'origin-promote-1', relationship: 'origin' }),
     );
     const reference = expectActionSuccess(
-      await addExternalLink({ ticket_id: ticketId, system: 'jira', external_id: 'OPS-PROMOTE-2', relationship: 'reference' }),
+      await addExternalLink({ ticket_id: ticketId, system: 'jira', realm: 'acme.atlassian.net', external_id: 'OPS-PROMOTE-2', relationship: 'reference' }),
     );
 
     const conflict = await updateExternalLink(reference.link_id, { relationship: 'origin' });
@@ -190,9 +202,9 @@ describe('ticket external system links', () => {
 
   it('T302: duplicate external record for the same entity is rejected', async () => {
     const ticketId = await insertTicket(db, fixture);
-    expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: '7' }));
+    expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: '7' }));
 
-    const duplicate = await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: '7' });
+    const duplicate = await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: '7' });
     expect(duplicate).toMatchObject({ actionError: expect.stringMatching(/already linked/i) });
     expect((duplicate as any).code).toBe('duplicate_external_link');
   });
@@ -207,6 +219,7 @@ describe('ticket external system links', () => {
       entity_type: 'comment',
       comment_id: commentId,
       system: 'discord',
+      realm: 'guild-1',
       external_id: '123',
     });
     expect(result).toMatchObject({ actionError: expect.stringMatching(/comment not found/i) });
@@ -218,6 +231,7 @@ describe('ticket external system links', () => {
         entity_type: 'comment',
         comment_id: commentId,
         system: 'discord',
+        realm: 'guild-1',
         external_id: '123',
       }),
     );
@@ -231,6 +245,7 @@ describe('ticket external system links', () => {
       await addExternalLink({
         ticket_id: ticketId,
         system: 'jira',
+        realm: 'acme.atlassian.net',
         external_id: 'OPS-99',
         external_parent_id: 'OPS-EPIC',
       }),
@@ -303,22 +318,22 @@ describe('ticket external system links', () => {
 
   it('T307: links are tenant-scoped', async () => {
     const ticketId = await insertTicket(db, fixture);
-    expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: 'isolated-1' }));
+    expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'isolated-1' }));
 
     const foreignTicket = uuidv4();
-    const foreign = await addExternalLink({ ticket_id: foreignTicket, system: 'github', external_id: 'isolated-2' });
+    const foreign = await addExternalLink({ ticket_id: foreignTicket, system: 'github', realm: 'acme/repo', external_id: 'isolated-2' });
     expect(foreign).toMatchObject({ actionError: expect.stringMatching(/ticket not found/i) });
     expect((foreign as any).code).toBe('ticket_not_found');
 
     const rows = await scopedDbFor(fixture.tenantId)
       .table('external_entity_links')
-      .where({ system: 'github', external_id: 'isolated-2' });
+      .where({ system: 'github', realm: 'acme/repo', external_id: 'isolated-2' });
     expect(rows).toHaveLength(0);
   });
 
   it('T308: add and remove write ticket audit rows with the external_link source', async () => {
     const ticketId = await insertTicket(db, fixture);
-    const link = expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: 'audit-1' }));
+    const link = expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'audit-1' }));
     expectActionSuccess(await removeExternalLink(link.link_id));
 
     const audits = await scopedDbFor(fixture.tenantId)
@@ -333,46 +348,62 @@ describe('ticket external system links', () => {
     expect(audits.every((row: any) => row.source === 'external_link')).toBe(true);
   });
 
-  it('T309: create-with-links persistence rolls back atomically and skips duplicates idempotently', async () => {
-    const ticketId = await insertTicket(db, fixture);
-
+  async function expectRollback(
+    ticketId: string,
+    links: Array<{ system: string; external_id: string; relationship?: 'origin' | 'mirror' | 'reference' }>,
+  ): Promise<void> {
     await expect(
-      db.transaction(async (trx) => {
-        await persistExternalLinksForCreate(
-          trx,
-          fixture.tenantId,
-          ticketId,
-          [
-            { system: 'github', external_id: 'atomic-ok' },
-            { system: 'github', external_id: '' },
-          ],
-          fixture.userId,
-        );
-      }),
+      db.transaction((trx) =>
+        persistExternalLinksForCreate(trx, fixture.tenantId, ticketId, links, fixture.userId),
+      ),
     ).rejects.toThrow();
-
     const rows = await scopedDbFor(fixture.tenantId)
       .table('external_entity_links')
       .where({ ticket_id: ticketId });
     expect(rows).toHaveLength(0);
+  }
 
+  it('T309: create-with-links rejects conflicts and rolls back atomically (no silent skip)', async () => {
+    const ticketId = await insertTicket(db, fixture);
+
+    // A malformed link rolls the batch back.
+    await expectRollback(ticketId, [
+      { system: 'github', realm: 'acme/repo', external_id: 'atomic-ok' },
+      { system: 'github', realm: 'acme/repo', external_id: '' },
+    ]);
+
+    // Two origins for the same entity are rejected outright, not silently dropped.
+    await expectRollback(ticketId, [
+      { system: 'github', realm: 'acme/repo', external_id: 'origin-a', relationship: 'origin' },
+      { system: 'jira', realm: 'acme.atlassian.net', external_id: 'origin-b', relationship: 'origin' },
+    ]);
+
+    // A duplicate external record within the same batch is rejected.
+    await expectRollback(ticketId, [
+      { system: 'github', realm: 'acme/repo', external_id: 'dup' },
+      { system: 'github', realm: 'acme/repo', external_id: 'dup' },
+    ]);
+
+    // A single valid link persists and writes its planned audit entry inline.
     const first = await db.transaction((trx) =>
-      persistExternalLinksForCreate(trx, fixture.tenantId, ticketId, [{ system: 'github', external_id: 'atomic-ok' }], fixture.userId),
+      persistExternalLinksForCreate(trx, fixture.tenantId, ticketId, [{ system: 'github', realm: 'acme/repo', external_id: 'atomic-ok' }], fixture.userId),
     );
     expect(first).toHaveLength(1);
-    const second = await db.transaction((trx) =>
-      persistExternalLinksForCreate(trx, fixture.tenantId, ticketId, [{ system: 'github', external_id: 'atomic-ok' }], fixture.userId),
-    );
-    expect(second).toHaveLength(0);
+
+    const audits = await scopedDbFor(fixture.tenantId)
+      .table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_EXTERNAL_LINK_ADDED', source: 'external_link' });
+    expect(audits).toHaveLength(1);
+    expect(audits[0].entity_id).toBe(first[0].link_id);
   });
 
   it('T310: mutations are rejected without the ticket update permission', async () => {
     const ticketId = await insertTicket(db, fixture);
-    const link = expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: 'perm-1' }));
+    const link = expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'perm-1' }));
 
     hasPermissionMock.mockResolvedValue(false);
 
-    expect(await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: 'perm-2' })).toMatchObject({
+    expect(await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'perm-2' })).toMatchObject({
       permissionError: expect.stringMatching(/Permission denied/),
     });
     expect(await updateExternalLink(link.link_id, { external_status: 'x' })).toMatchObject({
@@ -388,7 +419,7 @@ describe('ticket external system links', () => {
 
   it('T312: a read-only user can list links but cannot mutate them', async () => {
     const ticketId = await insertTicket(db, fixture);
-    expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: 'readonly-1' }));
+    expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'readonly-1' }));
 
     // Only `ticket:read` is granted; the UI still renders the links (criterion 2).
     hasPermissionMock.mockImplementation(async (_user: unknown, _resource: unknown, action: unknown) =>
@@ -398,11 +429,183 @@ describe('ticket external system links', () => {
     const listed = expectActionSuccess(await getTicketExternalLinks(ticketId));
     expect(listed).toHaveLength(1);
 
-    expect(await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: 'readonly-2' })).toMatchObject({
+    expect(await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'readonly-2' })).toMatchObject({
       permissionError: expect.stringMatching(/Permission denied/),
     });
     expect(await removeExternalLink(listed[0].link_id)).toMatchObject({
       permissionError: expect.stringMatching(/Permission denied/),
     });
+  });
+
+  it('T313: client contacts are rejected even when they hold ticket permissions', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const internalUser = userRef.user;
+    try {
+      // Client-portal contacts also carry coarse ticket:read/update.
+      userRef.user = { ...internalUser, user_type: 'client', clientId: fixture.clientId };
+      hasPermissionMock.mockResolvedValue(true);
+
+      expect(await getTicketExternalLinks(ticketId)).toMatchObject({
+        permissionError: expect.stringMatching(/Permission denied/),
+      });
+      expect(await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'client-1' })).toMatchObject({
+        permissionError: expect.stringMatching(/Permission denied/),
+      });
+      expect(await findTicketByExternalLink({ system: 'github', external_id: 'client-1' })).toMatchObject({
+        permissionError: expect.stringMatching(/Permission denied/),
+      });
+      expect(await listExternalSystems()).toMatchObject({
+        permissionError: expect.stringMatching(/Permission denied/),
+      });
+      expect(await upsertTenantExternalSystem({ key: 'custom:client', label: 'Client' })).toMatchObject({
+        permissionError: expect.stringMatching(/Permission denied/),
+      });
+    } finally {
+      userRef.user = internalUser;
+    }
+  });
+
+  it('T314: create/update reject links with no clickable destination', async () => {
+    const ticketId = await insertTicket(db, fixture);
+
+    // Template system with no realm and no explicit URL.
+    const noRealm = await addExternalLink({ ticket_id: ticketId, system: 'github', external_id: 'no-realm' });
+    expect((noRealm as any).code).toBe('url_required');
+
+    // Generic system with no URL.
+    const noUrl = await addExternalLink({ ticket_id: ticketId, system: 'generic', external_id: 'no-url' });
+    expect((noUrl as any).code).toBe('url_required');
+
+    // Generic system with an explicit URL is fine.
+    const ok = expectActionSuccess(
+      await addExternalLink({ ticket_id: ticketId, system: 'generic', external_id: 'with-url', url: 'https://example.com/x' }),
+    );
+    // Clearing its only URL is refused.
+    const cleared = await updateExternalLink(ok.link_id, { url: null });
+    expect((cleared as any).code).toBe('url_required');
+
+    // A templated system still resolves without an explicit URL when the realm is present.
+    const github = expectActionSuccess(
+      await addExternalLink({
+        ticket_id: ticketId,
+        system: 'github',
+        external_id: 'gh-1',
+        realm: 'acme/repo',
+        url: 'https://example.com/override',
+      }),
+    );
+    const githubCleared = expectActionSuccess(await updateExternalLink(github.link_id, { url: null }));
+    expect(githubCleared.url).toBeNull();
+    expect(githubCleared.display.href).toBe('https://github.com/acme/repo/issues/gh-1');
+  });
+
+  it('T315: external_system + external_id filter the same link row', async () => {
+    const service = new TicketService();
+    const context = { tenant: fixture.tenantId, userId: fixture.userId } as any;
+    const ticketId = await insertTicket(db, fixture);
+    expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'f-42' }));
+    expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'jira', realm: 'acme.atlassian.net', external_id: 'f-99' }));
+
+    // github + 99 must NOT match the ticket that has github/42 and jira/99.
+    const wrong = await runWithTenant(fixture.tenantId, () =>
+      service.list(
+        { filters: { external_system: 'github', external_id: 'f-99' } as any, limit: 100 },
+        context,
+      ),
+    );
+    expect(wrong.data.map((t: any) => t.ticket_id)).not.toContain(ticketId);
+
+    const right = await runWithTenant(fixture.tenantId, () =>
+      service.list(
+        { filters: { external_system: 'github', external_id: 'f-42' } as any, limit: 100 },
+        context,
+      ),
+    );
+    expect(right.data.map((t: any) => t.ticket_id)).toContain(ticketId);
+  });
+
+  it('T316: the real create service rejects conflicting inline links and leaves no residue', async () => {
+    const service = new TicketService();
+    const context = { tenant: fixture.tenantId, userId: fixture.userId } as any;
+    const base = {
+      client_id: fixture.clientId,
+      contact_name_id: fixture.contactId,
+      board_id: fixture.boardId,
+      status_id: fixture.openStatusId,
+      priority_id: fixture.priorityId,
+    };
+
+    publishEventMock.mockClear();
+    publishWorkflowEventMock.mockClear();
+
+    const conflictTitle = `svc-atomic-${Date.now()}`;
+    await expect(
+      runWithTenant(fixture.tenantId, () =>
+        service.create(
+          {
+            ...base,
+            title: conflictTitle,
+            external_links: [
+              { system: 'github', realm: 'acme/repo', external_id: 'svc-o1', relationship: 'origin' },
+              { system: 'jira', realm: 'acme.atlassian.net', external_id: 'svc-o2', relationship: 'origin' },
+            ],
+          } as any,
+          context,
+        ),
+      ),
+    ).rejects.toThrow();
+
+    const tickets = await scopedDbFor(fixture.tenantId).table('tickets').where({ title: conflictTitle });
+    expect(tickets).toHaveLength(0);
+    const links = await scopedDbFor(fixture.tenantId)
+      .table('external_entity_links')
+      .whereIn('external_id', ['svc-o1', 'svc-o2']);
+    expect(links).toHaveLength(0);
+    const linkEvents = publishEventMock.mock.calls.filter(
+      (call: any[]) => call[0].eventType === 'TICKET_EXTERNAL_LINK_ADDED',
+    );
+    expect(linkEvents).toHaveLength(0);
+    const creationEvents = publishWorkflowEventMock.mock.calls.filter(
+      (call: any[]) => call[0].eventType === 'TICKET_CREATED',
+    );
+    expect(creationEvents).toHaveLength(0);
+
+    // A duplicate external record in the same batch also rolls the create back.
+    const dupTitle = `svc-dup-${Date.now()}`;
+    await expect(
+      runWithTenant(fixture.tenantId, () =>
+        service.create(
+          {
+            ...base,
+            title: dupTitle,
+            external_links: [
+              { system: 'github', realm: 'acme/repo', external_id: 'svc-dup' },
+              { system: 'github', realm: 'acme/repo', external_id: 'svc-dup' },
+            ],
+          } as any,
+          context,
+        ),
+      ),
+    ).rejects.toThrow();
+    expect(await scopedDbFor(fixture.tenantId).table('tickets').where({ title: dupTitle })).toHaveLength(0);
+
+    // A valid create keeps TICKET_CREATED.externalLinks and announces the link post-commit.
+    publishEventMock.mockClear();
+    publishWorkflowEventMock.mockClear();
+    const okTitle = `svc-ok-${Date.now()}`;
+    const created: any = await runWithTenant(fixture.tenantId, () =>
+      service.create(
+        { ...base, title: okTitle, external_links: [{ system: 'github', realm: 'acme/repo', external_id: 'svc-ok' }] } as any,
+        context,
+      ),
+    );
+    expect(created.ticket_id).toBeTruthy();
+    expect(
+      publishEventMock.mock.calls.some((call: any[]) => call[0].eventType === 'TICKET_EXTERNAL_LINK_ADDED'),
+    ).toBe(true);
+    const createdEvent = publishWorkflowEventMock.mock.calls.find(
+      (call: any[]) => call[0].eventType === 'TICKET_CREATED',
+    );
+    expect(createdEvent?.[0]?.payload?.externalLinks?.[0]?.externalId).toBe('svc-ok');
   });
 });

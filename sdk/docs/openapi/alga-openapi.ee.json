@@ -21214,6 +21214,71 @@
           "status_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "external_links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "system": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Built-in system key or custom:<slug>."
+                },
+                "external_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Identifier of the record in the external system."
+                },
+                "external_parent_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "realm": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Repo, server, or workspace the record lives in."
+                },
+                "url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri",
+                  "description": "Explicit link-out; must be http(s)."
+                },
+                "relationship": {
+                  "type": "string",
+                  "enum": [
+                    "origin",
+                    "mirror",
+                    "reference"
+                  ]
+                },
+                "actor": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {}
+                },
+                "external_status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "system",
+                "external_id"
+              ]
+            },
+            "description": "Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create."
           }
         }
       },

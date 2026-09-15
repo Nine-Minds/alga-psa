@@ -8,10 +8,20 @@ import {
   type ExternalEntityLinkEntityType,
   type ExternalLinkRelationship,
   type ExternalSystemActor,
+  type ExternalSystemDefinition,
   type IExternalEntityLink,
   type ITenantExternalSystem,
 } from '@alga-psa/types';
 import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import {
+  renderExternalLinkUrl,
   resolveExternalSystem,
   safeExternalUrl,
 } from '../../lib/externalSystems';
@@ -38,7 +48,8 @@ export type ExternalLinkErrorCode =
   | 'duplicate_external_link'
   | 'system_in_use'
   | 'invalid_system_key'
-  | 'system_label_required';
+  | 'system_label_required'
+  | 'url_required';
 
 export class ExternalLinkValidationError extends Error {
   readonly code: ExternalLinkErrorCode;
@@ -132,6 +143,23 @@ function normalizeEntityType(value: unknown): ExternalEntityLinkEntityType {
   return value as ExternalEntityLinkEntityType;
 }
 
+/**
+ * A link is only useful if it resolves to a clickable http(s) destination.
+ * Reject a create/update that would persist a row with nowhere to go — e.g. a
+ * template system with no realm, or a generic system with no explicit URL.
+ */
+export function assertLinkDestination(
+  definition: ExternalSystemDefinition | null,
+  link: Pick<IExternalEntityLink, 'external_id' | 'realm' | 'url'>,
+): void {
+  if (!renderExternalLinkUrl(definition, link)) {
+    throw new ExternalLinkValidationError(
+      'url_required',
+      'A clickable URL is required: provide an explicit URL or the fields the external system template needs',
+    );
+  }
+}
+
 export interface PreparedExternalLink {
   entity_type: ExternalEntityLinkEntityType;
   entity_id: string;
@@ -182,6 +210,9 @@ export async function prepareExternalLink(
     }
   }
 
+  const realm = input.realm?.trim() || null;
+  assertLinkDestination(definition, { external_id: externalId, realm, url });
+
   await requireTicket(conn, tenant, input.ticket_id);
 
   let entityId = input.ticket_id;
@@ -207,7 +238,7 @@ export async function prepareExternalLink(
     system: definition.key,
     external_id: externalId,
     external_parent_id: input.external_parent_id?.trim() || null,
-    realm: input.realm?.trim() || null,
+    realm,
     url,
     relationship,
     actor: input.actor ?? null,
@@ -227,18 +258,33 @@ export function uniqueViolationTargets(error: unknown): string {
 }
 
 /**
- * Insert a prepared link. When `skipConflicts` is set (create paths), a duplicate
- * external record or an already-present origin is skipped and null is returned
- * rather than failing the owning transaction — so retries don't create duplicate
- * origins. Explicit action calls leave it unset and surface the conflict.
+ * Insert a prepared link. Conflicts surface as structured errors and abort the
+ * surrounding transaction — a conflicting link must roll back the entity it was
+ * created with, never be silently dropped. The DB uniqueness indexes are the
+ * backstop; the pre-checks give a clean error instead of a raw 23505.
  */
 export async function insertExternalLink(
   trx: Knex.Transaction,
   tenant: string,
   prepared: PreparedExternalLink,
   createdBy: string | null,
-  options: { skipConflicts?: boolean } = {},
-): Promise<IExternalEntityLink | null> {
+): Promise<IExternalEntityLink> {
+  const duplicate = await tenantTable(trx, tenant, 'external_entity_links')
+    .where({
+      entity_type: prepared.entity_type,
+      system: prepared.system,
+      external_id: prepared.external_id,
+    })
+    .whereRaw("COALESCE(external_parent_id, '') = ?", [prepared.external_parent_id ?? ''])
+    .select('link_id')
+    .first();
+  if (duplicate) {
+    throw new ExternalLinkValidationError(
+      'duplicate_external_link',
+      'That external record is already linked',
+    );
+  }
+
   if (prepared.relationship === 'origin') {
     const existingOrigin = await tenantTable(trx, tenant, 'external_entity_links')
       .where({
@@ -249,9 +295,6 @@ export async function insertExternalLink(
       .select('link_id')
       .first();
     if (existingOrigin) {
-      if (options.skipConflicts) {
-        return null;
-      }
       throw new ExternalLinkValidationError('origin_exists', 'This entity already has an origin link');
     }
   }
@@ -268,9 +311,6 @@ export async function insertExternalLink(
   } catch (error) {
     if (isUniqueViolation(error)) {
       const target = uniqueViolationTargets(error);
-      if (options.skipConflicts) {
-        return null;
-      }
       if (target.includes('origin')) {
         throw new ExternalLinkValidationError('origin_exists', 'This entity already has an origin link');
       }
@@ -284,10 +324,43 @@ export async function insertExternalLink(
 }
 
 /**
- * Best-effort atomic link creation for a ticket/comment create. Returns the
- * inserted rows; duplicates and origin conflicts are skipped so retries are
- * idempotent. Validation errors still throw — a malformed link should fail the
- * create rather than silently drop.
+ * Publish a link lifecycle event after the write transaction commits. Best
+ * effort: a broker outage must not roll back a persisted link.
+ */
+export async function publishExternalLinkEvent(
+  eventType: 'TICKET_EXTERNAL_LINK_ADDED' | 'TICKET_EXTERNAL_LINK_UPDATED' | 'TICKET_EXTERNAL_LINK_REMOVED',
+  tenant: string,
+  row: IExternalEntityLink,
+  userId: string | null,
+): Promise<void> {
+  try {
+    await publishEvent({
+      eventType,
+      payload: {
+        tenantId: tenant,
+        occurredAt: new Date().toISOString(),
+        ...(userId ? { actorUserId: userId, userId } : {}),
+        ticketId: row.ticket_id,
+        linkId: row.link_id,
+        entityType: row.entity_type,
+        entityId: row.entity_id,
+        system: row.system,
+        externalId: row.external_id,
+        externalParentId: row.external_parent_id ?? null,
+        relationship: row.relationship,
+      },
+    } as never);
+  } catch (error) {
+    console.error('[externalLinks] failed to publish event', { eventType, error });
+  }
+}
+
+/**
+ * Atomically create the inline links for a ticket/comment create. Each inserted
+ * link gets its planned audit entry in this same transaction; events are
+ * published by the caller only after the transaction commits. Any conflict (a
+ * second origin, a duplicate external record, an unusable destination) throws
+ * and rolls the whole entity creation back.
  */
 export async function persistExternalLinksForCreate(
   trx: Knex.Transaction,
@@ -299,13 +372,34 @@ export async function persistExternalLinksForCreate(
   if (!links || links.length === 0) {
     return [];
   }
+  const tenantSystems = await loadTenantExternalSystems(trx, tenant);
   const inserted: IExternalEntityLink[] = [];
   for (const link of links) {
     const prepared = await prepareExternalLink(trx, tenant, { ...link, ticket_id: ticketId });
-    const row = await insertExternalLink(trx, tenant, prepared, createdBy, { skipConflicts: true });
-    if (row) {
-      inserted.push(row);
-    }
+    const row = await insertExternalLink(trx, tenant, prepared, createdBy);
+
+    await writeTicketActivity(trx, {
+      tenant,
+      ticketId: row.ticket_id,
+      eventType: TICKET_ACTIVITY_EVENT.EXTERNAL_LINK_ADDED,
+      entityType: TICKET_ACTIVITY_ENTITY.SYSTEM,
+      entityId: row.link_id,
+      actor: {
+        actorType: TICKET_ACTIVITY_ACTOR.USER,
+        userId: createdBy ?? undefined,
+      },
+      source: TICKET_ACTIVITY_SOURCE.EXTERNAL_LINK,
+      occurredAt: new Date().toISOString(),
+      details: {
+        system: row.system,
+        system_label: resolveExternalSystem(tenantSystems, row.system)?.label ?? row.system,
+        external_id: row.external_id,
+        relationship: row.relationship,
+        entity_type: row.entity_type,
+      },
+    });
+
+    inserted.push(row);
   }
   return inserted;
 }

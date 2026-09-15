@@ -32,6 +32,10 @@ const CODE_MESSAGES: Record<ExternalLinkErrorCode, { message: string; key: strin
     message: 'URL must be a valid http(s) URL',
     key: 'features/tickets:externalLinks.errors.invalidUrl',
   },
+  url_required: {
+    message: 'A clickable URL is required: provide an explicit URL or the fields the external system template needs',
+    key: 'features/tickets:externalLinks.errors.urlRequired',
+  },
   invalid_relationship: {
     message: 'Invalid relationship',
     key: 'features/tickets:externalLinks.errors.invalidRelationship',

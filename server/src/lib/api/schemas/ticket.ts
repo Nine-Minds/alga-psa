@@ -128,8 +128,11 @@ export const createTicketSchema = z.object({
   external_links: inlineTicketExternalLinksSchema,
 });
 
-// Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared)
-export const updateTicketSchema = createUpdateSchema(createTicketSchema).extend({
+// Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared).
+// `external_links` is create-only: it is written through the dedicated
+// external-links endpoints, never as part of an ordinary ticket update, so it is
+// omitted here and defensively stripped by the service.
+export const updateTicketSchema = createUpdateSchema(createTicketSchema.omit({ external_links: true })).extend({
   contact_name_id: uuidSchema.nullable().optional(),
   ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds

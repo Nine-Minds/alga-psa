@@ -179,6 +179,7 @@ export interface TicketBentoLayoutProps {
   onChecklistItemsChanged: (items: any[]) => void;
   // External system links
   externalLinks?: ITicketExternalLinkView[];
+  onExternalLinksChanged?: (links: ITicketExternalLinkView[]) => void;
   // Timer / time entries
   hideTimeEntry?: boolean;
   isLiveTicketTimerEnabled?: boolean;
@@ -855,6 +856,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         id={`${id}-external-links-section`}
         ticketId={ticketId}
         initialLinks={props.externalLinks}
+        onLinksChanged={props.onExternalLinksChanged}
       />
     </div>
   );

@@ -17,7 +17,6 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
   listExternalSystems as buildSystemDefinitions,
   renderExternalLinkUrl,
@@ -27,9 +26,11 @@ import {
 import { CUSTOM_EXTERNAL_SYSTEM_KEY_PATTERN } from '@alga-psa/types';
 import {
   ExternalLinkValidationError,
+  assertLinkDestination,
   insertExternalLink,
   loadTenantExternalSystems,
   prepareExternalLink,
+  publishExternalLinkEvent,
   requireTicket,
   type AddExternalLinkInput,
   type UpdateExternalLinkPatch,
@@ -95,6 +96,18 @@ function tenantTable(conn: Knex | Knex.Transaction, tenant: string, table: strin
   return tenantDb(conn, tenant).table(table);
 }
 
+/**
+ * External links and custom systems are MSP-only (plan §5): client-portal
+ * contacts also hold coarse `ticket:read`/`ticket:update`, so possession of the
+ * permission is not enough. Reject any non-internal session before touching the
+ * tenant-scoped tables.
+ */
+function assertInternalUser(user: { user_type?: string }): void {
+  if (user?.user_type !== 'internal') {
+    throw new Error('Permission denied: external link actions are internal-only');
+  }
+}
+
 function toView(
   row: IExternalEntityLink,
   tenantSystems: readonly ITenantExternalSystem[],
@@ -127,39 +140,10 @@ function toView(
   };
 }
 
-async function publishLinkEvent(
-  eventType: 'TICKET_EXTERNAL_LINK_ADDED' | 'TICKET_EXTERNAL_LINK_UPDATED' | 'TICKET_EXTERNAL_LINK_REMOVED',
-  tenant: string,
-  row: IExternalEntityLink,
-  userId: string,
-): Promise<void> {
-  try {
-    await publishEvent({
-      eventType,
-      payload: {
-        tenantId: tenant,
-        occurredAt: new Date().toISOString(),
-        actorUserId: userId,
-        userId,
-        ticketId: row.ticket_id,
-        linkId: row.link_id,
-        entityType: row.entity_type,
-        entityId: row.entity_id,
-        system: row.system,
-        externalId: row.external_id,
-        externalParentId: row.external_parent_id ?? null,
-        relationship: row.relationship,
-      },
-    } as never);
-  } catch (error) {
-    // Best-effort: the link is already persisted.
-    console.error('[externalLinks] failed to publish event', { eventType, error });
-  }
-}
-
 export const getTicketExternalLinks = withAuth(
   async (user, { tenant }, ticketId: string): Promise<ITicketExternalLinkView[] | ExternalLinkActionError> => {
     try {
+      assertInternalUser(user);
       if (!(await hasPermission(user, 'ticket', 'read'))) {
         throw new Error('Permission denied: Cannot read ticket links');
       }
@@ -188,18 +172,14 @@ export const getTicketExternalLinks = withAuth(
 export const addExternalLink = withAuth(
   async (user, { tenant }, input: AddExternalLinkInput): Promise<ITicketExternalLinkView | ExternalLinkActionError> => {
     try {
+      assertInternalUser(user);
       if (!(await hasPermission(user, 'ticket', 'update'))) {
         throw new Error('Permission denied: Cannot update ticket links');
       }
       const { knex } = await createTenantKnex();
       const result = await withTransaction(knex, async (trx) => {
         const prepared = await prepareExternalLink(trx, tenant, input);
-        const row = await insertExternalLink(trx, tenant, prepared, user.user_id, {
-          skipConflicts: false,
-        });
-        if (!row) {
-          throw new ExternalLinkValidationError('duplicate_external_link', 'That external record is already linked');
-        }
+        const row = await insertExternalLink(trx, tenant, prepared, user.user_id);
         const systems = await loadTenantExternalSystems(trx, tenant);
         await writeTicketActivity(trx, {
           tenant,
@@ -224,7 +204,7 @@ export const addExternalLink = withAuth(
         });
         return { row, systems };
       });
-      await publishLinkEvent('TICKET_EXTERNAL_LINK_ADDED', tenant, result.row, user.user_id);
+      await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', tenant, result.row, user.user_id);
       return toView(result.row, result.systems);
     } catch (error) {
       const expected = externalLinkActionErrorFrom(error);
@@ -239,6 +219,7 @@ export const addExternalLink = withAuth(
 export const updateExternalLink = withAuth(
   async (user, { tenant }, linkId: string, patch: UpdateExternalLinkPatch): Promise<ITicketExternalLinkView | ExternalLinkActionError> => {
     try {
+      assertInternalUser(user);
       if (!(await hasPermission(user, 'ticket', 'update'))) {
         throw new Error('Permission denied: Cannot update ticket links');
       }
@@ -288,13 +269,22 @@ export const updateExternalLink = withAuth(
         if (patch.last_synced_at !== undefined) updates.last_synced_at = patch.last_synced_at;
         if (patch.metadata !== undefined) updates.metadata = patch.metadata;
 
+        // An update must not leave the link without a clickable destination —
+        // notably clearing the only explicit URL on a template-less system.
+        const systems = await loadTenantExternalSystems(trx, tenant);
+        assertLinkDestination(resolveExternalSystem(systems, existing.system), {
+          external_id: existing.external_id,
+          realm: existing.realm ?? null,
+          url: updates.url !== undefined ? (updates.url as string | null) : (existing.url ?? null),
+        });
+
         const [row] = await tenantTable(trx, tenant, 'external_entity_links')
           .where({ link_id: linkId })
           .update(updates)
           .returning('*');
-        return { row: row as IExternalEntityLink, systems: await loadTenantExternalSystems(trx, tenant) };
+        return { row: row as IExternalEntityLink, systems };
       });
-      await publishLinkEvent('TICKET_EXTERNAL_LINK_UPDATED', tenant, result.row, user.user_id);
+      await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_UPDATED', tenant, result.row, user.user_id);
       return toView(result.row, result.systems);
     } catch (error) {
       const expected = externalLinkActionErrorFrom(error);
@@ -309,6 +299,7 @@ export const updateExternalLink = withAuth(
 export const removeExternalLink = withAuth(
   async (user, { tenant }, linkId: string): Promise<{ link_id: string } | ExternalLinkActionError> => {
     try {
+      assertInternalUser(user);
       if (!(await hasPermission(user, 'ticket', 'update'))) {
         throw new Error('Permission denied: Cannot update ticket links');
       }
@@ -345,7 +336,7 @@ export const removeExternalLink = withAuth(
         });
         return existing as IExternalEntityLink;
       });
-      await publishLinkEvent('TICKET_EXTERNAL_LINK_REMOVED', tenant, removed, user.user_id);
+      await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_REMOVED', tenant, removed, user.user_id);
       return { link_id: linkId };
     } catch (error) {
       const expected = externalLinkActionErrorFrom(error);
@@ -364,6 +355,7 @@ export const findTicketByExternalLink = withAuth(
     input: { system: string; external_id: string; external_parent_id?: string | null },
   ): Promise<{ ticket_id: string; link: ITicketExternalLinkView } | null | ExternalLinkActionError> => {
     try {
+      assertInternalUser(user);
       if (!(await hasPermission(user, 'ticket', 'read'))) {
         throw new Error('Permission denied: Cannot read ticket links');
       }
@@ -398,6 +390,7 @@ export const findTicketByExternalLink = withAuth(
 export const listExternalSystems = withAuth(
   async (user, { tenant }): Promise<ExternalSystemOption[] | ExternalLinkActionError> => {
     try {
+      assertInternalUser(user);
       if (!(await hasPermission(user, 'ticket', 'update'))) {
         throw new Error('Permission denied: Cannot read external systems');
       }
@@ -432,6 +425,7 @@ export const upsertTenantExternalSystem = withAuth(
     input: { key: string; label: string; url_template?: string | null },
   ): Promise<{ key: string; label: string; url_template: string | null } | ExternalLinkActionError> => {
     try {
+      assertInternalUser(user);
       if (!(await hasPermission(user, 'ticket', 'update'))) {
         throw new Error('Permission denied: Cannot manage external systems');
       }
@@ -468,6 +462,7 @@ export const upsertTenantExternalSystem = withAuth(
 export const deleteTenantExternalSystem = withAuth(
   async (user, { tenant }, key: string): Promise<{ key: string } | ExternalLinkActionError> => {
     try {
+      assertInternalUser(user);
       if (!(await hasPermission(user, 'ticket', 'update'))) {
         throw new Error('Permission denied: Cannot manage external systems');
       }

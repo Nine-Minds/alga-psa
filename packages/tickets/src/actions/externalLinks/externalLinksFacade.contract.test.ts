@@ -50,11 +50,17 @@ describe('external links tenant facade contract', () => {
     expect(persistenceSource).toContain('23505');
   });
 
-  it('keeps events and audit after the write transaction', () => {
-    // publishLinkEvent is invoked outside withTransaction for add/update/remove.
-    const addIndex = actionsSource.indexOf('await publishLinkEvent(\'TICKET_EXTERNAL_LINK_ADDED\'');
+  it('keeps events after the write transaction and inline audit inside it', () => {
+    // Event publishing is invoked outside withTransaction for add/update/remove.
+    const addIndex = actionsSource.indexOf('await publishExternalLinkEvent(\'TICKET_EXTERNAL_LINK_ADDED\'');
     const firstTxClose = actionsSource.indexOf('});', actionsSource.indexOf('const result = await withTransaction(knex, async (trx) => {'));
     expect(addIndex).toBeGreaterThan(firstTxClose);
     expect(actionsSource).toContain('TICKET_ACTIVITY_SOURCE.EXTERNAL_LINK');
+
+    // The inline create path writes audit in-transaction and never swallows
+    // unique violations (no silent skipConflicts).
+    expect(persistenceSource).toContain('writeTicketActivity');
+    expect(persistenceSource).toContain('publishExternalLinkEvent');
+    expect(persistenceSource).not.toContain('skipConflicts');
   });
 });

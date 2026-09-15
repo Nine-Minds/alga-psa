@@ -16,7 +16,7 @@ describe('ticket external links UI contract', () => {
     const bento = readRepoFile('packages/tickets/src/components/ticket/bento/TicketBentoLayout.tsx');
 
     expect(entry).toContain('<TicketExternalLinksSection');
-    expect(entry).toContain('initialLinks={bootstrap?.externalLinks');
+    expect(entry).toContain('initialLinks={externalLinks ?? undefined}');
     expect(bento).toContain('<TicketExternalLinksSection');
     expect(bento).toContain('initialLinks={props.externalLinks}');
   });
@@ -52,6 +52,22 @@ describe('ticket external links UI contract', () => {
     expect(source).toContain('rel="noopener noreferrer"');
     expect(commentItem).toContain('externalLinks');
     expect(commentItem).toContain('target="_blank"');
+  });
+
+  it('T121c: origin badge and comment chips share the section-updated link state', () => {
+    const details = readRepoFile('packages/tickets/src/components/ticket/TicketDetails.tsx');
+    const bento = readRepoFile('packages/tickets/src/components/ticket/bento/TicketBentoLayout.tsx');
+    const section = readRepoFile('packages/tickets/src/components/ticket/TicketExternalLinksSection.tsx');
+
+    // TicketDetails owns the link state and feeds it to the origin memo.
+    expect(details).toContain('const [externalLinks, setExternalLinks]');
+    expect(details).toContain('for (const link of externalLinks ?? [])');
+    expect(details).toContain('onLinksChanged={setExternalLinks}');
+    expect(details).toContain('onExternalLinksChanged={setExternalLinks}');
+    expect(bento).toContain('onLinksChanged={props.onExternalLinksChanged}');
+
+    // The dialog refuses to save without a clickable destination.
+    expect(section).toContain('if (selectedSystem && !previewHref)');
   });
 
   it('T123: links load through ticket bootstrap and comment links flow to the conversation', () => {

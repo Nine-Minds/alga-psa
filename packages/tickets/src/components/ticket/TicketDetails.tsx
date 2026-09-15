@@ -549,20 +549,26 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
     const [allContactsForWatchListLoading, setAllContactsForWatchListLoading] = useState(false);
+    // Single source of truth for this ticket's links: seeded from the server
+    // bootstrap, then kept current by the section's onLinksChanged so the origin
+    // badge and comment chips update immediately on add/edit/remove — no reload.
+    const [externalLinks, setExternalLinks] = useState<ITicketExternalLinkView[] | null>(
+        bootstrap?.externalLinks ?? null,
+    );
     const originExternalLink = useMemo(
-        () => (bootstrap?.externalLinks ?? []).find(
+        () => (externalLinks ?? []).find(
             (link) => link.entity_type === 'ticket' && link.relationship === 'origin',
         ),
-        [bootstrap?.externalLinks],
+        [externalLinks],
     );
     const externalLinksByCommentId = useMemo(() => {
         const grouped: Record<string, ITicketExternalLinkView[]> = {};
-        for (const link of bootstrap?.externalLinks ?? []) {
+        for (const link of externalLinks ?? []) {
             if (link.entity_type !== 'comment' || !link.entity_id) continue;
             (grouped[link.entity_id] ??= []).push(link);
         }
         return grouped;
-    }, [bootstrap?.externalLinks]);
+    }, [externalLinks]);
     const ticketOrigin = useMemo(
         () =>
             getTicketOrigin({
@@ -3776,7 +3782,8 @@ const handleClose = () => {
                     onChangeClient={handleClientChange}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
-                    externalLinks={bootstrap?.externalLinks ?? undefined}
+                    externalLinks={externalLinks ?? undefined}
+                    onExternalLinksChanged={setExternalLinks}
                     hideTimeEntry={hideTimeEntry}
                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                     elapsedTime={elapsedTime}
@@ -3959,7 +3966,8 @@ const handleClose = () => {
                             <TicketExternalLinksSection
                                 id={`${id}-external-links-section`}
                                 ticketId={ticket.ticket_id || ''}
-                                initialLinks={bootstrap?.externalLinks ?? undefined}
+                                initialLinks={externalLinks ?? undefined}
+                                onLinksChanged={setExternalLinks}
                             />
                         </div>
 

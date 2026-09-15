@@ -9,6 +9,7 @@ import {
   externalLinkLookupQuerySchema,
   createTicketSchema,
   createTicketCommentSchema,
+  updateTicketSchema,
 } from '../../../lib/api/schemas/ticket';
 
 function readSource(relativePath: string): string {
@@ -61,6 +62,16 @@ describe('Ticket external links REST API contract', () => {
     expect(externalLinkLookupQuerySchema.safeParse({ external_id: 'x' }).success).toBe(false);
   });
 
+  it('treats external_links as create-only (rejected/omitted from ticket updates)', () => {
+    const parsed = updateTicketSchema.safeParse({
+      title: 'x',
+      external_links: [{ system: 'github', external_id: '1' }],
+    });
+    expect(parsed.success).toBe(true);
+    expect((parsed.data as any)?.external_links).toBeUndefined();
+    expect(createTicketSchema.shape.external_links).toBeDefined();
+  });
+
   it('accepts inline external_links on ticket and comment create', () => {
     const link = { system: 'discord', external_id: '123' };
     expect(createTicketSchema.shape.external_links).toBeDefined();
@@ -97,6 +108,33 @@ describe('Ticket external links REST API contract', () => {
     expect(source).toContain('await addExternalLink({ ticket_id: ticketId, ...data })');
   });
 
+  it('authorizes the resolved ticket before returning by-external-link data', () => {
+    const source = readSource('../../../lib/api/controllers/ApiTicketController.ts');
+    const lookupStart = source.indexOf('findByExternalLink()');
+    const authCall = source.indexOf(
+      'await this.assertTicketReadAllowed(apiRequest, result.ticket_id, knex);',
+    );
+    const returnLine = source.indexOf(
+      'return createSuccessResponse(result, 200, undefined, apiRequest);',
+      lookupStart,
+    );
+
+    expect(lookupStart).toBeGreaterThan(-1);
+    expect(authCall).toBeGreaterThan(lookupStart);
+    expect(authCall).toBeLessThan(returnLine);
+  });
+
+  it('matches external_system and external_id against the same link row', () => {
+    const source = readSource('../../../lib/api/services/TicketService.ts');
+
+    expect(source).toContain('handledExternalFilters');
+    expect(source).toContain("externalLinkSubquery.andWhere('eel.system', externalSystem)");
+    expect(source).toContain("externalLinkSubquery.andWhere('eel.external_id', externalId)");
+    // The two predicates are never applied as separate EXISTS queries.
+    expect(source).not.toContain("case 'external_system':");
+    expect(source).not.toContain("case 'external_id':");
+  });
+
   it('binds a link to the authorized ticket before mutating it', () => {
     const source = readSource('../../../lib/api/controllers/ApiTicketController.ts');
     const bindingCheck = source.indexOf('!before.some((link) => link.link_id === linkId)');
@@ -112,8 +150,8 @@ describe('Ticket external links REST API contract', () => {
 
     expect(source).toContain('await persistExternalLinksForCreate(');
     expect(source).toContain("entity_type: 'comment' as const");
-    expect(source).toContain("case 'external_system':");
-    expect(source).toContain("case 'external_id':");
+    expect(source).toContain('handledExternalFilters');
+    expect(source).toContain("externalLinkSubquery.andWhere('eel.system', externalSystem)");
     expect(source).toContain('external_entity_links as eel');
   });
 
