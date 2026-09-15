@@ -50,6 +50,22 @@ describe('external links tenant facade contract', () => {
     expect(persistenceSource).toContain('23505');
   });
 
+  it('authorizes every link read/mutation through the per-record ticket policy', () => {
+    const authorizationSource = readRepoFile('packages/tickets/src/lib/ticketRecordAuthorization.ts');
+
+    // Actions resolve the owning ticket and evaluate the same kernel policy as
+    // ticketActions.getTicketById, not just coarse ticket:read/update.
+    expect(actionsSource).toContain('authorizeTicketRecordAccess');
+    expect(actionsSource).toContain("authorizeTicketAccess(user, trx, tenant, input.ticket_id, 'update')");
+    expect(actionsSource).toContain("authorizeTicketAccess(user, trx, tenant, ticketId, 'read')");
+    expect(actionsSource).toContain('authorizeTicketAccess(user, trx, tenant, existing.ticket_id, \'update\')');
+    expect(actionsSource).toContain('authorizeTicketAccess(user, trx, tenant, rows[0].ticket_id, \'read\')');
+
+    expect(authorizationSource).toContain('createAuthorizationKernel');
+    expect(authorizationSource).toContain('resolveBundleNarrowingRulesForEvaluation');
+    expect(authorizationSource).toContain('authorizeResource');
+  });
+
   it('keeps events after the write transaction and inline audit inside it', () => {
     // Event publishing is invoked outside withTransaction for add/update/remove.
     const addIndex = actionsSource.indexOf('await publishExternalLinkEvent(\'TICKET_EXTERNAL_LINK_ADDED\'');

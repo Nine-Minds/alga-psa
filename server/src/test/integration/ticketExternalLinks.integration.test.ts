@@ -45,6 +45,18 @@ vi.mock('server/src/lib/eventBus/publishers', async (importOriginal) => ({
   publishWorkflowEvent: publishWorkflowEventMock,
 }));
 
+// The per-record authorization decision is the seam exercised by the
+// resource-denial tests: coarse RBAC stays granted, the kernel says no.
+const authorizationKernelMock = vi.hoisted(() => ({
+  authorizeResource: vi.fn(async () => ({ allowed: true })),
+}));
+vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/kernel')>()),
+  createAuthorizationKernel: () => ({
+    authorizeResource: authorizationKernelMock.authorizeResource,
+  }),
+}));
+
 vi.mock('@alga-psa/event-bus', () => ({
   getEventBus: vi.fn(() => ({ publish: vi.fn() })),
   ServerEventPublisher: class {},
@@ -130,6 +142,10 @@ describe('ticket external system links', () => {
     hasPermissionMock.mockResolvedValue(true);
     publishEventMock.mockReset();
     publishEventMock.mockResolvedValue(undefined);
+    publishWorkflowEventMock.mockReset();
+    publishWorkflowEventMock.mockResolvedValue(undefined);
+    authorizationKernelMock.authorizeResource.mockReset();
+    authorizationKernelMock.authorizeResource.mockResolvedValue({ allowed: true });
   });
 
   it('T300: add / list / update / remove round trip with resolved display', async () => {
@@ -437,11 +453,13 @@ describe('ticket external system links', () => {
     });
   });
 
-  it('T313: client contacts are rejected even when they hold ticket permissions', async () => {
+  it('T313: the MSP-only guard rejects a client-shaped session even with ticket permissions', async () => {
     const ticketId = await insertTicket(db, fixture);
     const internalUser = userRef.user;
     try {
-      // Client-portal contacts also carry coarse ticket:read/update.
+      // Unit-level guard check at the withAuth/hasPermission seam: a
+      // client-shaped principal that holds coarse ticket:read/update is still
+      // rejected before any tenant table is touched.
       userRef.user = { ...internalUser, user_type: 'client', clientId: fixture.clientId };
       hasPermissionMock.mockResolvedValue(true);
 
@@ -607,5 +625,82 @@ describe('ticket external system links', () => {
       (call: any[]) => call[0].eventType === 'TICKET_CREATED',
     );
     expect(createdEvent?.[0]?.payload?.externalLinks?.[0]?.externalId).toBe('svc-ok');
+  });
+
+  it('T317: coarse ticket permissions do not bypass per-record resource denial', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const link = expectActionSuccess(
+      await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'deny-1' }),
+    );
+    // Bootstrap a lookup target while access is allowed.
+    expectActionSuccess(await findTicketByExternalLink({ system: 'github', external_id: 'deny-1' }));
+
+    // Coarse RBAC is fully granted; only the per-record kernel denies.
+    hasPermissionMock.mockResolvedValue(true);
+    authorizationKernelMock.authorizeResource.mockResolvedValue({ allowed: false });
+
+    expect(await getTicketExternalLinks(ticketId)).toMatchObject({
+      permissionError: expect.stringMatching(/Permission denied/),
+    });
+    expect(
+      await addExternalLink({ ticket_id: ticketId, system: 'github', realm: 'acme/repo', external_id: 'deny-2' }),
+    ).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(await updateExternalLink(link.link_id, { external_status: 'denied' })).toMatchObject({
+      permissionError: expect.stringMatching(/Permission denied/),
+    });
+    expect(await removeExternalLink(link.link_id)).toMatchObject({
+      permissionError: expect.stringMatching(/Permission denied/),
+    });
+    expect(await findTicketByExternalLink({ system: 'github', external_id: 'deny-1' })).toMatchObject({
+      permissionError: expect.stringMatching(/Permission denied/),
+    });
+
+    // The denied mutations left the original link untouched.
+    const rows = await scopedDbFor(fixture.tenantId)
+      .table('external_entity_links')
+      .where({ ticket_id: ticketId });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].external_status).toBeNull();
+  });
+
+  it('T318: a comment create with conflicting inline links rolls back completely', async () => {
+    const service = new TicketService();
+    const context = { tenant: fixture.tenantId, userId: fixture.userId } as any;
+    const ticketId = await insertTicket(db, fixture);
+
+    publishEventMock.mockClear();
+    publishWorkflowEventMock.mockClear();
+
+    await expect(
+      runWithTenant(fixture.tenantId, () =>
+        service.addComment(
+          ticketId,
+          {
+            comment_text: 'atomic comment with conflicting links',
+            external_links: [
+              { system: 'github', realm: 'acme/repo', external_id: 'c-dup' },
+              { system: 'github', realm: 'acme/repo', external_id: 'c-dup' },
+            ],
+          } as any,
+          context,
+        ),
+      ),
+    ).rejects.toThrow();
+
+    const comments = await scopedDbFor(fixture.tenantId)
+      .table('comments')
+      .where({ note: 'atomic comment with conflicting links' });
+    expect(comments).toHaveLength(0);
+    const links = await scopedDbFor(fixture.tenantId)
+      .table('external_entity_links')
+      .where({ external_id: 'c-dup' });
+    expect(links).toHaveLength(0);
+    const audits = await scopedDbFor(fixture.tenantId)
+      .table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_EXTERNAL_LINK_ADDED' });
+    expect(audits).toHaveLength(0);
+    expect(
+      publishEventMock.mock.calls.some((call: any[]) => call[0].eventType === 'TICKET_EXTERNAL_LINK_ADDED'),
+    ).toBe(false);
   });
 });

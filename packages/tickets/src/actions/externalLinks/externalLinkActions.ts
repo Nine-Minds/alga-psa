@@ -9,6 +9,7 @@ import type {
   ExternalSystemActor,
   IExternalEntityLink,
   ITenantExternalSystem,
+  IUserWithRoles,
 } from '@alga-psa/types';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -24,6 +25,7 @@ import {
   safeExternalUrl,
 } from '../../lib/externalSystems';
 import { CUSTOM_EXTERNAL_SYSTEM_KEY_PATTERN } from '@alga-psa/types';
+import { authorizeTicketRecordAccess } from '../../lib/ticketRecordAuthorization';
 import {
   ExternalLinkValidationError,
   assertLinkDestination,
@@ -31,7 +33,6 @@ import {
   loadTenantExternalSystems,
   prepareExternalLink,
   publishExternalLinkEvent,
-  requireTicket,
   type AddExternalLinkInput,
   type UpdateExternalLinkPatch,
 } from './externalLinkPersistence';
@@ -108,6 +109,36 @@ function assertInternalUser(user: { user_type?: string }): void {
   }
 }
 
+/**
+ * Enforce the same per-record ticket authorization `getTicketById` applies.
+ * Client-portal visibility and relationship/bundle narrowing are evaluated for
+ * the owning ticket, not just the coarse `ticket:read|update` permission.
+ */
+async function authorizeTicketAccess(
+  user: IUserWithRoles,
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  action: 'read' | 'update',
+): Promise<void> {
+  try {
+    await authorizeTicketRecordAccess({
+      trx,
+      tenant,
+      user,
+      ticketId,
+      action,
+    });
+  } catch (error) {
+    // Preserve the structured not-found result the action layer already exposes;
+    // `Permission denied` errors are mapped to permissionError by the caller.
+    if (error instanceof Error && error.message === 'Ticket not found') {
+      throw new ExternalLinkValidationError('ticket_not_found', 'Ticket not found');
+    }
+    throw error;
+  }
+}
+
 function toView(
   row: IExternalEntityLink,
   tenantSystems: readonly ITenantExternalSystem[],
@@ -148,16 +179,18 @@ export const getTicketExternalLinks = withAuth(
         throw new Error('Permission denied: Cannot read ticket links');
       }
       const { knex } = await createTenantKnex();
-      await requireTicket(knex, tenant, ticketId);
-      const [rows, systems] = await Promise.all([
-        tenantTable(knex, tenant, 'external_entity_links')
-          .where({ ticket_id: ticketId })
-          .orderBy([
-            { column: 'entity_type', order: 'asc' },
-            { column: 'created_at', order: 'asc' },
-          ]),
-        loadTenantExternalSystems(knex, tenant),
-      ]);
+      const [rows, systems] = await withTransaction(knex, async (trx) => {
+        await authorizeTicketAccess(user, trx, tenant, ticketId, 'read');
+        return Promise.all([
+          tenantTable(trx, tenant, 'external_entity_links')
+            .where({ ticket_id: ticketId })
+            .orderBy([
+              { column: 'entity_type', order: 'asc' },
+              { column: 'created_at', order: 'asc' },
+            ]),
+          loadTenantExternalSystems(trx, tenant),
+        ]);
+      });
       return (rows as IExternalEntityLink[]).map((row) => toView(row, systems));
     } catch (error) {
       const expected = externalLinkActionErrorFrom(error);
@@ -178,6 +211,7 @@ export const addExternalLink = withAuth(
       }
       const { knex } = await createTenantKnex();
       const result = await withTransaction(knex, async (trx) => {
+        await authorizeTicketAccess(user, trx, tenant, input.ticket_id, 'update');
         const prepared = await prepareExternalLink(trx, tenant, input);
         const row = await insertExternalLink(trx, tenant, prepared, user.user_id);
         const systems = await loadTenantExternalSystems(trx, tenant);
@@ -231,6 +265,7 @@ export const updateExternalLink = withAuth(
         if (!existing) {
           throw new ExternalLinkValidationError('link_not_found', 'External link not found');
         }
+        await authorizeTicketAccess(user, trx, tenant, existing.ticket_id, 'update');
 
         const updates: Record<string, unknown> = { updated_at: trx.fn.now() };
 
@@ -311,6 +346,7 @@ export const removeExternalLink = withAuth(
         if (!existing) {
           throw new ExternalLinkValidationError('link_not_found', 'External link not found');
         }
+        await authorizeTicketAccess(user, trx, tenant, existing.ticket_id, 'update');
         await tenantTable(trx, tenant, 'external_entity_links').where({ link_id: linkId }).del();
         const systems = await loadTenantExternalSystems(trx, tenant);
         await writeTicketActivity(trx, {
@@ -364,19 +400,23 @@ export const findTicketByExternalLink = withAuth(
         throw new ExternalLinkValidationError('external_id_required', 'External ID is required');
       }
       const { knex } = await createTenantKnex();
-      const query = tenantTable(knex, tenant, 'external_entity_links')
-        .where({ system: input.system, external_id: externalId });
-      if (input.external_parent_id != null) {
-        query.where({ external_parent_id: input.external_parent_id });
-      }
-      query.orderBy([{ column: 'entity_type', order: 'asc' }, { column: 'created_at', order: 'asc' }]);
-      const rows = (await query) as IExternalEntityLink[];
-      if (rows.length === 0) {
-        return null;
-      }
-      const systems = await loadTenantExternalSystems(knex, tenant);
-      const row = rows[0];
-      return { ticket_id: row.ticket_id, link: toView(row, systems) };
+      return await withTransaction(knex, async (trx) => {
+        const query = tenantTable(trx, tenant, 'external_entity_links')
+          .where({ system: input.system, external_id: externalId });
+        if (input.external_parent_id != null) {
+          query.where({ external_parent_id: input.external_parent_id });
+        }
+        query.orderBy([{ column: 'entity_type', order: 'asc' }, { column: 'created_at', order: 'asc' }]);
+        const rows = (await query) as IExternalEntityLink[];
+        if (rows.length === 0) {
+          return null;
+        }
+        // Resolve and authorize the owning ticket before leaking link data.
+        await authorizeTicketAccess(user, trx, tenant, rows[0].ticket_id, 'read');
+        const systems = await loadTenantExternalSystems(trx, tenant);
+        const row = rows[0];
+        return { ticket_id: row.ticket_id, link: toView(row, systems) };
+      });
     } catch (error) {
       const expected = externalLinkActionErrorFrom(error);
       if (expected) {
