@@ -1501,8 +1501,9 @@ export class TicketService extends BaseService<ITicket> {
         }
 
         // Persist ticket-level external links in the same transaction so a bot's
-        // create-with-links is atomic. Invalid links roll back the whole create;
-        // exact duplicates / an already-present origin are skipped idempotently.
+        // create-with-links is atomic. Any invalid link — a second origin, a
+        // duplicate external record, or an unusable destination — throws and
+        // rolls back the whole ticket create.
         const externalLinks = await persistExternalLinksForCreate(
           trx,
           context.tenant,
