@@ -24,7 +24,8 @@ describe('ticket external links UI contract', () => {
   it('T121: the add/edit dialog disables origin when one already exists', () => {
     const source = readRepoFile('packages/tickets/src/components/ticket/TicketExternalLinksSection.tsx');
 
-    expect(source).toContain("relationship === 'origin' && hasOrigin && form.relationship !== 'origin'");
+    expect(source).toContain("relationship === 'origin' && hasOtherOrigin");
+    expect(source).toContain('link.link_id !== editingLink?.link_id');
     expect(source).toContain('originExistsHint');
     expect(source).toContain('renderExternalLinkUrl');
     expect(source).toContain("externalLinks.errors.urlRequired");

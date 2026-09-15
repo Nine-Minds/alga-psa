@@ -288,9 +288,9 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
     );
   }, [selectedSystem, form.externalId, form.realm, form.url]);
 
-  const hasOrigin = useMemo(
-    () => ticketLevelLinks.some((link) => link.relationship === 'origin'),
-    [ticketLevelLinks],
+  const hasOtherOrigin = useMemo(
+    () => ticketLevelLinks.some((link) => link.relationship === 'origin' && link.link_id !== editingLink?.link_id),
+    [ticketLevelLinks, editingLink?.link_id],
   );
 
   const openAdd = useCallback(() => {
@@ -423,9 +423,9 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
       RELATIONSHIPS.map((relationship) => ({
         value: relationship,
         label: relationshipLabel(relationship),
-        disabled: relationship === 'origin' && hasOrigin && form.relationship !== 'origin',
+        disabled: relationship === 'origin' && hasOtherOrigin,
       })),
-    [relationshipLabel, hasOrigin, form.relationship],
+    [relationshipLabel, hasOtherOrigin],
   );
 
   const dialogFooter = (
@@ -706,7 +706,7 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
               />
               <p className="text-xs text-[rgb(var(--color-text-500))]">
                 {relationshipDescription(form.relationship)}
-                {hasOrigin && form.relationship !== 'origin'
+                {hasOtherOrigin && form.relationship !== 'origin'
                   ? ` ${t('externalLinks.fields.originExistsHint', 'This ticket already has an origin link.')}`
                   : null}
               </p>

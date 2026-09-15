@@ -2,7 +2,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -63,6 +63,22 @@ function link(overrides: Partial<ITicketExternalLinkView> = {}): ITicketExternal
 }
 
 describe('TicketExternalLinksSection behaviour', () => {
+  // Radix Select uses browser APIs that jsdom does not implement.
+  const browserMethods = ['hasPointerCapture', 'setPointerCapture', 'releasePointerCapture', 'scrollIntoView'] as const;
+  const originalDescriptors = browserMethods.map((name) => Object.getOwnPropertyDescriptor(Element.prototype, name));
+  beforeAll(() => {
+    for (const name of browserMethods) {
+      Object.defineProperty(Element.prototype, name, { configurable: true, value: vi.fn(() => false) });
+    }
+  });
+  afterAll(() => {
+    browserMethods.forEach((name, index) => {
+      const descriptor = originalDescriptors[index];
+      if (descriptor) Object.defineProperty(Element.prototype, name, descriptor);
+      else Reflect.deleteProperty(Element.prototype, name);
+    });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     actionMocks.listExternalSystems.mockResolvedValue([]);
@@ -112,7 +128,9 @@ describe('TicketExternalLinksSection behaviour', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add link' }));
 
-    expect(screen.getByText('This ticket already has an origin link.')).toBeInTheDocument();
+    expect(screen.getByText(/This ticket already has an origin link\.$/)).toBeInTheDocument();
+    await user.click(document.getElementById('ticket-external-links-relationship')!);
+    expect(screen.getByRole('option', { name: 'origin', exact: true })).toHaveAttribute('aria-disabled', 'true');
   });
 
   async function openEdit(initial: ITicketExternalLinkView) {
@@ -128,6 +146,23 @@ describe('TicketExternalLinksSection behaviour', () => {
     await user.click(await screen.findByText('Edit'));
     return user;
   }
+
+  it('allows changing the existing origin relationship and selecting origin again before saving', async () => {
+    const user = await openEdit(link());
+
+    await user.click(document.getElementById('ticket-external-links-relationship')!);
+    await user.click(screen.getByRole('option', { name: 'reference', exact: true }));
+    expect(screen.queryByText(/This ticket already has an origin link\.$/)).not.toBeInTheDocument();
+
+    await user.click(document.getElementById('ticket-external-links-relationship')!);
+    expect(screen.getByRole('option', { name: 'origin', exact: true })).not.toHaveAttribute('aria-disabled', 'true');
+    await user.click(screen.getByRole('option', { name: 'origin', exact: true }));
+    await user.click(document.getElementById('ticket-external-links-dialog-save')!);
+
+    await waitFor(() => expect(actionMocks.updateExternalLink).toHaveBeenCalledWith(
+      'l1', expect.objectContaining({ relationship: 'origin' }),
+    ));
+  });
 
   it('T133: editing preserves actor id and url alongside the edited handle/display name', async () => {
     const user = await openEdit(

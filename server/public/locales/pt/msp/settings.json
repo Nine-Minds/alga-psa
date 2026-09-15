@@ -1029,8 +1029,7 @@
           "updated": "Sistema externo atualizado.",
           "deleted": "Sistema externo excluído."
         }
-      },
-      "tab": "Sistemas externos"
+      }
     }
   },
   "interactions": {

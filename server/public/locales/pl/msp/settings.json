@@ -1033,8 +1033,7 @@
           "updated": "Zaktualizowano system zewnętrzny.",
           "deleted": "Usunięto system zewnętrzny."
         }
-      },
-      "tab": "Systemy zewnętrzne"
+      }
     }
   },
   "interactions": {
