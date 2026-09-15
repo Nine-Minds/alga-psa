@@ -15,6 +15,7 @@ export const NAMESPACES = [
   "inventory",
   "opportunities",
   "assets",
+  "interactions",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 export const DEFAULT_NS: Namespace = "common";

@@ -497,6 +497,59 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     edition: 'both',
   });
 
+  const ClientNotesResponse = registry.registerSchema(
+    'ClientNotesResponse',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        document: zOpenApi.unknown().nullable().describe('The linked notes document row, or null when the client has no notes.'),
+        blockData: zOpenApi.unknown().nullable().describe('BlockNote block array for the notes body, or null.'),
+        lastUpdated: zOpenApi.string().nullable().describe('ISO timestamp of the last notes update, or null.'),
+      }),
+    }),
+  );
+  const ClientNotesUpdateBody = registry.registerSchema(
+    'ClientNotesUpdateBody',
+    zOpenApi.object({
+      blockData: zOpenApi.unknown().describe('Full BlockNote block array (or its JSON string). Replaces the existing notes document.'),
+    }),
+  );
+  const clientNotesErrs = {
+    400: { description: 'Invalid client id or request payload.', schema: ApiError },
+    401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+    403: { description: 'Permission denied for client resource action.', schema: ApiError },
+    404: { description: 'Client not found.', schema: ApiError },
+    500: { description: 'Unexpected client notes failure.', schema: ApiError },
+  };
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/clients/{id}/notes',
+    summary: 'Get client notes',
+    description: 'Returns the BlockNote content of the client notes document (the rich-text notes shown on the client page), or null fields when no notes exist.',
+    tags: [clientTag], security: [{ ApiKeyAuth: [] }], request: { params: ClientIdParam },
+    responses: { 200: { description: 'Client notes content.', schema: ClientNotesResponse }, ...clientNotesErrs },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'read' },
+    edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/clients/{id}/notes',
+    summary: 'Update client notes',
+    description: 'Creates or replaces the BlockNote notes document linked to the client. Send the full block array; partial updates are not merged. Returns the document id.',
+    tags: [clientTag], security: [{ ApiKeyAuth: [] }], request: { params: ClientIdParam, body: { schema: ClientNotesUpdateBody } },
+    responses: { 200: { description: 'Notes saved.', schema: zOpenApi.object({ data: zOpenApi.object({ document_id: zOpenApi.string().uuid() }) }) }, ...clientNotesErrs },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/clients/{id}/notes',
+    summary: 'Delete client notes',
+    description: 'Unlinks the notes document from the client. Pass delete_document=true to also hard-delete the document and its block content.',
+    tags: [clientTag], security: [{ ApiKeyAuth: [] }],
+    request: { params: ClientIdParam, query: zOpenApi.object({ delete_document: zOpenApi.enum(['true', 'false']).optional() }) },
+    responses: { 200: { description: 'Notes unlinked/deleted.', schema: zOpenApi.object({ message: zOpenApi.string() }) }, ...clientNotesErrs },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
   registry.registerRoute({
     method: 'post',
     path: '/api/v1/clients/{id}/locations',

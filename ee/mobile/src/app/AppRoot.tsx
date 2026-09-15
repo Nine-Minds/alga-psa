@@ -5,6 +5,7 @@ import type { InitialState } from "@react-navigation/native";
 import { getAppConfig, hydrateAppConfig, setActiveBaseUrl } from "../config/appConfig";
 import { clearStoredHost, loadStoredHost, saveStoredHost } from "../config/hostStore";
 import { linking } from "../navigation/linking";
+import { stripTransientRouteParams } from "../navigation/navStatePersistence";
 import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
 import { LoadingState } from "../ui/states";
@@ -121,7 +122,7 @@ export function AppRoot() {
       setNavStateLoaded(false);
       const stored = await getSecureJson<InitialState>(`alga.mobile.navState.${userId}`);
       if (canceled) return;
-      setNavInitialState(stored ?? undefined);
+      setNavInitialState(stripTransientRouteParams(stored ?? undefined));
       setNavStateLoaded(true);
     };
 
@@ -371,7 +372,7 @@ export function AppRoot() {
                   if (active === "SignIn" || active === "AuthCallback") return;
                   if (navPersistHandle.current) clearTimeout(navPersistHandle.current);
                   navPersistHandle.current = setTimeout(() => {
-                    void setSecureJson(`alga.mobile.navState.${userId}`, state);
+                    void setSecureJson(`alga.mobile.navState.${userId}`, stripTransientRouteParams(state));
                   }, 500);
                 }}
               >

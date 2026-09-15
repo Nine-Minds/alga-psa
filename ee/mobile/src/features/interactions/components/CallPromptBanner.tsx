@@ -2,7 +2,7 @@ import React from "react";
 import { Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
-import { SecondaryButton } from "./SecondaryButton";
+import { SecondaryButton } from "../../opportunities/components/SecondaryButton";
 import type { PendingCallPrompt } from "../hooks/usePendingCallPrompt";
 
 export function CallPromptBanner({
@@ -14,12 +14,12 @@ export function CallPromptBanner({
   onLog: () => void;
   onDismiss: () => void;
 }) {
-  const { t } = useTranslation("opportunities");
+  const { t } = useTranslation("interactions");
   const theme = useTheme();
 
   return (
     <View
-      testID="opportunity-detail-call-prompt"
+      testID="call-prompt"
       style={{
         marginTop: theme.spacing.lg,
         padding: theme.spacing.md,
@@ -33,23 +33,13 @@ export function CallPromptBanner({
         {t("callPrompt.title", "Log this call?")}
       </Text>
       <Text style={{ ...theme.typography.caption, color: theme.colors.badge.info.text, marginTop: 2 }}>
-        {t("callPrompt.body", "You called {{name}}. Add it to the deal's record.", {
-          name: prompt.contactName ?? "",
-        })}
+        {t("callPrompt.body", "You called {{name}}. Log it as an interaction?", { name: prompt.name ?? prompt.phone })}
       </Text>
       <View style={{ flexDirection: "row", gap: theme.spacing.sm, marginTop: theme.spacing.md }}>
-        <SecondaryButton
-          testID="opportunity-detail-call-prompt-log"
-          onPress={onLog}
-          accessibilityLabel={t("callPrompt.log", "Log the call")}
-        >
+        <SecondaryButton testID="call-prompt-log" onPress={onLog} accessibilityLabel={t("callPrompt.log", "Log the call")}>
           {t("callPrompt.log", "Log the call")}
         </SecondaryButton>
-        <SecondaryButton
-          testID="opportunity-detail-call-prompt-dismiss"
-          onPress={onDismiss}
-          accessibilityLabel={t("callPrompt.dismiss", "Not now")}
-        >
+        <SecondaryButton testID="call-prompt-dismiss" onPress={onDismiss} accessibilityLabel={t("callPrompt.dismiss", "Not now")}>
           {t("callPrompt.dismiss", "Not now")}
         </SecondaryButton>
       </View>

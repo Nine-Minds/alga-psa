@@ -5,10 +5,11 @@ import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments'
  * Business logic for ticket-related operations
  */
 
-import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
+import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
+import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 import { applyVisibilityBoardFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
@@ -69,6 +70,7 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { generateDocumentPreviews, type PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -227,6 +229,43 @@ export interface BundleView {
   master: BundleMemberTicket | null;
   children: BundleMemberTicket[];
   settings: { mode: BundleMode; reopen_on_child_reply: boolean } | null;
+}
+
+export type TicketDocumentVariant = 'thumbnail' | 'preview';
+
+// Same job the web composer arms; publishScheduledCommentHandler flips the row
+// to 'published' and dispatches the withheld TICKET_COMMENT_ADDED event.
+const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
+
+type ScheduledCommentPublication = { publishAt: Date; timeZone: string };
+
+function resolveScheduledCommentPublication(
+  data: { scheduled_publish_at?: string; scheduled_publish_tz?: string },
+  isInternal: boolean,
+): ScheduledCommentPublication | null {
+  if (!data.scheduled_publish_at) return null;
+  const publishAt = new Date(data.scheduled_publish_at);
+  if (Number.isNaN(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_at'], message: 'Scheduled publication time must be in the future' },
+    ]);
+  }
+  if (isInternal) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_at'], message: 'Only client-visible comments can be scheduled' },
+    ]);
+  }
+  if (!data.scheduled_publish_tz) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_tz'], message: 'A valid IANA time zone is required for scheduled comments' },
+    ]);
+  }
+  return { publishAt, timeZone: data.scheduled_publish_tz };
+}
+
+function isPreviewableMime(mimeType: string | null | undefined): boolean {
+  const mime = (mimeType ?? '').toLowerCase();
+  return mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('video/');
 }
 
 export class TicketService extends BaseService<ITicket> {
@@ -1124,6 +1163,7 @@ export class TicketService extends BaseService<ITicket> {
     });
 
     documentCommitted = true;
+    await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
@@ -1176,6 +1216,85 @@ export class TicketService extends BaseService<ITicket> {
       fileName: doc.document_name || result.metadata.original_name,
       mimeType: doc.mime_type || result.metadata.mime_type,
     };
+  }
+
+  /**
+   * Serve the cached thumbnail (200x200) or preview (800x600) image for a
+   * ticket document. Images and PDFs uploaded before previews existed get
+   * their previews generated on first request and persisted.
+   */
+  async downloadTicketDocumentVariant(
+    ticketId: string,
+    documentId: string,
+    variant: TicketDocumentVariant,
+    context: ServiceContext
+  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const scopedDb = tenantDb(knex, context.tenant);
+    const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
+    scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      docQuery.where('d.is_client_visible', true);
+    }
+
+    const doc = await docQuery
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+      })
+      .select('d.*')
+      .first() as IDocument | undefined;
+
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+      throw new NotFoundError('Document not found');
+    }
+
+    const column = variant === 'thumbnail' ? 'thumbnail_file_id' : 'preview_file_id';
+    let fileId = doc[column] ?? null;
+
+    if (!fileId && !doc.preview_generated_at && isPreviewableMime(doc.mime_type)) {
+      const original = await StorageService.downloadFile(doc.file_id);
+      const generated = await this.persistDocumentPreviews(knex, doc, original.buffer, context.tenant);
+      fileId = generated?.[column] ?? null;
+    }
+
+    if (!fileId) {
+      throw new NotFoundError(`Document ${variant} not available`);
+    }
+
+    const result = await StorageService.downloadFile(fileId);
+    return {
+      buffer: result.buffer,
+      fileId,
+      mimeType: result.metadata.mime_type || 'image/jpeg',
+    };
+  }
+
+  private async persistDocumentPreviews(
+    knex: Knex,
+    document: IDocument,
+    buffer: Buffer,
+    tenant: string,
+  ): Promise<PreviewGenerationResult | null> {
+    try {
+      const result = await generateDocumentPreviews(document, buffer);
+      await tenantScopedTable(knex, 'documents', tenant)
+        .where({ document_id: document.document_id })
+        .update({
+          thumbnail_file_id: result.thumbnail_file_id,
+          preview_file_id: result.preview_file_id,
+          preview_generated_at: result.preview_generated_at,
+        });
+      return result;
+    } catch (error) {
+      console.error(`[TicketService] Preview generation failed for document ${document.document_id}:`, error);
+      return null;
+    }
   }
 
   async deleteTicketDocument(
@@ -2147,6 +2266,10 @@ export class TicketService extends BaseService<ITicket> {
         });
       }
 
+      // A reply into an internal thread inherits is_internal=true, so this
+      // check runs after visibility is resolved rather than on the raw body.
+      const scheduledPublication = resolveScheduledCommentPublication(data, apiIsInternal);
+
       const commentData = {
         comment_id: apiCommentId,
         thread_id: apiThreadId,
@@ -2160,6 +2283,13 @@ export class TicketService extends BaseService<ITicket> {
         created_at: apiNowIso,
         updated_at: apiNowIso,
         metadata: data.metadata,
+        ...(scheduledPublication
+          ? {
+              publish_state: 'scheduled',
+              scheduled_publish_at: scheduledPublication.publishAt.toISOString(),
+              scheduled_publish_tz: scheduledPublication.timeZone,
+            }
+          : {}),
       };
 
       const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
@@ -2175,7 +2305,8 @@ export class TicketService extends BaseService<ITicket> {
           });
       }
 
-      if (!comment.is_internal) {
+      // A scheduled public comment is not a client reply until publication.
+      if (!comment.is_internal && !scheduledPublication) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
       }
 
@@ -2211,13 +2342,85 @@ export class TicketService extends BaseService<ITicket> {
         comment: { id: comment.comment_id, content: comment.note, author: authorName, isInternal: comment.is_internal },
         ...notificationSuppression,
       };
-      await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
+      if (scheduledPublication) {
+        // Never arm the worker before the row is committed; the boot
+        // reconciler repairs a post-commit scheduling failure.
+        registerAfterCommit(trx, async () => {
+          const scheduled = await scheduleBackgroundJobAt(
+            SCHEDULED_COMMENT_JOB,
+            { tenantId: context.tenant, ticketId, commentId: comment.comment_id },
+            scheduledPublication.publishAt,
+            { singletonKey: `publish-comment:${comment.comment_id}`, metadata: { scheduledPublishTz: scheduledPublication.timeZone } },
+          );
+          await tenantScopedTable(knex, 'comments', context.tenant)
+            .where({ comment_id: comment.comment_id, publish_state: 'scheduled' })
+            .update({ schedule_job_id: scheduled.jobId });
+        }, `schedule comment publication ${comment.comment_id}`);
+      } else {
+        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
+      }
       return { response };
     });
 
     // Intent is persisted; after-commit dispatch and recurring recovery deliver it.
 
     return result.response;
+  }
+
+  /**
+   * Cancel a scheduled (not yet published) comment. Mirrors the web
+   * cancelScheduledComment action: cancellation is a retained audit state and
+   * the compare-and-set on publish_state races safely against the worker.
+   */
+  async cancelScheduledComment(
+    ticketId: string,
+    commentId: string,
+    context: ServiceContext
+  ): Promise<{ comment_id: string; publish_state: 'canceled' }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    return withTransaction(knex, async (trx) => {
+      const existing = await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, ticket_id: ticketId })
+        .first();
+
+      if (!existing) {
+        throw new NotFoundError('Comment not found');
+      }
+      if (existing.publish_state !== 'scheduled') {
+        throw new ValidationError('Only scheduled comments can be canceled');
+      }
+      if (existing.user_id !== context.userId && context.user?.user_type !== 'internal') {
+        throw new ForbiddenError('You can only cancel your own scheduled comments');
+      }
+
+      await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, publish_state: 'scheduled' })
+        .update({
+          publish_state: 'canceled',
+          deleted_at: trx.fn.now(),
+          schedule_job_id: null,
+          updated_at: trx.fn.now(),
+        });
+      await withdrawCommentAttachments(trx, context.tenant, commentId);
+      if (existing.schedule_job_id) {
+        await cancelScheduledJob(existing.schedule_job_id, context.tenant);
+      }
+
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED',
+        entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+        entityId: commentId,
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: { canceled: true },
+      });
+
+      return { comment_id: commentId, publish_state: 'canceled' as const };
+    });
   }
 
   /**

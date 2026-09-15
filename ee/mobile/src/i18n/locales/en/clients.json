@@ -52,5 +52,20 @@
   "ticketsFilter": {
     "chip": "Client: {{name}}",
     "clear": "Clear client filter"
+  },
+  "notes": {
+    "title": "Notes",
+    "ticketTitle": "Client notes",
+    "legacyLabel": "Earlier notes",
+    "empty": "No notes for this client yet.",
+    "add": "Add note",
+    "addTitle": "Add a client note",
+    "label": "Note",
+    "placeholder": "What should the team know about this client?",
+    "save": "Save note",
+    "saved": "Note added",
+    "saveFailed": "Couldn't save note",
+    "loadFailed": "Unable to load client notes.",
+    "retry": "Retry"
   }
 }
