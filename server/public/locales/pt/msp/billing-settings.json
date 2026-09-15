@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Gerenciar regiões fiscais",
+      "title": "Regiões e taxas de imposto",
       "loading": "Carregando regiões...",
       "fields": {
         "code": {
           "label": "Código da região",
-          "placeholder": "por exemplo, CA, NY, VAT-UK"
+          "placeholder": "por exemplo, CA, NY, VAT-UK",
+          "immutableHint": "O código da região identifica esta região para taxas de imposto, clientes e locais, por isso não pode ser alterado."
         },
         "name": {
           "label": "Nome da região",
@@ -268,6 +269,57 @@
         "update": "Falha ao atualizar a região fiscal.",
         "activate": "Falha ao ativar a região fiscal.",
         "deactivate": "Falha ao desativar a região fiscal."
+      },
+      "search": {
+        "placeholder": "Pesquisar regiões"
+      },
+      "columns": {
+        "region": "Região",
+        "currentRate": "Taxa atual",
+        "rates": "Taxas"
+      },
+      "rateSummary": {
+        "noRates": "Sem taxa",
+        "noCurrentRate": "Sem taxa em vigor",
+        "combined": "{{count}} combinadas",
+        "combinedHint": "{{count}} taxas ativas aplicam-se hoje e são somadas nas faturas."
+      },
+      "empty": {
+        "title": "Ainda não há regiões de imposto",
+        "description": "Adicione uma região para cada local onde cobra imposto e atribua-lhe uma taxa.",
+        "noMatch": "Nenhuma região corresponde a \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Mostrar taxas",
+        "collapse": "Ocultar taxas"
+      },
+      "rates": {
+        "empty": "Esta região não tem taxas. As faturas tributadas aqui falharão até que uma seja adicionada.",
+        "composite": "Composta",
+        "effectiveRange": "De {{start}} a {{end}}",
+        "effectiveFrom": "A partir de {{start}}",
+        "deleteEntity": "a taxa de {{rate}} para {{region}}",
+        "columns": {
+          "rate": "Taxa",
+          "description": "Descrição",
+          "effective": "Vigência"
+        },
+        "status": {
+          "current": "Em vigor",
+          "scheduled": "Agendada",
+          "expired": "Expirada",
+          "inactive": "Inativa"
+        },
+        "actions": {
+          "add": "Adicionar taxa",
+          "edit": "Editar",
+          "advanced": "Definições avançadas",
+          "delete": "Eliminar"
+        },
+        "errors": {
+          "validateDeletion": "Não foi possível validar a eliminação. Tente novamente.",
+          "delete": "Não foi possível eliminar a taxa de imposto."
+        }
       }
     },
     "thresholds": {

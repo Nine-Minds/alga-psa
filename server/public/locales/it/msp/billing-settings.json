@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Gestire le regioni fiscali",
+      "title": "Regioni e aliquote fiscali",
       "loading": "Caricamento regioni...",
       "fields": {
         "code": {
           "label": "Codice regionale",
-          "placeholder": "ad esempio, CA, NY, IVA-Regno Unito"
+          "placeholder": "ad esempio, CA, NY, IVA-Regno Unito",
+          "immutableHint": "Il codice regione identifica questa regione per aliquote fiscali, clienti e sedi, quindi non può essere modificato."
         },
         "name": {
           "label": "Nome della regione",
@@ -268,6 +269,57 @@
         "update": "Impossibile aggiornare la regione fiscale.",
         "activate": "Impossibile attivare la regione fiscale.",
         "deactivate": "Impossibile disattivare la regione fiscale."
+      },
+      "search": {
+        "placeholder": "Cerca regioni"
+      },
+      "columns": {
+        "region": "Regione",
+        "currentRate": "Aliquota attuale",
+        "rates": "Aliquote"
+      },
+      "rateSummary": {
+        "noRates": "Nessuna aliquota",
+        "noCurrentRate": "Nessuna aliquota in vigore",
+        "combined": "{{count}} combinate",
+        "combinedHint": "{{count}} aliquote attive si applicano oggi e vengono sommate nelle fatture."
+      },
+      "empty": {
+        "title": "Nessuna regione fiscale",
+        "description": "Aggiungi una regione per ogni luogo in cui applichi le imposte, poi assegnale un'aliquota.",
+        "noMatch": "Nessuna regione corrisponde a \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Mostra aliquote",
+        "collapse": "Nascondi aliquote"
+      },
+      "rates": {
+        "empty": "Questa regione non ha aliquote. Le fatture tassate qui falliranno finché non ne viene aggiunta una.",
+        "composite": "Composita",
+        "effectiveRange": "Dal {{start}} al {{end}}",
+        "effectiveFrom": "Dal {{start}}",
+        "deleteEntity": "l'aliquota del {{rate}} per {{region}}",
+        "columns": {
+          "rate": "Aliquota",
+          "description": "Descrizione",
+          "effective": "Validità"
+        },
+        "status": {
+          "current": "In vigore",
+          "scheduled": "Programmata",
+          "expired": "Scaduta",
+          "inactive": "Inattiva"
+        },
+        "actions": {
+          "add": "Aggiungi aliquota",
+          "edit": "Modifica",
+          "advanced": "Impostazioni avanzate",
+          "delete": "Elimina"
+        },
+        "errors": {
+          "validateDeletion": "Impossibile convalidare l'eliminazione. Riprova.",
+          "delete": "Impossibile eliminare l'aliquota fiscale."
+        }
       }
     },
     "thresholds": {

@@ -64,11 +64,16 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
     let title = `Teams appointment ${actors.runId}`;
     await page.goto('/msp/schedule');
     const noon = page.locator('.rbc-day-slot.rbc-today .rbc-time-slot').nth(24);
+    await expect(noon).toBeVisible();
+    // Slots mount before the event fetch completes. A raw mouse click bypasses
+    // actionability checks and would otherwise hit the calendar loading overlay.
+    await expect(page.getByText('Loading...', { exact: true })).toBeHidden();
     await noon.scrollIntoViewIfNeeded();
     const bounds = await noon.boundingBox();
     if (!bounds) throw new Error('Today noon slot must be visible');
     await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
     const newEntry = page.getByRole('dialog', { name: 'New Entry', exact: true });
+    await expect(newEntry).toBeVisible();
     await newEntry.locator('#title').fill(title);
     await newEntry.locator('#save-entry-btn').click();
     await expect(newEntry).toBeHidden();
