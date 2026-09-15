@@ -171,14 +171,18 @@ const ExternalSystemsSettings: React.FC = () => {
     },
     {
       title: t('ticketing.externalSystems.table.actions'),
-      dataIndex: 'key',
+      // Column identity is derived from dataIndex, so this must not reuse a
+      // data column's dataIndex: DataTable resolves the first matching
+      // renderer and would paint the Actions cell with the Key column.
+      dataIndex: 'actions',
       width: '8%',
-      render: (_value: string, record: ExternalSystemOption) => (
+      render: (_value: unknown, record: ExternalSystemOption) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               id={`external-system-actions-${record.key.replace(':', '-')}`}
               variant="ghost"
+              aria-label={t('ticketing.externalSystems.table.actions')}
               className="h-8 w-8 p-0"
             >
               <MoreVertical className="h-4 w-4" />
