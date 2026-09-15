@@ -1871,7 +1871,7 @@ export default function TaskForm({
               </label>
               <div
                 id="task-actual-hours-display"
-                className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700"
+                className="p-2 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md text-[rgb(var(--color-text-700))]"
               >
                 {actualHours}
               </div>
