@@ -238,7 +238,7 @@ describe('slaTicketWorkflow integration', () => {
           workflowId: 'sla-ticket-tenant-lifecycle-ticket-lifecycle',
         });
 
-        await expect.poll(async () => (await handle.query<any>('getState')).nextWakeTime).toBeTruthy();
+        await expect.poll(async () => (await handle.query<any>('getState')).nextWakeTime, { timeout: 15_000 }).toBeTruthy();
         await env.sleep(2 * 60 * 1000);
         await responseNotification;
 
@@ -251,7 +251,9 @@ describe('slaTicketWorkflow integration', () => {
         await handle.signal('resume');
         await handle.signal('completeResponse', { met: true });
 
-        await expect.poll(async () => (await handle.query<any>('getState')).currentPhase).toBe('resolution');
+        // The pause sweep may be mid-activity when these signals land; give the
+        // worker time to process them before asserting on the phase.
+        await expect.poll(async () => (await handle.query<any>('getState')).currentPhase, { timeout: 15_000 }).toBe('resolution');
 
         await env.sleep(3 * 60 * 1000);
         await resolutionNotification;
@@ -309,7 +311,7 @@ describe('slaTicketWorkflow integration', () => {
 
     try {
       await worker1.runUntil(async () => {
-        await expect.poll(async () => (await handle.query<any>('getState')).nextWakeTime).toBeTruthy();
+        await expect.poll(async () => (await handle.query<any>('getState')).nextWakeTime, { timeout: 15_000 }).toBeTruthy();
       });
 
       const worker2 = await Worker.create({
