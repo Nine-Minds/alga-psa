@@ -1869,16 +1869,12 @@ export default function TaskForm({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {taskFormT('actualHoursLabel', 'Actual Hours')}
               </label>
-              <Input
-                id="task-actual-hours-input"
-                type="number"
-                min="0"
-                step="0.5"
-                value={actualHours}
-                readOnly
-                aria-readonly="true"
-                className="w-full"
-              />
+              <div
+                id="task-actual-hours-display"
+                className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700"
+              >
+                {actualHours}
+              </div>
               <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
                 {taskFormT('actualHoursDerivedHelp', 'Calculated from linked time entries')}
               </p>
