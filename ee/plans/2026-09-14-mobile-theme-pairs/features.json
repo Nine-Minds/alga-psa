@@ -341,7 +341,7 @@
   {
     "id": "F038",
     "description": "The generated editor HTML declares CSS variables for background, text, secondary text, link, mention background and mention text with the current light defaults",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-theme",
     "prdRefs": [
       "FR20"
@@ -350,7 +350,7 @@
   {
     "id": "F039",
     "description": "bridge.ts gains a setTheme message that updates those CSS variables at runtime",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-theme",
     "prdRefs": [
       "FR20"
@@ -359,7 +359,7 @@
   {
     "id": "F040",
     "description": "TicketRichTextEditor sends setTheme on load and whenever the active theme changes (editable and read-only)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-theme",
     "prdRefs": [
       "FR20",
@@ -369,7 +369,7 @@
   {
     "id": "F041",
     "description": "CommentsSection, DescriptionSection and ExpandableComment render through the themed editor so comment bodies match the card",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-theme",
     "prdRefs": [
       "FR21"

@@ -455,7 +455,7 @@
   {
     "id": "T050",
     "description": "Generated editor HTML contains the six CSS variables with light defaults and the mention badge uses them",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-theme",
     "featureIds": [
       "F038"
@@ -464,7 +464,7 @@
   {
     "id": "T051",
     "description": "bridge setTheme message updates the CSS variables on the document root",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-theme",
     "featureIds": [
       "F039"
@@ -473,7 +473,7 @@
   {
     "id": "T052",
     "description": "TicketRichTextEditor posts setTheme after the editor reports ready and again when the theme prop changes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-theme",
     "featureIds": [
       "F040"
@@ -482,7 +482,7 @@
   {
     "id": "T053",
     "description": "A read-only comment rendered under the dark Alga theme posts the dark background and text colours",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-theme",
     "featureIds": [
       "F040",
@@ -492,7 +492,7 @@
   {
     "id": "T054",
     "description": "ExpandableComment and DescriptionSection pass the active theme through to the editor",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "editor-theme",
     "featureIds": [
       "F041"
