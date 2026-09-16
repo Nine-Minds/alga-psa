@@ -107,7 +107,72 @@ function directGraphGet(
       requestId: res.headers?.['request-id'],
       clientRequestId: res.headers?.['client-request-id'] ?? clientRequestId,
       data: res.data,
-    }));
+    }))
+    .catch((error) => {
+      if (error && typeof error === 'object') {
+        (error as any).clientRequestId =
+          (error as any)?.response?.headers?.['client-request-id'] ?? clientRequestId;
+      }
+      throw error;
+    });
+}
+
+/** Native Graph error message, preserved as sanitized evidence alongside the remedy. */
+function nativeGraphMessage(error: any): string | undefined {
+  const body = error?.response?.data;
+  const err = body?.error || body;
+  const candidate = err?.message ?? err?.error_description;
+  return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : undefined;
+}
+
+/** Native Graph error code (distinct from an Axios transport code). */
+function graphErrorCode(error: any): string | undefined {
+  const body = error?.response?.data;
+  const err = body?.error || body;
+  const candidate = err?.code ?? body?.code;
+  return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : undefined;
+}
+
+interface CustomerFailureMeta {
+  httpClientRequestId?: string;
+  error: {
+    message: string;
+    status?: number;
+    graphCode?: string;
+    oauthError?: string;
+    suberror?: string;
+    aadstsCode?: string;
+    requestId?: string;
+    clientRequestId?: string;
+  };
+}
+
+/**
+ * Preserve the native Graph codes/message and correlation ids for a customer
+ * failure while the remediation stays in the recommendation. Uses the shared
+ * classifier's evidence rather than replacing it with remedy text.
+ */
+function customerFailureMeta(
+  classified: ReturnType<typeof classifyEntraOAuthFailure>,
+  error: any
+): CustomerFailureMeta {
+  const status = error?.response?.status ?? classified.httpStatus ?? undefined;
+  const requestId = error?.response?.headers?.['request-id'];
+  const clientRequestId =
+    error?.clientRequestId ?? error?.response?.headers?.['client-request-id'];
+  return {
+    httpClientRequestId: clientRequestId,
+    error: {
+      message: nativeGraphMessage(error) ?? classified.remedy,
+      status,
+      graphCode: classified.graphCode ?? undefined,
+      oauthError: classified.oauthError ?? undefined,
+      suberror: classified.suberror ?? undefined,
+      aadstsCode: classified.aadstsCode ?? undefined,
+      requestId,
+      clientRequestId,
+    },
+  };
 }
 
 function collectStepRecommendations(steps: EntraDiagnosticsStep[]): DiagnosticsRecommendation[] {
@@ -261,6 +326,7 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
           message: error?.message,
           httpStatus: error?.response?.status,
           code: error?.code,
+          graphCode: graphErrorCode(error),
           responseBody: error?.response?.data,
           context: 'customer',
           customer: {
@@ -269,21 +335,20 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
             operation: 'users',
           },
         });
-        recState.recommendations.push(...[classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
+        const recs = [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[];
+        recState.recommendations.push(...recs);
+        const meta = customerFailureMeta(classified, error);
         return {
           status: 'fail' as const,
           http: {
             method: 'GET',
             path: '/users?$select=id&$top=1',
             status: error?.response?.status,
-            requestId: error?.response?.headers?.['request-id'],
+            requestId: meta.error.requestId,
+            clientRequestId: meta.httpClientRequestId,
           },
-          error: {
-            message: classified.remedy,
-            status: error?.response?.status,
-            requestId: error?.response?.headers?.['request-id'],
-          },
-          recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
+          error: meta.error,
+          recommendations: recs,
         };
       }
     }
@@ -313,6 +378,7 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
           message: error?.message,
           httpStatus: error?.response?.status,
           code: error?.code,
+          graphCode: graphErrorCode(error),
           responseBody: error?.response?.data,
           context: 'customer',
           customer: {
@@ -321,21 +387,20 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
             operation: 'groups',
           },
         });
-        recState.recommendations.push(...[classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
+        const recs = [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[];
+        recState.recommendations.push(...recs);
+        const meta = customerFailureMeta(classified, error);
         return {
           status: 'fail' as const,
           http: {
             method: 'GET',
             path: '/groups?$select=id&$top=1',
             status: error?.response?.status,
-            requestId: error?.response?.headers?.['request-id'],
+            requestId: meta.error.requestId,
+            clientRequestId: meta.httpClientRequestId,
           },
-          error: {
-            message: classified.remedy,
-            status: error?.response?.status,
-            requestId: error?.response?.headers?.['request-id'],
-          },
-          recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
+          error: meta.error,
+          recommendations: recs,
         };
       }
     }
@@ -354,65 +419,24 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
       }
       if (!accessToken) return { status: 'skip' as const, data: { reason: 'No tenant token.' } };
 
+      let group: Awaited<ReturnType<typeof directGraphGet>>;
       try {
-        const group = await directGraphGet(
+        group = await directGraphGet(
           accessToken,
           `/groups/${encodeURIComponent(portal.entitlementGroupId)}?$select=id,displayName,securityEnabled`,
           signal
         );
-        const groupData = group.data;
-        const recommendations: DiagnosticsRecommendation[] = [];
-        if (groupData?.securityEnabled === false) {
-          recommendations.push({
-            code: 'entitlement_group_not_security',
-            severity: 'warn',
-            text: 'The configured entitlement group is not a security group; membership may not be enforceable.',
-            messageKey: 'entitlementGroupNotSecurity',
-          });
-        }
-        const data: Record<string, unknown> = {
-          groupId: groupData?.id,
-          displayName: groupData?.displayName,
-          securityEnabled: groupData?.securityEnabled,
-        };
-        if (!firstUserId) {
-          return {
-            status: recommendations.length ? ('warn' as const) : ('pass' as const),
-            http: {
-              method: 'GET',
-              path: '/groups/{id}',
-              status: group.status,
-              requestId: group.requestId,
-              clientRequestId: group.clientRequestId,
-            },
-            data: { ...data, membershipSkipped: 'No user is available to test membership.' },
-            recommendations,
-          };
-        }
-        const membership = await axios.post(
-          `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(firstUserId)}/checkMemberGroups`,
-          { groupIds: [portal.entitlementGroupId] },
-          {
-            headers: { Authorization: `Bearer ${accessToken}`, 'client-request-id': randomUUID() },
-            timeout: 15000,
-            signal,
-          }
-        );
-        const isMember =
-          Array.isArray(membership.data?.value) &&
-          membership.data.value.includes(portal.entitlementGroupId);
-        return {
-          status: recommendations.length ? ('warn' as const) : ('pass' as const),
-          http: {
-            method: 'POST',
-            path: '/users/{id}/checkMemberGroups',
-            status: membership.status,
-            requestId: membership.headers?.['request-id'],
-          },
-          data: { ...data, membershipTested: true, sampledUserIsMember: isMember },
-          recommendations,
-        };
       } catch (error: any) {
+        const classified = classifyEntraOAuthFailure({
+          message: error?.message,
+          httpStatus: error?.response?.status,
+          code: error?.code,
+          graphCode: graphErrorCode(error),
+          responseBody: error?.response?.data,
+          context: 'customer',
+          customer: { entraTenantId: mapping.entraTenantId, applicationClientId: boundClientId, operation: 'groups' },
+        });
+        const meta = customerFailureMeta(classified, error);
         if (error?.response?.status === 404) {
           const rec: DiagnosticsRecommendation = {
             code: 'entitlement_group_missing',
@@ -427,37 +451,129 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
               method: 'GET',
               path: '/groups/{id}',
               status: 404,
-              requestId: error?.response?.headers?.['request-id'],
+              requestId: meta.error.requestId,
+              clientRequestId: meta.httpClientRequestId,
             },
-            error: { message: rec.text, status: 404, requestId: error?.response?.headers?.['request-id'] },
+            error: meta.error,
             recommendations: [rec],
           };
         }
+        const recs = [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[];
+        recState.recommendations.push(...recs);
+        return {
+          status: 'fail' as const,
+          http: {
+            method: 'GET',
+            path: '/groups/{id}',
+            status: error?.response?.status,
+            requestId: meta.error.requestId,
+            clientRequestId: meta.httpClientRequestId,
+          },
+          error: meta.error,
+          recommendations: recs,
+        };
+      }
+
+      const groupData = group.data;
+      const groupRecommendations: DiagnosticsRecommendation[] = [];
+      if (groupData?.securityEnabled === false) {
+        groupRecommendations.push({
+          code: 'entitlement_group_not_security',
+          severity: 'warn',
+          text: 'The configured entitlement group is not a security group; membership may not be enforceable.',
+          messageKey: 'entitlementGroupNotSecurity',
+        });
+      }
+      const data: Record<string, unknown> = {
+        groupId: groupData?.id,
+        displayName: groupData?.displayName,
+        securityEnabled: groupData?.securityEnabled,
+      };
+      if (!firstUserId) {
+        return {
+          status: groupRecommendations.length ? ('warn' as const) : ('pass' as const),
+          http: {
+            method: 'GET',
+            path: '/groups/{id}',
+            status: group.status,
+            requestId: group.requestId,
+            clientRequestId: group.clientRequestId,
+          },
+          data: { ...data, membershipSkipped: 'No user is available to test membership.' },
+          recommendations: groupRecommendations,
+        };
+      }
+
+      const membershipClientRequestId = randomUUID();
+      let membership: { status: number; headers?: Record<string, any>; data?: any };
+      try {
+        membership = await axios.post(
+          `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(firstUserId)}/checkMemberGroups`,
+          { groupIds: [portal.entitlementGroupId] },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'client-request-id': membershipClientRequestId,
+              'return-client-request-id': 'true',
+            },
+            timeout: 15000,
+            signal,
+          }
+        );
+      } catch (error: any) {
         const classified = classifyEntraOAuthFailure({
           message: error?.message,
           httpStatus: error?.response?.status,
           code: error?.code,
+          graphCode: graphErrorCode(error),
           responseBody: error?.response?.data,
           context: 'customer',
           customer: { entraTenantId: mapping.entraTenantId, applicationClientId: boundClientId, operation: 'membership' },
         });
-        recState.recommendations.push(...[classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
+        const recs = [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[];
+        recState.recommendations.push(...recs);
+        const requestId = error?.response?.headers?.['request-id'];
+        const clientRequestId =
+          error?.response?.headers?.['client-request-id'] ?? membershipClientRequestId;
         return {
           status: 'fail' as const,
           http: {
             method: 'POST',
             path: '/users/{id}/checkMemberGroups',
             status: error?.response?.status,
-            requestId: error?.response?.headers?.['request-id'],
+            requestId,
+            clientRequestId,
           },
+          data: { ...data, groupResolved: true, membershipProbeFailed: true },
           error: {
-            message: classified.remedy,
+            message: nativeGraphMessage(error) ?? classified.remedy,
             status: error?.response?.status,
-            requestId: error?.response?.headers?.['request-id'],
+            graphCode: classified.graphCode ?? undefined,
+            oauthError: classified.oauthError ?? undefined,
+            suberror: classified.suberror ?? undefined,
+            aadstsCode: classified.aadstsCode ?? undefined,
+            requestId,
+            clientRequestId,
           },
-          recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
+          recommendations: [...groupRecommendations, ...recs],
         };
       }
+
+      const isMember =
+        Array.isArray(membership.data?.value) &&
+        membership.data.value.includes(portal.entitlementGroupId);
+      return {
+        status: groupRecommendations.length ? ('warn' as const) : ('pass' as const),
+        http: {
+          method: 'POST',
+          path: '/users/{id}/checkMemberGroups',
+          status: membership.status,
+          requestId: membership.headers?.['request-id'],
+          clientRequestId: membership.headers?.['client-request-id'] ?? membershipClientRequestId,
+        },
+        data: { ...data, membershipTested: true, sampledUserIsMember: isMember },
+        recommendations: groupRecommendations,
+      };
     }
   );
 

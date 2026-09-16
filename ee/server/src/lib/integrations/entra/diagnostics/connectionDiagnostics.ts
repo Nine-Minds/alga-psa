@@ -966,10 +966,12 @@ export async function runEntraConnectionDiagnostics(
   );
 
   let mappings: Awaited<ReturnType<typeof listConfirmedEntraMappings>> = [];
+  let mappingsLoadError: string | null = null;
   try {
     mappings = await listConfirmedEntraMappings(tenant);
-  } catch {
+  } catch (error: any) {
     mappings = [];
+    mappingsLoadError = error?.message || 'Confirmed tenant mappings could not be read.';
   }
 
   await runStep(
@@ -979,6 +981,21 @@ export async function runEntraConnectionDiagnostics(
     async () => {
       if (!isDirect) {
         return { status: 'skip' as const, data: { reason: 'Not a Direct connection.' } };
+      }
+      if (mappingsLoadError) {
+        const rec: DiagnosticsRecommendation = {
+          code: 'mappings_lookup_failed',
+          severity: 'fail',
+          text: 'Confirmed tenant mappings could not be read, so the mapping comparison was not performed. Re-run diagnostics; if it persists, review the tenant mappings.',
+          messageKey: 'mappingsLookupFailed',
+        };
+        collect([rec]);
+        return {
+          status: 'fail' as const,
+          data: { mappingsUnavailable: true },
+          error: { message: rec.text },
+          recommendations: [rec],
+        };
       }
       const discoveredIds = new Set(discoveredTenants.map((t) => t.entraTenantId));
       const missingMapped = mappings.filter((m) => !discoveredIds.has(m.entraTenantId));
@@ -1205,6 +1222,21 @@ export async function runEntraConnectionDiagnostics(
       if (!isCipp || !cippProbe) {
         return { status: 'skip' as const, data: { reason: 'No CIPP tenant list available.' } };
       }
+      if (mappingsLoadError) {
+        const rec: DiagnosticsRecommendation = {
+          code: 'mappings_lookup_failed',
+          severity: 'fail',
+          text: 'Confirmed tenant mappings could not be read, so the mapping comparison was not performed. Re-run diagnostics; if it persists, review the tenant mappings.',
+          messageKey: 'mappingsLookupFailed',
+        };
+        collect([rec]);
+        return {
+          status: 'fail' as const,
+          data: { mappingsUnavailable: true },
+          error: { message: rec.text },
+          recommendations: [rec],
+        };
+      }
       const discoveredIds = new Set(cippProbe.tenants.map((t) => t.entraTenantId));
       const missingMapped = mappings.filter((m) => !discoveredIds.has(m.entraTenantId));
       const mappedIds = new Set(mappings.map((m) => m.entraTenantId));
@@ -1401,7 +1433,7 @@ export async function runEntraConnectionDiagnostics(
           text: `Review queue has ${openCount} item(s) waiting; ambiguous matches are never auto-linked.`,
           messageKey: 'reconciliationOpenItems',
           params: { count: openCount },
-          action: { kind: 'navigate', payload: 'reconciliation' },
+          action: { kind: 'navigate', payload: 'review-queue' },
         },
       ]);
       return {
@@ -1413,7 +1445,7 @@ export async function runEntraConnectionDiagnostics(
   });
 
   const summary = buildSummary(runner.steps, connection, connectionType, binding, cippProbe);
-  summary.mappedClientCount = mappings.length;
+  summary.mappedClientCount = mappingsLoadError ? null : mappings.length;
   const dedupedRecommendations = dedupeRecommendations(recommendations);
 
   const report: EntraDiagnosticsReport = {

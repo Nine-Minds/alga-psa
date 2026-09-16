@@ -789,6 +789,7 @@
           "reconnectEntra": "No refresh token is stored. Reconnect Microsoft Entra.",
           "noManagedTenants": "No managed tenants were returned. The partner must be onboarded to Microsoft 365 Lighthouse with active GDAP relationships.",
           "mappedTenantMissing": "Mapped tenant \"{{client}}\" was not returned by discovery. GDAP may have expired or been terminated.",
+          "mappingsLookupFailed": "Confirmed tenant mappings could not be read. Re-run diagnostics; if it persists, review the tenant mappings.",
           "cippCredentialsMissing": "CIPP base URL and API token are required. Configure them on the Connection tab.",
           "cippAuthRejected": "CIPP rejected the API credential. Rotate the CIPP API key from Settings > CIPP > API access; this is not an Azure client secret.",
           "cippEmptyTenantList": "CIPP returned no tenants. Check CIPP customer visibility and configuration.",

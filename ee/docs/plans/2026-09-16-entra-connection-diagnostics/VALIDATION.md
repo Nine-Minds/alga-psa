@@ -100,3 +100,13 @@ Re-run results after the repair:
 | TypeScript | server (12288 MB heap), EE server, integrations and nm-store all exit 0 |
 
 The full shared suite reports 9 DB-backed workflow suites failing on `ECONNREFUSED 127.0.0.1:5432`; those require a database on the default port and are unrelated to diagnostics. The migrated-DB lane deliberately targets `entra_diagnostics_takeover` on port 5472 and passed. Remaining limitations are unchanged.
+
+## Review round 2 repairs (2026-09-16)
+
+Three verified defects were fixed and covered:
+
+1. Reconciliation recommendation navigation. `reconciliation_queue` emitted `action.payload: 'reconciliation'`, which `parseEntraConsoleTab` resolves to `overview`. It now emits `'review-queue'`. New test asserts the recommendation action parses back to the `review-queue` console tab.
+2. Customer failure evidence. `users_read`/`groups_read` replaced the native Graph code/message and dropped `client-request-id`, and `entitlement_group_resolves` reported a failed group GET as the membership POST and mis-attributed a membership POST 404 as a missing group. Failures now carry sanitized native `graphCode`/message/OAuth/AADSTS metadata plus request and client-request ids alongside the remediation, and the group GET and membership POST are separate try/catch blocks. Five new unit tests cover users metadata retention, groups metadata retention, group-GET-reported-as-GET, membership-404-not-a-missing-group (`groupResolved`/`membershipProbeFailed`), and secret redaction of preserved metadata.
+3. Confirmed-mappings lookup failure. A thrown `listConfirmedEntraMappings` was silently converted to `[]`, producing passing Direct/CIPP comparisons and a fabricated `mappedClientCount: 0`. The failure is now reported as a `mappings_lookup_failed` fail recommendation in both Direct and CIPP steps, `summary.mappedClientCount` is `null` when unavailable, and independent discovery/sync checks still run. New Direct and CIPP unit tests cover this; a `mappingsLookupFailed` remedy key was added to all 10 locale packs.
+
+Re-run evidence after these repairs: broad EE Entra unit suite 310 passed (52 files); EE focused diagnostics lane 88 passed; migrated PostgreSQL + Graph emulator 24 passed; server guide/translation suites 10 passed; EE server `tsc --noEmit` exits 0; the `mappingsLookupFailed` key is present with locale parity.

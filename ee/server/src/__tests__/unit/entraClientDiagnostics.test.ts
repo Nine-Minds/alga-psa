@@ -35,6 +35,11 @@ const hoisted = vi.hoisted(() => {
     pageNextLink: null as string | null,
     pageError: null as any,
     pageRead: vi.fn(),
+    usersGetError: null as any,
+    groupsGetError: null as any,
+    groupByIdGetError: null as any,
+    membershipPostError: null as any,
+    portalConfig: null as any,
   };
 });
 
@@ -107,7 +112,9 @@ vi.mock('@ee/lib/integrations/entra/settingsService', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  tenantDb: vi.fn(() => ({ table: () => ({ where: () => ({ first: async () => undefined }) }) })),
+  tenantDb: vi.fn(() => ({
+    table: () => ({ where: () => ({ first: async () => hoisted.portalConfig }) }),
+  })),
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
 }));
 
@@ -115,14 +122,27 @@ vi.mock('axios', () => {
   const isAxiosError = (e: any) => Boolean(e?.isAxiosError);
   const get = vi.fn(async (url: string) => {
     if (url.includes('/users?')) {
+      if (hoisted.usersGetError) throw hoisted.usersGetError;
       return { status: 200, data: { value: [{ id: 'u1' }] }, headers: { 'request-id': 'rid-u' } };
     }
     if (url.includes('/groups?')) {
+      if (hoisted.groupsGetError) throw hoisted.groupsGetError;
       return { status: 200, data: { value: [{ id: 'g1' }] }, headers: {} };
+    }
+    if (/\/groups\/[^?]/.test(url)) {
+      if (hoisted.groupByIdGetError) throw hoisted.groupByIdGetError;
+      return {
+        status: 200,
+        data: { id: 'eg-1', displayName: 'Portal Access', securityEnabled: true },
+        headers: { 'request-id': 'rid-group' },
+      };
     }
     return { status: 200, data: {}, headers: {} };
   });
-  const post = vi.fn(async () => ({ data: { value: [] } }));
+  const post = vi.fn(async () => {
+    if (hoisted.membershipPostError) throw hoisted.membershipPostError;
+    return { data: { value: [] }, status: 200, headers: {} };
+  });
   return { default: { get, post, isAxiosError }, get, post, isAxiosError };
 });
 
@@ -175,6 +195,11 @@ describe('runEntraClientAccessDiagnostics', () => {
     hoisted.pageNextLink = null;
     hoisted.pageError = null;
     hoisted.pageRead.mockReset();
+    hoisted.usersGetError = null;
+    hoisted.groupsGetError = null;
+    hoisted.groupByIdGetError = null;
+    hoisted.membershipPostError = null;
+    hoisted.portalConfig = null;
     vi.clearAllMocks();
   });
 
@@ -361,5 +386,154 @@ describe('runEntraClientAccessDiagnostics', () => {
     });
     expect(client.category).toBe('other');
     expect(result.overallStatus).toBe('warn');
+  });
+
+  function graphError(overrides: {
+    status: number;
+    requestId?: string;
+    clientRequestId?: string;
+    code?: string;
+    message?: string;
+    rawMessage?: string;
+  }) {
+    return Object.assign(new Error(overrides.rawMessage ?? 'Request failed with status code'), {
+      isAxiosError: true,
+      code: overrides.code ?? 'ERR_BAD_REQUEST',
+      response: {
+        status: overrides.status,
+        headers: {
+          ...(overrides.requestId ? { 'request-id': overrides.requestId } : {}),
+          ...(overrides.clientRequestId ? { 'client-request-id': overrides.clientRequestId } : {}),
+        },
+        data: { error: { code: 'Authorization_RequestDenied', message: overrides.message } },
+      },
+    });
+  }
+
+  it('keeps native users read evidence and client correlation alongside the remedy', async () => {
+    hoisted.usersGetError = graphError({
+      status: 403,
+      requestId: 'rid-users',
+      clientRequestId: 'crid-users',
+      message: 'Insufficient privileges',
+    });
+    const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { clientIds: ['c1'] });
+    const step = result.clients[0].steps.find((s) => s.id === 'users_read');
+    expect(step?.status).toBe('fail');
+    expect(step?.http).toMatchObject({
+      method: 'GET',
+      path: '/users?$select=id&$top=1',
+      status: 403,
+      requestId: 'rid-users',
+      clientRequestId: 'crid-users',
+    });
+    expect(step?.error).toMatchObject({
+      message: 'Insufficient privileges',
+      status: 403,
+      graphCode: 'Authorization_RequestDenied',
+      requestId: 'rid-users',
+      clientRequestId: 'crid-users',
+    });
+    // The remediation is preserved as a recommendation, not lost to the evidence.
+    expect(step?.recommendations?.some((r) => r.code === 'customer_directory_role_missing')).toBe(true);
+  });
+
+  it('keeps native groups read evidence and distinguishes it from the users read', async () => {
+    hoisted.groupsGetError = graphError({
+      status: 403,
+      requestId: 'rid-groups',
+      clientRequestId: 'crid-groups',
+      message: 'Insufficient privileges',
+    });
+    const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { clientIds: ['c1'] });
+    const client = result.clients[0];
+    expect(client.steps.find((s) => s.id === 'users_read')?.status).toBe('pass');
+    const groups = client.steps.find((s) => s.id === 'groups_read');
+    expect(groups?.status).toBe('fail');
+    expect(groups?.http).toMatchObject({
+      method: 'GET',
+      path: '/groups?$select=id&$top=1',
+      requestId: 'rid-groups',
+      clientRequestId: 'crid-groups',
+    });
+    expect(groups?.error).toMatchObject({
+      message: 'Insufficient privileges',
+      graphCode: 'Authorization_RequestDenied',
+      clientRequestId: 'crid-groups',
+    });
+  });
+
+  it('reports a failed entitlement group GET as a GET, never as the membership POST', async () => {
+    hoisted.portalConfig = {
+      client_portal_entitlement_group_id: 'eg-1',
+      client_portal_entitlement_membership_mode: 'auto',
+    };
+    hoisted.groupByIdGetError = graphError({
+      status: 500,
+      requestId: 'rid-group-get',
+      clientRequestId: 'crid-group-get',
+      code: 'ERR_BAD_RESPONSE',
+      message: 'Group lookup exploded',
+    });
+    const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { clientIds: ['c1'] });
+    const step = result.clients[0].steps.find((s) => s.id === 'entitlement_group_resolves');
+    expect(step?.status).toBe('fail');
+    expect(step?.http).toMatchObject({
+      method: 'GET',
+      path: '/groups/{id}',
+      status: 500,
+      requestId: 'rid-group-get',
+      clientRequestId: 'crid-group-get',
+    });
+    expect(step?.error).toMatchObject({ message: 'Group lookup exploded', graphCode: 'Authorization_RequestDenied' });
+    expect(step?.recommendations?.some((r) => r.code === 'entitlement_group_missing')).toBe(false);
+  });
+
+  it('does not report a resolved group as missing when the membership POST returns 404', async () => {
+    hoisted.portalConfig = {
+      client_portal_entitlement_group_id: 'eg-1',
+      client_portal_entitlement_membership_mode: 'auto',
+    };
+    hoisted.membershipPostError = graphError({
+      status: 404,
+      requestId: 'rid-membership',
+      clientRequestId: 'crid-membership',
+      rawMessage: 'Request failed with status code 404',
+    });
+    const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { clientIds: ['c1'] });
+    const step = result.clients[0].steps.find((s) => s.id === 'entitlement_group_resolves');
+    expect(step?.status).toBe('fail');
+    expect(step?.http).toMatchObject({
+      method: 'POST',
+      path: '/users/{id}/checkMemberGroups',
+      status: 404,
+      requestId: 'rid-membership',
+      clientRequestId: 'crid-membership',
+    });
+    expect((step?.data as any)?.groupResolved).toBe(true);
+    expect((step?.data as any)?.membershipProbeFailed).toBe(true);
+    expect(step?.recommendations?.some((r) => r.code === 'entitlement_group_missing')).toBe(false);
+  });
+
+  it('redacts secrets from preserved native error metadata', async () => {
+    hoisted.usersGetError = Object.assign(new Error('noise'), {
+      isAxiosError: true,
+      response: {
+        status: 403,
+        headers: { 'request-id': 'rid-secret' },
+        data: {
+          error: {
+            code: 'Authorization_RequestDenied',
+            message: 'Denied for refresh_token=super-secret-refresh-value',
+          },
+        },
+      },
+    });
+    const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { clientIds: ['c1'] });
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain('super-secret-refresh-value');
+    // Correlation ids and native codes survive secret redaction.
+    const step = result.clients[0].steps.find((s) => s.id === 'users_read');
+    expect(step?.error).toMatchObject({ requestId: 'rid-secret', graphCode: 'Authorization_RequestDenied' });
   });
 });

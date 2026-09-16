@@ -11,6 +11,7 @@ const hoisted = vi.hoisted(() => ({
     status: 200,
     tenants: [] as Array<{ entraTenantId: string; displayName: string | null }>,
   } as any,
+  mappingsError: null as any,
 }));
 
 vi.mock('@ee/lib/integrations/entra/connectionRepository', () => ({
@@ -39,7 +40,10 @@ vi.mock('@ee/lib/integrations/entra/providers/cipp/cippProviderAdapter', () => (
 }));
 
 vi.mock('@ee/lib/integrations/entra/mapping/confirmedMappingsService', () => ({
-  listConfirmedEntraMappings: vi.fn(async () => []),
+  listConfirmedEntraMappings: vi.fn(async () => {
+    if (hoisted.mappingsError) throw hoisted.mappingsError;
+    return [];
+  }),
   listConfirmedEntraMappingsWithDb: vi.fn(async () => []),
 }));
 
@@ -134,6 +138,7 @@ describe('CIPP connection diagnostics outcomes', () => {
       status: 200,
       tenants: [],
     };
+    hoisted.mappingsError = null;
   });
 
   it('passes reachability and warns on an empty tenant list', async () => {
@@ -180,5 +185,18 @@ describe('CIPP connection diagnostics outcomes', () => {
     const steps = stepsById(report);
     expect(steps.cipp_reachable.status).toBe('fail');
     expect(report.recommendations.some((r) => r.code === 'cipp_unreachable')).toBe(true);
+  });
+
+  it('fails the CIPP mapping comparison and nulls the count when mappings cannot be read', async () => {
+    hoisted.mappingsError = new Error('mapping lookup exploded');
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const steps = stepsById(report);
+    expect(steps.cipp_mappings_vs_list.status).toBe('fail');
+    expect((steps.cipp_mappings_vs_list.data as any)?.mappingsUnavailable).toBe(true);
+    expect(report.recommendations.some((r) => r.code === 'mappings_lookup_failed')).toBe(true);
+    expect(report.summary.mappedClientCount).toBeNull();
+    // Independent CIPP checks still ran.
+    expect(steps.cipp_reachable.status).toBe('pass');
+    expect(steps.cipp_tenant_list.status).toBe('warn');
   });
 });

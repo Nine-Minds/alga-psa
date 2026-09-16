@@ -88,6 +88,8 @@ const hoisted = vi.hoisted(() => {
     },
     updateValidation: vi.fn(),
     probes: [] as string[],
+    mappingsError: null as any,
+    reconciliation: { count: 0, oldest: null as string | null },
   };
 });
 
@@ -146,7 +148,10 @@ vi.mock('@ee/lib/integrations/entra/providers/direct/directProviderAdapter', () 
 }));
 
 vi.mock('@ee/lib/integrations/entra/mapping/confirmedMappingsService', () => ({
-  listConfirmedEntraMappings: vi.fn(async () => hoisted.mappings),
+  listConfirmedEntraMappings: vi.fn(async () => {
+    if (hoisted.mappingsError) throw hoisted.mappingsError;
+    return hoisted.mappings;
+  }),
   listConfirmedEntraMappingsWithDb: vi.fn(async () => hoisted.mappings),
 }));
 
@@ -229,7 +234,7 @@ vi.mock('@alga-psa/db', () => ({
           return chain;
         },
         first: async () => {
-          if (name === 'entra_contact_reconciliation_queue') return { count: 0, oldest: null };
+          if (name === 'entra_contact_reconciliation_queue') return hoisted.reconciliation;
           if (name === 'microsoft_profile_consumer_bindings') return hoisted.binding;
           if (name === 'microsoft_profiles') return hoisted.profile;
           return undefined;
@@ -270,6 +275,7 @@ vi.mock('axios', () => {
 
 import { runEntraConnectionDiagnostics } from '@ee/lib/integrations/entra/diagnostics/connectionDiagnostics';
 import { getEntraSyncRunProgress } from '@ee/lib/integrations/entra/entraWorkflowClient';
+import { parseEntraConsoleTab } from '@ee/components/settings/integrations/entra/entraConsoleModel';
 
 describe('runEntraConnectionDiagnostics', () => {
   beforeEach(() => {
@@ -295,6 +301,8 @@ describe('runEntraConnectionDiagnostics', () => {
     queryResults.entra_sync_runs = [];
     queryResults.entra_sync_run_tenants = [];
     hoisted.probes = [];
+    hoisted.mappingsError = null;
+    hoisted.reconciliation = { count: 0, oldest: null };
     vi.clearAllMocks();
   });
 
@@ -463,5 +471,30 @@ describe('runEntraConnectionDiagnostics', () => {
     expect(report.steps.find((s) => s.id === 'last_runs')?.status).toBe('pass');
     expect(report.steps.find((s) => s.id === 'token_refresh')?.status).toBe('skip');
     expect(report.recommendations.some((r) => r.code === 'connect_entra')).toBe(true);
+  });
+
+  it('emits a review-queue navigation target that parses to the console tab', async () => {
+    hoisted.reconciliation = { count: 3, oldest: '2026-01-01T00:00:00.000Z' };
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+
+    const step = report.steps.find((s) => s.id === 'reconciliation_queue');
+    expect(step?.status).toBe('warn');
+    const rec = report.recommendations.find((r) => r.code === 'reconciliation_open_items');
+    expect(rec?.action).toEqual({ kind: 'navigate', payload: 'review-queue' });
+    expect(parseEntraConsoleTab(rec?.action?.payload ?? null)).toBe('review-queue');
+  });
+
+  it('reports a confirmed-mappings lookup failure instead of an empty passing comparison', async () => {
+    hoisted.mappingsError = new Error('mapping lookup exploded');
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+
+    const step = report.steps.find((s) => s.id === 'mappings_vs_discovery');
+    expect(step?.status).toBe('fail');
+    expect((step?.data as any)?.mappingsUnavailable).toBe(true);
+    expect(report.recommendations.some((r) => r.code === 'mappings_lookup_failed')).toBe(true);
+    expect(report.summary.mappedClientCount).toBeNull();
+    // Independent discovery checks still ran.
+    expect(report.steps.find((s) => s.id === 'managed_tenants_count')?.status).toBe('pass');
+    expect(report.steps.find((s) => s.id === 'last_runs')?.status).toBe('pass');
   });
 });
