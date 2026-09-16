@@ -186,6 +186,73 @@ describe('regenerateRecurringServicePeriods', () => {
     expect(plan.activeRecords).toEqual([existing]);
   });
 
+  it('fills a gap before a preserved record without duplicating the preserved slot', () => {
+    const skipped = makeRecord({
+      recordId: 'record-oct-skipped',
+      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+      periodKey: 'period:2026-10-08:2026-11-08',
+      revision: 2,
+      duePosition: 'arrears',
+      lifecycleState: 'skipped',
+      provenance: {
+        kind: 'user_edited',
+        reasonCode: 'skip',
+        sourceRuleVersion: 'rule-v1',
+        sourceRunKey: 'skip-1',
+        supersedesRecordId: 'record-oct-r1',
+      },
+      servicePeriod: { start: '2026-10-08', end: '2026-11-08', semantics: 'half_open' },
+      invoiceWindow: { start: '2026-11-08', end: '2026-12-08', semantics: 'half_open' },
+    });
+
+    const candidates = [
+      makeRecord({
+        recordId: 'c-aug',
+        scheduleKey: skipped.scheduleKey,
+        periodKey: 'period:2026-08-08:2026-09-08',
+        revision: 1,
+        duePosition: 'arrears',
+        servicePeriod: { start: '2026-08-08', end: '2026-09-08', semantics: 'half_open' },
+        invoiceWindow: { start: '2026-09-08', end: '2026-10-08', semantics: 'half_open' },
+      }),
+      makeRecord({
+        recordId: 'c-sep',
+        scheduleKey: skipped.scheduleKey,
+        periodKey: 'period:2026-09-08:2026-10-08',
+        revision: 1,
+        duePosition: 'arrears',
+        servicePeriod: { start: '2026-09-08', end: '2026-10-08', semantics: 'half_open' },
+        invoiceWindow: { start: '2026-10-08', end: '2026-11-08', semantics: 'half_open' },
+      }),
+      makeRecord({
+        recordId: 'c-oct',
+        scheduleKey: skipped.scheduleKey,
+        periodKey: skipped.periodKey,
+        revision: 1,
+        duePosition: 'arrears',
+        servicePeriod: skipped.servicePeriod,
+        invoiceWindow: skipped.invoiceWindow,
+      }),
+    ];
+
+    const plan = regenerateRecurringServicePeriods({
+      existingRecords: [skipped],
+      candidateRecords: candidates,
+      regeneratedAt: '2026-09-15T00:00:00Z',
+      sourceRuleVersion: 'rule-v1',
+      sourceRunKey: 'nightly-1',
+    });
+
+    expect(plan.preservedRecords.map((record) => record.recordId)).toEqual(['record-oct-skipped']);
+    expect(plan.newRecords.map((record) => record.servicePeriod.start).sort()).toEqual([
+      '2026-08-08',
+      '2026-09-08',
+    ]);
+    expect(plan.newRecords.some((record) => record.periodKey === skipped.periodKey)).toBe(false);
+    expect(plan.supersededRecords).toEqual([]);
+    expect(plan.conflicts).toEqual([]);
+  });
+
   it('assigns new records a revision above superseded ledger history', () => {
     const superseded = makeRecord({
       recordId: 'record-june-r1',

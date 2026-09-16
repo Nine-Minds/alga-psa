@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   DuePosition,
@@ -385,14 +385,56 @@ async function loadContractCadenceObligations(
   return rows as ContractCadenceObligationRow[];
 }
 
+export interface ContractCadenceObligationSyncResult {
+  changed: boolean;
+  periodsGenerated: number;
+  periodsRealigned: number;
+  periodsSuperseded: number;
+  hitPeriodCap: boolean;
+  furthestServicePeriodEnd: ISO8601String | null;
+  expectedCoverageEnd: ISO8601String | null;
+  meetsExpectedCoverage: boolean;
+}
+
+function emptyObligationSyncResult(changed: boolean): ContractCadenceObligationSyncResult {
+  return {
+    changed,
+    periodsGenerated: 0,
+    periodsRealigned: 0,
+    periodsSuperseded: 0,
+    hitPeriodCap: false,
+    furthestServicePeriodEnd: null,
+    expectedCoverageEnd: null,
+    meetsExpectedCoverage: false,
+  };
+}
+
+function resolveFurthestServicePeriodEnd(
+  records: IRecurringServicePeriodRecord[],
+): ISO8601String | null {
+  let furthest: ISO8601String | null = null;
+  for (const record of records) {
+    if (!furthest || compareIsoDateOnly(record.servicePeriod.end, furthest) > 0) {
+      furthest = record.servicePeriod.end;
+    }
+  }
+  return furthest;
+}
+
 async function syncContractCadenceObligation(
   trx: Knex.Transaction,
   params: {
     tenant: string;
     obligation: ContractCadenceObligationRow;
     sourceRunPrefix: string;
+    /**
+     * Run date for the rolling coverage horizon. Defaults to the wall clock.
+     * Generation still starts at the assignment/billed boundary so historical
+     * gaps are recovered; this only moves the future target forward.
+     */
+    asOf?: ISO8601String;
   },
-) {
+): Promise<ContractCadenceObligationSyncResult> {
   const materializedAt = new Date().toISOString();
   const assignmentStart = normalizeDateOnlyValue(params.obligation.assignment_start_date);
   if (!assignmentStart) {
@@ -401,7 +443,7 @@ async function syncContractCadenceObligation(
       contractLineId: params.obligation.contract_line_id,
       retiredAt: materializedAt,
     });
-    return;
+    return emptyObligationSyncResult(true);
   }
 
   const frequency = normalizeContractCadenceBillingCycle(params.obligation.billing_frequency);
@@ -416,7 +458,7 @@ async function syncContractCadenceObligation(
       contractLineId: params.obligation.contract_line_id,
       retiredAt: materializedAt,
     });
-    return;
+    return emptyObligationSyncResult(true);
   }
 
   const assignmentEnd = normalizeDateOnlyValue(params.obligation.assignment_end_date);
@@ -426,7 +468,7 @@ async function syncContractCadenceObligation(
       contractLineId: params.obligation.contract_line_id,
       retiredAt: materializedAt,
     });
-    return;
+    return emptyObligationSyncResult(true);
   }
 
   const duePosition: DuePosition =
@@ -450,11 +492,22 @@ async function syncContractCadenceObligation(
     ? maxIsoDateOnly(assignmentStart, billedBoundaryEnd)
     : assignmentStart;
 
+  // Generation begins at the historical boundary (so the first missing period is
+  // recovered), but the rolling 180-day target is anchored to the run date so a
+  // stale assignment start or billed boundary cannot pin the future horizon in
+  // the past.
+  const runDateOnly = (params.asOf ?? materializedAt).slice(0, 10);
+  const coverageAnchorDate = maxIsoDateOnly(
+    regenerationStart,
+    `${runDateOnly}T00:00:00Z` as ISO8601String,
+  );
+
   const materialized = materializeContractCadenceServicePeriods({
     asOf: regenerationStart,
     materializedAt,
     billingCycle: frequency,
     anchorDate: assignmentStart,
+    coverageAnchorDate,
     sourceObligation: {
       tenant: params.tenant,
       obligationId: params.obligation.contract_line_id,
@@ -490,6 +543,198 @@ async function syncContractCadenceObligation(
       ...regenerationPlan.backfilledRecords,
       ...regenerationPlan.realignedRecords,
     ],
+  });
+
+  const furthestServicePeriodEnd = resolveFurthestServicePeriodEnd(regenerationPlan.activeRecords);
+  const targetHorizonEnd = `${materialized.coverage.targetHorizonEnd}T00:00:00Z` as ISO8601String;
+  const expectedCoverageEnd = assignmentEnd
+    && compareIsoDateOnly(assignmentEnd, targetHorizonEnd) < 0
+    ? assignmentEnd
+    : targetHorizonEnd;
+  const meetsExpectedCoverage = !materialized.hitPeriodCap
+    && furthestServicePeriodEnd != null
+    && compareIsoDateOnly(furthestServicePeriodEnd, expectedCoverageEnd) >= 0;
+
+  return {
+    changed:
+      regenerationPlan.backfilledRecords.length > 0
+      || regenerationPlan.realignedRecords.length > 0
+      || regenerationPlan.supersededRecords.length > 0,
+    periodsGenerated: regenerationPlan.backfilledRecords.length,
+    periodsRealigned: regenerationPlan.realignedRecords.length,
+    periodsSuperseded: regenerationPlan.supersededRecords.length,
+    hitPeriodCap: materialized.hitPeriodCap,
+    furthestServicePeriodEnd,
+    expectedCoverageEnd,
+    meetsExpectedCoverage,
+  };
+}
+
+async function loadEligibleContractCadenceObligationsForReplenishment(
+  trx: Knex.Transaction,
+  params: { tenant: string; asOf: ISO8601String },
+): Promise<ContractCadenceObligationRow[]> {
+  const db = tenantDb(trx, params.tenant);
+  const asOfDate = params.asOf.slice(0, 10);
+  const query = db.table('contract_lines as cl');
+  db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  const rows = await query
+    .where('cl.is_active', true)
+    .where('cl.cadence_owner', 'contract')
+    .whereNotNull('cl.billing_timing')
+    .where('cc.is_active', true)
+    .where('ct.is_active', true)
+    .where((builder) =>
+      builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
+    )
+    .whereNotNull('cc.start_date')
+    .andWhere('cc.start_date', '<=', asOfDate)
+    .andWhere((builder) => builder.whereNull('cc.end_date').orWhere('cc.end_date', '>', asOfDate))
+    .select(
+      'cl.contract_line_id',
+      'cl.contract_line_type',
+      'cl.cadence_owner',
+      'cl.billing_frequency',
+      'cl.billing_timing',
+      'cc.start_date as assignment_start_date',
+      'cc.end_date as assignment_end_date',
+    ) as ContractCadenceObligationRow[];
+
+  // A contract assigned to more than one client produces duplicate line rows.
+  // Sync each line once, deterministically choosing the earliest assignment so
+  // a multi-profile/multi-assignment client cannot trigger duplicate passes.
+  const deduped = new Map<string, ContractCadenceObligationRow>();
+  for (const row of rows) {
+    const existing = deduped.get(row.contract_line_id);
+    if (!existing) {
+      deduped.set(row.contract_line_id, row);
+      continue;
+    }
+    const existingStart = normalizeDateOnlyValue(existing.assignment_start_date);
+    const candidateStart = normalizeDateOnlyValue(row.assignment_start_date);
+    if (candidateStart && (!existingStart || compareIsoDateOnly(candidateStart, existingStart) < 0)) {
+      deduped.set(row.contract_line_id, row);
+    }
+  }
+
+  return [...deduped.values()];
+}
+
+export interface ContractCadenceReplenishmentLineFailure {
+  contractLineId: string;
+  error: string;
+}
+
+export interface ContractCadenceReplenishmentSummary {
+  tenant: string;
+  linesExamined: number;
+  linesReplenished: number;
+  periodsGenerated: number;
+  periodsRealigned: number;
+  periodsSuperseded: number;
+  linesAtPeriodCap: number;
+  linesAwaitingCoverage: number;
+  failures: ContractCadenceReplenishmentLineFailure[];
+}
+
+/**
+ * Nightly-capable, tenant-scoped sweep over eligible contract-cadence lines.
+ *
+ * Reuses the canonical synchronization path for every line (no forked
+ * regeneration rules). Each line runs inside its own savepoint so one bad line
+ * cannot roll back the tenant's other repairs; the caller owns the outer
+ * transaction and the per-tenant advisory lock.
+ *
+ * Historical boundary policy (shared with authoring/repair):
+ * - The catch-up floor is `max(assignmentStart, latest billed/invoice-linked
+ *   service-period end)`. Candidates at or before that floor are treated as
+ *   intentional history and skipped; a candidate that overlaps it is rejected.
+ * - Locked, billed, edited, skipped, deferred, and user-edited/repair records
+ *   are preserved in place; the sweep never recreates or overwrites them.
+ * - Superseded and archived rows (for example the earlier client-cadence
+ *   operator repair) stay excluded and are never revived.
+ * - Candidates are clipped to assignment start/end, so ended assignments and
+ *   assignment boundaries are respected.
+ * A gap therefore is only auto-recovered when it sits after the billed floor
+ * and inside the assignment window; anything before the floor is reported as
+ * history rather than silently recreated.
+ */
+export async function replenishContractCadenceServicePeriodsForTenant(
+  trx: Knex.Transaction,
+  params: { tenant: string; sourceRunPrefix: string; asOf?: ISO8601String },
+): Promise<ContractCadenceReplenishmentSummary> {
+  const asOf = params.asOf ?? (new Date().toISOString() as ISO8601String);
+  const obligations = await loadEligibleContractCadenceObligationsForReplenishment(trx, {
+    tenant: params.tenant,
+    asOf,
+  });
+
+  const summary: ContractCadenceReplenishmentSummary = {
+    tenant: params.tenant,
+    linesExamined: obligations.length,
+    linesReplenished: 0,
+    periodsGenerated: 0,
+    periodsRealigned: 0,
+    periodsSuperseded: 0,
+    linesAtPeriodCap: 0,
+    linesAwaitingCoverage: 0,
+    failures: [],
+  };
+
+  for (const obligation of obligations) {
+    try {
+      // Savepoint per line: a failure rolls back only this line's writes while
+      // the outer per-tenant transaction (and advisory lock) survives.
+      const result = await trx.transaction(async (lineTrx) =>
+        syncContractCadenceObligation(lineTrx, {
+          tenant: params.tenant,
+          obligation,
+          sourceRunPrefix: params.sourceRunPrefix,
+          asOf,
+        }),
+      );
+
+      if (result.changed) {
+        summary.linesReplenished += 1;
+      }
+      summary.periodsGenerated += result.periodsGenerated;
+      summary.periodsRealigned += result.periodsRealigned;
+      summary.periodsSuperseded += result.periodsSuperseded;
+      if (result.hitPeriodCap) {
+        summary.linesAtPeriodCap += 1;
+      }
+      if (!result.meetsExpectedCoverage) {
+        summary.linesAwaitingCoverage += 1;
+      }
+    } catch (error) {
+      summary.failures.push({
+        contractLineId: obligation.contract_line_id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return summary;
+}
+
+export const CONTRACT_CADENCE_REPLENISHMENT_LOCK_SUFFIX = ':contract-cadence-replenishment';
+
+/**
+ * Wraps the tenant sweep in the transaction + advisory lock the nightly job
+ * needs. The xact lock serialises concurrent application pods for the tenant
+ * and is released at commit/rollback.
+ */
+export async function runContractCadenceReplenishmentForTenant(
+  knex: Knex,
+  params: { tenant: string; sourceRunPrefix: string; asOf?: ISO8601String },
+): Promise<ContractCadenceReplenishmentSummary> {
+  return withTransaction(knex, async (trx) => {
+    await trx.raw('select pg_advisory_xact_lock(hashtextextended(? || ?, 0))', [
+      params.tenant,
+      CONTRACT_CADENCE_REPLENISHMENT_LOCK_SUFFIX,
+    ]);
+    return replenishContractCadenceServicePeriodsForTenant(trx, params);
   });
 }
 

@@ -121,6 +121,7 @@ function isPreservedOverrideRecord(record: IRecurringServicePeriodRecord) {
     || record.provenance.kind === 'repair'
     || record.lifecycleState === 'edited'
     || record.lifecycleState === 'locked'
+    || record.lifecycleState === 'skipped'
     || record.lifecycleState === 'billed'
   );
 }
@@ -228,7 +229,43 @@ export function regenerateRecurringServicePeriods(
 
   let candidateIndex = 0;
 
+  const buildNewRecord = (
+    candidate: IRecurringServicePeriodRecord,
+  ): IRecurringServicePeriodRecord => {
+    const revision = resolveNextRevision(candidate, candidate.revision, maxRevisionBySchedulePeriod);
+    return revision === candidate.revision
+      ? candidate
+      : {
+          ...candidate,
+          recordId: recordIdFactory({
+            scheduleKey: candidate.scheduleKey,
+            periodKey: candidate.periodKey,
+            revision,
+          }),
+          revision,
+        };
+  };
+
   for (const existing of existingRecords) {
+    // Candidates that start before this existing record fill a gap in the
+    // ledger. Emitting them as new records first keeps the ordered pairing
+    // correct when a preserved/override record follows a missing period; a
+    // purely positional walk would otherwise pair that preserved record with
+    // the wrong candidate and leave the gap unfilled. A candidate carrying this
+    // record's own periodKey is its slot (for example a boundary adjustment
+    // that moved the start), so it still pairs and surfaces the mismatch.
+    while (
+      candidateRecords[candidateIndex]
+      && toDateOnly(candidateRecords[candidateIndex].servicePeriod.start)
+        < toDateOnly(existing.servicePeriod.start)
+      && candidateRecords[candidateIndex].periodKey !== existing.periodKey
+    ) {
+      const gapRecord = buildNewRecord(candidateRecords[candidateIndex]);
+      newRecords.push(gapRecord);
+      activeRecords.push(gapRecord);
+      candidateIndex += 1;
+    }
+
     const candidate = candidateRecords[candidateIndex];
 
     if (isPreservedOverrideRecord(existing)) {
@@ -299,18 +336,7 @@ export function regenerateRecurringServicePeriods(
   }
 
   for (const candidate of candidateRecords.slice(candidateIndex)) {
-    const revision = resolveNextRevision(candidate, candidate.revision, maxRevisionBySchedulePeriod);
-    const newRecord = revision === candidate.revision
-      ? candidate
-      : {
-          ...candidate,
-          recordId: recordIdFactory({
-            scheduleKey: candidate.scheduleKey,
-            periodKey: candidate.periodKey,
-            revision,
-          }),
-          revision,
-        };
+    const newRecord = buildNewRecord(candidate);
     newRecords.push(newRecord);
     activeRecords.push(newRecord);
   }
