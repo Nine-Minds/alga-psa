@@ -3,6 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { TestContext } from 'server/test-utils/testContext';
 import { assignContractLineToClient } from '../../../../../test-utils/billingTestHelpers';
 import {
+  createBillingProfile,
+  ensureDefaultBillingProfile,
+} from 'server/test-utils/billingProfileTestHelpers';
+import {
   materializeContractCadenceServicePeriodsForContractLine,
   replenishContractCadenceServicePeriodsSweep,
   runContractCadenceReplenishmentForTenant,
@@ -46,8 +50,8 @@ describe('Contract-cadence service-period replenishment', () => {
     name?: string;
     startDate?: string;
     endDate?: string | null;
-    billingTiming?: 'advance' | 'arrears';
-    billingFrequency?: 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+    billingTiming?: string;
+    billingFrequency?: string;
     lineActive?: boolean;
     contractActive?: boolean;
     assignmentActive?: boolean;
@@ -498,6 +502,99 @@ describe('Contract-cadence service-period replenishment', () => {
         .whereNotIn('lifecycle_state', ['superseded', 'archived']);
       expect(rows).toHaveLength(0);
     }
+  });
+
+  it('does not enumerate unsupported frequency or timing lines, preserving their protected rows', async () => {
+    // The read-only audit treats supported frequencies and advance/arrears timing
+    // as part of replenisher eligibility. The sweep must agree: an unsupported
+    // line otherwise falls through canonical sync to retirement, which would
+    // supersede protected locked/edited rows.
+    const weeklyLine = await createContractCadenceLine({
+      name: 'Weekly Contract Cadence Line',
+      billingFrequency: 'weekly',
+    });
+    const oddTimingLine = await createContractCadenceLine({
+      name: 'Unsupported Timing Line',
+      billingTiming: 'on_completion',
+    });
+
+    const weeklyLockedId = await seedContractPeriod({
+      obligationId: weeklyLine,
+      serviceStart: '2026-03-08',
+      serviceEnd: '2026-04-08',
+      invoiceStart: '2026-04-08',
+      invoiceEnd: '2026-05-08',
+      lifecycleState: 'locked',
+    });
+    const oddTimingEditedId = await seedContractPeriod({
+      obligationId: oddTimingLine,
+      serviceStart: '2026-03-08',
+      serviceEnd: '2026-04-08',
+      invoiceStart: '2026-04-08',
+      invoiceEnd: '2026-05-08',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+    });
+
+    const result = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+
+    expect(result.failures).toEqual([]);
+    const weeklyRows = await loadContractPeriods(weeklyLine);
+    expect(weeklyRows.find((row) => row.record_id === weeklyLockedId)?.lifecycle_state).toBe('locked');
+    const oddTimingRows = await loadContractPeriods(oddTimingLine);
+    expect(oddTimingRows.find((row) => row.record_id === oddTimingEditedId)?.lifecycle_state).toBe('edited');
+  });
+
+  it('replenishes a multi-profile client once without touching profiles or cycles', async () => {
+    // Billing profiles are not an input to contract-cadence replenishment. A
+    // segmented client must still get exactly one recovered period and no new
+    // cycles or invoices; the sweep is not a per-profile pass.
+    await ensureDefaultBillingProfile(
+      { db: context.db, tenantId: context.tenantId },
+      context.clientId,
+    );
+    await createBillingProfile(
+      { db: context.db, tenantId: context.tenantId },
+      context.clientId,
+      'Site B',
+    );
+
+    const obligationId = await createContractCadenceLine({ contractLineId: INCIDENT.contractLineId });
+    await seedIncidentLedger(obligationId);
+
+    const cyclesBefore = await context.db('client_billing_cycles')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .count('* as count')
+      .first();
+    const invoicesBefore = await invoiceCount();
+
+    const result = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+
+    expect(result.failures).toEqual([]);
+    const active = (await loadContractPeriods(obligationId))
+      .filter((row) => row.lifecycle_state !== 'superseded');
+    expect(
+      active.filter(
+        (row) =>
+          dateOnly(row.service_period_start) === '2026-08-08'
+          && dateOnly(row.service_period_end) === '2026-09-08',
+      ),
+    ).toHaveLength(1);
+
+    const cyclesAfter = await context.db('client_billing_cycles')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .count('* as count')
+      .first();
+    expect(Number(cyclesAfter?.count ?? 0)).toBe(Number(cyclesBefore?.count ?? 0));
+    expect(await invoiceCount()).toBe(invoicesBefore);
   });
 
   it('isolates a failing line, rolls back its writes, and recovers on retry', async () => {

@@ -765,7 +765,15 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
   const rows = await query
     .where('cl.is_active', true)
     .where('cl.cadence_owner', 'contract')
-    .whereNotNull('cl.billing_timing')
+    .whereIn('cl.billing_timing', ['advance', 'arrears'])
+    // Keep eligibility identical to CONTRACT_CADENCE_COVERAGE_AUDIT_SQL. An
+    // unsupported frequency or timing is not a contract-cadence obligation, so
+    // it must not enter the sweep: sync would otherwise fall through to
+    // retireFutureContractCadenceRowsForLine and supersede its protected
+    // locked/edited/skipped periods.
+    .whereRaw(
+      "lower(cl.billing_frequency) in ('monthly', 'quarterly', 'semi-annually', 'semiannually', 'annually', 'annual')",
+    )
     .where('cc.is_active', true)
     .where('ct.is_active', true)
     .where((builder) =>

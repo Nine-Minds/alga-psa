@@ -73,7 +73,10 @@ Coverage query (abridged; see the module for the exact SQL). It:
 
 - applies the same eligibility rules as the replenisher (active assignment,
   contract and line; not system-managed; `cadence_owner = 'contract'`;
-  supported frequency; advance/arrears timing; assignment live at `:as_of`);
+  supported frequency; advance/arrears timing; assignment live at `:as_of`).
+  The replenisher's enumeration now enforces that same frequency/timing set, so
+  an ineligible line never enters canonical sync (which would otherwise retire
+  its mutable rows, including protected locked/edited/skipped periods);
 - clips the target, threshold and "today" comparisons to the assignment end via
   `least(..., coalesce(assignment_end, ...))`, so a short assignment that ends
   before the horizon is not reported as permanently short;
@@ -199,15 +202,18 @@ success are not established by the audit alone.
 Only the isolated local test database was exercised; no production record was
 read or changed.
 
-- `contractCadenceServicePeriodReplenishment.test.ts` (26 tests) reproduces the
+- `contractCadenceServicePeriodReplenishment.test.ts` (28 tests) reproduces the
   production ledger shape in an isolated test database and asserts the recovered
   period, the following-month invoice-window mapping, preserved billed/locked/
   skipped/deferred/superseded history, repeat-run idempotency, a later-horizon
   run with no invoices, multiple missed periods for a never-invoiced assignment,
   an interior gap behind an existing later row, a capped catch-up that makes
   forward progress across runs, advance/arrears and month-end and
-  quarterly/semi-annual/annual anchors, eligibility, per-line failure isolation
-  with retry, per-tenant sweep isolation, and tenant isolation.
+  quarterly/semi-annual/annual anchors, eligibility (including unsupported
+  frequency/timing lines being left untouched with their protected rows
+  preserved), per-line failure isolation with retry, per-tenant sweep isolation,
+  a multi-profile client replenished exactly once with no new cycles or invoices,
+  and tenant isolation.
 - `contractCadenceServicePeriodReplenishment.concurrency.test.ts` commits the
   fixture on a pool connection and runs two overlapping sweeps on separate
   connections, asserting the advisory lock serialises them and no period is
@@ -225,6 +231,10 @@ read or changed.
   daily schedule is persisted in `pgboss.schedule`, successive firings reach the
   worker, it survives a runner restart, and repeat initialization converges on
   one schedule.
+- `contractCadenceReplenishmentHandlerRegistration.test.ts` exercises the real
+  `registerAllJobHandlers` boot path and executes the registry entry with the
+  shared sweep stubbed, proving the registered handler is the sweep rather than
+  merely an imported name.
 - `maintenanceJobFanout.unit.test.ts` proves the job runs once as a system job,
   aggregates tenant- and line-level failures instead of reporting unconditional
   success, and propagates a total failure.
