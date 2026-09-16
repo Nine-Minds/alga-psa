@@ -651,7 +651,7 @@
         },
         "clientPortalVisible": {
           "label": "Visibile nel portale clienti",
-          "help": "Se disattivato, questa board e i suoi ticket sono nascosti a tutti gli utenti del portale clienti, indipendentemente dai gruppi di visibilità."
+          "help": "Se disattivato, questa bacheca e i suoi ticket sono nascosti a tutti gli utenti del portale clienti, indipendentemente dai gruppi di visibilità."
         },
         "defaultBoard": {
           "label": "Bacheca predefinita per i ticket del portale clienti",
