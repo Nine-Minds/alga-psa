@@ -49,13 +49,14 @@ const workItemColors: Record<WorkItemType, string> = {
  * in the chip's tooltip.
  */
 const CHIP_TIME_LINE_MINUTES = 30;
-const CHIP_TWO_LINE_MINUTES = 60;
+const CHIP_TWO_LINE_MINUTES = 45;
+const CHIP_THREE_LINE_MINUTES = 90;
 
 function AgentScheduleEventChip({ event, title }: EventProps<IScheduleEntry>) {
   const start = new Date(event.scheduled_start);
   const end = new Date(event.scheduled_end);
   const minutes = (end.getTime() - start.getTime()) / 60000;
-  const lines = minutes >= CHIP_TWO_LINE_MINUTES ? 'two' : 'one';
+  const lines = minutes >= CHIP_THREE_LINE_MINUTES ? 'three' : minutes >= CHIP_TWO_LINE_MINUTES ? 'two' : 'one';
   const hasTimeLine = minutes >= CHIP_TIME_LINE_MINUTES;
   return (
     <div className="agent-schedule-chip">

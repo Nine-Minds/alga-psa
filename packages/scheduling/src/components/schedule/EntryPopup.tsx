@@ -1573,7 +1573,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               name="notes"
               value={entryData.notes}
               onChange={handleInputChange}
-              placeholder={t('entryPopup.fields.notesPlaceholder', { defaultValue: 'Anything the technician should know before this work' })}
+              placeholder={t('entryPopup.fields.notesPlaceholder', { defaultValue: 'Anything the technician should know before starting' })}
               rows={3}
               className=""
               disabled={!canEditFields} // Disable based on permissions
@@ -1757,7 +1757,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             id="delete-entry-btn"
             type="button"
             variant="ghost"
-            className="mr-auto gap-1 text-[rgb(var(--color-accent-500))] hover:text-[rgb(var(--color-accent-600))]"
+            className="mr-auto gap-1 text-red-500 hover:text-red-600 hover:bg-red-500/10"
             onClick={startDelete}
           >
             <Trash2 className="w-4 h-4" />

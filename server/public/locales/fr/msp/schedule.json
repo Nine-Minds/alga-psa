@@ -591,7 +591,7 @@
       "end": "Fin *",
       "notes": "Remarques",
       "technician": "Technicien",
-      "notesPlaceholder": "Tout ce que le technicien doit savoir avant ce travail"
+      "notesPlaceholder": "Tout ce que le technicien doit savoir avant de commencer"
     },
     "actions": {
       "cancel": "Annuler",

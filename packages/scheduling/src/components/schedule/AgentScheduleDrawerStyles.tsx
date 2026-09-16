@@ -60,7 +60,6 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
            selection; the saturated colour is kept for selected states. */
         background-color: rgb(var(--color-primary-500) / 0.22) !important;
         border-left: 3px solid rgb(var(--color-primary-500)) !important;
-        border-bottom: 2px solid rgb(var(--color-primary-500) / 0.55) !important;
         /* A 2px gutter in the grid colour so stacked chips read as separate. */
         outline: 2px solid rgb(var(--color-border-50));
         cursor: grab;
@@ -102,6 +101,9 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         /* Wrap between words; split a word only when it cannot fit a line by itself. */
         overflow-wrap: break-word;
       }
+      .agent-schedule-chip__title--three {
+        -webkit-line-clamp: 3;
+      }
       .agent-schedule-chip__title--one {
         -webkit-line-clamp: 1;
         overflow-wrap: normal;
@@ -116,13 +118,23 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
       .agent-schedule-view .rbc-time-gutter .rbc-label {
         font-size: 11px;
         padding: 0 4px;
+        position: relative;
+        top: -7px;
+      }
+      .agent-schedule-view .rbc-time-gutter .rbc-timeslot-group:first-child .rbc-label {
+        top: 0;
+      }
+      /* The gutter labels the hour rule; it does not draw cells of its own. */
+      .agent-schedule-view .rbc-time-gutter .rbc-time-slot {
+        border-top: none !important;
+      }
+      .agent-schedule-view .rbc-time-gutter .rbc-timeslot-group {
+        border-bottom-color: transparent !important;
       }
 
       /* Thin, theme-matched scrollbar with a reserved gutter so the day
          columns stay equal and the header stays aligned with the grid. */
       .agent-schedule-view .rbc-time-content {
-        scrollbar-width: thin;
-        scrollbar-color: rgb(var(--color-primary-500) / 0.45) transparent;
         scrollbar-gutter: stable;
       }
       .agent-schedule-view .rbc-time-header.rbc-overflowing {
@@ -132,12 +144,14 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         width: 8px;
       }
       .agent-schedule-view .rbc-time-content::-webkit-scrollbar-thumb {
-        background: rgb(var(--color-border-300));
+        background: rgb(var(--color-primary-500) / 0.45);
         border-radius: 4px;
       }
-      .agent-schedule-view .rbc-time-content::-webkit-scrollbar-track,
-      .agent-schedule-view .rbc-time-content::-webkit-scrollbar-button {
+      .agent-schedule-view .rbc-time-content::-webkit-scrollbar-track {
         background: transparent;
+      }
+      .agent-schedule-view .rbc-time-content::-webkit-scrollbar-button {
+        display: none;
         height: 0;
       }
 
@@ -172,11 +186,11 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         margin-left: -8px;
         border-radius: 2px;
         background: rgb(var(--color-text-900));
-        opacity: 0;
+        opacity: 0.3;
         transition: opacity 120ms ease;
       }
       .agent-schedule-view .rbc-event:hover .rbc-addons-dnd-resize-ns-anchor:last-child::after {
-        opacity: 0.55;
+        opacity: 0.7;
       }
       .agent-schedule-view .rbc-addons-dnd-resize-ns-anchor .rbc-addons-dnd-resize-ns-icon {
         display: none !important;
@@ -221,7 +235,6 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
       .agent-schedule-view--work-item .rbc-event.agent-schedule-event--other {
         background-color: rgb(var(--color-border-300) / 0.35) !important;
         border-left-color: rgb(var(--color-border-400)) !important;
-        border-bottom-color: rgb(var(--color-border-400) / 0.5) !important;
         color: rgb(var(--color-text-700)) !important;
       }
 

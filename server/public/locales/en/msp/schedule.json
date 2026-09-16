@@ -591,7 +591,7 @@
       "end": "End *",
       "notes": "Notes",
       "technician": "Technician",
-      "notesPlaceholder": "Anything the technician should know before this work"
+      "notesPlaceholder": "Anything the technician should know before starting"
     },
     "actions": {
       "cancel": "Cancel",

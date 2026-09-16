@@ -591,7 +591,7 @@
       "end": "Einde *",
       "notes": "Opmerkingen",
       "technician": "Technicus",
-      "notesPlaceholder": "Alles wat de technicus vóór dit werk moet weten"
+      "notesPlaceholder": "Alles wat de technicus moet weten voordat hij begint"
     },
     "actions": {
       "cancel": "Annuleren",

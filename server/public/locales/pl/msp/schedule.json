@@ -591,7 +591,7 @@
       "end": "Koniec *",
       "notes": "Notatki",
       "technician": "Technik",
-      "notesPlaceholder": "Wszystko, co technik powinien wiedzieć przed tą pracą"
+      "notesPlaceholder": "Wszystko, co technik powinien wiedzieć przed rozpoczęciem"
     },
     "actions": {
       "cancel": "Anuluj",
