@@ -1,13 +1,26 @@
+import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../../_responses';
 import { requireEntraAccess } from '../../_guards';
 import { runEntraClientAccessDiagnostics } from '@ee/lib/integrations/entra/diagnostics';
+import { evaluateEntraReadiness } from '@ee/lib/integrations/entra/diagnostics/readiness';
 
 export { dynamic, runtime };
 
 export async function POST(request: Request): Promise<Response> {
   const accessGate = await requireEntraAccess('read');
   if (accessGate instanceof Response) {
-    return accessGate;
+    const user = await getCurrentUser().catch(() => null);
+    const readiness = user
+      ? await evaluateEntraReadiness(user).catch(() => null)
+      : null;
+    const body = (await accessGate.clone().json().catch(() => null)) as
+      | Record<string, unknown>
+      | null;
+    return NextResponse.json(
+      { ...(body ?? { success: false, error: 'Forbidden' }), readiness },
+      { status: accessGate.status }
+    );
   }
 
   const body = await parseJsonBody(request);

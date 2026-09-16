@@ -125,8 +125,6 @@ export function buildCustomerConsentUrl(
   const tid = asString(entraTenantId);
   const appId = asString(applicationClientId);
   if (!tid || !appId) return null;
-  // Guard against placeholder/blank identifiers reaching a URL.
-  if (tid.length < 8 || appId.length < 8) return null;
   return `https://login.microsoftonline.com/${encodeURIComponent(tid)}/adminconsent?client_id=${encodeURIComponent(appId)}`;
 }
 
@@ -179,7 +177,10 @@ export function classifyEntraOAuthFailure(
     networkCause,
   };
 
-  if (aadsts === 'AADSTS7000222' || oauth === INVALID_CLIENT) {
+  // Specific AADSTS codes always win over a generic OAuth error such as
+  // invalid_client. AADSTS700016 (app not found / single-tenant) plus
+  // invalid_client must not be reported as a secret-rotation problem.
+  if (aadsts === 'AADSTS7000222') {
     return {
       ...base,
       category: 'other',
@@ -190,7 +191,7 @@ export function classifyEntraOAuthFailure(
       recommendation: partnerRecommendation(
         'client_secret_invalid',
         'fail',
-        'Microsoft rejected the app credential (invalid_client / AADSTS7000222). Rotate the client secret in Azure, update the Microsoft app registration in Settings > Integrations > Microsoft, then reconnect.'
+        'Microsoft rejected the app credential (AADSTS7000222). Rotate the client secret in Azure, update the Microsoft app registration in Settings > Integrations > Microsoft, then reconnect.'
       ),
     };
   }
@@ -287,7 +288,7 @@ export function classifyEntraOAuthFailure(
     };
   }
 
-  if (aadsts === 'AADSTS70000' || oauth === INVALID_GRANT) {
+  if (aadsts === 'AADSTS70000') {
     return {
       ...base,
       category: 'other',
@@ -298,7 +299,42 @@ export function classifyEntraOAuthFailure(
       recommendation: partnerRecommendation(
         'refresh_token_invalid',
         'fail',
-        'The refresh grant is expired or revoked (invalid_grant / AADSTS70000). Reconnect Microsoft Entra to issue a new refresh token.'
+        'The refresh grant is expired or revoked (AADSTS70000). Reconnect Microsoft Entra to issue a new refresh token.'
+      ),
+    };
+  }
+
+  // Generic OAuth errors, only after every specific AADSTS code has been ruled
+  // out so that (for example) AADSTS700016 + invalid_client stays "app not
+  // found" rather than becoming a secret-rotation remedy.
+  if (oauth === INVALID_CLIENT) {
+    return {
+      ...base,
+      category: 'other',
+      severity: 'fail',
+      remedy: isCustomer
+        ? 'The app credential was rejected in this customer tenant. Rotate the Microsoft app registration secret in Azure and update it in Alga.'
+        : 'The app client secret expired or is wrong. Rotate the secret in Azure and update the app registration in Alga.',
+      recommendation: partnerRecommendation(
+        'client_secret_invalid',
+        'fail',
+        'Microsoft rejected the app credential (invalid_client). Rotate the client secret in Azure, update the Microsoft app registration in Settings > Integrations > Microsoft, then reconnect.'
+      ),
+    };
+  }
+
+  if (oauth === INVALID_GRANT) {
+    return {
+      ...base,
+      category: 'other',
+      severity: 'fail',
+      remedy: isCustomer
+        ? 'The customer grant is expired or revoked. Re-run after reconnecting the partner; a more specific code takes precedence when present.'
+        : 'The refresh token was revoked or expired. Reconnect Microsoft Entra.',
+      recommendation: partnerRecommendation(
+        'refresh_token_invalid',
+        'fail',
+        'The refresh grant is expired or revoked (invalid_grant). Reconnect Microsoft Entra to issue a new refresh token.'
       ),
     };
   }

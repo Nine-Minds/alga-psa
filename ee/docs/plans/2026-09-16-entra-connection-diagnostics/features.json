@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Share requireEntraAccess read-policy evaluation to report edition, both tier grants, and RBAC safely without weakening authentication or client-portal denial.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Connection diagnostics: layer 1"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Preserve safe structured readiness failures through routes/actions, including Pro-tier explanation and CE edition-unavailable behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Connection diagnostics: layer 1"
     ]
@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "Share server-side Entra callback URL resolution across connect, setup metadata, and diagnostics, preserving intended URL precedence without client reconstruction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Connection diagnostics: layer 1"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "Expose narrow adapter read/paging/token-context seams needed for diagnostics without changing sync behavior or losing error metadata.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client access diagnostics: layer 4"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "Cross-reference historical tenant failures with client diagnostics using identities and timestamps without presenting stale failures as current.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Sync pipeline health: layer 5"
     ]
@@ -610,7 +610,7 @@
   {
     "id": "F077",
     "description": "Accumulate completed client results and counts during continuations, show running/partial/failure states, stop after close, and prevent duplicate starts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Redaction and UI"
     ]
@@ -634,7 +634,7 @@
   {
     "id": "F080",
     "description": "Default exports to redacted identifiers and allow explicit includeIdentifiers exports without ever including full secrets/tokens.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Redaction and UI"
     ]

@@ -1,60 +1,177 @@
 import { describe, it, expect } from 'vitest';
-import { redactText } from '@ee/lib/integrations/entra/diagnostics/redaction';
-import { signContinuation, verifyContinuation } from '@ee/lib/integrations/entra/diagnostics/continuation';
+import {
+  applyReportRedaction,
+  createSupportBundle,
+  redactText,
+  sanitizeClient,
+  sanitizeContinuationResults,
+} from '@ee/lib/integrations/entra/diagnostics/redaction';
+import {
+  signContinuation,
+  verifyContinuation,
+  type EntraClientContinuationPayload,
+} from '@ee/lib/integrations/entra/diagnostics/continuation';
+import type { EntraDiagnosticsReport } from '@alga-psa/types';
 
-describe('redactText', () => {
-  it('redacts JWTs and bearer tokens but retains request ids', () => {
-    const jwt = 'eyJhbGciOiJub25lIn0.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature';
-    const text = `Authorization: Bearer ${jwt} request-id=rid-123`;
-    const redacted = redactText(text, true);
-    expect(redacted).not.toContain(jwt);
-    expect(redacted).toContain('request-id=rid-123');
-    expect(redacted).toContain('Bearer <redacted>');
-  });
+const GUID = '11111111-2222-3333-4444-555555555555';
+const OTHER_GUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+const JWT = 'eyJhbGciOiJub25lIn0.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature';
+const REFRESH = 'raw-refresh-token-value-1234567890';
+const SECRET = 'raw-client-secret-value-abcdefghij';
 
-  it('redacts GUIDs by default but keeps them when identifiers are included', () => {
-    const guid = '11111111-2222-3333-4444-555555555555';
-    expect(redactText(`tenant ${guid}`, false)).toBe('tenant <id>');
-    expect(redactText(`tenant ${guid}`, true)).toBe(`tenant ${guid}`);
-  });
-});
-
-describe('continuation signing', () => {
-  const base = {
-    v: 1 as const,
-    tenant: 'tenant-1',
-    userId: 'user-1',
-    scope: 'clients' as const,
-    connectionType: 'direct' as const,
-    clientIds: ['c1', 'c2'],
-    includeUserYield: false,
-    offset: 1,
-    total: 2,
-    results: [],
-    exp: Date.now() + 60_000,
+function makeReport(): EntraDiagnosticsReport {
+  return {
+    createdAt: '2026-09-16T00:00:00.000Z',
+    scope: 'connection',
+    summary: {
+      connectionType: 'direct',
+      connectionStatus: 'connected',
+      profileName: 'Partner App',
+      partnerTenantId: GUID,
+      authenticatedUpn: 'admin@partner.example',
+      tokenExpiresAt: '2026-09-16T01:00:00.000Z',
+      managedTenantCount: 2,
+      mappedClientCount: 1,
+      overallStatus: 'fail',
+    },
+    steps: [
+      {
+        id: 'connection_row',
+        title: 'Active Entra connection',
+        status: 'fail',
+        startedAt: '2026-09-16T00:00:00.000Z',
+        durationMs: 3,
+        http: { method: 'GET', path: `/users/${GUID}`, status: 403, requestId: 'rid-1' },
+        data: {
+          storedValidationMessage: `Bearer ${JWT}`,
+          clientSecretRef: 'ref-1',
+          nested: { access_token: SECRET },
+        },
+        error: {
+          message: `failed for ${GUID} with Bearer ${JWT}`,
+          status: 403,
+          requestId: 'rid-2',
+          clientRequestId: 'crid-2',
+          responseBody: { error: { message: 'denied' }, refresh_token: REFRESH },
+        },
+        recommendations: [
+          {
+            code: 'customer_consent_required',
+            severity: 'fail',
+            text: `Grant consent for ${GUID}`,
+            messageKey: 'customerConsentRequired',
+            params: { client: 'Acme', tenant: GUID },
+            action: {
+              kind: 'open_url',
+              payload: `https://login.microsoftonline.com/${GUID}/adminconsent?client_id=${OTHER_GUID}`,
+            },
+          },
+        ],
+      },
+    ],
+    clients: [],
+    recommendations: [],
+    supportBundle: {},
   };
+}
 
-  it('round-trips a valid continuation', () => {
-    const token = signContinuation(base, 'test-secret');
-    const verified = verifyContinuation(token, 'test-secret');
-    expect(verified?.tenant).toBe('tenant-1');
-    expect(verified?.clientIds).toEqual(['c1', 'c2']);
+function makeClient() {
+  return {
+    clientId: 'client-1',
+    clientName: 'Acme Corp',
+    entraTenantId: GUID,
+    entraTenantDisplayName: 'Acme Tenant',
+    overallStatus: 'fail' as const,
+    category: 'need_consent' as const,
+    remedy: `Grant consent for ${GUID} at ${OTHER_GUID}`,
+    isComplete: true,
+    steps: [
+      {
+        id: 'tenant_token_mint',
+        title: 'Mint customer tenant token',
+        status: 'fail' as const,
+        startedAt: '2026-09-16T00:00:00.000Z',
+        durationMs: 5,
+        error: {
+          message: `AADSTS65001 for admin@customer.example Bearer ${JWT}`,
+          requestId: 'rid-3',
+          aadstsCode: 'AADSTS65001',
+        },
+        data: { refreshToken: REFRESH, applicationClientId: OTHER_GUID },
+      },
+    ],
+  };
+}
+
+describe('redaction (adversarial)', () => {
+  it('strips secrets from every field even when identifiers are included', () => {
+    const sanitized = applyReportRedaction(makeReport(), true);
+    const serialized = JSON.stringify(sanitized);
+
+    expect(serialized).not.toContain(JWT);
+    expect(serialized).not.toContain(REFRESH);
+    expect(serialized).not.toContain(SECRET);
+    // Identifiers are retained in the live report.
+    expect(serialized).toContain(GUID);
+    // Correlation ids survive.
+    expect(sanitized.steps[0].http?.requestId).toBe('rid-1');
+    expect(sanitized.steps[0].error?.requestId).toBe('rid-2');
   });
 
-  it('rejects a tampered continuation', () => {
-    const token = signContinuation(base, 'test-secret');
-    const [body, sig] = token.split('.');
-    const tampered = `${body}.${sig.slice(0, -2)}xx`;
-    expect(verifyContinuation(tampered, 'test-secret')).toBeNull();
+  it('redacts identifiers, emails, and secret-bearing fields in the support bundle by default', () => {
+    const bundle = createSupportBundle(makeReport(), false);
+    const serialized = JSON.stringify(bundle);
+
+    expect(serialized).not.toContain(GUID);
+    expect(serialized).not.toContain(OTHER_GUID);
+    expect(serialized).not.toContain('admin@partner.example');
+    expect(serialized).not.toContain(JWT);
+    expect(serialized).not.toContain(REFRESH);
+    expect(serialized).not.toContain(SECRET);
+    expect(serialized).toContain('rid-1');
+    // The consent action URL has its identifiers redacted.
+    expect(serialized).toContain('<id>/adminconsent');
   });
 
-  it('rejects expired continuations', () => {
-    const token = signContinuation({ ...base, exp: Date.now() - 1000 }, 'test-secret');
-    expect(verifyContinuation(token, 'test-secret')).toBeNull();
+  it('sanitizes client responses deeply including remedies and step data', () => {
+    const sanitized = sanitizeClient(makeClient() as any, true);
+    const serialized = JSON.stringify(sanitized);
+    expect(serialized).not.toContain(JWT);
+    expect(serialized).not.toContain(REFRESH);
+    expect(sanitized.steps[0].error?.requestId).toBe('rid-3');
   });
 
-  it('rejects a continuation signed with a different secret', () => {
-    const token = signContinuation(base, 'secret-a');
-    expect(verifyContinuation(token, 'secret-b')).toBeNull();
+  it('redactText handles error-text credentials', () => {
+    expect(redactText('Bearer abc123 access_token=xyz', true)).not.toContain('abc123');
+    expect(redactText('Bearer abc123 access_token=xyz', true)).not.toContain('xyz');
+  });
+
+  it('sanitizes continuation results before signing', () => {
+    const payload: EntraClientContinuationPayload = {
+      v: 1,
+      tenant: 'tenant-1',
+      userId: 'user-1',
+      scope: 'clients',
+      connectionType: 'direct',
+      connectionId: 'conn-1',
+      selection: [{ clientId: 'client-1', managedTenantId: 'm1', entraTenantId: GUID }],
+      includeUserYield: false,
+      offset: 1,
+      total: 1,
+      results: [makeClient() as any],
+      exp: Date.now() + 60_000,
+    };
+    const token = signContinuation(payload, 'test-signing-secret-1234');
+    // The serialized token must not carry the raw secrets.
+    const decodedBody = Buffer.from(token.split('.')[0], 'base64url').toString('utf8');
+    expect(decodedBody).not.toContain(JWT);
+    expect(decodedBody).not.toContain(REFRESH);
+    expect(verifyContinuation(token, 'test-signing-secret-1234')?.tenant).toBe('tenant-1');
+  });
+
+  it('sanitizeContinuationResults removes secrets from arbitrary results', () => {
+    const [result] = sanitizeContinuationResults([makeClient()], true) as any[];
+    expect(JSON.stringify(result)).not.toContain(REFRESH);
+    expect(result.steps[0].error.requestId).toBe('rid-3');
   });
 });

@@ -11,7 +11,12 @@ import {
   Play,
   XCircle,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader } from '@alga-psa/ui/components/Dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+} from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -28,6 +33,8 @@ import type {
   DiagnosticsRecommendation,
   EntraClientDiagnosticsContinuation,
   EntraClientDiagnosticsResult,
+  EntraClientOutcomeCategory,
+  EntraDiagnosticsReadiness,
   EntraDiagnosticsReport,
   EntraDiagnosticsStep,
 } from '@alga-psa/types';
@@ -39,6 +46,34 @@ interface EntraDiagnosticsDialogProps {
 }
 
 const CONFIRM_THRESHOLD = 20;
+
+const GUID_PATTERN =
+  /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g;
+const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+
+/** Client-side identifier redaction for exports; secrets are already removed server-side. */
+function stripIdentifiers(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return value.replace(GUID_PATTERN, '<id>').replace(EMAIL_PATTERN, '<redacted-email>');
+  }
+  if (Array.isArray(value)) return value.map(stripIdentifiers);
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (key === 'requestId' || key === 'clientRequestId') {
+        out[key] = entry;
+        continue;
+      }
+      const identifierKey =
+        /(tenantid|tenant_id|clientid|client_id|userid|user_id|objectid|object_id|appid|app_id|entratenantid|entra_tenant_id|partnerTenantId)/.test(
+          key
+        );
+      out[key] = identifierKey && entry !== null ? null : stripIdentifiers(entry);
+    }
+    return out;
+  }
+  return value;
+}
 
 function statusVariant(status: EntraDiagnosticsStep['status']): BadgeVariant {
   switch (status) {
@@ -66,69 +101,13 @@ function StatusIcon({ status }: { status: EntraDiagnosticsStep['status'] }) {
   }
 }
 
-function RecommendationActions({
-  recommendation,
-  onNavigate,
-}: {
-  recommendation: DiagnosticsRecommendation;
-  onNavigate?: (tab: string) => void;
-}) {
-  const { t } = useTranslation('msp/admin');
-  const action = recommendation.action;
-  if (!action) return null;
-
-  const handle = async () => {
-    if (action.kind === 'copy') {
-      try {
-        await navigator.clipboard.writeText(action.payload);
-      } catch {
-        // clipboard unavailable
-      }
-      return;
-    }
-    if (action.kind === 'open_url') {
-      window.open(action.payload, '_blank', 'noopener,noreferrer');
-      return;
-    }
-    onNavigate?.(action.payload);
-  };
-
-  if (action.kind === 'navigate') {
-    return (
-      <Button
-        id={`entra-diag-rec-${recommendation.code}`}
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={handle}
-      >
-        {t('integrations.entra.diagnostics.actions.goToStep', {
-          defaultValue: 'Go to step',
-        })}
-      </Button>
-    );
-  }
-
-  return (
-    <Button
-      id={`entra-diag-rec-${recommendation.code}`}
-      type="button"
-      size="sm"
-      variant="outline"
-      onClick={handle}
-      className="gap-1"
-    >
-      {action.kind === 'copy' ? (
-        <Copy className="h-3.5 w-3.5" />
-      ) : (
-        <ExternalLink className="h-3.5 w-3.5" />
-      )}
-      {action.kind === 'copy'
-        ? t('integrations.entra.diagnostics.actions.copy', { defaultValue: 'Copy' })
-        : t('integrations.entra.diagnostics.actions.open', { defaultValue: 'Open' })}
-    </Button>
-  );
-}
+const CATEGORY_ORDER: EntraClientOutcomeCategory[] = [
+  'ok',
+  'need_consent',
+  'conditional_access',
+  'missing_role',
+  'other',
+];
 
 export function EntraDiagnosticsDialog({
   isOpen,
@@ -137,6 +116,7 @@ export function EntraDiagnosticsDialog({
 }: EntraDiagnosticsDialogProps) {
   const { t } = useTranslation('msp/admin');
   const [report, setReport] = React.useState<EntraDiagnosticsReport | null>(null);
+  const [readiness, setReadiness] = React.useState<EntraDiagnosticsReadiness | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
@@ -144,90 +124,138 @@ export function EntraDiagnosticsDialog({
   const [mappings, setMappings] = React.useState<EntraConfirmedMapping[]>([]);
   const [selectedClients, setSelectedClients] = React.useState<string[]>([]);
   const [includeYield, setIncludeYield] = React.useState(false);
+  const [includeIdentifiersExport, setIncludeIdentifiersExport] = React.useState(false);
   const [clientsRunning, setClientsRunning] = React.useState(false);
   const [clientResults, setClientResults] = React.useState<EntraClientDiagnosticsResult[]>([]);
   const [clientProgress, setClientProgress] = React.useState<{ completed: number; total: number } | null>(null);
   const [clientError, setClientError] = React.useState<string | null>(null);
+  const [clientRecommendations, setClientRecommendations] = React.useState<DiagnosticsRecommendation[]>([]);
+  const [clientAggregate, setClientAggregate] = React.useState<Record<EntraClientOutcomeCategory, number> | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
 
-  const runConnection = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setReport(null);
-    try {
-      const result = await runEntraConnectionDiagnostics();
-      if ('error' in result) {
-        setError(result.error || t('integrations.entra.diagnostics.errors.failed', { defaultValue: 'Diagnostics failed' }));
-        return;
+  // Staleness guard: increments on each open/close so late responses are dropped.
+  const runTokenRef = React.useRef(0);
+  const abortRef = React.useRef(false);
+
+  const remedyText = React.useCallback(
+    (rec: DiagnosticsRecommendation) => {
+      if (rec.messageKey) {
+        return t(`integrations.entra.diagnostics.remedies.${rec.messageKey}`, {
+          defaultValue: rec.text,
+          ...(rec.params ?? {}),
+        });
       }
-      setReport(result.data);
-    } catch (e: any) {
-      setError(e?.message || t('integrations.entra.diagnostics.errors.failed', { defaultValue: 'Diagnostics failed' }));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+      return rec.text;
+    },
+    [t]
+  );
+
+  const stepTitle = React.useCallback(
+    (step: EntraDiagnosticsStep) =>
+      t(`integrations.entra.diagnostics.steps.${step.id}`, { defaultValue: step.title }),
+    [t]
+  );
+
+  const runConnection = React.useCallback(
+    async (token: number) => {
+      setLoading(true);
+      setError(null);
+      setReadiness(null);
+      setReport(null);
+      try {
+        const result = await runEntraConnectionDiagnostics();
+        if (runTokenRef.current !== token) return;
+        if ('error' in result) {
+          setError(result.error || t('integrations.entra.diagnostics.errors.failed', { defaultValue: 'Diagnostics failed' }));
+          setReadiness(((result as any).readiness as EntraDiagnosticsReadiness) ?? null);
+          return;
+        }
+        setReport(result.data);
+      } catch (e: any) {
+        if (runTokenRef.current !== token) return;
+        setError(e?.message || t('integrations.entra.diagnostics.errors.failed', { defaultValue: 'Diagnostics failed' }));
+      } finally {
+        if (runTokenRef.current === token) setLoading(false);
+      }
+    },
+    [t]
+  );
 
   React.useEffect(() => {
-    if (!isOpen) return;
-    void runConnection();
+    if (!isOpen) {
+      // Closing stops any in-flight continuations and invalidates responses.
+      runTokenRef.current += 1;
+      abortRef.current = true;
+      setClientsRunning(false);
+      return;
+    }
+    abortRef.current = false;
+    const token = (runTokenRef.current += 1);
+    void runConnection(token);
     void (async () => {
       try {
         const result = await getEntraConfirmedMappings();
+        if (runTokenRef.current !== token) return;
         if (result.success && result.data) {
           const list = ((result.data as any).mappings ?? result.data) as EntraConfirmedMapping[];
           setMappings(list);
           setSelectedClients(list.map((m) => m.clientId));
         }
       } catch {
-        // mapping list is optional for connection-only runs
+        if (runTokenRef.current === token) setMappings([]);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, runConnection]);
 
   const runClients = React.useCallback(
     async (clientIds: string[]) => {
+      const token = runTokenRef.current;
       setClientsRunning(true);
       setClientError(null);
       setClientResults([]);
+      setClientRecommendations([]);
+      setClientAggregate(null);
       setClientProgress({ completed: 0, total: clientIds.length });
       let continuation: string | undefined;
       let completed = 0;
       const accumulated: EntraClientDiagnosticsResult[] = [];
       try {
         do {
+          if (abortRef.current || runTokenRef.current !== token) return;
           const response = await runEntraClientAccessDiagnostics({
-            clientIds,
+            clientIds: continuation ? undefined : clientIds,
             includeUserYield: includeYield,
             continuation,
           });
+          if (abortRef.current || runTokenRef.current !== token) return;
           if ('error' in response) {
-            setClientError(
-              response.error ||
-                t('integrations.entra.diagnostics.errors.clientFailed', {
-                  defaultValue: 'Client diagnostics failed',
-                })
-            );
-            setClientResults(accumulated);
+            setClientError(response.error || t('integrations.entra.diagnostics.errors.clientFailed', { defaultValue: 'Client diagnostics failed' }));
+            setClientResults([...accumulated]);
             return;
           }
           const payload: EntraClientDiagnosticsContinuation = response.data;
           if (payload.error) {
             setClientError(payload.error);
+            setClientResults([...accumulated]);
             return;
           }
           accumulated.push(...payload.clients);
           completed = payload.completed;
           setClientResults([...accumulated]);
           setClientProgress({ completed, total: payload.total });
+          setClientAggregate(payload.aggregate);
+          if (payload.recommendations?.length) setClientRecommendations(payload.recommendations);
           continuation = payload.isDone ? undefined : payload.jobId;
           if (!continuation) break;
         } while (continuation);
       } catch (e: any) {
-        setClientError(e?.message || 'Client diagnostics failed');
-        setClientResults(accumulated);
+        if (runTokenRef.current === token) {
+          setClientError(e?.message || 'Client diagnostics failed');
+          setClientResults([...accumulated]);
+        }
       } finally {
-        setClientsRunning(false);
+        if (runTokenRef.current === token) setClientsRunning(false);
       }
     },
     [includeYield, t]
@@ -242,11 +270,63 @@ export function EntraDiagnosticsDialog({
     void runClients(selectedClients);
   }, [runClients, selectedClients]);
 
-  const supportBundle = report?.supportBundle;
+  // Cross-reference client results with the latest per-tenant sync failures.
+  const latestFailuresByClient = React.useMemo(() => {
+    const map = new Map<string, { at: string | null; message: string | null }>();
+    const step = report?.steps.find((s) => s.id === 'per_tenant_last_result');
+    const failed = (step?.data as any)?.failedTenants;
+    if (Array.isArray(failed)) {
+      for (const tenant of failed) {
+        if (tenant?.clientId) {
+          map.set(tenant.clientId, {
+            at: tenant.completedAt ?? null,
+            message: tenant.errorMessage ?? null,
+          });
+        }
+      }
+    }
+    return map;
+  }, [report]);
+
+  const buildExport = React.useCallback((): Record<string, unknown> => {
+    const combined = {
+      generatedAt: new Date().toISOString(),
+      identifiersIncluded: includeIdentifiersExport,
+      connection: report
+        ? {
+            createdAt: report.createdAt,
+            scope: report.scope,
+            summary: report.summary,
+            steps: report.steps,
+            recommendations: report.recommendations,
+          }
+        : null,
+      clientRun: {
+        isComplete: clientProgress ? clientProgress.completed >= clientProgress.total : false,
+        completed: clientProgress?.completed ?? 0,
+        total: clientProgress?.total ?? 0,
+        aggregate: clientAggregate,
+        recommendations: clientRecommendations,
+        clients: clientResults.map((client) => ({
+          ...client,
+          latestSyncFailure: latestFailuresByClient.get(client.clientId) ?? null,
+        })),
+      },
+    };
+    return includeIdentifiersExport ? combined : (stripIdentifiers(combined) as Record<string, unknown>);
+  }, [
+    clientAggregate,
+    clientProgress,
+    clientRecommendations,
+    clientResults,
+    includeIdentifiersExport,
+    latestFailuresByClient,
+    report,
+  ]);
+
   const copySupportBundle = async () => {
-    if (!report) return;
     try {
-      await navigator.clipboard.writeText(JSON.stringify(supportBundle ?? report, null, 2));
+      await navigator.clipboard.writeText(JSON.stringify(buildExport(), null, 2));
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -255,30 +335,22 @@ export function EntraDiagnosticsDialog({
   };
 
   const downloadJson = () => {
-    if (!report) return;
-    const blob = new Blob([JSON.stringify(supportBundle ?? report, null, 2)], {
-      type: 'application/json',
-    });
+    const blob = new Blob([JSON.stringify(buildExport(), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `entra-connection-diagnostics-${report.createdAt}.json`;
+    link.download = `entra-diagnostics-${new Date().toISOString()}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
-
-  const clientRows = React.useMemo(() => {
-    if (!report) return clientResults;
-    if (report.clients.length > 0) return report.clients;
-    return clientResults;
-  }, [clientResults, report]);
 
   const columns: ColumnDefinition<EntraClientDiagnosticsResult>[] = [
     {
       title: t('integrations.entra.diagnostics.clients.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'clientName',
       render: (_v, record) =>
-        record.clientName || t('integrations.entra.diagnostics.clients.unavailableName', { defaultValue: 'Unavailable name' }),
+        record.clientName ||
+        t('integrations.entra.diagnostics.clients.unavailableName', { defaultValue: 'Unavailable name' }),
     },
     {
       title: t('integrations.entra.diagnostics.clients.columns.tenant', { defaultValue: 'Tenant' }),
@@ -295,38 +367,31 @@ export function EntraDiagnosticsDialog({
     {
       title: t('integrations.entra.diagnostics.clients.columns.remedy', { defaultValue: 'Remedy' }),
       dataIndex: 'remedy',
-      render: (value) => (
-        <span className="text-sm text-muted-foreground">{value || ''}</span>
-      ),
+      render: (value) => <span className="text-sm text-muted-foreground">{value || ''}</span>,
     },
   ];
 
   const footer = (
-    <div className="flex w-full items-center justify-between gap-2">
-      <div className="flex gap-2">
-        <Button
-          id="entra-diag-copy-bundle"
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={copySupportBundle}
-          disabled={!report}
-        >
+    <div className="flex w-full flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+          <input
+            id="entra-diag-export-identifiers"
+            type="checkbox"
+            checked={includeIdentifiersExport}
+            onChange={(e) => setIncludeIdentifiersExport(e.target.checked)}
+          />
+          {t('integrations.entra.diagnostics.actions.includeIdentifiers', {
+            defaultValue: 'Include identifiers in export',
+          })}
+        </label>
+        <Button id="entra-diag-copy-bundle" type="button" size="sm" variant="outline" onClick={copySupportBundle}>
           <Copy className="mr-2 h-4 w-4" />
           {copied
             ? t('integrations.entra.diagnostics.actions.copied', { defaultValue: 'Copied' })
-            : t('integrations.entra.diagnostics.actions.copySupportBundle', {
-                defaultValue: 'Copy support bundle',
-              })}
+            : t('integrations.entra.diagnostics.actions.copySupportBundle', { defaultValue: 'Copy support bundle' })}
         </Button>
-        <Button
-          id="entra-diag-download-json"
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={downloadJson}
-          disabled={!report}
-        >
+        <Button id="entra-diag-download-json" type="button" size="sm" variant="outline" onClick={downloadJson}>
           <Download className="mr-2 h-4 w-4" />
           {t('integrations.entra.diagnostics.actions.downloadJson', { defaultValue: 'Download JSON' })}
         </Button>
@@ -356,6 +421,23 @@ export function EntraDiagnosticsDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {readiness && !readiness.ok && (
+          <div className="mb-3 rounded border border-destructive/40 bg-destructive/10 p-3" id="entra-diag-readiness">
+            <div className="text-sm font-medium">
+              {t('integrations.entra.diagnostics.labels.readiness', { defaultValue: 'Access readiness' })}
+            </div>
+            <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+              {readiness.checks.map((check) => (
+                <li key={check.key}>
+                  {check.ok ? '✓' : '✗'}{' '}
+                  {t(`integrations.entra.diagnostics.readiness.${check.key}`, { defaultValue: check.key })}
+                  {check.detail ? ` — ${check.detail}` : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {loading && (
           <div className="py-6 text-center text-sm text-muted-foreground" id="entra-diag-loading">
             {t('integrations.entra.diagnostics.states.running', { defaultValue: 'Running diagnostics...' })}
@@ -374,35 +456,29 @@ export function EntraDiagnosticsDialog({
                 {t('integrations.entra.diagnostics.labels.overall', { defaultValue: 'Overall' })}:
               </span>
               <Badge variant={statusVariant(report.summary.overallStatus)}>
-                {report.summary.overallStatus}
+                {t(`integrations.entra.diagnostics.statuses.${report.summary.overallStatus}`, {
+                  defaultValue: report.summary.overallStatus,
+                })}
               </Badge>
+              {report.summary.authenticatedUpn && (
+                <span className="text-xs text-muted-foreground">{report.summary.authenticatedUpn}</span>
+              )}
             </div>
 
             <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-              <div>
-                <dt className="text-muted-foreground">
-                  {t('integrations.entra.diagnostics.labels.connectionType', { defaultValue: 'Connection' })}
-                </dt>
-                <dd>{report.summary.connectionType ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {t('integrations.entra.diagnostics.labels.status', { defaultValue: 'Status' })}
-                </dt>
-                <dd>{report.summary.connectionStatus ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {t('integrations.entra.diagnostics.labels.mappedClients', { defaultValue: 'Mapped clients' })}
-                </dt>
-                <dd>{report.summary.mappedClientCount ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {t('integrations.entra.diagnostics.labels.managedTenants', { defaultValue: 'Managed tenants' })}
-                </dt>
-                <dd>{report.summary.managedTenantCount ?? '—'}</dd>
-              </div>
+              {[
+                ['connectionType', report.summary.connectionType ?? '—'],
+                ['status', report.summary.connectionStatus ?? '—'],
+                ['mappedClients', report.summary.mappedClientCount ?? '—'],
+                ['managedTenants', report.summary.managedTenantCount ?? '—'],
+              ].map(([key, value]) => (
+                <div key={String(key)}>
+                  <dt className="text-muted-foreground">
+                    {t(`integrations.entra.diagnostics.labels.${key}`, { defaultValue: String(key) })}
+                  </dt>
+                  <dd>{String(value)}</dd>
+                </div>
+              ))}
             </dl>
 
             {report.recommendations.length > 0 && (
@@ -412,7 +488,10 @@ export function EntraDiagnosticsDialog({
                 </div>
                 <ul className="space-y-2">
                   {report.recommendations.map((rec) => (
-                    <li key={`${rec.code}-${rec.action?.payload ?? ''}`} className="flex items-start justify-between gap-2 text-sm">
+                    <li
+                      key={`${rec.code}-${rec.action?.payload ?? ''}-${JSON.stringify(rec.params ?? {})}`}
+                      className="flex items-start justify-between gap-2 text-sm"
+                    >
                       <span>
                         <Badge
                           size="sm"
@@ -420,9 +499,32 @@ export function EntraDiagnosticsDialog({
                         >
                           {rec.severity}
                         </Badge>{' '}
-                        {rec.text}
+                        {remedyText(rec)}
                       </span>
-                      <RecommendationActions recommendation={rec} onNavigate={onNavigate} />
+                      {rec.action && (
+                        <Button
+                          id={`entra-diag-rec-${rec.code}`}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (rec.action!.kind === 'copy') void navigator.clipboard.writeText(rec.action!.payload);
+                            else if (rec.action!.kind === 'open_url')
+                              window.open(rec.action!.payload, '_blank', 'noopener,noreferrer');
+                            else onNavigate?.(rec.action!.payload);
+                          }}
+                          className="gap-1"
+                        >
+                          {rec.action.kind === 'copy' ? (
+                            <Copy className="h-3.5 w-3.5" />
+                          ) : (
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          )}
+                          {t(`integrations.entra.diagnostics.actions.${rec.action.kind}`, {
+                            defaultValue: rec.action.kind,
+                          })}
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -435,18 +537,20 @@ export function EntraDiagnosticsDialog({
                   <summary className="flex cursor-pointer select-none items-center justify-between gap-3">
                     <span className="flex min-w-0 items-center gap-2">
                       <StatusIcon status={step.status} />
-                      <span className="truncate font-medium">{step.title}</span>
+                      <span className="truncate font-medium">{stepTitle(step)}</span>
                       <span className="text-xs text-muted-foreground">({step.durationMs}ms)</span>
                     </span>
-                    <Badge variant={statusVariant(step.status)}>{step.status}</Badge>
+                    <Badge variant={statusVariant(step.status)}>
+                      {t(`integrations.entra.diagnostics.statuses.${step.status}`, {
+                        defaultValue: step.status,
+                      })}
+                    </Badge>
                   </summary>
                   <div className="mt-2 space-y-2 text-sm">
                     {step.blockedBy && (
                       <div className="text-xs text-muted-foreground">
-                        {t('integrations.entra.diagnostics.labels.blockedBy', {
-                          defaultValue: 'Blocked by',
-                        })}
-                        : {step.blockedBy}
+                        {t('integrations.entra.diagnostics.labels.blockedBy', { defaultValue: 'Blocked by' })}:{' '}
+                        {step.blockedBy}
                       </div>
                     )}
                     {step.http && (
@@ -454,6 +558,7 @@ export function EntraDiagnosticsDialog({
                         {step.http.method} {step.http.path || step.http.url || ''}{' '}
                         {typeof step.http.status === 'number' ? `· ${step.http.status}` : ''}
                         {step.http.requestId ? ` · request-id: ${step.http.requestId}` : ''}
+                        {step.http.clientRequestId ? ` · client-request-id: ${step.http.clientRequestId}` : ''}
                       </div>
                     )}
                     {step.error && (
@@ -462,13 +567,46 @@ export function EntraDiagnosticsDialog({
                           {t('integrations.entra.diagnostics.labels.error', { defaultValue: 'Error' })}
                         </div>
                         <div>{step.error.message}</div>
+                        <div className="mt-1 space-x-2 text-xs text-muted-foreground">
+                          {step.error.status ? <span>HTTP {step.error.status}</span> : null}
+                          {step.error.code ? <span>code: {step.error.code}</span> : null}
+                          {step.error.aadstsCode ? <span>{step.error.aadstsCode}</span> : null}
+                          {step.error.oauthError ? <span>oauth: {step.error.oauthError}</span> : null}
+                          {step.error.suberror ? <span>suberror: {step.error.suberror}</span> : null}
+                          {step.error.requestId ? <span>request-id: {step.error.requestId}</span> : null}
+                        </div>
                       </div>
                     )}
-                    {step.data && (
+                    {step.id === 'expected_app_registration_values' && step.data ? (
+                      <div className="space-y-1 text-xs">
+                        {[
+                          ['callbackUrl', (step.data as any).callbackUrl],
+                          ['delegatedScopes', ((step.data as any).delegatedScopes ?? []).join(' ')],
+                          ['accountTypeRequirement', (step.data as any).accountTypeRequirement],
+                          ['boundClientId', (step.data as any).boundClientId],
+                        ].map(([key, value]) =>
+                          value ? (
+                            <div key={String(key)} className="flex items-center gap-2">
+                              <span className="font-medium">{String(key)}:</span>
+                              <code className="break-all">{String(value)}</code>
+                              <Button
+                                id={`entra-diag-copy-${key}`}
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => void navigator.clipboard.writeText(String(value))}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : null
+                        )}
+                      </div>
+                    ) : step.data ? (
                       <pre className="overflow-auto rounded bg-muted p-2 text-xs">
                         {JSON.stringify(step.data, null, 2)}
                       </pre>
-                    )}
+                    ) : null}
                   </div>
                 </details>
               ))}
@@ -488,7 +626,26 @@ export function EntraDiagnosticsDialog({
                   })}
                 </Badge>
               </div>
+
               <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  id="entra-diag-select-all"
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedClients(mappings.map((m) => m.clientId))}
+                >
+                  {t('integrations.entra.diagnostics.clients.selectAll', { defaultValue: 'Select all' })}
+                </Button>
+                <Button
+                  id="entra-diag-clear"
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedClients([])}
+                >
+                  {t('integrations.entra.diagnostics.clients.clear', { defaultValue: 'Clear' })}
+                </Button>
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     id="entra-diag-yield-toggle"
@@ -524,20 +681,94 @@ export function EntraDiagnosticsDialog({
                   </span>
                 )}
               </div>
+
+              {mappings.length > 0 && (
+                <div
+                  className="max-h-40 overflow-auto rounded border p-2 text-sm"
+                  id="entra-diag-client-picker"
+                >
+                  {mappings.map((mapping) => (
+                    <label key={mapping.clientId} className="flex items-center gap-2 py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedClients.includes(mapping.clientId)}
+                        onChange={(e) =>
+                          setSelectedClients((prev) =>
+                            e.target.checked
+                              ? [...new Set([...prev, mapping.clientId])]
+                              : prev.filter((id) => id !== mapping.clientId)
+                          )
+                        }
+                        disabled={clientsRunning}
+                        aria-label={mapping.clientName || mapping.displayName || mapping.clientId}
+                      />
+                      <span className="truncate">
+                        {mapping.clientName ||
+                          mapping.displayName ||
+                          t('integrations.entra.diagnostics.clients.unavailableName', {
+                            defaultValue: 'Unavailable name',
+                          })}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
               {clientError && (
                 <div className="text-sm text-destructive" role="alert">
                   {clientError}
                 </div>
               )}
-              {clientRows.length > 0 && (
+
+              {clientAggregate && (
+                <div className="flex flex-wrap gap-2 text-xs" id="entra-diag-client-aggregate">
+                  {CATEGORY_ORDER.map((category) => (
+                    <Badge key={category} variant={clientAggregate[category] > 0 ? 'secondary' : 'default-muted'}>
+                      {t(`integrations.entra.diagnostics.clients.categories.${category}`, {
+                        defaultValue: category,
+                      })}
+                      : {clientAggregate[category]}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {clientRecommendations.length > 0 && (
+                <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground" id="entra-diag-client-recommendations">
+                  {clientRecommendations.map((rec) => (
+                    <li key={`${rec.code}-${JSON.stringify(rec.params ?? {})}`}>{remedyText(rec)}</li>
+                  ))}
+                </ul>
+              )}
+
+              {clientResults.length > 0 && (
                 <DataTable
                   id="entra-diagnostics-client-table"
-                  data={clientRows}
+                  data={clientResults}
                   columns={columns}
                   expandedRowRender={(record) => (
-                    <pre className="overflow-auto rounded bg-muted p-2 text-xs">
-                      {JSON.stringify(record.steps, null, 2)}
-                    </pre>
+                    <div className="space-y-2 p-2 text-xs">
+                      <div className="text-muted-foreground">
+                        {t('integrations.entra.diagnostics.clients.details.completed', {
+                          defaultValue: 'Complete',
+                        })}
+                        : {record.isComplete ? 'yes' : 'no'}
+                      </div>
+                      {latestFailuresByClient.get(record.clientId) && (
+                        <div className="rounded bg-muted p-2">
+                          <div className="font-medium">
+                            {t('integrations.entra.diagnostics.clients.details.latestSyncFailure', {
+                              defaultValue: 'Latest sync failure',
+                            })}
+                          </div>
+                          <div>
+                            {latestFailuresByClient.get(record.clientId)?.at ?? ''}{' '}
+                            {latestFailuresByClient.get(record.clientId)?.message ?? ''}
+                          </div>
+                        </div>
+                      )}
+                      <pre className="overflow-auto rounded bg-muted p-2">{JSON.stringify(record.steps, null, 2)}</pre>
+                    </div>
                   )}
                 />
               )}

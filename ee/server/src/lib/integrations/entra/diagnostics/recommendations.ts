@@ -15,7 +15,15 @@ const SEVERITY_RANK: Record<DiagnosticsSeverity, number> = {
  */
 function recommendationKey(rec: DiagnosticsRecommendation): string {
   const action = rec.action ? `${rec.action.kind}:${rec.action.payload}` : '';
-  return `${rec.code}|${action}`;
+  // Include interpolation parameters (the affected context) so two different
+  // missing mapped tenants or scopes remain visible instead of collapsing.
+  const params = rec.params
+    ? Object.keys(rec.params)
+        .sort()
+        .map((key) => `${key}=${String(rec.params![key])}`)
+        .join(',')
+    : '';
+  return `${rec.code}|${params}|${action}`;
 }
 
 /**

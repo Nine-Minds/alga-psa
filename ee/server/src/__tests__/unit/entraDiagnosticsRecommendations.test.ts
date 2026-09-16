@@ -24,6 +24,16 @@ describe('dedupeRecommendations', () => {
     expect(result).toHaveLength(2);
   });
 
+  it('keeps the same code for different affected contexts (two mapped tenants)', () => {
+    const result = dedupeRecommendations([
+      { code: 'mapped_tenant_missing', severity: 'warn', text: 'a', params: { client: 'Acme' } },
+      { code: 'mapped_tenant_missing', severity: 'warn', text: 'b', params: { client: 'Beta' } },
+      { code: 'mapped_tenant_missing', severity: 'warn', text: 'a2', params: { client: 'Acme' } },
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result.map((r) => r.params?.client)).toEqual(['Acme', 'Beta']);
+  });
+
   it('orders fail before warn before info while preserving stable order', () => {
     const recs: DiagnosticsRecommendation[] = [
       { code: 'i1', severity: 'info', text: 'info' },

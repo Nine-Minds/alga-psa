@@ -111,8 +111,66 @@ function extractPrimaryDomain(raw: Record<string, unknown>): string | null {
   return null;
 }
 
+export interface CippTenantProbe {
+  reachable: boolean;
+  authRejected: boolean;
+  endpoint: string | null;
+  attempted: string[];
+  status?: number;
+  networkCode?: string;
+  error?: string;
+  tenants: EntraManagedTenantRecord[];
+}
+
+function mapCippTenants(payload: unknown): EntraManagedTenantRecord[] {
+  const rows = extractCollection(payload);
+  const tenants: EntraManagedTenantRecord[] = [];
+  const seen = new Set<string>();
+
+  for (const row of rows) {
+    const raw = toObject(row);
+    // Real CIPP ListTenants identifies a tenant as `customerId`.
+    const entraTenantId =
+      toStringOrNull(raw.customerId) ||
+      toStringOrNull(raw.tenantId) ||
+      toStringOrNull(raw.id) ||
+      toStringOrNull(raw.customerTenantId);
+    if (!entraTenantId || seen.has(entraTenantId)) {
+      continue;
+    }
+
+    seen.add(entraTenantId);
+    tenants.push({
+      entraTenantId,
+      displayName:
+        toStringOrNull(raw.displayName) ||
+        toStringOrNull(raw.name) ||
+        toStringOrNull(raw.tenantName),
+      primaryDomain: extractPrimaryDomain(raw),
+      sourceUserCount:
+        toNumber(raw.userCount) ||
+        toNumber(raw.usersCount) ||
+        toNumber(raw.licensedUsers),
+      raw,
+    });
+  }
+
+  return tenants;
+}
+
 /** How long CIPP gets to answer one call before we call it a timeout. */
 const CIPP_REQUEST_TIMEOUT_MS = 20_000;
+
+/**
+ * Candidate tenant-list endpoints in the order the integration has always
+ * tried them. The first is stock CIPP-API; the aliases are kept for older
+ * deployments.
+ */
+const CIPP_TENANT_LIST_CANDIDATES = [
+  '/api/listtenants',
+  '/api/tenant/list',
+  '/api/tenants',
+];
 
 export class CippProviderAdapter implements EntraProviderAdapter {
   public readonly connectionType = 'cipp' as const;
@@ -192,40 +250,82 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
       '/api/listtenants',
     ]);
-    const rows = extractCollection(payload);
+    return mapCippTenants(payload);
+  }
 
-    const tenants: EntraManagedTenantRecord[] = [];
-    const seen = new Set<string>();
-
-    for (const row of rows) {
-      const raw = toObject(row);
-      // Real CIPP ListTenants identifies a tenant as `customerId`.
-      const entraTenantId =
-        toStringOrNull(raw.customerId) ||
-        toStringOrNull(raw.tenantId) ||
-        toStringOrNull(raw.id) ||
-        toStringOrNull(raw.customerTenantId);
-      if (!entraTenantId || seen.has(entraTenantId)) {
-        continue;
-      }
-
-      seen.add(entraTenantId);
-      tenants.push({
-        entraTenantId,
-        displayName:
-          toStringOrNull(raw.displayName) ||
-          toStringOrNull(raw.name) ||
-          toStringOrNull(raw.tenantName),
-        primaryDomain: extractPrimaryDomain(raw),
-        sourceUserCount:
-          toNumber(raw.userCount) ||
-          toNumber(raw.usersCount) ||
-          toNumber(raw.licensedUsers),
-        raw,
-      });
+  /**
+   * Read-only tenant-list probe that preserves endpoint-fallback and
+   * normalization evidence for diagnostics. It reuses the same candidate
+   * order, credential remedies, and tenant mapping as listManagedTenants.
+   */
+  public async probeTenantList(tenant: string): Promise<CippTenantProbe> {
+    const credentials = await getEntraCippCredentials(tenant);
+    if (!credentials) {
+      throw new Error('CIPP credentials are not configured.');
     }
 
-    return tenants;
+    const base = credentials.baseUrl.replace(/\/+$/, '');
+    const attempted: string[] = [];
+    let lastError: unknown = null;
+    let sawHttpResponse = false;
+
+    for (const candidate of CIPP_TENANT_LIST_CANDIDATES) {
+      const url = `${base}${candidate}`;
+      attempted.push(url);
+      try {
+        const response = await axios.get(url, {
+          timeout: CIPP_REQUEST_TIMEOUT_MS,
+          headers: {
+            Authorization: `Bearer ${credentials.apiToken}`,
+            'X-API-KEY': credentials.apiToken,
+          },
+        });
+        sawHttpResponse = true;
+        return {
+          reachable: true,
+          authRejected: false,
+          endpoint: url,
+          attempted,
+          status: response.status,
+          tenants: mapCippTenants(response.data),
+        };
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          const status = error.response?.status;
+          if (status === 401 || status === 403) {
+            return {
+              reachable: true,
+              authRejected: true,
+              endpoint: url,
+              attempted,
+              status,
+              tenants: [],
+            };
+          }
+          if (status === 404) {
+            sawHttpResponse = true;
+            lastError = error;
+            continue;
+          }
+          if (status) {
+            sawHttpResponse = true;
+          }
+        }
+        lastError = error;
+      }
+    }
+
+    const axiosError = axios.isAxiosError(lastError) ? lastError : null;
+    return {
+      reachable: sawHttpResponse,
+      authRejected: false,
+      endpoint: null,
+      attempted,
+      status: axiosError?.response?.status,
+      networkCode: axiosError?.code,
+      error: axiosError ? axiosError.message : (lastError as Error)?.message,
+      tenants: [],
+    };
   }
 
   public async listUsersForTenant(

@@ -1,11 +1,15 @@
 import type {
   DiagnosticsErrorMeta,
   DiagnosticsHttpMeta,
-  DiagnosticsStepStatus,
   DiagnosticsRecommendation,
+  DiagnosticsStepStatus,
   EntraDiagnosticsStep,
 } from '@alga-psa/types';
-import { classifyGraphFailure } from '@alga-psa/shared/services/diagnostics';
+import {
+  classifyGraphFailure,
+  createDiagnosticsRunner,
+} from '@alga-psa/shared/services/diagnostics';
+import { classifyEntraOAuthFailure } from './oauthClassifier';
 
 export interface EntraStepOutcome {
   status: DiagnosticsStepStatus;
@@ -34,13 +38,44 @@ export interface EntraStepRunner {
 }
 
 /**
- * Dependency-aware Entra step runner. A failed prerequisite produces a `skip`
- * step with `blockedBy`, but independent steps continue to run. Unexpected
- * errors are classified with the shared Graph classifier so correlation ids
- * survive.
+ * Dependency-aware Entra step runner. It composes the shared timed runner for
+ * timing/error capture and adds only the Entra-specific behavior: dependency
+ * skips with `blockedBy`, structured recommendations, and OAuth-aware
+ * classification of thrown errors.
  */
 export function createEntraStepRunner(): EntraStepRunner {
-  const steps: EntraDiagnosticsStep[] = [];
+  const recommendationsById = new Map<string, DiagnosticsRecommendation[]>();
+
+  const shared = createDiagnosticsRunner({
+    classifyError: (error): DiagnosticsErrorMeta => {
+      const failure = classifyGraphFailure(error);
+      return {
+        message: failure.message,
+        status: failure.status,
+        code: failure.code,
+        requestId: failure.requestId,
+        clientRequestId: failure.clientRequestId,
+        responseBody: failure.responseBody,
+      };
+    },
+    onError: (error, stepId) => {
+      const classified = classifyEntraOAuthFailure({
+        message: (error as any)?.message,
+        httpStatus: (error as any)?.response?.status,
+        code: (error as any)?.code,
+        responseBody: (error as any)?.response?.data,
+        context: 'partner',
+      });
+      if (classified.recommendation) {
+        recommendationsById.set(stepId, [
+          ...(recommendationsById.get(stepId) ?? []),
+          classified.recommendation,
+        ]);
+      }
+    },
+  });
+
+  const steps = shared.steps;
   const statuses = new Map<string, DiagnosticsStepStatus>();
 
   const runStep: EntraStepRunner['runStep'] = async (id, title, options, fn) => {
@@ -59,51 +94,27 @@ export function createEntraStepRunner(): EntraStepRunner {
         blockedBy,
         data: options.skipReason ? { reason: options.skipReason } : undefined,
       };
-      steps.push(step);
+      shared.push(step);
       statuses.set(id, 'skip');
       return step;
     }
 
-    const stepStarted = Date.now();
-    const startedAt = new Date().toISOString();
-    try {
-      const partial = await fn();
-      const step: EntraDiagnosticsStep = {
-        id,
-        title,
-        startedAt,
-        durationMs: Date.now() - stepStarted,
-        status: partial.status,
-        http: partial.http,
-        data: partial.data,
-        error: partial.error,
-        recommendations: partial.recommendations,
-      };
-      steps.push(step);
-      statuses.set(id, step.status);
-      return step;
-    } catch (error: unknown) {
-      const classified = classifyGraphFailure(error);
-      const errorMeta: DiagnosticsErrorMeta = {
-        message: classified.message,
-        status: classified.status,
-        code: classified.code,
-        requestId: classified.requestId,
-        clientRequestId: classified.clientRequestId,
-        responseBody: classified.responseBody,
-      };
-      const step: EntraDiagnosticsStep = {
-        id,
-        title,
-        startedAt,
-        durationMs: Date.now() - stepStarted,
-        status: 'fail',
-        error: errorMeta,
-      };
-      steps.push(step);
-      statuses.set(id, 'fail');
-      return step;
+    const step = await shared.runStep(id, title, async () => {
+      const outcome = await fn();
+      if (outcome.recommendations?.length) {
+        recommendationsById.set(id, outcome.recommendations);
+      }
+      const { recommendations: _recommendations, ...partial } = outcome;
+      return partial;
+    });
+
+    const enriched = step as EntraDiagnosticsStep;
+    const collected = recommendationsById.get(id);
+    if (collected?.length) {
+      enriched.recommendations = collected;
     }
+    statuses.set(id, step.status);
+    return enriched;
   };
 
   return { steps, statuses, runStep };

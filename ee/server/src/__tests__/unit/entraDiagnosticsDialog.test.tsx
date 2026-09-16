@@ -172,6 +172,17 @@ describe('EntraDiagnosticsDialog', () => {
       expect(writeText).toHaveBeenCalled();
     });
     const copied = writeText.mock.calls[0][0] as string;
-    expect(copied).toContain('<redacted>');
+    // Default export redacts identifiers; correlation ids survive.
+    expect(copied).not.toContain(GUID);
+    expect(copied).toContain('"generatedAt"');
+
+    // The explicit include-identifiers control retains them.
+    writeText.mockClear();
+    fireEvent.click(document.getElementById('entra-diag-export-identifiers') as HTMLElement);
+    fireEvent.click(document.getElementById('entra-diag-copy-bundle') as HTMLElement);
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled();
+    });
+    expect(writeText.mock.calls[0][0]).toContain(GUID);
   });
 });

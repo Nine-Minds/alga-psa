@@ -4,12 +4,13 @@ import type {
   DiagnosticsRecommendation,
   EntraConnectionDiagnosticsOptions,
   EntraConnectionType,
+  EntraDiagnosticsReadiness,
   EntraDiagnosticsReport,
   EntraDiagnosticsSummary,
 } from '@alga-psa/types';
 import {
   buildTokenFingerprint,
-  classifyGraphFailure,
+  computeOverallStatus,
   decodeJwtPayload,
 } from '@alga-psa/shared/services/diagnostics';
 import { getMicrosoftGraphBaseUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
@@ -28,11 +29,11 @@ import {
   type EntraDirectProbeResult,
 } from '../providers/direct/directProbe';
 import { createDirectProviderAdapter } from '../providers/direct/directProviderAdapter';
+import { CippProviderAdapter, type CippTenantProbe } from '../providers/cipp/cippProviderAdapter';
 import { getEntraCippCredentials } from '../providers/cipp/cippSecretStore';
-import { probeCippWithDetail } from './cippDiagnosticsProbe';
 import { listConfirmedEntraMappings } from '../mapping/confirmedMappingsService';
 import { getEntraSyncSchedule } from '../scheduleService';
-import { getEntraSyncRunHistory, getEntraSyncRunProgress } from '../entraWorkflowClient';
+import { getEntraSyncRunProgress } from '../entraWorkflowClient';
 import { classifyEntraOAuthFailure } from './oauthClassifier';
 import { dedupeRecommendations } from './recommendations';
 import { applyReportRedaction, createSupportBundle } from './redaction';
@@ -138,7 +139,9 @@ async function inspectBinding(tenant: string): Promise<BindingInspection> {
   let clientSecret: string | null = null;
   if (base.clientSecretRef) {
     const secretProvider = await getSecretProviderInstance();
-    clientSecret = (await secretProvider.getTenantSecret(tenant, base.clientSecretRef)) ?? null;
+    const resolved = await secretProvider.getTenantSecret(tenant, base.clientSecretRef);
+    // Reject whitespace-only secrets; they are not usable credentials.
+    clientSecret = typeof resolved === 'string' && resolved.trim().length > 0 ? resolved : null;
   }
   if (!clientSecret) {
     return { ...base, outcome: 'missing_secret', clientSecret: null };
@@ -149,6 +152,86 @@ async function inspectBinding(tenant: string): Promise<BindingInspection> {
 
 function expectedScopes(): string[] {
   return ENTRA_DIRECT_DELEGATED_SCOPES.filter((s) => s !== 'offline_access');
+}
+
+interface RecentRunRow {
+  runId: string;
+  status: string;
+  runType: string;
+  startedAt: string;
+  completedAt: string | null;
+  isDryRun: boolean;
+  totalTenants: number;
+  succeededTenants: number;
+  failedTenants: number;
+}
+
+async function loadRecentRuns(tenant: string, limit = 20): Promise<RecentRunRow[]> {
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const rows = (await db
+    .table('entra_sync_runs')
+    .orderBy('started_at', 'desc')
+    .limit(limit)
+    .select([
+      'run_id',
+      'status',
+      'run_type',
+      'started_at',
+      'completed_at',
+      'is_dry_run',
+      'total_tenants',
+      'succeeded_tenants',
+      'failed_tenants',
+    ])) as Array<Record<string, unknown>>;
+
+  return rows.map((row) => ({
+    runId: String(row.run_id),
+    status: String(row.status),
+    runType: String(row.run_type),
+    startedAt: row.started_at instanceof Date ? row.started_at.toISOString() : String(row.started_at),
+    completedAt:
+      row.completed_at instanceof Date
+        ? row.completed_at.toISOString()
+        : row.completed_at
+          ? String(row.completed_at)
+          : null,
+    isDryRun: Boolean(row.is_dry_run),
+    totalTenants: Number(row.total_tenants ?? 0),
+    succeededTenants: Number(row.succeeded_tenants ?? 0),
+    failedTenants: Number(row.failed_tenants ?? 0),
+  }));
+}
+
+async function loadRunTotals(
+  tenant: string,
+  runIds: string[]
+): Promise<Map<string, Record<string, number>>> {
+  const totals = new Map<string, Record<string, number>>();
+  if (runIds.length === 0) return totals;
+  const { knex } = await createTenantKnex();
+  const rows = (await tenantDb(knex, tenant)
+    .table('entra_sync_run_tenants')
+    .whereIn('run_id', runIds)
+    .groupBy('run_id')
+    .select('run_id')
+    .sum({
+      created: 'created_count',
+      linked: 'linked_count',
+      updated: 'updated_count',
+      ambiguous: 'ambiguous_count',
+      inactivated: 'inactivated_count',
+    })) as Array<Record<string, unknown>>;
+  for (const row of rows) {
+    totals.set(String(row.run_id), {
+      created: Number(row.created ?? 0),
+      linked: Number(row.linked ?? 0),
+      updated: Number(row.updated ?? 0),
+      ambiguous: Number(row.ambiguous ?? 0),
+      inactivated: Number(row.inactivated ?? 0),
+    });
+  }
+  return totals;
 }
 
 export async function runEntraConnectionDiagnostics(
@@ -170,20 +253,46 @@ export async function runEntraConnectionDiagnostics(
   const isDirect = connectionType === 'direct';
   const isCipp = connectionType === 'cipp';
 
-  // Layer 1.1 readiness: the route gate already enforced edition/tier/RBAC.
+  const readiness: EntraDiagnosticsReadiness = options.readiness ?? {
+    authenticated: true,
+    clientPortal: false,
+    edition: isEeEdition() ? 'enterprise' : 'community',
+    checks: [
+      { key: 'authenticated', ok: true },
+      { key: 'notClientPortal', ok: true },
+      { key: 'edition', ok: isEeEdition() },
+      { key: 'integrationsTier', ok: true },
+      { key: 'entraSyncTier', ok: true },
+      { key: 'systemSettingsRead', ok: true },
+    ],
+    ok: true,
+    deniedReason: null,
+  };
+
+  // Layer 1.1 readiness: report the real access subchecks, not hardcoded success.
   await runStep(
     'edition_tier_rbac',
     'Edition, tier, and access readiness',
     {},
     async () => ({
-      status: 'pass' as const,
+      status: readiness.ok ? ('pass' as const) : ('fail' as const),
       data: {
-        edition: isEeEdition() ? 'enterprise' : 'community',
-        integrationsTierGranted: true,
-        entraSyncTierGranted: true,
-        systemSettingsReadGranted: true,
-        note: 'Access was verified by the Entra guard before diagnostics ran.',
+        edition: readiness.edition,
+        checks: readiness.checks,
+        deniedReason: readiness.deniedReason,
+        note: 'Access is enforced by the Entra guard before diagnostics run.',
       },
+      error: readiness.ok ? undefined : { message: readiness.deniedReason ?? 'Access denied.' },
+      recommendations: readiness.ok
+        ? undefined
+        : [
+            {
+              code: 'entra_access_denied',
+              severity: 'fail',
+              text: readiness.deniedReason ?? 'Access to Entra diagnostics is denied.',
+              messageKey: 'entraAccessDenied',
+            },
+          ],
     })
   );
 
@@ -291,19 +400,23 @@ export async function runEntraConnectionDiagnostics(
             error: { message: 'The bound app registration has no client id.' },
           };
         default:
+          // Includes missing_secret: the binding resolves, but the secret check
+          // is where a missing secret fails.
           return {
             status: 'pass' as const,
             data: {
               profileName: binding.profileDisplayName,
               clientId: binding.clientId,
               tenantId: binding.tenantId,
+              secretPresent: binding.outcome === 'ok',
             },
           };
       }
     }
   );
 
-  // Layer 1.4 client secret presence (Direct only).
+  // Layer 1.4 client secret presence (Direct only). A missing secret fails and
+  // blocks the credential-dependent refresh/discovery work.
   await runStep(
     'client_secret_present',
     'App registration client secret',
@@ -315,13 +428,27 @@ export async function runEntraConnectionDiagnostics(
           data: { reason: 'Not applicable to CIPP connections.' },
         };
       }
-      if (!binding || binding.outcome !== 'ok') {
+      if (!binding || binding.outcome === 'missing_binding' || binding.outcome === 'missing_profile') {
+        return { status: 'skip' as const, data: { reason: 'No usable app registration is bound.' } };
+      }
+      if (binding.outcome === 'archived_profile' || binding.outcome === 'missing_capability') {
+        return { status: 'skip' as const, data: { reason: 'The bound app registration is not usable.' } };
+      }
+      if (binding.outcome !== 'ok' || !binding.clientSecret) {
+        const rec: DiagnosticsRecommendation = {
+          code: 'client_secret_missing',
+          severity: 'fail',
+          text: 'The app registration client secret is missing or empty. Rotate the secret in Azure and update the app registration in Settings > Integrations > Microsoft.',
+          messageKey: 'clientSecretMissing',
+        };
+        collect([rec]);
         return {
-          status: 'skip' as const,
-          data: { reason: 'No usable app registration is bound.' },
+          status: 'fail' as const,
+          error: { message: rec.text },
+          recommendations: [rec],
         };
       }
-      const fingerprint = buildTokenFingerprint(binding.clientSecret ?? undefined);
+      const fingerprint = buildTokenFingerprint(binding.clientSecret);
       collect([
         {
           code: 'secret_expiry_unknown',
@@ -334,7 +461,7 @@ export async function runEntraConnectionDiagnostics(
         status: 'pass' as const,
         data: {
           secretFingerprint: fingerprint,
-          lastFour: binding.clientSecret ? binding.clientSecret.slice(-4) : null,
+          lastFour: binding.clientSecret.slice(-4),
           expiry: 'unknown',
           expiryGuidance: 'Microsoft client secrets expire in 6-24 months.',
         },
@@ -375,17 +502,40 @@ export async function runEntraConnectionDiagnostics(
       temporalNamespace: temporal.namespace,
       temporalTaskQueue: temporal.taskQueue,
       workerPollerEvidence: temporal.workerEvidence,
-      scheduleNextFireTime: describe.nextFireTime,
+      scheduleLookupFailed: describe.lookupFailed,
       scheduleConfigured: describe.configured,
+      scheduleNextFireTime: describe.nextFireTime,
+      scheduleIntervalMinutes: describe.intervalMinutes,
+      schedulePaused: describe.paused,
+      scheduleIntervalMatchesSettings:
+        describe.intervalMinutes === null
+          ? null
+          : Math.round(describe.intervalMinutes) === Math.round(schedule.syncIntervalMinutes),
     };
 
     if (!temporal.reachable) {
       collect([
         {
           code: 'temporal_unreachable',
-          severity: 'warn',
-          text: 'The Temporal frontend could not be reached. Automatic sync and sync-triggered workflows will not run until it is available.',
+          severity: 'fail',
+          text: 'The Temporal frontend could not be reached. Automatic sync cannot run until it is available.',
           messageKey: 'temporalUnreachable',
+        },
+      ]);
+      return {
+        status: 'fail' as const,
+        data,
+        error: { message: temporal.error ?? 'Temporal frontend is unreachable.' },
+      };
+    }
+
+    if (temporal.workerEvidence === 'none') {
+      collect([
+        {
+          code: 'temporal_no_workers',
+          severity: 'warn',
+          text: 'Temporal is reachable but no worker is polling the Entra task queue. Scheduled syncs will not be processed.',
+          messageKey: 'temporalNoWorkers',
         },
       ]);
       return { status: 'warn' as const, data };
@@ -403,6 +553,18 @@ export async function runEntraConnectionDiagnostics(
       return { status: 'warn' as const, data };
     }
 
+    if (describe.lookupFailed) {
+      collect([
+        {
+          code: 'schedule_lookup_failed',
+          severity: 'warn',
+          text: 'The Temporal schedule could not be inspected. Verify Temporal permissions and connectivity.',
+          messageKey: 'scheduleLookupFailed',
+        },
+      ]);
+      return { status: 'warn' as const, data, error: { message: describe.error } };
+    }
+
     if (!describe.configured) {
       collect([
         {
@@ -415,15 +577,30 @@ export async function runEntraConnectionDiagnostics(
       return { status: 'warn' as const, data };
     }
 
+    if (data.scheduleIntervalMatchesSettings === false) {
+      collect([
+        {
+          code: 'schedule_interval_mismatch',
+          severity: 'warn',
+          text: `The Temporal schedule interval (${describe.intervalMinutes} min) does not match the saved setting (${schedule.syncIntervalMinutes} min). Save the schedule to reconcile it.`,
+          messageKey: 'scheduleIntervalMismatch',
+        },
+      ]);
+      return { status: 'warn' as const, data };
+    }
+
     return { status: 'pass' as const, data };
   });
 
   // Direct token layers 2 & 3.
   let refreshedAccessToken: string | null = null;
+  const credentialDeps = isDirect
+    ? ['app_registration_binding', 'client_secret_present']
+    : ['app_registration_binding'];
   await runStep(
     'token_set_present',
     'Stored Direct OAuth tokens',
-    { requires: ['app_registration_binding'] },
+    { requires: credentialDeps },
     async () => {
       if (!isDirect) {
         return { status: 'skip' as const, data: { reason: 'Not a Direct connection.' } };
@@ -487,18 +664,29 @@ export async function runEntraConnectionDiagnostics(
       } catch (error: any) {
         const classified = classifyEntraOAuthFailure({
           message: error?.message,
+          httpStatus: error?.status ?? error?.response?.status,
+          code: error?.code,
+          oauthError: error?.oauthError,
+          suberror: error?.suberror,
+          aadstsCode: error?.aadstsCode,
+          responseBody: error?.responseBody ?? error?.response?.data,
           context: 'partner',
         });
-        collect([classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
+        const rec = classified.recommendation;
+        collect([rec].filter(Boolean) as DiagnosticsRecommendation[]);
         return {
           status: 'fail' as const,
           error: {
             message: classified.remedy,
-            aadstsCode: classified.aadstsCode ?? undefined,
+            status: classified.httpStatus ?? undefined,
+            code: error?.code,
             oauthError: classified.oauthError ?? undefined,
             suberror: classified.suberror ?? undefined,
+            aadstsCode: classified.aadstsCode ?? undefined,
+            requestId: error?.requestId ?? error?.response?.headers?.['request-id'],
+            clientRequestId: error?.response?.headers?.['client-request-id'],
           },
-          recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
+          recommendations: [rec].filter(Boolean) as DiagnosticsRecommendation[],
         };
       }
     }
@@ -605,7 +793,7 @@ export async function runEntraConnectionDiagnostics(
   await runStep(
     'managed_tenants_endpoint',
     'Managed tenants endpoint reachability',
-    { requires: ['token_refresh'] },
+    { requires: ['token_refresh', 'token_claims'] },
     async () => {
       if (!isDirect || !refreshedAccessToken) {
         return { status: 'skip' as const, data: { reason: 'No refreshed Direct token available.' } };
@@ -620,6 +808,21 @@ export async function runEntraConnectionDiagnostics(
         };
       }
       const failedProbe = probe as Extract<EntraDirectProbeResult, { valid: false }>;
+      if (failedProbe.status === 400) {
+        const rec: DiagnosticsRecommendation = {
+          code: 'managed_tenants_endpoint_fault',
+          severity: 'fail',
+          text: 'Graph rejected the managedTenants request; this is an Alga-side endpoint fault. Contact support with the request id.',
+          messageKey: 'managedTenantsEndpointFault',
+        };
+        collect([rec]);
+        return {
+          status: 'fail' as const,
+          http: { method: 'GET', path: endpoint, status: 400 },
+          error: { message: rec.text, status: 400 },
+          recommendations: [rec],
+        };
+      }
       const rec = classifyEntraOAuthFailure({
         httpStatus: failedProbe.status,
         code: failedProbe.code,
@@ -629,12 +832,17 @@ export async function runEntraConnectionDiagnostics(
       collect([rec.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
       return {
         status: 'fail' as const,
-        http: { method: 'GET', path: endpoint, status: failedProbe.status },
+        http: {
+          method: 'GET',
+          path: endpoint,
+          status: failedProbe.status,
+          requestId: failedProbe.requestId,
+        },
         error: {
-          message:
-            failedProbe.code === 'validation_failed' && failedProbe.status === 400
-              ? 'Graph rejected the managedTenants request; this is an Alga-side endpoint fault. Contact support with the request id.'
-              : failedProbe.error,
+          message: rec.remedy,
+          status: failedProbe.status,
+          code: failedProbe.code,
+          requestId: failedProbe.requestId,
         },
         recommendations: [rec.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
       };
@@ -666,10 +874,7 @@ export async function runEntraConnectionDiagnostics(
             messageKey: 'noManagedTenants',
           },
         ]);
-        return {
-          status: 'warn' as const,
-          data: { count: 0, sample: [] },
-        };
+        return { status: 'warn' as const, data: { count: 0, sample: [] } };
       }
       return {
         status: 'pass' as const,
@@ -677,6 +882,13 @@ export async function runEntraConnectionDiagnostics(
       };
     }
   );
+
+  let mappings: Awaited<ReturnType<typeof listConfirmedEntraMappings>> = [];
+  try {
+    mappings = await listConfirmedEntraMappings(tenant);
+  } catch {
+    mappings = [];
+  }
 
   await runStep(
     'mappings_vs_discovery',
@@ -686,7 +898,6 @@ export async function runEntraConnectionDiagnostics(
       if (!isDirect) {
         return { status: 'skip' as const, data: { reason: 'Not a Direct connection.' } };
       }
-      const mappings = await listConfirmedEntraMappings(tenant);
       const discoveredIds = new Set(discoveredTenants.map((t) => t.entraTenantId));
       const missingMapped = mappings.filter((m) => !discoveredIds.has(m.entraTenantId));
       const mappedIds = new Set(mappings.map((m) => m.entraTenantId));
@@ -698,9 +909,6 @@ export async function runEntraConnectionDiagnostics(
         text: `Mapped tenant "${m.clientName || m.displayName || m.entraTenantId}" was not returned by discovery. GDAP may have expired or been terminated.`,
         messageKey: 'mappedTenantMissing',
         params: { client: m.clientName || m.displayName || m.entraTenantId },
-        action: includeIdentifiers
-          ? undefined
-          : undefined,
       }));
       collect(recs);
       return {
@@ -719,41 +927,34 @@ export async function runEntraConnectionDiagnostics(
     }
   );
 
-  // CIPP layers C.1-C.5.
-  await runStep(
-    'cipp_credentials_present',
-    'CIPP credentials',
-    {},
-    async () => {
-      if (!isCipp) {
-        return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
-      }
-      const credentials = await getEntraCippCredentials(tenant);
-      if (!credentials?.baseUrl || !credentials?.apiToken) {
-        collect([
-          {
-            code: 'cipp_credentials_missing',
-            severity: 'fail',
-            text: 'CIPP base URL and API token are required. Configure them on the Connection tab.',
-            messageKey: 'cippCredentialsMissing',
-          },
-        ]);
-        return {
-          status: 'fail' as const,
-          error: { message: 'CIPP credentials are not configured.' },
-        };
-      }
-      return {
-        status: 'pass' as const,
-        data: {
-          baseUrl: credentials.baseUrl,
-          apiTokenFingerprint: buildTokenFingerprint(credentials.apiToken),
-        },
-      };
+  // CIPP layers C.1-C.5 (Direct-only steps above already skip on CIPP).
+  let cippProbe: CippTenantProbe | null = null;
+  let cippProbeError: string | null = null;
+  await runStep('cipp_credentials_present', 'CIPP credentials', {}, async () => {
+    if (!isCipp) {
+      return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
     }
-  );
+    const credentials = await getEntraCippCredentials(tenant);
+    if (!credentials?.baseUrl || !credentials?.apiToken) {
+      collect([
+        {
+          code: 'cipp_credentials_missing',
+          severity: 'fail',
+          text: 'CIPP base URL and API token are required. Configure them on the Connection tab.',
+          messageKey: 'cippCredentialsMissing',
+        },
+      ]);
+      return { status: 'fail' as const, error: { message: 'CIPP credentials are not configured.' } };
+    }
+    return {
+      status: 'pass' as const,
+      data: {
+        baseUrl: credentials.baseUrl,
+        apiTokenFingerprint: buildTokenFingerprint(credentials.apiToken),
+      },
+    };
+  });
 
-  let cippTenants: Array<{ entraTenantId: string; displayName: string | null }> = [];
   await runStep(
     'cipp_reachable',
     'CIPP API reachability',
@@ -762,47 +963,58 @@ export async function runEntraConnectionDiagnostics(
       if (!isCipp) {
         return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
       }
-      const credentials = await getEntraCippCredentials(tenant);
-      if (!credentials) {
-        return { status: 'skip' as const, data: { reason: 'No CIPP credentials.' } };
-      }
-      const probe = await probeCippWithDetail(credentials);
-      if (probe.reachable && !probe.authRejected) {
+      try {
+        cippProbe = await new CippProviderAdapter().probeTenantList(tenant);
+      } catch (error: any) {
+        cippProbeError = error?.message ?? 'CIPP probe failed.';
+        const rec: DiagnosticsRecommendation = {
+          code: 'cipp_unreachable',
+          severity: 'fail',
+          text: 'CIPP could not be reached. Verify the base URL and outbound connectivity.',
+          messageKey: 'cippUnreachable',
+        };
+        collect([rec]);
         return {
-          status: 'pass' as const,
-          data: {
-            attemptedEndpoints: probe.attempted,
-            answeringEndpoint: probe.endpoint,
-            status: probe.status,
-            tenantCount: probe.tenantCount,
-          },
+          status: 'fail' as const,
+          error: { message: cippProbeError },
+          recommendations: [rec],
         };
       }
-      if (probe.authRejected) {
-        // Reachable but rejected: attributed to cipp_auth, not duplicated here.
+      if (cippProbe.authRejected) {
         return {
           status: 'warn' as const,
           data: {
-            attemptedEndpoints: probe.attempted,
-            answeringEndpoint: probe.endpoint,
-            status: probe.status,
+            attemptedEndpoints: cippProbe.attempted,
+            answeringEndpoint: cippProbe.endpoint,
+            status: cippProbe.status,
             reachable: true,
             note: 'Reachability proven; the credential was rejected and is reported by CIPP authentication.',
           },
         };
       }
-      const rec = classifyEntraOAuthFailure({
-        message: probe.error ?? 'CIPP unreachable',
-        code: probe.networkCode,
-        httpStatus: probe.status,
-        context: 'partner',
-      });
-      collect([rec.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
+      if (!cippProbe.reachable) {
+        const rec: DiagnosticsRecommendation = {
+          code: 'cipp_unreachable',
+          severity: 'fail',
+          text: `CIPP could not be reached${cippProbe.networkCode ? ` (${cippProbe.networkCode})` : ''}. Verify the base URL, DNS/TLS, and outbound connectivity.`,
+          messageKey: 'cippUnreachable',
+          params: { cause: cippProbe.networkCode ?? cippProbe.error ?? 'unknown' },
+        };
+        collect([rec]);
+        return {
+          status: 'fail' as const,
+          data: { attemptedEndpoints: cippProbe.attempted },
+          error: { message: rec.text, status: cippProbe.status },
+          recommendations: [rec],
+        };
+      }
       return {
-        status: 'fail' as const,
-        data: { attemptedEndpoints: probe.attempted, answeringEndpoint: probe.endpoint },
-        error: { message: rec.remedy },
-        recommendations: [rec.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
+        status: 'pass' as const,
+        data: {
+          attemptedEndpoints: cippProbe.attempted,
+          answeringEndpoint: cippProbe.endpoint,
+          status: cippProbe.status,
+        },
       };
     }
   );
@@ -811,12 +1023,10 @@ export async function runEntraConnectionDiagnostics(
     if (!isCipp) {
       return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
     }
-    const credentials = await getEntraCippCredentials(tenant);
-    if (!credentials) {
-      return { status: 'skip' as const, data: { reason: 'No CIPP credentials.' } };
+    if (!cippProbe) {
+      return { status: 'skip' as const, data: { reason: cippProbeError ?? 'No probe result.' } };
     }
-    const probe = await probeCippWithDetail(credentials);
-    if (probe.authRejected) {
+    if (cippProbe.authRejected) {
       const rec: DiagnosticsRecommendation = {
         code: 'cipp_auth_rejected',
         severity: 'fail',
@@ -826,58 +1036,56 @@ export async function runEntraConnectionDiagnostics(
       collect([rec]);
       return {
         status: 'fail' as const,
-        error: { message: rec.text, status: probe.status },
+        error: { message: rec.text, status: cippProbe.status },
         recommendations: [rec],
       };
     }
-    return { status: 'pass' as const, data: { status: probe.status } };
+    return { status: 'pass' as const, data: { status: cippProbe.status } };
   });
 
-  await runStep(
-    'cipp_tenant_list',
-    'CIPP tenant list',
-    { requires: ['cipp_auth'] },
-    async () => {
-      if (!isCipp) {
-        return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
-      }
-      const credentials = await getEntraCippCredentials(tenant);
-      if (!credentials) {
-        return { status: 'skip' as const, data: { reason: 'No CIPP credentials.' } };
-      }
-      const probe = await probeCippWithDetail(credentials);
-      cippTenants = probe.tenants;
-      if (cippTenants.length === 0) {
-        collect([
-          {
-            code: 'cipp_empty_tenant_list',
-            severity: 'warn',
-            text: 'CIPP returned no tenants. Check CIPP customer visibility and configuration.',
-            messageKey: 'cippEmptyTenantList',
-          },
-        ]);
-        return { status: 'warn' as const, data: { count: 0, sample: [] } };
-      }
-      return {
-        status: 'pass' as const,
-        data: { count: cippTenants.length, sample: cippTenants.slice(0, 10) },
-      };
+  await runStep('cipp_tenant_list', 'CIPP tenant list', { requires: ['cipp_auth'] }, async () => {
+    if (!isCipp) {
+      return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
     }
-  );
+    if (!cippProbe) {
+      return { status: 'skip' as const, data: { reason: cippProbeError ?? 'No probe result.' } };
+    }
+    const tenants = cippProbe.tenants;
+    if (tenants.length === 0) {
+      collect([
+        {
+          code: 'cipp_empty_tenant_list',
+          severity: 'warn',
+          text: 'CIPP returned no tenants. Check CIPP customer visibility and configuration.',
+          messageKey: 'cippEmptyTenantList',
+        },
+      ]);
+      return { status: 'warn' as const, data: { count: 0, sample: [] } };
+    }
+    return {
+      status: 'pass' as const,
+      data: {
+        count: tenants.length,
+        sample: tenants.slice(0, 10).map((t) => ({
+          entraTenantId: t.entraTenantId,
+          displayName: t.displayName,
+        })),
+      },
+    };
+  });
 
   await runStep(
     'cipp_mappings_vs_list',
     'Confirmed mappings versus CIPP tenant list',
     { requires: ['cipp_tenant_list'] },
     async () => {
-      if (!isCipp) {
-        return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
+      if (!isCipp || !cippProbe) {
+        return { status: 'skip' as const, data: { reason: 'No CIPP tenant list available.' } };
       }
-      const mappings = await listConfirmedEntraMappings(tenant);
-      const discoveredIds = new Set(cippTenants.map((t) => t.entraTenantId));
+      const discoveredIds = new Set(cippProbe.tenants.map((t) => t.entraTenantId));
       const missingMapped = mappings.filter((m) => !discoveredIds.has(m.entraTenantId));
       const mappedIds = new Set(mappings.map((m) => m.entraTenantId));
-      const unmappedCount = cippTenants.filter((t) => !mappedIds.has(t.entraTenantId)).length;
+      const unmappedCount = cippProbe.tenants.filter((t) => !mappedIds.has(t.entraTenantId)).length;
       const recs: DiagnosticsRecommendation[] = missingMapped.map((m) => ({
         code: 'mapped_tenant_missing',
         severity: 'warn',
@@ -903,10 +1111,17 @@ export async function runEntraConnectionDiagnostics(
   );
 
   // Layer 5 sync pipeline health (always runs).
+  const recentRuns = await loadRecentRuns(tenant, 20);
+  const realRuns = recentRuns.filter((r) => !r.isDryRun);
+  const displayedRuns = recentRuns.slice(0, 5);
+  const totalsByRun = await loadRunTotals(
+    tenant,
+    displayedRuns.map((r) => r.runId)
+  );
+
   let latestRealRunId: string | null = null;
   await runStep('last_runs', 'Recent sync runs', {}, async () => {
-    const history = await getEntraSyncRunHistory(tenant, 5);
-    const runs = history.map((run) => ({
+    const runs = displayedRuns.map((run) => ({
       runId: run.runId,
       status: run.status,
       trigger: run.isDryRun ? 'preflight' : run.runType,
@@ -920,16 +1135,54 @@ export async function runEntraConnectionDiagnostics(
       totalTenants: run.totalTenants,
       succeededTenants: run.succeededTenants,
       failedTenants: run.failedTenants,
+      totals: totalsByRun.get(run.runId) ?? {
+        created: 0,
+        linked: 0,
+        updated: 0,
+        ambiguous: 0,
+        inactivated: 0,
+      },
     }));
 
-    latestRealRunId = history.find((r) => !r.isDryRun)?.runId ?? null;
+    latestRealRunId = realRuns[0]?.runId ?? null;
 
-    const realRuns = history.filter((r) => !r.isDryRun);
     const isUnsuccessful = (status: string) => status === 'failed' || status === 'partial';
     const twoConsecutive =
       realRuns.length >= 2 &&
       isUnsuccessful(realRuns[0]?.status ?? '') &&
       isUnsuccessful(realRuns[1]?.status ?? '');
+
+    // Decode the latest real failure's stored error text with the shared
+    // classifier so AADSTS remedies surface from history, not just live calls.
+    let decodedFailure: Record<string, unknown> | null = null;
+    const latestFailedReal = realRuns.find((r) => isUnsuccessful(r.status));
+    if (latestFailedReal) {
+      try {
+        const progress = await getEntraSyncRunProgress(tenant, latestFailedReal.runId);
+        const failedTenant = progress.tenantResults.find(
+          (t) => (t.status === 'failed' || t.status === 'partial') && t.errorMessage
+        );
+        const rawMessage = failedTenant?.errorMessage ?? null;
+        if (rawMessage) {
+          const classified = classifyEntraOAuthFailure({ message: rawMessage, context: 'partner' });
+          decodedFailure = {
+            runId: latestFailedReal.runId,
+            managedTenantId: failedTenant?.managedTenantId ?? null,
+            clientId: failedTenant?.clientId ?? null,
+            clientName:
+              mappings.find((m) => m.clientId === failedTenant?.clientId)?.clientName ?? null,
+            message: rawMessage,
+            aadstsCode: classified.aadstsCode,
+            suberror: classified.suberror,
+            oauthError: classified.oauthError,
+            remedy: classified.remedy,
+          };
+          if (classified.recommendation) collect([classified.recommendation]);
+        }
+      } catch {
+        decodedFailure = null;
+      }
+    }
 
     if (twoConsecutive) {
       collect([
@@ -940,12 +1193,12 @@ export async function runEntraConnectionDiagnostics(
           messageKey: 'consecutiveSyncFailures',
         },
       ]);
-      return { status: 'warn' as const, data: { runs } };
+      return { status: 'warn' as const, data: { runs, decodedFailure } };
     }
     if (runs.length === 0) {
-      return { status: 'pass' as const, data: { runs: [], noRuns: true } };
+      return { status: 'pass' as const, data: { runs: [], decodedFailure: null, noRuns: true } };
     }
-    return { status: 'pass' as const, data: { runs } };
+    return { status: 'pass' as const, data: { runs, decodedFailure } };
   });
 
   await runStep('per_tenant_last_result', 'Per-tenant result of the latest sync', {}, async () => {
@@ -953,7 +1206,10 @@ export async function runEntraConnectionDiagnostics(
       return { status: 'pass' as const, data: { tenants: [], noRun: true } };
     }
     const progress = await getEntraSyncRunProgress(tenant, latestRealRunId);
-    const failed = progress.tenantResults.filter((t) => t.status === 'failed' || t.status === 'partial');
+    const failed = progress.tenantResults.filter(
+      (t) => t.status === 'failed' || t.status === 'partial'
+    );
+    const clientById = new Map(mappings.map((m) => [m.clientId, m]));
     return {
       status: failed.length ? ('warn' as const) : ('pass' as const),
       data: {
@@ -961,6 +1217,8 @@ export async function runEntraConnectionDiagnostics(
         failedTenants: failed.map((t) => ({
           managedTenantId: t.managedTenantId,
           clientId: t.clientId,
+          clientName: t.clientId ? clientById.get(t.clientId)?.clientName ?? null : null,
+          entraTenantId: t.clientId ? clientById.get(t.clientId)?.entraTenantId ?? null : null,
           status: t.status,
           errorMessage: t.errorMessage,
           completedAt: t.completedAt,
@@ -984,6 +1242,7 @@ export async function runEntraConnectionDiagnostics(
         ? row.oldest.toISOString()
         : String(row.oldest)
       : null;
+    const oldestAgeMs = oldest ? Math.max(0, Date.now() - Date.parse(oldest)) : null;
 
     if (openCount > 0) {
       collect([
@@ -993,17 +1252,18 @@ export async function runEntraConnectionDiagnostics(
           text: `Review queue has ${openCount} item(s) waiting; ambiguous matches are never auto-linked.`,
           messageKey: 'reconciliationOpenItems',
           params: { count: openCount },
+          action: { kind: 'navigate', payload: 'reconciliation' },
         },
       ]);
       return {
         status: 'warn' as const,
-        data: { openCount, oldestCreatedAt: oldest },
+        data: { openCount, oldestCreatedAt: oldest, oldestAgeMs },
       };
     }
-    return { status: 'pass' as const, data: { openCount: 0, oldestCreatedAt: null } };
+    return { status: 'pass' as const, data: { openCount: 0, oldestCreatedAt: null, oldestAgeMs: null } };
   });
 
-  const summary = buildSummary(runner.steps, connection, connectionType, binding);
+  const summary = buildSummary(runner.steps, connection, connectionType, binding, cippProbe);
   const dedupedRecommendations = dedupeRecommendations(recommendations);
 
   const report: EntraDiagnosticsReport = {
@@ -1017,9 +1277,6 @@ export async function runEntraConnectionDiagnostics(
   };
 
   const redactedReport = applyReportRedaction(report, includeIdentifiers);
-  // Support exports are always identifier-redacted by default; an operator can
-  // opt into identifiers through the export control in the dialog. Tokens and
-  // secrets are never present regardless.
   const supportBundle = createSupportBundle(report, false);
   return { ...redactedReport, supportBundle };
 }
@@ -1028,23 +1285,18 @@ function buildSummary(
   steps: ReturnType<typeof createEntraStepRunner>['steps'],
   connection: Awaited<ReturnType<typeof getActiveEntraPartnerConnection>>,
   connectionType: EntraConnectionType | null,
-  binding: BindingInspection | null
+  binding: BindingInspection | null,
+  cippProbe: CippTenantProbe | null
 ): EntraDiagnosticsSummary {
   const byId = new Map(steps.map((s) => [s.id, s]));
-  const discovery = byId.get('managed_tenants_count')?.data as
-    | { count?: number }
-    | undefined;
+  const discovery = byId.get('managed_tenants_count')?.data as { count?: number } | undefined;
+  const cippList = byId.get('cipp_tenant_list')?.data as { count?: number } | undefined;
   const mappings = byId.get('mappings_vs_discovery')?.data as
     | { mappedClientCount?: number }
     | undefined;
   const cippMappings = byId.get('cipp_mappings_vs_list')?.data as
     | { mappedClientCount?: number }
     | undefined;
-  const overall: EntraDiagnosticsSummary['overallStatus'] = steps.some((s) => s.status === 'fail')
-    ? 'fail'
-    : steps.some((s) => s.status === 'warn')
-      ? 'warn'
-      : 'pass';
 
   return {
     connectionType,
@@ -1057,8 +1309,8 @@ function buildSummary(
       (byId.get('graph_me')?.data as any)?.userPrincipalName ??
       null,
     tokenExpiresAt: (byId.get('token_refresh')?.data as any)?.expiresAt ?? null,
-    managedTenantCount: discovery?.count ?? null,
+    managedTenantCount: discovery?.count ?? cippList?.count ?? cippProbe?.tenants.length ?? null,
     mappedClientCount: mappings?.mappedClientCount ?? cippMappings?.mappedClientCount ?? null,
-    overallStatus: overall,
+    overallStatus: computeOverallStatus(steps),
   };
 }

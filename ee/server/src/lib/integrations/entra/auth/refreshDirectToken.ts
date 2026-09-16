@@ -79,7 +79,7 @@ async function refreshEntraDirectTokenForAuthority(
         // the operator: as a plain Error the preflight/API routes collapse it
         // to their generic fallback, and only the worker's run history keeps
         // the real reason.
-        throw new EntraOperatorError(
+        const credentialError = new EntraOperatorError(
           'credential-rejected',
           'Microsoft rejected the stored credentials for this connection'
           + (detail ? ` (${detail})` : '')
@@ -87,13 +87,28 @@ async function refreshEntraDirectTokenForAuthority(
             ? '. The app has not been granted admin consent in the managed tenant — grant consent there, then retry; reconnecting will not help.'
             : '. Reconnect Microsoft Entra to resume syncing.')
         );
+        // Preserve structured Microsoft metadata for diagnostics without
+        // changing the operator-facing message or existing callers.
+        Object.assign(credentialError, {
+          status,
+          oauthError: oauthError ?? null,
+          suberror: data.suberror ?? null,
+          aadstsCode: aadsts ?? null,
+          requestId: error.response?.headers?.['request-id'],
+        });
+        throw credentialError;
       }
-      throw new EntraOperatorError(
+      const unreachableError = new EntraOperatorError(
         'unreachable',
         `Microsoft could not refresh the connection's access token${
           status ? ` (HTTP ${status})` : ''
         }. The sync will retry on its next run.`
       );
+      Object.assign(unreachableError, {
+        status,
+        requestId: error.response?.headers?.['request-id'],
+      });
+      throw unreachableError;
     }
     throw error;
   }

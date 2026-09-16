@@ -56,6 +56,22 @@ Verified: shared diagnostics tests + unchanged email regression; EE unit tests f
 
 Could not complete in this draft: live console smoke with green + two failure screenshots against the msgraph emulator; nm-store user guide (repository not located in this assignment); DB-backed integration tests and the full server `tsc` (the server typecheck exceeded available heap).
 
+## Review repairs (2026-09-16, round 2)
+
+Addressed the review findings:
+
+- Redaction is now a deep, unconditional secret sanitizer (`sanitizeDeep`) applied to every serialized field: step `data`, `error.responseBody`, client fields, recommendation text/params/actions, bundle summary, and continuation results. Secret redaction always runs; identifier redaction is controlled separately. Correlation ids are preserved. The dialog added an explicit include-identifiers export control, and exports combine both scopes with timestamps, completion state, and sync/client cross-references.
+- User yield preview now calls a supplied-token adapter seam (`listUsersForTenantWithToken`) that reuses provider normalization and paging, reports truncation honestly, and bounds pages. CIPP yield reuses the adapter and a CIPP remedy; its yield failure is a separate step from the access read.
+- Customer `tenant_token_mint` failures now pass the mapped tenant and bound application client id, so AADSTS65001 yields a real consent URL with copy/open actions. Classifier precedence is fixed (specific AADSTS beats generic invalid_client). Refresh/probe paths preserve status/OAuth/suberror/AADSTS/request-id. Recommendation dedupe now includes affected context.
+- Continuations use a real deployment signing secret via `ENTRA_DIAGNOSTICS_JOB_SECRET`/`NEXTAUTH_SECRET` and fail safely when absent; payloads are validated and size-bounded; they bind and revalidate connection id and mapping identities; changed/removed mappings are surfaced rather than silently skipped; work is bounded by request time as well as three-client batches; `maxPages` bounds the optional preview.
+- The Entra step runner now composes the shared timed runner; client overall statususes the shared fold.
+- Readiness: `evaluateEntraReadiness` produces real subchecks; routes attach readiness to denials and pass it into the connection report. Missing/whitespace secrets fail `client_secret_present` and block dependent refresh/Graph work. Discovery depends on `token_claims`. The shared callback helper is used by connect, setup metadata, and diagnostics.
+- Temporal: read-only task-queue poller evidence; schedule interval/enabled comparison with fail/warn outcomes; connections closed in finally; lookup failure distinguished from a missing schedule.
+- CIPP: single adapter probe reused for reachability/auth/list; CIPP remedies (API key) rather than GDAP; status fold includes warnings; managed-tenant summary count populated.
+- Sync health: last five runs include created/linked/updated/ambiguous/inactivated totals, trigger, and duration; latest failure decoded with the shared classifier; 20 runs fetched before dry-run filtering; client names and reconciliation oldest age included; per-tenant failures carry client identity for cross-reference.
+
+Checklists reconciled conservatively: 83/87 features and 10/40 tests implemented; emulator fault fixtures, nm-store guide, and console screenshots remain open.
+
 ## Validation and handoff
 
 Plan-only checks:

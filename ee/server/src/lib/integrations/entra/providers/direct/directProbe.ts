@@ -41,6 +41,8 @@ export type EntraDirectProbeResult =
       error: string;
       code: 'auth_rejected' | 'consent_missing' | 'validation_failed';
       status?: number;
+      /** Graph request id, preserved for support correlation. */
+      requestId?: string;
       /** Graph's own error code/message, for logs — never shown to the operator. */
       detail?: string;
     };
@@ -112,6 +114,9 @@ export async function probeEntraDirectAccess(
   } catch (error: unknown) {
     const status = axios.isAxiosError(error) ? error.response?.status : undefined;
     const detail = graphErrorDetail(error);
+    const requestId = axios.isAxiosError(error)
+      ? (error.response?.headers?.['request-id'] as string | undefined)
+      : undefined;
 
     if (status === 401) {
       return {
@@ -120,6 +125,7 @@ export async function probeEntraDirectAccess(
         error: 'Microsoft rejected the access token for this connection.',
         code: 'auth_rejected',
         status,
+        requestId,
         detail,
       };
     }
@@ -133,6 +139,7 @@ export async function probeEntraDirectAccess(
           'A Global Administrator must grant admin consent for the requested permissions.',
         code: 'consent_missing',
         status,
+        requestId,
         detail,
       };
     }
@@ -143,6 +150,7 @@ export async function probeEntraDirectAccess(
       error: 'Unable to read the Microsoft Entra managed tenant list with this connection.',
       code: 'validation_failed',
       status,
+      requestId,
       detail,
     };
   }

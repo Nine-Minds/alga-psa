@@ -47,12 +47,24 @@ describe('classifyEntraOAuthFailure', () => {
     expect(result.recommendation?.code).toBe(expected);
   });
 
-  it('classifies invalid_client as a secret rotation remedy', () => {
+  it('classifies invalid_client as a secret rotation remedy when no AADSTS code is present', () => {
     const result = classifyEntraOAuthFailure({
       message: 'invalid_client',
       context: 'partner',
     });
     expect(result.recommendation?.code).toBe('client_secret_invalid');
+  });
+
+  it('lets a specific AADSTS code beat a generic invalid_client', () => {
+    // Reproduced regression: AADSTS700016 + invalid_client was reported as a
+    // secret-rotation problem instead of app-not-found.
+    const result = classifyEntraOAuthFailure({
+      message: 'invalid_client AADSTS700016: Application with identifier was not found',
+      oauthError: 'invalid_client',
+      aadstsCode: 'AADSTS700016',
+      context: 'partner',
+    });
+    expect(result.recommendation?.code).toBe('app_not_found');
   });
 
   it('classifies a customer users 403 as a GDAP directory-role failure', () => {
@@ -87,10 +99,10 @@ describe('classifyEntraOAuthFailure', () => {
 });
 
 describe('buildCustomerConsentUrl', () => {
-  it('returns null for missing or placeholder identifiers', () => {
+  it('returns null when either identifier is missing', () => {
     expect(buildCustomerConsentUrl(null, 'aaaaaaaa-bbbb')).toBeNull();
     expect(buildCustomerConsentUrl('tenant', null)).toBeNull();
-    expect(buildCustomerConsentUrl('short', 'short')).toBeNull();
+    expect(buildCustomerConsentUrl('', '')).toBeNull();
   });
 
   it('encodes the tenant and app identifiers', () => {

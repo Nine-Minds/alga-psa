@@ -673,7 +673,51 @@
           "managedTenants": "Managed tenants",
           "recommendations": "Recommendations",
           "blockedBy": "Blocked by",
-          "error": "Error"
+          "error": "Error",
+          "readiness": "Access readiness"
+        },
+        "statuses": {
+          "pass": "Pass",
+          "warn": "Warn",
+          "fail": "Fail",
+          "skip": "Skip"
+        },
+        "steps": {
+          "edition_tier_rbac": "Edition, tier, and access readiness",
+          "connection_row": "Active Entra connection",
+          "app_registration_binding": "Microsoft app registration binding",
+          "client_secret_present": "App registration client secret",
+          "expected_app_registration_values": "Expected app registration values",
+          "sync_worker_and_schedule": "Sync worker and schedule",
+          "token_set_present": "Stored Direct OAuth tokens",
+          "token_refresh": "Refresh the partner access token",
+          "token_claims": "Decode access token claims and scopes",
+          "graph_me": "Microsoft Graph /me baseline",
+          "managed_tenants_endpoint": "Managed tenants endpoint reachability",
+          "managed_tenants_count": "Managed tenants discovery",
+          "mappings_vs_discovery": "Confirmed mappings versus live discovery",
+          "cipp_credentials_present": "CIPP credentials",
+          "cipp_reachable": "CIPP API reachability",
+          "cipp_auth": "CIPP API credential",
+          "cipp_tenant_list": "CIPP tenant list",
+          "cipp_mappings_vs_list": "Confirmed mappings versus CIPP tenant list",
+          "last_runs": "Recent sync runs",
+          "per_tenant_last_result": "Per-tenant result of the latest sync",
+          "reconciliation_queue": "Reconciliation queue",
+          "tenant_token_mint": "Mint customer tenant token",
+          "users_read": "Read directory users",
+          "groups_read": "Read directory groups",
+          "entitlement_group_resolves": "Resolve entitlement group",
+          "user_yield_preview": "User yield preview",
+          "per_tenant_users": "CIPP per-tenant users"
+        },
+        "readiness": {
+          "authenticated": "Signed in",
+          "notClientPortal": "Not a client portal user",
+          "edition": "Enterprise Edition",
+          "integrationsTier": "Integrations tier",
+          "entraSyncTier": "Entra Sync tier (Pro)",
+          "systemSettingsRead": "system_settings read"
         },
         "states": {
           "running": "Running diagnostics..."
@@ -688,7 +732,10 @@
           "downloadJson": "Download JSON",
           "copy": "Copy",
           "open": "Open",
-          "goToStep": "Go to step"
+          "open_url": "Open",
+          "navigate": "Go to",
+          "goToStep": "Go to step",
+          "includeIdentifiers": "Include identifiers in export"
         },
         "clients": {
           "title": "Selected client diagnostics",
@@ -700,6 +747,19 @@
           "confirmMessage": "You selected {{count}} clients. Each client is issued a token and makes a small number of Graph requests.",
           "confirmRun": "Run",
           "unavailableName": "Unavailable name",
+          "selectAll": "Select all",
+          "clear": "Clear",
+          "categories": {
+            "ok": "OK",
+            "need_consent": "Consent required",
+            "conditional_access": "Conditional Access",
+            "missing_role": "Missing role",
+            "other": "Other"
+          },
+          "details": {
+            "completed": "Complete",
+            "latestSyncFailure": "Latest sync failure"
+          },
           "columns": {
             "client": "Client",
             "tenant": "Tenant",
@@ -714,22 +774,45 @@
           "chooseAnotherApp": "The bound Microsoft app registration is archived. Choose another app registration, then reconnect.",
           "addEntraCapability": "Edit the app registration in Settings > Integrations > Microsoft and enable the Entra capability.",
           "secretExpiryUnknown": "Client secret expiry is unknown. Microsoft client secrets expire in 6-24 months; rotate on schedule in Azure.",
-          "temporalUnreachable": "The Temporal frontend could not be reached. Automatic sync and sync-triggered workflows will not run until it is available.",
+          "clientSecretMissing": "The app registration client secret is missing or empty. Rotate the secret in Azure and update the app registration in Settings > Integrations > Microsoft.",
+          "entraAccessDenied": "Access to Entra diagnostics is denied for this user or workspace.",
+          "temporalUnreachable": "The Temporal frontend could not be reached. Automatic sync cannot run until it is available.",
+          "temporalNoWorkers": "Temporal is reachable but no worker is polling the Entra task queue. Scheduled syncs will not be processed.",
           "syncDisabled": "Automatic Entra sync is turned off for this workspace.",
+          "scheduleLookupFailed": "The Temporal schedule could not be inspected. Verify Temporal permissions and connectivity.",
           "scheduleMissing": "Automatic sync is enabled but no Temporal schedule was found. Save the schedule to apply it.",
+          "scheduleIntervalMismatch": "The Temporal schedule interval ({{interval}} min) does not match the saved setting ({{configured}} min). Save the schedule to reconcile it.",
           "reconnectEntra": "No refresh token is stored. Reconnect Microsoft Entra.",
           "noManagedTenants": "No managed tenants were returned. The partner must be onboarded to Microsoft 365 Lighthouse with active GDAP relationships.",
           "mappedTenantMissing": "Mapped tenant \"{{client}}\" was not returned by discovery. GDAP may have expired or been terminated.",
           "cippCredentialsMissing": "CIPP base URL and API token are required. Configure them on the Connection tab.",
-          "cippAuthRejected": "CIPP rejected the API credential. Rotate the CIPP API key from Settings > CIPP > API access, not an Azure client secret.",
+          "cippAuthRejected": "CIPP rejected the API credential. Rotate the CIPP API key from Settings > CIPP > API access; this is not an Azure client secret.",
           "cippEmptyTenantList": "CIPP returned no tenants. Check CIPP customer visibility and configuration.",
+          "cippUnreachable": "CIPP could not be reached. Verify the base URL, DNS/TLS, and outbound connectivity.",
+          "cippPerTenantFailed": "CIPP could not read this tenant directory.",
           "consecutiveSyncFailures": "The last two syncs did not complete successfully. Review the sync history and per-tenant errors.",
           "reconciliationOpenItems": "Review queue has {{count}} item(s) waiting; ambiguous matches are never auto-linked.",
           "customerConsentRequired": "The app needs admin consent in this customer tenant. Reconnecting the partner will not help; open the consent link and grant consent as the customer admin.",
           "entitlementGroupNotSecurity": "The configured entitlement group is not a security group; membership may not be enforceable.",
           "entitlementGroupMissing": "The configured entitlement group no longer exists in this customer tenant.",
           "allUsersExcluded": "Every user in this directory was excluded by the current filter rules; sync would create no contacts.",
-          "missingScope": "The token is missing {{scope}}. Grant admin consent, then reconnect Microsoft Entra."
+          "yieldTruncated": "The yield preview stopped early because the directory is large. Counts are a lower bound, not the full directory.",
+          "yieldFailed": "The yield preview could not be computed.",
+          "missingScope": "The token is missing {{scope}}. Grant admin consent, then reconnect Microsoft Entra.",
+          "appClientIdMismatch": "The token was issued to a different application than the bound app registration. Reconnect Microsoft Entra with the correct app.",
+          "client_secret_invalid": "Microsoft rejected the app credential (invalid_client / AADSTS7000222). Rotate the client secret in Azure, update the Microsoft app registration in Settings > Integrations > Microsoft, then reconnect.",
+          "app_not_found": "Microsoft could not find the application (AADSTS700016). Verify the bound client id and that the app is multi-tenant.",
+          "partner_consent_required": "Partner-tenant admin consent is missing (AADSTS65001 / consent_required). Grant admin consent for the app in the partner tenant, then reconnect.",
+          "conditional_access": "Conditional Access blocked the request (AADSTS50076/AADSTS50079). The connecting account must satisfy MFA/compliant-device policy.",
+          "refresh_token_invalid": "The refresh grant is expired or revoked. Reconnect Microsoft Entra to issue a new refresh token.",
+          "tenant_not_found": "Microsoft could not resolve the tenant (AADSTS90002). Verify the tenant id in the connection or mapping.",
+          "account_not_allowed": "The connecting account is not allowed in the tenant (AADSTS50020). Verify the account has access or is a guest.",
+          "network_unreachable": "Microsoft Graph could not be reached. Check outbound connectivity, DNS, and TLS trust.",
+          "token_rejected": "Microsoft rejected the token (401). Reconnect Microsoft Entra or verify the customer consent.",
+          "forbidden": "Microsoft Graph returned 403 (Forbidden). Verify delegated permissions, consent, and role assignments.",
+          "request_failed": "The Microsoft request failed. Expand the step for the error code and correlation id.",
+          "customer_directory_role_missing": "Microsoft Graph denied a customer directory read (403). The delegated account needs a directory-read role in this customer tenant, typically assigned through GDAP (for example Directory Readers).",
+          "managedTenantsEndpointFault": "Graph rejected the managedTenants request; this is an Alga-side endpoint fault. Contact support with the request id."
         }
       }
     }

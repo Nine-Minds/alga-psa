@@ -139,7 +139,7 @@
   {
     "id": "T013",
     "description": "Unit: Table-test Temporal frontend/namespace failure, absent worker pollers, matching interval/next fire, mismatched enabled schedule, enabled missing schedule, and disabled absent schedule; assert no schedule mutation or workflow start.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019",

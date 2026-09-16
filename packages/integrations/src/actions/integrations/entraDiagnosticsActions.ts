@@ -17,12 +17,13 @@ type RouteHandler = (request: Request) => Promise<Response>;
 
 type EntraDiagnosticsResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: string; readiness?: unknown };
 
 type EntraRoutePayload<T> = {
   success?: boolean;
   data?: T;
   error?: string;
+  readiness?: unknown;
 };
 
 function isClientPortalUser(user: unknown): boolean {
@@ -94,6 +95,7 @@ async function callEeRoute<T>(params: {
     return {
       success: false,
       error: payload?.error || entraRouteStatusError(response.status),
+      readiness: payload?.readiness,
     };
   } catch {
     return { success: false, error: 'Microsoft Entra diagnostics failed. Please try again.' };

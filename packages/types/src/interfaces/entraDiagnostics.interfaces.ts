@@ -72,8 +72,24 @@ export interface EntraDiagnosticsReport {
   supportBundle: EntraDiagnosticsSupportBundle | Record<string, unknown>;
 }
 
+export interface EntraDiagnosticsReadinessCheck {
+  key: string;
+  ok: boolean;
+  detail?: string | null;
+}
+
+export interface EntraDiagnosticsReadiness {
+  authenticated: boolean;
+  clientPortal: boolean;
+  edition: 'enterprise' | 'community';
+  checks: EntraDiagnosticsReadinessCheck[];
+  ok: boolean;
+  deniedReason: string | null;
+}
+
 export interface EntraConnectionDiagnosticsOptions {
   includeIdentifiers?: boolean;
+  readiness?: EntraDiagnosticsReadiness;
 }
 
 export interface EntraClientAccessDiagnosticsInput {

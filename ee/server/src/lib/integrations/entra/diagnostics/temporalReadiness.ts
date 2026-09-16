@@ -2,8 +2,9 @@
  * Read-only Temporal readiness checks for diagnostics.
  *
  * These deliberately never start a workflow or mutate a schedule. A reachable
- * frontend proves the API answered; it does not prove a worker is polling, so
- * worker evidence is reported as unknown rather than asserted.
+ * frontend proves the API answered; worker evidence comes from describing the
+ * task queue's pollers, which is read-only and does not prove execution
+ * succeeded for any particular workflow.
  */
 
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
@@ -16,13 +17,21 @@ export interface TemporalReadiness {
   address: string;
   namespace: string;
   taskQueue: string;
-  workerEvidence: 'unknown' | 'available';
+  workerEvidence: 'available' | 'none' | 'unknown';
   error?: string;
 }
 
 export interface EntraScheduleDescription {
+  /** A schedule exists. */
   configured: boolean;
+  /** The schedule lookup itself failed (connectivity/permission) vs not found. */
+  lookupFailed: boolean;
   nextFireTime: string | null;
+  /** Interval in minutes from the schedule spec, when readable. */
+  intervalMinutes: number | null;
+  /** Schedule paused state, when readable. */
+  paused: boolean | null;
+  error?: string;
 }
 
 function temporalConfig() {
@@ -39,7 +48,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
     return await Promise.race([
       promise,
       new Promise<T>((_resolve, reject) => {
-        timer = setTimeout(() => reject(new Error('Temporal connection timed out')), ms);
+        timer = setTimeout(() => reject(new Error('Temporal request timed out')), ms);
       }),
     ]);
   } finally {
@@ -47,82 +56,149 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-async function connectTemporal(): Promise<any | null> {
-  const mod: any = await import('@temporalio/client').catch(() => null);
-  if (!mod) return null;
-  const { address, namespace } = temporalConfig();
-  const connection = await withTimeout(mod.Connection.connect({ address }), 4000);
-  const client = new mod.Client({ connection, namespace });
-  return { mod, connection, client };
+async function withTemporalClient<T>(
+  fn: (client: any) => Promise<T>
+): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
+  let connection: any = null;
+  try {
+    const mod: any = await import('@temporalio/client').catch(() => null);
+    if (!mod) {
+      return { ok: false, error: 'Temporal client is not available in this deployment.' };
+    }
+    const { address, namespace } = temporalConfig();
+    connection = await withTimeout(mod.Connection.connect({ address }), 4000);
+    const client = new mod.Client({ connection, namespace });
+    const value = await fn(client);
+    return { ok: true, value };
+  } catch (error: any) {
+    return { ok: false, error: error?.message || 'Temporal frontend is unreachable.' };
+  } finally {
+    try {
+      connection?.close?.();
+    } catch {
+      // best-effort close
+    }
+  }
+}
+
+function isScheduleNotFound(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const message = String((error as any).message || '');
+  const name = String((error as any).name || '');
+  const code = String((error as any).code || (error as any).cause?.code || '');
+  return (
+    name.includes('NotFound') ||
+    code === 'NOT_FOUND' ||
+    message.toLowerCase().includes('not found') ||
+    message.toLowerCase().includes('no schedule')
+  );
 }
 
 export async function probeTemporalReadiness(): Promise<TemporalReadiness> {
   const { address, namespace, taskQueue } = temporalConfig();
-  try {
-    const connected = await connectTemporal();
-    if (!connected) {
-      return {
-        reachable: false,
-        address,
-        namespace,
-        taskQueue,
-        workerEvidence: 'unknown',
-        error: 'Temporal client is not available in this deployment.',
-      };
-    }
-    await withTimeout(
-      connected.client.workflowService.describeNamespace({ namespace }),
-      4000
-    );
+  const result = await withTemporalClient(async (client) => {
+    await withTimeout(client.workflowService.describeNamespace({ namespace }), 4000);
+
+    let workerEvidence: TemporalReadiness['workerEvidence'] = 'unknown';
     try {
-      connected.connection.close?.();
+      const described: any = await withTimeout(
+        client.workflowService.describeTaskQueue({
+          namespace,
+          taskQueue: { name: taskQueue },
+          includeTaskQueueStatus: true,
+        }),
+        4000
+      );
+      const pollers = described?.pollers ?? described?.taskQueueStatus?.pollers ?? [];
+      workerEvidence = Array.isArray(pollers) && pollers.length > 0 ? 'available' : 'none';
     } catch {
-      // best-effort
+      workerEvidence = 'unknown';
     }
-    return {
-      reachable: true,
-      address,
-      namespace,
-      taskQueue,
-      workerEvidence: 'unknown',
-    };
-  } catch (error: any) {
+
+    return { workerEvidence };
+  });
+
+  if (!result.ok) {
+    const failure = result as { ok: false; error: string };
     return {
       reachable: false,
       address,
       namespace,
       taskQueue,
       workerEvidence: 'unknown',
-      error: error?.message || 'Temporal frontend is unreachable.',
+      error: failure.error,
     };
   }
+
+  return {
+    reachable: true,
+    address,
+    namespace,
+    taskQueue,
+    workerEvidence: result.value.workerEvidence,
+  };
 }
 
 /**
  * Describe the tenant's Entra schedule if it exists. Never creates, updates,
- * deletes, or triggers it. `nextFireTime` is null when unavailable.
+ * deletes, or triggers it. Distinguishes a lookup/connectivity failure from a
+ * genuinely missing schedule.
  */
 export async function describeEntraSchedule(tenant: string): Promise<EntraScheduleDescription> {
-  try {
-    const connected = await connectTemporal();
-    if (!connected) return { configured: false, nextFireTime: null };
-    const scheduleId = `${ENTRA_SCHEDULE_ID_PREFIX}:${tenant}`;
-    const handle = connected.client.schedule.getHandle(scheduleId);
+  const scheduleId = `${ENTRA_SCHEDULE_ID_PREFIX}:${tenant}`;
+  const result = await withTemporalClient(async (client) => {
+    const handle = client.schedule.getHandle(scheduleId);
     const description: any = await withTimeout(handle.describe() as Promise<any>, 4000);
-    const next =
-      description?.info?.nextActionTimes?.[0] ??
-      description?.info?.nextActionTimes?.[0]?.toISOString?.() ??
-      null;
-    try {
-      connected.connection.close?.();
-    } catch {
-      // best-effort
-    }
+
+    const intervals = description?.schedule?.spec?.intervals;
+    const intervalMinutes =
+      Array.isArray(intervals) && intervals.length > 0 && typeof intervals[0]?.every === 'string'
+        ? parseIntervalToMinutes(intervals[0].every)
+        : null;
+
+    const paused =
+      typeof description?.schedule?.state?.paused === 'boolean'
+        ? description.schedule.state.paused
+        : typeof description?.state?.paused === 'boolean'
+          ? description.state.paused
+          : null;
+
+    const nextRaw = description?.info?.nextActionTimes?.[0] ?? null;
+    const nextFireTime = nextRaw ? new Date(nextRaw).toISOString() : null;
+
+    return { nextFireTime, intervalMinutes, paused };
+  });
+
+  if (!result.ok) {
+    const failure = result as { ok: false; error: string };
+    // A missing schedule throws NotFound; any other failure is a lookup fault.
     return {
-      configured: true,
-      nextFireTime: next ? new Date(next).toISOString() : null,
+      configured: false,
+      lookupFailed: !isScheduleNotFound({ message: failure.error }),
+      nextFireTime: null,
+      intervalMinutes: null,
+      paused: null,
+      error: failure.error,
     };
-  } catch {
-    return { configured: false, nextFireTime: null };
   }
+
+  return {
+    configured: true,
+    lookupFailed: false,
+    nextFireTime: result.value.nextFireTime,
+    intervalMinutes: result.value.intervalMinutes,
+    paused: result.value.paused,
+  };
+}
+
+function parseIntervalToMinutes(every: string): number | null {
+  const match = every.trim().match(/^(\d+)\s*(s|m|h|d)$/i);
+  if (!match) return null;
+  const value = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  if (!Number.isFinite(value)) return null;
+  if (unit === 's') return value / 60;
+  if (unit === 'm') return value;
+  if (unit === 'h') return value * 60;
+  return value * 60 * 24;
 }
