@@ -26,10 +26,11 @@
     "loading": "Loading...",
     "errors": {
       "loadPermissions": "Failed to load user permissions",
-      "forbidden": "You do not have permission to view this schedule."
+      "forbidden": "You do not have permission to view this schedule.",
+      "moveFailed": "Failed to move schedule entry"
     },
     "schedulingFor": "Scheduling",
-    "selectSlotHint": "Click or drag a time on the calendar to schedule this work for this agent. Click an entry to edit it.",
+    "selectSlotHint": "Click or drag a time on the calendar to schedule this work for this agent. Drag an entry to move it, drag its edge to change the duration, or click it to edit.",
     "readOnlyHint": "You can view this schedule, but need the schedule update permission to add or change entries.",
     "workItemLegend": "Outlined entries belong to this work item."
   },

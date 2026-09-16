@@ -26,10 +26,11 @@
     "loading": "Carregando...",
     "errors": {
       "loadPermissions": "Falha ao carregar as permissões do usuário",
-      "forbidden": "Você não tem permissão para visualizar esta programação."
+      "forbidden": "Você não tem permissão para visualizar esta programação.",
+      "moveFailed": "Não foi possível mover a entrada de agenda"
     },
     "schedulingFor": "Agendando",
-    "selectSlotHint": "Clique ou arraste um horário no calendário para agendar este trabalho para este agente. Clique numa entrada para editá-la.",
+    "selectSlotHint": "Clique ou arraste um horário no calendário para agendar este trabalho para este agente. Arraste uma entrada para movê-la, arraste sua borda para alterar a duração ou clique nela para editá-la.",
     "readOnlyHint": "Você pode ver esta agenda, mas precisa da permissão de atualização de agenda para adicionar ou alterar entradas.",
     "workItemLegend": "As entradas contornadas pertencem a este item de trabalho."
   },

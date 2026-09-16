@@ -10,8 +10,11 @@ import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
 import WorkItemEntryEditor, { type WorkItemEntryTarget } from './WorkItemEntryEditor';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import { AgentScheduleDrawerStyles } from './AgentScheduleDrawerStyles';
-import { getScheduleEntries } from '@alga-psa/scheduling/actions';
+import toast from 'react-hot-toast';
+import { getScheduleEntries, updateScheduleEntry } from '@alga-psa/scheduling/actions';
 import type { IScheduleEntry, WorkItemType } from '@alga-psa/types';
+import { isSourceOwnedWorkItemType } from '../../lib/entryOwnedWorkItems';
+import { droppedEntryDates, movedEntryUpdate, resizedEntryDates } from '../../lib/entryMoves';
 import { useScheduleViewer } from '../../hooks/useScheduleViewer';
 import {
   WORK_ITEM_ENTRY_DEFAULT_DURATION_MS,
@@ -144,6 +147,53 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
   const closeEditor = () => setEditorTarget(null);
   const refreshEntries = () => setRefreshKey((value) => value + 1);
 
+  // Moving and resizing on the grid edit the viewed agent's own entries in
+  // place. Source-owned entries (deal steps) mirror another record, so the
+  // grid leaves them alone, as the main calendar does.
+  const canMoveOnGrid = (event: IScheduleEntry) =>
+    canModifySchedule &&
+    !isSourceOwnedWorkItemType(event?.work_item_type) &&
+    Boolean(event?.assigned_user_ids?.includes(agentId));
+
+  const replaceEventLocally = (updated: IScheduleEntry) =>
+    setEvents((current) => current.map((entry) => (entry.entry_id === updated.entry_id ? updated : entry)));
+
+  const persistMove = async (
+    event: IScheduleEntry,
+    dates: { scheduled_start: Date; scheduled_end: Date; is_all_day?: boolean }
+  ) => {
+    const updated = movedEntryUpdate(event, dates);
+    replaceEventLocally(updated);
+    try {
+      const result = await updateScheduleEntry(event.entry_id, updated);
+      if (!result.success) {
+        replaceEventLocally(event);
+        toast.error(result.error || t('agentView.errors.moveFailed', { defaultValue: 'Failed to move schedule entry' }));
+        return;
+      }
+      if (result.entry?.recurrence_pattern || event.recurrence_pattern) {
+        refreshEntries();
+      }
+      workItemContext?.onScheduled?.();
+    } catch (err) {
+      console.error('Failed to move schedule entry:', err);
+      replaceEventLocally(event);
+      toast.error(t('agentView.errors.moveFailed', { defaultValue: 'Failed to move schedule entry' }));
+    }
+  };
+
+  const handleEventDrop = ({ event, start, end, isAllDay }: { event: object; start: Date | string; end: Date | string; isAllDay?: boolean }) => {
+    const entry = event as IScheduleEntry;
+    if (!canMoveOnGrid(entry)) return;
+    return persistMove(entry, droppedEntryDates(entry, { start: new Date(start), end: new Date(end), isAllDay }));
+  };
+
+  const handleEventResize = ({ event, start, end }: { event: object; start: Date | string; end: Date | string }) => {
+    const entry = event as IScheduleEntry;
+    if (!canMoveOnGrid(entry)) return;
+    return persistMove(entry, resizedEntryDates(entry, { start: new Date(start), end: new Date(end) }));
+  };
+
   const belongsToWorkItem = (event: IScheduleEntry) =>
     Boolean(workItemContext) && event.work_item_id === workItemContext?.workItemId;
 
@@ -192,7 +242,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
           {canCreateFromSlot
             ? t('agentView.selectSlotHint', {
                 defaultValue:
-                  'Click or drag a time on the calendar to schedule this work for this agent. Click an entry to edit it.',
+                  'Click or drag a time on the calendar to schedule this work for this agent. Drag an entry to move it, drag its edge to change the duration, or click it to edit.',
               })
             : t('agentView.readOnlyHint', {
                 defaultValue:
@@ -264,8 +314,10 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
             onSelectEvent={(event: object) => handleSelectEvent(event as IScheduleEntry)}
             selectable={canCreateFromSlot}
             onSelectSlot={canCreateFromSlot ? handleSelectSlot : undefined}
-            resizableAccessor={() => false}
-            draggableAccessor={() => false}
+            resizableAccessor={(event: object) => canMoveOnGrid(event as IScheduleEntry)}
+            draggableAccessor={(event: object) => canMoveOnGrid(event as IScheduleEntry)}
+            onEventDrop={handleEventDrop}
+            onEventResize={handleEventResize}
             step={15}
             timeslots={4}
             defaultView="week"

@@ -26,10 +26,11 @@
     "loading": "Chargement...",
     "errors": {
       "loadPermissions": "Échec du chargement des autorisations utilisateur",
-      "forbidden": "Vous n'êtes pas autorisé à consulter cet horaire."
+      "forbidden": "Vous n'êtes pas autorisé à consulter cet horaire.",
+      "moveFailed": "Impossible de déplacer l’entrée de planning"
     },
     "schedulingFor": "Planification de",
-    "selectSlotHint": "Cliquez ou faites glisser un créneau dans le calendrier pour planifier ce travail pour cet agent. Cliquez sur une entrée pour la modifier.",
+    "selectSlotHint": "Cliquez ou faites glisser un créneau dans le calendrier pour planifier ce travail pour cet agent. Faites glisser une entrée pour la déplacer, son bord pour changer la durée, ou cliquez dessus pour la modifier.",
     "readOnlyHint": "Vous pouvez consulter ce planning, mais vous avez besoin de la permission de mise à jour du planning pour ajouter ou modifier des entrées.",
     "workItemLegend": "Les entrées encadrées appartiennent à cet élément de travail."
   },

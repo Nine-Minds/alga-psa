@@ -26,10 +26,11 @@
     "loading": "Caricamento...",
     "errors": {
       "loadPermissions": "Impossibile caricare le autorizzazioni utente",
-      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione."
+      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione.",
+      "moveFailed": "Impossibile spostare la voce di agenda"
     },
     "schedulingFor": "Pianificazione di",
-    "selectSlotHint": "Fai clic o trascina un orario nel calendario per pianificare questo lavoro per questo agente. Fai clic su una voce per modificarla.",
+    "selectSlotHint": "Fai clic o trascina un orario nel calendario per pianificare questo lavoro per questo agente. Trascina una voce per spostarla, trascina il suo bordo per cambiare la durata o fai clic per modificarla.",
     "readOnlyHint": "Puoi visualizzare questa agenda, ma hai bisogno del permesso di aggiornamento agenda per aggiungere o modificare voci.",
     "workItemLegend": "Le voci con bordo appartengono a questo elemento di lavoro."
   },

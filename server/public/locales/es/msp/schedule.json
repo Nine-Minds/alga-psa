@@ -26,10 +26,11 @@
     "loading": "Cargando...",
     "errors": {
       "loadPermissions": "No se pudieron cargar los permisos de usuario",
-      "forbidden": "No tiene permiso para ver este programa."
+      "forbidden": "No tiene permiso para ver este programa.",
+      "moveFailed": "No se pudo mover la entrada de agenda"
     },
     "schedulingFor": "Programando",
-    "selectSlotHint": "Haga clic o arrastre una hora en el calendario para programar este trabajo para este agente. Haga clic en una entrada para editarla.",
+    "selectSlotHint": "Haga clic o arrastre una hora en el calendario para programar este trabajo para este agente. Arrastre una entrada para moverla, arrastre su borde para cambiar la duración o haga clic en ella para editarla.",
     "readOnlyHint": "Puede ver esta agenda, pero necesita el permiso de actualización de agenda para añadir o cambiar entradas.",
     "workItemLegend": "Las entradas con borde pertenecen a este elemento de trabajo."
   },

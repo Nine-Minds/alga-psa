@@ -251,6 +251,52 @@ describe('AgentScheduleView', () => {
     await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(2));
   });
 
+  it('lets a user with update permission move and resize the viewed agent entries', async () => {
+    render(<AgentScheduleView agentId="agent-1" />);
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
+    const props = calendarSpy.mock.calls.at(-1)[0];
+    const mine = { entry_id: 'e1', work_item_type: 'ticket', assigned_user_ids: ['agent-1'], scheduled_start: new Date('2026-01-05T10:00:00'), scheduled_end: new Date('2026-01-05T11:00:00') };
+    expect(props.draggableAccessor(mine)).toBe(true);
+    expect(props.resizableAccessor(mine)).toBe(true);
+    expect(props.draggableAccessor({ ...mine, assigned_user_ids: ['someone-else'] })).toBe(false);
+    expect(props.draggableAccessor({ ...mine, work_item_type: 'opportunity_step' })).toBe(false);
+
+    await act(async () => {
+      await props.onEventDrop({ event: mine, start: new Date('2026-01-05T13:00:00'), end: new Date('2026-01-05T14:00:00') });
+    });
+    expect(updateScheduleEntry).toHaveBeenCalledWith('e1', expect.objectContaining({
+      scheduled_start: new Date('2026-01-05T13:00:00'),
+      scheduled_end: new Date('2026-01-05T14:00:00'),
+    }));
+
+    await act(async () => {
+      await props.onEventResize({ event: mine, start: new Date('2026-01-05T10:00:00'), end: new Date('2026-01-05T12:00:00') });
+    });
+    expect(updateScheduleEntry).toHaveBeenLastCalledWith('e1', expect.objectContaining({
+      scheduled_end: new Date('2026-01-05T12:00:00'),
+    }));
+  });
+
+  it('keeps the grid static without update permission', async () => {
+    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read:all']);
+    render(<AgentScheduleView agentId="agent-1" />);
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
+    const props = calendarSpy.mock.calls.at(-1)[0];
+    expect(props.draggableAccessor({ entry_id: 'e1', work_item_type: 'ticket', assigned_user_ids: ['agent-1'] })).toBe(false);
+  });
+
+  it('reverts the grid and reports when a move fails to save', async () => {
+    updateScheduleEntry.mockResolvedValueOnce({ success: false, error: 'nope' });
+    render(<AgentScheduleView agentId="agent-1" />);
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
+    const props = calendarSpy.mock.calls.at(-1)[0];
+    const mine = { entry_id: 'e1', work_item_type: 'ticket', assigned_user_ids: ['agent-1'], scheduled_start: new Date('2026-01-05T10:00:00'), scheduled_end: new Date('2026-01-05T11:00:00') };
+    await act(async () => {
+      await props.onEventDrop({ event: mine, start: new Date('2026-01-05T13:00:00'), end: new Date('2026-01-05T14:00:00') });
+    });
+    expect(toast.error).toHaveBeenCalledWith('nope');
+  });
+
   it('outlines entries that belong to the work item being scheduled', async () => {
     render(
       <AgentScheduleView
