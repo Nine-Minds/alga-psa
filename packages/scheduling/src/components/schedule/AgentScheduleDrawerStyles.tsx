@@ -88,6 +88,10 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      .agent-schedule-chip__inline-time {
+        opacity: 0.8;
+        font-weight: 400;
+      }
       .agent-schedule-chip__title {
         display: -webkit-box;
         -webkit-box-orient: vertical;

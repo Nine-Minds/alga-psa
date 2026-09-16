@@ -107,6 +107,11 @@ interface EntryPopupProps {
    * item is shown as a fixed label rather than something to change.
    */
   lockWorkItem?: boolean;
+  /**
+   * The host already shows the work item (e.g. the agent calendar drawer's
+   * header), so the dialog's own work item line would only repeat it.
+   */
+  hideWorkItemRow?: boolean;
 }
 
 // All-day recurrence dates share the entry's UTC calendar-date representation.
@@ -140,6 +145,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   canAssignOthers,
   viewOnly = false,
   lockWorkItem = false,
+  hideWorkItemRow = false,
   initialWorkItem = null
 }) => {
   const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>(() => {
@@ -1353,6 +1359,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               <div className="flex justify-between items-start gap-3 pt-1 pb-4">
                 {selectedWorkItem ? (
                   <div className="min-w-0 flex-1 text-sm text-gray-500 space-y-0.5">
+                    {!hideWorkItemRow && (
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0 truncate">
                         <span className="capitalize">{selectedWorkItem.type.replace('_', ' ')}</span>
@@ -1361,6 +1368,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                       </div>
                       {showDetailsButton && event && <OpenDrawerButton event={event} />}
                     </div>
+                    )}
                     {lockedAssigneeNames && (
                       <div id="entry-popup-technician" className="truncate">
                         {t('entryPopup.fields.technician', { defaultValue: 'Technician' })}
@@ -1742,7 +1750,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         </div>
         )}
 
-      <div className="mt-6 flex items-center justify-end space-x-3">
+      <div className="mt-4 flex items-center justify-end space-x-3">
         {/* Destructive action sits apart from the primary pair, styled as a quiet action. */}
         {showDeleteButton && (
           <Button

@@ -56,14 +56,19 @@ function AgentScheduleEventChip({ event, title }: EventProps<IScheduleEntry>) {
   const end = new Date(event.scheduled_end);
   const minutes = (end.getTime() - start.getTime()) / 60000;
   const lines = minutes >= CHIP_TWO_LINE_MINUTES ? 'two' : 'one';
+  const hasTimeLine = minutes >= CHIP_TIME_LINE_MINUTES;
   return (
     <div className="agent-schedule-chip">
-      {minutes >= CHIP_TIME_LINE_MINUTES && (
+      {hasTimeLine && (
         <div className="agent-schedule-chip__time">
           {moment(start).format('h:mm')}–{moment(end).format('h:mm A')}
         </div>
       )}
-      <div className={`agent-schedule-chip__title agent-schedule-chip__title--${lines}`}>{title}</div>
+      <div className={`agent-schedule-chip__title agent-schedule-chip__title--${lines}`}>
+        {/* A short chip has no room for a time line, so the start time leads the title. */}
+        {!hasTimeLine && <span className="agent-schedule-chip__inline-time">{moment(start).format('h:mm')} </span>}
+        {title}
+      </div>
     </div>
   );
 }
@@ -331,7 +336,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
             <span aria-hidden="true"> · </span>
             <span className="text-[rgb(var(--color-text-800))]">{workItemContext.title}</span>
           </div>
-          <div className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
+          <div className="mt-1 text-xs text-[rgb(var(--color-text-700))]">
             {canCreateFromSlot
               ? t('agentView.selectSlotHint', {
                   defaultValue: 'Drag to create, move or resize entries. Click an entry to edit.',

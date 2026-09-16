@@ -259,6 +259,9 @@ export default function WorkItemEntryEditor({
       canAssignOthers={canModify && !lockAssignees}
       viewOnly={!canModify}
       lockWorkItem={Boolean(context)}
+      // Inside the agent calendar drawer the header already names the work
+      // item; in the standalone drawer the dialog is the only place it shows.
+      hideWorkItemRow={presentation === 'dialog' && Boolean(context)}
       isInDrawer={presentation === 'drawer'}
     />
   );
