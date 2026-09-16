@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Zeiteintrag konnte nicht gelöscht werden",
     "timeEntryDeleted": "Zeiteintrag gelöscht",
     "closeFailed": "Ticket konnte nicht geschlossen werden",
-    "scheduleVisitFailed": "Der Terminplaner konnte nicht geöffnet werden",
     "loadCommentsFailed": "Kommentare konnten nicht geladen werden",
     "updateTicketFailed": "Das Ticket konnte nicht aktualisiert werden",
     "errorWithMessage": "Fehler: {{message}}",
     "billingProfileUpdated": "Abrechnungsprofil aktualisiert",
-    "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
+    "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden",
+    "scheduleOpenFailed": "Der Planer konnte nicht geöffnet werden"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -1603,7 +1603,8 @@
       "additionalAgentsTooltip": "Weitere Bearbeiter:",
       "unknownAgent": "Unbekannter Bearbeiter",
       "category": "Kategorie",
-      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus."
+      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus.",
+      "viewSchedule": "Zeitplan anzeigen"
     },
     "layout": {
       "grid": "Raster",
@@ -1631,7 +1632,6 @@
       "showLess": "Weniger anzeigen",
       "contact": "Kontakt",
       "client": "Kunde",
-      "nextVisit": "Nächster Besuch",
       "callsAndEmails": "Anrufe und E-Mails",
       "call": "Anrufen",
       "viewAll": "Alle anzeigen",
@@ -1657,7 +1657,6 @@
       "billing": "Abrechnung",
       "couldNotLoad": "Diese Kachel konnte nicht geladen werden",
       "nothingScheduled": "Nichts geplant",
-      "scheduleVisit": "Besuch planen",
       "scheduledWork": "Geplante Arbeit",
       "scheduleDone": "erledigt",
       "noCallsOrEmails": "Keine Anrufe oder E-Mails erfasst",
@@ -1703,7 +1702,9 @@
         "approved": "Genehmigt",
         "declined": "Abgelehnt",
         "cancelled": "Storniert"
-      }
+      },
+      "scheduleTime": "Zeit planen",
+      "openScheduleEntry": "Zeitplaneintrag öffnen"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",

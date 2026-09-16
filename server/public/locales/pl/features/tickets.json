@@ -339,12 +339,12 @@
     "pastedImageDeleteFailed_few": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "pastedImageDeleteFailed_many": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "closeFailed": "Nie udało się zamknąć zgłoszenia",
-    "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu",
     "loadCommentsFailed": "Nie udało się wczytać komentarzy",
     "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia",
     "errorWithMessage": "Błąd: {{message}}",
     "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
-    "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego"
+    "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego",
+    "scheduleOpenFailed": "Nie udało się otworzyć planera"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -1743,7 +1743,8 @@
       "additionalAgentsTooltip": "Dodatkowi agenci:",
       "unknownAgent": "Nieznany agent",
       "category": "Kategoria",
-      "selectDestinationStatus": "Wybierz status dla nowej tablicy przed zapisaniem."
+      "selectDestinationStatus": "Wybierz status dla nowej tablicy przed zapisaniem.",
+      "viewSchedule": "Zobacz harmonogram"
     },
     "layout": {
       "grid": "Siatka",
@@ -1771,7 +1772,6 @@
       "showLess": "Pokaż mniej",
       "contact": "Kontakt",
       "client": "Klient",
-      "nextVisit": "Następna wizyta",
       "callsAndEmails": "Połączenia i e-maile",
       "call": "Zadzwoń",
       "viewAll": "Zobacz wszystkie",
@@ -1797,7 +1797,6 @@
       "billing": "Rozliczenia",
       "couldNotLoad": "Nie udało się wczytać tego kafelka",
       "nothingScheduled": "Nic nie zaplanowano",
-      "scheduleVisit": "Zaplanuj wizytę",
       "scheduledWork": "Zaplanowane prace",
       "scheduleDone": "ukończono",
       "noCallsOrEmails": "Nie zarejestrowano połączeń ani e-maili",
@@ -1845,7 +1844,9 @@
         "approved": "Zatwierdzona",
         "declined": "Odrzucona",
         "cancelled": "Anulowana"
-      }
+      },
+      "scheduleTime": "Zaplanuj czas",
+      "openScheduleEntry": "Otwórz wpis harmonogramu"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",

@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Error al eliminar la entrada de tiempo",
     "timeEntryDeleted": "Entrada de tiempo eliminada",
     "closeFailed": "No se pudo cerrar el ticket",
-    "scheduleVisitFailed": "No se pudo abrir el planificador",
     "loadCommentsFailed": "No se pudieron cargar los comentarios",
     "updateTicketFailed": "No se pudo actualizar el ticket",
     "errorWithMessage": "Error: {{message}}",
     "billingProfileUpdated": "Perfil de facturación actualizado",
-    "updateBillingProfileFailed": "No se pudo actualizar el perfil de facturación"
+    "updateBillingProfileFailed": "No se pudo actualizar el perfil de facturación",
+    "scheduleOpenFailed": "No se pudo abrir el programador"
   },
   "conversation": {
     "comments": "Comentarios",
@@ -1603,7 +1603,8 @@
       "additionalAgentsTooltip": "Agentes adicionales:",
       "unknownAgent": "Agente desconocido",
       "category": "Categoría",
-      "selectDestinationStatus": "Seleccione un estado para el nuevo tablero antes de guardar."
+      "selectDestinationStatus": "Seleccione un estado para el nuevo tablero antes de guardar.",
+      "viewSchedule": "Ver agenda"
     },
     "layout": {
       "grid": "Cuadrícula",
@@ -1631,7 +1632,6 @@
       "showLess": "Mostrar menos",
       "contact": "Contacto",
       "client": "Cliente",
-      "nextVisit": "Próxima visita",
       "callsAndEmails": "Llamadas y correos",
       "call": "Llamar",
       "viewAll": "Ver todo",
@@ -1657,7 +1657,6 @@
       "billing": "Facturación",
       "couldNotLoad": "No se pudo cargar este panel",
       "nothingScheduled": "Nada programado",
-      "scheduleVisit": "Programar una visita",
       "scheduledWork": "Trabajo programado",
       "scheduleDone": "completado",
       "noCallsOrEmails": "No hay llamadas ni correos registrados",
@@ -1703,7 +1702,9 @@
         "approved": "Aprobada",
         "declined": "Rechazada",
         "cancelled": "Cancelada"
-      }
+      },
+      "scheduleTime": "Programar tiempo",
+      "openScheduleEntry": "Abrir entrada de agenda"
     },
     "timeline": {
       "subtitle": "Respuestas, tiempo y cambios del sistema en un solo lugar",
