@@ -300,4 +300,95 @@ describe('Contract-cadence coverage audit', () => {
     expect(byLine.has(clientCadenceId)).toBe(false);
     expect(byLine.has(ended)).toBe(false);
   });
+
+  it('classifies protected leading and interior gaps identically under UTC and America/New_York', async () => {
+    // Timezone regression for the audit boundary. `areAllGapCandidatesProtected`
+    // hands date-only range/anchor inputs to CADENCE_GENERATORS, whose
+    // `ensureUtcMidnightIsoDate` parses them in the host timezone. Under a
+    // negative-offset zone a date-only value parsed to non-UTC midnight, so the
+    // audit threw before classifying anything. The classifications below must be
+    // identical whichever zone the process runs in; the New York pass fails
+    // against the pre-fix audit.
+    const protectedLeading = await createLine({ startDate: '2026-08-08', name: 'Protected Leading TZ' });
+    await seedPeriod({
+      obligationId: protectedLeading,
+      serviceStart: '2026-08-15',
+      serviceEnd: '2026-09-08',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+      periodKey: 'period:2026-08-08:2026-09-08',
+    });
+    await seedPeriod({
+      obligationId: protectedLeading,
+      serviceStart: '2026-09-08',
+      serviceEnd: '2026-10-08',
+      lifecycleState: 'generated',
+    });
+
+    const recoverableLeading = await createLine({ startDate: '2026-02-08', name: 'Recoverable Leading TZ' });
+    await seedPeriod({ obligationId: recoverableLeading, serviceStart: '2026-04-08', serviceEnd: '2026-05-08', lifecycleState: 'generated' });
+
+    const protectedInterior = await createLine({ startDate: '2026-08-08', name: 'Protected Interior TZ' });
+    await seedPeriod({
+      obligationId: protectedInterior,
+      serviceStart: '2026-08-08',
+      serviceEnd: '2026-09-15',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+      periodKey: 'period:2026-08-08:2026-09-08',
+    });
+    await seedPeriod({ obligationId: protectedInterior, serviceStart: '2026-10-08', serviceEnd: '2026-11-08', lifecycleState: 'generated' });
+
+    const recoverableInterior = await createLine({ startDate: '2026-02-08', name: 'Recoverable Interior TZ' });
+    await seedPeriod({ obligationId: recoverableInterior, serviceStart: '2026-02-08', serviceEnd: '2026-03-08', lifecycleState: 'generated' });
+    await seedPeriod({ obligationId: recoverableInterior, serviceStart: '2026-04-08', serviceEnd: '2026-05-08', lifecycleState: 'generated' });
+
+    const fingerprint = (result: Awaited<ReturnType<typeof audit>>) => {
+      const row = (id: string) => result.byLine.get(id)!;
+      const interior = (id: string) =>
+        result.interiorGaps.find((gap) => String(gap.obligation_id) === id) ?? null;
+      return {
+        protectedLeading: {
+          leading_gap: row(protectedLeading).leading_gap,
+          leading_gap_intentional: row(protectedLeading).leading_gap_intentional,
+        },
+        recoverableLeading: {
+          leading_gap: row(recoverableLeading).leading_gap,
+          leading_gap_intentional: row(recoverableLeading).leading_gap_intentional,
+        },
+        protectedInterior: {
+          gap_start: interior(protectedInterior) ? dateOnly(interior(protectedInterior)!.gap_start) : null,
+          is_intentional: interior(protectedInterior)?.is_intentional ?? null,
+        },
+        recoverableInterior: {
+          gap_start: interior(recoverableInterior) ? dateOnly(interior(recoverableInterior)!.gap_start) : null,
+          is_intentional: interior(recoverableInterior)?.is_intentional ?? null,
+        },
+      };
+    };
+
+    const expected = {
+      protectedLeading: { leading_gap: false, leading_gap_intentional: true },
+      recoverableLeading: { leading_gap: true, leading_gap_intentional: false },
+      protectedInterior: { gap_start: '2026-10-08', is_intentional: true },
+      recoverableInterior: { gap_start: '2026-04-08', is_intentional: false },
+    };
+
+    const withTZ = async <T>(tz: string, fn: () => Promise<T>): Promise<T> => {
+      const previous = process.env.TZ;
+      process.env.TZ = tz;
+      try {
+        return await fn();
+      } finally {
+        process.env.TZ = previous;
+      }
+    };
+
+    const utc = fingerprint(await withTZ('UTC', () => audit('2026-09-15')));
+    const newYork = fingerprint(await withTZ('America/New_York', () => audit('2026-09-15')));
+
+    expect(utc).toEqual(expected);
+    expect(newYork).toEqual(expected);
+    expect(newYork).toEqual(utc);
+  });
 });

@@ -277,6 +277,15 @@ function toDateOnly(value: unknown): ISO8601String {
   return `${String(value).slice(0, 10)}` as ISO8601String;
 }
 
+// `CADENCE_GENERATORS` normalize their inputs with `ensureUtcMidnightIsoDate`,
+// which parses a date-only string in the host timezone and rejects anything
+// that is not UTC midnight (so `2026-08-08` throws under `TZ=America/New_York`
+// but not under `TZ=UTC`). Hand the generators explicit UTC-midnight timestamps
+// so gap classification is timezone-independent.
+function toUtcMidnightIso(value: unknown): ISO8601String {
+  return `${toDateOnly(value)}T00:00:00Z` as ISO8601String;
+}
+
 // `findRecurringServicePeriodCandidateProtection` only reads the schedule slot
 // and the service-period range, so the audit can hand it these lightweight
 // shapes instead of hydrating a full persisted record.
@@ -400,11 +409,11 @@ function areAllGapCandidatesProtected(params: {
   });
 
   const periods = CADENCE_GENERATORS[frequency]({
-    rangeStart: regionStart,
-    rangeEnd: regionEnd,
+    rangeStart: toUtcMidnightIso(regionStart),
+    rangeEnd: toUtcMidnightIso(regionEnd),
     sourceObligation,
     duePosition,
-    anchorDate: toDateOnly(params.assignmentStart),
+    anchorDate: toUtcMidnightIso(params.assignmentStart),
   });
   const gapPeriods = periods.filter(
     (period) => toDateOnly(period.start) < regionEnd && toDateOnly(period.end) > regionStart,
