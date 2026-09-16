@@ -586,7 +586,9 @@
       "privateEntry": "Private entry (not visible to other users)",
       "start": "Start *",
       "end": "End *",
-      "notes": "Notes"
+      "notes": "Notes",
+      "technician": "Technician",
+      "notesPlaceholder": "Anything the technician should know before this work"
     },
     "actions": {
       "cancel": "Cancel",
@@ -700,6 +702,11 @@
       "created": "Microsoft Teams meeting created",
       "createFailed": "Failed to create Teams meeting",
       "recurringUnsupported": "Teams meetings can only be added to standalone entries, not recurring series."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {

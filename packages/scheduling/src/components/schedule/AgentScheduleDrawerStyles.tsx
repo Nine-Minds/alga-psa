@@ -55,7 +55,7 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
          title is in the tooltip. A 1px halo in the grid colour separates
          chips that touch. */
       .agent-schedule-view .rbc-event {
-        padding: 2px 4px !important;
+        padding: 2px 3px !important;
         /* A 2px gutter in the grid colour so stacked chips read as separate. */
         outline: 2px solid rgb(var(--color-border-50));
         cursor: grab;
@@ -71,8 +71,9 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
       }
       .agent-schedule-view .rbc-event-content {
         overflow: hidden !important;
-        font-size: 12px;
+        font-size: 11px;
         line-height: 14px;
+        letter-spacing: -0.01em;
       }
       .agent-schedule-chip__title {
         display: -webkit-box;
@@ -86,6 +87,38 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
       }
       .agent-schedule-chip__title--one {
         -webkit-line-clamp: 1;
+        overflow-wrap: normal;
+        text-overflow: ellipsis;
+      }
+
+      /* Short gutter labels ("8 AM") leave more width for the seven days. */
+      .agent-schedule-view .rbc-time-gutter,
+      .agent-schedule-view .rbc-time-header-gutter {
+        min-width: 52px;
+      }
+      .agent-schedule-view .rbc-time-gutter .rbc-label {
+        font-size: 11px;
+        padding: 0 4px;
+      }
+
+      /* Thin, theme-matched scrollbar with a reserved gutter so the day
+         columns stay equal and the header stays aligned with the grid. */
+      .agent-schedule-view .rbc-time-content {
+        scrollbar-width: thin;
+        scrollbar-color: rgb(var(--color-border-300)) transparent;
+        scrollbar-gutter: stable;
+      }
+      .agent-schedule-view .rbc-time-content::-webkit-scrollbar {
+        width: 8px;
+      }
+      .agent-schedule-view .rbc-time-content::-webkit-scrollbar-thumb {
+        background: rgb(var(--color-border-300));
+        border-radius: 4px;
+      }
+      .agent-schedule-view .rbc-time-content::-webkit-scrollbar-track,
+      .agent-schedule-view .rbc-time-content::-webkit-scrollbar-button {
+        background: transparent;
+        height: 0;
       }
 
       /* Today and now are the dispatcher's anchors. */

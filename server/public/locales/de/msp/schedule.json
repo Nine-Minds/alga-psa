@@ -586,7 +586,9 @@
       "privateEntry": "Privater Eintrag (für andere Benutzer nicht sichtbar)",
       "start": "Start *",
       "end": "Ende *",
-      "notes": "Notizen"
+      "notes": "Notizen",
+      "technician": "Techniker",
+      "notesPlaceholder": "Alles, was der Techniker vor dieser Arbeit wissen sollte"
     },
     "actions": {
       "cancel": "Abbrechen",
@@ -700,6 +702,11 @@
       "created": "Microsoft Teams-Besprechung erstellt",
       "createFailed": "Teams-Besprechung konnte nicht erstellt werden",
       "recurringUnsupported": "Teams-Besprechungen können nur zu eigenständigen Einträgen hinzugefügt werden, nicht zu wiederkehrenden Serien."
+    },
+    "duration": {
+      "minutes": "{{count}} Min.",
+      "hours": "{{count}} Std.",
+      "hoursMinutes": "{{hours}} Std. {{minutes}} Min."
     }
   },
   "actions": {

@@ -586,7 +586,9 @@
       "privateEntry": "Entrée privée (non visible par les autres utilisateurs)",
       "start": "Commencer *",
       "end": "Fin *",
-      "notes": "Remarques"
+      "notes": "Remarques",
+      "technician": "Technicien",
+      "notesPlaceholder": "Tout ce que le technicien doit savoir avant ce travail"
     },
     "actions": {
       "cancel": "Annuler",
@@ -700,6 +702,11 @@
       "created": "Réunion Microsoft Teams créée",
       "createFailed": "Échec de la création de la réunion Teams",
       "recurringUnsupported": "Les réunions Teams ne peuvent être ajoutées qu'à des entrées autonomes, pas à des séries récurrentes."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {

@@ -952,10 +952,34 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   // first control); the field a user came to edit is the title, so take focus
   // after they have finished.
   useEffect(() => {
-    if (viewOnly) return;
+    // Only a new entry wants the title; an existing one is opened to read or
+    // adjust, and a caret in a filled field suggests otherwise.
+    if (viewOnly || event) return;
     const timer = setTimeout(() => titleInputRef.current?.focus({ preventScroll: true }), 50);
     return () => clearTimeout(timer);
-  }, [viewOnly]);
+  }, [viewOnly, event]);
+
+  // With assignment locked (the agent calendar drawer), the picker is hidden,
+  // so the caption says who the entry is for.
+  const lockedAssigneeNames = !canAssignMultipleAgents && !canAssignOthers
+    ? (entryData.assigned_user_ids ?? [])
+        .map((id) => users.find((user) => user.user_id === id))
+        .filter((user): user is IUser => Boolean(user))
+        .map((user) => `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim())
+        .filter(Boolean)
+        .join(', ') || null
+    : null;
+
+  const durationLabel = (() => {
+    if (!entryData.scheduled_start || !entryData.scheduled_end || endsBeforeStart) return '';
+    const minutes = Math.round(durationBetween(entryData.scheduled_start, entryData.scheduled_end) / 60000);
+    if (minutes <= 0) return '';
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    if (hours === 0) return t('entryPopup.duration.minutes', { defaultValue: '{{count}} min', count: rest });
+    if (rest === 0) return t('entryPopup.duration.hours', { defaultValue: '{{count}} h', count: hours });
+    return t('entryPopup.duration.hoursMinutes', { defaultValue: '{{hours}} h {{minutes}} min', hours, minutes: rest });
+  })();
 
   const showDetailsButton = Boolean(
     event && event.work_item_type &&
@@ -991,7 +1015,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           </h2>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto space-y-4 p-1">
+      <div className={`flex-1 overflow-y-auto space-y-4 ${isInDrawer ? 'p-1' : ''}`}>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>
@@ -1321,10 +1345,19 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             {viewOnly || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
               <div className="flex justify-between items-center gap-3 py-1">
                 {selectedWorkItem ? (
-                  <div className="min-w-0 text-sm text-gray-500 truncate">
-                    <span className="capitalize">{selectedWorkItem.type.replace('_', ' ')}</span>
-                    <span aria-hidden="true"> · </span>
-                    <span className="text-[rgb(var(--color-text-800))]">{selectedWorkItem.name}</span>
+                  <div className="min-w-0 text-sm text-gray-500 space-y-0.5">
+                    <div className="truncate">
+                      <span className="capitalize">{selectedWorkItem.type.replace('_', ' ')}</span>
+                      <span aria-hidden="true"> · </span>
+                      <span className="text-[rgb(var(--color-text-800))]">{selectedWorkItem.name}</span>
+                    </div>
+                    {lockedAssigneeNames && (
+                      <div id="entry-popup-technician" className="truncate">
+                        {t('entryPopup.fields.technician', { defaultValue: 'Technician' })}
+                        <span aria-hidden="true"> · </span>
+                        <span className="text-[rgb(var(--color-text-800))]">{lockedAssigneeNames}</span>
+                      </div>
+                    )}
                   </div>
                 ) : isSourceOwnedWorkItemType(entryData.work_item_type) ? (
                   // A deal step's entry is written from the opportunity's plan;
@@ -1509,7 +1542,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   ? t('entryPopup.validation.endAfterStart', {
                       defaultValue: 'End date must be after start date',
                     })
-                  : ''}
+                  : durationLabel}
               </p>
             </div>
           </div>
@@ -1522,6 +1555,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               name="notes"
               value={entryData.notes}
               onChange={handleInputChange}
+              placeholder={t('entryPopup.fields.notesPlaceholder', { defaultValue: 'Anything the technician should know before this work' })}
               rows={3}
               className=""
               disabled={!canEditFields} // Disable based on permissions

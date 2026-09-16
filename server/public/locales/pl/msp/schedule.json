@@ -586,7 +586,9 @@
       "privateEntry": "Wpis prywatny (niewidoczny dla innych użytkowników)",
       "start": "Rozpocznij *",
       "end": "Koniec *",
-      "notes": "Notatki"
+      "notes": "Notatki",
+      "technician": "Technik",
+      "notesPlaceholder": "Wszystko, co technik powinien wiedzieć przed tą pracą"
     },
     "actions": {
       "cancel": "Anuluj",
@@ -700,6 +702,11 @@
       "created": "Utworzono spotkanie Microsoft Teams",
       "createFailed": "Nie udało się utworzyć spotkania Teams",
       "recurringUnsupported": "Spotkania Teams można dodawać tylko do pojedynczych wpisów, nie do serii cyklicznych."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} godz.",
+      "hoursMinutes": "{{hours}} godz. {{minutes}} min"
     }
   },
   "actions": {

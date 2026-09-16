@@ -414,6 +414,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
             onEventResize={handleEventResize}
             components={{ event: AgentScheduleEventChip, toolbar: AgentToolbar }}
             dayLayoutAlgorithm="no-overlap"
+            formats={{ timeGutterFormat: 'h A' }}
             step={15}
             timeslots={4}
             defaultView="week"

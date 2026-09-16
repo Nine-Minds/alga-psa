@@ -1661,11 +1661,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
       return;
     }
 
+    // Seven day columns need the room; the drawer caps itself at 60vw.
     openDrawer(
       <AgentScheduleDrawer
         agentId={userId}
         workItemContext={buildScheduleContext(ticket.ticket_id)}
-      />
+      />,
+      undefined,
+      undefined,
+      '1200px'
     );
   };
 

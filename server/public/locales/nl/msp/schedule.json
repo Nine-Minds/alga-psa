@@ -586,7 +586,9 @@
       "privateEntry": "Privétoegang (niet zichtbaar voor andere gebruikers)",
       "start": "Begin *",
       "end": "Einde *",
-      "notes": "Opmerkingen"
+      "notes": "Opmerkingen",
+      "technician": "Technicus",
+      "notesPlaceholder": "Alles wat de technicus vóór dit werk moet weten"
     },
     "actions": {
       "cancel": "Annuleren",
@@ -700,6 +702,11 @@
       "created": "Microsoft Teams-vergadering gemaakt",
       "createFailed": "Teams-vergadering kon niet worden gemaakt",
       "recurringUnsupported": "Teams-vergaderingen kunnen alleen aan losse items worden toegevoegd, niet aan terugkerende reeksen."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} u",
+      "hoursMinutes": "{{hours}} u {{minutes}} min"
     }
   },
   "actions": {
