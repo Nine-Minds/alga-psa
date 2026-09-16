@@ -26,7 +26,17 @@
     "loading": "Laden...",
     "errors": {
       "loadPermissions": "Kan gebruikersrechten niet laden",
-      "forbidden": "U heeft geen toestemming om dit schema te bekijken."
+      "forbidden": "U heeft geen toestemming om dit schema te bekijken.",
+      "moveFailed": "Agenda-item kon niet worden verplaatst"
+    },
+    "schedulingFor": "Inplannen van",
+    "selectSlotHint": "Sleep om items te maken, te verplaatsen of de duur te wijzigen. Klik op een item om het te bewerken.",
+    "readOnlyHint": "U kunt deze agenda bekijken, maar u heeft de agenda-bijwerkrechten nodig om items toe te voegen of te wijzigen.",
+    "workItemLegend": "Dit werkitem",
+    "schedulingForAgent": "Inplannen voor {{name}}",
+    "otherWorkLegend": "Ander werk",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -553,7 +563,8 @@
       "appointmentRequest": "Afspraakverzoek",
       "view": "Invoer bekijken",
       "edit": "Invoer bewerken",
-      "new": "Nieuwe invoer"
+      "new": "Nieuwe invoer",
+      "newForWorkItem": "{{name}} inplannen"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Dit is een privé-ingang. Alleen de maker kan details bekijken of bewerken."
@@ -578,7 +589,9 @@
       "privateEntry": "Privétoegang (niet zichtbaar voor andere gebruikers)",
       "start": "Begin *",
       "end": "Einde *",
-      "notes": "Opmerkingen"
+      "notes": "Opmerkingen",
+      "technician": "Technicus",
+      "notesPlaceholder": "Alles wat de technicus moet weten voordat hij begint"
     },
     "actions": {
       "cancel": "Annuleren",
@@ -588,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Ad-hocinvoer (geen werkitem)",
-      "openDetails": "Details"
+      "openDetails": "Details",
+      "loading": "Werkitem laden…",
+      "openTicket": "Ticket openen",
+      "openTask": "Taak openen",
+      "openInteraction": "Interactie openen"
     },
     "appointmentRequest": {
       "approved": {
@@ -691,6 +708,11 @@
       "created": "Microsoft Teams-vergadering gemaakt",
       "createFailed": "Teams-vergadering kon niet worden gemaakt",
       "recurringUnsupported": "Teams-vergaderingen kunnen alleen aan losse items worden toegevoegd, niet aan terugkerende reeksen."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} u",
+      "hoursMinutes": "{{hours}} u {{minutes}} min"
     }
   },
   "actions": {
@@ -744,5 +766,15 @@
       "graphThrottled": "Microsoft Graph beperkt het downloaden van opnamen. Probeer het zo dadelijk opnieuw.",
       "graphHttpStatus": "Microsoft Graph gaf HTTP {{status}} terug bij het downloaden van de Teams-opname."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} ingepland",
+    "updated": "Agenda-item bijgewerkt",
+    "deleted": "Agenda-item verwijderd",
+    "createFailed": "Dit werk kon niet worden ingepland",
+    "updateFailed": "Agenda-item kon niet worden bijgewerkt",
+    "deleteFailed": "Agenda-item kon niet worden verwijderd",
+    "loadFailed": "Agenda-item kon niet worden geladen",
+    "noPermission": "U heeft de agenda-bijwerkrechten nodig om werk in te plannen."
   }
 }

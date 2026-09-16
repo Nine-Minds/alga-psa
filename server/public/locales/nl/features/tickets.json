@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Kan tijdregistratie niet verwijderen",
     "timeEntryDeleted": "Tijdregistratie verwijderd",
     "closeFailed": "Ticket sluiten is mislukt",
-    "scheduleVisitFailed": "Kan de planner niet openen",
     "loadCommentsFailed": "Opmerkingen laden mislukt",
     "updateTicketFailed": "Ticket bijwerken mislukt",
     "errorWithMessage": "Fout: {{message}}",
     "billingProfileUpdated": "Facturatieprofiel bijgewerkt",
-    "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt"
+    "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt",
+    "scheduleOpenFailed": "De planner kon niet worden geopend"
   },
   "conversation": {
     "comments": "Reacties",
@@ -1603,7 +1603,8 @@
       "additionalAgentsTooltip": "Extra medewerkers:",
       "unknownAgent": "Onbekende medewerker",
       "category": "Categorie",
-      "selectDestinationStatus": "Selecteer een status voor het nieuwe bord voordat u opslaat."
+      "selectDestinationStatus": "Selecteer een status voor het nieuwe bord voordat u opslaat.",
+      "viewSchedule": "Agenda bekijken"
     },
     "layout": {
       "grid": "Raster",
@@ -1631,7 +1632,6 @@
       "showLess": "Minder weergeven",
       "contact": "Contact",
       "client": "Klant",
-      "nextVisit": "Volgend bezoek",
       "callsAndEmails": "Gesprekken en e-mails",
       "call": "Bellen",
       "viewAll": "Alles weergeven",
@@ -1657,7 +1657,6 @@
       "billing": "Facturatie",
       "couldNotLoad": "Kan deze tegel niet laden",
       "nothingScheduled": "Niets gepland",
-      "scheduleVisit": "Een bezoek plannen",
       "scheduledWork": "Gepland werk",
       "scheduleDone": "voltooid",
       "noCallsOrEmails": "Geen gesprekken of e-mails geregistreerd",
@@ -1703,7 +1702,9 @@
         "approved": "Goedgekeurd",
         "declined": "Afgewezen",
         "cancelled": "Geannuleerd"
-      }
+      },
+      "scheduleTime": "Tijd inplannen",
+      "openScheduleEntry": "Agenda-item openen"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",

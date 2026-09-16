@@ -75,6 +75,7 @@ import { addTicketResource, getTicketResources, removeTicketResource } from "../
 import { assignTeamToTicket, removeTeamFromTicket } from "../../actions/teamAssignmentActions";
 import { getTeamById, getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
+import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
 import { Button } from "@alga-psa/ui/components/Button";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
@@ -1143,7 +1144,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
-    const [nextVisitRefreshKey, setNextVisitRefreshKey] = useState(0);
+    const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
     const [tags, setTags] = useState<ITag[]>(bootstrap?.tags ?? []);
     const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
@@ -1692,12 +1693,31 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
       return;
     }
 
+    if (!ticket.ticket_id) {
+      return;
+    }
+
+    // Seven day columns need the room; the drawer caps itself at 60vw.
     openDrawer(
       <AgentScheduleDrawer
         agentId={userId}
-      />
+        workItemContext={buildScheduleContext(ticket.ticket_id)}
+      />,
+      undefined,
+      undefined,
+      '1200px'
     );
   };
+
+  /** The ticket as a schedulable work item, shared by every scheduling surface on this page. */
+  const buildScheduleContext = (ticketId: string): WorkItemScheduleContext => ({
+    workItemId: ticketId,
+    workItemType: 'ticket',
+    title: ticket.title || t('bento.tiles.scheduledWork', 'Scheduled work'),
+    clientName: client?.client_name ?? null,
+    defaultAssigneeId: ticket.assigned_to ?? null,
+    onScheduled: () => setScheduleRefreshKey((value) => value + 1),
+  });
 
     const handleAddAgent = async (userId: string) => {
         try {
@@ -2425,7 +2445,7 @@ const handleClose = () => {
         }
     };
 
-    const handleScheduleVisit = async () => {
+    const openScheduleEntryEditor = async (existingEntryId?: string) => {
         try {
             if (!ticket.ticket_id) {
                 toast.error(t('messages.ticketIdMissing'));
@@ -2435,18 +2455,17 @@ const handleClose = () => {
             await launchScheduleEntry({
                 openDrawer,
                 closeDrawer,
-                context: {
-                    workItemId: ticket.ticket_id,
-                    workItemType: 'ticket',
-                    title: ticket.title || t('bento.tiles.scheduledWork', 'Scheduled work'),
-                    clientName: client?.client_name ?? null,
-                },
-                onComplete: () => setNextVisitRefreshKey((value) => value + 1),
+                context: buildScheduleContext(ticket.ticket_id),
+                onComplete: () => setScheduleRefreshKey((value) => value + 1),
+                existingEntryId,
             });
         } catch (error) {
-            handleTicketActionError(error, t('messages.scheduleVisitFailed', { defaultValue: 'Failed to open the scheduler' }));
+            handleTicketActionError(error, t('messages.scheduleOpenFailed', { defaultValue: 'Failed to open the scheduler' }));
         }
     };
+
+    const handleScheduleWork = () => openScheduleEntryEditor();
+    const handleOpenScheduleEntry = (entryId: string) => openScheduleEntryEditor(entryId);
 
     const handleEditTimeEntry = async (entry: { entry_id: string }) => {
         try {
@@ -3803,8 +3822,9 @@ const handleClose = () => {
                     onPause={handlePauseClick}
                     onStop={handleStopClick}
                     onAddTimeEntry={handleAddTimeEntry}
-                    onScheduleVisit={handleScheduleVisit}
-                    nextVisitRefreshKey={nextVisitRefreshKey}
+                    onScheduleWork={handleScheduleWork}
+                    onOpenScheduleEntry={handleOpenScheduleEntry}
+                    scheduleRefreshKey={scheduleRefreshKey}
                     userId={userId || ''}
                     dateTimeFormat={dateTimeFormat}
                     timeEntriesRefreshKey={timeEntriesRefreshKey}

@@ -283,7 +283,6 @@
     "saveCommentFailed": "Failed to save comment changes",
     "updateDescriptionFailed": "Failed to update description",
     "prepareTimeEntryFailed": "An error occurred while preparing the time entry. Please try again.",
-    "scheduleVisitFailed": "Failed to open the scheduler",
     "updateContactFailed": "Failed to update contact",
     "updateClientFailed": "Failed to update client",
     "updateLocationFailed": "Failed to update location",
@@ -310,7 +309,8 @@
     "updateTicketFailed": "Failed to update ticket",
     "errorWithMessage": "Error: {{message}}",
     "billingProfileUpdated": "Billing profile updated",
-    "updateBillingProfileFailed": "Failed to update billing profile"
+    "updateBillingProfileFailed": "Failed to update billing profile",
+    "scheduleOpenFailed": "Failed to open the scheduler"
   },
   "conversation": {
     "comments": "Comments",
@@ -1611,7 +1611,8 @@
       "responseWaitingOnClient": "Waiting on client",
       "responseNone": "No reply needed",
       "category": "Category",
-      "selectDestinationStatus": "Select a status for the new board before saving."
+      "selectDestinationStatus": "Select a status for the new board before saving.",
+      "viewSchedule": "View schedule"
     },
     "layout": {
       "grid": "Grid",
@@ -1639,7 +1640,6 @@
       "showLess": "Show less",
       "contact": "Contact",
       "client": "Client",
-      "nextVisit": "Next visit",
       "callsAndEmails": "Calls and emails",
       "call": "Call",
       "viewAll": "View all",
@@ -1667,7 +1667,6 @@
       "billing": "Billing",
       "couldNotLoad": "Could not load this tile",
       "nothingScheduled": "Nothing scheduled",
-      "scheduleVisit": "Schedule a visit",
       "scheduledWork": "Scheduled work",
       "scheduleDone": "done",
       "noCallsOrEmails": "No calls or emails logged",
@@ -1711,7 +1710,9 @@
         "approved": "Approved",
         "declined": "Declined",
         "cancelled": "Cancelled"
-      }
+      },
+      "scheduleTime": "Schedule time",
+      "openScheduleEntry": "Open schedule entry"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",
