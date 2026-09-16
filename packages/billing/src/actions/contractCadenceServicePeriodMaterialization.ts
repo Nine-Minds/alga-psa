@@ -13,7 +13,10 @@ import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from '@shared/billingClients/clipRecurringCandidatesToObligationBounds';
-import { isPreservedRecurringServicePeriodRecord } from '@shared/billingClients/regenerateRecurringServicePeriods';
+import {
+  findRecurringServicePeriodCandidateProtection,
+  isPreservedRecurringServicePeriodRecord,
+} from '@shared/billingClients/regenerateRecurringServicePeriods';
 
 export { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME };
 
@@ -321,12 +324,23 @@ async function persistRecurringServicePeriodRegeneration(
   const db = tenantDb(trx, params.tenant);
 
   for (const record of params.recordsToSupersede) {
-    await db.table('recurring_service_periods')
+    // Invoicing and manual edits do not take the sweep's advisory lock. Recheck
+    // protection on the write so a concurrent state change rolls back this line.
+    const updated = await db.table('recurring_service_periods')
       .where({ record_id: record.recordId })
+      .where('lifecycle_state', 'generated')
+      .whereNotIn('provenance_kind', ['user_edited', 'repair'])
+      .whereNull('invoice_id')
+      .whereNull('invoice_charge_id')
+      .whereNull('invoice_charge_detail_id')
+      .whereNull('invoice_linked_at')
       .update({
         lifecycle_state: record.lifecycleState,
         updated_at: record.updatedAt,
       });
+    if (updated !== 1) {
+      throw new Error(`Recurring service period ${record.recordId} changed during replenishment; retry after the current billing or editing operation completes.`);
+    }
   }
 
   if (params.recordsToInsert.length > 0) {
@@ -440,7 +454,7 @@ function servicePeriodIdentity(record: Pick<IRecurringServicePeriodRecord, 'serv
  * Coverage view used by capped continuation. It mirrors canonical regeneration:
  * a candidate is accounted for when the ledger holds its exact period, holds its
  * schedule-slot key (an override retaining the original boundary), or when a
- * preserved override's range covers the candidate's start. Without the slot and
+ * preserved override's range overlaps the candidate. Without the slot and
  * override semantics, an intentionally replaced period (for example an edited
  * Jan 8–Mar 8 period keeping the Jan–Feb key) would look permanently missing and
  * stall the continuation at the same boundary on every run.
@@ -448,7 +462,7 @@ function servicePeriodIdentity(record: Pick<IRecurringServicePeriodRecord, 'serv
 function buildContinuationCoverageIndex(records: IRecurringServicePeriodRecord[]) {
   const identities = new Set<string>();
   const slotKeys = new Set<string>();
-  const protectedRanges: Array<{ start: string; end: string }> = [];
+  const protectedRecords: IRecurringServicePeriodRecord[] = [];
 
   for (const record of records) {
     if (record.lifecycleState === 'superseded' || record.lifecycleState === 'archived') {
@@ -457,14 +471,11 @@ function buildContinuationCoverageIndex(records: IRecurringServicePeriodRecord[]
     identities.add(servicePeriodIdentity(record));
     slotKeys.add(`${record.scheduleKey}\u0000${record.periodKey}`);
     if (isPreservedRecurringServicePeriodRecord(record)) {
-      protectedRanges.push({
-        start: record.servicePeriod.start.slice(0, 10),
-        end: record.servicePeriod.end.slice(0, 10),
-      });
+      protectedRecords.push(record);
     }
   }
 
-  return { identities, slotKeys, protectedRanges };
+  return { identities, slotKeys, protectedRecords };
 }
 
 function isCandidateCoveredForContinuation(
@@ -477,10 +488,7 @@ function isCandidateCoveredForContinuation(
   if (coverage.slotKeys.has(`${candidate.scheduleKey}\u0000${candidate.periodKey}`)) {
     return true;
   }
-  const candidateStart = candidate.servicePeriod.start.slice(0, 10);
-  return coverage.protectedRanges.some(
-    (range) => candidateStart >= range.start && candidateStart < range.end,
-  );
+  return findRecurringServicePeriodCandidateProtection(candidate, coverage.protectedRecords) != null;
 }
 
 /**
@@ -680,42 +688,27 @@ async function syncContractCadenceObligation(
     ? assignmentEnd
     : targetHorizonEnd;
 
-  // No candidates means there is nothing to reconcile: either the ledger already
-  // reaches the horizon or the assignment starts beyond it. Return without
-  // touching the ledger so later rows (for example a valid beyond-horizon row)
-  // are preserved instead of being superseded by an empty candidate set.
-  if (candidateRecords.length === 0) {
-    const furthestExisting = resolveFurthestServicePeriodEnd(
-      existingRecords.filter(
-        (record) => record.lifecycleState !== 'superseded' && record.lifecycleState !== 'archived',
-      ),
-    );
-    return {
-      changed: false,
-      periodsGenerated: 0,
-      periodsRealigned: 0,
-      periodsSuperseded: 0,
-      hitPeriodCap: materialized.hitPeriodCap,
-      wasExhaustedBeforeRun,
-      overrideConflicts: 0,
-      furthestServicePeriodEnd: furthestExisting,
-      expectedCoverageEnd,
-      meetsExpectedCoverage:
-        furthestExisting != null
-        && compareIsoDateOnly(furthestExisting, expectedCoverageEnd) >= 0,
-    };
-  }
+  // Generation limits and assignment bounds mean different things. Beyond a
+  // generated batch, valid rows remain untouched. Once generation has reached
+  // the assignment end, mutable rows beyond that end must retire, even when the
+  // final period was billed and clipping leaves no candidates at all.
+  const generatedCoverageEnd = materialized.records.at(-1)?.servicePeriod.end
+    ?? historicalBoundaryFloor
+    ?? targetHorizonEnd;
+  const assignmentCovered = assignmentEnd != null
+    && compareIsoDateOnly(assignmentEnd, generatedCoverageEnd) <= 0;
+  const candidateCoverageEnd = assignmentCovered ? undefined : generatedCoverageEnd;
 
-  // Bound reconciliation to what regeneration actually produced. A capped batch
-  // (or an open-ended/at-horizon run) preserves rows beyond the generated range;
-  // an assignment-bounded run does not, so mutable rows past the assignment end
-  // are still retired by canonical regeneration.
-  const assignmentBounded = assignmentEnd != null
-    && compareIsoDateOnly(assignmentEnd, targetHorizonEnd) <= 0;
-  const candidateCoverageEnd =
-    materialized.hitPeriodCap || !assignmentBounded
-      ? candidateRecords[candidateRecords.length - 1].servicePeriod.end
-      : undefined;
+  if (
+    assignmentCovered && historicalBoundaryFloor
+    && compareIsoDateOnly(historicalBoundaryFloor, assignmentEnd) > 0
+  ) {
+    // Continuation may scan rows beyond a newly shortened assignment. Those
+    // rows are not billed history; only the actual billed floor can protect them.
+    historicalBoundaryFloor = billedBoundaryEnd
+      ? maxIsoDateOnly(billedBoundaryEnd, assignmentEnd)
+      : assignmentEnd;
+  }
 
   const regenerationPlan = backfillRecurringServicePeriods({
     candidateRecords,
@@ -1027,7 +1020,10 @@ export async function replenishContractCadenceServicePeriodsSweep(
       result.summaries.push(summary);
 
       const payload = summarizeContractCadenceReplenishment(summary);
-      if (summary.failures.length > 0 || summary.linesAwaitingCoverage > 0 || summary.linesAtPeriodCap > 0) {
+      if (
+        summary.failures.length > 0 || summary.linesAwaitingCoverage > 0
+        || summary.linesAtPeriodCap > 0 || summary.overrideConflicts > 0
+      ) {
         logger.warn(
           'Contract-cadence service-period replenishment completed with unresolved coverage or failures',
           payload,

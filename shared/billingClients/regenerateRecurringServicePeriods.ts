@@ -125,10 +125,30 @@ export function isPreservedRecurringServicePeriodRecord(
     || record.lifecycleState === 'locked'
     || record.lifecycleState === 'skipped'
     || record.lifecycleState === 'billed'
+    || record.invoiceLinkage != null
   );
 }
 
 const isPreservedOverrideRecord = isPreservedRecurringServicePeriodRecord;
+
+/** A protected slot or range excludes regenerated charges on either side of an edit. */
+export function findRecurringServicePeriodCandidateProtection(
+  candidate: IRecurringServicePeriodRecord,
+  protectedRecords: IRecurringServicePeriodRecord[],
+): IRecurringServicePeriodRecord | undefined {
+  return protectedRecords.find((record) =>
+    record.sourceObligation.tenant === candidate.sourceObligation.tenant
+    && record.sourceObligation.obligationType === candidate.sourceObligation.obligationType
+    && record.sourceObligation.obligationId === candidate.sourceObligation.obligationId
+    && (
+      buildSchedulePeriodKey(record) === buildSchedulePeriodKey(candidate)
+      || (
+        toDateOnly(candidate.servicePeriod.start) < toDateOnly(record.servicePeriod.end)
+        && toDateOnly(candidate.servicePeriod.end) > toDateOnly(record.servicePeriod.start)
+      )
+    ),
+  );
+}
 
 function startsAtOrAfterCoverageEnd(
   record: IRecurringServicePeriodRecord,
@@ -230,6 +250,20 @@ export function regenerateRecurringServicePeriods(
   const newRecords: IRecurringServicePeriodRecord[] = [];
   const activeRecords: IRecurringServicePeriodRecord[] = [];
   const conflicts: IRecurringServicePeriodRegenerationConflict[] = [];
+  const protectedRecords = existingRecords.filter(isPreservedOverrideRecord);
+
+  const isProtectedCandidate = (candidate: IRecurringServicePeriodRecord) => {
+    const protection = findRecurringServicePeriodCandidateProtection(candidate, protectedRecords);
+    if (!protection) return false;
+    conflicts.push({
+      kind: 'service_period_mismatch',
+      recordId: protection.recordId,
+      scheduleKey: protection.scheduleKey,
+      periodKey: candidate.periodKey,
+      reason: 'The candidate overlaps a protected service period or replaces its edited slot; no charge was generated. Review the preserved record before repairing this slot.',
+    });
+    return true;
+  };
 
   let candidateIndex = 0;
 
@@ -250,10 +284,14 @@ export function regenerateRecurringServicePeriods(
         };
   };
 
-  for (let existingIndex = 0; existingIndex < existingRecords.length; existingIndex += 1) {
-    const existing = existingRecords[existingIndex];
-    const nextExisting = existingRecords[existingIndex + 1];
+  const appendNewCandidate = (candidate: IRecurringServicePeriodRecord) => {
+    if (isProtectedCandidate(candidate)) return;
+    const record = buildNewRecord(candidate);
+    newRecords.push(record);
+    activeRecords.push(record);
+  };
 
+  for (const existing of existingRecords) {
     // Candidates that start before this existing record fill a gap in the
     // ledger. Emitting them as new records first keeps the ordered pairing
     // correct when a preserved/override record follows a missing period; a
@@ -267,9 +305,7 @@ export function regenerateRecurringServicePeriods(
         < toDateOnly(existing.servicePeriod.start)
       && candidateRecords[candidateIndex].periodKey !== existing.periodKey
     ) {
-      const gapRecord = buildNewRecord(candidateRecords[candidateIndex]);
-      newRecords.push(gapRecord);
-      activeRecords.push(gapRecord);
+      appendNewCandidate(candidateRecords[candidateIndex]);
       candidateIndex += 1;
     }
 
@@ -283,32 +319,6 @@ export function regenerateRecurringServicePeriods(
       preservedRecords.push(existing);
       activeRecords.push(existing);
       if (candidate) {
-        candidateIndex += 1;
-      }
-      // The override owns its entire service-period range, including any ideal
-      // slot it covers after a boundary edit (expanded or partial overlap). A
-      // following candidate that begins inside the override and is not the next
-      // existing record's slot must not be inserted beside it. Suppressing it is
-      // the fail-closed choice; the conflict makes the suppressed slot visible
-      // instead of silently emitting a duplicate charge.
-      while (
-        candidateRecords[candidateIndex]
-        && toDateOnly(candidateRecords[candidateIndex].servicePeriod.start)
-          < toDateOnly(existing.servicePeriod.end)
-        && (
-          !nextExisting
-          || toDateOnly(candidateRecords[candidateIndex].servicePeriod.start)
-            < toDateOnly(nextExisting.servicePeriod.start)
-        )
-      ) {
-        conflicts.push({
-          kind: 'service_period_mismatch',
-          recordId: existing.recordId,
-          scheduleKey: existing.scheduleKey,
-          periodKey: candidateRecords[candidateIndex].periodKey,
-          reason:
-            'The preserved override covers this candidate slot, so the overlapping generated candidate was suppressed.',
-        });
         candidateIndex += 1;
       }
       continue;
@@ -326,6 +336,16 @@ export function regenerateRecurringServicePeriods(
         lifecycleState: 'superseded',
         updatedAt: input.regeneratedAt,
       });
+      continue;
+    }
+
+    if (isProtectedCandidate(candidate)) {
+      supersededRecords.push({
+        ...existing,
+        lifecycleState: 'superseded',
+        updatedAt: input.regeneratedAt,
+      });
+      candidateIndex += 1;
       continue;
     }
 
@@ -369,9 +389,7 @@ export function regenerateRecurringServicePeriods(
   }
 
   for (const candidate of candidateRecords.slice(candidateIndex)) {
-    const newRecord = buildNewRecord(candidate);
-    newRecords.push(newRecord);
-    activeRecords.push(newRecord);
+    appendNewCandidate(candidate);
   }
 
   return {

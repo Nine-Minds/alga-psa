@@ -183,4 +183,66 @@ describe('Contract-cadence replenishment under concurrent execution', () => {
     const invoice = await db('invoices').where({ tenant: tenantId, client_id: clientId }).first();
     expect(invoice).toBeUndefined();
   }, 60000);
+  it('does not supersede a period invoiced after the sweep read its ledger', async () => {
+    const { obligationId } = await seedConcurrentFixture();
+    const template = await db('recurring_service_periods')
+      .where({ tenant: tenantId, obligation_id: obligationId }).first();
+    const recordId = uuidv4();
+    await db('recurring_service_periods').insert({
+      ...template,
+      record_id: recordId,
+      period_key: 'period:2026-08-08:2026-09-08',
+      lifecycle_state: 'generated',
+      service_period_start: '2026-08-08', service_period_end: '2026-09-08',
+      // Wrong arrears window requires a replacement, provoking a guarded update.
+      invoice_window_start: '2026-08-08', invoice_window_end: '2026-09-08',
+      invoice_id: null, invoice_charge_id: null, invoice_charge_detail_id: null,
+      invoice_linked_at: null,
+    });
+
+    const billingTrx = await db.transaction();
+    await billingTrx('recurring_service_periods')
+      .where({ tenant: tenantId, record_id: recordId })
+      .update({
+        lifecycle_state: 'billed',
+        invoice_id: uuidv4(), invoice_charge_id: uuidv4(), invoice_charge_detail_id: uuidv4(),
+        invoice_linked_at: new Date().toISOString(),
+      });
+    const billedRow = await billingTrx('recurring_service_periods')
+      .where({ tenant: tenantId, record_id: recordId }).first();
+
+    // The uncommitted invoice holds a row lock. The sweep sees the previous
+    // generated state, then waits on that lock when trying to supersede it.
+    let onQuery: (query: { sql: string; bindings?: unknown[] }) => void;
+    let timer: ReturnType<typeof setTimeout>;
+    const attemptedWrite = new Promise<void>((resolve, reject) => {
+      timer = setTimeout(() => reject(new Error('Sweep did not attempt its stale ledger update')), 10000);
+      onQuery = (query) => {
+        if (query.sql.startsWith('update "recurring_service_periods"') && query.bindings?.includes(recordId)) {
+          resolve();
+        }
+      };
+      db.on('query', onQuery);
+    });
+    const params = { tenant: tenantId, sourceRunPrefix: 'invoice-race', asOf: '2026-09-15T00:00:00Z' };
+    const pendingSweep = runContractCadenceReplenishmentForTenant(db, params);
+    try {
+      await attemptedWrite;
+      await billingTrx.commit();
+      const summary = await pendingSweep;
+      expect(summary.failures).toEqual(expect.arrayContaining([
+        expect.objectContaining({ contractLineId: obligationId, error: expect.stringContaining('changed during replenishment') }),
+      ]));
+      expect(await db('recurring_service_periods').where({ tenant: tenantId, record_id: recordId }).first()).toEqual(billedRow);
+      const retry = await runContractCadenceReplenishmentForTenant(db, params);
+      expect(retry.failures).toEqual([]);
+      expect(await db('recurring_service_periods').where({ tenant: tenantId, record_id: recordId }).first()).toEqual(billedRow);
+    } finally {
+      clearTimeout(timer!);
+      db.removeListener('query', onQuery!);
+      if (!billingTrx.isCompleted()) await billingTrx.rollback();
+      await pendingSweep;
+    }
+  }, 60000);
+
 });

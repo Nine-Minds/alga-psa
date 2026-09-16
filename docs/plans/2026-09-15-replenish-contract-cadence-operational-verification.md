@@ -199,7 +199,7 @@ success are not established by the audit alone.
 Only the isolated local test database was exercised; no production record was
 read or changed.
 
-- `contractCadenceServicePeriodReplenishment.test.ts` (14 tests) reproduces the
+- `contractCadenceServicePeriodReplenishment.test.ts` (26 tests) reproduces the
   production ledger shape in an isolated test database and asserts the recovered
   period, the following-month invoice-window mapping, preserved billed/locked/
   skipped/deferred/superseded history, repeat-run idempotency, a later-horizon
@@ -211,7 +211,10 @@ read or changed.
 - `contractCadenceServicePeriodReplenishment.concurrency.test.ts` commits the
   fixture on a pool connection and runs two overlapping sweeps on separate
   connections, asserting the advisory lock serialises them and no period is
-  written twice.
+  written twice. A second test holds an invoicing transaction open while the
+  sweep reads the old generated state. Once invoicing commits, the guarded
+  supersession rejects that stale update, rolls back the line, and preserves
+  the invoice linkage on retry.
 - `materializeContractCadenceServicePeriods.domain.test.ts` covers the
   `coverageAnchorDate` decoupling and the period-cap reporting.
 - `contractCadenceReplenishmentScheduling.test.ts` proves the pg-boss schedule is
@@ -235,8 +238,21 @@ read or changed.
 - `contractCadenceCoverageAudit.test.ts` validates the read-only audit against
   absent, leading-gap, interior-gap, intentional-exclusion, bounded-assignment,
   and ineligible-line fixtures.
-- `regenerateRecurringServicePeriods` gap-aware pairing and expanded/shifted
-  override preservation are covered by the shared and server suites.
+- `regenerateRecurringServicePeriods` checks every proposed insert or replacement
+  against protected slots and overlapping ranges, including overrides expanded
+  backward into an earlier period. It suppresses unsafe candidates and reports
+  the protected record and candidate slot in the regeneration conflicts.
+  Capped continuation uses the same protection rule so an intentional exclusion
+  cannot stall catch-up. The shared and server suites cover these rules.
+- Empty generation batches retain their coverage limit. A completed catch-up
+  leaves later valid rows untouched, while an assignment ending at its final
+  billed period still retires mutable post-end rows. Continuation does not turn
+  coverage beyond a shortened assignment into protected billed history.
+- `billingInvoiceTiming.integration.test.ts` selects the fixed February 2025
+  window explicitly in its reconciliation tests. Rolling replenishment adds
+  enough newer windows to move that fixture beyond the first listing page.
+  T156–T158 passed at the pre-task commit `ec5ce14fcc`; their unfiltered listing
+  failed on the draft branch, so they were not pre-existing failures.
 
 Not performed: any production query in the audit section, any UI check of Ready
 to Bill, any measurement of cross-tenant impact, deployed-image equivalence, or

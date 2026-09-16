@@ -21,15 +21,15 @@ import {
 
 const dateOnly = (value: unknown) => new Date(value as string | Date).toISOString().slice(0, 10);
 
-const CLOUDLAB = {
-  contractLineId: '90528e81-9f06-410d-8e32-61f148305af0',
-  contractId: '2591c219-b976-49c8-a009-cf6df59f677a',
-  assignmentId: '7382c090-5129-44a6-8aa1-775390c6a456',
+const INCIDENT = {
+  contractLineId: '7970745c-f3ae-4b5d-b699-bd4e546154d5',
+  contractId: 'aebdf1b3-e8f5-4029-b71c-107191c0b31b',
+  assignmentId: 'e6aae4f2-0c7b-4905-8921-dd8e64174756',
   assignmentStart: '2026-02-08T00:00:00Z',
   rateCents: 1262860,
   invoiceNumber: '0001850',
-  billedInvoiceId: '8023a611-fd0e-4713-8f21-706dd608130c',
-  billedChargeDetailId: '27d20203-9b5b-4395-8600-73bff5e5b448',
+  billedInvoiceId: 'f7087063-882a-482b-81b4-b706fed0386b',
+  billedChargeDetailId: '3faeb57f-ac24-446e-85e6-acab77031875',
 } as const;
 
 describe('Contract-cadence service-period replenishment', () => {
@@ -69,7 +69,7 @@ describe('Contract-cadence service-period replenishment', () => {
         contract_line_type: 'Fixed',
         cadence_owner: 'contract',
         is_active: options.lineActive ?? true,
-        custom_rate: options.rateCents ?? CLOUDLAB.rateCents,
+        custom_rate: options.rateCents ?? INCIDENT.rateCents,
       },
       'contract_line_id',
     );
@@ -136,7 +136,7 @@ describe('Contract-cadence service-period replenishment', () => {
       source_rule_version:
         'contract_cadence|billing_cycle:monthly|anchor:2026-02-08|due:arrears',
       reason_code: input.reasonCode ?? 'initial_materialization',
-      source_run_key: 'contract_line_update:90528e81-9f06-410d-8e32-61f148305af0:2026-04-15T03:45:06.058Z',
+      source_run_key: `contract_line_update:${input.obligationId}:2026-04-15T03:45:06.058Z`,
       supersedes_record_id: input.supersedesRecordId ?? null,
       invoice_id: input.invoiceLinkage?.invoiceId ?? null,
       invoice_charge_id: input.invoiceLinkage?.invoiceChargeId ?? null,
@@ -180,9 +180,9 @@ describe('Contract-cadence service-period replenishment', () => {
         provenanceKind: 'regenerated',
         reasonCode: 'source_rule_changed',
         invoiceLinkage: {
-          invoiceId: isLast ? CLOUDLAB.billedInvoiceId : uuidv4(),
+          invoiceId: isLast ? INCIDENT.billedInvoiceId : uuidv4(),
           invoiceChargeId: uuidv4(),
-          invoiceChargeDetailId: isLast ? CLOUDLAB.billedChargeDetailId : uuidv4(),
+          invoiceChargeDetailId: isLast ? INCIDENT.billedChargeDetailId : uuidv4(),
           linkedAt: isLast ? '2026-08-13T04:02:55.799Z' : '2026-05-01T00:00:00.000Z',
         },
       });
@@ -278,7 +278,7 @@ describe('Contract-cadence service-period replenishment', () => {
   }, 30000);
 
   it('recovers the missing Aug 8–Sep 8 period and establishes future coverage while preserving history', async () => {
-    const obligationId = await createContractCadenceLine({ contractLineId: CLOUDLAB.contractLineId });
+    const obligationId = await createContractCadenceLine({ contractLineId: INCIDENT.contractLineId });
     await seedIncidentLedger(obligationId);
     await seedSupersededClientCadenceHistory(obligationId);
 
@@ -341,7 +341,7 @@ describe('Contract-cadence service-period replenishment', () => {
   });
 
   it('is idempotent across repeated runs and advances the horizon without invoices', async () => {
-    const obligationId = await createContractCadenceLine({ contractLineId: CLOUDLAB.contractLineId });
+    const obligationId = await createContractCadenceLine({ contractLineId: INCIDENT.contractLineId });
     await seedIncidentLedger(obligationId);
 
     await runContractCadenceReplenishmentForTenant(context.db, {
@@ -577,7 +577,7 @@ describe('Contract-cadence service-period replenishment', () => {
   });
 
   it('preserves skipped and deferred periods while recovering the gaps before them', async () => {
-    const obligationId = await createContractCadenceLine({ contractLineId: CLOUDLAB.contractLineId });
+    const obligationId = await createContractCadenceLine({ contractLineId: INCIDENT.contractLineId });
     await seedIncidentLedger(obligationId);
 
     const skippedId = await seedContractPeriod({
@@ -641,7 +641,7 @@ describe('Contract-cadence service-period replenishment', () => {
 
   it('does not touch another tenant contract-cadence line', async () => {
     const obligationId = await createContractCadenceLine({
-      contractLineId: CLOUDLAB.contractLineId,
+      contractLineId: INCIDENT.contractLineId,
       startDate: '2026-02-08T00:00:00Z',
     });
     await seedIncidentLedger(obligationId);
@@ -716,7 +716,7 @@ describe('Contract-cadence service-period replenishment', () => {
       contract_line_type: 'Fixed',
       cadence_owner: 'contract',
       is_active: true,
-      custom_rate: CLOUDLAB.rateCents,
+      custom_rate: INCIDENT.rateCents,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -770,7 +770,7 @@ describe('Contract-cadence service-period replenishment', () => {
   });
 
   it('recovers an interior gap even when later generated rows already exist', async () => {
-    const obligationId = await createContractCadenceLine({ contractLineId: CLOUDLAB.contractLineId });
+    const obligationId = await createContractCadenceLine({ contractLineId: INCIDENT.contractLineId });
     await seedIncidentLedger(obligationId);
 
     // A later future row already exists (Oct 8 – Nov 8) while Aug 8 – Oct 8 is
@@ -866,7 +866,7 @@ describe('Contract-cadence service-period replenishment', () => {
   });
 
   it('preserves the last billed period under its following-month invoice header', async () => {
-    const obligationId = await createContractCadenceLine({ contractLineId: CLOUDLAB.contractLineId });
+    const obligationId = await createContractCadenceLine({ contractLineId: INCIDENT.contractLineId });
     await seedIncidentLedger(obligationId);
 
     const before = await loadContractPeriods(obligationId);
@@ -878,7 +878,7 @@ describe('Contract-cadence service-period replenishment', () => {
     expect(lastBilled).toBeTruthy();
     expect(dateOnly(lastBilled.invoice_window_start)).toBe('2026-08-08');
     expect(dateOnly(lastBilled.invoice_window_end)).toBe('2026-09-08');
-    expect(lastBilled.invoice_charge_detail_id).toBe(CLOUDLAB.billedChargeDetailId);
+    expect(lastBilled.invoice_charge_detail_id).toBe(INCIDENT.billedChargeDetailId);
 
     await runContractCadenceReplenishmentForTenant(context.db, {
       tenant: context.tenantId,
@@ -908,7 +908,7 @@ describe('Contract-cadence service-period replenishment', () => {
   });
 
   it('sweeps tenants independently and isolates a tenant-level failure', async () => {
-    const obligationId = await createContractCadenceLine({ contractLineId: CLOUDLAB.contractLineId });
+    const obligationId = await createContractCadenceLine({ contractLineId: INCIDENT.contractLineId });
     await seedIncidentLedger(obligationId);
 
     const failingTenant = uuidv4();
@@ -1309,4 +1309,105 @@ describe('Contract-cadence service-period replenishment', () => {
     // Protected records past the assignment end are preserved.
     expect(rows.find((row) => row.record_id === lockedId)?.lifecycle_state).toBe('locked');
   });
+  it('preserves an override expanded into the preceding slot without generating an overlapping charge', async () => {
+    const obligationId = await createContractCadenceLine({ startDate: '2026-08-08T00:00:00Z' });
+    const overrideId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2026-08-15', serviceEnd: '2026-10-08',
+      invoiceStart: '2026-10-08', invoiceEnd: '2026-11-08',
+      lifecycleState: 'edited', provenanceKind: 'user_edited',
+    });
+    await context.db('recurring_service_periods')
+      .where({ tenant: context.tenantId, record_id: overrideId })
+      .update({ period_key: 'period:2026-09-08:2026-10-08' });
+    const before = (await loadContractPeriods(obligationId)).find((row) => row.record_id === overrideId);
+    const params = { tenant: context.tenantId, sourceRunPrefix: 'test-nightly', asOf: '2026-09-15T00:00:00Z' };
+
+    const result = await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(result.failures).toEqual([]);
+    expect(result.overrideConflicts).toBeGreaterThan(0);
+    const after = await loadContractPeriods(obligationId);
+    expect(after.find((row) => row.record_id === overrideId)).toEqual(before);
+    expect(after.filter((row) => row.record_id !== overrideId && row.lifecycle_state !== 'superseded'
+      && dateOnly(row.service_period_start) < '2026-10-08'
+      && dateOnly(row.service_period_end) > '2026-08-15')).toEqual([]);
+    expect(after.some((row) => dateOnly(row.service_period_start) === '2026-10-08')).toBe(true);
+    await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(await loadContractPeriods(obligationId)).toEqual(after);
+  });
+
+  it('retires post-end mutable rows when the final assignment period is already billed', async () => {
+    const obligationId = await createContractCadenceLine({ startDate: '2026-08-08T00:00:00Z' });
+    await seedContractPeriod({
+      obligationId, serviceStart: '2026-08-08', serviceEnd: '2026-09-08',
+      invoiceStart: '2026-09-08', invoiceEnd: '2026-10-08', lifecycleState: 'billed',
+    });
+    const mutableId = await seedContractPeriod({
+      obligationId, serviceStart: '2026-09-08', serviceEnd: '2026-10-08',
+      invoiceStart: '2026-10-08', invoiceEnd: '2026-11-08', lifecycleState: 'generated',
+    });
+    const lockedId = await seedContractPeriod({
+      obligationId, serviceStart: '2026-10-08', serviceEnd: '2026-11-08',
+      invoiceStart: '2026-11-08', invoiceEnd: '2026-12-08', lifecycleState: 'locked',
+    });
+    const before = await loadContractPeriods(obligationId);
+    const line = await context.db('contract_lines')
+      .where({ tenant: context.tenantId, contract_line_id: obligationId }).first();
+    await context.db('client_contracts')
+      .where({ tenant: context.tenantId, contract_id: line.contract_id }).update({ end_date: '2026-09-08' });
+    const params = { tenant: context.tenantId, contractLineId: obligationId, sourceRunPrefix: 'test-assignment-update' };
+
+    await materializeContractCadenceServicePeriodsForContractLine(context.db, params);
+    const after = await loadContractPeriods(obligationId);
+    expect(after.find((row) => row.record_id === mutableId)?.lifecycle_state).toBe('superseded');
+    expect(after.find((row) => row.record_id === lockedId)).toEqual(before.find((row) => row.record_id === lockedId));
+    expect(after.find((row) => row.lifecycle_state === 'billed')).toEqual(before.find((row) => row.lifecycle_state === 'billed'));
+    await materializeContractCadenceServicePeriodsForContractLine(context.db, params);
+    expect(await loadContractPeriods(obligationId)).toEqual(after);
+  });
+
+  it('continues capped catch-up across an override expanded backward into an earlier slot', async () => {
+    const obligationId = await createContractCadenceLine({ startDate: '2005-01-08T00:00:00Z' });
+    const overrideId = await seedContractPeriod({
+      obligationId, serviceStart: '2005-02-15', serviceEnd: '2005-04-08',
+      invoiceStart: '2005-04-08', invoiceEnd: '2005-05-08',
+      lifecycleState: 'edited', provenanceKind: 'user_edited',
+    });
+    await context.db('recurring_service_periods')
+      .where({ tenant: context.tenantId, record_id: overrideId })
+      .update({ period_key: 'period:2005-03-08:2005-04-08' });
+    const params = { tenant: context.tenantId, sourceRunPrefix: 'test-nightly', asOf: '2026-09-15T00:00:00Z' };
+    const first = await runContractCadenceReplenishmentForTenant(context.db, params);
+    const second = await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(first.failures).toEqual([]);
+    expect(second.failures).toEqual([]);
+    expect(second.periodsGenerated).toBeGreaterThan(0);
+    expect(second.linesAwaitingCoverage).toBe(0);
+    const rows = await loadContractPeriods(obligationId);
+    expect(rows.filter((row) => row.record_id !== overrideId && row.lifecycle_state !== 'superseded'
+      && dateOnly(row.service_period_start) < '2005-04-08'
+      && dateOnly(row.service_period_end) > '2005-02-15')).toEqual([]);
+    await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(await loadContractPeriods(obligationId)).toEqual(rows);
+  });
+
+  it('does not mistake completed capped coverage beyond a shortened assignment for historical exclusions', async () => {
+    const obligationId = await createContractCadenceLine({ startDate: '1980-01-08T00:00:00Z' });
+    const params = { tenant: context.tenantId, sourceRunPrefix: 'test-nightly', asOf: '2026-09-15T00:00:00Z' };
+    for (let run = 0; run < 3; run += 1) {
+      await runContractCadenceReplenishmentForTenant(context.db, params);
+    }
+    const line = await context.db('contract_lines')
+      .where({ tenant: context.tenantId, contract_line_id: obligationId }).first();
+    await context.db('client_contracts')
+      .where({ tenant: context.tenantId, contract_id: line.contract_id }).update({ end_date: '2026-09-08' });
+    await materializeContractCadenceServicePeriodsForContractLine(context.db, {
+      tenant: context.tenantId, contractLineId: obligationId, sourceRunPrefix: 'test-assignment-update',
+    });
+    const rows = await loadContractPeriods(obligationId);
+    expect(rows.filter((row) => row.lifecycle_state === 'generated'
+      && dateOnly(row.service_period_end) > '2026-09-08')).toEqual([]);
+    expect(rows.filter((row) => row.lifecycle_state === 'generated')).not.toHaveLength(0);
+  });
+
 });
