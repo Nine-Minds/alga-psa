@@ -2,7 +2,10 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { v4 as uuidv4 } from 'uuid';
 import { TestContext } from 'server/test-utils/testContext';
 import { assignContractLineToClient } from '../../../../../test-utils/billingTestHelpers';
-import { runContractCadenceReplenishmentForTenant } from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
+import {
+  replenishContractCadenceServicePeriodsSweep,
+  runContractCadenceReplenishmentForTenant,
+} from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
 
 /**
  * DB-backed behavior for the nightly contract-cadence replenishment. The
@@ -43,6 +46,7 @@ describe('Contract-cadence service-period replenishment', () => {
     startDate?: string;
     endDate?: string | null;
     billingTiming?: 'advance' | 'arrears';
+    billingFrequency?: 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
     lineActive?: boolean;
     contractActive?: boolean;
     assignmentActive?: boolean;
@@ -58,7 +62,7 @@ describe('Contract-cadence service-period replenishment', () => {
       {
         contract_line_id: contractLineId,
         contract_line_name: options.name ?? `Contract Cadence Line ${contractLineId.slice(0, 8)}`,
-        billing_frequency: 'monthly',
+        billing_frequency: options.billingFrequency ?? 'monthly',
         billing_timing: options.billingTiming ?? 'arrears',
         is_custom: false,
         contract_line_type: 'Fixed',
@@ -291,6 +295,11 @@ describe('Contract-cadence service-period replenishment', () => {
     expect(summary.failures).toEqual([]);
     expect(summary.linesExamined).toBeGreaterThanOrEqual(1);
     expect(summary.periodsGenerated).toBeGreaterThanOrEqual(1);
+    expect(summary.asOf).toBe('2026-09-15T00:00:00Z');
+    // The incident line was already exhausted before the run, which is exactly
+    // the signal the old nightly silently missed.
+    expect(summary.linesExhaustedBeforeRun).toBeGreaterThanOrEqual(1);
+    expect(summary.linesAwaitingCoverage).toBe(0);
 
     const after = await loadContractPeriods(obligationId);
     const recovered = after.find(
@@ -352,6 +361,8 @@ describe('Contract-cadence service-period replenishment', () => {
     expect(secondRows).toEqual(firstRows);
     expect(secondSummary.periodsGenerated).toBe(0);
     expect(secondSummary.periodsSuperseded).toBe(0);
+    expect(secondSummary.linesExhaustedBeforeRun).toBe(0);
+    expect(secondSummary.linesAwaitingCoverage).toBe(0);
     expect(secondRows.filter((row) => row.lifecycle_state === 'superseded')).toHaveLength(0);
 
     // A later scheduled run moves the horizon forward and still creates no invoices.
@@ -732,5 +743,246 @@ describe('Contract-cadence service-period replenishment', () => {
     // The first tenant's ledger is unaffected by the second tenant's run.
     const firstTenantRows = await loadContractPeriods(obligationId);
     expect(firstTenantRows.some((row) => row.lifecycle_state !== 'superseded')).toBe(true);
+  });
+
+  it('backfills multiple missed periods for a never-invoiced assignment and reaches the horizon', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '2024-02-08T00:00:00Z',
+      name: 'Never Invoiced Line',
+    });
+
+    const summary = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(summary.failures).toEqual([]);
+
+    const rows = await loadContractPeriods(obligationId);
+    const active = rows.filter((row) => row.lifecycle_state !== 'superseded');
+    const starts = active.map((row) => dateOnly(row.service_period_start));
+    for (const expected of ['2024-02-08', '2024-03-08', '2026-08-08', '2026-09-08']) {
+      expect(starts).toContain(expected);
+    }
+    const furthest = active.map((row) => dateOnly(row.service_period_end)).sort().at(-1);
+    expect(furthest >= '2027-03-14').toBe(true);
+  });
+
+  it('recovers an interior gap even when later generated rows already exist', async () => {
+    const obligationId = await createContractCadenceLine({ contractLineId: CLOUDLAB.contractLineId });
+    await seedIncidentLedger(obligationId);
+
+    // A later future row already exists (Oct 8 – Nov 8) while Aug 8 – Oct 8 is
+    // missing; the sweep must fill the hole without duplicating the later row.
+    await seedContractPeriod({
+      obligationId,
+      serviceStart: '2026-10-08',
+      serviceEnd: '2026-11-08',
+      invoiceStart: '2026-11-08',
+      invoiceEnd: '2026-12-08',
+      lifecycleState: 'generated',
+    });
+
+    const summary = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(summary.failures).toEqual([]);
+
+    const rows = await loadContractPeriods(obligationId);
+    const active = rows.filter((row) => row.lifecycle_state !== 'superseded');
+    for (const [start, end] of [
+      ['2026-08-08', '2026-09-08'],
+      ['2026-09-08', '2026-10-08'],
+      ['2026-10-08', '2026-11-08'],
+    ]) {
+      const matches = active.filter(
+        (row) =>
+          dateOnly(row.service_period_start) === start
+          && dateOnly(row.service_period_end) === end,
+      );
+      expect(matches).toHaveLength(1);
+    }
+    const bounds = active.map(
+      (row) => `${dateOnly(row.service_period_start)}:${dateOnly(row.service_period_end)}`,
+    );
+    expect(new Set(bounds).size).toBe(bounds.length);
+  });
+
+  it('backfills a capped catch-up across runs instead of regenerating the same batch', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '2005-01-08T00:00:00Z',
+      name: 'Ancient Assignment Line',
+    });
+
+    // The first run can only emit the 200-period cap, so it honestly reports
+    // incomplete coverage instead of claiming the horizon is met.
+    const first = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(first.linesAtPeriodCap).toBe(1);
+    expect(first.linesAwaitingCoverage).toBe(1);
+    const firstActive = (await loadContractPeriods(obligationId)).filter(
+      (row) => row.lifecycle_state !== 'superseded',
+    );
+    expect(firstActive).toHaveLength(200);
+    const firstFurthest = firstActive
+      .map((row) => dateOnly(row.service_period_end))
+      .sort()
+      .at(-1);
+    expect(firstFurthest < '2027-03-14').toBe(true);
+
+    // The second run resumes after the covered prefix instead of regenerating
+    // the same initial batch, and completes the horizon.
+    const second = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(second.linesAtPeriodCap).toBe(0);
+    expect(second.linesAwaitingCoverage).toBe(0);
+    expect(second.periodsGenerated).toBeGreaterThan(0);
+    const secondRows = await loadContractPeriods(obligationId);
+    const secondActive = secondRows.filter((row) => row.lifecycle_state !== 'superseded');
+    expect(secondActive.length).toBeGreaterThan(firstActive.length);
+    const secondFurthest = secondActive
+      .map((row) => dateOnly(row.service_period_end))
+      .sort()
+      .at(-1);
+    expect(secondFurthest >= '2027-03-14').toBe(true);
+
+    const third = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(third.periodsGenerated).toBe(0);
+    expect(third.periodsSuperseded).toBe(0);
+    expect(await loadContractPeriods(obligationId)).toEqual(secondRows);
+  });
+
+  it('preserves the last billed period under its following-month invoice header', async () => {
+    const obligationId = await createContractCadenceLine({ contractLineId: CLOUDLAB.contractLineId });
+    await seedIncidentLedger(obligationId);
+
+    const before = await loadContractPeriods(obligationId);
+    const lastBilled = before.find(
+      (row) =>
+        row.lifecycle_state === 'billed'
+        && dateOnly(row.service_period_start) === '2026-07-08',
+    );
+    expect(lastBilled).toBeTruthy();
+    expect(dateOnly(lastBilled.invoice_window_start)).toBe('2026-08-08');
+    expect(dateOnly(lastBilled.invoice_window_end)).toBe('2026-09-08');
+    expect(lastBilled.invoice_charge_detail_id).toBe(CLOUDLAB.billedChargeDetailId);
+
+    await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+
+    const after = await loadContractPeriods(obligationId);
+    expect(after.find((row) => row.record_id === lastBilled.record_id)).toEqual(lastBilled);
+    const active = after.filter((row) => row.lifecycle_state !== 'superseded');
+    // The Aug–Sep invoice header belongs to July–Aug service; the Aug–Sep service
+    // period was genuinely missing and is now represented exactly once.
+    expect(
+      active.filter(
+        (row) =>
+          dateOnly(row.service_period_start) === '2026-07-08'
+          && dateOnly(row.service_period_end) === '2026-08-08',
+      ),
+    ).toHaveLength(1);
+    expect(
+      active.filter(
+        (row) =>
+          dateOnly(row.service_period_start) === '2026-08-08'
+          && dateOnly(row.service_period_end) === '2026-09-08',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('sweeps tenants independently and isolates a tenant-level failure', async () => {
+    const obligationId = await createContractCadenceLine({ contractLineId: CLOUDLAB.contractLineId });
+    await seedIncidentLedger(obligationId);
+
+    const failingTenant = uuidv4();
+    await context.db('tenants').insert({
+      tenant: failingTenant,
+      client_name: 'Unreachable Tenant',
+      phone_number: '555-0199',
+      email: `unreachable-${failingTenant.slice(0, 8)}@example.com`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      payment_platform_id: `platform-${failingTenant.slice(0, 8)}`,
+      payment_method_id: `method-${failingTenant.slice(0, 8)}`,
+      auth_service_id: `auth-${failingTenant.slice(0, 8)}`,
+      plan: 'pro',
+      product_code: 'psa',
+    });
+
+    const summary = await replenishContractCadenceServicePeriodsSweep({
+      asOf: '2026-09-15T00:00:00Z',
+      resolveConnection: async (tenant) => {
+        if (tenant === failingTenant) {
+          throw new Error('connection unavailable');
+        }
+        return context.db;
+      },
+    });
+
+    expect(summary.tenantsFailed).toBe(1);
+    const tenantSummary = summary.summaries.find((entry) => entry.tenant === context.tenantId);
+    expect(tenantSummary?.periodsGenerated).toBeGreaterThanOrEqual(1);
+    expect(summary.summaries.find((entry) => entry.tenant === failingTenant)).toBeUndefined();
+
+    const rows = await loadContractPeriods(obligationId);
+    expect(rows.some((row) => dateOnly(row.service_period_start) === '2026-08-08')).toBe(true);
+  });
+
+  it('applies anniversary cadence and invoice windows for quarterly, semi-annual and annual arrears', async () => {
+    const quarterly = await createContractCadenceLine({
+      startDate: '2026-02-08T00:00:00Z',
+      billingFrequency: 'quarterly',
+      name: 'Quarterly Line',
+    });
+    const semiAnnual = await createContractCadenceLine({
+      startDate: '2026-02-08T00:00:00Z',
+      billingFrequency: 'semi-annually',
+      name: 'Semi Annual Line',
+    });
+    const annual = await createContractCadenceLine({
+      startDate: '2026-02-28T00:00:00Z',
+      billingFrequency: 'annually',
+      name: 'Annual Line',
+    });
+
+    const summary = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(summary.failures).toEqual([]);
+
+    const quarterlyRows = await loadContractPeriods(quarterly);
+    expect(dateOnly(quarterlyRows[0].service_period_start)).toBe('2026-02-08');
+    expect(dateOnly(quarterlyRows[0].service_period_end)).toBe('2026-05-08');
+    expect(dateOnly(quarterlyRows[0].invoice_window_start)).toBe('2026-05-08');
+    expect(dateOnly(quarterlyRows[0].invoice_window_end)).toBe('2026-08-08');
+    expect(dateOnly(quarterlyRows[1].service_period_end)).toBe('2026-08-08');
+
+    const semiAnnualRows = await loadContractPeriods(semiAnnual);
+    expect(dateOnly(semiAnnualRows[0].service_period_end)).toBe('2026-08-08');
+    expect(dateOnly(semiAnnualRows[0].invoice_window_end)).toBe('2027-02-08');
+
+    const annualRows = await loadContractPeriods(annual);
+    expect(dateOnly(annualRows[0].service_period_start)).toBe('2026-02-28');
+    expect(dateOnly(annualRows[0].service_period_end)).toBe('2027-02-28');
+    expect(dateOnly(annualRows[0].invoice_window_start)).toBe('2027-02-28');
+    expect(dateOnly(annualRows[0].invoice_window_end)).toBe('2028-02-28');
   });
 });

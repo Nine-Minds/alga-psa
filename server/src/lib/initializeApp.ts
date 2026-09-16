@@ -13,10 +13,7 @@ import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHan
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { initializeJobRunner, stopJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
-import {
-  replenishContractCadenceServicePeriodsSweep,
-  CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME,
-} from 'server/src/lib/jobs/handlers/replenishContractCadenceServicePeriodsHandler';
+import { registerContractCadenceReplenishmentSchedule } from 'server/src/lib/jobs/scheduleContractCadenceReplenishment';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
@@ -576,21 +573,9 @@ async function initializeJobScheduler(storageService: StorageService) {
   // Register the nightly contract-cadence service-period replenishment job if it
   // doesn't exist. This is independent of client billing-cycle creation: it
   // enumerates contract-cadence lines directly and advances their rolling
-  // coverage, including recovering already-missing periods.
-  const existingContractReplenishmentJobs = await jobScheduler.getJobs({
-    jobName: CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME,
-  });
-  if (existingContractReplenishmentJobs.length === 0) {
-    jobScheduler.registerJobHandler(CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME, async () => {
-      await replenishContractCadenceServicePeriodsSweep();
-    });
-
-    await jobScheduler.scheduleRecurringJob(
-      CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME,
-      '24 hours',
-      { tenantId: 'system' }
-    );
-  }
+  // coverage, including recovering already-missing periods. Enterprise schedules
+  // the same sweep on the durable Temporal maintenance fan-out instead.
+  await registerContractCadenceReplenishmentSchedule(jobScheduler, { isEnterprise });
 
   // Register the nightly time period creation job per tenant
   jobScheduler.registerJobHandler<{ tenantId: string }>('createNextTimePeriods', async (job) => {

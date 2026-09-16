@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tenantHandlerMock = vi.fn();
 const systemHandlerMock = vi.fn();
+const contractSweepMock = vi.fn();
 const listTenantsMock = vi.fn();
 // Rows returned for the per-job tenant selector tables (teams_integrations, email_providers).
 const selectTenantsMock = vi.fn();
@@ -53,6 +54,9 @@ vi.mock('@alga-psa/jobs/handlers/teamsMeetingSweepHandler', () => ({ TEAMS_MEETI
 vi.mock('@alga-psa/jobs/handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('inbound-email-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallNotificationHandler', () => ({ renewTelephonyCallSubscriptions: (...a: unknown[]) => tenantHandlerMock('renew-telephony-call-subscriptions', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallArtifactHandler', () => ({ TELEPHONY_CALL_ARTIFACT_SWEEP_JOB: 'sweep-telephony-call-artifacts', telephonyCallArtifactSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-telephony-call-artifacts', ...a) }));
+vi.mock('@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization', () => ({
+  replenishContractCadenceServicePeriodsSweep: (...a: unknown[]) => contractSweepMock(...a),
+}));
 
 import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
 
@@ -60,11 +64,13 @@ describe('runMaintenanceJob', () => {
   beforeEach(() => {
     tenantHandlerMock.mockReset();
     systemHandlerMock.mockReset();
+    contractSweepMock.mockReset();
     listTenantsMock.mockReset();
     selectTenantsMock.mockReset();
     selectorTablesSeen.length = 0;
     tenantHandlerMock.mockResolvedValue(undefined);
     systemHandlerMock.mockResolvedValue(undefined);
+    contractSweepMock.mockResolvedValue({ tenantsProcessed: 0, tenantsFailed: 0, summaries: [] });
   });
 
   it('runs a system job once and does not list tenants', async () => {
@@ -165,5 +171,22 @@ describe('runMaintenanceJob', () => {
   it('reports known jobs via isKnownMaintenanceJob', () => {
     expect(isKnownMaintenanceJob('search:reconcile')).toBe(true);
     expect(isKnownMaintenanceJob('sla-timer')).toBe(false);
+    expect(isKnownMaintenanceJob('replenishContractCadenceServicePeriods')).toBe(true);
+  });
+
+  it('runs contract-cadence replenishment once as a system job', async () => {
+    const result = await runMaintenanceJob('replenishContractCadenceServicePeriods');
+    expect(listTenantsMock).not.toHaveBeenCalled();
+    expect(contractSweepMock).toHaveBeenCalledTimes(1);
+    expect(contractSweepMock).toHaveBeenCalledWith({
+      sourceRunPrefix: 'temporal-contract-cadence-replenishment',
+    });
+    expect(result).toEqual({
+      jobName: 'replenishContractCadenceServicePeriods',
+      scope: 'system',
+      total: 1,
+      succeeded: 1,
+      failed: 0,
+    });
   });
 });

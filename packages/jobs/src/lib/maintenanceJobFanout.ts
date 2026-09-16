@@ -2,6 +2,8 @@ import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import type { TenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from '@alga-psa/types';
+import { replenishContractCadenceServicePeriodsSweep } from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
 
 // Sibling handlers live in this same package; imported relatively so the
 // wildcard './handlers/*' export-map entry is not self-referenced (which would
@@ -99,6 +101,15 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
   'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }), tenants: tenantsWithInboundEmail, concurrency: 3 },
   'provider-disconnect-retry': { scope: 'tenant', run: (tenantId) => providerDisconnectRetryHandler({ tenantId }) },
+  // The sweep owns tenant enumeration and per-tenant advisory locking itself,
+  // so it runs once as a system job rather than being fanned out twice.
+  [CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME]: {
+    scope: 'system',
+    run: () =>
+      replenishContractCadenceServicePeriodsSweep({
+        sourceRunPrefix: 'temporal-contract-cadence-replenishment',
+      }),
+  },
 };
 
 export type MaintenanceJobResult = {

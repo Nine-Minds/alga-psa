@@ -67,3 +67,45 @@ Frozen-time CloudLab reproduction (missing Aug 8–Sep 8 created, mapped to the 
 
 ## Verification / rollout (acceptance 7)
 Read-only audit query for contract-cadence coverage across all tenants (pre-deploy); after deploy, verify CloudLab gains Aug 8–Sep 8 and future periods and appears in Ready to Bill.
+
+---
+
+## Specification reconciliation (2026-09-16)
+
+A second, untracked packet — `ee/docs/plans/2026-09-16-contract-cadence-service-period-replenishment/`
+(PRD, SCRATCHPAD, features, tests) — was written after this committed packet. It
+proposes a different execution architecture and is **not** the implemented
+specification. The two were not combined.
+
+**Committed packet wins (implemented):**
+
+- A dedicated nightly `replenishContractCadenceServicePeriods` sweep, separate
+  from `createClientContractLineCycles`, with per-tenant transactions and a
+  `pg_advisory_xact_lock`, reusing the canonical contract sync so regeneration
+  rules are not forked.
+- `coverageAnchorDate` decouples the generation start from the rolling horizon.
+
+**Competing packet (rejected, not implemented):**
+
+- Hooking replenishment into the per-client `createClientContractLineCycles`
+  boundary and adding a `clientId` filter, so the sweep would depend on client
+  cycle creation and run once per client visit.
+- Consolidating the two `createClientContractLineCycles` implementations
+  (`packages/billing` → `shared/billingClients`). This is a distinct refactor
+  with its own blast radius; it is out of scope here.
+- `SELECT … FOR UPDATE` row locking on eligible contract lines in place of the
+  per-tenant advisory lock.
+
+**Useful acceptance coverage carried over from the untracked packet:** tenant
+isolation and per-line/per-tenant failure isolation, cap visibility and
+continuation, skipped/deferred/stale-row preservation, advance/arrears and
+month-end anchors, mixed client/contract cadence, and the read-only audit. The
+competing packet's identifier-free artifacts remain in the working tree
+uncommitted; their identifiers stay on the board card.
+
+**Overriding human requirement:** Essentials and Pro run the sweep on the
+established Temporal maintenance fan-out
+(`maintenance-fanout:replenishContractCadenceServicePeriods`, daily at 04:00
+UTC), with the pg-boss recurring schedule used only where Temporal is not the
+scheduling authority. The commit-time draft's pg-boss-only wiring did not
+satisfy this and has been corrected.
