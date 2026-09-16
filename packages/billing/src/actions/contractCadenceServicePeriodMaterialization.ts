@@ -14,8 +14,9 @@ import { materializeContractCadenceServicePeriods } from '@shared/billingClients
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from '@shared/billingClients/clipRecurringCandidatesToObligationBounds';
 import {
-  findRecurringServicePeriodCandidateProtection,
-  isPreservedRecurringServicePeriodRecord,
+  buildRecurringServicePeriodCoverageIndex,
+  findUncoveredRecurringServicePeriodCandidates,
+  isRecurringServicePeriodCandidateCovered,
 } from '@shared/billingClients/regenerateRecurringServicePeriods';
 
 export { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME };
@@ -417,6 +418,8 @@ export interface ContractCadenceObligationSyncResult {
   furthestServicePeriodEnd: ISO8601String | null;
   expectedCoverageEnd: ISO8601String | null;
   meetsExpectedCoverage: boolean;
+  /** Eligible candidates the active ledger still does not cover or protect. */
+  unresolvedGapCount: number;
 }
 
 function emptyObligationSyncResult(changed: boolean): ContractCadenceObligationSyncResult {
@@ -431,6 +434,7 @@ function emptyObligationSyncResult(changed: boolean): ContractCadenceObligationS
     furthestServicePeriodEnd: null,
     expectedCoverageEnd: null,
     meetsExpectedCoverage: false,
+    unresolvedGapCount: 0,
   };
 }
 
@@ -444,51 +448,6 @@ function resolveFurthestServicePeriodEnd(
     }
   }
   return furthest;
-}
-
-function servicePeriodIdentity(record: Pick<IRecurringServicePeriodRecord, 'servicePeriod'>) {
-  return `${record.servicePeriod.start.slice(0, 10)}|${record.servicePeriod.end.slice(0, 10)}`;
-}
-
-/**
- * Coverage view used by capped continuation. It mirrors canonical regeneration:
- * a candidate is accounted for when the ledger holds its exact period, holds its
- * schedule-slot key (an override retaining the original boundary), or when a
- * preserved override's range overlaps the candidate. Without the slot and
- * override semantics, an intentionally replaced period (for example an edited
- * Jan 8–Mar 8 period keeping the Jan–Feb key) would look permanently missing and
- * stall the continuation at the same boundary on every run.
- */
-function buildContinuationCoverageIndex(records: IRecurringServicePeriodRecord[]) {
-  const identities = new Set<string>();
-  const slotKeys = new Set<string>();
-  const protectedRecords: IRecurringServicePeriodRecord[] = [];
-
-  for (const record of records) {
-    if (record.lifecycleState === 'superseded' || record.lifecycleState === 'archived') {
-      continue;
-    }
-    identities.add(servicePeriodIdentity(record));
-    slotKeys.add(`${record.scheduleKey}\u0000${record.periodKey}`);
-    if (isPreservedRecurringServicePeriodRecord(record)) {
-      protectedRecords.push(record);
-    }
-  }
-
-  return { identities, slotKeys, protectedRecords };
-}
-
-function isCandidateCoveredForContinuation(
-  candidate: IRecurringServicePeriodRecord,
-  coverage: ReturnType<typeof buildContinuationCoverageIndex>,
-) {
-  if (coverage.identities.has(servicePeriodIdentity(candidate))) {
-    return true;
-  }
-  if (coverage.slotKeys.has(`${candidate.scheduleKey}\u0000${candidate.periodKey}`)) {
-    return true;
-  }
-  return findRecurringServicePeriodCandidateProtection(candidate, coverage.protectedRecords) != null;
 }
 
 /**
@@ -625,12 +584,12 @@ async function syncContractCadenceObligation(
   let historicalBoundaryFloor = billedBoundaryEnd;
 
   if (materialized.hitPeriodCap) {
-    const coverage = buildContinuationCoverageIndex(existingRecords);
+    const coverage = buildRecurringServicePeriodCoverageIndex(existingRecords);
     let continuationStart: ISO8601String = regenerationStart;
 
     for (let batchIndex = 0; batchIndex < MAX_CONTINUATION_SCAN_BATCHES; batchIndex += 1) {
       const missingCandidate = materialized.records.find(
-        (candidate) => !isCandidateCoveredForContinuation(candidate, coverage),
+        (candidate) => !isRecurringServicePeriodCandidateCovered(candidate, coverage),
       );
       const lastRecord = materialized.records[materialized.records.length - 1];
 
@@ -732,9 +691,23 @@ async function syncContractCadenceObligation(
   });
 
   const furthestServicePeriodEnd = resolveFurthestServicePeriodEnd(regenerationPlan.activeRecords);
+
+  // Reaching the horizon is not enough: a capped or otherwise-truncated batch
+  // can leave an interior quarter uncovered while still ending at the horizon.
+  // Assess continuity with the same candidate/protection semantics the
+  // regeneration and capped continuation use, so a gap that is suppressed only
+  // by a protected override is not reported as missing while a genuinely absent
+  // eligible period is.
+  const unresolvedGapCount = findUncoveredRecurringServicePeriodCandidates(
+    candidateRecords,
+    regenerationPlan.activeRecords,
+    regenerationPlan.historicalBoundaryEnd,
+  ).length;
+
   const meetsExpectedCoverage = !materialized.hitPeriodCap
     && furthestServicePeriodEnd != null
-    && compareIsoDateOnly(furthestServicePeriodEnd, expectedCoverageEnd) >= 0;
+    && compareIsoDateOnly(furthestServicePeriodEnd, expectedCoverageEnd) >= 0
+    && unresolvedGapCount === 0;
 
   return {
     changed:
@@ -750,6 +723,7 @@ async function syncContractCadenceObligation(
     furthestServicePeriodEnd,
     expectedCoverageEnd,
     meetsExpectedCoverage,
+    unresolvedGapCount,
   };
 }
 
@@ -832,6 +806,8 @@ export interface ContractCadenceReplenishmentSummary {
   linesExhaustedBeforeRun: number;
   /** Preserved-override/candidate mismatches surfaced instead of discarded. */
   overrideConflicts: number;
+  /** Eligible candidates the active ledger still does not cover or protect. */
+  unresolvedGapCount: number;
   failures: ContractCadenceReplenishmentLineFailure[];
 }
 
@@ -879,6 +855,7 @@ export async function replenishContractCadenceServicePeriodsForTenant(
     linesAwaitingCoverage: 0,
     linesExhaustedBeforeRun: 0,
     overrideConflicts: 0,
+    unresolvedGapCount: 0,
     failures: [],
   };
 
@@ -905,6 +882,7 @@ export async function replenishContractCadenceServicePeriodsForTenant(
         summary.linesExhaustedBeforeRun += 1;
       }
       summary.overrideConflicts += result.overrideConflicts;
+      summary.unresolvedGapCount += result.unresolvedGapCount;
       if (result.hitPeriodCap) {
         summary.linesAtPeriodCap += 1;
       }
@@ -981,6 +959,7 @@ export function summarizeContractCadenceReplenishment(
     linesExhaustedBeforeRun: summary.linesExhaustedBeforeRun,
     linesAtPeriodCap: summary.linesAtPeriodCap,
     remainingCoverageGaps: summary.linesAwaitingCoverage,
+    remainingEligibleGaps: summary.unresolvedGapCount,
     overrideConflicts: summary.overrideConflicts,
     failedObligations: summary.failures.length,
     failures: summary.failures.slice(0, 20),

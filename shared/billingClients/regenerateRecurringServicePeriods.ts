@@ -150,6 +150,81 @@ export function findRecurringServicePeriodCandidateProtection(
   );
 }
 
+export interface RecurringServicePeriodCoverageIndex {
+  identities: Set<string>;
+  slotKeys: Set<string>;
+  protectedRecords: IRecurringServicePeriodRecord[];
+}
+
+/**
+ * Coverage view shared by capped continuation and coverage reporting. A
+ * candidate is accounted for when the ledger holds its exact period, holds its
+ * schedule-slot key (an override retaining the original boundary), or when a
+ * preserved override's range overlaps it. Without the slot and override
+ * semantics, an intentionally replaced period (for example an edited Jan 8–Mar
+ * 8 period keeping the Jan–Feb key) would look permanently missing.
+ */
+export function buildRecurringServicePeriodCoverageIndex(
+  records: IRecurringServicePeriodRecord[],
+): RecurringServicePeriodCoverageIndex {
+  const identities = new Set<string>();
+  const slotKeys = new Set<string>();
+  const protectedRecords: IRecurringServicePeriodRecord[] = [];
+
+  for (const record of records) {
+    if (record.lifecycleState === 'superseded' || record.lifecycleState === 'archived') {
+      continue;
+    }
+    identities.add(
+      `${toDateOnly(record.servicePeriod.start)}|${toDateOnly(record.servicePeriod.end)}`,
+    );
+    slotKeys.add(buildSchedulePeriodKey(record));
+    if (isPreservedRecurringServicePeriodRecord(record)) {
+      protectedRecords.push(record);
+    }
+  }
+
+  return { identities, slotKeys, protectedRecords };
+}
+
+export function isRecurringServicePeriodCandidateCovered(
+  candidate: IRecurringServicePeriodRecord,
+  coverage: RecurringServicePeriodCoverageIndex,
+): boolean {
+  if (
+    coverage.identities.has(
+      `${toDateOnly(candidate.servicePeriod.start)}|${toDateOnly(candidate.servicePeriod.end)}`,
+    )
+  ) {
+    return true;
+  }
+  if (coverage.slotKeys.has(buildSchedulePeriodKey(candidate))) {
+    return true;
+  }
+  return findRecurringServicePeriodCandidateProtection(candidate, coverage.protectedRecords) != null;
+}
+
+/**
+ * Eligible candidates the active ledger neither holds nor intentionally
+ * protects. Candidates ending at or before `coverageFloorEnd` are history and
+ * excluded. Callers use this to assert coverage continuity instead of trusting
+ * the furthest end date, which can reach the horizon while an interior period
+ * is missing.
+ */
+export function findUncoveredRecurringServicePeriodCandidates(
+  candidateRecords: IRecurringServicePeriodRecord[],
+  activeRecords: IRecurringServicePeriodRecord[],
+  coverageFloorEnd?: ISO8601String | null,
+): IRecurringServicePeriodRecord[] {
+  const coverage = buildRecurringServicePeriodCoverageIndex(activeRecords);
+  const eligible = coverageFloorEnd
+    ? candidateRecords.filter(
+        (candidate) => toDateOnly(candidate.servicePeriod.end) > toDateOnly(coverageFloorEnd),
+      )
+    : candidateRecords;
+  return eligible.filter((candidate) => !isRecurringServicePeriodCandidateCovered(candidate, coverage));
+}
+
 function startsAtOrAfterCoverageEnd(
   record: IRecurringServicePeriodRecord,
   candidateCoverageEnd: ISO8601String | undefined,
@@ -312,13 +387,24 @@ export function regenerateRecurringServicePeriods(
     const candidate = candidateRecords[candidateIndex];
 
     if (isPreservedOverrideRecord(existing)) {
-      const conflict = buildOverrideConflict(existing, candidate);
+      // A preserved record owns only the candidate that replaces its slot or
+      // overlaps its range. Consuming an unrelated candidate here would drop a
+      // period no later iteration can regenerate — for example, two preserved
+      // monthly locks on a quarterly schedule would swallow the following
+      // quarter. Leave unrelated candidates for later existing records or the
+      // trailing reconciliation; `appendNewCandidate` still refuses any
+      // candidate that actually overlaps a preserved record.
+      const ownedCandidate = candidate
+        && findRecurringServicePeriodCandidateProtection(candidate, [existing]) != null
+        ? candidate
+        : undefined;
+      const conflict = buildOverrideConflict(existing, ownedCandidate);
       if (conflict) {
         conflicts.push(conflict);
       }
       preservedRecords.push(existing);
       activeRecords.push(existing);
-      if (candidate) {
+      if (ownedCandidate) {
         candidateIndex += 1;
       }
       continue;

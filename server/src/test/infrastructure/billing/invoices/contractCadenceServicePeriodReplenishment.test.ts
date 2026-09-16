@@ -597,6 +597,65 @@ describe('Contract-cadence service-period replenishment', () => {
     expect(await invoiceCount()).toBe(invoicesBefore);
   });
 
+  it('recovers the quarter after preserved monthly slots and stays idempotent', async () => {
+    // Quarterly grid anchored 2026-01-08 with two preserved monthly locks. The
+    // Jan 8–Apr 8 candidate overlaps both locks and stays suppressed, but the
+    // unrelated Apr 8–Jul 8 quarter must still be generated on the first run
+    // and not regenerated on the next.
+    const obligationId = await createContractCadenceLine({
+      startDate: '2026-01-08T00:00:00Z',
+      billingFrequency: 'quarterly',
+      name: 'Quarterly Locked Monthly Slots',
+    });
+    for (const [serviceStart, serviceEnd, invoiceStart, invoiceEnd] of [
+      ['2026-01-08', '2026-02-08', '2026-02-08', '2026-03-08'],
+      ['2026-02-08', '2026-03-08', '2026-03-08', '2026-04-08'],
+    ]) {
+      await seedContractPeriod({
+        obligationId,
+        serviceStart,
+        serviceEnd,
+        invoiceStart,
+        invoiceEnd,
+        lifecycleState: 'locked',
+      });
+    }
+
+    const params = { tenant: context.tenantId, sourceRunPrefix: 'test-nightly', asOf: '2026-09-15T00:00:00Z' };
+    const first = await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(first.failures).toEqual([]);
+    // Coverage continuity, not just the furthest end: the missing quarter is
+    // reported when it is not recovered.
+    expect(first.linesAwaitingCoverage).toBe(0);
+    expect(first.unresolvedGapCount).toBe(0);
+
+    const rows = await loadContractPeriods(obligationId);
+    expect(
+      rows.filter(
+        (row) =>
+          row.lifecycle_state === 'generated'
+          && dateOnly(row.service_period_start) === '2026-04-08'
+          && dateOnly(row.service_period_end) === '2026-07-08',
+      ),
+    ).toHaveLength(1);
+    // The January quarter is suppressed by the two locks, not generated.
+    expect(
+      rows.filter(
+        (row) =>
+          row.lifecycle_state === 'generated'
+          && dateOnly(row.service_period_start) === '2026-01-08'
+          && dateOnly(row.service_period_end) === '2026-04-08',
+      ),
+    ).toHaveLength(0);
+
+    const afterFirst = await loadContractPeriods(obligationId);
+    const second = await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(second.periodsGenerated).toBe(0);
+    expect(second.periodsSuperseded).toBe(0);
+    expect(second.linesAwaitingCoverage).toBe(0);
+    expect(await loadContractPeriods(obligationId)).toEqual(afterFirst);
+  });
+
   it('isolates a failing line, rolls back its writes, and recovers on retry', async () => {
     // Billed history ends mid-period (Aug 20) so the first regenerated candidate
     // overlaps the historical boundary and the canonical backfill refuses it.

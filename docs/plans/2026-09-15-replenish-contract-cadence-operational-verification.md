@@ -152,10 +152,14 @@ order by exhausted desc, below_threshold desc, meets_target, a.furthest_end null
 ```
 
 Interior gaps use the same `eligible` CTE and a `lag()` over
-`(tenant, schedule_key)`; `is_intentional` marks a gap whose start is at or
-before the billed floor (see the module for the full query). A line absent from
-`coverage` is ineligible; a line with `furthest_end is null` is silently
-exhausted.
+`(tenant, schedule_key)`. The SQL marks a gap intentional when its start is at or
+before the billed floor (history). `markProtectedInteriorGaps` then reclassifies
+the remaining gaps against the canonical protection semantics: it regenerates the
+cadence candidate(s) covering each gap and marks it intentional only when every
+candidate is overlapped by a preserved record, so a protected override that
+suppresses a partially overlapped slot is not reported as recoverable and an
+unrelated missing candidate still is. A line absent from `coverage` is
+ineligible; a line with `furthest_end is null` is silently exhausted.
 
 Cross-tenant impact is unmeasured. Both queries project `tenant` (and coverage
 projects `contract_line_id`), so results can be grouped as counts per tenant
@@ -202,7 +206,7 @@ success are not established by the audit alone.
 Only the isolated local test database was exercised; no production record was
 read or changed.
 
-- `contractCadenceServicePeriodReplenishment.test.ts` (28 tests) reproduces the
+- `contractCadenceServicePeriodReplenishment.test.ts` (29 tests) reproduces the
   production ledger shape in an isolated test database and asserts the recovered
   period, the following-month invoice-window mapping, preserved billed/locked/
   skipped/deferred/superseded history, repeat-run idempotency, a later-horizon
@@ -211,9 +215,12 @@ read or changed.
   forward progress across runs, advance/arrears and month-end and
   quarterly/semi-annual/annual anchors, eligibility (including unsupported
   frequency/timing lines being left untouched with their protected rows
-  preserved), per-line failure isolation with retry, per-tenant sweep isolation,
-  a multi-profile client replenished exactly once with no new cycles or invoices,
-  and tenant isolation.
+  preserved), a quarterly schedule whose two preserved monthly locks must not
+  swallow the following quarter (recovered on the first run, idempotent on the
+  next, with `linesAwaitingCoverage`/`unresolvedGapCount` reporting continuity
+  rather than the furthest end), per-line failure isolation with retry,
+  per-tenant sweep isolation, a multi-profile client replenished exactly once
+  with no new cycles or invoices, and tenant isolation.
 - `contractCadenceServicePeriodReplenishment.concurrency.test.ts` commits the
   fixture on a pool connection and runs two overlapping sweeps on separate
   connections, asserting the advisory lock serialises them and no period is
@@ -247,13 +254,21 @@ read or changed.
   and is updated rather than duplicated on repeat setup.
 - `contractCadenceCoverageAudit.test.ts` validates the read-only audit against
   absent, leading-gap, interior-gap, intentional-exclusion, bounded-assignment,
-  and ineligible-line fixtures.
+  and ineligible-line fixtures. It also distinguishes a protected exclusion from
+  an actual gap: an Aug 8–Sep 15 override retaining the Aug 8–Sep 8 slot
+  intentionally suppresses Sep 8–Oct 8 (reported intentional), while a genuinely
+  missing month on another line stays recoverable.
 - `regenerateRecurringServicePeriods` checks every proposed insert or replacement
   against protected slots and overlapping ranges, including overrides expanded
   backward into an earlier period. It suppresses unsafe candidates and reports
   the protected record and candidate slot in the regeneration conflicts.
-  Capped continuation uses the same protection rule so an intentional exclusion
-  cannot stall catch-up. The shared and server suites cover these rules.
+  Preserved records consume only the candidate that replaces their slot or
+  overlaps their range, so an unrelated later candidate (for example the quarter
+  after two preserved monthly locks) is still generated. Capped continuation and
+  coverage continuity use the same protection rule so an intentional exclusion
+  cannot stall catch-up. `findUncoveredRecurringServicePeriodCandidates` reports
+  an uncovered eligible candidate even when later coverage reaches the horizon.
+  The shared and server suites cover these rules.
 - Empty generation batches retain their coverage limit. A completed catch-up
   leaves later valid rows untouched, while an assignment ending at its final
   billed period still retires mutable post-end rows. Continuation does not turn

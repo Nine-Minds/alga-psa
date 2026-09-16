@@ -69,14 +69,16 @@ describe('Contract-cadence coverage audit', () => {
     obligationId: string;
     serviceStart: string;
     serviceEnd: string;
-    lifecycleState: 'generated' | 'billed' | 'locked';
+    lifecycleState: 'generated' | 'billed' | 'locked' | 'edited' | 'skipped';
     invoiceLinked?: boolean;
+    provenanceKind?: 'generated' | 'user_edited' | 'repair' | 'regenerated';
+    periodKey?: string;
   }) {
     await context.db('recurring_service_periods').insert({
       record_id: uuidv4(),
       tenant: context.tenantId,
       schedule_key: `schedule:${context.tenantId}:contract_line:${input.obligationId}:contract:arrears`,
-      period_key: `period:${input.serviceStart}:${input.serviceEnd}`,
+      period_key: input.periodKey ?? `period:${input.serviceStart}:${input.serviceEnd}`,
       revision: 1,
       obligation_id: input.obligationId,
       obligation_type: 'contract_line',
@@ -91,7 +93,7 @@ describe('Contract-cadence coverage audit', () => {
       activity_window_start: null,
       activity_window_end: null,
       timing_metadata: null,
-      provenance_kind: 'generated',
+      provenance_kind: input.provenanceKind ?? 'generated',
       source_rule_version: 'contract_cadence|billing_cycle:monthly|anchor:2026-02-08|due:arrears',
       reason_code: 'initial_materialization',
       source_run_key: 'audit-fixture',
@@ -180,6 +182,45 @@ describe('Contract-cadence coverage audit', () => {
     expect(intentionalGap).toBeTruthy();
     expect(dateOnly(intentionalGap!.gap_start)).toBe('2026-04-08');
     expect(intentionalGap!.is_intentional).toBe(true);
+  });
+
+  it('marks a gap left by a protected override intentional without hiding an unrelated gap', async () => {
+    // The Aug 8–Sep 15 override retains the Aug 8–Sep 8 slot, so canonical
+    // protection suppresses the Sep 8–Oct 8 candidate and the ledger jumps to
+    // Oct 8. The resulting Sep 15–Oct 8 hole is an intentional exclusion, not
+    // recoverable. A genuinely missing month on another line must still be
+    // reported as recoverable.
+    const overridden = await createLine({ startDate: '2026-08-08', name: 'Protected Override Gap' });
+    await seedPeriod({
+      obligationId: overridden,
+      serviceStart: '2026-08-08',
+      serviceEnd: '2026-09-15',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+      periodKey: 'period:2026-08-08:2026-09-08',
+    });
+    await seedPeriod({
+      obligationId: overridden,
+      serviceStart: '2026-10-08',
+      serviceEnd: '2026-11-08',
+      lifecycleState: 'generated',
+    });
+
+    const recoverable = await createLine({ startDate: '2026-02-08', name: 'Unrelated Recoverable Gap' });
+    await seedPeriod({ obligationId: recoverable, serviceStart: '2026-02-08', serviceEnd: '2026-03-08', lifecycleState: 'generated' });
+    await seedPeriod({ obligationId: recoverable, serviceStart: '2026-04-08', serviceEnd: '2026-05-08', lifecycleState: 'generated' });
+
+    const { interiorGaps } = await audit('2026-09-15');
+
+    const overriddenGap = interiorGaps.find((gap) => gap.obligation_id === overridden);
+    expect(overriddenGap).toBeTruthy();
+    expect(dateOnly(overriddenGap!.gap_start)).toBe('2026-10-08');
+    expect(overriddenGap!.is_intentional).toBe(true);
+
+    const recoverableGap = interiorGaps.find((gap) => gap.obligation_id === recoverable);
+    expect(recoverableGap).toBeTruthy();
+    expect(dateOnly(recoverableGap!.gap_start)).toBe('2026-04-08');
+    expect(recoverableGap!.is_intentional).toBe(false);
   });
 
   it('clips the target to the assignment end for short assignments', async () => {

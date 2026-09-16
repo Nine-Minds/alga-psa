@@ -1,5 +1,25 @@
 import type { Knex } from 'knex';
-import type { ISO8601String } from '@alga-psa/types';
+import type {
+  DuePosition,
+  IRecurringObligationRef,
+  IRecurringServicePeriod,
+  IRecurringServicePeriodRecord,
+  ISO8601String,
+} from '@alga-psa/types';
+import {
+  generateAnnualContractCadenceServicePeriods,
+  generateMonthlyContractCadenceServicePeriods,
+  generateQuarterlyContractCadenceServicePeriods,
+  generateSemiAnnualContractCadenceServicePeriods,
+  type ContractCadenceServicePeriodGenerationInput,
+} from '@shared/billingClients/contractCadenceServicePeriods';
+import {
+  findRecurringServicePeriodCandidateProtection,
+} from '@shared/billingClients/regenerateRecurringServicePeriods';
+import {
+  buildRecurringServicePeriodPeriodKey,
+  buildRecurringServicePeriodScheduleKey,
+} from '@shared/billingClients/recurringServicePeriodKeys';
 
 /**
  * Read-only contract-cadence coverage audit.
@@ -49,6 +69,9 @@ export interface ContractCadenceInteriorGapRow {
   gap_days: number | string;
   billed_floor_end: string;
   is_intentional: boolean;
+  assignment_start: string;
+  billing_frequency: string;
+  billing_timing: string;
 }
 
 export interface ContractCadenceCoverageAuditResult {
@@ -195,7 +218,10 @@ select
   a.service_period_start as gap_start,
   (a.service_period_start - a.previous_end) as gap_days,
   coalesce(f.billed_floor_end, date '0001-01-01') as billed_floor_end,
-  (a.service_period_start <= coalesce(f.billed_floor_end, date '0001-01-01')) as is_intentional
+  (a.service_period_start <= coalesce(f.billed_floor_end, date '0001-01-01')) as is_intentional,
+  e.assignment_start,
+  e.billing_frequency,
+  e.billing_timing
 from active a
 join eligible e
   on e.tenant = a.tenant and e.contract_line_id = a.obligation_id
@@ -210,6 +236,202 @@ function addDays(date: ISO8601String, days: number): ISO8601String {
   const next = new Date(`${date.slice(0, 10)}T00:00:00.000Z`);
   next.setUTCDate(next.getUTCDate() + days);
   return next.toISOString().slice(0, 10) as ISO8601String;
+}
+
+type SupportedCadenceFrequency = 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+
+const CADENCE_GENERATORS: Record<
+  SupportedCadenceFrequency,
+  (input: ContractCadenceServicePeriodGenerationInput) => IRecurringServicePeriod[]
+> = {
+  monthly: generateMonthlyContractCadenceServicePeriods,
+  quarterly: generateQuarterlyContractCadenceServicePeriods,
+  'semi-annually': generateSemiAnnualContractCadenceServicePeriods,
+  annually: generateAnnualContractCadenceServicePeriods,
+};
+
+function normalizeCadenceFrequency(value: string): SupportedCadenceFrequency | null {
+  switch ((value ?? '').toLowerCase()) {
+    case 'monthly':
+      return 'monthly';
+    case 'quarterly':
+      return 'quarterly';
+    case 'semi-annually':
+    case 'semiannually':
+      return 'semi-annually';
+    case 'annually':
+    case 'annual':
+      return 'annually';
+    default:
+      return null;
+  }
+}
+
+function toDateOnly(value: unknown): ISO8601String {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10) as ISO8601String;
+  }
+  return `${String(value).slice(0, 10)}` as ISO8601String;
+}
+
+// `findRecurringServicePeriodCandidateProtection` only reads the schedule slot
+// and the service-period range, so the audit can hand it these lightweight
+// shapes instead of hydrating a full persisted record.
+type ProtectionRecordShape = {
+  scheduleKey: string;
+  periodKey: string;
+  sourceObligation: { tenant: string; obligationType: string; obligationId: string };
+  servicePeriod: { start: ISO8601String; end: ISO8601String };
+};
+
+const asProtectionRecord = (shape: ProtectionRecordShape): IRecurringServicePeriodRecord =>
+  shape as unknown as IRecurringServicePeriodRecord;
+
+interface ProtectedPeriodDbRow {
+  tenant: string;
+  obligation_id: string;
+  schedule_key: string;
+  period_key: string;
+  service_period_start: unknown;
+  service_period_end: unknown;
+}
+
+/**
+ * Reclassify raw interior gaps against the canonical protection semantics.
+ *
+ * The SQL marks a gap intentional when it sits at or before the billed floor
+ * (historical). That misses a gap created when a protected override suppresses
+ * a candidate it only partially overlaps: the override Aug 8–Sep 15 keeps the
+ * Aug 8–Sep 8 slot, so the Sep 8–Oct 8 candidate is suppressed, leaving a
+ * Sep 15–Oct 8 hole that is not history. Here we generate the canonical
+ * candidate(s) covering each gap and mark it intentional only when every
+ * candidate is protected. A gap with any unprotected candidate stays
+ * recoverable, so unrelated gaps are never hidden.
+ */
+async function markProtectedInteriorGaps(
+  trx: Knex,
+  gaps: ContractCadenceInteriorGapRow[],
+  tenantFilter: string | null,
+): Promise<void> {
+  const pending = gaps.filter((gap) => !gap.is_intentional);
+  if (pending.length === 0) {
+    return;
+  }
+
+  const obligationIds = Array.from(new Set(pending.map((gap) => String(gap.obligation_id))));
+  const protectedQuery = trx('recurring_service_periods')
+    .where({ obligation_type: 'contract_line', cadence_owner: 'contract' })
+    .whereIn('obligation_id', obligationIds)
+    .whereNotIn('lifecycle_state', ['superseded', 'archived'])
+    .andWhere((builder) =>
+      builder
+        .whereIn('lifecycle_state', ['edited', 'locked', 'skipped', 'billed'])
+        .orWhereIn('provenance_kind', ['user_edited', 'repair'])
+        .orWhereNotNull('invoice_id')
+        .orWhereNotNull('invoice_charge_detail_id'),
+    )
+    .select(
+      'tenant',
+      'obligation_id',
+      'schedule_key',
+      'period_key',
+      'service_period_start',
+      'service_period_end',
+    );
+  if (tenantFilter) {
+    protectedQuery.andWhere('tenant', tenantFilter);
+  }
+  const protectedRows = (await protectedQuery) as ProtectedPeriodDbRow[];
+
+  const protectedByObligation = new Map<string, IRecurringServicePeriodRecord[]>();
+  for (const row of protectedRows) {
+    const key = `${row.tenant}\u0000${row.obligation_id}`;
+    const list = protectedByObligation.get(key) ?? [];
+    list.push(
+      asProtectionRecord({
+        scheduleKey: row.schedule_key,
+        periodKey: row.period_key,
+        sourceObligation: {
+          tenant: String(row.tenant),
+          obligationType: 'contract_line',
+          obligationId: String(row.obligation_id),
+        },
+        servicePeriod: {
+          start: toDateOnly(row.service_period_start),
+          end: toDateOnly(row.service_period_end),
+        },
+      }),
+    );
+    protectedByObligation.set(key, list);
+  }
+
+  for (const gap of pending) {
+    const frequency = normalizeCadenceFrequency(gap.billing_frequency);
+    if (!frequency) {
+      continue;
+    }
+    const tenant = String(gap.tenant);
+    const obligationId = String(gap.obligation_id);
+    const previousEnd = toDateOnly(gap.previous_end);
+    const gapStart = toDateOnly(gap.gap_start);
+    if (gapStart <= previousEnd) {
+      continue;
+    }
+
+    const duePosition: DuePosition = gap.billing_timing === 'advance' ? 'advance' : 'arrears';
+    const sourceObligation: IRecurringObligationRef = {
+      tenant,
+      obligationId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    };
+    const scheduleKey = buildRecurringServicePeriodScheduleKey({
+      tenant,
+      obligationType: 'contract_line',
+      obligationId,
+      cadenceOwner: 'contract',
+      duePosition,
+    });
+
+    const periods = CADENCE_GENERATORS[frequency]({
+      rangeStart: previousEnd,
+      rangeEnd: gapStart,
+      sourceObligation,
+      duePosition,
+      anchorDate: toDateOnly(gap.assignment_start),
+    });
+    const gapPeriods = periods.filter(
+      (period) => toDateOnly(period.start) < gapStart && toDateOnly(period.end) > previousEnd,
+    );
+    if (gapPeriods.length === 0) {
+      continue;
+    }
+
+    const protectedForObligation = protectedByObligation.get(`${tenant}\u0000${obligationId}`) ?? [];
+    const everyCandidateProtected = gapPeriods.every(
+      (period) =>
+        findRecurringServicePeriodCandidateProtection(
+          asProtectionRecord({
+            scheduleKey,
+            periodKey: buildRecurringServicePeriodPeriodKey(period),
+            sourceObligation: {
+              tenant,
+              obligationType: 'contract_line',
+              obligationId,
+            },
+            servicePeriod: {
+              start: toDateOnly(period.start),
+              end: toDateOnly(period.end),
+            },
+          }),
+          protectedForObligation,
+        ) != null,
+    );
+
+    if (everyCandidateProtected) {
+      gap.is_intentional = true;
+    }
+  }
 }
 
 /**
@@ -232,12 +454,15 @@ export async function runContractCadenceCoverageAudit(
     tenant,
   ]);
   const interiorGapResult = await trx.raw(CONTRACT_CADENCE_INTERIOR_GAPS_SQL, [asOf, tenant]);
+  const interiorGaps = interiorGapResult.rows as ContractCadenceInteriorGapRow[];
+
+  await markProtectedInteriorGaps(trx, interiorGaps, tenant);
 
   return {
     asOf,
     targetEnd,
     thresholdEnd,
     coverage: coverageResult.rows as ContractCadenceCoverageRow[],
-    interiorGaps: interiorGapResult.rows as ContractCadenceInteriorGapRow[],
+    interiorGaps,
   };
 }
