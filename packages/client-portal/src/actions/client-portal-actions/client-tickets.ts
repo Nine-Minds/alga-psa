@@ -31,7 +31,7 @@ import {
 } from '@shared/lib/ticketActivity';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
-  applyVisibilityBoardFilter,
+  applyTicketVisibilityFilter,
   getTicketOrigin,
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
@@ -162,7 +162,7 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
-      applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 't.board_id');
+      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
     })
     .first();
 
@@ -265,7 +265,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyVisibilityBoardFilter(query, visibility.visibleBoardIds);
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -350,7 +350,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyVisibilityBoardFilter(ticketQuery, visibility.visibleBoardIds);
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
         })
         .first();
 
@@ -1173,7 +1173,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds);
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' });
         })
         .first();
 

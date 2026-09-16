@@ -10,7 +10,7 @@ import { Knex } from 'knex';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
-import { applyVisibilityBoardFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
+import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -329,7 +329,7 @@ export class TicketService extends BaseService<ITicket> {
     visibility: ContactVisibilityContext
   ): Knex.QueryBuilder {
     query = query.where('t.client_id', visibility.clientId);
-    return applyVisibilityBoardFilter(query, visibility.visibleBoardIds, 't.board_id');
+    return applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
   }
 
   /**

@@ -20,6 +20,7 @@ export function createTicketRelationshipSqlAdapter(
     ownerColumn: 't.entered_by',
     clientColumn: 't.client_id',
     boardColumn: 't.board_id',
+    contactColumn: 't.contact_name_id',
     teamColumn: 't.assigned_team_id',
     // Tickets expose no client-visibility column ⇒ `client_visible_only` denies,
     // matching the JS kernel (record.is_client_visible is absent).
