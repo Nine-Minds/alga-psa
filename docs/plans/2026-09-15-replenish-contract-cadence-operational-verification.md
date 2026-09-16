@@ -83,7 +83,13 @@ Coverage query (abridged; see the module for the exact SQL). It:
 - computes `coverage_floor_start = greatest(assignment_start, billed_floor_end)`
   and flags a **leading gap** when the first active row starts after that floor
   (the case a `lag()`-only interior scan misses when there is no billed
-  history).
+  history). `leading_gap` reports only *recoverable* leading holes:
+  `markProtectedLeadingGaps` applies the same canonical candidate/protection
+  semantics as interior gaps, so a protected first candidate (for example an
+  edited Aug 15–Sep 8 period retaining the Aug 8–Sep 8 slot on an Aug 8
+  assignment) sets `leading_gap_intentional` and clears `leading_gap`. Aggregate
+  recoverable totals therefore read `... leading_gap` and intentional exclusions
+  read `... leading_gap_intentional`.
 
 ```sql
 with params as (
@@ -164,7 +170,10 @@ ineligible; a line with `furthest_end is null` is silently exhausted.
 Cross-tenant impact is unmeasured. Both queries project `tenant` (and coverage
 projects `contract_line_id`), so results can be grouped as counts per tenant
 (`count(*) filter (where exhausted)`, `... below_threshold`, `... not
-meets_target`, `... leading_gap`) before any tenant is named.
+meets_target`, `... leading_gap`). `leading_gap` already excludes protected
+leading exclusions (those carry `leading_gap_intentional`), so the recoverable
+total is not inflated by overrides; count intentional exclusions separately with
+`... leading_gap_intentional`.
 
 ## Pre-deployment aggregate impact assessment
 
@@ -206,7 +215,7 @@ success are not established by the audit alone.
 Only the isolated local test database was exercised; no production record was
 read or changed.
 
-- `contractCadenceServicePeriodReplenishment.test.ts` (29 tests) reproduces the
+- `contractCadenceServicePeriodReplenishment.test.ts` (30 tests) reproduces the
   production ledger shape in an isolated test database and asserts the recovered
   period, the following-month invoice-window mapping, preserved billed/locked/
   skipped/deferred/superseded history, repeat-run idempotency, a later-horizon
@@ -218,9 +227,10 @@ read or changed.
   preserved), a quarterly schedule whose two preserved monthly locks must not
   swallow the following quarter (recovered on the first run, idempotent on the
   next, with `linesAwaitingCoverage`/`unresolvedGapCount` reporting continuity
-  rather than the furthest end), per-line failure isolation with retry,
-  per-tenant sweep isolation, a multi-profile client replenished exactly once
-  with no new cycles or invoices, and tenant isolation.
+  rather than the furthest end), a shifted leading override that the audit must
+  classify as intentional rather than a leading gap, per-line failure isolation
+  with retry, per-tenant sweep isolation, a multi-profile client replenished
+  exactly once with no new cycles or invoices, and tenant isolation.
 - `contractCadenceServicePeriodReplenishment.concurrency.test.ts` commits the
   fixture on a pool connection and runs two overlapping sweeps on separate
   connections, asserting the advisory lock serialises them and no period is
@@ -254,10 +264,12 @@ read or changed.
   and is updated rather than duplicated on repeat setup.
 - `contractCadenceCoverageAudit.test.ts` validates the read-only audit against
   absent, leading-gap, interior-gap, intentional-exclusion, bounded-assignment,
-  and ineligible-line fixtures. It also distinguishes a protected exclusion from
-  an actual gap: an Aug 8–Sep 15 override retaining the Aug 8–Sep 8 slot
-  intentionally suppresses Sep 8–Oct 8 (reported intentional), while a genuinely
-  missing month on another line stays recoverable.
+  and ineligible-line fixtures. It also distinguishes protected exclusions from
+  actual gaps: an Aug 8–Sep 15 override retaining the Aug 8–Sep 8 slot
+  intentionally suppresses Sep 8–Oct 8 (reported intentional), an Aug 15–Sep 8
+  override retaining the Aug 8–Sep 8 slot marks the leading hole
+  `leading_gap_intentional` with `leading_gap=false`, while genuinely missing
+  first/interior periods stay recoverable.
 - `regenerateRecurringServicePeriods` checks every proposed insert or replacement
   against protected slots and overlapping ranges, including overrides expanded
   backward into an earlier period. It suppresses unsafe candidates and reports

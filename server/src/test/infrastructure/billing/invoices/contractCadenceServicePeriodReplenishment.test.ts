@@ -11,6 +11,7 @@ import {
   replenishContractCadenceServicePeriodsSweep,
   runContractCadenceReplenishmentForTenant,
 } from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
+import { runContractCadenceCoverageAudit } from '@alga-psa/billing/actions/contractCadenceCoverageAudit';
 
 /**
  * DB-backed behavior for the nightly contract-cadence replenishment. The
@@ -654,6 +655,46 @@ describe('Contract-cadence service-period replenishment', () => {
     expect(second.periodsSuperseded).toBe(0);
     expect(second.linesAwaitingCoverage).toBe(0);
     expect(await loadContractPeriods(obligationId)).toEqual(afterFirst);
+  });
+
+  it('audits a shifted leading override as an intentional exclusion, not a leading gap', async () => {
+    // Assignment starts Aug 8; the edited override shifts the first period to
+    // Aug 15 while retaining the Aug 8–Sep 8 slot. Replenishment preserves it
+    // and reaches coverage, and the audit must not report the protected
+    // Aug 8–Aug 15 hole as a recoverable leading gap.
+    const obligationId = await createContractCadenceLine({
+      startDate: '2026-08-08T00:00:00Z',
+      name: 'Shifted Leading Override',
+    });
+    const overrideId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2026-08-15',
+      serviceEnd: '2026-09-08',
+      invoiceStart: '2026-09-08',
+      invoiceEnd: '2026-10-08',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+    });
+    await context.db('recurring_service_periods')
+      .where({ tenant: context.tenantId, record_id: overrideId })
+      .update({ period_key: 'period:2026-08-08:2026-09-08' });
+
+    const summary = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(summary.failures).toEqual([]);
+    expect(summary.linesAwaitingCoverage).toBe(0);
+
+    const audit = await runContractCadenceCoverageAudit(context.db, {
+      tenant: context.tenantId,
+      asOf: '2026-09-15',
+    });
+    const row = audit.coverage.find((candidate) => candidate.contract_line_id === obligationId);
+    expect(row).toBeTruthy();
+    expect(row!.leading_gap).toBe(false);
+    expect(row!.leading_gap_intentional).toBe(true);
   });
 
   it('isolates a failing line, rolls back its writes, and recovers on retry', async () => {

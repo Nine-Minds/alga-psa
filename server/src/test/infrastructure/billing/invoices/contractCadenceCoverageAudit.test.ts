@@ -155,11 +155,42 @@ describe('Contract-cadence coverage audit', () => {
     expect(absentRow.below_threshold).toBe(true);
     expect(absentRow.meets_target).toBe(false);
     expect(absentRow.leading_gap).toBe(true);
+    expect(absentRow.leading_gap_intentional).toBe(false);
 
     const leadingRow = byLine.get(leading)!;
     expect(dateOnly(leadingRow.first_start)).toBe('2026-04-08');
     expect(dateOnly(leadingRow.coverage_floor_start)).toBe('2026-02-08');
     expect(leadingRow.leading_gap).toBe(true);
+    expect(leadingRow.leading_gap_intentional).toBe(false);
+  });
+
+  it('classifies a protected leading exclusion as intentional, not a missing first period', async () => {
+    // An edited override that shifts the first period forward but retains the
+    // Aug 8–Sep 8 slot protects that candidate. The Aug 8–Aug 15 hole is an
+    // intentional exclusion, so it must not count as a recoverable leading gap.
+    const shifted = await createLine({ startDate: '2026-08-08', name: 'Shifted Leading Override' });
+    await seedPeriod({
+      obligationId: shifted,
+      serviceStart: '2026-08-15',
+      serviceEnd: '2026-09-08',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+      periodKey: 'period:2026-08-08:2026-09-08',
+    });
+    await seedPeriod({
+      obligationId: shifted,
+      serviceStart: '2026-09-08',
+      serviceEnd: '2026-10-08',
+      lifecycleState: 'generated',
+    });
+
+    const { byLine } = await audit('2026-09-15');
+    const row = byLine.get(shifted)!;
+
+    expect(dateOnly(row.first_start)).toBe('2026-08-15');
+    expect(dateOnly(row.coverage_floor_start)).toBe('2026-08-08');
+    expect(row.leading_gap).toBe(false);
+    expect(row.leading_gap_intentional).toBe(true);
   });
 
   it('reports interior gaps, separating intentional exclusions before the billed floor', async () => {

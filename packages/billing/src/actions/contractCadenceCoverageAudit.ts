@@ -57,7 +57,10 @@ export interface ContractCadenceCoverageRow {
   exhausted: boolean;
   below_threshold: boolean;
   meets_target: boolean;
+  /** Recoverable leading hole between the coverage floor and the first active period. */
   leading_gap: boolean;
+  /** True when that leading hole is fully protected and must not be recovered. */
+  leading_gap_intentional: boolean;
 }
 
 export interface ContractCadenceInteriorGapRow {
@@ -296,29 +299,16 @@ interface ProtectedPeriodDbRow {
   service_period_end: unknown;
 }
 
-/**
- * Reclassify raw interior gaps against the canonical protection semantics.
- *
- * The SQL marks a gap intentional when it sits at or before the billed floor
- * (historical). That misses a gap created when a protected override suppresses
- * a candidate it only partially overlaps: the override Aug 8–Sep 15 keeps the
- * Aug 8–Sep 8 slot, so the Sep 8–Oct 8 candidate is suppressed, leaving a
- * Sep 15–Oct 8 hole that is not history. Here we generate the canonical
- * candidate(s) covering each gap and mark it intentional only when every
- * candidate is protected. A gap with any unprotected candidate stays
- * recoverable, so unrelated gaps are never hidden.
- */
-async function markProtectedInteriorGaps(
+async function loadProtectedRecordsByObligation(
   trx: Knex,
-  gaps: ContractCadenceInteriorGapRow[],
+  obligationIds: string[],
   tenantFilter: string | null,
-): Promise<void> {
-  const pending = gaps.filter((gap) => !gap.is_intentional);
-  if (pending.length === 0) {
-    return;
+): Promise<Map<string, IRecurringServicePeriodRecord[]>> {
+  const protectedByObligation = new Map<string, IRecurringServicePeriodRecord[]>();
+  if (obligationIds.length === 0) {
+    return protectedByObligation;
   }
 
-  const obligationIds = Array.from(new Set(pending.map((gap) => String(gap.obligation_id))));
   const protectedQuery = trx('recurring_service_periods')
     .where({ obligation_type: 'contract_line', cadence_owner: 'contract' })
     .whereIn('obligation_id', obligationIds)
@@ -343,7 +333,6 @@ async function markProtectedInteriorGaps(
   }
   const protectedRows = (await protectedQuery) as ProtectedPeriodDbRow[];
 
-  const protectedByObligation = new Map<string, IRecurringServicePeriodRecord[]>();
   for (const row of protectedRows) {
     const key = `${row.tenant}\u0000${row.obligation_id}`;
     const list = protectedByObligation.get(key) ?? [];
@@ -365,71 +354,166 @@ async function markProtectedInteriorGaps(
     protectedByObligation.set(key, list);
   }
 
+  return protectedByObligation;
+}
+
+/**
+ * A hole between `regionStart` and `regionEnd` is an intentional exclusion only
+ * when the canonical candidate(s) covering it are all protected. This is the
+ * same candidate/protection rule the regeneration and capped continuation use,
+ * applied to both interior and leading gaps, so an unprotected candidate keeps
+ * the hole recoverable and a partial protection cannot hide a real gap.
+ */
+function areAllGapCandidatesProtected(params: {
+  tenant: string;
+  obligationId: string;
+  assignmentStart: string;
+  billingFrequency: string;
+  billingTiming: string;
+  regionStart: ISO8601String;
+  regionEnd: ISO8601String;
+  protectedForObligation: IRecurringServicePeriodRecord[];
+}): boolean {
+  const frequency = normalizeCadenceFrequency(params.billingFrequency);
+  if (!frequency) {
+    return false;
+  }
+  const regionStart = toDateOnly(params.regionStart);
+  const regionEnd = toDateOnly(params.regionEnd);
+  if (regionEnd <= regionStart) {
+    return false;
+  }
+
+  const duePosition: DuePosition = params.billingTiming === 'advance' ? 'advance' : 'arrears';
+  const sourceObligation: IRecurringObligationRef = {
+    tenant: params.tenant,
+    obligationId: params.obligationId,
+    obligationType: 'contract_line',
+    chargeFamily: 'fixed',
+  };
+  const scheduleKey = buildRecurringServicePeriodScheduleKey({
+    tenant: params.tenant,
+    obligationType: 'contract_line',
+    obligationId: params.obligationId,
+    cadenceOwner: 'contract',
+    duePosition,
+  });
+
+  const periods = CADENCE_GENERATORS[frequency]({
+    rangeStart: regionStart,
+    rangeEnd: regionEnd,
+    sourceObligation,
+    duePosition,
+    anchorDate: toDateOnly(params.assignmentStart),
+  });
+  const gapPeriods = periods.filter(
+    (period) => toDateOnly(period.start) < regionEnd && toDateOnly(period.end) > regionStart,
+  );
+  if (gapPeriods.length === 0) {
+    return false;
+  }
+
+  return gapPeriods.every(
+    (period) =>
+      findRecurringServicePeriodCandidateProtection(
+        asProtectionRecord({
+          scheduleKey,
+          periodKey: buildRecurringServicePeriodPeriodKey(period),
+          sourceObligation: {
+            tenant: params.tenant,
+            obligationType: 'contract_line',
+            obligationId: params.obligationId,
+          },
+          servicePeriod: {
+            start: toDateOnly(period.start),
+            end: toDateOnly(period.end),
+          },
+        }),
+        params.protectedForObligation,
+      ) != null,
+  );
+}
+
+/**
+ * Reclassify raw interior gaps against the canonical protection semantics.
+ *
+ * The SQL marks a gap intentional when it sits at or before the billed floor
+ * (historical). That misses a gap created when a protected override suppresses
+ * a candidate it only partially overlaps: the override Aug 8–Sep 15 keeps the
+ * Aug 8–Sep 8 slot, so the Sep 8–Oct 8 candidate is suppressed, leaving a
+ * Sep 15–Oct 8 hole that is not history.
+ */
+async function markProtectedInteriorGaps(
+  trx: Knex,
+  gaps: ContractCadenceInteriorGapRow[],
+  tenantFilter: string | null,
+): Promise<void> {
+  const pending = gaps.filter((gap) => !gap.is_intentional);
+  if (pending.length === 0) {
+    return;
+  }
+
+  const obligationIds = Array.from(new Set(pending.map((gap) => String(gap.obligation_id))));
+  const protectedByObligation = await loadProtectedRecordsByObligation(trx, obligationIds, tenantFilter);
+
   for (const gap of pending) {
-    const frequency = normalizeCadenceFrequency(gap.billing_frequency);
-    if (!frequency) {
-      continue;
-    }
     const tenant = String(gap.tenant);
     const obligationId = String(gap.obligation_id);
-    const previousEnd = toDateOnly(gap.previous_end);
-    const gapStart = toDateOnly(gap.gap_start);
-    if (gapStart <= previousEnd) {
-      continue;
-    }
-
-    const duePosition: DuePosition = gap.billing_timing === 'advance' ? 'advance' : 'arrears';
-    const sourceObligation: IRecurringObligationRef = {
-      tenant,
-      obligationId,
-      obligationType: 'contract_line',
-      chargeFamily: 'fixed',
-    };
-    const scheduleKey = buildRecurringServicePeriodScheduleKey({
-      tenant,
-      obligationType: 'contract_line',
-      obligationId,
-      cadenceOwner: 'contract',
-      duePosition,
-    });
-
-    const periods = CADENCE_GENERATORS[frequency]({
-      rangeStart: previousEnd,
-      rangeEnd: gapStart,
-      sourceObligation,
-      duePosition,
-      anchorDate: toDateOnly(gap.assignment_start),
-    });
-    const gapPeriods = periods.filter(
-      (period) => toDateOnly(period.start) < gapStart && toDateOnly(period.end) > previousEnd,
-    );
-    if (gapPeriods.length === 0) {
-      continue;
-    }
-
     const protectedForObligation = protectedByObligation.get(`${tenant}\u0000${obligationId}`) ?? [];
-    const everyCandidateProtected = gapPeriods.every(
-      (period) =>
-        findRecurringServicePeriodCandidateProtection(
-          asProtectionRecord({
-            scheduleKey,
-            periodKey: buildRecurringServicePeriodPeriodKey(period),
-            sourceObligation: {
-              tenant,
-              obligationType: 'contract_line',
-              obligationId,
-            },
-            servicePeriod: {
-              start: toDateOnly(period.start),
-              end: toDateOnly(period.end),
-            },
-          }),
-          protectedForObligation,
-        ) != null,
-    );
-
-    if (everyCandidateProtected) {
+    const intentional = areAllGapCandidatesProtected({
+      tenant,
+      obligationId,
+      assignmentStart: gap.assignment_start,
+      billingFrequency: gap.billing_frequency,
+      billingTiming: gap.billing_timing,
+      regionStart: toDateOnly(gap.previous_end),
+      regionEnd: toDateOnly(gap.gap_start),
+      protectedForObligation,
+    });
+    if (intentional) {
       gap.is_intentional = true;
+    }
+  }
+}
+
+/**
+ * A leading gap is the region between the historical coverage floor and the
+ * first active service period. Apply the same protection semantics: an override
+ * that shifts the first period forward (for example an edited Aug 15–Sep 8
+ * period retaining the Aug 8–Sep 8 slot) protects the first candidate, so the
+ * gap is an intentional exclusion, not a missing first period. Genuinely
+ * missing first candidates stay recoverable.
+ */
+async function markProtectedLeadingGaps(
+  trx: Knex,
+  coverage: ContractCadenceCoverageRow[],
+  tenantFilter: string | null,
+): Promise<void> {
+  const pending = coverage.filter((row) => row.leading_gap && row.first_start != null);
+  if (pending.length === 0) {
+    return;
+  }
+
+  const obligationIds = Array.from(new Set(pending.map((row) => String(row.contract_line_id))));
+  const protectedByObligation = await loadProtectedRecordsByObligation(trx, obligationIds, tenantFilter);
+
+  for (const row of pending) {
+    const tenant = String(row.tenant);
+    const obligationId = String(row.contract_line_id);
+    const protectedForObligation = protectedByObligation.get(`${tenant}\u0000${obligationId}`) ?? [];
+    const intentional = areAllGapCandidatesProtected({
+      tenant,
+      obligationId,
+      assignmentStart: row.assignment_start,
+      billingFrequency: row.billing_frequency,
+      billingTiming: row.billing_timing,
+      regionStart: toDateOnly(row.coverage_floor_start),
+      regionEnd: toDateOnly(row.first_start),
+      protectedForObligation,
+    });
+    if (intentional) {
+      row.leading_gap = false;
+      row.leading_gap_intentional = true;
     }
   }
 }
@@ -453,16 +537,22 @@ export async function runContractCadenceCoverageAudit(
     thresholdEnd,
     tenant,
   ]);
+  const coverage = coverageResult.rows as ContractCadenceCoverageRow[];
+  for (const row of coverage) {
+    row.leading_gap_intentional = false;
+  }
+
   const interiorGapResult = await trx.raw(CONTRACT_CADENCE_INTERIOR_GAPS_SQL, [asOf, tenant]);
   const interiorGaps = interiorGapResult.rows as ContractCadenceInteriorGapRow[];
 
   await markProtectedInteriorGaps(trx, interiorGaps, tenant);
+  await markProtectedLeadingGaps(trx, coverage, tenant);
 
   return {
     asOf,
     targetEnd,
     thresholdEnd,
-    coverage: coverageResult.rows as ContractCadenceCoverageRow[],
+    coverage,
     interiorGaps,
   };
 }
