@@ -952,10 +952,17 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   // first control); the field a user came to edit is the title, so take focus
   // after they have finished.
   useEffect(() => {
-    // Only a new entry wants the title; an existing one is opened to read or
-    // adjust, and a caret in a filled field suggests otherwise.
-    if (viewOnly || event) return;
-    const timer = setTimeout(() => titleInputRef.current?.focus({ preventScroll: true }), 50);
+    // A new entry wants the title. An existing one is opened to read or
+    // adjust, so focus rests on the dialog itself rather than ringing the
+    // first control the host happened to focus.
+    const timer = setTimeout(() => {
+      if (!viewOnly && !event) {
+        titleInputRef.current?.focus({ preventScroll: true });
+        return;
+      }
+      const dialog = titleInputRef.current?.closest<HTMLElement>('[role="dialog"]');
+      dialog?.focus({ preventScroll: true });
+    }, 50);
     return () => clearTimeout(timer);
   }, [viewOnly, event]);
 
