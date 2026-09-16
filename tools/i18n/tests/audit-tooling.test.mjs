@@ -17,6 +17,22 @@ const {
 } = require('../lib/translation-utils.cjs');
 const { compareBaseline, runAudit } = require('../audit.cjs');
 
+for (const namespace of ['client-portal', 'msp/contacts']) {
+  test(`Brazilian Portuguese ${namespace} copy passes the locale quality audit`, () => {
+    const { report } = runAudit({
+      locale: 'pt',
+      namespaceFilter: new Set([namespace]),
+      writeReport: false,
+    });
+    assert.equal(report.namespaces.length, 1);
+    const result = report.namespaces[0];
+    assert.ok(result.keyCount > 0);
+    assert.deepEqual(result.structuralErrors, []);
+    assert.deepEqual(result.untranslated, []);
+    assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
 test('Polish tax settings pass the locale quality audit', () => {
   const { report } = runAudit({
     locale: 'pl',
