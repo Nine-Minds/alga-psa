@@ -942,6 +942,20 @@ jobs:
         run: xvfb-run --auto-servernum npm test
         shell: bash
 
+      # The server is force-recreated for the upgrade and Teams stages below, so
+      # the end-of-job container-logs artifact only holds the last incarnation.
+      # Keep the browser-stage server and worker output next to the Playwright
+      # report while it still exists.
+      - name: Preserve browser-stage service logs
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 3
+        run: |
+          mkdir -p e2e-tests/test-results/browser-stage-logs
+          for service in server workflow-worker temporal-worker email-service; do
+            timeout --kill-after=5s 30s docker-compose -p alga-e2e-test logs --no-color "$service" > "e2e-tests/test-results/browser-stage-logs/${service}.log" 2>&1 || echo "Log capture for $service exited with $?" >> "e2e-tests/test-results/browser-stage-logs/${service}.log"
+          done
+        shell: bash
+
       # Publish completed browser evidence before the independent API lane.
       - name: Upload Playwright diagnostics
         if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
