@@ -550,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Actif",
-        "inactive": "Inactif"
+        "inactive": "Inactif",
+        "hiddenFromPortal": "Masqué du portail"
       },
       "actions": {
         "addBoard": "Ajouter un tableau",
@@ -647,6 +648,10 @@
         "liveTimer": {
           "label": "Activer le minuteur de ticket en direct",
           "help": "Affiche le minuteur en direct et les intervalles suivis sur les tickets de ce tableau. La saisie manuelle du temps reste disponible."
+        },
+        "clientPortalVisible": {
+          "label": "Visible dans le portail client",
+          "help": "Si désactivé, ce tableau et ses tickets sont masqués pour tous les utilisateurs du portail client, quels que soient les groupes de visibilité."
         },
         "defaultBoard": {
           "label": "Tableau par défaut pour les tickets du portail client",

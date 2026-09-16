@@ -140,6 +140,13 @@ function createUserModelTrx(state: UserModelState) {
       };
     }
 
+    if (table === 'boards') {
+      return {
+        select: async () =>
+          state.boards.map((board) => ({ board_id: board.board_id, client_portal_visible: true })),
+      };
+    }
+
     if (table === 'client_portal_visibility_group_boards as cvgb') {
       return {
         join: () => ({

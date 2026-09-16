@@ -394,6 +394,11 @@ export function VisibilityGroupsSettings() {
                           onChange={() => handleSelectBoards(boardId)}
                         />
                         <span>{board.board_name}</span>
+                        {board.client_portal_visible === false && (
+                          <span className="text-xs text-muted-foreground">
+                            {t('clientSettings.visibilityGroups.boardHiddenFromPortal', 'Hidden from client portal')}
+                          </span>
+                        )}
                       </label>
                     );
                   })

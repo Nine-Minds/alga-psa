@@ -550,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Active",
-        "inactive": "Inactive"
+        "inactive": "Inactive",
+        "hiddenFromPortal": "Hidden from portal"
       },
       "actions": {
         "addBoard": "Add Board",
@@ -647,6 +648,10 @@
         "liveTimer": {
           "label": "Enable live ticket timer",
           "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+        },
+        "clientPortalVisible": {
+          "label": "Visible in client portal",
+          "help": "When off, this board and its tickets are hidden from every client portal user, regardless of visibility groups."
         },
         "defaultBoard": {
           "label": "Default board for client portal tickets",

@@ -554,7 +554,8 @@
       },
       "statusLabels": {
         "active": "Aktywna",
-        "inactive": "Nieaktywna"
+        "inactive": "Nieaktywna",
+        "hiddenFromPortal": "Ukryta w portalu"
       },
       "actions": {
         "addBoard": "Dodaj tablicę",
@@ -651,6 +652,10 @@
         "liveTimer": {
           "label": "Włącz stoper zgłoszeń na żywo",
           "help": "Pokazuje stoper na żywo i rejestrowane interwały na zgłoszeniach tej tablicy. Ręczne wprowadzanie czasu pozostaje dostępne."
+        },
+        "clientPortalVisible": {
+          "label": "Widoczna w portalu klienta",
+          "help": "Gdy wyłączone, ta tablica i jej zgłoszenia są ukryte przed wszystkimi użytkownikami portalu klienta, niezależnie od grup widoczności."
         },
         "defaultBoard": {
           "label": "Domyślna tablica dla zgłoszeń z portalu klienta",

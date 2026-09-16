@@ -550,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Actief",
-        "inactive": "Inactief"
+        "inactive": "Inactief",
+        "hiddenFromPortal": "Verborgen in portaal"
       },
       "actions": {
         "addBoard": "Bord toevoegen",
@@ -647,6 +648,10 @@
         "liveTimer": {
           "label": "Live tickettimer inschakelen",
           "help": "Toont de live timer en bijgehouden intervallen op tickets in dit bord. Handmatige tijdinvoer blijft beschikbaar."
+        },
+        "clientPortalVisible": {
+          "label": "Zichtbaar in klantportaal",
+          "help": "Indien uitgeschakeld zijn dit bord en de bijbehorende tickets verborgen voor alle gebruikers van het klantportaal, ongeacht zichtbaarheidsgroepen."
         },
         "defaultBoard": {
           "label": "Standaardbord voor tickets uit klantportaal",

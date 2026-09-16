@@ -25,8 +25,15 @@ function buildTrx(params: {
   contact?: { contact_name_id: string; client_id: string | null; portal_visibility_group_id: string | null; is_client_admin?: boolean };
   group?: { group_id: string; client_id: string; ticket_scope?: 'client' | 'contact' };
   boardIds?: string[];
+  boards?: Array<{ board_id: string; client_portal_visible: boolean }>;
 }) {
   return ((table: string) => {
+    if (table === 'boards') {
+      return {
+        select: vi.fn().mockResolvedValue(params.boards ?? []),
+      };
+    }
+
     if (table === 'contacts') {
       return {
         where: vi.fn().mockReturnValue({
@@ -166,6 +173,37 @@ describe('client portal visibility resolver', () => {
     expect(applyTicketVisibilityFilter(query, baseVisibility, columns)).toBe(query);
     expect(query.whereRaw).not.toHaveBeenCalled();
     expect(query.whereIn).not.toHaveBeenCalled();
+  });
+
+  it('drops boards hidden from the client portal even when the assigned group includes them', async () => {
+    const trx = buildTrx({
+      contact: { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'group-1' },
+      group: { group_id: 'group-1', client_id: 'client-1' },
+      boardIds: ['board-1', 'board-2'],
+      boards: [
+        { board_id: 'board-1', client_portal_visible: true },
+        { board_id: 'board-2', client_portal_visible: false },
+      ],
+    });
+
+    await expect(
+      getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1')
+    ).resolves.toMatchObject({ visibleBoardIds: ['board-1'] });
+  });
+
+  it('materializes the allow-list for unassigned contacts when any board is hidden from the portal', async () => {
+    const trx = buildTrx({
+      contact: { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: null },
+      boards: [
+        { board_id: 'board-1', client_portal_visible: true },
+        { board_id: 'board-2', client_portal_visible: false },
+        { board_id: 'board-3', client_portal_visible: true },
+      ],
+    });
+
+    await expect(
+      getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1')
+    ).resolves.toMatchObject({ visibilityGroupId: null, visibleBoardIds: ['board-1', 'board-3'] });
   });
 });
 

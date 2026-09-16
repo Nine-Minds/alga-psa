@@ -550,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Ativo",
-        "inactive": "Inativo"
+        "inactive": "Inativo",
+        "hiddenFromPortal": "Oculto no portal"
       },
       "actions": {
         "addBoard": "Adicionar quadro",
@@ -647,6 +648,10 @@
         "liveTimer": {
           "label": "Ativar cronômetro de ticket ao vivo",
           "help": "Mostra o cronômetro ao vivo e os intervalos rastreados nos tickets neste quadro. A entrada manual de hora permanece disponível."
+        },
+        "clientPortalVisible": {
+          "label": "Visível no portal do cliente",
+          "help": "Quando desativado, este quadro e seus tickets ficam ocultos para todos os usuários do portal do cliente, independentemente dos grupos de visibilidade."
         },
         "defaultBoard": {
           "label": "Quadro padrão para tickets do portal do cliente",

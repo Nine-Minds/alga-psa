@@ -14,6 +14,38 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   return tenantDb(conn, tenant).table<Row>(table);
 }
 
+/**
+ * Boards flagged client_portal_visible = false are hidden from every portal
+ * user, regardless of visibility group. Subtracting them here means every
+ * consumer of the context (lists, dashboards, creation, authorization) inherits
+ * the rule without knowing about the flag.
+ *
+ * Returns the group's list untouched (including a literal null for "no group =
+ * all boards") when nothing is hidden, so callers that branch on null keep
+ * their existing contract.
+ */
+async function resolveVisibleBoardIds(
+  trx: Knex.Transaction,
+  tenant: string,
+  groupBoardIds: string[] | null
+): Promise<string[] | null> {
+  const boards = await tenantScopedTable<{ board_id: string; client_portal_visible: boolean | null }>(
+    trx,
+    'boards',
+    tenant
+  ).select('board_id', 'client_portal_visible');
+
+  const visible = boards.filter((board) => board.client_portal_visible !== false);
+  if (visible.length === boards.length) {
+    return groupBoardIds;
+  }
+
+  const visibleIds = new Set(visible.map((board) => board.board_id));
+  return groupBoardIds === null
+    ? [...visibleIds]
+    : groupBoardIds.filter((boardId) => visibleIds.has(boardId));
+}
+
 export async function getClientContactVisibilityContext(
   trx: Knex.Transaction,
   tenant: string,
@@ -42,7 +74,7 @@ export async function getClientContactVisibilityContext(
       contactId,
       clientId: contact.client_id,
       visibilityGroupId: null,
-      visibleBoardIds: null,
+      visibleBoardIds: await resolveVisibleBoardIds(trx, tenant, null),
     };
   }
 
@@ -92,6 +124,6 @@ export async function getClientContactVisibilityContext(
     contactId,
     clientId: contact.client_id,
     visibilityGroupId: contact.portal_visibility_group_id,
-    visibleBoardIds: boardIds,
+    visibleBoardIds: await resolveVisibleBoardIds(trx, tenant, boardIds),
   };
 }

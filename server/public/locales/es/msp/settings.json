@@ -550,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Activo",
-        "inactive": "Inactivo"
+        "inactive": "Inactivo",
+        "hiddenFromPortal": "Oculto en el portal"
       },
       "actions": {
         "addBoard": "Agregar tablero",
@@ -647,6 +648,10 @@
         "liveTimer": {
           "label": "Activar temporizador de tickets en vivo",
           "help": "Muestra el temporizador en vivo y los intervalos registrados en los tickets de este tablero. La entrada manual de tiempo sigue disponible."
+        },
+        "clientPortalVisible": {
+          "label": "Visible en el portal de clientes",
+          "help": "Si está desactivado, este tablero y sus tickets se ocultan a todos los usuarios del portal de clientes, independientemente de los grupos de visibilidad."
         },
         "defaultBoard": {
           "label": "Tablero predeterminado para tickets del portal del cliente",
