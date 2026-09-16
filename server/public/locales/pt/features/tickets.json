@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Falha ao excluir entrada de hora",
     "timeEntryDeleted": "Entrada de tempo excluída",
     "closeFailed": "Falha ao fechar ticket",
-    "scheduleVisitFailed": "Falha ao abrir o agendador",
     "loadCommentsFailed": "Falha ao carregar os comentários",
     "updateTicketFailed": "Falha ao atualizar o ticket",
     "errorWithMessage": "Erro: {{message}}",
     "billingProfileUpdated": "Perfil de faturamento atualizado",
-    "updateBillingProfileFailed": "Falha ao atualizar o perfil de faturamento"
+    "updateBillingProfileFailed": "Falha ao atualizar o perfil de faturamento",
+    "scheduleOpenFailed": "Não foi possível abrir o agendador"
   },
   "conversation": {
     "comments": "Comentários",
@@ -1632,7 +1632,6 @@
       "showLess": "Mostrar menos",
       "contact": "Contato",
       "client": "Cliente",
-      "nextVisit": "Próxima visita",
       "callsAndEmails": "Ligações e e-mails",
       "call": "Ligar",
       "viewAll": "Ver todos",
@@ -1658,7 +1657,6 @@
       "billing": "Cobrança",
       "couldNotLoad": "Não foi possível carregar este bloco",
       "nothingScheduled": "Nada agendado",
-      "scheduleVisit": "Agendar uma visita",
       "scheduledWork": "Trabalho agendado",
       "scheduleDone": "concluído",
       "noCallsOrEmails": "Nenhuma ligação ou e-mail registrado",
@@ -1704,7 +1702,9 @@
         "approved": "Aprovado",
         "declined": "Recusado",
         "cancelled": "Cancelado"
-      }
+      },
+      "scheduleTime": "Agendar tempo",
+      "openScheduleEntry": "Abrir entrada de agenda"
     },
     "timeline": {
       "subtitle": "Respostas, tempo e alterações do sistema em um só lugar",

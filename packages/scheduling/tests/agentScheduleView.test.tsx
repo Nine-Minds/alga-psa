@@ -7,11 +7,14 @@ import toast from 'react-hot-toast';
 
 // vi.hoisted: mock factories run while this module's imports evaluate —
 // plain consts would still be in their temporal dead zone at that point.
-const { calendarSpy, getScheduleEntries, addScheduleEntry, getCurrentUser, getCurrentUserPermissions, useUsers } =
+const { calendarSpy, getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getScheduleEntryById, getCurrentUser, getCurrentUserPermissions, useUsers } =
   vi.hoisted(() => ({
     calendarSpy: vi.fn(),
     getScheduleEntries: vi.fn(),
     addScheduleEntry: vi.fn(),
+    updateScheduleEntry: vi.fn(),
+    deleteScheduleEntry: vi.fn(),
+    getScheduleEntryById: vi.fn(),
     getCurrentUser: vi.fn(),
     getCurrentUserPermissions: vi.fn(),
     useUsers: vi.fn(() => ({ users: [] })),
@@ -27,6 +30,9 @@ vi.mock('next/dynamic', () => ({
 vi.mock('@alga-psa/scheduling/actions', () => ({
   getScheduleEntries,
   addScheduleEntry,
+  updateScheduleEntry,
+  deleteScheduleEntry,
+  getScheduleEntryById,
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -93,6 +99,10 @@ beforeEach(() => {
   addScheduleEntry.mockClear();
   getScheduleEntries.mockResolvedValue({ success: true, entries: [] });
   addScheduleEntry.mockResolvedValue({ success: true, entry: { entry_id: 'entry-new' } });
+  updateScheduleEntry.mockClear();
+  updateScheduleEntry.mockResolvedValue({ success: true, entry: { entry_id: 'entry-1' } });
+  deleteScheduleEntry.mockClear();
+  deleteScheduleEntry.mockResolvedValue({ success: true, deleted: true, canDelete: true, dependencies: [], alternatives: [] });
   getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
   getCurrentUserPermissions.mockResolvedValue(['user_schedule:read:all', 'user_schedule:update']);
 });
@@ -181,7 +191,79 @@ describe('AgentScheduleView', () => {
 
     // Not isInDrawer: EntryPopup must wrap itself in a Dialog so it overlays
     // the full-height calendar instead of rendering offscreen below it.
-    expect(entryPopupSpy.mock.calls.at(-1)[0].isInDrawer).toBe(false);
+    const popupProps = entryPopupSpy.mock.calls.at(-1)[0];
+    expect(popupProps.isInDrawer).toBe(false);
+    // A user with user_schedule:update can fix an existing entry from here.
+    expect(popupProps.viewOnly).toBe(false);
+    expect(typeof popupProps.onDelete).toBe('function');
+  });
+
+  it('updates an existing entry through the popup and refreshes the calendar', async () => {
+    const onScheduled = vi.fn();
+    const { getByTestId } = render(
+      <AgentScheduleView
+        agentId="agent-1"
+        workItemContext={{ workItemId: 'ticket-1', workItemType: 'ticket', title: 'Printer offline', onScheduled }}
+      />
+    );
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
+    const props = calendarSpy.mock.calls.at(-1)[0];
+    const existing = {
+      entry_id: 'entry-1',
+      title: 'Old title',
+      scheduled_start: new Date('2026-01-05T10:00:00Z'),
+      scheduled_end: new Date('2026-01-05T11:00:00Z'),
+      work_item_type: 'ticket',
+      work_item_id: 'ticket-1',
+      assigned_user_ids: ['agent-1'],
+    };
+    act(() => { props.onSelectEvent(existing); });
+    await waitFor(() => expect(getByTestId('entry-popup')).toBeTruthy());
+
+    const popupProps = entryPopupSpy.mock.calls.at(-1)[0];
+    await act(async () => {
+      await popupProps.onSave({ ...existing, title: 'Fixed title', recurrence_pattern: null });
+    });
+
+    expect(updateScheduleEntry).toHaveBeenCalledWith('entry-1', expect.objectContaining({ title: 'Fixed title' }));
+    expect(toast.success).toHaveBeenCalledWith('Schedule entry updated');
+    expect(onScheduled).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(2));
+  });
+
+  it('deletes an existing entry through the popup', async () => {
+    const { getByTestId } = render(<AgentScheduleView agentId="agent-1" />);
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
+    const props = calendarSpy.mock.calls.at(-1)[0];
+    act(() => {
+      props.onSelectEvent({ entry_id: 'entry-1', scheduled_start: new Date(), scheduled_end: new Date(), work_item_type: 'ticket', assigned_user_ids: ['agent-1'] });
+    });
+    await waitFor(() => expect(getByTestId('entry-popup')).toBeTruthy());
+
+    const popupProps = entryPopupSpy.mock.calls.at(-1)[0];
+    await act(async () => {
+      const result = await popupProps.onDelete('entry-1');
+      expect(result.success).toBe(true);
+    });
+
+    expect(deleteScheduleEntry).toHaveBeenCalledWith('entry-1', undefined);
+    expect(toast.success).toHaveBeenCalledWith('Schedule entry deleted');
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(2));
+  });
+
+  it('outlines entries that belong to the work item being scheduled', async () => {
+    render(
+      <AgentScheduleView
+        agentId="agent-1"
+        workItemContext={{ workItemId: 'ticket-1', workItemType: 'ticket', title: 'Printer offline' }}
+      />
+    );
+    await waitFor(() => expect(calendarSpy).toHaveBeenCalled());
+    const { eventPropGetter } = calendarSpy.mock.calls.at(-1)[0];
+    const mine = eventPropGetter({ work_item_type: 'ticket', work_item_id: 'ticket-1' });
+    const other = eventPropGetter({ work_item_type: 'ticket', work_item_id: 'ticket-2' });
+    expect(mine.style.boxShadow).toContain('--color-primary-600');
+    expect(other.style.boxShadow).toBeUndefined();
   });
 
   it('sets scrollToTime to 8 AM', () => {
@@ -337,6 +419,27 @@ describe('AgentScheduleView', () => {
     expect(toast.success).toHaveBeenCalledWith('Scheduled Printer offline');
   });
 
+  it('gives a single week-view click the default one-hour duration', async () => {
+    const { getByTestId } = render(
+      <AgentScheduleView
+        agentId="agent-1"
+        workItemContext={{ workItemId: 'ticket-1', workItemType: 'ticket', title: 'Printer offline' }}
+      />
+    );
+    await waitFor(() => expect(typeof calendarSpy.mock.calls.at(-1)[0].onSelectSlot).toBe('function'));
+    act(() => {
+      calendarSpy.mock.calls.at(-1)[0].onSelectSlot({
+        start: new Date('2026-01-05T10:00:00Z'),
+        end: new Date('2026-01-05T10:15:00Z'),
+        slots: [],
+        action: 'click',
+      });
+    });
+    await waitFor(() => expect(getByTestId('entry-popup')).toBeTruthy());
+    const { slot } = entryPopupSpy.mock.calls.at(-1)[0];
+    expect(slot.end).toEqual(new Date('2026-01-05T11:00:00Z'));
+  });
+
   it('shows the work item header with a selection hint when the user can schedule', async () => {
     const { findByText } = render(
       <AgentScheduleView
@@ -367,7 +470,7 @@ describe('AgentScheduleView', () => {
     expect(queryByText(/Click or drag a time on the calendar/)).toBeNull();
   });
 
-  it('pins month-view slots to 8am for 15 minutes', async () => {
+  it('pins month-view slots to 8am for the default one-hour duration', async () => {
     const { getByTestId } = render(
       <AgentScheduleView
         agentId="agent-1"
@@ -399,6 +502,6 @@ describe('AgentScheduleView', () => {
     const popupProps = entryPopupSpy.mock.calls.at(-1)[0];
     expect(popupProps.slot.start.getHours()).toBe(8);
     expect(popupProps.slot.start.getMinutes()).toBe(0);
-    expect(popupProps.slot.end.getTime() - popupProps.slot.start.getTime()).toBe(15 * 60 * 1000);
+    expect(popupProps.slot.end.getTime() - popupProps.slot.start.getTime()).toBe(60 * 60 * 1000);
   });
 });

@@ -26,13 +26,12 @@
     "loading": "Laden...",
     "errors": {
       "loadPermissions": "Benutzerberechtigungen konnten nicht geladen werden",
-      "forbidden": "Sie sind nicht berechtigt, diesen Zeitplan anzuzeigen.",
-      "saveFailed": "Der Termin konnte nicht gespeichert werden"
+      "forbidden": "Sie sind nicht berechtigt, diesen Zeitplan anzuzeigen."
     },
-    "saved": "{{title}} geplant",
     "schedulingFor": "Planung für",
-    "selectSlotHint": "Klicken oder ziehen Sie eine Zeit im Kalender, um diese Arbeit für diesen Mitarbeiter zu planen.",
-    "readOnlyHint": "Sie können diesen Zeitplan ansehen, benötigen aber die Berechtigung zum Aktualisieren von Zeitplänen, um Einträge hinzuzufügen."
+    "selectSlotHint": "Klicken oder ziehen Sie eine Zeit im Kalender, um diese Arbeit für diesen Mitarbeiter zu planen. Klicken Sie auf einen Eintrag, um ihn zu bearbeiten.",
+    "readOnlyHint": "Sie können diesen Zeitplan ansehen, benötigen aber die Berechtigung zum Aktualisieren von Zeitplänen, um Einträge hinzuzufügen oder zu ändern.",
+    "workItemLegend": "Umrandete Einträge gehören zu diesem Arbeitselement."
   },
   "calendar": {
     "legend": {
@@ -558,7 +557,8 @@
       "appointmentRequest": "Terminanfrage",
       "view": "Eintrag anzeigen",
       "edit": "Eintrag bearbeiten",
-      "new": "Neuer Eintrag"
+      "new": "Neuer Eintrag",
+      "newForWorkItem": "{{name}} planen"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Dies ist ein privater Eintrag. Nur der Ersteller kann Details anzeigen oder bearbeiten."
@@ -593,7 +593,8 @@
     },
     "workItem": {
       "adHocFallback": "Ad-hoc-Eintrag (kein Workitem)",
-      "openDetails": "Details"
+      "openDetails": "Details",
+      "loading": "Arbeitselement wird geladen…"
     },
     "appointmentRequest": {
       "approved": {
@@ -749,5 +750,15 @@
       "graphThrottled": "Microsoft Graph drosselt derzeit Aufzeichnungs-Downloads. Bitte versuchen Sie es in Kürze erneut.",
       "graphHttpStatus": "Microsoft Graph hat beim Herunterladen der Teams-Aufzeichnung HTTP {{status}} zurückgegeben."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} geplant",
+    "updated": "Zeitplaneintrag aktualisiert",
+    "deleted": "Zeitplaneintrag gelöscht",
+    "createFailed": "Diese Arbeit konnte nicht geplant werden",
+    "updateFailed": "Zeitplaneintrag konnte nicht aktualisiert werden",
+    "deleteFailed": "Zeitplaneintrag konnte nicht gelöscht werden",
+    "loadFailed": "Zeitplaneintrag konnte nicht geladen werden",
+    "noPermission": "Sie benötigen die Berechtigung zum Aktualisieren von Zeitplänen, um Arbeit zu planen."
   }
 }

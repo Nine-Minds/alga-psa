@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useSchedulingCallbacks, type AgentScheduleWorkItemContext } from '@alga-psa/ui/context';
+import { useSchedulingCallbacks, type WorkItemScheduleContext } from '@alga-psa/ui/context';
 
 interface AgentScheduleDrawerProps {
   agentId: string;
-  workItemContext?: AgentScheduleWorkItemContext;
+  workItemContext?: WorkItemScheduleContext;
 }
 
 export default function AgentScheduleDrawer({ agentId, workItemContext }: AgentScheduleDrawerProps) {

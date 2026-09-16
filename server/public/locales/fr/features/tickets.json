@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Échec de la suppression de l'entrée de temps",
     "timeEntryDeleted": "Entrée de temps supprimée",
     "closeFailed": "Échec de la fermeture du ticket",
-    "scheduleVisitFailed": "Échec de l'ouverture du planificateur",
     "loadCommentsFailed": "Échec du chargement des commentaires",
     "updateTicketFailed": "Échec de la mise à jour du ticket",
     "errorWithMessage": "Erreur : {{message}}",
     "billingProfileUpdated": "Profil de facturation mis à jour",
-    "updateBillingProfileFailed": "Échec de la mise à jour du profil de facturation"
+    "updateBillingProfileFailed": "Échec de la mise à jour du profil de facturation",
+    "scheduleOpenFailed": "Impossible d’ouvrir le planificateur"
   },
   "conversation": {
     "comments": "Commentaires",
@@ -1632,7 +1632,6 @@
       "showLess": "Afficher moins",
       "contact": "Contact",
       "client": "Client",
-      "nextVisit": "Prochaine visite",
       "callsAndEmails": "Appels et e-mails",
       "call": "Appeler",
       "viewAll": "Voir tout",
@@ -1658,7 +1657,6 @@
       "billing": "Facturation",
       "couldNotLoad": "Impossible de charger cette tuile",
       "nothingScheduled": "Rien de planifié",
-      "scheduleVisit": "Planifier une visite",
       "scheduledWork": "Travail planifié",
       "scheduleDone": "terminé",
       "noCallsOrEmails": "Aucun appel ou e-mail enregistré",
@@ -1704,7 +1702,9 @@
         "approved": "Approuvé",
         "declined": "Refusé",
         "cancelled": "Annulé"
-      }
+      },
+      "scheduleTime": "Planifier du temps",
+      "openScheduleEntry": "Ouvrir l’entrée de planning"
     },
     "timeline": {
       "subtitle": "Réponses, temps et changements système au même endroit",

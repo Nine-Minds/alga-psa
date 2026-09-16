@@ -1088,35 +1088,29 @@ export function BentoHero({
                   </Badge>
                 </Tooltip>
               ) : null}
-              {additionalAgentEntries.length > 0 ? (
-                <Tooltip
-                  content={
-                    <div className="text-xs space-y-1.5">
-                      <div className="font-medium text-gray-300 mb-1">
-                        {t('bento.hero.additionalAgentsTooltip', 'Additional agents:')}
-                      </div>
-                      {additionalAgentEntries.map((agent) => (
-                        <div key={agent.userId} className="flex items-center gap-2">
-                          <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />
-                          <span>{agent.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  }
-                >
-                  <Badge
-                    variant="info"
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={() => {
-                      const first = additionalAgentEntries[0];
-                      if (first) onAgentClick?.(first.userId);
-                    }}
-                  >
-                    +{additionalAgentEntries.length}
-                  </Badge>
-                </Tooltip>
-              ) : null}
+              {additionalAgentEntries.map((agent) => {
+                const label = onAgentClick
+                  ? `${t('bento.hero.viewSchedule', 'View schedule')}: ${agent.name}`
+                  : agent.name;
+                const avatar = <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />;
+                return (
+                  <Tooltip key={agent.userId} content={label}>
+                    {onAgentClick ? (
+                      <button
+                        id={`${id}-additional-agent-${agent.userId}`}
+                        type="button"
+                        aria-label={label}
+                        className="rounded-full hover:ring-2 hover:ring-[rgb(var(--color-primary-300))]"
+                        onClick={() => onAgentClick(agent.userId)}
+                      >
+                        {avatar}
+                      </button>
+                    ) : (
+                      <span id={`${id}-additional-agent-${agent.userId}`} className="cursor-help">{avatar}</span>
+                    )}
+                  </Tooltip>
+                );
+              })}
               </>
             ))}
           </HeroField>

@@ -19,35 +19,30 @@ export type OpenDrawerFn = (
   width?: string
 ) => void;
 
-/** Context for launching the scheduler drawer pre-scoped to a work item (e.g. a ticket). */
-export interface ScheduleEntryLaunchContext {
-  workItemId: string;
-  workItemType: 'ticket';
-  /** Pre-fills the entry title and the selected work item label. */
-  title: string;
-  clientName?: string | null;
-}
-
 /**
- * Optional work-item context for the agent schedule drawer. When present, a
- * selected calendar slot can create a schedule entry pre-scoped to that work
- * item; when absent (e.g. the read-only interaction view) selection stays
- * disabled.
+ * A work item (e.g. a ticket) that schedule entries are created or edited
+ * for. Shared by every scheduling surface a ticket page can open: the
+ * "schedule time" drawer, the agent calendar drawer, and existing-entry edits.
  */
-export interface AgentScheduleWorkItemContext {
+export interface WorkItemScheduleContext {
   workItemId: string;
   workItemType: 'ticket';
   /** Pre-fills the entry title and the selected work item label. */
   title: string;
   clientName?: string | null;
-  /** Called after a schedule entry is created so the host can refresh. */
+  /**
+   * Who a new entry is for when the surface has no better answer (e.g. the
+   * ticket's assignee). Falls back to the current user.
+   */
+  defaultAssigneeId?: string | null;
+  /** Called after an entry is created, updated or deleted so the host can refresh. */
   onScheduled?: () => void;
 }
 
 export interface SchedulingCallbacks {
   renderAgentSchedule: (
     agentId: string,
-    workItemContext?: AgentScheduleWorkItemContext
+    workItemContext?: WorkItemScheduleContext
   ) => React.ReactNode;
   launchTimeEntry: (params: {
     openDrawer: OpenDrawerFn;
@@ -56,12 +51,16 @@ export interface SchedulingCallbacks {
     onComplete?: () => void;
     existingEntryId?: string;
   }) => Promise<void>;
-  /** Opens the schedule-entry editor in the global drawer, pre-scoped to the given work item. */
+  /**
+   * Opens the schedule-entry editor in the global drawer, pre-scoped to the
+   * given work item: a new entry by default, or `existingEntryId` to edit one.
+   */
   launchScheduleEntry: (params: {
     openDrawer: OpenDrawerFn;
     closeDrawer: () => void;
-    context: ScheduleEntryLaunchContext;
+    context: WorkItemScheduleContext;
     onComplete?: () => void;
+    existingEntryId?: string;
   }) => Promise<void>;
   fetchTimeEntriesForTicket: (ticketId: string) => Promise<TicketTimeEntriesSummary>;
   deleteTimeEntry: (entryId: string) => Promise<void | ActionMessageError | ActionPermissionError>;

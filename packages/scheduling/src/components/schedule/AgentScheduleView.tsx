@@ -2,19 +2,21 @@
 
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import toast from 'react-hot-toast';
 import { momentLocalizer, SlotInfo, View } from 'react-big-calendar';
 import moment from 'moment';
 import CalendarSkeleton from '@alga-psa/ui/components/skeletons/CalendarSkeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { AgentScheduleWorkItemContext } from '@alga-psa/ui/context';
-import EntryPopup from './EntryPopup';
+import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
+import WorkItemEntryEditor, { type WorkItemEntryTarget } from './WorkItemEntryEditor';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import { AgentScheduleDrawerStyles } from './AgentScheduleDrawerStyles';
-import { getScheduleEntries, addScheduleEntry } from '@alga-psa/scheduling/actions';
-import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
-import { useUsers } from '@alga-psa/user-composition/hooks';
+import { getScheduleEntries } from '@alga-psa/scheduling/actions';
 import type { IScheduleEntry, WorkItemType } from '@alga-psa/types';
+import { useScheduleViewer } from '../../hooks/useScheduleViewer';
+import {
+  WORK_ITEM_ENTRY_DEFAULT_DURATION_MS,
+  slotFromCalendarSelection,
+} from '../../lib/workItemScheduling';
 
 const DynamicBigCalendar = dynamic(() => import('./DynamicBigCalendar'), {
   loading: () => <CalendarSkeleton height="100%" view="week" showSidebar={false} />,
@@ -40,7 +42,7 @@ interface AgentScheduleViewProps {
    * presence is what enables slot selection and scopes a new entry to that
    * work item; the read-only interaction view omits it.
    */
-  workItemContext?: AgentScheduleWorkItemContext;
+  workItemContext?: WorkItemScheduleContext;
 }
 
 const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItemContext }) => {
@@ -48,47 +50,18 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
   const [events, setEvents] = useState<IScheduleEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [date, setDate] = useState<Date>(new Date());
+  const [date, setDate] = useState(new Date());
   const [view, setView] = useState<View>('week');
-  const [showEntryPopup, setShowEntryPopup] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<IScheduleEntry | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<{
-    start: Date | string;
-    end: Date | string;
-    assigned_user_ids?: string[];
-    defaultAssigneeId?: string;
-  } | null>(null);
+  const [editorTarget, setEditorTarget] = useState<WorkItemEntryTarget | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [userPermissions, setUserPermissions] = useState<string[] | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
-  const { users = [] } = useUsers();
 
-  const permissionsLoaded = userPermissions !== null;
-
-  const canViewOthers = useMemo(() => {
-    if (!userPermissions) return false;
-    return userPermissions.some((permission) => permission === 'user_schedule:read:all' || permission === 'user_schedule:update');
-  }, [userPermissions]);
-
-  const canReadOwn = useMemo(() => {
-    if (!userPermissions) return false;
-    return userPermissions.some((permission) => permission === 'user_schedule:read' || permission === 'user_schedule:update' || permission === 'user_schedule:read:all');
-  }, [userPermissions]);
-
-  const canViewAgent = useMemo(() => {
-    if (!currentUserId || !permissionsLoaded) return false;
-    if (agentId === currentUserId) {
-      return canReadOwn;
-    }
-    return canViewOthers;
-  }, [agentId, canReadOwn, canViewOthers, currentUserId, permissionsLoaded]);
-
-  const canModifySchedule = useMemo(() => {
-    if (!userPermissions) return false;
-    return userPermissions.includes('user_schedule:update');
-  }, [userPermissions]);
+  const viewer = useScheduleViewer(
+    t('agentView.errors.loadPermissions', { defaultValue: 'Failed to load user permissions' })
+  );
+  const { currentUserId, loaded: permissionsLoaded, canModifySchedule } = viewer;
+  const canViewAgent = viewer.canViewAgent(agentId);
 
   // Creating an entry from a slot assigns it to the viewed agent, which needs
   // user_schedule:update. Without it the drawer stays the read-only view it was
@@ -103,31 +76,8 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
   }, [date, view]);
 
   useEffect(() => {
-    let active = true;
-    const loadUser = async () => {
-      try {
-        const user = await getCurrentUser();
-        if (!active) return;
-        setCurrentUserId(user?.user_id ?? null);
-        const permissions = await getCurrentUserPermissions();
-        if (!active) return;
-        setUserPermissions(permissions || []);
-      } catch (err) {
-        if (!active) return;
-        setError(
-          err instanceof Error
-            ? err.message
-            : t('agentView.errors.loadPermissions', {
-                defaultValue: 'Failed to load user permissions',
-              })
-        );
-      }
-    };
-    loadUser();
-    return () => {
-      active = false;
-    };
-  }, [t]);
+    if (viewer.error) setError(viewer.error);
+  }, [viewer.error]);
 
   useEffect(() => {
     let active = true;
@@ -178,118 +128,42 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
   }, [events, hasScrolled, view]);
 
   const handleSelectEvent = (event: IScheduleEntry) => {
-    setSelectedEvent(event);
-    setSelectedSlot(null);
-    setShowEntryPopup(true);
+    setEditorTarget({ kind: 'edit', event });
   };
 
-  const handleEntryPopupClose = () => {
-    setShowEntryPopup(false);
-    setSelectedEvent(null);
-    setSelectedSlot(null);
-  };
-
-  // LEVERAGE: pattern slot-select-month-pin — second copy of
-  // ScheduleCalendar.handleSelectSlot's month-view 8am/15-minute adjustment;
-  // the viewed agent is the default assignee so an entry created from their
-  // drawer lands on their schedule.
   const handleSelectSlot = (slotInfo: SlotInfo) => {
     if (!workItemContext) return;
-
-    const start = new Date(slotInfo.start);
-    let end = new Date(slotInfo.end);
-    if (view === 'month') {
-      start.setHours(8, 0, 0, 0);
-      end = new Date(start);
-      end.setMinutes(start.getMinutes() + 15);
-    }
-
-    setSelectedEvent(null);
-    setSelectedSlot({
-      start,
-      end,
-      defaultAssigneeId: agentId,
-      assigned_user_ids: [agentId],
+    const slot = slotFromCalendarSelection(slotInfo, view, {
+      durationMs: WORK_ITEM_ENTRY_DEFAULT_DURATION_MS,
     });
-    setShowEntryPopup(true);
+    // The viewed agent is the assignee, so an entry created from their drawer
+    // lands on the calendar the user is looking at.
+    setEditorTarget({ kind: 'create', slot, assigneeIds: [agentId] });
   };
 
-  const handleEntryPopupSave = async (
-    entryData: Omit<IScheduleEntry, 'tenant'> & { updateType?: string }
-  ) => {
-    if (!workItemContext) return;
+  const closeEditor = () => setEditorTarget(null);
+  const refreshEntries = () => setRefreshKey((value) => value + 1);
 
-    try {
-      const result = await addScheduleEntry({
-        ...entryData,
-        work_item_id: workItemContext.workItemId,
-        work_item_type: workItemContext.workItemType,
-        title: entryData.title || workItemContext.title,
-        recurrence_pattern: entryData.recurrence_pattern || null,
-      });
+  const belongsToWorkItem = (event: IScheduleEntry) =>
+    Boolean(workItemContext) && event.work_item_id === workItemContext?.workItemId;
 
-      if (!result.success) {
-        toast.error(
-          result.error ||
-            t('agentView.errors.saveFailed', { defaultValue: 'Failed to save schedule entry' })
-        );
-        return;
-      }
-
-      handleEntryPopupClose();
-      setRefreshKey((value) => value + 1);
-      toast.success(
-        t('agentView.saved', {
-          defaultValue: 'Scheduled {{title}}',
-          title: workItemContext.title,
-        })
-      );
-      workItemContext.onScheduled?.();
-    } catch (err) {
-      console.error('Failed to save schedule entry:', err);
-      toast.error(t('agentView.errors.saveFailed', { defaultValue: 'Failed to save schedule entry' }));
-    }
-  };
-
-  const renderEntryPopup = () => {
-    if (!showEntryPopup || !currentUserId) return null;
-    if (!selectedEvent && !selectedSlot) return null;
-
-    const isCreating = !selectedEvent && Boolean(selectedSlot) && canCreateFromSlot;
+  const renderEditor = () => {
+    if (!editorTarget || !currentUserId) return null;
 
     return (
-      <EntryPopup
-        event={selectedEvent}
-        slot={selectedSlot ?? undefined}
-        initialWorkItem={
-          isCreating && workItemContext
-            ? {
-                work_item_id: workItemContext.workItemId,
-                type: workItemContext.workItemType,
-                name: workItemContext.title,
-                description: '',
-              }
-            : null
-        }
-        onClose={handleEntryPopupClose}
-        onSave={isCreating ? handleEntryPopupSave : async () => {}}
-        canAssignMultipleAgents={false}
-        users={users}
-        currentUserId={currentUserId}
-        loading={false}
-        // Not isInDrawer: EntryPopup then wraps itself in a Dialog, which the
-        // drawer's InsideDialogContext renders as a centered overlay above the
-        // full-height calendar. Inline rendering put the form below the
-        // calendar, offscreen, so slot selection appeared to do nothing.
-        isInDrawer={false}
-        error={null}
-        canModifySchedule={canModifySchedule}
-        focusedTechnicianId={agentId}
-        // The drawer refetches only the viewed agent's entries, so an entry
-        // reassigned here would vanish on save and read as a failure. Keep the
-        // assignee locked to the agent whose calendar is open.
-        canAssignOthers={false}
-        viewOnly={!isCreating}
+      <WorkItemEntryEditor
+        context={workItemContext}
+        target={editorTarget}
+        // Dialog presentation: the drawer's InsideDialogContext renders it as
+        // a centered overlay above the full-height calendar. Rendering inline
+        // put the form below the calendar, offscreen, so selecting a slot
+        // appeared to do nothing.
+        presentation="dialog"
+        onClose={closeEditor}
+        onSaved={refreshEntries}
+        onDeleted={refreshEntries}
+        lockAssignees
+        viewer={viewer}
       />
     );
   };
@@ -317,12 +191,17 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
         <div className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
           {canCreateFromSlot
             ? t('agentView.selectSlotHint', {
-                defaultValue: 'Click or drag a time on the calendar to schedule this work for this agent.',
+                defaultValue:
+                  'Click or drag a time on the calendar to schedule this work for this agent. Click an entry to edit it.',
               })
             : t('agentView.readOnlyHint', {
                 defaultValue:
-                  'You can view this schedule, but need the schedule update permission to add entries.',
+                  'You can view this schedule, but need the schedule update permission to add or change entries.',
               })}
+          {' '}
+          {t('agentView.workItemLegend', {
+            defaultValue: 'Outlined entries belong to this work item.',
+          })}
         </div>
       </div>
     );
@@ -359,12 +238,20 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
             eventPropGetter={(event: object) => {
               const scheduleEvent = event as IScheduleEntry;
               const backgroundColor = workItemColors[scheduleEvent.work_item_type] || 'rgb(var(--color-border-200))';
+              const isThisWorkItem = belongsToWorkItem(scheduleEvent);
               return {
+                className: isThisWorkItem ? 'agent-schedule-event--this-work-item' : undefined,
                 style: {
                   backgroundColor,
                   borderRadius: '6px',
                   border: 'none',
                   color: 'rgb(var(--color-text-900))',
+                  ...(isThisWorkItem
+                    ? {
+                        boxShadow: 'inset 0 0 0 2px rgb(var(--color-primary-600))',
+                        fontWeight: 600,
+                      }
+                    : {}),
                 },
               };
             }}
@@ -386,7 +273,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
           />
         </Suspense>
       </div>
-      {renderEntryPopup()}
+      {renderEditor()}
     </div>
   );
 };

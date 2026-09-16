@@ -49,6 +49,7 @@ import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Label } from '@alga-psa/ui/components/Label';
 import { isSourceOwnedWorkItemType } from '../../lib/entryOwnedWorkItems';
+import { slotFromCalendarSelection } from '../../lib/workItemScheduling';
 
 // A local save can succeed while its Teams reschedule fails. Every calendar
 // update gesture must surface the server warning without reverting that save.
@@ -428,23 +429,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   }, [fetchEvents]);
 
   const handleSelectSlot = (slotInfo: any) => {
-    // For month view, adjust the start time to 8am and end time to be 15 minutes after
-    let adjustedSlotInfo = { ...slotInfo };
-    if (view === 'month') {
-      const startDate = new Date(slotInfo.start);
-      // Set the start time to 8am
-      startDate.setHours(8, 0, 0, 0);
-      
-      const endDate = new Date(startDate);
-      endDate.setMinutes(startDate.getMinutes() + 15);
-      
-      adjustedSlotInfo = {
-        ...slotInfo,
-        start: startDate,
-        end: endDate
-      };
-    }
-    
+    // A date-only (month) selection is pinned to 8am for one grid step.
+    const adjustedSlotInfo = {
+      ...slotInfo,
+      ...slotFromCalendarSelection(slotInfo, view, { durationMs: 15 * 60 * 1000 }),
+    };
+
     setSelectedSlot({
       ...adjustedSlotInfo,
       defaultAssigneeId: focusedTechnicianId,

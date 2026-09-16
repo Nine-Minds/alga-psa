@@ -41,7 +41,7 @@ import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/compo
 import { BentoHero } from './BentoHero';
 import { BentoTimelineTile } from './BentoTimelineTile';
 import { SlaClocksTile } from './SlaClocksTile';
-import { NextVisitTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
+import { ScheduledWorkTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
 import { TimeLoggedSummary } from './TimeLoggedSummary';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import { resolveTicketCallPhone } from './ticketCallPhone';
@@ -85,7 +85,7 @@ export interface TicketBentoLayoutProps {
   hideSlaStatus?: boolean;
   /** Hides the billing rollup tile (AlgaDesk has no billing surface). */
   hideBilling?: boolean;
-  /** Hides the Next visit / Appointment requests tiles (AlgaDesk has no scheduling surface). */
+  /** Hides the Scheduled work / Appointment requests tiles (AlgaDesk has no scheduling surface). */
   hideScheduling?: boolean;
   workflowLocked?: boolean;
   onOpenAllFields: () => void;
@@ -113,9 +113,11 @@ export interface TicketBentoLayoutProps {
     phone?: string | null;
   }[];
   /** Opens the scheduler drawer pre-scoped to this ticket (global drawer system). */
-  onScheduleVisit?: () => void;
-  /** Bumped by the parent after a visit is scheduled so the "Next visit" tile refetches. */
-  nextVisitRefreshKey?: number;
+  onScheduleWork?: () => void;
+  /** Opens an existing schedule entry linked to this ticket for editing. */
+  onOpenScheduleEntry?: (entryId: string) => void;
+  /** Bumped by the parent after scheduled work changes so the "Scheduled work" tile refetches. */
+  scheduleRefreshKey?: number;
   // Timeline
   conversations: IComment[];
   userMap: Record<string, CommentUserAuthor>;
@@ -560,19 +562,20 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
 
       {!props.hideScheduling ? (
         <>
-          <Suspense fallback={<BentoTileSkeleton id={`${id}-next-visit-tile-loading`} title={t('bento.tiles.nextVisit', 'Next visit')} />}>
-            <NextVisitTile
-              id={`${id}-next-visit-tile`}
+          <Suspense fallback={<BentoTileSkeleton id={`${id}-scheduled-work-tile-loading`} title={t('bento.tiles.scheduledWork', 'Scheduled work')} />}>
+            <ScheduledWorkTile
+              id={`${id}-scheduled-work-tile`}
               ticketId={ticketId}
-              refreshKey={props.nextVisitRefreshKey}
+              refreshKey={props.scheduleRefreshKey}
               initialData={props.bentoStreams?.scheduleEntries}
-              onScheduleVisit={props.onScheduleVisit}
+              onSchedule={props.onScheduleWork}
+              onOpenEntry={props.onOpenScheduleEntry}
             />
           </Suspense>
           <AppointmentRequestsTile
             id={`${id}-appointment-requests-tile`}
             ticketId={ticketId}
-            refreshKey={props.nextVisitRefreshKey}
+            refreshKey={props.scheduleRefreshKey}
           />
         </>
       ) : null}

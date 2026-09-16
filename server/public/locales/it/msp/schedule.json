@@ -26,13 +26,12 @@
     "loading": "Caricamento...",
     "errors": {
       "loadPermissions": "Impossibile caricare le autorizzazioni utente",
-      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione.",
-      "saveFailed": "Impossibile salvare la voce della pianificazione"
+      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione."
     },
-    "saved": "{{title}} pianificato",
     "schedulingFor": "Pianificazione di",
-    "selectSlotHint": "Fai clic o trascina un orario nel calendario per pianificare questo lavoro per questo agente.",
-    "readOnlyHint": "Puoi visualizzare questa agenda, ma hai bisogno del permesso di aggiornamento agenda per aggiungere voci."
+    "selectSlotHint": "Fai clic o trascina un orario nel calendario per pianificare questo lavoro per questo agente. Fai clic su una voce per modificarla.",
+    "readOnlyHint": "Puoi visualizzare questa agenda, ma hai bisogno del permesso di aggiornamento agenda per aggiungere o modificare voci.",
+    "workItemLegend": "Le voci con bordo appartengono a questo elemento di lavoro."
   },
   "calendar": {
     "legend": {
@@ -558,7 +557,8 @@
       "appointmentRequest": "Richiesta di appuntamento",
       "view": "Visualizza voce",
       "edit": "Modifica voce",
-      "new": "Nuova voce"
+      "new": "Nuova voce",
+      "newForWorkItem": "Pianifica {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Questa è un'entrata privata. Solo il creatore può visualizzare o modificare i dettagli."
@@ -593,7 +593,8 @@
     },
     "workItem": {
       "adHocFallback": "Voce ad hoc (nessun elemento di lavoro)",
-      "openDetails": "Dettagli"
+      "openDetails": "Dettagli",
+      "loading": "Caricamento elemento di lavoro…"
     },
     "appointmentRequest": {
       "approved": {
@@ -749,5 +750,15 @@
       "graphThrottled": "Microsoft Graph sta limitando i download delle registrazioni. Riprovare tra poco.",
       "graphHttpStatus": "Microsoft Graph ha restituito HTTP {{status}} durante il download della registrazione di Teams."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} pianificato",
+    "updated": "Voce di agenda aggiornata",
+    "deleted": "Voce di agenda eliminata",
+    "createFailed": "Impossibile pianificare questo lavoro",
+    "updateFailed": "Impossibile aggiornare la voce di agenda",
+    "deleteFailed": "Impossibile eliminare la voce di agenda",
+    "loadFailed": "Impossibile caricare la voce di agenda",
+    "noPermission": "Hai bisogno del permesso di aggiornamento agenda per pianificare il lavoro."
   }
 }

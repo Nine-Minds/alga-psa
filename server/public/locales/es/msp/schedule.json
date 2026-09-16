@@ -26,13 +26,12 @@
     "loading": "Cargando...",
     "errors": {
       "loadPermissions": "No se pudieron cargar los permisos de usuario",
-      "forbidden": "No tiene permiso para ver este programa.",
-      "saveFailed": "No se pudo guardar la entrada de la programación"
+      "forbidden": "No tiene permiso para ver este programa."
     },
-    "saved": "{{title}} programado",
     "schedulingFor": "Programando",
-    "selectSlotHint": "Haga clic o arrastre una hora en el calendario para programar este trabajo para este agente.",
-    "readOnlyHint": "Puede ver esta agenda, pero necesita el permiso de actualización de agenda para añadir entradas."
+    "selectSlotHint": "Haga clic o arrastre una hora en el calendario para programar este trabajo para este agente. Haga clic en una entrada para editarla.",
+    "readOnlyHint": "Puede ver esta agenda, pero necesita el permiso de actualización de agenda para añadir o cambiar entradas.",
+    "workItemLegend": "Las entradas con borde pertenecen a este elemento de trabajo."
   },
   "calendar": {
     "legend": {
@@ -558,7 +557,8 @@
       "appointmentRequest": "Solicitud de cita",
       "view": "Ver entrada",
       "edit": "Editar entrada",
-      "new": "Nueva entrada"
+      "new": "Nueva entrada",
+      "newForWorkItem": "Programar {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Esta es una entrada privada. Sólo el creador puede ver o editar detalles."
@@ -593,7 +593,8 @@
     },
     "workItem": {
       "adHocFallback": "Entrada ad hoc (sin elemento de trabajo)",
-      "openDetails": "Detalles"
+      "openDetails": "Detalles",
+      "loading": "Cargando elemento de trabajo…"
     },
     "appointmentRequest": {
       "approved": {
@@ -749,5 +750,15 @@
       "graphThrottled": "Microsoft Graph está limitando la velocidad de las descargas de grabaciones. Inténtelo de nuevo en breve.",
       "graphHttpStatus": "Microsoft Graph devolvió HTTP {{status}} al descargar la grabación de Teams."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} programado",
+    "updated": "Entrada de agenda actualizada",
+    "deleted": "Entrada de agenda eliminada",
+    "createFailed": "No se pudo programar este trabajo",
+    "updateFailed": "No se pudo actualizar la entrada de agenda",
+    "deleteFailed": "No se pudo eliminar la entrada de agenda",
+    "loadFailed": "No se pudo cargar la entrada de agenda",
+    "noPermission": "Necesita el permiso de actualización de agenda para programar trabajo."
   }
 }

@@ -26,13 +26,12 @@
     "loading": "Loading...",
     "errors": {
       "loadPermissions": "Failed to load user permissions",
-      "forbidden": "You do not have permission to view this schedule.",
-      "saveFailed": "Failed to save schedule entry"
+      "forbidden": "You do not have permission to view this schedule."
     },
-    "saved": "Scheduled {{title}}",
     "schedulingFor": "Scheduling",
-    "selectSlotHint": "Click or drag a time on the calendar to schedule this work for this agent.",
-    "readOnlyHint": "You can view this schedule, but need the schedule update permission to add entries."
+    "selectSlotHint": "Click or drag a time on the calendar to schedule this work for this agent. Click an entry to edit it.",
+    "readOnlyHint": "You can view this schedule, but need the schedule update permission to add or change entries.",
+    "workItemLegend": "Outlined entries belong to this work item."
   },
   "calendar": {
     "legend": {
@@ -558,7 +557,8 @@
       "appointmentRequest": "Appointment Request",
       "view": "View Entry",
       "edit": "Edit Entry",
-      "new": "New Entry"
+      "new": "New Entry",
+      "newForWorkItem": "Schedule {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "This is a private entry. Only the creator can view or edit details."
@@ -593,7 +593,8 @@
     },
     "workItem": {
       "adHocFallback": "Ad-hoc entry (no work item)",
-      "openDetails": "Details"
+      "openDetails": "Details",
+      "loading": "Loading work item…"
     },
     "appointmentRequest": {
       "approved": {
@@ -749,5 +750,15 @@
       "graphThrottled": "Microsoft Graph is rate limiting recording downloads. Please try again shortly.",
       "graphHttpStatus": "Microsoft Graph returned HTTP {{status}} while downloading the Teams recording."
     }
+  },
+  "workItemEditor": {
+    "created": "Scheduled {{title}}",
+    "updated": "Schedule entry updated",
+    "deleted": "Schedule entry deleted",
+    "createFailed": "Failed to schedule this work",
+    "updateFailed": "Failed to update schedule entry",
+    "deleteFailed": "Failed to delete schedule entry",
+    "loadFailed": "Failed to load schedule entry",
+    "noPermission": "You need the schedule update permission to schedule work."
   }
 }

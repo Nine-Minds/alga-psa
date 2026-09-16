@@ -928,6 +928,19 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
   };
 
+  // A new entry for a known work item is titled after it, so the dialog says
+  // what is being scheduled rather than the generic "New Entry".
+  const popupTitle =
+    isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending'
+      ? t('entryPopup.title.appointmentRequest', { defaultValue: 'Appointment Request' })
+      : viewOnly
+        ? t('entryPopup.title.view', { defaultValue: 'View Entry' })
+        : event
+          ? t('entryPopup.title.edit', { defaultValue: 'Edit Entry' })
+          : selectedWorkItem?.name
+            ? t('entryPopup.title.newForWorkItem', { defaultValue: 'Schedule {{name}}', name: selectedWorkItem.name })
+            : t('entryPopup.title.new', { defaultValue: 'New Entry' });
+
   // Create the content of the form
   const content = (
     <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className={`bg-white p-4 rounded-lg h-auto flex flex-col transition-all duration-300 z-10
@@ -939,13 +952,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       <div className="shrink-0 pb-4 border-b flex justify-between items-center">
         {isInDrawer && (
           <h2 className="text-xl font-bold">
-            {isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending'
-              ? t('entryPopup.title.appointmentRequest', { defaultValue: 'Appointment Request' })
-              : viewOnly
-                ? t('entryPopup.title.view', { defaultValue: 'View Entry' })
-                : event
-                  ? t('entryPopup.title.edit', { defaultValue: 'Edit Entry' })
-                  : t('entryPopup.title.new', { defaultValue: 'New Entry' })}
+            {popupTitle}
           </h2>
         )}
         <div className={`flex gap-2 ${!isInDrawer ? 'ml-auto' : ''}`}>
@@ -1320,6 +1327,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                       })}
                     </div>
                   </div>
+                ) : entryData.work_item_id && !ENTRY_OWNED_WORK_ITEM_TYPES.has(entryData.work_item_type) ? (
+                  // The linked work item is still loading; showing the ad-hoc
+                  // label here flashed a wrong answer before the right one.
+                  <span
+                    id="entry-popup-work-item-loading"
+                    className="text-sm text-[rgb(var(--color-text-500))] animate-pulse"
+                  >
+                    {t('entryPopup.workItem.loading', { defaultValue: 'Loading work item…' })}
+                  </span>
                 ) : (
                   <span className="font-bold text-[rgb(var(--color-text-900))]">
                     {t('entryPopup.workItem.adHocFallback', {
@@ -1327,6 +1343,17 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     })}
                   </span>
                 )}
+              </div>
+            ) : !selectedWorkItem && entryData.work_item_id && !ENTRY_OWNED_WORK_ITEM_TYPES.has(entryData.work_item_type) ? (
+              // Same as the read-only branch: the linked work item is still
+              // loading, so don't flash the ad-hoc label in its place.
+              <div className="flex items-center p-2">
+                <span
+                  id="entry-popup-work-item-loading"
+                  className="text-sm text-[rgb(var(--color-text-500))] animate-pulse"
+                >
+                  {t('entryPopup.workItem.loading', { defaultValue: 'Loading work item…' })}
+                </span>
               </div>
             ) : (
               <SelectedWorkItem
@@ -1724,13 +1751,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       isOpen={true}
       onClose={onClose}
       hideCloseButton={false}
-      title={isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending'
-        ? t('entryPopup.title.appointmentRequest', { defaultValue: 'Appointment Request' })
-        : viewOnly
-          ? t('entryPopup.title.view', { defaultValue: 'View Entry' })
-          : event
-            ? t('entryPopup.title.edit', { defaultValue: 'Edit Entry' })
-            : t('entryPopup.title.new', { defaultValue: 'New Entry' })}
+      title={popupTitle}
     >
       <EntryPopupContext value={contextValue}>
         {content}

@@ -26,13 +26,12 @@
     "loading": "Laden...",
     "errors": {
       "loadPermissions": "Kan gebruikersrechten niet laden",
-      "forbidden": "U heeft geen toestemming om dit schema te bekijken.",
-      "saveFailed": "Kan het schema-item niet opslaan"
+      "forbidden": "U heeft geen toestemming om dit schema te bekijken."
     },
-    "saved": "{{title}} ingepland",
     "schedulingFor": "Inplannen van",
-    "selectSlotHint": "Klik of sleep een tijd in de kalender om dit werk voor deze medewerker in te plannen.",
-    "readOnlyHint": "U kunt deze agenda bekijken, maar u heeft de agenda-bijwerkrechten nodig om items toe te voegen."
+    "selectSlotHint": "Klik of sleep een tijd in de kalender om dit werk voor deze medewerker in te plannen. Klik op een item om het te bewerken.",
+    "readOnlyHint": "U kunt deze agenda bekijken, maar u heeft de agenda-bijwerkrechten nodig om items toe te voegen of te wijzigen.",
+    "workItemLegend": "Omlijnde items horen bij dit werkitem."
   },
   "calendar": {
     "legend": {
@@ -558,7 +557,8 @@
       "appointmentRequest": "Afspraakverzoek",
       "view": "Invoer bekijken",
       "edit": "Invoer bewerken",
-      "new": "Nieuwe invoer"
+      "new": "Nieuwe invoer",
+      "newForWorkItem": "{{name}} inplannen"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Dit is een privé-ingang. Alleen de maker kan details bekijken of bewerken."
@@ -593,7 +593,8 @@
     },
     "workItem": {
       "adHocFallback": "Ad-hocinvoer (geen werkitem)",
-      "openDetails": "Details"
+      "openDetails": "Details",
+      "loading": "Werkitem laden…"
     },
     "appointmentRequest": {
       "approved": {
@@ -749,5 +750,15 @@
       "graphThrottled": "Microsoft Graph beperkt het downloaden van opnamen. Probeer het zo dadelijk opnieuw.",
       "graphHttpStatus": "Microsoft Graph gaf HTTP {{status}} terug bij het downloaden van de Teams-opname."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} ingepland",
+    "updated": "Agenda-item bijgewerkt",
+    "deleted": "Agenda-item verwijderd",
+    "createFailed": "Dit werk kon niet worden ingepland",
+    "updateFailed": "Agenda-item kon niet worden bijgewerkt",
+    "deleteFailed": "Agenda-item kon niet worden verwijderd",
+    "loadFailed": "Agenda-item kon niet worden geladen",
+    "noPermission": "U heeft de agenda-bijwerkrechten nodig om werk in te plannen."
   }
 }
