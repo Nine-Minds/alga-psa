@@ -1,4 +1,4 @@
-import { eeUnavailable, isEnterpriseEdition, optionsResponse } from '../../../_ceStub';
+import { eeUnavailable, isEnterpriseEdition, optionsResponse } from '../../_ceStub';
 import { assertSessionProductAccess } from '@/lib/api/standaloneProductGuards';
 
 export const runtime = 'nodejs';
