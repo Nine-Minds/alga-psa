@@ -6,7 +6,8 @@
       "fetchRates": "Kan belastingtarieven niet ophalen",
       "add": "Kan het belastingtarief niet toevoegen",
       "update": "Kan het belastingtarief niet updaten",
-      "confirmDeletion": "Kan het verwijderen van het belastingtarief niet bevestigen."
+      "confirmDeletion": "Kan het verwijderen van het belastingtarief niet bevestigen.",
+      "setDefault": "Standaardbelastingtarief kon niet worden ingesteld"
     },
     "validation": {
       "requiredFieldsTitle": "Vul de verplichte velden in:",
@@ -22,7 +23,9 @@
       "notAvailable": "N.v.t",
       "region": "Regio",
       "taxPercentage": "Belastingpercentage",
-      "composite": "Composiet"
+      "composite": "Composiet",
+      "default": "Standaard",
+      "defaultBadge": "Standaard"
     },
     "actions": {
       "openMenu": "Menu openen",
@@ -32,7 +35,8 @@
       "addNew": "Nieuw belastingtarief toevoegen",
       "add": "Belastingtarief toevoegen",
       "update": "Belastingtarief bijwerken",
-      "cancel": "Annuleren"
+      "cancel": "Annuleren",
+      "setDefault": "Als standaard instellen"
     },
     "dialog": {
       "fields": {
@@ -70,7 +74,8 @@
       "taxPercentage": "Belastingpercentage",
       "taxType": "Belastingtype",
       "isComposite": "Is samengesteld",
-      "isActive": "Is actief"
+      "isActive": "Is actief",
+      "isDefault": "Tenantstandaard"
     },
     "values": {
       "dash": "-",

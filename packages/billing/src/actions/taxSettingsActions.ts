@@ -570,8 +570,13 @@ export const createDefaultTaxSettings = withAuth(async (
       throw new Error('Permission denied: billing update required');
     }
     const { knex } = await createTenantKnex();
+    // Guard only; the actual assignment happens in createDefaultTaxSettingsInternal.
+    // Prefer the tenant default so the check agrees with the selection.
     const defaultTaxRate = await tenantScopedTable<ITaxRate>(knex, tenant, 'tax_rates')
       .where('is_active', true)
+      .orderBy('is_default', 'desc')
+      .orderBy('created_at', 'asc')
+      .orderBy('tax_rate_id', 'asc')
       .first();
     if (!defaultTaxRate) {
       throw new Error('No active tax rates found in the system to assign as default.');

@@ -1235,7 +1235,8 @@
       "regionInvalid": "Wybrany region podatkowy nie jest już prawidłowy. Odśwież stronę i wybierz inny region.",
       "duplicate": "Dla tego regionu i zakresu dat istnieje już stawka podatku.",
       "missingField": "Brakuje wymaganego pola stawki podatku.",
-      "missingFieldNamed": "Brakuje wymaganego pola stawki podatku: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola stawki podatku: {{field}}.",
+      "inactiveDefault": "Nieaktywnej stawki podatku nie można ustawić jako domyślnej."
     },
     "tax": {
       "defaultRequiresActiveRate": "Skonfiguruj co najmniej jedną aktywną stawkę podatku przed utworzeniem domyślnych ustawień podatkowych.",

@@ -155,6 +155,16 @@ export function TaxRateDetailPanel({ taxRate, onBack, isReadOnly = false }: TaxR
                         })}
                   </Badge>
                 </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {t('taxRateDetail.fields.isDefault', { defaultValue: 'Tenant Default' })}
+                  </p>
+                  <Badge variant={taxRate.is_default ? 'primary' : 'outline'}>
+                    {taxRate.is_default
+                      ? t('taxRateDetail.values.yes', { defaultValue: 'Yes' })
+                      : t('taxRateDetail.values.no', { defaultValue: 'No' })}
+                  </Badge>
+                </div>
               </div>
 
               {/* Tax Precedence Info */}

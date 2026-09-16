@@ -43,6 +43,8 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
         return actionError('Tax rate ID is required for updates.', 'msp/billing-settings:errors.taxRate.idRequired');
       case 'Tax rate not found':
         return actionError('Tax rate not found.', 'msp/billing-settings:errors.taxRate.notFound');
+      case 'Cannot set an inactive tax rate as default':
+        return actionError('An inactive tax rate cannot be set as the default.', 'msp/billing-settings:errors.taxRate.inactiveDefault');
       // Thrown by deleteTaxRate's in-transaction guards; intentionally
       // user-visible, so keep the wording rather than degrading to the
       // generic delete fallback.
@@ -75,6 +77,35 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
   }
 
   return null;
+}
+
+/**
+ * Re-home the tenant default after the current holder is deleted or
+ * deactivated, so an operator's configured default never dangles. Picks the
+ * rate the legacy fallback would have chosen (earliest-created active rate) so
+ * the effective lookup result is unchanged. No-op when a default already exists
+ * or no active rate remains.
+ */
+async function promoteEarliestActiveTaxRate(db: ReturnType<typeof tenantDb>): Promise<void> {
+  const existingDefault = await db.table('tax_rates')
+    .where({ is_default: true })
+    .first('tax_rate_id');
+  if (existingDefault) {
+    return;
+  }
+
+  const nextRate = await db.table('tax_rates')
+    .where('is_active', true)
+    .orderBy('created_at', 'asc')
+    .orderBy('tax_rate_id', 'asc')
+    .first('tax_rate_id');
+  if (!nextRate) {
+    return;
+  }
+
+  await db.table('tax_rates')
+    .where({ tax_rate_id: nextRate.tax_rate_id })
+    .update({ is_default: true });
 }
 
 export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[] | TaxRateActionError> => {
@@ -130,7 +161,7 @@ export const addTaxRate = withAuth(async (
       const tax_rate_id = uuid4();
 
       const [newTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-        .insert({ ...taxRateData, tax_rate_id, tenant: tenant! })
+        .insert({ ...taxRateData, is_default: false, tax_rate_id, tenant: tenant! })
         .returning('*');
       return newTaxRate;
     });
@@ -158,24 +189,25 @@ export const updateTaxRate = withAuth(async (
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
+      const tdb = tenantDb(trx, tenant);
 
       if (!taxRateData.tax_rate_id) {
         throw new Error('Tax rate ID is required for updates');
       }
 
+      const existingRate = await tdb.table<ITaxRate>('tax_rates')
+        .where({
+          tax_rate_id: taxRateData.tax_rate_id,
+          tenant
+        })
+        .first();
+
+      if (!existingRate) {
+        throw new Error('Tax rate not found');
+      }
+
       // Validate date range before update, excluding current tax rate
       if (taxRateData.start_date || taxRateData.end_date) {
-        const existingRate = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-          .where({
-            tax_rate_id: taxRateData.tax_rate_id,
-            tenant
-          })
-          .first();
-
-        if (!existingRate) {
-          throw new Error('Tax rate not found');
-        }
-
         if (!taxRateData.region_code) {
           throw new Error('Region is required');
         }
@@ -188,13 +220,23 @@ export const updateTaxRate = withAuth(async (
         );
       }
 
-      // Clean up the data before update and exclude partition key (tenant)
-      const { tenant: _, ...updateData } = { ...taxRateData };
+      // is_default is owned exclusively by setDefaultTaxRate; strip it so this
+      // action cannot create a second default or silently clear the current one.
+      const updateData: Partial<ITaxRate> = { ...taxRateData };
+      delete updateData.tenant;
+      delete updateData.is_default;
       if (updateData.end_date === '') {
         updateData.end_date = null;
       }
 
-      const [updatedTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
+      // Deactivating the default would otherwise leave a dangling inactive
+      // default: clear the flag and hand it to the next active rate.
+      const deactivatingDefault = existingRate.is_default === true && updateData.is_active === false;
+      if (deactivatingDefault) {
+        updateData.is_default = false;
+      }
+
+      const [updatedTaxRate] = await tdb.table<ITaxRate>('tax_rates')
         .where({
           tax_rate_id: updateData.tax_rate_id,
           tenant
@@ -204,10 +246,76 @@ export const updateTaxRate = withAuth(async (
       if (!updatedTaxRate) {
         throw new Error('Tax rate not found');
       }
+
+      if (deactivatingDefault) {
+        await promoteEarliestActiveTaxRate(tdb);
+      }
+
       return updatedTaxRate;
     });
   } catch (error: any) {
     console.error('Error updating tax rate:', error);
+    const expected = taxRateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
+});
+
+/**
+ * Designate a tenant-wide default tax rate.
+ *
+ * The default is a property of the tenant, not the client: unspecified tax
+ * lookups fall back to it before the legacy "earliest active rate" behaviour.
+ * The migration does not pre-select a default, so a tenant may legitimately
+ * have none; once one is set, deactivating or deleting it hands the flag to the
+ * next active rate (see promoteEarliestActiveTaxRate).
+ */
+export const setDefaultTaxRate = withAuth(async (
+  user,
+  { tenant },
+  taxRateId: string
+): Promise<ITaxRate | TaxRateActionError> => {
+  try {
+    await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
+    if (!await hasPermission(user, 'billing', 'update')) {
+      return permissionError('Permission denied: Cannot update tax rates', 'msp/billing-settings:errors.permissions.updateTaxRates');
+    }
+
+    if (!taxRateId) {
+      throw new Error('Tax rate ID is required for updates');
+    }
+
+    const { knex: db } = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tdb = tenantDb(trx, tenant);
+
+      const target = await tdb.table<ITaxRate>('tax_rates')
+        .where({ tax_rate_id: taxRateId })
+        .first();
+      if (!target) {
+        throw new Error('Tax rate not found');
+      }
+      if (!target.is_active) {
+        throw new Error('Cannot set an inactive tax rate as default');
+      }
+
+      // Move the default in one transaction: clear the current holder, then set
+      // the new one. The partial unique index on (tenant) WHERE is_default
+      // guarantees at most one survives.
+      await tdb.table('tax_rates')
+        .where({ is_default: true })
+        .update({ is_default: false });
+
+      const [updatedTaxRate] = await tdb.table<ITaxRate>('tax_rates')
+        .where({ tax_rate_id: taxRateId })
+        .update({ is_default: true })
+        .returning('*');
+      return updatedTaxRate;
+    });
+  } catch (error: any) {
+    console.error('Error setting default tax rate:', error);
     const expected = taxRateActionErrorFrom(error);
     if (expected) {
       return expected;
@@ -234,10 +342,10 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
       // Fail-fast tenant guard: confirm the tax rate belongs to this tenant before touching
       // child tables scoped through tax_rates.
       const db = tenantDb(trx, tenantId);
-      const exists = await db.table('tax_rates')
+      const existing = await db.table('tax_rates')
         .where({ tax_rate_id: taxRateId })
-        .first('tax_rate_id');
-      if (!exists) {
+        .first('tax_rate_id', 'is_default');
+      if (!existing) {
         throw new Error('Tax rate not found or already deleted.');
       }
 
@@ -258,6 +366,12 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
 
       if (deletedCount === 0) {
         throw new Error('Tax rate not found or already deleted.');
+      }
+
+      // Deleting the default must not silently drop the tenant back to the
+      // legacy fallback; hand the default to the next active rate.
+      if (existing.is_default === true) {
+        await promoteEarliestActiveTaxRate(db);
       }
     });
 

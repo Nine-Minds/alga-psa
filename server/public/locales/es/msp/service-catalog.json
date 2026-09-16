@@ -6,7 +6,8 @@
       "fetchRates": "No se han podido recuperar las tasas impositivas",
       "add": "No se pudo agregar la tasa impositiva",
       "update": "No se pudo actualizar la tasa impositiva",
-      "confirmDeletion": "No se pudo confirmar la eliminación de la tasa impositiva."
+      "confirmDeletion": "No se pudo confirmar la eliminación de la tasa impositiva.",
+      "setDefault": "No se pudo establecer la tasa de impuesto predeterminada"
     },
     "validation": {
       "requiredFieldsTitle": "Por favor complete los campos requeridos:",
@@ -22,7 +23,9 @@
       "notAvailable": "N/D",
       "region": "Región",
       "taxPercentage": "Porcentaje de impuestos",
-      "composite": "compuesto"
+      "composite": "compuesto",
+      "default": "Predeterminado",
+      "defaultBadge": "Predeterminado"
     },
     "actions": {
       "openMenu": "abrir menú",
@@ -32,7 +35,8 @@
       "addNew": "Agregar nueva tasa impositiva",
       "add": "Agregar tasa impositiva",
       "update": "Actualizar tasa impositiva",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "setDefault": "Establecer como predeterminado"
     },
     "dialog": {
       "fields": {
@@ -70,7 +74,8 @@
       "taxPercentage": "Porcentaje de impuestos",
       "taxType": "Tipo de impuesto",
       "isComposite": "es compuesto",
-      "isActive": "esta activo"
+      "isActive": "esta activo",
+      "isDefault": "Predeterminado del inquilino"
     },
     "values": {
       "dash": "-",

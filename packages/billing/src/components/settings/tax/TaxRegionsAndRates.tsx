@@ -1,17 +1,20 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import toast from 'react-hot-toast';
 import {
   AlertTriangle,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Layers,
   MapPin,
   MoreVertical,
+  Pencil,
   PlusCircle,
   Settings,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
@@ -40,7 +43,7 @@ import {
 import { ColumnDefinition, DeletionValidationResult, ITaxRate, ITaxRegion } from '@alga-psa/types';
 import { toPlainDate } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { getTaxRates, deleteTaxRate, DeleteTaxRateResult } from '../../../actions/taxRateActions';
+import { getTaxRates, deleteTaxRate, setDefaultTaxRate, DeleteTaxRateResult } from '../../../actions/taxRateActions';
 import { getTaxRegions, updateTaxRegion } from '../../../actions/taxSettingsActions';
 import {
   formatTaxPercentage,
@@ -70,13 +73,35 @@ const rateStatusBadge: Record<TaxRateStatus, 'success' | 'info' | 'warning' | 'd
   inactive: 'default-muted',
 };
 
+interface TaxRegionsAndRatesProps {
+  /**
+   * Revision bumped by the shared parent when tenant tax settings change
+   * elsewhere (e.g. TaxSourceSettings switching tax source). When it changes,
+   * this component refetches so the rate list — including the default
+   * indicator — reflects the latest persisted state.
+   */
+  settingsRevision?: number;
+  /**
+   * Notifies the shared parent that this component changed tax state (set
+   * default, create, edit or delete a rate) so its sibling tax components
+   * re-evaluate their own state.
+   */
+  onSettingsChanged?: () => void;
+}
+
 /**
  * One table for tax regions with each region's rates inline: the region row shows
  * what an invoice would be taxed at today, expanding it lists the rates behind that
  * number. Rates are always created inside a region, so there is no region picker.
  */
-export function TaxRegionsAndRates() {
+export function TaxRegionsAndRates({
+  settingsRevision = 0,
+  onSettingsChanged,
+}: TaxRegionsAndRatesProps) {
   const { t } = useTranslation('msp/billing-settings');
+  // Rate rows reuse the strings the rate dialog already owns; they live in the
+  // service-catalog namespace rather than billing-settings.
+  const { t: tCatalog } = useTranslation('msp/service-catalog');
   const { formatDate } = useFormatters();
   const today = useMemo(() => Temporal.Now.plainDateISO(), []);
   // Rates carry calendar dates; format them in the app locale so they read the
@@ -133,6 +158,35 @@ export function TaxRegionsAndRates() {
   }, [load]);
 
   const refresh = useCallback(() => load(false), [load]);
+
+  // Refetch when a sibling tax component changes shared state. The default
+  // indicator is part of the fetched rate list, so this keeps it from going
+  // stale against a sibling-driven change.
+  const lastSettingsRevisionRef = useRef(settingsRevision);
+  useEffect(() => {
+    if (lastSettingsRevisionRef.current === settingsRevision) {
+      return;
+    }
+    lastSettingsRevisionRef.current = settingsRevision;
+    void refresh();
+  }, [settingsRevision, refresh]);
+
+  const handleSetDefaultTaxRate = async (rate: ITaxRate) => {
+    try {
+      const result = await setDefaultTaxRate(rate.tax_rate_id);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(result, getErrorMessage(result));
+        return;
+      }
+      await refresh();
+      onSettingsChanged?.();
+    } catch (error) {
+      console.error('Failed to set default tax rate:', error);
+      handleError(error, tCatalog('taxRates.errors.setDefault', {
+        defaultValue: 'Failed to set default tax rate',
+      }));
+    }
+  };
 
   const rows = useMemo<RegionRow[]>(() => {
     const byRegion = summarizeRatesByRegion(rates, today);
@@ -227,6 +281,7 @@ export function TaxRegionsAndRates() {
       }
       resetDelete();
       await refresh();
+      onSettingsChanged?.();
     } catch (error) {
       console.error('Error confirming tax rate deletion:', error);
       handleError(error, t('tax.regions.rates.errors.delete', { defaultValue: 'Failed to delete tax rate.' }));
@@ -279,8 +334,9 @@ export function TaxRegionsAndRates() {
   const columns: ColumnDefinition<RegionRow>[] = [
     {
       title: '',
-      dataIndex: 'region_code',
-      width: '3%',
+      dataIndex: 'expand',
+      width: '56px',
+      sortable: false,
       render: (_, row) => {
         const expanded = expandedCodes.has(row.region_code);
         return (
@@ -423,6 +479,7 @@ export function TaxRegionsAndRates() {
               <th className="py-1 pr-3 font-medium">{t('tax.regions.rates.columns.description', { defaultValue: 'Description' })}</th>
               <th className="py-1 pr-3 font-medium">{t('tax.regions.rates.columns.effective', { defaultValue: 'Effective' })}</th>
               <th className="py-1 pr-3 font-medium">{t('common.columns.status', { defaultValue: 'Status' })}</th>
+              <th className="py-1 pr-3 font-medium">{tCatalog('taxRates.table.default', { defaultValue: 'Default' })}</th>
               <th className="py-1 font-medium"><span className="sr-only">{t('common.columns.actions', { defaultValue: 'Actions' })}</span></th>
             </tr>
           </thead>
@@ -470,6 +527,13 @@ export function TaxRegionsAndRates() {
                       })}
                     </Badge>
                   </td>
+                  <td className="py-2 pr-3">
+                    {rate.is_default && (
+                      <Badge variant="primary" size="sm" id={`tax-rate-default-badge-${rate.tax_rate_id}`}>
+                        {tCatalog('taxRates.table.defaultBadge', { defaultValue: 'Default' })}
+                      </Badge>
+                    )}
+                  </td>
                   <td className="py-2 text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -486,12 +550,24 @@ export function TaxRegionsAndRates() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
+                          id={`set-default-tax-rate-${rate.tax_rate_id}`}
+                          disabled={rate.is_default || !rate.is_active}
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            void handleSetDefaultTaxRate(rate);
+                          }}
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          {tCatalog('taxRates.actions.setDefault', { defaultValue: 'Set as default' })}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           id={`edit-tax-rate-${rate.tax_rate_id}`}
                           onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
                             setRateDialog({ region: row, rate });
                           }}
                         >
+                          <Pencil className="mr-2 h-4 w-4" />
                           {t('tax.regions.rates.actions.edit', { defaultValue: 'Edit' })}
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -512,6 +588,7 @@ export function TaxRegionsAndRates() {
                             requestDelete(rate);
                           }}
                         >
+                          <Trash2 className="mr-2 h-4 w-4" />
                           {t('tax.regions.rates.actions.delete', { defaultValue: 'Delete' })}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -641,6 +718,7 @@ export function TaxRegionsAndRates() {
           onSaved={() => {
             setRateDialog(null);
             void refresh();
+            onSettingsChanged?.();
           }}
         />
       )}

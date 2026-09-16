@@ -17,12 +17,18 @@ vi.mock('@shared/services/productAccessGuard', () => ({
 }));
 import ClientTaxSettings from '../models/clientTaxSettings';
 import { TaxService } from './taxService';
-import { addTaxRate, updateTaxRate } from '../actions/taxRateActions';
+import { addTaxRate, updateTaxRate, setDefaultTaxRate, deleteTaxRate } from '../actions/taxRateActions';
 
 let db: Knex;
 let clientId: string;
 let defaultRateId: string;
 const region = 'TEST-RATE';
+
+async function rateByPercentage(percentage: number) {
+  return context.db!('tax_rates')
+    .where({ tenant: context.tenant, tax_percentage: percentage })
+    .first();
+}
 
 beforeAll(async () => {
   const database = process.env.DB_NAME_SERVER || 'test_database';
@@ -202,5 +208,107 @@ describe('TaxService PostgreSQL rate selection', () => {
   it('preserves a fractional PostgreSQL percentage and rounds only the resulting tax cents', async () => {
     await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).update({ tax_percentage: 7.25 });
     expect(await new TaxService().calculateTax(clientId, 333, '2026-06-01')).toEqual({ taxAmount: 25, taxRate: 7.25 });
+  });
+
+  describe('tenant default tax rate', () => {
+    const earliest = () => rateByPercentage(5);
+    const swapCandidate = () => rateByPercentage(7);
+    const inactiveCandidate = () => rateByPercentage(50);
+
+    it('designates a default and moves it off the previous holder in one transaction', async () => {
+      const first = await earliest();
+      const second = await swapCandidate();
+
+      const setFirst = await setDefaultTaxRate(first.tax_rate_id);
+      expect(setFirst).toMatchObject({ tax_rate_id: first.tax_rate_id, is_default: true });
+      expect(await context.db!('tax_rates')
+        .where({ tenant: context.tenant, is_default: true })
+        .pluck('tax_rate_id')).toEqual([first.tax_rate_id]);
+
+      const setSecond = await setDefaultTaxRate(second.tax_rate_id);
+      expect(setSecond).toMatchObject({ tax_rate_id: second.tax_rate_id, is_default: true });
+      expect(await context.db!('tax_rates')
+        .where({ tenant: context.tenant, is_default: true })
+        .pluck('tax_rate_id')).toEqual([second.tax_rate_id]);
+      expect((await context.db!('tax_rates')
+        .where({ tenant: context.tenant, tax_rate_id: first.tax_rate_id })
+        .first()).is_default).toBe(false);
+    });
+
+    it('refuses to make an inactive rate the tenant default', async () => {
+      const inactive = await inactiveCandidate();
+      const result = await setDefaultTaxRate(inactive.tax_rate_id);
+      expect(result).toMatchObject({
+        actionError: 'An inactive tax rate cannot be set as the default.',
+        messageKey: 'msp/billing-settings:errors.taxRate.inactiveDefault',
+      });
+      expect(await context.db!('tax_rates').where({ tenant: context.tenant, is_default: true })).toHaveLength(0);
+    });
+
+    it('enforces at most one default per tenant with the partial unique index', async () => {
+      const first = await earliest();
+      const second = await swapCandidate();
+      await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: first.tax_rate_id }).update({ is_default: true });
+      await expect(
+        context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: second.tax_rate_id }).update({ is_default: true }),
+      ).rejects.toThrow(/unique|duplicate/i);
+    });
+
+    it('promotes the earliest active rate when the default is deleted', async () => {
+      const survivor = await earliest();
+      const doomed = await swapCandidate();
+      await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: survivor.tax_rate_id })
+        .update({ created_at: '2020-01-01T00:00:00.000Z' });
+      await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: doomed.tax_rate_id })
+        .update({ created_at: '2022-01-01T00:00:00.000Z' });
+
+      await setDefaultTaxRate(doomed.tax_rate_id);
+      const result = await deleteTaxRate(doomed.tax_rate_id);
+      expect(result.success).toBe(true);
+
+      const defaults = await context.db!('tax_rates').where({ tenant: context.tenant, is_default: true });
+      expect(defaults.map(rate => rate.tax_rate_id)).toEqual([survivor.tax_rate_id]);
+    });
+
+    it('promotes the earliest active rate when the default is deactivated', async () => {
+      const survivor = await earliest();
+      const doomed = await swapCandidate();
+      // updateTaxRate re-validates the date range on any update; drop the
+      // fixture's inactive rate so its open-ended range cannot block the edit.
+      await context.db!('tax_rates').where({ tenant: context.tenant, tax_percentage: 50 }).del();
+      await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: survivor.tax_rate_id })
+        .update({ created_at: '2020-01-01T00:00:00.000Z' });
+      await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: doomed.tax_rate_id })
+        .update({ created_at: '2022-01-01T00:00:00.000Z' });
+
+      const defaulted = await setDefaultTaxRate(doomed.tax_rate_id);
+      if (!defaulted || !('tax_rate_id' in defaulted)) throw new Error('Expected a persisted tax rate');
+
+      const updated = await updateTaxRate({ ...defaulted, is_active: false });
+      expect(updated).toMatchObject({ tax_rate_id: doomed.tax_rate_id, is_active: false, is_default: false });
+
+      const defaults = await context.db!('tax_rates').where({ tenant: context.tenant, is_default: true });
+      expect(defaults.map(rate => rate.tax_rate_id)).toEqual([survivor.tax_rate_id]);
+    });
+
+    it('resolves a new client default to the tenant default rather than the earliest active rate', async () => {
+      const survivor = await earliest();
+      const tenantDefault = await swapCandidate();
+      await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: survivor.tax_rate_id })
+        .update({ created_at: '2020-01-01T00:00:00.000Z' });
+      await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: tenantDefault.tax_rate_id })
+        .update({ created_at: '2022-01-01T00:00:00.000Z' });
+      await setDefaultTaxRate(tenantDefault.tax_rate_id);
+
+      const secondClientId = randomUUID();
+      await context.db!('clients').insert({ tenant: context.tenant, client_id: secondClientId, client_name: 'Second client' });
+
+      await new TaxService().createDefaultTaxSettings(secondClientId);
+
+      const association = await context.db!('client_tax_rates')
+        .where({ tenant: context.tenant, client_id: secondClientId, is_default: true })
+        .first();
+      expect(association.tax_rate_id).toBe(tenantDefault.tax_rate_id);
+    });
   });
 });

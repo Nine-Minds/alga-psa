@@ -6,7 +6,8 @@
       "fetchRates": "Échec de la récupération des taux de taxe",
       "add": "Échec de l'ajout du taux de taxe",
       "update": "Échec de la mise à jour du taux de taxe",
-      "confirmDeletion": "Échec de la confirmation de la suppression du taux de taxe."
+      "confirmDeletion": "Échec de la confirmation de la suppression du taux de taxe.",
+      "setDefault": "Échec de la définition du taux d'imposition par défaut"
     },
     "validation": {
       "requiredFieldsTitle": "Veuillez remplir les champs obligatoires :",
@@ -22,7 +23,9 @@
       "notAvailable": "S/O",
       "region": "Région",
       "taxPercentage": "Pourcentage d'impôt",
-      "composite": "Composite"
+      "composite": "Composite",
+      "default": "Par défaut",
+      "defaultBadge": "Par défaut"
     },
     "actions": {
       "openMenu": "Ouvrir le menu",
@@ -32,7 +35,8 @@
       "addNew": "Ajouter un nouveau taux de taxe",
       "add": "Ajouter un taux de taxe",
       "update": "Mettre à jour le taux de taxe",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "setDefault": "Définir par défaut"
     },
     "dialog": {
       "fields": {
@@ -70,7 +74,8 @@
       "taxPercentage": "Pourcentage d'impôt",
       "taxType": "Type de taxe",
       "isComposite": "Est composite",
-      "isActive": "Est actif"
+      "isActive": "Est actif",
+      "isDefault": "Défaut du tenant"
     },
     "values": {
       "dash": "-",

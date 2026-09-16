@@ -1233,7 +1233,8 @@
       "regionInvalid": "La región fiscal seleccionada ya no es válida. Actualice la página y elija otra región.",
       "duplicate": "Ya existe una tasa de impuesto para esta región e intervalo de fechas.",
       "missingField": "Falta un campo obligatorio de la tasa de impuesto.",
-      "missingFieldNamed": "Falta un campo obligatorio de la tasa de impuesto: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de la tasa de impuesto: {{field}}.",
+      "inactiveDefault": "No se puede establecer una tasa de impuesto inactiva como predeterminada."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configure al menos una tasa de impuesto activa antes de crear los ajustes fiscales predeterminados.",

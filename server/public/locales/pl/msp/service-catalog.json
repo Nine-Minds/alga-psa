@@ -6,7 +6,8 @@
       "fetchRates": "Nie udało się pobrać stawek podatku",
       "add": "Nie udało się dodać stawki podatku",
       "update": "Nie udało się zaktualizować stawki podatku",
-      "confirmDeletion": "Nie udało się potwierdzić usunięcia stawki podatku."
+      "confirmDeletion": "Nie udało się potwierdzić usunięcia stawki podatku.",
+      "setDefault": "Nie udało się ustawić domyślnej stawki podatku"
     },
     "validation": {
       "requiredFieldsTitle": "Proszę wypełnić wymagane pola:",
@@ -22,7 +23,9 @@
       "notAvailable": "Nie dotyczy",
       "region": "Region podatkowy",
       "taxPercentage": "Procent podatku",
-      "composite": "Kompozyt"
+      "composite": "Kompozyt",
+      "default": "Domyślny",
+      "defaultBadge": "Domyślny"
     },
     "actions": {
       "openMenu": "Otwórz menu",
@@ -32,7 +35,8 @@
       "addNew": "Dodaj nową stawkę podatku",
       "add": "Dodaj stawkę podatku",
       "update": "Zaktualizuj stawkę podatku",
-      "cancel": "Anuluj"
+      "cancel": "Anuluj",
+      "setDefault": "Ustaw jako domyślny"
     },
     "dialog": {
       "fields": {
@@ -70,7 +74,8 @@
       "taxPercentage": "Procent podatku",
       "taxType": "Rodzaj podatku",
       "isComposite": "Jest kompozytowy",
-      "isActive": "Jest aktywny"
+      "isActive": "Jest aktywny",
+      "isDefault": "Domyślny dla organizacji"
     },
     "values": {
       "dash": "-",
