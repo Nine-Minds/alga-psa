@@ -30,9 +30,11 @@
       "moveFailed": "Não foi possível mover a entrada de agenda"
     },
     "schedulingFor": "Agendando",
-    "selectSlotHint": "Clique ou arraste um horário no calendário para agendar este trabalho para este agente. Arraste uma entrada para movê-la, arraste sua borda para alterar a duração ou clique nela para editá-la.",
+    "selectSlotHint": "Arraste para criar, mover ou redimensionar entradas. Clique numa entrada para editá-la.",
     "readOnlyHint": "Você pode ver esta agenda, mas precisa da permissão de atualização de agenda para adicionar ou alterar entradas.",
-    "workItemLegend": "As entradas contornadas pertencem a este item de trabalho."
+    "workItemLegend": "Este item de trabalho",
+    "schedulingForAgent": "Agendando para {{name}}",
+    "otherWorkLegend": "Outro trabalho"
   },
   "calendar": {
     "legend": {

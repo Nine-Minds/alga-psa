@@ -30,9 +30,11 @@
       "moveFailed": "Agenda-item kon niet worden verplaatst"
     },
     "schedulingFor": "Inplannen van",
-    "selectSlotHint": "Klik of sleep een tijd in de kalender om dit werk voor deze medewerker in te plannen. Sleep een item om het te verplaatsen, sleep de rand om de duur te wijzigen of klik erop om het te bewerken.",
+    "selectSlotHint": "Sleep om items te maken, te verplaatsen of de duur te wijzigen. Klik op een item om het te bewerken.",
     "readOnlyHint": "U kunt deze agenda bekijken, maar u heeft de agenda-bijwerkrechten nodig om items toe te voegen of te wijzigen.",
-    "workItemLegend": "Omlijnde items horen bij dit werkitem."
+    "workItemLegend": "Dit werkitem",
+    "schedulingForAgent": "Inplannen voor {{name}}",
+    "otherWorkLegend": "Ander werk"
   },
   "calendar": {
     "legend": {

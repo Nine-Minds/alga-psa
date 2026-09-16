@@ -102,6 +102,11 @@ interface EntryPopupProps {
    * existing `event`.
    */
   initialWorkItem?: Omit<IWorkItem, 'tenant'> | null;
+  /**
+   * The entry is being edited from its work item's own page, so the work
+   * item is shown as a fixed label rather than something to change.
+   */
+  lockWorkItem?: boolean;
 }
 
 // All-day recurrence dates share the entry's UTC calendar-date representation.
@@ -134,6 +139,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   focusedTechnicianId,
   canAssignOthers,
   viewOnly = false,
+  lockWorkItem = false,
   initialWorkItem = null
 }) => {
   const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>(() => {
@@ -941,6 +947,25 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             ? t('entryPopup.title.newForWorkItem', { defaultValue: 'Schedule {{name}}', name: selectedWorkItem.name })
             : t('entryPopup.title.new', { defaultValue: 'New Entry' });
 
+  const showDetailsButton = Boolean(
+    event && event.work_item_type &&
+    (event.work_item_type === 'ticket' || event.work_item_type === 'project_task' || event.work_item_type === 'interaction') &&
+    event.work_item_id
+  );
+  const showDeleteButton = Boolean(
+    event && onDelete && !viewOnly && (!event.is_private || isCurrentUserSoleAssignee)
+  );
+  const startDelete = () => {
+    if (!event) return;
+    setDeleteValidation(null);
+    setPendingDeleteScope(undefined);
+    if (event.is_recurring && !materializedEntryId) {
+      setShowDeleteDialog(true);
+      return;
+    }
+    setIsDeleteDialogOpen(true);
+  };
+
   // Create the content of the form
   const content = (
     <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className={`bg-white p-4 rounded-lg h-auto flex flex-col transition-all duration-300 z-10
@@ -949,38 +974,13 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       'max-w-[95vw] w-auto min-w-[300px] max-h-[90vh] shadow-none'
       }`} noValidate
     >
-      <div className="shrink-0 pb-4 border-b flex justify-between items-center">
-        {isInDrawer && (
+      {isInDrawer && (
+        <div className="shrink-0 pb-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold">
             {popupTitle}
           </h2>
-        )}
-        <div className={`flex gap-2 ${!isInDrawer ? 'ml-auto' : ''}`}>
-          {event && event.work_item_type && (event.work_item_type === 'ticket' || event.work_item_type === 'project_task' || event.work_item_type === 'interaction') && event.work_item_id && (
-            <OpenDrawerButton event={event} />
-          )}
-          {/* Only show delete button if not a private event or user is creator */}
-          {event && onDelete && !viewOnly && (!event.is_private || isCurrentUserSoleAssignee) && (
-            <Button
-              id="delete-entry-btn"
-              onClick={() => {
-                setDeleteValidation(null);
-                setPendingDeleteScope(undefined);
-                if (event.is_recurring && !materializedEntryId) {
-                  setShowDeleteDialog(true);
-                  return;
-                }
-                setIsDeleteDialogOpen(true);
-              }}
-              type="button"
-              variant="destructive"
-              size="sm"
-            >
-              {t('entryPopup.actions.delete', { defaultValue: 'Delete Entry' })}
-            </Button>
-          )}
         </div>
-      </div>
+      )}
       <div className="flex-1 overflow-y-auto space-y-4 p-1">
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">
@@ -1308,11 +1308,11 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         {(!isAppointmentRequest || (appointmentRequestData && appointmentRequestData.status === 'approved')) && (
         <div className="min-w-0">
           <div className="relative">
-            {viewOnly || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
-              <div className="flex justify-between items-center p-2">
+            {viewOnly || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
+              <div className="flex justify-between items-center gap-3 p-2">
                 {selectedWorkItem ? (
-                  <div>
-                    <div className="font-medium">{selectedWorkItem.name}</div>
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{selectedWorkItem.name}</div>
                     <div className="text-sm text-gray-500 capitalize">{selectedWorkItem.type.replace('_', ' ')}</div>
                   </div>
                 ) : isSourceOwnedWorkItemType(entryData.work_item_type) ? (
@@ -1343,6 +1343,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     })}
                   </span>
                 )}
+                {showDetailsButton && event && <OpenDrawerButton event={event} />}
               </div>
             ) : !selectedWorkItem && entryData.work_item_id && !ENTRY_OWNED_WORK_ITEM_TYPES.has(entryData.work_item_type) ? (
               // Same as the read-only branch: the linked work item is still
@@ -1356,16 +1357,21 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 </span>
               </div>
             ) : (
-              <SelectedWorkItem
-                workItem={selectedWorkItem}
-                onEdit={(e?: React.MouseEvent) => {
-                  if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                  setIsEditingWorkItem(true);
-                }}
-              />
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <SelectedWorkItem
+                    workItem={selectedWorkItem}
+                    onEdit={(e?: React.MouseEvent) => {
+                      if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                      setIsEditingWorkItem(true);
+                    }}
+                  />
+                </div>
+                {showDetailsButton && event && <OpenDrawerButton event={event} />}
+              </div>
             )}
             {isEditingWorkItem && (
               <AddWorkItemDialog
@@ -1392,10 +1398,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               name="title"
               value={entryData.title}
               onChange={handleInputChange}
+              autoFocus={canEditFields}
               className=""
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
+          {(canAssignMultipleAgents || (entryData.assigned_user_ids?.length === 1 && entryData.assigned_user_ids[0] === currentUserId)) && (
           <div className="flex gap-4 items-start">
             {canAssignMultipleAgents && (
               <div className="flex-1">
@@ -1432,6 +1440,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               </div>
             )}
           </div>
+          )}
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700">
@@ -1678,7 +1687,19 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         </div>
         )}
 
-      <div className="mt-6 flex justify-end space-x-3">
+      <div className="mt-6 flex items-center justify-end space-x-3">
+        {/* Destructive action sits apart from the primary pair, styled as a quiet action. */}
+        {showDeleteButton && (
+          <Button
+            id="delete-entry-btn"
+            type="button"
+            variant="ghost"
+            className="mr-auto text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-accent-600))]"
+            onClick={startDelete}
+          >
+            {t('entryPopup.actions.delete', { defaultValue: 'Delete Entry' })}
+          </Button>
+        )}
         {/* Only show Cancel/Close button if not in a drawer, since the drawer will have its own close button */}
         {!isInDrawer && (
           <Button id="cancel-entry-btn" onClick={onClose} variant="outline">
@@ -1751,6 +1772,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       isOpen={true}
       onClose={onClose}
       hideCloseButton={false}
+      className="max-w-[640px]"
       title={popupTitle}
     >
       <EntryPopupContext value={contextValue}>

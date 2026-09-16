@@ -308,8 +308,8 @@ describe('AgentScheduleView', () => {
     const { eventPropGetter } = calendarSpy.mock.calls.at(-1)[0];
     const mine = eventPropGetter({ work_item_type: 'ticket', work_item_id: 'ticket-1' });
     const other = eventPropGetter({ work_item_type: 'ticket', work_item_id: 'ticket-2' });
-    expect(mine.style.boxShadow).toContain('--color-primary-600');
-    expect(other.style.boxShadow).toBeUndefined();
+    expect(mine.className).toBe('agent-schedule-event--this-work-item');
+    expect(other.className).toBe('agent-schedule-event--other');
   });
 
   it('sets scrollToTime to 8 AM', () => {
@@ -495,7 +495,7 @@ describe('AgentScheduleView', () => {
     );
 
     expect(await findByText('Printer offline')).toBeTruthy();
-    expect(await findByText(/Click or drag a time on the calendar/)).toBeTruthy();
+    expect(await findByText(/Drag to create, move or resize entries/)).toBeTruthy();
   });
 
   it('explains the read-only calendar when the user lacks update permission', async () => {
@@ -513,7 +513,7 @@ describe('AgentScheduleView', () => {
   it('renders no work item header without a work item context', async () => {
     const { queryByText } = render(<AgentScheduleView agentId="agent-1" />);
     await waitFor(() => expect(calendarSpy).toHaveBeenCalled());
-    expect(queryByText(/Click or drag a time on the calendar/)).toBeNull();
+    expect(queryByText(/Drag to create, move or resize entries/)).toBeNull();
   });
 
   it('pins month-view slots to 8am for the default one-hour duration', async () => {

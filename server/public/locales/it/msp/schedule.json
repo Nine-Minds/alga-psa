@@ -30,9 +30,11 @@
       "moveFailed": "Impossibile spostare la voce di agenda"
     },
     "schedulingFor": "Pianificazione di",
-    "selectSlotHint": "Fai clic o trascina un orario nel calendario per pianificare questo lavoro per questo agente. Trascina una voce per spostarla, trascina il suo bordo per cambiare la durata o fai clic per modificarla.",
+    "selectSlotHint": "Trascina per creare, spostare o ridimensionare le voci. Fai clic su una voce per modificarla.",
     "readOnlyHint": "Puoi visualizzare questa agenda, ma hai bisogno del permesso di aggiornamento agenda per aggiungere o modificare voci.",
-    "workItemLegend": "Le voci con bordo appartengono a questo elemento di lavoro."
+    "workItemLegend": "Questo elemento di lavoro",
+    "schedulingForAgent": "Pianificazione per {{name}}",
+    "otherWorkLegend": "Altro lavoro"
   },
   "calendar": {
     "legend": {

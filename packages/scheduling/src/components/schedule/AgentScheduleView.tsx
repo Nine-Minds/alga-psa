@@ -2,7 +2,10 @@
 
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { momentLocalizer, SlotInfo, View } from 'react-big-calendar';
+import { momentLocalizer, SlotInfo, View, type EventProps, type ToolbarProps } from 'react-big-calendar';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@alga-psa/ui/components/Button';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import moment from 'moment';
 import CalendarSkeleton from '@alga-psa/ui/components/skeletons/CalendarSkeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -16,6 +19,8 @@ import type { IScheduleEntry, WorkItemType } from '@alga-psa/types';
 import { isSourceOwnedWorkItemType } from '../../lib/entryOwnedWorkItems';
 import { droppedEntryDates, movedEntryUpdate, resizedEntryDates } from '../../lib/entryMoves';
 import { useScheduleViewer } from '../../hooks/useScheduleViewer';
+import { useUsers } from '@alga-psa/user-composition/hooks';
+import { hasAllDayDates } from '../../lib/calendarDateDisplay';
 import {
   WORK_ITEM_ENTRY_DEFAULT_DURATION_MS,
   slotFromCalendarSelection,
@@ -38,6 +43,15 @@ const workItemColors: Record<WorkItemType, string> = {
   opportunity_step: 'rgb(var(--color-event-opportunity))',
 };
 
+/**
+ * Chip content for the narrow drawer columns: the title only (the grid
+ * already shows the time), wrapping to at most two lines. The full title is
+ * in the chip's tooltip.
+ */
+function AgentScheduleEventChip({ title }: EventProps<IScheduleEntry>) {
+  return <div className="agent-schedule-chip__title">{title}</div>;
+}
+
 interface AgentScheduleViewProps {
   agentId: string;
   /**
@@ -59,12 +73,20 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
   const [refreshKey, setRefreshKey] = useState(0);
   const calendarRef = useRef<HTMLDivElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const { users = [] } = useUsers();
+  const agent = users.find((user) => user.user_id === agentId);
+  const agentName = agent ? `${agent.first_name ?? ''} ${agent.last_name ?? ''}`.trim() : '';
 
   const viewer = useScheduleViewer(
     t('agentView.errors.loadPermissions', { defaultValue: 'Failed to load user permissions' })
   );
   const { currentUserId, loaded: permissionsLoaded, canModifySchedule } = viewer;
   const canViewAgent = viewer.canViewAgent(agentId);
+
+  const belongsToWorkItem = (event: IScheduleEntry) =>
+    Boolean(workItemContext) && event.work_item_id === workItemContext?.workItemId;
+  const hasAllDayEvents = events.some((event) => hasAllDayDates(event));
+  const hasOtherWork = Boolean(workItemContext) && events.some((event) => !belongsToWorkItem(event));
 
   // Creating an entry from a slot assigns it to the viewed agent, which needs
   // user_schedule:update. Without it the drawer stays the read-only view it was
@@ -119,16 +141,24 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
     };
   }, [agentId, canViewAgent, currentUserId, permissionsLoaded, dateRange.end, dateRange.start, refreshKey, t]);
 
+  // First paint lands on the working day, or earlier if this work item's
+  // first entry starts before 8am, so the dispatcher's target is in view.
+  // Measured from the gutter rows rather than a fixed pixel guess, which
+  // drifted with the row height.
   useEffect(() => {
-    if (!hasScrolled && calendarRef.current && (view === 'day' || view === 'week')) {
-      const timeSlotContainer = calendarRef.current.querySelector('.rbc-time-content');
-      if (timeSlotContainer) {
-        const scrollToPosition = 8 * 4 * 15;
-        (timeSlotContainer as HTMLElement).scrollTop = scrollToPosition;
-        setHasScrolled(true);
-      }
-    }
-  }, [events, hasScrolled, view]);
+    if (hasScrolled || isLoading || !calendarRef.current || (view !== 'day' && view !== 'week')) return;
+    const timeContent = calendarRef.current.querySelector('.rbc-time-content') as HTMLElement | null;
+    const gutterRows = calendarRef.current.querySelectorAll('.rbc-time-gutter .rbc-timeslot-group');
+    if (!timeContent || gutterRows.length === 0) return;
+
+    const ownEntryHours = events
+      .filter((event) => belongsToWorkItem(event) && !hasAllDayDates(event))
+      .map((event) => new Date(event.scheduled_start).getHours());
+    const targetHour = Math.max(0, Math.min(8, ...ownEntryHours) - 1);
+    const row = gutterRows[Math.min(targetHour, gutterRows.length - 1)] as HTMLElement;
+    timeContent.scrollTop = row.offsetTop;
+    setHasScrolled(true);
+  }, [events, hasScrolled, isLoading, view]);
 
   const handleSelectEvent = (event: IScheduleEntry) => {
     setEditorTarget({ kind: 'edit', event });
@@ -194,9 +224,6 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
     return persistMove(entry, resizedEntryDates(entry, { start: new Date(start), end: new Date(end) }));
   };
 
-  const belongsToWorkItem = (event: IScheduleEntry) =>
-    Boolean(workItemContext) && event.work_item_id === workItemContext?.workItemId;
-
   const renderEditor = () => {
     if (!editorTarget || !currentUserId) return null;
 
@@ -218,6 +245,49 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
     );
   };
 
+  // Compact toolbar for the drawer's width: chevrons, Today, the range, the view switch.
+  const AgentToolbar = ({ label, onNavigate, onView, view: currentView }: ToolbarProps) => (
+    <div className="rbc-toolbar agent-schedule-toolbar flex items-center gap-2 px-1 py-2">
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          id="agent-schedule-prev"
+          variant="ghost"
+          size="sm"
+          className="px-2"
+          aria-label={t('calendar.toolbar.previousAria', { defaultValue: 'Previous {{view}}', view: currentView })}
+          onClick={() => onNavigate('PREV')}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          id="agent-schedule-next"
+          variant="ghost"
+          size="sm"
+          className="px-2"
+          aria-label={t('calendar.toolbar.nextAria', { defaultValue: 'Next {{view}}', view: currentView })}
+          onClick={() => onNavigate('NEXT')}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button id="agent-schedule-today" variant="outline" size="sm" onClick={() => onNavigate('TODAY')}>
+          {t('calendar.toolbar.today', { defaultValue: 'Today' })}
+        </Button>
+      </div>
+      <span className="rbc-toolbar-label flex-1 min-w-0 truncate text-center">{label}</span>
+      <div className="shrink-0">
+        <ViewSwitcher
+          currentView={currentView}
+          onChange={(next) => onView(next as View)}
+          options={[
+            { value: 'day', label: t('calendar.toolbar.views.day', { defaultValue: 'Day' }) },
+            { value: 'week', label: t('calendar.toolbar.views.week', { defaultValue: 'Week' }) },
+            { value: 'month', label: t('calendar.toolbar.views.month', { defaultValue: 'Month' }) },
+          ]}
+        />
+      </div>
+    </div>
+  );
+
   const scrollToTime = useMemo(() => {
     const time = new Date();
     time.setHours(8, 0, 0, 0);
@@ -230,39 +300,61 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
     return (
       <div
         id="agent-schedule-work-item-header"
-        className="px-4 py-3 border-b border-[rgb(var(--color-border-200))]"
+        className="px-4 py-3 border-b border-[rgb(var(--color-border-200))] flex items-start justify-between gap-4"
       >
-        <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))]">
-          {t('agentView.schedulingFor', { defaultValue: 'Scheduling' })}
+        <div className="min-w-0">
+          <div className="text-base font-semibold text-[rgb(var(--color-text-900))] truncate">
+            {agentName
+              ? t('agentView.schedulingForAgent', { defaultValue: 'Scheduling for {{name}}', name: agentName })
+              : t('agentView.schedulingFor', { defaultValue: 'Scheduling' })}
+          </div>
+          <div className="text-sm text-[rgb(var(--color-text-700))] truncate">
+            {workItemContext.title}
+          </div>
+          <div className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+            {canCreateFromSlot
+              ? t('agentView.selectSlotHint', {
+                  defaultValue: 'Drag to create, move or resize entries. Click an entry to edit.',
+                })
+              : t('agentView.readOnlyHint', {
+                  defaultValue:
+                    'You can view this schedule, but need the schedule update permission to add or change entries.',
+                })}
+          </div>
         </div>
-        <div className="text-sm font-medium text-[rgb(var(--color-text-900))] truncate">
-          {workItemContext.title}
+        {hasOtherWork && (
+        <div
+          id="agent-schedule-work-item-legend"
+          className="shrink-0 flex flex-col items-start gap-1 text-xs text-[rgb(var(--color-text-600))]"
+        >
+          <span className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="inline-block h-3 w-5 rounded-sm bg-[rgb(var(--color-primary-200))] ring-2 ring-[rgb(var(--color-primary-600))]"
+            />
+            {t('agentView.workItemLegend', { defaultValue: 'This work item' })}
+          </span>
+          <span className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="inline-block h-3 w-5 rounded-sm bg-[rgb(var(--color-border-300))]"
+            />
+            {t('agentView.otherWorkLegend', { defaultValue: 'Other work' })}
+          </span>
         </div>
-        <div className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
-          {canCreateFromSlot
-            ? t('agentView.selectSlotHint', {
-                defaultValue:
-                  'Click or drag a time on the calendar to schedule this work for this agent. Drag an entry to move it, drag its edge to change the duration, or click it to edit.',
-              })
-            : t('agentView.readOnlyHint', {
-                defaultValue:
-                  'You can view this schedule, but need the schedule update permission to add or change entries.',
-              })}
-          {' '}
-          {t('agentView.workItemLegend', {
-            defaultValue: 'Outlined entries belong to this work item.',
-          })}
-        </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="h-full flex flex-col bg-[rgb(var(--color-border-50))]">
+    <div
+      className={`h-full min-h-0 flex flex-col overflow-hidden bg-[rgb(var(--color-border-50))] agent-schedule-view${hasAllDayEvents ? '' : ' agent-schedule-view--no-all-day'}${workItemContext ? ' agent-schedule-view--work-item' : ''}`}
+    >
       <CalendarStyleProvider />
       <AgentScheduleDrawerStyles />
       {renderWorkItemHeader()}
-      <div className="flex-grow relative" ref={calendarRef}>
+      <div className="flex-1 min-h-0 relative" ref={calendarRef}>
         {isLoading && (
           <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10">
             {t('agentView.loading', { defaultValue: 'Loading...' })}
@@ -287,21 +379,19 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
             }}
             eventPropGetter={(event: object) => {
               const scheduleEvent = event as IScheduleEntry;
-              const backgroundColor = workItemColors[scheduleEvent.work_item_type] || 'rgb(var(--color-border-200))';
               const isThisWorkItem = belongsToWorkItem(scheduleEvent);
+              // With a work item in focus, the type palette gives way to one
+              // question: is this chip the ticket being scheduled or not?
+              const backgroundColor = workItemContext && !isThisWorkItem
+                ? 'rgb(var(--color-border-300))'
+                : workItemColors[scheduleEvent.work_item_type] || 'rgb(var(--color-border-200))';
               return {
-                className: isThisWorkItem ? 'agent-schedule-event--this-work-item' : undefined,
+                className: isThisWorkItem ? 'agent-schedule-event--this-work-item' : 'agent-schedule-event--other',
                 style: {
                   backgroundColor,
                   borderRadius: '6px',
                   border: 'none',
                   color: 'rgb(var(--color-text-900))',
-                  ...(isThisWorkItem
-                    ? {
-                        boxShadow: 'inset 0 0 0 2px rgb(var(--color-primary-600))',
-                        fontWeight: 600,
-                      }
-                    : {}),
                 },
               };
             }}
@@ -318,6 +408,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
             draggableAccessor={(event: object) => canMoveOnGrid(event as IScheduleEntry)}
             onEventDrop={handleEventDrop}
             onEventResize={handleEventResize}
+            components={{ event: AgentScheduleEventChip, toolbar: AgentToolbar }}
             step={15}
             timeslots={4}
             defaultView="week"

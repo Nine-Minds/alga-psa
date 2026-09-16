@@ -30,9 +30,11 @@
       "moveFailed": "Zeitplaneintrag konnte nicht verschoben werden"
     },
     "schedulingFor": "Planung für",
-    "selectSlotHint": "Klicken oder ziehen Sie eine Zeit im Kalender, um diese Arbeit für diesen Mitarbeiter zu planen. Ziehen Sie einen Eintrag, um ihn zu verschieben, ziehen Sie seinen Rand, um die Dauer zu ändern, oder klicken Sie ihn an, um ihn zu bearbeiten.",
+    "selectSlotHint": "Ziehen, um Einträge zu erstellen, zu verschieben oder ihre Dauer zu ändern. Klicken Sie auf einen Eintrag, um ihn zu bearbeiten.",
     "readOnlyHint": "Sie können diesen Zeitplan ansehen, benötigen aber die Berechtigung zum Aktualisieren von Zeitplänen, um Einträge hinzuzufügen oder zu ändern.",
-    "workItemLegend": "Umrandete Einträge gehören zu diesem Arbeitselement."
+    "workItemLegend": "Dieses Arbeitselement",
+    "schedulingForAgent": "Planung für {{name}}",
+    "otherWorkLegend": "Andere Arbeit"
   },
   "calendar": {
     "legend": {

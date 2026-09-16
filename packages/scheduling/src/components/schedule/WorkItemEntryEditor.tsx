@@ -258,6 +258,7 @@ export default function WorkItemEntryEditor({
       focusedTechnicianId={focusedTechnicianId}
       canAssignOthers={canModify && !lockAssignees}
       viewOnly={!canModify}
+      lockWorkItem={Boolean(context)}
       isInDrawer={presentation === 'drawer'}
     />
   );
