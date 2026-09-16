@@ -283,6 +283,10 @@ const servicePeriodPostInventoryRefs = new Set([
   // snapshot and seed persisted service-period columns in their fixtures.
   'server/src/test/infrastructure/billing/invoices/contractCadenceServicePeriodReplenishment.test.ts',
   'server/src/test/infrastructure/billing/invoices/contractCadenceServicePeriodReplenishment.concurrency.test.ts',
+  // The replenishment coverage audit and its regression fixtures also read
+  // persisted boundaries and were added after the historical snapshot.
+  'packages/billing/src/actions/contractCadenceCoverageAudit.ts',
+  'server/src/test/infrastructure/billing/invoices/contractCadenceCoverageAudit.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the
