@@ -733,5 +733,15 @@
       "groupNameRequired": "Nazwa grupy jest wymagana",
       "readPermission": "Odmowa uprawnień: nie można odczytywać kontaktów"
     }
+  },
+  "portal": {
+    "visibilityGroups": {
+      "scopeLabel": "Widoczność zgłoszeń",
+      "scopeClient": "Wszystkie zgłoszenia tego klienta",
+      "scopeContact": "Tylko własne zgłoszenia",
+      "scopeClientDescription": "Członkowie widzą wszystkie zgłoszenia tego klienta na wybranych tablicach.",
+      "scopeContactDescription": "Członkowie widzą tylko zgłoszenia, w których są wskazani jako kontakt. Administratorzy klienta widzą wszystkie zgłoszenia na wybranych tablicach, również te bez kontaktu.",
+      "assignmentHelp": "Przypisz grupę, aby ograniczyć tablice i zgłoszenia, lub zachowaj pełny dostęp do klienta."
+    }
   }
 }

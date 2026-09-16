@@ -11,6 +11,7 @@ describe('email branding actions contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'tenant_settings', tenant)");
     expect(source).toContain('tenantScopedTable(trx, "system_email_templates as t", tenant)');
     expect(source).toContain('tenantScopedTable(trx, "tenant_email_templates", tenant)');
+    expect(source).toContain('tenantScopedTable(trx, "system_email_templates", tenant).where({ name })');
 
     // No raw table access that could reach another tenant's rows.
     expect(source).not.toMatch(/\btrx\(["'](tenant_email_templates|system_email_templates|tenant_settings)/);
@@ -34,10 +35,12 @@ describe('email branding actions contract', () => {
     expect(apply).toContain('await withTransaction(knex, async (trx: Knex.Transaction) => {');
     expect(apply).toContain('chunked(inserts, INSERT_BATCH_SIZE)');
     // Citus rejects column references in the SET clause of a distributed table.
-    expect(apply).toContain(".update({ html_content: update.html, updated_at: now })");
+    expect(apply).toContain('html_content: update.html,');
+    expect(apply).toContain('updated_at: now,');
     expect(apply).not.toMatch(/\.update\([^)]*knex\.raw/);
-    // text_content is never rewritten on an existing row.
-    expect(apply).not.toMatch(/\.update\(\{[^}]*text_content/);
+    // Subject and plain text move only when the planner asked for an overwrite.
+    expect(apply).toContain('...(update.subject !== undefined ? { subject: update.subject } : {})');
+    expect(apply).toContain('...(update.text !== undefined ? { text_content: update.text } : {})');
   });
 
   it('runs every action under withAuth so the tenant comes from the session', () => {
@@ -46,6 +49,7 @@ describe('email branding actions contract', () => {
     expect(exported).toContain('getEmailBrandingStatusAction');
     expect(exported).toContain('applyEmailBrandingAction');
     expect(exported).toContain('removeEmailBrandingAction');
+    expect(exported).toContain('previewEmailBrandingApplyAction');
 
     // A tenant argument would let a caller name someone else's tenant.
     expect(source).not.toMatch(/export const \w+ = async \(\s*tenant: string/);
@@ -53,6 +57,34 @@ describe('email branding actions contract', () => {
 
   it('enforces the Enterprise-only fields server side', () => {
     expect(source).toContain('normalizeEmailBrandingInput(input, isEnterprise)');
+  });
+});
+
+describe('apply preview', () => {
+  const preview = source.slice(source.indexOf('export const previewEmailBrandingApplyAction'));
+  const body = preview.slice(0, preview.indexOf('\n});'));
+
+  it('reads a single template through tenant-scoped builders', () => {
+    expect(body).toContain('loadTemplateRowsForName(trx, tenant, name)');
+
+    const loader = source.slice(source.indexOf('async function loadTemplateRowsForName'));
+    const loaderBody = loader.slice(0, loader.indexOf('\n}\n'));
+    expect(loaderBody).toContain('tenantScopedTable(trx, "system_email_templates", tenant).where({ name })');
+    expect(loaderBody).toContain('tenantScopedTable(trx, "tenant_email_templates", tenant).where({ name })');
+  });
+
+  it('writes nothing at all', () => {
+    expect(body).not.toMatch(/\.(insert|update|del)\(/);
+    expect(body).not.toContain('updateTenantSettings');
+    expect(body).not.toContain('revalidatePath');
+    expect(body).not.toContain('requireSettingsUpdate');
+  });
+
+  it('previews through the same planner and decorator as the apply', () => {
+    expect(body).toContain('previewEmailBrandingApply({');
+    expect(body).toContain('target: resolveEmailPalette(context.palette)');
+    expect(body).toContain('appliedPalette: context.palette.appliedPalette ?? null');
+    expect(body).toContain('decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise)');
   });
 });
 

@@ -441,7 +441,8 @@
       "boards": "Boards",
       "priorities": "Prioritäten",
       "categories": "Kategorien",
-      "checklistTemplates": "Checklisten-Vorlagen"
+      "checklistTemplates": "Checklisten-Vorlagen",
+      "externalSystems": "Externe Systeme"
     },
     "numbering": {
       "title": "Nummernformat",
@@ -986,6 +987,47 @@
           "updateStatusFailed": "Vorlagenstatus konnte nicht aktualisiert werden",
           "itemSaveFailed": "Checklisten-Element konnte nicht gespeichert werden",
           "ruleSaveFailed": "Regel für automatische Anwendung konnte nicht gespeichert werden"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Externe Systeme",
+      "subtitle": "Fügen Sie benutzerdefinierte externe Systeme hinzu, damit Tickets auf Datensätze außerhalb des integrierten Katalogs verweisen können.",
+      "addButton": "System hinzufügen",
+      "builtInTitle": "Integrierte Systeme",
+      "builtInSubtitle": "Für jeden Mandanten verfügbar; URLs werden aus der Systemvorlage erzeugt.",
+      "table": {
+        "label": "Bezeichnung",
+        "key": "Schlüssel",
+        "urlTemplate": "URL-Vorlage",
+        "actions": "Aktionen"
+      },
+      "actions": {
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Abbrechen",
+        "save": "Speichern"
+      },
+      "fields": {
+        "key": "Schlüssel",
+        "keyHint": "Muss custom:<slug> entsprechen (Kleinbuchstaben, Ziffern oder Unterstriche).",
+        "label": "Bezeichnung",
+        "urlTemplate": "URL-Vorlage",
+        "urlTemplateHint": "Optional. Verwenden Sie die Platzhalter {realm} und {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Externes System hinzufügen",
+        "editTitle": "Externes System bearbeiten"
+      },
+      "deleteDialog": {
+        "title": "Externes System löschen",
+        "message": "\"{{label}}\" löschen? Systeme, die noch von Links verwendet werden, können nicht gelöscht werden."
+      },
+      "messages": {
+        "success": {
+          "created": "Externes System erstellt.",
+          "updated": "Externes System aktualisiert.",
+          "deleted": "Externes System gelöscht."
         }
       }
     }
@@ -1561,7 +1603,8 @@
       "preview": {
         "subjectLabel": "Betreff-Vorschau",
         "iframeTitle": "Vorschau der E-Mail-Vorlage",
-        "sampleDataNote": "Die Vorschau verwendet Beispieldaten. Tatsächliche E-Mails enthalten echte Werte."
+        "sampleDataNote": "Die Vorschau verwendet Beispieldaten. Tatsächliche E-Mails enthalten echte Werte.",
+        "sourceSyncNote": "Klicken Sie in der Vorschau auf ein Element, um den zugehörigen Code auszuwählen; wenn Sie den Cursor im Code bewegen, wird das Element hier umrandet."
       },
       "errors": {
         "loadFailed": "Vorlagen konnten nicht geladen werden"
@@ -1610,7 +1653,8 @@
       },
       "tabs": {
         "source": "Quellcode",
-        "preview": "Vorschau"
+        "preview": "Vorschau",
+        "variables": "Variablen"
       },
       "common": {
         "notAvailable": "k. A."
@@ -1680,6 +1724,20 @@
           "colors": "Farben",
           "text": "Text",
           "subject": "Betreff"
+        },
+        "overwrite": "Überschreiben",
+        "overwriteHint": "Beim Überschreiben wird eine Vorlage aus der Standardvorlage in Ihrer Farbpalette neu erstellt; Ihre Bearbeitungen gehen dabei verloren.",
+        "preview": {
+          "open": "Ergebnis in der Vorschau ansehen",
+          "title": "Vorschau: {{name}}",
+          "loading": "Vorschau wird erstellt ...",
+          "captions": {
+            "create": "Eine gebrandete Kopie der Standardvorlage wird für Sie erstellt.",
+            "update": "Ihre gebrandete Kopie wird mit der gespeicherten Palette aus der Standardvorlage neu erstellt.",
+            "customized": "Ihre Bearbeitungen bleiben Wort für Wort erhalten. Nur die in dieser Vorlage verbliebenen Standardfarben werden ersetzt.",
+            "overwrite": "Ihre Bearbeitungen an dieser Vorlage werden verworfen. Sie wird aus der Standardvorlage in Ihrer Farbpalette neu erstellt.",
+            "skipped": "Es wird nichts geschrieben – {{reason}}. So sieht die Vorlage heute aus."
+          }
         },
         "summary": "{{written}} gebrandet, {{skipped}} übersprungen, {{failed}} fehlgeschlagen",
         "groups": {

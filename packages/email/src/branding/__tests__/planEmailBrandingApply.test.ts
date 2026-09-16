@@ -205,6 +205,95 @@ describe('planEmailBrandingApply', () => {
     });
   });
 
+  it('rebuilds a customized row from the standard template when it is overwritten', () => {
+    const customized = brandedRow(200, 'ticket-created', 'en');
+    customized.html_content = customized.html_content
+      .replace('View Ticket', 'Open in our portal')
+      .replace(TERRACOTTA.footerBg, '#101014');
+    customized.subject = 'A ticket needs you';
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [customized],
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: { ...SCOPE, overwrite: ['ticket-created'] },
+    });
+
+    const update = plan.updates.find((candidate) => candidate.id === 200)!;
+    expect(update).toBeDefined();
+    // The edits go, the standard copy in the new palette arrives.
+    expect(update.html).not.toContain('Open in our portal');
+    expect(update.html).not.toContain('#101014');
+    expect(update.html).toContain(FOREST.primary);
+    const standard = SYSTEM_ROWS.find((row) => row.name === 'ticket-created' && row.language_code === 'en')!;
+    expect(update.subject).toBe(standard.subject);
+    expect(update.text).toBe(standard.text_content);
+  });
+
+  it('overwrites a redesigned row that carries none of our colors', () => {
+    const redesign = {
+      id: 400,
+      name: 'ticket-created',
+      language_code: 'en',
+      subject: 'Ticket raised',
+      html_content: '<html><head><style>body{background:#0b0b12}</style></head><body>{{ticket.title}}</body></html>',
+      text_content: 'Ticket raised',
+    };
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [redesign],
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: { ...SCOPE, overwrite: ['ticket-created'] },
+    });
+
+    const update = plan.updates.find((candidate) => candidate.id === 400)!;
+    expect(update).toBeDefined();
+    expect(update.html).toContain(FOREST.primary);
+    expect(containsEmailPaletteTokens(update.html, STOCK_EMAIL_PALETTE)).toBe(false);
+    expect(plan.skipped.some((skip) => skip.reason === 'nothing-to-replace')).toBe(false);
+  });
+
+  it('touches nothing an overwrite would leave identical', () => {
+    const tenantRows = SYSTEM_ROWS.map((row, index) => brandedRow(100 + index, row.name, row.language_code));
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows,
+      target: TERRACOTTA,
+      appliedPalette: TERRACOTTA,
+      scope: { ...SCOPE, overwrite: NAMES },
+    });
+
+    expect(plan.updates).toHaveLength(0);
+    expect(plan.skipped.every((skip) => skip.reason === 'unchanged')).toBe(true);
+  });
+
+  it('leaves the other names alone when only one is overwritten', () => {
+    const customized = brandedRow(200, 'ticket-created', 'en');
+    customized.html_content = customized.html_content.replace('View Ticket', 'Open in our portal');
+    const other = brandedRow(201, 'ticket-closed', 'en');
+    other.html_content = other.html_content.replace('View Ticket', 'See the ticket');
+
+    const plan = planEmailBrandingApply({
+      systemRows: SYSTEM_ROWS,
+      tenantRows: [customized, other],
+      target: FOREST,
+      appliedPalette: TERRACOTTA,
+      scope: { ...SCOPE, overwrite: ['ticket-created'] },
+    });
+
+    expect(plan.updates.find((update) => update.id === 200)!.html).not.toContain('Open in our portal');
+    expect(plan.skipped).toContainEqual({
+      name: 'ticket-closed',
+      language: 'en',
+      state: 'customized',
+      reason: 'customized',
+    });
+  });
+
   it('accounts for every selected row exactly once', () => {
     const customized = brandedRow(200, 'ticket-created', 'en');
     customized.html_content = customized.html_content.replace('View Ticket', 'Open in our portal');

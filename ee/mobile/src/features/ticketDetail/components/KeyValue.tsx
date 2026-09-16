@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 import { useTheme } from "../../../ui/ThemeContext";
 
 export function KeyValue({ label, value, children }: { label: string; value: React.ReactNode; children?: React.ReactNode }) {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, typography, highContrast } = useTheme();
   return (
     <View
       style={{
@@ -11,7 +11,7 @@ export function KeyValue({ label, value, children }: { label: string; value: Rea
         paddingHorizontal: spacing.md,
         backgroundColor: colors.card,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: highContrast ? colors.borderStrong : colors.border,
         borderRadius: 10,
       }}
     >

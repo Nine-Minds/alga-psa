@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { getActivePushTokensForUser } from './pushTokenService';
+import { getActivePushTokensForUser, meetsPushPriorityThreshold } from './pushTokenService';
 import { buildTicketPushMessage, sendPushNotifications } from './expoPushService';
 
 const TICKET_PUSH_TEMPLATES = new Set([
@@ -64,14 +64,29 @@ export async function triggerPushForNotification(
     return;
   }
 
-  const messages = tokens.map((t) =>
+  // Each device chooses the lowest priority it wants pushed (Settings →
+  // "Push me for"). Below-threshold notifications still exist in-app.
+  const priority = notification.priority ?? 'normal';
+  const eligible = tokens.filter((t) => meetsPushPriorityThreshold(priority, t.push_priority_threshold));
+  if (eligible.length === 0) {
+    logger.info('[PushDispatcher] All devices filtered by priority threshold; skipping', {
+      template: notification.template_name,
+      userId: notification.user_id,
+      tenant: notification.tenant,
+      priority,
+      deviceCount: tokens.length,
+    });
+    return;
+  }
+
+  const messages = eligible.map((t) =>
     buildTicketPushMessage({
       expoPushToken: t.expo_push_token,
       title: notification.title,
       body: notification.message,
       ticketId: ticketId ?? '',
       tenant: notification.tenant,
-      priority: notification.priority ?? 'normal',
+      priority,
     }),
   );
 
@@ -81,6 +96,8 @@ export async function triggerPushForNotification(
     template: notification.template_name,
     userId: notification.user_id,
     tenant: notification.tenant,
-    deviceCount: tokens.length,
+    priority,
+    deviceCount: eligible.length,
+    filteredByThreshold: tokens.length - eligible.length,
   });
 }

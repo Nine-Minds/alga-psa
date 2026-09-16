@@ -11,6 +11,7 @@ import {
   validateClipboardImageFile,
 } from '../../lib/clipboardImageUtils';
 import { deleteDraftClipboardImages as deleteDraftClipboardImagesInternal } from '../../actions/comment-actions/clipboardImageDraftActions';
+import { resolveDocumentViewUrl as resolveDefaultDocumentViewUrl } from '../../lib/documentViewUrl';
 
 export interface TicketRichTextDraftClipboardImage {
   documentId: string;
@@ -172,9 +173,7 @@ export function useTicketRichTextUploadSession({
         ? `/api/documents/download/${uploadedDocument.file_id}`
         : resolveDocumentViewUrl
         ? resolveDocumentViewUrl(uploadedDocument)
-        : uploadedDocument.file_id
-          ? `/api/documents/view/${uploadedDocument.file_id}`
-          : `/api/documents/download/${uploadedDocument.document_id}`;
+        : resolveDefaultDocumentViewUrl(uploadedDocument);
 
       if (trackDraftUploads || commentAttachments) {
         if (!trackedRef.current.some(item => item.documentId === uploadedDocument.document_id)) {

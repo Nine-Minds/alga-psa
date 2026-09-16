@@ -44,6 +44,36 @@ for (const locale of ['pt', 'es', 'fr', 'it']) {
   });
 }
 
+for (const namespace of ['client-portal', 'msp/contacts']) {
+  test(`Brazilian Portuguese ${namespace} copy passes the locale quality audit`, () => {
+    const { report } = runAudit({
+      locale: 'pt',
+      namespaceFilter: new Set([namespace]),
+      writeReport: false,
+    });
+    assert.equal(report.namespaces.length, 1);
+    const result = report.namespaces[0];
+    assert.ok(result.keyCount > 0);
+    assert.deepEqual(result.structuralErrors, []);
+    assert.deepEqual(result.untranslated, []);
+    assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
+test('Polish tax settings pass the locale quality audit', () => {
+  const { report } = runAudit({
+    locale: 'pl',
+    namespaceFilter: new Set(['msp/billing-settings']),
+    writeReport: false,
+  });
+  assert.equal(report.namespaces.length, 1);
+  const namespace = report.namespaces[0];
+  assert.ok(namespace.keyCount > 0);
+  assert.deepEqual(namespace.structuralErrors, []);
+  assert.deepEqual(namespace.untranslated.filter(({ key }) => key.startsWith('tax.')), []);
+  assert.deepEqual(namespace.forbiddenViolations.filter(({ key }) => key.startsWith('tax.')), []);
+});
+
 test('identical allowlist matches exact, locale-folded, and pattern values', () => {
   const allowlist = allowlistMatchers({
     dialect: 'de-DE',

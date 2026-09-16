@@ -1945,5 +1945,79 @@
       "internalLabel": "Nie powiadamiaj też agentów i obserwatorów",
       "internalHelper": "Pomija także ich e-maile i powiadomienia w aplikacji"
     }
+  },
+  "externalLinks": {
+    "title": "Łącza zewnętrzne",
+    "empty": "Brak łączy zewnętrznych",
+    "loading": "Ładowanie łączy zewnętrznych...",
+    "noUrl": "Brak adresu URL dla tego odwołania",
+    "customSystemOption": "{{label}} (niestandardowy)",
+    "actions": {
+      "add": "Dodaj łącze",
+      "edit": "Edytuj",
+      "remove": "Usuń",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "menu": "Działania łącza"
+    },
+    "relationship": {
+      "origin": "Źródło",
+      "mirror": "Kopia",
+      "reference": "Odwołanie"
+    },
+    "relationshipDescription": {
+      "origin": "Skąd pochodzi to zgłoszenie. Każde zgłoszenie może mieć jedno łącze źródłowe, które określa jego oznaczenie pochodzenia.",
+      "mirror": "Inny rekord śledzący tę samą pracę co to zgłoszenie.",
+      "reference": "Informacje pomocnicze dotyczące tego zgłoszenia."
+    },
+    "dialog": {
+      "addTitle": "Dodaj łącze zewnętrzne",
+      "editTitle": "Edytuj łącze zewnętrzne",
+      "intro": "Dodanie łącza nie synchronizuje danych między systemami."
+    },
+    "removeDialog": {
+      "title": "Usuń łącze zewnętrzne",
+      "message": "Usunąć to łącze zewnętrzne ze zgłoszenia?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Ładowanie systemów...",
+      "selectSystem": "Wybierz system",
+      "externalId": "Identyfikator zewnętrzny",
+      "externalIdPlaceholder": "np. 42 lub 1234567890",
+      "realm": "Obszar",
+      "url": "URL",
+      "urlOptional": "Opcjonalne zastąpienie",
+      "urlRequired": "https://...",
+      "relationship": "Relacja",
+      "originExistsHint": "To zgłoszenie ma już łącze źródłowe.",
+      "actorGroup": "Osoba lub konto (opcjonalnie)",
+      "actorHint": "Osoba lub konto powiązane z połączonym rekordem w systemie zewnętrznym.",
+      "actorHandle": "Nazwa użytkownika lub identyfikator",
+      "actorDisplay": "Wyświetlana nazwa",
+      "builtInGroup": "Systemy wbudowane",
+      "customGroup": "Systemy niestandardowe",
+      "urlPreview": "Otwiera:",
+      "urlPreviewIncomplete": "Wypełnij powyższe pola, aby wyświetlić podgląd łącza."
+    },
+    "errors": {
+      "ticketNotFound": "Nie znaleziono zgłoszenia",
+      "commentNotFound": "Nie znaleziono komentarza w tym zgłoszeniu",
+      "linkNotFound": "Nie znaleziono łącza zewnętrznego",
+      "systemNotFound": "Nieznany system zewnętrzny",
+      "externalIdRequired": "Identyfikator zewnętrzny jest wymagany",
+      "invalidUrl": "Adres URL musi być prawidłowym adresem http(s)",
+      "invalidRelationship": "Nieprawidłowa relacja",
+      "invalidEntityType": "Nieprawidłowy typ encji",
+      "originExists": "Ta encja ma już łącze źródłowe",
+      "duplicateExternalLink": "Ten rekord zewnętrzny jest już połączony",
+      "systemInUse": "Ten system zewnętrzny jest używany przez istniejące łącza",
+      "systemInUseCount": "Ten system zewnętrzny jest używany przez {{count}} łącze/łączy",
+      "invalidSystemKey": "Klucze systemów niestandardowych muszą być zgodne z custom:<slug> przy użyciu małych liter, cyfr lub podkreśleń",
+      "systemLabelRequired": "Etykieta systemu jest wymagana",
+      "permissionDenied": "Odmowa dostępu: nie można zarządzać systemami zewnętrznymi",
+      "systemRequired": "Wybierz system zewnętrzny.",
+      "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL."
+    }
   }
 }

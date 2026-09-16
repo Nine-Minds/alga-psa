@@ -1773,14 +1773,16 @@ type VisibilityGroupListItem = {
   name: string;
   description: string | null;
   board_count: number;
+  ticket_scope: 'client' | 'contact';
 };
 
-type VisibilityGroupRow = Pick<VisibilityGroupListItem, 'group_id' | 'name' | 'description'>;
+type VisibilityGroupRow = Pick<VisibilityGroupListItem, 'group_id' | 'name' | 'description' | 'ticket_scope'>;
 
 type VisibilityGroupPayload = {
   name: string;
   description?: string | null;
   boardIds?: string[];
+  ticketScope?: 'client' | 'contact';
 };
 
 type VisibilityGroupActionError = ActionMessageError | ActionPermissionError;
@@ -1940,7 +1942,7 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
 
       const groups = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
         .where({ client_id: clientId })
-        .select('group_id', 'name', 'description')
+        .select('group_id', 'name', 'description', 'ticket_scope')
         .orderBy('name') as VisibilityGroupRow[];
 
       const boardCounts = groups.length
@@ -2004,7 +2006,7 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
   { tenant },
   contactId: string,
   groupId: string
-): Promise<{ group_id: string; name: string; description: string | null; board_ids: string[] } | VisibilityGroupActionError> => {
+): Promise<{ group_id: string; name: string; description: string | null; board_ids: string[]; ticket_scope: 'client' | 'contact' } | VisibilityGroupActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -2013,7 +2015,7 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
 
       const group = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
         .where({ client_id: clientId, group_id: groupId })
-        .first('group_id', 'name', 'description');
+        .first('group_id', 'name', 'description', 'ticket_scope');
 
       if (!group) {
         throw new Error('Visibility group not found');
@@ -2094,6 +2096,9 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
   contactId: string,
   input: VisibilityGroupPayload
 ): Promise<{ group_id: string } | VisibilityGroupActionError> => {
+  if (input.ticketScope !== undefined && input.ticketScope !== 'client' && input.ticketScope !== 'contact') {
+    return actionError('Invalid visibility group data provided.', 'msp/contacts:errors.contact.visibilityInvalidData');
+  }
   const name = input.name?.trim();
   if (!name) {
     return actionError('Group name is required', 'msp/contacts:errors.contact.groupNameRequired');
@@ -2114,6 +2119,7 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
           client_id: clientId,
           name,
           description: input.description?.trim() || null,
+          ticket_scope: input.ticketScope ?? 'client',
         })
         .returning('group_id');
 
@@ -2148,6 +2154,9 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
   groupId: string,
   input: VisibilityGroupPayload
 ): Promise<void | VisibilityGroupActionError> => {
+  if (input.ticketScope !== undefined && input.ticketScope !== 'client' && input.ticketScope !== 'contact') {
+    return actionError('Invalid visibility group data provided.', 'msp/contacts:errors.contact.visibilityInvalidData');
+  }
   const name = input.name?.trim();
   if (!name) {
     return actionError('Group name is required', 'msp/contacts:errors.contact.groupNameRequired');
@@ -2175,6 +2184,7 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
         .update({
           name,
           description: input.description?.trim() || null,
+          ...(input.ticketScope !== undefined ? { ticket_scope: input.ticketScope } : {}),
           updated_at: new Date().toISOString()
         });
 

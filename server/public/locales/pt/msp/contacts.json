@@ -729,5 +729,15 @@
       "groupNameRequired": "O nome do grupo é obrigatório",
       "readPermission": "Permissão negada: não é possível ler contatos"
     }
+  },
+  "portal": {
+    "visibilityGroups": {
+      "scopeLabel": "Visibilidade dos tickets",
+      "scopeClient": "Todos os tickets deste cliente",
+      "scopeContact": "Apenas os seus próprios tickets",
+      "scopeClientDescription": "Os membros veem todos os tickets deste cliente nos quadros selecionados.",
+      "scopeContactDescription": "Os membros veem apenas os tickets em que estão indicados como contato. Os administradores do cliente veem todos os tickets nos quadros selecionados, incluindo os que não têm contato.",
+      "assignmentHelp": "Atribua um grupo para limitar quadros e tickets, ou mantenha o acesso completo ao cliente."
+    }
   }
 }

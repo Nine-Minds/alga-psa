@@ -4,34 +4,51 @@ import { deactivateInvalidTokens } from './pushTokenService';
 
 const expo = new Expo();
 
+export type PushPriority = 'high' | 'normal' | 'low';
+
 export interface TicketPushParams {
   expoPushToken: string;
   title: string;
   body: string;
   ticketId: string;
   tenant: string;
-  /**
-   * Configured in-app notification priority (high|normal|low), carried to the
-   * mobile app as payload metadata only (task 29.8.46). This does NOT change
-   * Expo/OS delivery priority — that stays 'high' below.
-   */
-  priority?: 'high' | 'normal' | 'low';
+  /** Configured in-app notification priority (high|normal|low). */
+  priority?: PushPriority;
 }
 
+/**
+ * OS delivery per configured priority (mobile task 35.9.2). The mobile app
+ * creates the matching Android channels at startup so users can tune sound
+ * and vibration per level in system settings; iOS uses interruption levels.
+ */
+export const PUSH_PRIORITY_DELIVERY: Record<PushPriority, {
+  priority: 'high' | 'normal';
+  interruptionLevel: 'time-sensitive' | 'active' | 'passive';
+  channelId: string;
+  sound: 'default' | null;
+}> = {
+  high: { priority: 'high', interruptionLevel: 'time-sensitive', channelId: 'alga-priority-high', sound: 'default' },
+  normal: { priority: 'high', interruptionLevel: 'active', channelId: 'alga-priority-normal', sound: 'default' },
+  low: { priority: 'normal', interruptionLevel: 'passive', channelId: 'alga-priority-low', sound: null },
+};
+
 export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessage {
+  const priority = params.priority ?? 'normal';
+  const delivery = PUSH_PRIORITY_DELIVERY[priority];
   return {
     to: params.expoPushToken,
-    sound: 'default' as const,
+    sound: delivery.sound,
     title: params.title,
     body: params.body,
     data: {
       ticketId: params.ticketId,
       url: `alga://ticket/${params.ticketId}`,
       // Payload metadata so the mobile app can render/sort by priority.
-      priority: params.priority ?? 'normal',
+      priority,
     },
-    // Expo/OS delivery priority is intentionally unchanged (out of scope).
-    priority: 'high' as const,
+    priority: delivery.priority,
+    interruptionLevel: delivery.interruptionLevel,
+    channelId: delivery.channelId,
   };
 }
 
@@ -49,6 +66,8 @@ export function buildTestPushMessage(expoPushToken: string, serverHost: string):
     body: `Push notifications from ${serverHost} are working.`,
     data: { kind: 'push-test', priority: 'normal' },
     priority: 'high' as const,
+    interruptionLevel: 'active' as const,
+    channelId: PUSH_PRIORITY_DELIVERY.normal.channelId,
   };
 }
 

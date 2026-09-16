@@ -41,7 +41,7 @@ export function SecondaryButton({
         opacity: disabled ? 0.5 : pressed ? 0.9 : 1,
       })}
     >
-      <Text style={{ ...theme.typography.body, color: disabled ? theme.colors.textSecondary : textColor, fontWeight: "600" }}>
+      <Text style={{ ...theme.typography.body, color: disabled ? theme.colors.disabled.text : textColor, fontWeight: "600" }}>
         {children}
       </Text>
     </Pressable>

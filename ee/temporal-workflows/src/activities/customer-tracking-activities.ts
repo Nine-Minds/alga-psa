@@ -96,11 +96,77 @@ export class ContactEmailConflictError extends Error {
   }
 }
 
+/**
+ * Raised when a management-tenant client has the onboarding tenant's exact name
+ * but nothing that ties it to this onboarding admin. Reusing it would link an
+ * unrelated signup (name collision) to an existing customer's record — and its
+ * portal. We refuse and let an operator verify the association out-of-band.
+ */
+export class UnverifiedCustomerMatchError extends Error {
+  readonly tenantName: string;
+  readonly existingClientId: string;
+  readonly adminUserEmail: string;
+
+  constructor(tenantName: string, existingClientId: string, adminUserEmail: string) {
+    super(
+      `A client named "${tenantName}" already exists in the management tenant ` +
+      `(${existingClientId}) but has no trusted association with the onboarding ` +
+      `admin "${adminUserEmail}"; refusing to link an unverified customer. ` +
+      `Verify the association out-of-band, link the contact, then use the ` +
+      `Nine Minds portal-user recovery procedure.`
+    );
+    this.name = 'UnverifiedCustomerMatchError';
+    this.tenantName = tenantName;
+    this.existingClientId = existingClientId;
+    this.adminUserEmail = adminUserEmail;
+  }
+}
+
 type DbConstraintError = {
   code?: string;
   constraint?: string;
   message?: string;
 };
+
+type ClientLookupRow = {
+  client_id: string;
+  properties?: unknown;
+};
+
+/**
+ * The association marker written by a previous run of this same onboarding.
+ * `properties` JSON is deliberately reused so no migration is needed; the
+ * marker's normalized admin email (and, when available, the provisioned tenant
+ * UUID) are what make the concurrent-duplicate race self-identifying: the
+ * losing run re-reads a client the winner just created, which has no contacts
+ * yet, and must still recognize it as its own.
+ */
+export interface OnboardingAssociationMarker {
+  admin_email?: string;
+  tenant_uuid?: string | null;
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function parseClientProperties(raw: unknown): Record<string, unknown> {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+}
+
+function readOnboardingMarker(raw: unknown): OnboardingAssociationMarker {
+  const marker = parseClientProperties(raw).onboarding_association;
+  return marker && typeof marker === 'object' ? (marker as OnboardingAssociationMarker) : {};
+}
 
 /**
  * Detect a Postgres unique-constraint violation. Prefer the SQLSTATE (23505)
@@ -124,15 +190,71 @@ function isUniqueConstraintViolation(error: unknown, constraintNames: string[]):
   return false;
 }
 
-async function findClientIdsByName(
+async function findClientsByName(
   knex: Knex,
   tenant: string,
   tenantName: string
-): Promise<string[]> {
-  const rows = await tenantDb(knex, tenant).table('clients')
+): Promise<ClientLookupRow[]> {
+  return tenantDb(knex, tenant).table('clients')
     .where({ client_name: tenantName })
-    .select('client_id');
-  return rows.map((row: { client_id: string }) => row.client_id);
+    .select('client_id', 'properties');
+}
+
+/**
+ * Emails the management tenant already associates with a client: contact
+ * emails plus emails of client-portal users linked to that client's contacts.
+ * Evaluated only inside the management tenant (never unscoped).
+ */
+async function findClientAssociationEmails(
+  knex: Knex,
+  tenant: string,
+  clientId: string
+): Promise<Set<string>> {
+  const emails = new Set<string>();
+
+  const contacts = await tenantDb(knex, tenant).table('contacts')
+    .where({ client_id: clientId })
+    .select('contact_name_id', 'email');
+  for (const contact of contacts as Array<{ contact_name_id: string; email?: string | null }>) {
+    if (contact.email) emails.add(normalizeEmail(contact.email));
+  }
+
+  const contactIds = (contacts as Array<{ contact_name_id: string }>)
+    .map((contact) => contact.contact_name_id);
+  if (contactIds.length > 0) {
+    const users = await tenantDb(knex, tenant).table('users')
+      .whereIn('contact_id', contactIds)
+      .andWhere({ user_type: 'client' })
+      .select('email');
+    for (const user of users as Array<{ email?: string | null }>) {
+      if (user.email) emails.add(normalizeEmail(user.email));
+    }
+  }
+
+  return emails;
+}
+
+/**
+ * True only when the existing client is provably associated with the onboarding
+ * admin. A bare exact-name match is never enough.
+ */
+async function isClientTrustedForOnboarding(
+  knex: Knex,
+  tenant: string,
+  client: ClientLookupRow,
+  normalizedEmail: string,
+  tenantUuid: string | undefined
+): Promise<boolean> {
+  const marker = readOnboardingMarker(client.properties);
+  if (marker.admin_email && normalizeEmail(marker.admin_email) === normalizedEmail) {
+    return true;
+  }
+  if (tenantUuid && marker.tenant_uuid && marker.tenant_uuid === tenantUuid) {
+    return true;
+  }
+
+  const associatedEmails = await findClientAssociationEmails(knex, tenant, client.client_id);
+  return associatedEmails.has(normalizedEmail);
 }
 
 async function findContactIdByClientAndEmail(
@@ -162,17 +284,39 @@ async function findContactOwnerByEmail(
 /**
  * Resolve or create a customer client in the nineminds (management) tenant.
  *
- * Resolution is exact-name and tenant-scoped. A single existing match is
- * reused untouched (createClient is bypassed entirely so its tax/email/notes
- * side effects never run). Multiple matches are refused. A concurrent insert
- * that trips the unique `(tenant, client_name)` constraint is re-read rather
- * than treated as a failure.
+ * Resolution is exact-name and tenant-scoped, but a name match alone is not
+ * enough to reuse a client: the existing client must be provably associated
+ * with the onboarding admin (an existing contact/portal user with the admin's
+ * email, or an onboarding association marker written when the client was
+ * created). Otherwise an unrelated signup that happens to share a company name
+ * could be linked to — and granted portal access to — a stranger's record.
+ *
+ * A trusted single match is reused untouched (createClient is bypassed entirely
+ * so its tax/email/notes side effects never run). Multiple matches are refused.
+ * A concurrent insert that trips the unique `(tenant, client_name)` constraint
+ * is re-read rather than treated as a failure; the association marker is what
+ * makes that race self-identifying before any contact exists.
+ *
+ * Pre-marker partial onboardings: a client created before this marker existed
+ * (or any run that failed between creating the client and creating its contact)
+ * has no contacts, so it can present no trusted association and the retry
+ * refuses with `UnverifiedCustomerMatchError`. That refusal is deliberate.
+ * Widening trust to accept "same name, no contacts" is exactly the name
+ * collision that linked an unrelated signup to Harbor Point; an operator must
+ * verify the association out-of-band and use the Nine Minds recovery runbook
+ * rather than have the workflow guess. The refusal is logged at `error` with
+ * the colliding client id, and Step 5 treats it as non-fatal: tenant creation
+ * succeeds, portal provisioning is skipped, and the welcome email makes no
+ * Support Portal claim.
  */
 export async function createCustomerClientActivity(input: {
   tenantName: string;
   adminUserEmail: string;
+  tenantId?: string;
 }): Promise<{ customerId: string; reused: boolean }> {
   const log = Context.current().log;
+  const normalizedEmail = normalizeEmail(input.adminUserEmail);
+  const tenantUuid = input.tenantId?.trim() || undefined;
   
   try {
     const adminKnex = await getAdminConnection();
@@ -186,16 +330,36 @@ export async function createCustomerClientActivity(input: {
     });
 
     // Read-after-conflict guard: never trust a pre-check alone under concurrency.
-    const existingClientIds = await findClientIdsByName(adminKnex, ninemindsTenant, input.tenantName);
-    if (existingClientIds.length === 1) {
-      log.info('Reusing existing customer client', {
-        customerId: existingClientIds[0],
+    const existingClients = await findClientsByName(adminKnex, ninemindsTenant, input.tenantName);
+    if (existingClients.length === 1) {
+      const client = existingClients[0];
+      const trusted = await isClientTrustedForOnboarding(
+        adminKnex,
+        ninemindsTenant,
+        client,
+        normalizedEmail,
+        tenantUuid
+      );
+      if (!trusted) {
+        log.error('Refusing to reuse an unverified exact-name customer client', {
+          customerId: client.client_id,
+          tenantName: input.tenantName,
+          adminUserEmail: normalizedEmail
+        });
+        throw new UnverifiedCustomerMatchError(input.tenantName, client.client_id, normalizedEmail);
+      }
+
+      log.info('Reusing verified existing customer client', {
+        customerId: client.client_id,
         tenantName: input.tenantName
       });
-      return { customerId: existingClientIds[0], reused: true };
+      return { customerId: client.client_id, reused: true };
     }
-    if (existingClientIds.length > 1) {
-      throw new AmbiguousCustomerMatchError(input.tenantName, existingClientIds);
+    if (existingClients.length > 1) {
+      throw new AmbiguousCustomerMatchError(
+        input.tenantName,
+        existingClients.map((client) => client.client_id)
+      );
     }
 
     try {
@@ -208,7 +372,15 @@ export async function createCustomerClientActivity(input: {
             notes: `PSA Customer - Tenant: ${input.tenantName}`,
             properties: {
               tenant_id: input.tenantName,
-              subscription_type: 'psa'
+              subscription_type: 'psa',
+              // Identity for this onboarding. `tenant_id` above is a display
+              // name and cannot disambiguate; this marker is what lets a
+              // concurrent duplicate recognize the client it just lost the
+              // race to create (before any contact exists).
+              onboarding_association: {
+                admin_email: normalizedEmail,
+                tenant_uuid: tenantUuid ?? null,
+              },
             }
           },
           ninemindsTenant,
@@ -228,17 +400,39 @@ export async function createCustomerClientActivity(input: {
         throw insertError;
       }
 
-      // Another run created the client between our lookup and insert.
-      const racedClientIds = await findClientIdsByName(adminKnex, ninemindsTenant, input.tenantName);
-      if (racedClientIds.length === 1) {
-        log.info('Reusing customer client created by a concurrent run', {
-          customerId: racedClientIds[0],
+      // Another run created the client between our lookup and insert. Re-read
+      // and require the same trusted association; a bare name collision here is
+      // just as unsafe as on the pre-check path.
+      const racedClients = await findClientsByName(adminKnex, ninemindsTenant, input.tenantName);
+      if (racedClients.length === 1) {
+        const client = racedClients[0];
+        const trusted = await isClientTrustedForOnboarding(
+          adminKnex,
+          ninemindsTenant,
+          client,
+          normalizedEmail,
+          tenantUuid
+        );
+        if (!trusted) {
+          log.error('Refusing to reuse an unverified raced customer client', {
+            customerId: client.client_id,
+            tenantName: input.tenantName,
+            adminUserEmail: normalizedEmail
+          });
+          throw new UnverifiedCustomerMatchError(input.tenantName, client.client_id, normalizedEmail);
+        }
+
+        log.info('Reusing verified customer client created by a concurrent run', {
+          customerId: client.client_id,
           tenantName: input.tenantName
         });
-        return { customerId: racedClientIds[0], reused: true };
+        return { customerId: client.client_id, reused: true };
       }
-      if (racedClientIds.length > 1) {
-        throw new AmbiguousCustomerMatchError(input.tenantName, racedClientIds);
+      if (racedClients.length > 1) {
+        throw new AmbiguousCustomerMatchError(
+          input.tenantName,
+          racedClients.map((client) => client.client_id)
+        );
       }
       throw insertError;
     }

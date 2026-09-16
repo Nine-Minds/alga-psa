@@ -33,6 +33,23 @@ describe('MSP TicketDetails origin badge contract', () => {
     expect(source).toContain("inboundEmail: t('origin.inboundEmail', 'Created via Inbound Email')");
   });
 
+  it('T052: a structured origin link overrides the stored origin and feeds the badge tooltip', () => {
+    const source = readTicketDetailsSource();
+
+    // The origin link wins over both a stored origin and the internal creator.
+    expect(
+      getTicketOrigin({ ticket_origin: TICKET_ORIGINS.INTERNAL, origin_link_system: 'email' }),
+    ).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
+    expect(
+      getTicketOrigin({ ticket_origin: TICKET_ORIGINS.API, origin_link_system: 'client_portal' }),
+    ).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
+
+    // TicketDetails resolves the origin link and passes the readable system
+    // label through to the badge (never the raw key).
+    expect(source).toContain('origin_link_system: originExternalLink?.system ?? null');
+    expect(source).toContain('systemLabel={originExternalLink?.display.label ?? null}');
+  });
+
   it('T071: existing response-state badge behavior remains unchanged in MSP ticket details', () => {
     const source = readTicketDetailsSource();
 

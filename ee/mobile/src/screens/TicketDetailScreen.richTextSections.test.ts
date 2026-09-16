@@ -24,6 +24,8 @@ vi.mock("../api", () => ({
 
 vi.mock("../api/tickets", () => ({
   addTicketComment: vi.fn(),
+  cancelScheduledTicketComment: vi.fn(),
+  isScheduledComment: (c: { publish_state?: string | null }) => c.publish_state === "scheduled",
   getTicketById: vi.fn(),
   getTicketComments: vi.fn(),
   getTicketPriorities: vi.fn(),

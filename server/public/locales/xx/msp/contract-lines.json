@@ -694,7 +694,10 @@
       "allServicesAssociated": "⟦Ȧŀŀ ȧṽȧīŀȧƀŀḗ şḗřṽīƈḗş ȧřḗ ȧŀřḗȧḓẏ ȧşşȯƈīȧŧḗḓ ẇīŧħ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ.⟧",
       "badges": {
         "billingMismatch": "⟦Ɓīŀŀīƞɠ ḿīşḿȧŧƈħ⟧",
-        "defaultConfigType": "⟦Ḓḗƒȧŭŀŧ⟧"
+        "defaultConfigType": "⟦Ḓḗƒȧŭŀŧ⟧",
+        "standard": "⟦Şŧȧƞḓȧřḓ⟧",
+        "custom": "⟦Ƈŭşŧȯḿ⟧",
+        "unreviewed": "⟦Ŭƞřḗṽīḗẇḗḓ⟧"
       },
       "billingMethod": {
         "fixed": "⟦Ƒīẋḗḓ Ƥřīƈḗ⟧",

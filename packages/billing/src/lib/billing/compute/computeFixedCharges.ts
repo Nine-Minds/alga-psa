@@ -27,6 +27,12 @@ export interface FixedPlanServiceRow {
   service_id: string;
   service_name: string;
   default_rate: number | string | null;
+  /**
+   * Effective `service_prices.rate` for the contract's currency. Preferred over
+   * the currency-untagged legacy `default_rate` so a non-USD contract bills its
+   * own catalog price (correction #5).
+   */
+  currency_rate?: number | string | null;
   tax_rate_id: string | null;
   config_id: string;
   service_quantity?: number | string | null;
@@ -52,6 +58,20 @@ export interface FixedPlanServiceRow {
  */
 export function isUnitPricedFixedService(service: Pick<FixedPlanServiceRow, "pricing_basis">): boolean {
   return service.pricing_basis === "unit";
+}
+
+/**
+ * The catalog rate to price with: the effective, currency-tagged
+ * `service_prices` rate when present, otherwise the legacy `default_rate`.
+ * Returns 0 for "no rate" so callers that already treat 0 as absent keep their
+ * existing shape.
+ */
+function preferredCatalogRate(
+  service: Pick<FixedPlanServiceRow, "currency_rate" | "default_rate">,
+): number {
+  const raw = service.currency_rate ?? service.default_rate;
+  const parsed = typeof raw === "string" ? parseFloat(raw) : Number(raw ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 /** True when the line has at least one explicitly unit-priced member. */
@@ -208,7 +228,7 @@ export function resolveFixedPlanLevelBaseRate({
   if (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate)) {
     const totalDefaultRateCents = planServices.reduce(
       (sum: number, service) => {
-        const rate = Number(service.default_rate ?? 0);
+        const rate = preferredCatalogRate(service);
         const quantity =
           Number(
             service.configuration_quantity ?? service.service_quantity ?? 1,
@@ -463,6 +483,7 @@ export function computeFixedCharges(
         (service.configuration_custom_rate != null
           ? Number(service.configuration_custom_rate)
           : undefined) ??
+        service.currency_rate ??
         service.default_rate;
       const unitRate = rawUnitRate == null ? null : Number(rawUnitRate);
       if (
@@ -689,7 +710,7 @@ export function computeFixedCharges(
       : Math.round((bundleLevelBaseRate ?? 0) * 100);
 
     const totalFMVCents = normalizedBundleServices.reduce((sum, service) => {
-      const serviceFMV = Number(service.default_rate ?? 0) * service.quantity;
+      const serviceFMV = preferredCatalogRate(service) * service.quantity;
       return sum + serviceFMV;
     }, 0);
 
@@ -710,8 +731,8 @@ export function computeFixedCharges(
     // allocation below runs over nothing.
     const bundleAllocationNeeded = !generatedCharges;
     const serviceAllocations = (bundleAllocationNeeded ? normalizedBundleServices : []).map((service) => {
-      // FMV is based on the service's default rate (cents), not plan overrides.
-      const rateForFMV = Number(service.default_rate || 0);
+      // FMV is based on the service's catalog rate (cents), not plan overrides.
+      const rateForFMV = preferredCatalogRate(service);
       const serviceFMVCents = Math.round(rateForFMV * service.quantity);
 
       const proportion =
@@ -894,7 +915,7 @@ export function computeFixedCharges(
         const baseRateInCents =
           parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
             ? Math.round(parsedBaseRate)
-            : Number(service.default_rate ?? 0);
+            : preferredCatalogRate(service);
         const total = baseRateInCents * quantity;
 
         const { taxRegion: serviceTaxRegion, isTaxable } =

@@ -1,11 +1,15 @@
 import type { ApiClient } from "./client";
 import type { ApiResult } from "./types";
 
+export type PushPriorityThreshold = "low" | "normal" | "high";
+
 export type RegisterPushTokenRequest = {
   expoPushToken: string;
   deviceId: string;
   platform: string;
   appVersion?: string;
+  /** Lowest notification priority this device wants pushed; omit to keep the server's value. */
+  priorityThreshold?: PushPriorityThreshold;
 };
 
 export type UnregisterPushTokenRequest = {
@@ -47,6 +51,20 @@ export function unregisterPushToken(
   const { apiKey, ...body } = params;
   return client.request<{ ok: boolean }>({
     method: "DELETE",
+    path: "/api/v1/mobile/push-token",
+    headers: authHeaders(apiKey),
+    body,
+  });
+}
+
+/** Change only this device's push priority threshold (Settings → "Push me for"). */
+export function updatePushPriorityThreshold(
+  client: ApiClient,
+  params: { apiKey: string; deviceId: string; priorityThreshold: PushPriorityThreshold },
+): Promise<ApiResult<{ ok: boolean }>> {
+  const { apiKey, ...body } = params;
+  return client.request<{ ok: boolean }>({
+    method: "PATCH",
     path: "/api/v1/mobile/push-token",
     headers: authHeaders(apiKey),
     body,

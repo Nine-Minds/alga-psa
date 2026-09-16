@@ -34,6 +34,7 @@ import type { TicketNotificationSuppressionValue } from './TicketNotificationSup
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import { TicketCredentialsSection } from "./TicketCredentialsSection";
+import { TicketExternalLinksSection } from "./TicketExternalLinksSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
@@ -63,6 +64,7 @@ import {
     type ITicketAutoCloseState,
 } from "../../actions/close-rules/closeRuleActions";
 import { getTicketChecklistItems, type ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
+import type { ITicketExternalLinkView } from "../../actions/externalLinks/externalLinkActions";
 import type { CloseRuleFailure } from "../../lib/validateTicketClosure";
 import TicketChecklistSection, { summarizeChecklist } from "./TicketChecklistSection";
 import { Dialog, DialogContent, DialogFooter } from "@alga-psa/ui/components/Dialog";
@@ -224,6 +226,12 @@ interface TicketDetailsProps {
     renderCreateProjectTask?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
 
     /**
+     * Optional injected UI for quick-invoicing a ticket (e.g. billing package
+     * QuickInvoiceTicketDialog). Keeps @alga-psa/tickets from importing billing.
+     */
+    renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -299,6 +307,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     associatedAssets = null,
     renderContactDetails,
     renderCreateProjectTask,
+    renderQuickInvoice,
     renderClientDetails,
     renderIntervalManagement,
     hideSlaStatus = false,
@@ -548,7 +557,34 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
     const [allContactsForWatchListLoading, setAllContactsForWatchListLoading] = useState(false);
-    const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
+    // Single source of truth for this ticket's links: seeded from the server
+    // bootstrap, then kept current by the section's onLinksChanged so the origin
+    // badge and comment chips update immediately on add/edit/remove — no reload.
+    const [externalLinks, setExternalLinks] = useState<ITicketExternalLinkView[] | null>(
+        bootstrap?.externalLinks ?? null,
+    );
+    const originExternalLink = useMemo(
+        () => (externalLinks ?? []).find(
+            (link) => link.entity_type === 'ticket' && link.relationship === 'origin',
+        ),
+        [externalLinks],
+    );
+    const externalLinksByCommentId = useMemo(() => {
+        const grouped: Record<string, ITicketExternalLinkView[]> = {};
+        for (const link of externalLinks ?? []) {
+            if (link.entity_type !== 'comment' || !link.entity_id) continue;
+            (grouped[link.entity_id] ??= []).push(link);
+        }
+        return grouped;
+    }, [externalLinks]);
+    const ticketOrigin = useMemo(
+        () =>
+            getTicketOrigin({
+                ...(ticket as any),
+                origin_link_system: originExternalLink?.system ?? null,
+            }),
+        [ticket, originExternalLink?.system],
+    );
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
         clientPortal: t('origin.clientPortal', 'Created via Client Portal'),
@@ -3414,6 +3450,7 @@ const handleClose = () => {
                                     labels={ticketOriginLabels}
                                     size="sm"
                                     className="flex-shrink-0"
+                                    systemLabel={originExternalLink?.display.label ?? null}
                                 />
                             </div>
 
@@ -3713,6 +3750,7 @@ const handleClose = () => {
                     tags={tags}
                     onTagsChange={handleTagsChange}
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
+                    quickInvoiceActions={hideBilling ? undefined : renderQuickInvoice?.({ ticket })}
                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                         ? () => setIsResolutionCloseDialogOpen(true)
                         : undefined}
@@ -3771,6 +3809,8 @@ const handleClose = () => {
                     onChangeClient={handleClientChange}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
+                    externalLinks={externalLinks ?? undefined}
+                    onExternalLinksChanged={setExternalLinks}
                     hideTimeEntry={hideTimeEntry}
                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                     elapsedTime={elapsedTime}
@@ -3846,6 +3886,7 @@ const handleClose = () => {
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
+                                    renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                         ? () => setIsResolutionCloseDialogOpen(true)
                                         : undefined}
@@ -3916,6 +3957,7 @@ const handleClose = () => {
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                     reactionRefreshVersion={reactionRefreshVersion}
+                                    externalLinksByCommentId={externalLinksByCommentId}
                                 />
                             </div>
                         </Suspense>
@@ -3948,6 +3990,15 @@ const handleClose = () => {
                             ticketId={ticket.ticket_id || ''}
                             clientId={ticket.client_id ?? null}
                         />
+
+                        <div className="mt-6">
+                            <TicketExternalLinksSection
+                                id={`${id}-external-links-section`}
+                                ticketId={ticket.ticket_id || ''}
+                                initialLinks={externalLinks ?? undefined}
+                                onLinksChanged={setExternalLinks}
+                            />
+                        </div>
 
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
@@ -4060,6 +4111,7 @@ const handleClose = () => {
                             isBundledChild={Boolean(bundle?.isBundleChild)}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
+                            renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                             onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                 ? () => setIsResolutionCloseDialogOpen(true)
                                 : undefined}

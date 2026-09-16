@@ -441,7 +441,8 @@
       "boards": "Bacheche",
       "priorities": "Priorita",
       "categories": "Categorie",
-      "checklistTemplates": "Modelli di checklist"
+      "checklistTemplates": "Modelli di checklist",
+      "externalSystems": "Sistemi esterni"
     },
     "numbering": {
       "title": "Formato numerico",
@@ -986,6 +987,47 @@
           "updateStatusFailed": "Impossibile aggiornare lo stato del modello",
           "itemSaveFailed": "Impossibile salvare l'elemento della checklist",
           "ruleSaveFailed": "Impossibile salvare la regola di applicazione automatica"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Sistemi esterni",
+      "subtitle": "Aggiungi sistemi esterni personalizzati per consentire ai ticket di collegarsi a record esterni al catalogo integrato.",
+      "addButton": "Aggiungi sistema",
+      "builtInTitle": "Sistemi integrati",
+      "builtInSubtitle": "Disponibili per tutti i tenant; i relativi URL vengono generati dal modello del sistema.",
+      "table": {
+        "label": "Etichetta",
+        "key": "Chiave",
+        "urlTemplate": "Modello di URL",
+        "actions": "Azioni"
+      },
+      "actions": {
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "cancel": "Annulla",
+        "save": "Salva"
+      },
+      "fields": {
+        "key": "Chiave",
+        "keyHint": "Deve corrispondere a custom:<slug> usando lettere minuscole, cifre o trattini bassi.",
+        "label": "Etichetta",
+        "urlTemplate": "Modello di URL",
+        "urlTemplateHint": "Facoltativo. Usa i segnaposto {realm} e {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Aggiungi sistema esterno",
+        "editTitle": "Modifica sistema esterno"
+      },
+      "deleteDialog": {
+        "title": "Elimina sistema esterno",
+        "message": "Eliminare \"{{label}}\"? I sistemi ancora utilizzati dai collegamenti non possono essere eliminati."
+      },
+      "messages": {
+        "success": {
+          "created": "Sistema esterno creato.",
+          "updated": "Sistema esterno aggiornato.",
+          "deleted": "Sistema esterno eliminato."
         }
       }
     }
@@ -1561,7 +1603,8 @@
       "preview": {
         "subjectLabel": "Anteprima oggetto",
         "iframeTitle": "Anteprima del modello di email",
-        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali."
+        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali.",
+        "sourceSyncNote": "Fai clic su un elemento dell’anteprima per selezionare il codice corrispondente; spostando il cursore nel codice, l’elemento viene evidenziato qui."
       },
       "errors": {
         "loadFailed": "Impossibile caricare i modelli"
@@ -1610,7 +1653,8 @@
       },
       "tabs": {
         "source": "Codice sorgente",
-        "preview": "Anteprima"
+        "preview": "Anteprima",
+        "variables": "Variabili"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1680,6 +1724,20 @@
           "colors": "colori",
           "text": "testo",
           "subject": "oggetto"
+        },
+        "overwrite": "Sovrascrivi",
+        "overwriteHint": "La sovrascrittura ricrea un modello da quello standard con la tua palette ed elimina le tue modifiche.",
+        "preview": {
+          "open": "Vedi il risultato in anteprima",
+          "title": "Anteprima: {{name}}",
+          "loading": "Creazione dell’anteprima...",
+          "captions": {
+            "create": "Verrà creata una copia con il suo marchio a partire dal modello standard.",
+            "update": "La sua copia con il marchio verrà ricreata dal modello standard con la palette salvata.",
+            "customized": "Le sue modifiche restano parola per parola. Vengono sostituiti solo i colori originali rimasti in questo modello.",
+            "overwrite": "Le tue modifiche a questo modello verranno eliminate. Sarà ricreato dal modello standard con la tua palette.",
+            "skipped": "Non verrà scritto nulla: {{reason}}. Questo è il modello così com’è oggi."
+          }
         },
         "summary": "{{written}} con il tuo branding, {{skipped}} ignorati, {{failed}} non riusciti",
         "groups": {

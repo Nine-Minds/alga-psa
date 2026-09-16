@@ -1,9 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label } from "@alga-psa/ui/components/Label";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { getSampleDataForPreview } from "../../lib/templateSampleData";
+import {
+  annotateHtmlSource,
+  parseSourceRange,
+  SOURCE_RANGE_ATTRIBUTE,
+  type SourceRange,
+} from "./emailTemplateSourceMap";
+
+const ACTIVE_CLASS = 'alga-src-active';
+
+const SOURCE_MAP_STYLES = `
+  [${SOURCE_RANGE_ATTRIBUTE}]:hover { outline: 1px dashed rgba(37, 99, 235, 0.7); outline-offset: -1px; cursor: pointer; }
+  .${ACTIVE_CLASS} { outline: 2px solid rgb(37, 99, 235) !important; outline-offset: -1px; }
+`;
 
 /**
  * Replace {{variable}} placeholders in content with sample data values.
@@ -50,28 +63,49 @@ export function EmailTemplatePreview({
   templateName,
   subject,
   id,
+  sourceMap,
+  highlightOffset,
+  onSelectSource,
 }: {
   htmlContent: string;
   templateName: string;
   subject?: string;
   id?: string;
+  /** Links what is rendered back to the HTML source, for the side-by-side editor. */
+  sourceMap?: boolean;
+  /** Caret offset in the source; the element around it is outlined. */
+  highlightOffset?: number | null;
+  /** Fired with the source range of whatever was clicked in the preview. */
+  onSelectSource?: (range: SourceRange) => void;
 }) {
   const { t } = useTranslation('msp/settings');
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [documentEpoch, setDocumentEpoch] = useState(0);
+  const selectSourceRef = useRef(onSelectSource);
+  selectSourceRef.current = onSelectSource;
+
   const sampleData = useMemo(
     () => getSampleDataForPreview(templateName, htmlContent, subject),
     [templateName, htmlContent, subject]
   );
 
   const renderedHtml = useMemo(
-    () => replaceTemplateVariables(htmlContent, sampleData),
-    [htmlContent, sampleData]
+    () => replaceTemplateVariables(sourceMap ? annotateHtmlSource(htmlContent) : htmlContent, sampleData),
+    [htmlContent, sampleData, sourceMap]
   );
 
   const renderedSubject = useMemo(
     () => subject ? replaceTemplateVariables(subject, sampleData) : undefined,
     [subject, sampleData]
   );
+
+  // Clicking the rendered email selects the markup it came from.
+  const handleDocumentClick = useCallback((event: Event) => {
+    const target = event.target as Element | null;
+    const marked = target?.closest?.(`[${SOURCE_RANGE_ATTRIBUTE}]`);
+    const range = parseSourceRange(marked?.getAttribute(SOURCE_RANGE_ATTRIBUTE));
+    if (range) selectSourceRef.current?.(range);
+  }, []);
 
   // Auto-resize iframe to content height
   useEffect(() => {
@@ -84,14 +118,54 @@ export function EmailTemplatePreview({
         if (doc?.body) {
           iframe.style.height = `${doc.body.scrollHeight + 20}px`;
         }
+        if (doc && sourceMap) {
+          const style = doc.createElement('style');
+          style.textContent = SOURCE_MAP_STYLES;
+          (doc.head ?? doc.body)?.appendChild(style);
+          doc.addEventListener('click', handleDocumentClick);
+          setDocumentEpoch((epoch) => epoch + 1);
+        }
       } catch {
         // sandbox may restrict access
       }
     };
 
     iframe.addEventListener('load', handleLoad);
-    return () => iframe.removeEventListener('load', handleLoad);
-  }, [renderedHtml]);
+    return () => {
+      iframe.removeEventListener('load', handleLoad);
+      try {
+        iframe.contentDocument?.removeEventListener('click', handleDocumentClick);
+      } catch {
+        // sandbox may restrict access
+      }
+    };
+  }, [renderedHtml, sourceMap, handleDocumentClick]);
+
+  // Outline whichever element the source caret currently sits in.
+  useEffect(() => {
+    if (!sourceMap) return;
+    let doc: Document | null = null;
+    try {
+      doc = iframeRef.current?.contentDocument ?? null;
+    } catch {
+      return;
+    }
+    if (!doc) return;
+
+    doc.querySelectorAll(`.${ACTIVE_CLASS}`).forEach((element) => element.classList.remove(ACTIVE_CLASS));
+    if (highlightOffset == null) return;
+
+    const containing = Array.from(doc.querySelectorAll(`[${SOURCE_RANGE_ATTRIBUTE}]`))
+      .map((element) => ({ element, range: parseSourceRange(element.getAttribute(SOURCE_RANGE_ATTRIBUTE)) }))
+      .filter((candidate): candidate is { element: Element; range: SourceRange } =>
+        !!candidate.range && highlightOffset >= candidate.range.start && highlightOffset <= candidate.range.end)
+      .sort((a, b) => (a.range.end - a.range.start) - (b.range.end - b.range.start));
+
+    const match = containing[0]?.element;
+    if (!match) return;
+    match.classList.add(ACTIVE_CLASS);
+    match.scrollIntoView({ block: 'nearest' });
+  }, [sourceMap, highlightOffset, documentEpoch]);
 
   return (
     <div className="space-y-2">

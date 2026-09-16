@@ -504,7 +504,8 @@
       "addFromPresets": "Agregar desde preajustes",
       "collapseLine": "Contraer línea de contrato",
       "createCustom": "Crear personalizada",
-      "expandLine": "Expandir línea de contrato"
+      "expandLine": "Expandir línea de contrato",
+      "resetToStandard": "Restablecer al estándar"
     },
     "billingProfile": {
       "hint": "Los cargos de esta línea se facturan a este perfil, anulando el contrato.",
@@ -550,7 +551,8 @@
       "readOnly": "Este contrato predeterminado gestionado por el sistema es solo de atribución. La creación de líneas de contrato está deshabilitada."
     },
     "dialogs": {
-      "confirmRemove": "¿Quitar línea de contrato \"{{name}}\"?"
+      "confirmRemove": "¿Quitar línea de contrato \"{{name}}\"?",
+      "confirmResetRate": "¿Restablecer esta línea al precio de catálogo estándar? Se eliminará el precio personalizado guardado."
     },
     "empty": {
       "noneAdded": "Aún no se han agregado líneas de contrato.",
@@ -562,7 +564,8 @@
       "failedToLoad": "No se pudieron cargar las líneas de contrato",
       "failedToRefresh": "No se pudieron actualizar las líneas de contrato",
       "failedToRemove": "No se pudo quitar la línea de contrato",
-      "failedToUpdate": "No se pudo actualizar la línea de contrato"
+      "failedToUpdate": "No se pudo actualizar la línea de contrato",
+      "failedToResetRate": "No se pudo restablecer el precio de la línea"
     },
     "loading": {
       "contractLines": "Cargando líneas de contrato",
@@ -601,7 +604,12 @@
       "semanticsEffectiveFrom": "Cambios de precios y medición del servicio en vigor desde",
       "prospectiveSemanticsHelp": "Los cambios se aplican en este límite del período de servicio; las cantidades, la medición y los precios anteriores se conservan. Al cambiar la fecha se vuelve a cargar la configuración aplicable para revisarla."
     },
-    "title": "Líneas de contrato"
+    "title": "Líneas de contrato",
+    "rateProvenance": {
+      "standard": "Estándar",
+      "custom": "Personalizado",
+      "unreviewed": "Sin revisar"
+    }
   },
   "contractLineEdit": {
     "actions": {

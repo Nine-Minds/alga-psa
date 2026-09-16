@@ -5,18 +5,31 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import { getAppConfig } from "../config/appConfig";
-import { useTheme } from "../ui/ThemeContext";
+import { useTenantTheme, useTheme, useThemePreference } from "../ui/ThemeContext";
+import { describeThemePair, nextThemePreference } from "./settingsAppearance";
 import { authenticateForUnlock, canUseBiometrics, getBiometricGateEnabled, setBiometricGateEnabled } from "../auth/biometricGate";
 import { useAuth } from "../auth/AuthContext";
 import { clearTicketsCache } from "../cache/ticketsCache";
 import { Avatar } from "../ui/components/Avatar";
 import { tryBuildHostedPathUrl } from "../urls/hostedUrls";
 import { getHideSensitiveNotificationsEnabled, setHideSensitiveNotificationsEnabled } from "../settings/privacyPreferences";
+import {
+  getPushPriorityThreshold,
+  getReminderLeadMinutes,
+  PUSH_PRIORITY_THRESHOLDS,
+  REMINDER_LEAD_OPTIONS_MINUTES,
+  setPushPriorityThreshold,
+  setReminderLeadMinutes,
+  type PushPriorityThreshold,
+} from "../settings/notificationPreferences";
+import { Select } from "../ui/components/Select";
+import { MultiSelect } from "../ui/components/MultiSelect";
+import { resyncScheduleReminders } from "../notifications/reminderSync";
 import { formatAppVersion } from "./settingsDiagnostics";
 import type { Theme } from "../ui/themes";
 import { phase2Features } from "../features/phase2";
 import { requestPushPermission, getExpoPushToken } from "../notifications/pushTokenService";
-import { registerPushToken, sendTestPushNotification, unregisterPushToken, type TestPushResult } from "../api/pushToken";
+import { registerPushToken, sendTestPushNotification, unregisterPushToken, updatePushPriorityThreshold, type TestPushResult } from "../api/pushToken";
 import { createApiClient } from "../api";
 import { getStableDeviceId } from "../device/clientMetadata";
 import { clearPushRegistration, isRegisteredFor, readPushRegistration, writePushRegistration } from "../notifications/pushRegistration";
@@ -32,6 +45,8 @@ import { logger } from "../logging/logger";
 export function SettingsScreen() {
   const { t } = useTranslation("settings");
   const theme = useTheme();
+  const { preference, setPreference } = useThemePreference();
+  const { label: themePairLabel } = useTenantTheme();
   const config = getAppConfig();
   const navigation = useNavigation<any>();
   const { session, logout } = useAuth();
@@ -52,20 +67,29 @@ export function SettingsScreen() {
   const [appleError, setAppleError] = useState<string | null>(null);
   const [testPushBusy, setTestPushBusy] = useState(false);
   const [testPushStatus, setTestPushStatus] = useState<string | null>(null);
+  const [pushThreshold, setPushThreshold] = useState<PushPriorityThreshold>("low");
+  const [pushThresholdOpen, setPushThresholdOpen] = useState(false);
+  const [pushThresholdError, setPushThresholdError] = useState<string | null>(null);
+  const [reminderLeads, setReminderLeads] = useState<number[]>([15]);
+  const [reminderLeadsOpen, setReminderLeadsOpen] = useState(false);
 
   useEffect(() => {
     let canceled = false;
     const run = async () => {
-      const [enabled, available, hideSensitive, pushRegistration] = await Promise.all([
+      const [enabled, available, hideSensitive, pushRegistration, threshold, leads] = await Promise.all([
         getBiometricGateEnabled(),
         canUseBiometrics(),
         getHideSensitiveNotificationsEnabled(),
         readPushRegistration(),
+        getPushPriorityThreshold(),
+        getReminderLeadMinutes(),
       ]);
       if (canceled) return;
       setBiometricEnabled(enabled);
       setBiometricAvailable(available);
       setHideSensitiveEnabled(hideSensitive);
+      setPushThreshold(threshold);
+      setReminderLeads(leads);
       const appConfig = getAppConfig();
       setPushEnabled(
         appConfig.ok &&
@@ -376,6 +400,30 @@ export function SettingsScreen() {
 
       <View style={{ marginTop: theme.spacing.xl }}>
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
+          {t("sections.appearance", "Appearance")}
+        </Text>
+        <ToggleRow
+          theme={theme}
+          label={t("appearance.mode", "Appearance")}
+          value={t(`appearance.modes.${preference}`, preference)}
+          onPress={() => setPreference(nextThemePreference(preference))}
+        />
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+          {t("appearance.modeHint", "Tap to switch between System, Light and Dark.")}
+        </Text>
+        <View style={{ height: theme.spacing.sm }} />
+        <Row
+          theme={theme}
+          label={t("appearance.theme", "Theme")}
+          value={describeThemePair(themePairLabel, t)}
+        />
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+          {t("appearance.themeHint", "Set by your administrator in AlgaPSA settings")}
+        </Text>
+      </View>
+
+      <View style={{ marginTop: theme.spacing.xl }}>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
           {t("sections.security")}
         </Text>
         <ToggleRow
@@ -533,6 +581,77 @@ export function SettingsScreen() {
           <View style={{ height: theme.spacing.sm }} />
           <ToggleRow
             theme={theme}
+            label={t("notifications.pushThreshold", "Push me for")}
+            value={t(`notifications.threshold.${pushThreshold}`, pushThreshold)}
+            onPress={() => setPushThresholdOpen(true)}
+          />
+          <Text style={{ ...theme.typography.caption, color: pushThresholdError ? theme.colors.danger : theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+            {pushThresholdError ?? t("notifications.pushThresholdHint", "Priorities come from your notification settings in AlgaPSA. Lower-priority notifications still appear in the app.")}
+          </Text>
+          <Select
+            visible={pushThresholdOpen}
+            onClose={() => setPushThresholdOpen(false)}
+            title={t("notifications.pushThresholdTitle", "Which notifications should push to this phone?")}
+            value={pushThreshold}
+            options={PUSH_PRIORITY_THRESHOLDS.map((value) => ({
+              value,
+              label: t(`notifications.threshold.${value}`, value),
+              subtitle: t(`notifications.threshold.${value}Subtitle`, ""),
+            }))}
+            onSelect={(value) => {
+              void (async () => {
+                setPushThreshold(value);
+                setPushThresholdError(null);
+                await setPushPriorityThreshold(value);
+                const appConfig = getAppConfig();
+                if (!appConfig.ok || !session || !pushEnabled) return;
+                const deviceId = await getStableDeviceId();
+                if (!deviceId) return;
+                const client = createApiClient({
+                  baseUrl: appConfig.baseUrl,
+                  getTenantId: () => session.tenantId,
+                  getUserAgentTag: () => "mobile/settings",
+                });
+                const result = await updatePushPriorityThreshold(client, { apiKey: session.accessToken, deviceId, priorityThreshold: value });
+                if (!result.ok) {
+                  logger.warn("[Settings] Push threshold update failed", { error: result.error });
+                  setPushThresholdError(t("notifications.pushThresholdSaveFailed", "Couldn't update the server. The setting applies once push is re-enabled."));
+                }
+              })();
+            }}
+          />
+          <View style={{ height: theme.spacing.sm }} />
+          <ToggleRow
+            theme={theme}
+            label={t("notifications.reminderLeads", "Calendar reminders")}
+            value={describeReminderLeads(reminderLeads, t)}
+            onPress={() => setReminderLeadsOpen(true)}
+          />
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+            {t("notifications.reminderLeadsHint", "Local reminders before entries on your schedule. Several times can be selected.")}
+          </Text>
+          <MultiSelect
+            visible={reminderLeadsOpen}
+            onClose={() => {
+              setReminderLeadsOpen(false);
+              if (session) {
+                void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id });
+              }
+            }}
+            title={t("notifications.reminderLeadsTitle", "Remind me before a schedule entry")}
+            values={reminderLeads}
+            options={REMINDER_LEAD_OPTIONS_MINUTES.map((minutes) => ({ value: minutes, label: describeReminderLead(minutes, t) }))}
+            onToggle={(minutes) => {
+              const next = reminderLeads.includes(minutes)
+                ? reminderLeads.filter((lead) => lead !== minutes)
+                : [...reminderLeads, minutes].sort((a, b) => b - a);
+              setReminderLeads(next);
+              void setReminderLeadMinutes(next);
+            }}
+          />
+          <View style={{ height: theme.spacing.sm }} />
+          <ToggleRow
+            theme={theme}
             label={t("notifications.testPush", "Send test notification")}
             value={testPushStatus ?? t("notifications.testPushTap", "Tap to send one to this account's devices")}
             disabled={testPushBusy || !session}
@@ -634,6 +753,17 @@ function Row({ theme, label, value }: { theme: Theme; label: string; value: stri
 }
 
 type Translate = (key: string, defaultValue: string, options?: Record<string, unknown>) => string;
+
+export function describeReminderLead(minutes: number, t: Translate): string {
+  return minutes === 60
+    ? t("notifications.reminderLeadHour", "1 hour before")
+    : t("notifications.reminderLeadMinutes", "{{count}} minutes before", { count: minutes });
+}
+
+export function describeReminderLeads(leads: number[], t: Translate): string {
+  if (leads.length === 0) return t("notifications.reminderLeadsOff", "Off");
+  return leads.map((minutes) => describeReminderLead(minutes, t)).join(", ");
+}
 
 type RequestError = { kind: string; message: string; status?: number } | null;
 

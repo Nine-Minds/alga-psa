@@ -3,10 +3,24 @@
   "sections": {
     "account": "Account",
     "about": "About",
+    "appearance": "Appearance",
     "security": "Security",
     "data": "Data",
     "legal": "Legal",
     "notifications": "Notifications"
+  },
+  "appearance": {
+    "mode": "Appearance",
+    "modes": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "modeHint": "Tap to switch between System, Light and Dark.",
+    "theme": "Theme",
+    "themeDefault": "Default",
+    "themeCustom": "Custom",
+    "themeHint": "Set by your administrator in AlgaPSA settings"
   },
   "account": {
     "status": "Status",
@@ -78,7 +92,33 @@
     "testPushPartial": "Sent to some devices; failed for {{detail}}",
     "testPushFailed": "Server could not deliver: {{detail}}",
     "testPushRequestFailed": "Request failed: {{error}}",
-    "testPushUnsupported": "This server doesn't support test notifications yet. Update the server to use this."
+    "testPushUnsupported": "This server doesn't support test notifications yet. Update the server to use this.",
+    "pushThreshold": "Push me for",
+    "pushThresholdHint": "Priorities come from your notification settings in AlgaPSA. Lower-priority notifications still appear in the app.",
+    "pushThresholdTitle": "Which notifications should push to this phone?",
+    "threshold": {
+      "low": "All notifications",
+      "lowSubtitle": "High, normal, and low priority",
+      "normal": "Normal and high priority",
+      "normalSubtitle": "Skip low-priority notifications",
+      "high": "High priority only",
+      "highSubtitle": "Only urgent alerts such as SLA breaches"
+    },
+    "pushThresholdSaveFailed": "Couldn't update the server. The setting applies once push is re-enabled.",
+    "reminderLeads": "Calendar reminders",
+    "reminderLeadsHint": "Local reminders before entries on your schedule. Several times can be selected.",
+    "reminderLeadsTitle": "Remind me before a schedule entry",
+    "reminderLeadsOff": "Off",
+    "reminderLeadMinutes": "{{count}} minutes before",
+    "reminderLeadHour": "1 hour before",
+    "channels": {
+      "high": "High priority",
+      "highDescription": "SLA breaches, escalations, and other urgent alerts.",
+      "normal": "Normal priority",
+      "normalDescription": "Ticket assignments, comments, and updates.",
+      "low": "Low priority",
+      "lowDescription": "Digests and informational updates."
+    }
   },
   "data": {
     "clearCache": "Clear cache",
