@@ -34,7 +34,10 @@
     "readOnlyHint": "Vous pouvez consulter ce planning, mais vous avez besoin de la permission de mise à jour du planning pour ajouter ou modifier des entrées.",
     "workItemLegend": "Cet élément de travail",
     "schedulingForAgent": "Planification pour {{name}}",
-    "otherWorkLegend": "Autre travail"
+    "otherWorkLegend": "Autre travail",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
+    }
   },
   "calendar": {
     "legend": {

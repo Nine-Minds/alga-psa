@@ -34,7 +34,10 @@
     "readOnlyHint": "Sie können diesen Zeitplan ansehen, benötigen aber die Berechtigung zum Aktualisieren von Zeitplänen, um Einträge hinzuzufügen oder zu ändern.",
     "workItemLegend": "Dieses Arbeitselement",
     "schedulingForAgent": "Planung für {{name}}",
-    "otherWorkLegend": "Andere Arbeit"
+    "otherWorkLegend": "Andere Arbeit",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
+    }
   },
   "calendar": {
     "legend": {

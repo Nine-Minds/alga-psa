@@ -34,7 +34,10 @@
     "readOnlyHint": "Możesz przeglądać ten harmonogram, ale potrzebujesz uprawnienia do aktualizacji harmonogramu, aby dodawać lub zmieniać wpisy.",
     "workItemLegend": "Ten element pracy",
     "schedulingForAgent": "Planowanie dla {{name}}",
-    "otherWorkLegend": "Inna praca"
+    "otherWorkLegend": "Inna praca",
+    "workItemTypeLabel": {
+      "ticket": "Zgłoszenie"
+    }
   },
   "calendar": {
     "legend": {

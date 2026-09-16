@@ -34,7 +34,10 @@
     "readOnlyHint": "U kunt deze agenda bekijken, maar u heeft de agenda-bijwerkrechten nodig om items toe te voegen of te wijzigen.",
     "workItemLegend": "Dit werkitem",
     "schedulingForAgent": "Inplannen voor {{name}}",
-    "otherWorkLegend": "Ander werk"
+    "otherWorkLegend": "Ander werk",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
+    }
   },
   "calendar": {
     "legend": {

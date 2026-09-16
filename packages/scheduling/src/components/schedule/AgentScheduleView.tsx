@@ -312,10 +312,14 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
               ? t('agentView.schedulingForAgent', { defaultValue: 'Scheduling for {{name}}', name: agentName })
               : t('agentView.schedulingFor', { defaultValue: 'Scheduling' })}
           </div>
-          <div className="text-sm text-[rgb(var(--color-text-700))] truncate">
-            {workItemContext.title}
+          <div className="text-sm text-[rgb(var(--color-text-600))] truncate">
+            <span className="text-[rgb(var(--color-text-500))]">
+              {t('agentView.workItemTypeLabel.ticket', { defaultValue: 'Ticket' })}
+            </span>
+            <span aria-hidden="true"> · </span>
+            <span className="text-[rgb(var(--color-text-800))]">{workItemContext.title}</span>
           </div>
-          <div className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+          <div className="mt-1 text-xs italic text-[rgb(var(--color-text-500))]">
             {canCreateFromSlot
               ? t('agentView.selectSlotHint', {
                   defaultValue: 'Drag to create, move or resize entries. Click an entry to edit.',

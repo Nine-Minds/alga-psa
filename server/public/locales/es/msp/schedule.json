@@ -34,7 +34,10 @@
     "readOnlyHint": "Puede ver esta agenda, pero necesita el permiso de actualización de agenda para añadir o cambiar entradas.",
     "workItemLegend": "Este elemento de trabajo",
     "schedulingForAgent": "Programando para {{name}}",
-    "otherWorkLegend": "Otro trabajo"
+    "otherWorkLegend": "Otro trabajo",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
+    }
   },
   "calendar": {
     "legend": {

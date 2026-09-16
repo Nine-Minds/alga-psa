@@ -162,6 +162,17 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         display: none !important;
       }
 
+      /* Hour lines carry the rhythm; quarter-hour lines recede. */
+      .agent-schedule-view .rbc-day-slot .rbc-time-slot {
+        border-top: 1px solid rgb(var(--color-border-200) / 0.35) !important;
+      }
+      .agent-schedule-view .rbc-day-slot .rbc-timeslot-group {
+        border-bottom: 1px solid rgb(var(--color-border-300)) !important;
+      }
+      .agent-schedule-view .rbc-day-slot .rbc-timeslot-group > .rbc-time-slot:first-child {
+        border-top: none !important;
+      }
+
       /* The first day column gets the same divider as the rest. */
       .agent-schedule-view .rbc-time-content > .rbc-time-gutter + .rbc-day-slot {
         border-left: 1px solid rgb(var(--color-border-200));

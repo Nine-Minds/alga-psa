@@ -1350,7 +1350,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         <div className="min-w-0">
           <div className="relative">
             {viewOnly || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
-              <div className="flex justify-between items-center gap-3 py-1">
+              <div className="flex justify-between items-center gap-3 pt-1 pb-4">
                 {selectedWorkItem ? (
                   <div className="min-w-0 text-sm text-gray-500 space-y-0.5">
                     <div className="truncate">
@@ -1519,6 +1519,18 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700">
                 {t('entryPopup.fields.end', { defaultValue: 'End *' })}
+                {/* Always rendered: letting this appear and disappear resized the
+                    dialog under an open time popover, moving the rows mid-click. */}
+                <span
+                  id="schedule-time-hint"
+                  className={`ml-2 text-xs font-normal ${endsBeforeStart ? 'text-red-500' : 'text-gray-500'}`}
+                >
+                  {endsBeforeStart
+                    ? t('entryPopup.validation.endAfterStart', {
+                        defaultValue: 'End date must be after start date',
+                      })
+                    : durationLabel}
+                </span>
               </label>
               <DateTimePicker
                 id="scheduled_end"
@@ -1539,18 +1551,6 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 minDate={entryData.scheduled_start}
                 disabled={!canEditFields} // Disable based on permissions
               />
-              {/* Always rendered: letting this line appear and disappear resized the
-                  dialog under an open time popover, moving the rows mid-click. */}
-              <p
-                id="schedule-time-hint"
-                className={`min-h-[1rem] mt-1 text-xs leading-4 ${endsBeforeStart ? 'text-red-500' : 'text-gray-500'}`}
-              >
-                {endsBeforeStart
-                  ? t('entryPopup.validation.endAfterStart', {
-                      defaultValue: 'End date must be after start date',
-                    })
-                  : durationLabel}
-              </p>
             </div>
           </div>
           <div>

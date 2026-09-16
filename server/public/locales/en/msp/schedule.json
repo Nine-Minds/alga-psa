@@ -34,7 +34,10 @@
     "readOnlyHint": "You can view this schedule, but need the schedule update permission to add or change entries.",
     "workItemLegend": "This work item",
     "schedulingForAgent": "Scheduling for {{name}}",
-    "otherWorkLegend": "Other work"
+    "otherWorkLegend": "Other work",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
+    }
   },
   "calendar": {
     "legend": {

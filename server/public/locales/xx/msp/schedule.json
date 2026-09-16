@@ -34,7 +34,10 @@
     "readOnlyHint": "⟦Ẏȯŭ ƈȧƞ ṽīḗẇ ŧħīş şƈħḗḓŭŀḗ, ƀŭŧ ƞḗḗḓ ŧħḗ şƈħḗḓŭŀḗ ŭƥḓȧŧḗ ƥḗřḿīşşīȯƞ ŧȯ ȧḓḓ ȯř ƈħȧƞɠḗ ḗƞŧřīḗş.⟧",
     "workItemLegend": "⟦Ŧħīş ẇȯřķ īŧḗḿ⟧",
     "schedulingForAgent": "⟦Şƈħḗḓŭŀīƞɠ ƒȯř {{name}}⟧",
-    "otherWorkLegend": "⟦Ȯŧħḗř ẇȯřķ⟧"
+    "otherWorkLegend": "⟦Ȯŧħḗř ẇȯřķ⟧",
+    "workItemTypeLabel": {
+      "ticket": "⟦Ŧīƈķḗŧ⟧"
+    }
   },
   "calendar": {
     "legend": {
