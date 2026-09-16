@@ -1009,7 +1009,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
   // Create the content of the form
   const content = (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className={`bg-white p-4 rounded-lg h-auto flex flex-col transition-all duration-300 z-10
+    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className={`bg-white ${isInDrawer ? 'p-4' : 'px-0 pt-1 pb-2'} rounded-lg h-auto flex flex-col transition-all duration-300 z-10
     ${isInDrawer ? 
       'w-fit max-w-[90vw] shadow-none' : 
       'max-w-[95vw] w-auto min-w-[300px] max-h-[90vh] shadow-none'
@@ -1350,13 +1350,16 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         <div className="min-w-0">
           <div className="relative">
             {viewOnly || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
-              <div className="flex justify-between items-center gap-3 pt-1 pb-4">
+              <div className="flex justify-between items-start gap-3 pt-1 pb-4">
                 {selectedWorkItem ? (
-                  <div className="min-w-0 text-sm text-gray-500 space-y-0.5">
-                    <div className="truncate">
-                      <span className="capitalize">{selectedWorkItem.type.replace('_', ' ')}</span>
-                      <span aria-hidden="true"> · </span>
-                      <span className="text-[rgb(var(--color-text-800))]">{selectedWorkItem.name}</span>
+                  <div className="min-w-0 flex-1 text-sm text-gray-500 space-y-0.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 truncate">
+                        <span className="capitalize">{selectedWorkItem.type.replace('_', ' ')}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span className="text-[rgb(var(--color-text-800))]">{selectedWorkItem.name}</span>
+                      </div>
+                      {showDetailsButton && event && <OpenDrawerButton event={event} />}
                     </div>
                     {lockedAssigneeNames && (
                       <div id="entry-popup-technician" className="truncate">
@@ -1394,7 +1397,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     })}
                   </span>
                 )}
-                {showDetailsButton && event && <OpenDrawerButton event={event} />}
+                {showDetailsButton && event && !selectedWorkItem && <OpenDrawerButton event={event} />}
               </div>
             ) : !selectedWorkItem && entryData.work_item_id && !ENTRY_OWNED_WORK_ITEM_TYPES.has(entryData.work_item_type) ? (
               // Same as the read-only branch: the linked work item is still
@@ -1928,10 +1931,18 @@ const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
       onClick={handleOpenDrawer}
       variant="ghost"
       size="sm"
-      className="flex items-center gap-1 text-[rgb(var(--color-primary-600))]"
+      className="flex items-center gap-1 -my-1 text-[rgb(var(--color-primary-600))]"
     >
       <ExternalLink className="w-4 h-4" />
-      <span>{t('entryPopup.workItem.openDetails', { defaultValue: 'Details' })}</span>
+      <span>
+        {event.work_item_type === 'ticket'
+          ? t('entryPopup.workItem.openTicket', { defaultValue: 'Open ticket' })
+          : event.work_item_type === 'project_task'
+            ? t('entryPopup.workItem.openTask', { defaultValue: 'Open task' })
+            : event.work_item_type === 'interaction'
+              ? t('entryPopup.workItem.openInteraction', { defaultValue: 'Open interaction' })
+              : t('entryPopup.workItem.openDetails', { defaultValue: 'Details' })}
+      </span>
     </Button>
   );
 };

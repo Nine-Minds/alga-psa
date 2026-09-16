@@ -602,7 +602,10 @@
     "workItem": {
       "adHocFallback": "Entrada ad hoc (sin elemento de trabajo)",
       "openDetails": "Detalles",
-      "loading": "Cargando elemento de trabajo…"
+      "loading": "Cargando elemento de trabajo…",
+      "openTicket": "Abrir ticket",
+      "openTask": "Abrir tarea",
+      "openInteraction": "Abrir interacción"
     },
     "appointmentRequest": {
       "approved": {

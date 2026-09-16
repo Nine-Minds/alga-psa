@@ -602,7 +602,10 @@
     "workItem": {
       "adHocFallback": "⟦Ȧḓ-ħȯƈ ḗƞŧřẏ (ƞȯ ẇȯřķ īŧḗḿ)⟧",
       "openDetails": "⟦Ḓḗŧȧīŀş⟧",
-      "loading": "⟦Ŀȯȧḓīƞɠ ẇȯřķ īŧḗḿ…⟧"
+      "loading": "⟦Ŀȯȧḓīƞɠ ẇȯřķ īŧḗḿ…⟧",
+      "openTicket": "⟦Ȯƥḗƞ ŧīƈķḗŧ⟧",
+      "openTask": "⟦Ȯƥḗƞ ŧȧşķ⟧",
+      "openInteraction": "⟦Ȯƥḗƞ īƞŧḗřȧƈŧīȯƞ⟧"
     },
     "appointmentRequest": {
       "approved": {

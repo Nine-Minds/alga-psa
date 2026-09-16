@@ -48,12 +48,24 @@ const workItemColors: Record<WorkItemType, string> = {
  * already shows the time), wrapping to at most two lines. The full title is
  * in the chip's tooltip.
  */
-const CHIP_TWO_LINE_MINUTES = 45;
+const CHIP_TIME_LINE_MINUTES = 30;
+const CHIP_TWO_LINE_MINUTES = 60;
 
 function AgentScheduleEventChip({ event, title }: EventProps<IScheduleEntry>) {
-  const minutes = (new Date(event.scheduled_end).getTime() - new Date(event.scheduled_start).getTime()) / 60000;
+  const start = new Date(event.scheduled_start);
+  const end = new Date(event.scheduled_end);
+  const minutes = (end.getTime() - start.getTime()) / 60000;
   const lines = minutes >= CHIP_TWO_LINE_MINUTES ? 'two' : 'one';
-  return <div className={`agent-schedule-chip__title agent-schedule-chip__title--${lines}`}>{title}</div>;
+  return (
+    <div className="agent-schedule-chip">
+      {minutes >= CHIP_TIME_LINE_MINUTES && (
+        <div className="agent-schedule-chip__time">
+          {moment(start).format('h:mm')}–{moment(end).format('h:mm A')}
+        </div>
+      )}
+      <div className={`agent-schedule-chip__title agent-schedule-chip__title--${lines}`}>{title}</div>
+    </div>
+  );
 }
 
 interface AgentScheduleViewProps {
@@ -319,7 +331,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
             <span aria-hidden="true"> · </span>
             <span className="text-[rgb(var(--color-text-800))]">{workItemContext.title}</span>
           </div>
-          <div className="mt-1 text-xs italic text-[rgb(var(--color-text-500))]">
+          <div className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
             {canCreateFromSlot
               ? t('agentView.selectSlotHint', {
                   defaultValue: 'Drag to create, move or resize entries. Click an entry to edit.',

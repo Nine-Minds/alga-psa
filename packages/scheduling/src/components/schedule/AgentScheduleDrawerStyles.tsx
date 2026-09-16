@@ -55,7 +55,12 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
          title is in the tooltip. A 1px halo in the grid colour separates
          chips that touch. */
       .agent-schedule-view .rbc-event {
-        padding: 2px 3px !important;
+        padding: 2px 4px 2px 6px !important;
+        /* A tinted fill and a solid left bar: the chip is a booking, not a
+           selection; the saturated colour is kept for selected states. */
+        background-color: rgb(var(--color-primary-500) / 0.22) !important;
+        border-left: 3px solid rgb(var(--color-primary-500)) !important;
+        border-bottom: 2px solid rgb(var(--color-primary-500) / 0.55) !important;
         /* A 2px gutter in the grid colour so stacked chips read as separate. */
         outline: 2px solid rgb(var(--color-border-50));
         cursor: grab;
@@ -74,6 +79,14 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         font-size: 11px;
         line-height: 14px;
         letter-spacing: -0.01em;
+      }
+      .agent-schedule-chip__time {
+        font-size: 10.5px;
+        line-height: 13px;
+        opacity: 0.85;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .agent-schedule-chip__title {
         display: -webkit-box;
@@ -105,8 +118,11 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
          columns stay equal and the header stays aligned with the grid. */
       .agent-schedule-view .rbc-time-content {
         scrollbar-width: thin;
-        scrollbar-color: rgb(var(--color-border-300)) transparent;
+        scrollbar-color: rgb(var(--color-primary-500) / 0.45) transparent;
         scrollbar-gutter: stable;
+      }
+      .agent-schedule-view .rbc-time-header.rbc-overflowing {
+        border-right: none !important;
       }
       .agent-schedule-view .rbc-time-content::-webkit-scrollbar {
         width: 8px;
@@ -162,15 +178,20 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         display: none !important;
       }
 
-      /* Hour lines carry the rhythm; quarter-hour lines recede. */
+      /* Hour lines carry the rhythm; only the half hour is marked between
+         them, and quarter marks appear while a drag is in progress. */
       .agent-schedule-view .rbc-day-slot .rbc-time-slot {
-        border-top: 1px solid rgb(var(--color-border-200) / 0.35) !important;
+        border-top: 1px solid transparent !important;
+      }
+      .agent-schedule-view .rbc-day-slot .rbc-timeslot-group > .rbc-time-slot:nth-child(3) {
+        border-top-color: rgb(var(--color-border-200) / 0.45) !important;
       }
       .agent-schedule-view .rbc-day-slot .rbc-timeslot-group {
         border-bottom: 1px solid rgb(var(--color-border-300)) !important;
       }
-      .agent-schedule-view .rbc-day-slot .rbc-timeslot-group > .rbc-time-slot:first-child {
-        border-top: none !important;
+      .agent-schedule-view .rbc-addons-dnd-is-dragging .rbc-day-slot .rbc-time-slot,
+      .agent-schedule-view .rbc-slot-selecting .rbc-time-slot {
+        border-top-color: rgb(var(--color-border-200) / 0.3) !important;
       }
 
       /* The first day column gets the same divider as the rest. */
@@ -194,6 +215,9 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         box-shadow: inset 0 0 0 2px rgb(var(--color-primary-600)), 0 4px 12px rgb(0 0 0 / 0.25);
       }
       .agent-schedule-view--work-item .rbc-event.agent-schedule-event--other {
+        background-color: rgb(var(--color-border-300) / 0.35) !important;
+        border-left-color: rgb(var(--color-border-400)) !important;
+        border-bottom-color: rgb(var(--color-border-400) / 0.5) !important;
         color: rgb(var(--color-text-700)) !important;
       }
 
