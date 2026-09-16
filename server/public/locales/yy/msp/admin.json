@@ -658,5 +658,80 @@
       "fail": "〖Ƒȧīŀ ··〗",
       "skip": "〖Şķīƥ ··〗"
     }
+  },
+  "integrations": {
+    "entra": {
+      "diagnostics": {
+        "title": "Entra diagnostics",
+        "description": "Read-only checks of the Entra connection, partner authentication, discovery, and sync health.",
+        "run": "Run diagnostics",
+        "labels": {
+          "overall": "Overall",
+          "connectionType": "Connection",
+          "status": "Status",
+          "mappedClients": "Mapped clients",
+          "managedTenants": "Managed tenants",
+          "recommendations": "Recommendations",
+          "blockedBy": "Blocked by",
+          "error": "Error"
+        },
+        "states": {
+          "running": "Running diagnostics..."
+        },
+        "errors": {
+          "failed": "Diagnostics failed",
+          "clientFailed": "Client diagnostics failed"
+        },
+        "actions": {
+          "copySupportBundle": "Copy support bundle",
+          "copied": "Copied",
+          "downloadJson": "Download JSON",
+          "copy": "Copy",
+          "open": "Open",
+          "goToStep": "Go to step"
+        },
+        "clients": {
+          "title": "Selected client diagnostics",
+          "selectedCount": "{{count}} selected",
+          "yieldToggle": "User yield preview (more expensive)",
+          "run": "Run client diagnostics",
+          "progress": "{{completed}} of {{total}} complete",
+          "confirmTitle": "Run diagnostics for many clients?",
+          "confirmMessage": "You selected {{count}} clients. Each client is issued a token and makes a small number of Graph requests.",
+          "confirmRun": "Run",
+          "unavailableName": "Unavailable name",
+          "columns": {
+            "client": "Client",
+            "tenant": "Tenant",
+            "status": "Status",
+            "remedy": "Remedy"
+          }
+        },
+        "remedies": {
+          "connectEntra": "Connect Microsoft Entra from Settings > Integrations > Entra.",
+          "selectAppRegistration": "Select a Microsoft app registration for Entra, then reconnect.",
+          "selectExistingApp": "The bound Microsoft app no longer exists. Select an existing app registration, then reconnect.",
+          "chooseAnotherApp": "The bound Microsoft app registration is archived. Choose another app registration, then reconnect.",
+          "addEntraCapability": "Edit the app registration in Settings > Integrations > Microsoft and enable the Entra capability.",
+          "secretExpiryUnknown": "Client secret expiry is unknown. Microsoft client secrets expire in 6-24 months; rotate on schedule in Azure.",
+          "temporalUnreachable": "The Temporal frontend could not be reached. Automatic sync and sync-triggered workflows will not run until it is available.",
+          "syncDisabled": "Automatic Entra sync is turned off for this workspace.",
+          "scheduleMissing": "Automatic sync is enabled but no Temporal schedule was found. Save the schedule to apply it.",
+          "reconnectEntra": "No refresh token is stored. Reconnect Microsoft Entra.",
+          "noManagedTenants": "No managed tenants were returned. The partner must be onboarded to Microsoft 365 Lighthouse with active GDAP relationships.",
+          "mappedTenantMissing": "Mapped tenant \"{{client}}\" was not returned by discovery. GDAP may have expired or been terminated.",
+          "cippCredentialsMissing": "CIPP base URL and API token are required. Configure them on the Connection tab.",
+          "cippAuthRejected": "CIPP rejected the API credential. Rotate the CIPP API key from Settings > CIPP > API access, not an Azure client secret.",
+          "cippEmptyTenantList": "CIPP returned no tenants. Check CIPP customer visibility and configuration.",
+          "consecutiveSyncFailures": "The last two syncs did not complete successfully. Review the sync history and per-tenant errors.",
+          "reconciliationOpenItems": "Review queue has {{count}} item(s) waiting; ambiguous matches are never auto-linked.",
+          "customerConsentRequired": "The app needs admin consent in this customer tenant. Reconnecting the partner will not help; open the consent link and grant consent as the customer admin.",
+          "entitlementGroupNotSecurity": "The configured entitlement group is not a security group; membership may not be enforceable.",
+          "entitlementGroupMissing": "The configured entitlement group no longer exists in this customer tenant.",
+          "allUsersExcluded": "Every user in this directory was excluded by the current filter rules; sync would create no contacts.",
+          "missingScope": "The token is missing {{scope}}. Grant admin consent, then reconnect Microsoft Entra."
+        }
+      }
+    }
   }
 }
