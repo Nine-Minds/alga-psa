@@ -69,7 +69,7 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         cursor: grabbing;
       }
       .agent-schedule-view .rbc-event:hover {
-        box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+        box-shadow: var(--shadow-card-hover);
         transform: translateY(-1px);
         z-index: 5;
       }
@@ -233,7 +233,7 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         font-weight: 600;
       }
       .agent-schedule-view--work-item .rbc-event.agent-schedule-event--this-work-item:hover {
-        box-shadow: inset 0 0 0 2px rgb(var(--color-primary-600)), 0 4px 12px rgb(0 0 0 / 0.25);
+        box-shadow: inset 0 0 0 2px rgb(var(--color-primary-600)), var(--shadow-card-hover);
       }
       .agent-schedule-view--work-item .rbc-event.agent-schedule-event--other {
         background-color: rgb(var(--color-border-300) / 0.35) !important;
@@ -249,17 +249,17 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
 
       /* Add gray shading for non-working hours (before 8am and after 5pm) */
       .rbc-day-slot .rbc-time-slot {
-        border-top: 1px solid #f0f0f0;
+        border-top: 1px solid rgb(var(--color-border-200));
       }
 
       /* Non-working hours: 12am-8am */
       .rbc-time-content .rbc-time-column .rbc-timeslot-group:nth-child(-n+8) {
-        background-color: rgba(0, 0, 0, 0.05);
+        background-color: rgb(var(--color-border-100));
       }
 
       /* Non-working hours: 5pm-12am */
       .rbc-time-content .rbc-time-column .rbc-timeslot-group:nth-child(n+18) {
-        background-color: rgba(0, 0, 0, 0.05);
+        background-color: rgb(var(--color-border-100));
       }
 
       /* Make the time content area independently scrollable */

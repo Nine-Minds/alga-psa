@@ -2403,7 +2403,9 @@
       "workflow.event",
       "| null",
       "Sage",
-      "×"
+      "×",
+      "{{count}} h",
+      "{{hours}} h {{minutes}} min"
     ],
     "caseInsensitive": [
       "api",
@@ -2504,6 +2506,6 @@
       "^• (?:VPN|Wi-Fi|Malware/Virus)$",
       "^—$"
     ],
-    "notes": "Esta lista es deliberadamente conservadora; la auditoría debe señalar texto idéntico al inglés salvo que coincida con uno de estos valores exactos, préstamos sin distinción de mayúsculas o patrones técnicos."
+    "notes": "Esta lista es deliberadamente conservadora; la auditoría debe señalar texto idéntico al inglés salvo que coincida con uno de estos valores exactos, préstamos sin distinción de mayúsculas o patrones técnicos. Duration templates use the unit symbols h and min in this locale as in English; only the exact symbol-only templates are allowed."
   }
 }

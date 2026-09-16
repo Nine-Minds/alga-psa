@@ -2348,7 +2348,9 @@
       "×",
       "—",
       "{{count}} asset",
-      "{{count}} assets"
+      "{{count}} assets",
+      "{{count}} h",
+      "{{hours}} h {{minutes}} min"
     ],
     "caseInsensitive": [
       "account",
@@ -2475,6 +2477,6 @@
       "^(?:smtp|portal)\\.example\\.com$",
       "^,$"
     ],
-    "notes": "Questa allowlist è volutamente conservativa: l'audit deve segnalare il testo identico all'inglese salvo corrispondenza con uno di questi valori esatti, prestiti senza distinzione tra maiuscole e minuscole o pattern tecnici."
+    "notes": "Questa allowlist è volutamente conservativa: l'audit deve segnalare il testo identico all'inglese salvo corrispondenza con uno di questi valori esatti, prestiti senza distinzione tra maiuscole e minuscole o pattern tecnici. Duration templates use the unit symbols h and min in this locale as in English; only the exact symbol-only templates are allowed."
   }
 }

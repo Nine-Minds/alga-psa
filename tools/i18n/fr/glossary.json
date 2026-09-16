@@ -2233,7 +2233,9 @@
       "workflow.event",
       "| null",
       "×",
-      "—"
+      "—",
+      "{{count}} h",
+      "{{hours}} h {{minutes}} min"
     ],
     "caseInsensitive": [
       "api",
@@ -2444,6 +2446,6 @@
       "^Client \\*$",
       "^• (?:VPN|Wi-Fi)$"
     ],
-    "notes": "Cette liste d’autorisation est volontairement prudente ; l’outil d’audit doit signaler tout anglais identique qui ne correspond pas à l’une de ces valeurs exactes, à l’un de ces emprunts insensibles à la casse ou à l’un de ces motifs techniques."
+    "notes": "Cette liste d’autorisation est volontairement prudente ; l’outil d’audit doit signaler tout anglais identique qui ne correspond pas à l’une de ces valeurs exactes, à l’un de ces emprunts insensibles à la casse ou à l’un de ces motifs techniques. Duration templates use the unit symbols h and min in this locale as in English; only the exact symbol-only templates are allowed."
   }
 }

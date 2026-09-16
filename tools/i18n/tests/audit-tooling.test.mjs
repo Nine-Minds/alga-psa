@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const {
@@ -15,7 +16,33 @@ const {
   isReviewed,
   loadReviewState,
 } = require('../lib/translation-utils.cjs');
-const { compareBaseline } = require('../audit.cjs');
+const { compareBaseline, runAudit } = require('../audit.cjs');
+
+for (const locale of ['pt', 'es', 'fr', 'it']) {
+  test(`${locale} duration audit accepts unit symbols but rejects English duration prose`, (t) => {
+    const root = mkdtempSync(join(tmpdir(), 'schedule-duration-audit-'));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    for (const language of ['en', locale]) {
+      const schedule = JSON.parse(readFileSync(new URL(
+        `../../../server/public/locales/${language}/msp/schedule.json`, import.meta.url,
+      ), 'utf8'));
+      mkdirSync(join(root, language, 'msp'), { recursive: true });
+      writeFileSync(join(root, language, 'msp/schedule.json'), JSON.stringify({
+        duration: schedule.entryPopup.duration,
+        englishHours: '{{count}} hours',
+        englishHoursMinutes: '{{hours}} hours {{minutes}} minutes',
+        englishSuffix: '{{count}} h remaining',
+        englishPrefix: 'Duration: {{hours}} h {{minutes}} min',
+      }));
+    }
+
+    const { report } = runAudit({ locale, localesDir: root, writeReport: false });
+    assert.deepEqual(report.namespaces[0].untranslated.map(({ key }) => key), [
+      'englishHours', 'englishHoursMinutes', 'englishSuffix', 'englishPrefix',
+    ]);
+    assert.equal(report.summary.forbiddenViolationCount, 0);
+  });
+}
 
 test('identical allowlist matches exact, locale-folded, and pattern values', () => {
   const allowlist = allowlistMatchers({
