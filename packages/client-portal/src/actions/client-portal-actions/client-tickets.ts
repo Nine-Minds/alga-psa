@@ -1258,43 +1258,44 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       })();
 
       const requestedBoardId = validatedData.board_id?.trim() || null;
-      let assignedBoardId: string | null = requestedBoardId;
 
       if (visibility.visibleBoardIds !== null && visibility.visibleBoardIds.length === 0) {
         throw expectedClientTicketActionError('Selected visibility group does not allow any boards');
       }
 
-      if (visibility.visibleBoardIds !== null) {
-        if (!requestedBoardId) {
-          assignedBoardId = visibility.visibleBoardIds[0] || null;
-        } else if (!visibility.visibleBoardIds.includes(requestedBoardId)) {
-          throw expectedClientTicketActionError(VISIBILITY_NOT_FOUND_ERROR);
-        }
+      if (
+        requestedBoardId &&
+        visibility.visibleBoardIds !== null &&
+        !visibility.visibleBoardIds.includes(requestedBoardId)
+      ) {
+        throw expectedClientTicketActionError(VISIBILITY_NOT_FOUND_ERROR);
       }
 
-      const resolvedBoard = !assignedBoardId
-        ? await tenantDb(trx, tenant).table('boards')
-            .where({
-              is_default: true,
-              is_inactive: false
-            })
-            .first()
-        : await tenantDb(trx, tenant).table('boards')
-            .where({
-              board_id: assignedBoardId,
-              is_inactive: false
-            })
-            .first();
+      // No board sent: prefer the tenant default when the contact may see it,
+      // otherwise the first active board they may see. Hidden boards are
+      // already subtracted from visibleBoardIds, so a hidden default never wins.
+      const boardCandidates = tenantDb(trx, tenant).table('boards')
+        .where({ is_inactive: false })
+        .modify((query) => {
+          if (requestedBoardId) {
+            query.where({ board_id: requestedBoardId });
+          } else if (visibility.visibleBoardIds !== null) {
+            query.whereIn('board_id', visibility.visibleBoardIds);
+          } else {
+            query.where({ is_default: true });
+          }
+        })
+        .orderBy([{ column: 'is_default', order: 'desc' }, 'display_order', 'board_name']);
+
+      const resolvedBoard = await boardCandidates.first();
 
       if (!resolvedBoard) {
         throw expectedClientTicketActionError(
-          assignedBoardId
+          requestedBoardId
             ? VISIBILITY_NOT_FOUND_ERROR
             : 'No default board configured for tickets'
         );
       }
-
-      assignedBoardId = resolvedBoard.board_id;
 
       // Fetch default status for tickets
       const defaultStatusId = await TicketModel.getDefaultStatusId(

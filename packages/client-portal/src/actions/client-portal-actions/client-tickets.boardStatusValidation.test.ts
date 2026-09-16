@@ -115,11 +115,18 @@ function createClientPortalTrx(overrides: {
       }
 
       if (table === 'boards') {
-        return {
-          where: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue(overrides.defaultBoard ?? null),
+        const builder: any = {
+          select: vi.fn().mockResolvedValue([]),
+          where: vi.fn(() => builder),
+          whereIn: vi.fn(() => builder),
+          modify: vi.fn((callback: (query: any) => void) => {
+            callback(builder);
+            return builder;
           }),
+          orderBy: vi.fn(() => builder),
+          first: vi.fn().mockResolvedValue(overrides.defaultBoard ?? null),
         };
+        return builder;
       }
 
       if (table === 'tickets as t') {

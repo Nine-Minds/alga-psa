@@ -550,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Attivo",
-        "inactive": "Inattivo"
+        "inactive": "Inattivo",
+        "hiddenFromPortal": "Nascosta dal portale"
       },
       "actions": {
         "addBoard": "Aggiungi bacheca",
@@ -647,6 +648,10 @@
         "liveTimer": {
           "label": "Attiva timer ticket in tempo reale",
           "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
+        },
+        "clientPortalVisible": {
+          "label": "Visibile nel portale clienti",
+          "help": "Se disattivato, questa bacheca e i suoi ticket sono nascosti a tutti gli utenti del portale clienti, indipendentemente dai gruppi di visibilità."
         },
         "defaultBoard": {
           "label": "Bacheca predefinita per i ticket del portale clienti",

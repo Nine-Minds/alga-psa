@@ -88,6 +88,10 @@ function matchesFilters(row: Record<string, any>, filters: Record<string, any>) 
 
 function createVisibilityTrx(state: VisibilityState) {
   return ((table: string) => {
+    if (table === 'boards') {
+      return { select: async () => [] };
+    }
+
     if (table === 'contacts') {
       return {
         where: (filters: Record<string, any>) => {

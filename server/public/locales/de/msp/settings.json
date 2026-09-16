@@ -550,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Aktiv",
-        "inactive": "Inaktiv"
+        "inactive": "Inaktiv",
+        "hiddenFromPortal": "Im Portal ausgeblendet"
       },
       "actions": {
         "addBoard": "Board hinzufügen",
@@ -647,6 +648,10 @@
         "liveTimer": {
           "label": "Live-Ticket-Timer aktivieren",
           "help": "Zeigt den Live-Timer und erfasste Zeitintervalle auf Tickets in diesem Board an. Manuelle Zeiterfassung bleibt verfügbar."
+        },
+        "clientPortalVisible": {
+          "label": "Im Kundenportal sichtbar",
+          "help": "Wenn deaktiviert, sind dieses Board und seine Tickets für alle Kundenportal-Benutzer ausgeblendet, unabhängig von Sichtbarkeitsgruppen."
         },
         "defaultBoard": {
           "label": "Standard-Board für Tickets aus dem Kundenportal",

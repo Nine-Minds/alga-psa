@@ -104,6 +104,21 @@ function makeConnection() {
   });
 }
 
+/** Board lookup chain used by createClientTicket: where → modify → orderBy → first. */
+function makeBoardQuery(row: Record<string, unknown> | undefined) {
+  const builder: any = {
+    where: vi.fn(() => builder),
+    whereIn: vi.fn(() => builder),
+    modify: vi.fn((callback: (query: any) => void) => {
+      callback(builder);
+      return builder;
+    }),
+    orderBy: vi.fn(() => builder),
+    first: vi.fn().mockResolvedValue(row),
+  };
+  return builder;
+}
+
 function makeUserQuery(contactId = 'contact-1') {
   return {
     where: vi.fn().mockReturnValue({
@@ -589,11 +604,7 @@ describe('client portal ticket visibility enforcement', () => {
         }
 
         if (table === 'boards') {
-          return {
-            where: vi.fn().mockReturnValue({
-              first: vi.fn().mockResolvedValue({ board_id: 'board-allowed' }),
-            }),
-          };
+          return makeBoardQuery({ board_id: 'board-allowed' });
         }
 
         if (table === 'tickets') {
@@ -645,11 +656,7 @@ describe('client portal ticket visibility enforcement', () => {
         }
 
         if (table === 'boards') {
-          return {
-            where: vi.fn().mockReturnValue({
-              first: vi.fn().mockResolvedValue(undefined),
-            }),
-          };
+          return makeBoardQuery(undefined);
         }
 
         if (table === 'statuses') {
@@ -698,11 +705,7 @@ describe('client portal ticket visibility enforcement', () => {
         }
 
         if (table === 'boards') {
-          return {
-            where: vi.fn().mockReturnValue({
-              first: vi.fn().mockResolvedValue({ board_id: 'board-open' }),
-            }),
-          };
+          return makeBoardQuery({ board_id: 'board-open' });
         }
 
         if (table === 'statuses') {

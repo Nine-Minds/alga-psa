@@ -748,7 +748,8 @@
       "scopeContact": "Only their own tickets",
       "scopeClientDescription": "Members see every ticket for this client on the selected boards.",
       "scopeContactDescription": "Members see only tickets they are listed as the contact on. Client admins see all tickets on the selected boards, including tickets with no contact.",
-      "assignmentHelp": "Assign a group to limit boards and ticket visibility, or keep full client access."
+      "assignmentHelp": "Assign a group to limit boards and ticket visibility, or keep full client access.",
+      "boardHiddenFromPortal": "Hidden from client portal"
     },
     "domain": {
       "title": "Custom Domain",
