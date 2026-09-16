@@ -22,6 +22,50 @@ const levels = {
   system: 7
 };
 
+export type LogLevelName = keyof typeof levels;
+type LevelName = LogLevelName;
+
+export const logLevels = levels;
+
+// LOG_LEVEL is documented (.env.example) with these spellings; map them onto
+// the winston-style level names above so both vocabularies work.
+const levelAliases: Record<string, LevelName> = {
+  warning: 'warn',
+  critical: 'error',
+  fatal: 'error',
+  silly: 'system',
+  all: 'system'
+};
+
+// Anything noisier than `info` is opt-in. Without this the ~270 logger.debug
+// call sites across the codebase print on every request and drown the logs.
+const DEFAULT_LEVEL: LevelName = 'info';
+
+/**
+ * Resolve a LOG_LEVEL env value to a level name this codebase's loggers accept.
+ * Shared with the winston logger in server/src/utils/logger.tsx so both honour
+ * the same vocabulary and the same default.
+ */
+export const resolveLogLevel = (raw?: string): LogLevelName => {
+  const normalized = raw?.trim().toLowerCase();
+  if (!normalized) return DEFAULT_LEVEL;
+  const name = levelAliases[normalized] ?? normalized;
+  return name in levels ? (name as LogLevelName) : DEFAULT_LEVEL;
+};
+
+let cachedThreshold: number | undefined;
+
+const getThreshold = (): number => {
+  if (cachedThreshold !== undefined) return cachedThreshold;
+
+  const raw = typeof process !== 'undefined' ? process.env?.LOG_LEVEL : undefined;
+  cachedThreshold = levels[resolveLogLevel(raw)];
+
+  return cachedThreshold;
+};
+
+const enabled = (level: LevelName): boolean => levels[level] <= getThreshold();
+
 let internalLogger: any;
 
 const getLogger = () => {
@@ -57,15 +101,27 @@ const safeMeta = (meta: unknown): unknown => {
   }
 };
 
+// Each level is gated on LOG_LEVEL before the backend call, so a suppressed
+// log costs nothing beyond the comparison — meta is never serialized.
+const emit = (level: LevelName, method: 'error' | 'warn' | 'info' | 'debug' | 'log') =>
+  (msg: string, meta?: any) => {
+    if (!enabled(level)) return;
+    if (meta !== undefined) {
+      getLogger()[method](msg, safeMeta(meta));
+    } else {
+      getLogger()[method](msg);
+    }
+  };
+
 const logger = {
-  error: (msg: string, meta?: any) => meta !== undefined ? getLogger().error(msg, safeMeta(meta)) : getLogger().error(msg),
-  warn: (msg: string, meta?: any) => meta !== undefined ? getLogger().warn(msg, safeMeta(meta)) : getLogger().warn(msg),
-  info: (msg: string, meta?: any) => meta !== undefined ? getLogger().info(msg, safeMeta(meta)) : getLogger().info(msg),
-  http: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, safeMeta(meta)) : getLogger().log(msg),
-  verbose: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, safeMeta(meta)) : getLogger().log(msg),
-  debug: (msg: string, meta?: any) => meta !== undefined ? getLogger().debug(msg, safeMeta(meta)) : getLogger().debug(msg),
-  trace: (msg: string, meta?: any) => meta !== undefined ? getLogger().debug(msg, safeMeta(meta)) : getLogger().debug(msg),
-  system: (msg: string, meta?: any) => meta !== undefined ? getLogger().log(msg, safeMeta(meta)) : getLogger().log(msg),
+  error: emit('error', 'error'),
+  warn: emit('warn', 'warn'),
+  info: emit('info', 'info'),
+  http: emit('http', 'log'),
+  verbose: emit('verbose', 'log'),
+  debug: emit('debug', 'debug'),
+  trace: emit('trace', 'debug'),
+  system: emit('system', 'log'),
 };
 
 export default logger;
