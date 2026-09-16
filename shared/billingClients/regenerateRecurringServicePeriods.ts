@@ -115,7 +115,9 @@ function resolveNextRevision(
   return Math.max(requestedRevision, existingMaxRevision + 1);
 }
 
-function isPreservedOverrideRecord(record: IRecurringServicePeriodRecord) {
+export function isPreservedRecurringServicePeriodRecord(
+  record: IRecurringServicePeriodRecord,
+) {
   return (
     record.provenance.kind === 'user_edited'
     || record.provenance.kind === 'repair'
@@ -125,6 +127,8 @@ function isPreservedOverrideRecord(record: IRecurringServicePeriodRecord) {
     || record.lifecycleState === 'billed'
   );
 }
+
+const isPreservedOverrideRecord = isPreservedRecurringServicePeriodRecord;
 
 function startsAtOrAfterCoverageEnd(
   record: IRecurringServicePeriodRecord,
@@ -246,7 +250,10 @@ export function regenerateRecurringServicePeriods(
         };
   };
 
-  for (const existing of existingRecords) {
+  for (let existingIndex = 0; existingIndex < existingRecords.length; existingIndex += 1) {
+    const existing = existingRecords[existingIndex];
+    const nextExisting = existingRecords[existingIndex + 1];
+
     // Candidates that start before this existing record fill a gap in the
     // ledger. Emitting them as new records first keeps the ordered pairing
     // correct when a preserved/override record follows a missing period; a
@@ -278,19 +285,30 @@ export function regenerateRecurringServicePeriods(
       if (candidate) {
         candidateIndex += 1;
       }
-      // The override owns its entire service-period range. A candidate wholly
-      // inside that range (for example the next slot after an override expanded
-      // a period) is already covered by the override and must not be inserted
-      // beside it as a second, overlapping charge. Candidates that only
-      // partially overlap belong to a neighbouring record and still pair
-      // positionally.
+      // The override owns its entire service-period range, including any ideal
+      // slot it covers after a boundary edit (expanded or partial overlap). A
+      // following candidate that begins inside the override and is not the next
+      // existing record's slot must not be inserted beside it. Suppressing it is
+      // the fail-closed choice; the conflict makes the suppressed slot visible
+      // instead of silently emitting a duplicate charge.
       while (
         candidateRecords[candidateIndex]
         && toDateOnly(candidateRecords[candidateIndex].servicePeriod.start)
-          >= toDateOnly(existing.servicePeriod.start)
-        && toDateOnly(candidateRecords[candidateIndex].servicePeriod.end)
-          <= toDateOnly(existing.servicePeriod.end)
+          < toDateOnly(existing.servicePeriod.end)
+        && (
+          !nextExisting
+          || toDateOnly(candidateRecords[candidateIndex].servicePeriod.start)
+            < toDateOnly(nextExisting.servicePeriod.start)
+        )
       ) {
+        conflicts.push({
+          kind: 'service_period_mismatch',
+          recordId: existing.recordId,
+          scheduleKey: existing.scheduleKey,
+          periodKey: candidateRecords[candidateIndex].periodKey,
+          reason:
+            'The preserved override covers this candidate slot, so the overlapping generated candidate was suppressed.',
+        });
         candidateIndex += 1;
       }
       continue;

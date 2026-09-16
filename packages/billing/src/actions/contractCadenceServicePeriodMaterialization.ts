@@ -13,6 +13,7 @@ import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from '@shared/billingClients/clipRecurringCandidatesToObligationBounds';
+import { isPreservedRecurringServicePeriodRecord } from '@shared/billingClients/regenerateRecurringServicePeriods';
 
 export { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME };
 
@@ -436,6 +437,53 @@ function servicePeriodIdentity(record: Pick<IRecurringServicePeriodRecord, 'serv
 }
 
 /**
+ * Coverage view used by capped continuation. It mirrors canonical regeneration:
+ * a candidate is accounted for when the ledger holds its exact period, holds its
+ * schedule-slot key (an override retaining the original boundary), or when a
+ * preserved override's range covers the candidate's start. Without the slot and
+ * override semantics, an intentionally replaced period (for example an edited
+ * Jan 8–Mar 8 period keeping the Jan–Feb key) would look permanently missing and
+ * stall the continuation at the same boundary on every run.
+ */
+function buildContinuationCoverageIndex(records: IRecurringServicePeriodRecord[]) {
+  const identities = new Set<string>();
+  const slotKeys = new Set<string>();
+  const protectedRanges: Array<{ start: string; end: string }> = [];
+
+  for (const record of records) {
+    if (record.lifecycleState === 'superseded' || record.lifecycleState === 'archived') {
+      continue;
+    }
+    identities.add(servicePeriodIdentity(record));
+    slotKeys.add(`${record.scheduleKey}\u0000${record.periodKey}`);
+    if (isPreservedRecurringServicePeriodRecord(record)) {
+      protectedRanges.push({
+        start: record.servicePeriod.start.slice(0, 10),
+        end: record.servicePeriod.end.slice(0, 10),
+      });
+    }
+  }
+
+  return { identities, slotKeys, protectedRanges };
+}
+
+function isCandidateCoveredForContinuation(
+  candidate: IRecurringServicePeriodRecord,
+  coverage: ReturnType<typeof buildContinuationCoverageIndex>,
+) {
+  if (coverage.identities.has(servicePeriodIdentity(candidate))) {
+    return true;
+  }
+  if (coverage.slotKeys.has(`${candidate.scheduleKey}\u0000${candidate.periodKey}`)) {
+    return true;
+  }
+  const candidateStart = candidate.servicePeriod.start.slice(0, 10);
+  return coverage.protectedRanges.some(
+    (range) => candidateStart >= range.start && candidateStart < range.end,
+  );
+}
+
+/**
  * Upper bound on the number of capped batches a single run will walk while
  * looking for the true resumption point. Guards against a pathological ledger
  * that never advances; at 200 periods per batch this is well past any real
@@ -569,19 +617,12 @@ async function syncContractCadenceObligation(
   let historicalBoundaryFloor = billedBoundaryEnd;
 
   if (materialized.hitPeriodCap) {
-    const coveredPeriods = new Set(
-      existingRecords
-        .filter(
-          (record) =>
-            record.lifecycleState !== 'superseded' && record.lifecycleState !== 'archived',
-        )
-        .map(servicePeriodIdentity),
-    );
+    const coverage = buildContinuationCoverageIndex(existingRecords);
     let continuationStart: ISO8601String = regenerationStart;
 
     for (let batchIndex = 0; batchIndex < MAX_CONTINUATION_SCAN_BATCHES; batchIndex += 1) {
       const missingCandidate = materialized.records.find(
-        (candidate) => !coveredPeriods.has(servicePeriodIdentity(candidate)),
+        (candidate) => !isCandidateCoveredForContinuation(candidate, coverage),
       );
       const lastRecord = materialized.records[materialized.records.length - 1];
 
@@ -632,8 +673,49 @@ async function syncContractCadenceObligation(
     assignmentStart,
     assignmentEnd,
   );
+
+  const targetHorizonEnd = `${materialized.coverage.targetHorizonEnd}T00:00:00Z` as ISO8601String;
+  const expectedCoverageEnd = assignmentEnd
+    && compareIsoDateOnly(assignmentEnd, targetHorizonEnd) < 0
+    ? assignmentEnd
+    : targetHorizonEnd;
+
+  // No candidates means there is nothing to reconcile: either the ledger already
+  // reaches the horizon or the assignment starts beyond it. Return without
+  // touching the ledger so later rows (for example a valid beyond-horizon row)
+  // are preserved instead of being superseded by an empty candidate set.
+  if (candidateRecords.length === 0) {
+    const furthestExisting = resolveFurthestServicePeriodEnd(
+      existingRecords.filter(
+        (record) => record.lifecycleState !== 'superseded' && record.lifecycleState !== 'archived',
+      ),
+    );
+    return {
+      changed: false,
+      periodsGenerated: 0,
+      periodsRealigned: 0,
+      periodsSuperseded: 0,
+      hitPeriodCap: materialized.hitPeriodCap,
+      wasExhaustedBeforeRun,
+      overrideConflicts: 0,
+      furthestServicePeriodEnd: furthestExisting,
+      expectedCoverageEnd,
+      meetsExpectedCoverage:
+        furthestExisting != null
+        && compareIsoDateOnly(furthestExisting, expectedCoverageEnd) >= 0,
+    };
+  }
+
+  // Bound reconciliation to what regeneration actually produced. A capped batch
+  // (or an open-ended/at-horizon run) preserves rows beyond the generated range;
+  // an assignment-bounded run does not, so mutable rows past the assignment end
+  // are still retired by canonical regeneration.
+  const assignmentBounded = assignmentEnd != null
+    && compareIsoDateOnly(assignmentEnd, targetHorizonEnd) <= 0;
   const candidateCoverageEnd =
-    candidateRecords[candidateRecords.length - 1]?.servicePeriod.end;
+    materialized.hitPeriodCap || !assignmentBounded
+      ? candidateRecords[candidateRecords.length - 1].servicePeriod.end
+      : undefined;
 
   const regenerationPlan = backfillRecurringServicePeriods({
     candidateRecords,
@@ -657,11 +739,6 @@ async function syncContractCadenceObligation(
   });
 
   const furthestServicePeriodEnd = resolveFurthestServicePeriodEnd(regenerationPlan.activeRecords);
-  const targetHorizonEnd = `${materialized.coverage.targetHorizonEnd}T00:00:00Z` as ISO8601String;
-  const expectedCoverageEnd = assignmentEnd
-    && compareIsoDateOnly(assignmentEnd, targetHorizonEnd) < 0
-    ? assignmentEnd
-    : targetHorizonEnd;
   const meetsExpectedCoverage = !materialized.hitPeriodCap
     && furthestServicePeriodEnd != null
     && compareIsoDateOnly(furthestServicePeriodEnd, expectedCoverageEnd) >= 0;

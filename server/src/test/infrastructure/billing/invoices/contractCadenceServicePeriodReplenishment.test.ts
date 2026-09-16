@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TestContext } from 'server/test-utils/testContext';
 import { assignContractLineToClient } from '../../../../../test-utils/billingTestHelpers';
 import {
+  materializeContractCadenceServicePeriodsForContractLine,
   replenishContractCadenceServicePeriodsSweep,
   runContractCadenceReplenishmentForTenant,
 } from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
@@ -1141,5 +1142,171 @@ describe('Contract-cadence service-period replenishment', () => {
         && dateOnly(row.service_period_end) > '2026-09-08',
     );
     expect(overlaps).toEqual([]);
+  });
+
+  it('does not create a charge overlapping a partially expanded manual override', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '2026-08-08T00:00:00Z',
+      name: 'Partial Override Line',
+    });
+    const overrideId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2026-08-08',
+      serviceEnd: '2026-09-15',
+      invoiceStart: '2026-09-15',
+      invoiceEnd: '2026-10-15',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+    });
+    await context.db('recurring_service_periods')
+      .where({ tenant: context.tenantId, record_id: overrideId })
+      .update({ period_key: 'period:2026-08-08:2026-09-08' });
+    const before = (await loadContractPeriods(obligationId)).find(
+      (row) => row.record_id === overrideId,
+    );
+
+    const result = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(result.failures).toEqual([]);
+
+    const after = await loadContractPeriods(obligationId);
+    expect(after.find((row) => row.record_id === overrideId)).toEqual(before);
+    // The generated Sep 8–Oct 8 ideal slot overlaps the override through
+    // Sep 15; it must be suppressed rather than inserted beside it.
+    const overlaps = after.filter(
+      (row) =>
+        row.record_id !== overrideId
+        && row.lifecycle_state !== 'superseded'
+        && dateOnly(row.service_period_start) < '2026-09-15'
+        && dateOnly(row.service_period_end) > '2026-08-08',
+    );
+    expect(overlaps).toEqual([]);
+  });
+
+  it('advances capped generation past an expanded override and then idempotents', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '2005-01-08T00:00:00Z',
+      name: 'Capped Override Line',
+    });
+    const overrideId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2005-01-08',
+      serviceEnd: '2005-03-08',
+      invoiceStart: '2005-03-08',
+      invoiceEnd: '2005-04-08',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+    });
+    await context.db('recurring_service_periods')
+      .where({ tenant: context.tenantId, record_id: overrideId })
+      .update({ period_key: 'period:2005-01-08:2005-02-08' });
+
+    const params = {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    };
+    const first = await runContractCadenceReplenishmentForTenant(context.db, params);
+    const second = await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(first.failures).toEqual([]);
+    expect(second.failures).toEqual([]);
+    // The override's absorbed Jan/Feb slots must not look permanently missing.
+    expect(second.periodsGenerated).toBeGreaterThan(0);
+
+    let summary = second;
+    let runs = 2;
+    while (summary.linesAwaitingCoverage > 0 && runs < 12) {
+      summary = await runContractCadenceReplenishmentForTenant(context.db, params);
+      runs += 1;
+    }
+    expect(summary.linesAwaitingCoverage).toBe(0);
+
+    const rows = await loadContractPeriods(obligationId);
+    const active = rows.filter((row) => row.lifecycle_state !== 'superseded');
+    const furthest = active.map((row) => dateOnly(row.service_period_end)).sort().at(-1);
+    expect(furthest >= '2027-03-14').toBe(true);
+    // The override itself is untouched.
+    expect(rows.find((row) => row.record_id === overrideId)?.lifecycle_state).toBe('edited');
+
+    const finalRun = await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(finalRun.periodsGenerated).toBe(0);
+    expect(await loadContractPeriods(obligationId)).toEqual(rows);
+  });
+
+  it('preserves beyond-horizon rows when capped history is fully covered', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '1980-01-08T00:00:00Z',
+      name: 'Completed Catch-up Line',
+    });
+    const params = {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    };
+    for (let i = 0; i < 4; i += 1) {
+      await runContractCadenceReplenishmentForTenant(context.db, params);
+    }
+
+    const beyondId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2028-01-08',
+      serviceEnd: '2028-02-08',
+      invoiceStart: '2028-02-08',
+      invoiceEnd: '2028-03-08',
+      lifecycleState: 'generated',
+    });
+    const before = (await loadContractPeriods(obligationId)).find(
+      (row) => row.record_id === beyondId,
+    );
+
+    const result = await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(result.failures).toEqual([]);
+    expect((await loadContractPeriods(obligationId)).find((row) => row.record_id === beyondId)).toEqual(
+      before,
+    );
+  });
+
+  it('retires mutable rows past a shortened assignment but keeps the override history', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '2026-02-08T00:00:00Z',
+      name: 'Shortened Assignment Line',
+    });
+    const mutableId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2026-11-08',
+      serviceEnd: '2026-12-08',
+      invoiceStart: '2026-12-08',
+      invoiceEnd: '2027-01-08',
+      lifecycleState: 'generated',
+    });
+    const lockedId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2026-12-08',
+      serviceEnd: '2027-01-08',
+      invoiceStart: '2027-01-08',
+      invoiceEnd: '2027-02-08',
+      lifecycleState: 'locked',
+    });
+
+    const line = await context.db('contract_lines')
+      .where({ tenant: context.tenantId, contract_line_id: obligationId })
+      .first();
+    await context.db('client_contracts')
+      .where({ tenant: context.tenantId, contract_id: line.contract_id })
+      .update({ end_date: '2026-10-08' });
+
+    await materializeContractCadenceServicePeriodsForContractLine(context.db, {
+      tenant: context.tenantId,
+      contractLineId: obligationId,
+      sourceRunPrefix: 'test-assignment-update',
+    });
+
+    const rows = await loadContractPeriods(obligationId);
+    expect(rows.find((row) => row.record_id === mutableId)?.lifecycle_state).toBe('superseded');
+    // Protected records past the assignment end are preserved.
+    expect(rows.find((row) => row.record_id === lockedId)?.lifecycle_state).toBe('locked');
   });
 });
