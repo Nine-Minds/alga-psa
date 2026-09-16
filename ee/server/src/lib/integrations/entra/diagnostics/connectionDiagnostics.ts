@@ -20,6 +20,7 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import { tenantDb, createTenantKnex } from '@alga-psa/db';
 import { getActiveEntraPartnerConnection } from '../connectionRepository';
 import { refreshEntraDirectToken } from '../auth/refreshDirectToken';
+import { resolveMicrosoftCredentialsForTenant } from '../auth/microsoftCredentialResolver';
 import { ENTRA_DIRECT_DELEGATED_SCOPES } from '../auth/directScopes';
 import { ENTRA_DIRECT_SECRET_KEYS } from '../secrets';
 import {
@@ -203,6 +204,44 @@ async function loadRecentRuns(tenant: string, limit = 20): Promise<RecentRunRow[
   }));
 }
 
+async function loadRecentRealRuns(tenant: string, limit = 5): Promise<RecentRunRow[]> {
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const rows = (await db
+    .table('entra_sync_runs')
+    .where({ is_dry_run: false })
+    .orderBy('started_at', 'desc')
+    .limit(limit)
+    .select([
+      'run_id',
+      'status',
+      'run_type',
+      'started_at',
+      'completed_at',
+      'is_dry_run',
+      'total_tenants',
+      'succeeded_tenants',
+      'failed_tenants',
+    ])) as Array<Record<string, unknown>>;
+
+  return rows.map((row) => ({
+    runId: String(row.run_id),
+    status: String(row.status),
+    runType: String(row.run_type),
+    startedAt: row.started_at instanceof Date ? row.started_at.toISOString() : String(row.started_at),
+    completedAt:
+      row.completed_at instanceof Date
+        ? row.completed_at.toISOString()
+        : row.completed_at
+          ? String(row.completed_at)
+          : null,
+    isDryRun: false,
+    totalTenants: Number(row.total_tenants ?? 0),
+    succeededTenants: Number(row.succeeded_tenants ?? 0),
+    failedTenants: Number(row.failed_tenants ?? 0),
+  }));
+}
+
 async function loadRunTotals(
   tenant: string,
   runIds: string[]
@@ -252,6 +291,12 @@ export async function runEntraConnectionDiagnostics(
   const connectionType: EntraConnectionType | null = connection?.connection_type ?? null;
   const isDirect = connectionType === 'direct';
   const isCipp = connectionType === 'cipp';
+
+  // Bound application client id, used to build customer consent URLs for
+  // historical per-tenant failures as well as live client checks.
+  const boundAppClientId = isDirect
+    ? (await resolveMicrosoftCredentialsForTenant(tenant))?.clientId ?? null
+    : null;
 
   const readiness: EntraDiagnosticsReadiness = options.readiness ?? {
     authenticated: true,
@@ -533,9 +578,25 @@ export async function runEntraConnectionDiagnostics(
       collect([
         {
           code: 'temporal_no_workers',
-          severity: 'warn',
+          severity: 'fail',
           text: 'Temporal is reachable but no worker is polling the Entra task queue. Scheduled syncs will not be processed.',
           messageKey: 'temporalNoWorkers',
+        },
+      ]);
+      return {
+        status: 'fail' as const,
+        data,
+        error: { message: 'No Temporal worker is polling the Entra task queue.' },
+      };
+    }
+
+    if (temporal.workerEvidence === 'unknown') {
+      collect([
+        {
+          code: 'temporal_worker_unknown',
+          severity: 'warn',
+          text: 'Temporal is reachable but worker poller evidence is unavailable; worker availability could not be confirmed.',
+          messageKey: 'temporalWorkerUnknown',
         },
       ]);
       return { status: 'warn' as const, data };
@@ -572,6 +633,18 @@ export async function runEntraConnectionDiagnostics(
           severity: 'warn',
           text: 'Automatic sync is enabled but no Temporal schedule was found. Save the schedule to apply it.',
           messageKey: 'scheduleMissing',
+        },
+      ]);
+      return { status: 'warn' as const, data };
+    }
+
+    if (describe.paused === true) {
+      collect([
+        {
+          code: 'schedule_paused',
+          severity: 'warn',
+          text: 'Automatic sync is enabled but the Temporal schedule is paused; no runs will fire.',
+          messageKey: 'schedulePaused',
         },
       ]);
       return { status: 'warn' as const, data };
@@ -980,7 +1053,7 @@ export async function runEntraConnectionDiagnostics(
           recommendations: [rec],
         };
       }
-      if (cippProbe.authRejected) {
+      if (cippProbe.outcome === 'auth_rejected') {
         return {
           status: 'warn' as const,
           data: {
@@ -992,7 +1065,48 @@ export async function runEntraConnectionDiagnostics(
           },
         };
       }
-      if (!cippProbe.reachable) {
+      if (cippProbe.outcome === 'http_error') {
+        const rec: DiagnosticsRecommendation = {
+          code: 'cipp_http_error',
+          severity: 'fail',
+          text: `CIPP answered with HTTP ${cippProbe.status ?? 'error'}${cippProbe.error ? ` (${cippProbe.error})` : ''} for every tenant-list endpoint. This is a CIPP-side list failure, not an empty tenant list.`,
+          messageKey: 'cippHttpError',
+          params: { status: cippProbe.status ?? 'unknown' },
+        };
+        collect([rec]);
+        return {
+          status: 'fail' as const,
+          data: {
+            attemptedEndpoints: cippProbe.attempted,
+            answeringEndpoint: cippProbe.endpoint,
+            status: cippProbe.status,
+            listFailed: true,
+          },
+          error: { message: rec.text, status: cippProbe.status },
+          recommendations: [rec],
+        };
+      }
+      if (cippProbe.outcome === 'invalid_payload') {
+        const rec: DiagnosticsRecommendation = {
+          code: 'cipp_invalid_payload',
+          severity: 'fail',
+          text: 'CIPP returned a response that is not a tenant list. Verify the CIPP-API version and endpoint.',
+          messageKey: 'cippInvalidPayload',
+        };
+        collect([rec]);
+        return {
+          status: 'fail' as const,
+          data: {
+            attemptedEndpoints: cippProbe.attempted,
+            answeringEndpoint: cippProbe.endpoint,
+            status: cippProbe.status,
+            invalidPayload: true,
+          },
+          error: { message: rec.text, status: cippProbe.status },
+          recommendations: [rec],
+        };
+      }
+      if (cippProbe.outcome === 'unreachable') {
         const rec: DiagnosticsRecommendation = {
           code: 'cipp_unreachable',
           severity: 'fail',
@@ -1110,9 +1224,10 @@ export async function runEntraConnectionDiagnostics(
     }
   );
 
-  // Layer 5 sync pipeline health (always runs).
+  // Layer 5 sync pipeline health (always runs). The consecutive-failure rule
+  // queries real runs directly so any number of dry runs cannot hide them.
   const recentRuns = await loadRecentRuns(tenant, 20);
-  const realRuns = recentRuns.filter((r) => !r.isDryRun);
+  const realRuns = await loadRecentRealRuns(tenant, 5);
   const displayedRuns = recentRuns.slice(0, 5);
   const totalsByRun = await loadRunTotals(
     tenant,
@@ -1153,7 +1268,8 @@ export async function runEntraConnectionDiagnostics(
       isUnsuccessful(realRuns[1]?.status ?? '');
 
     // Decode the latest real failure's stored error text with the shared
-    // classifier so AADSTS remedies surface from history, not just live calls.
+    // classifier. A failed tenant is a customer-context failure, so classify it
+    // with that mapping's tenant and the bound application client id.
     let decodedFailure: Record<string, unknown> | null = null;
     const latestFailedReal = realRuns.find((r) => isUnsuccessful(r.status));
     if (latestFailedReal) {
@@ -1162,22 +1278,42 @@ export async function runEntraConnectionDiagnostics(
         const failedTenant = progress.tenantResults.find(
           (t) => (t.status === 'failed' || t.status === 'partial') && t.errorMessage
         );
-        const rawMessage = failedTenant?.errorMessage ?? null;
-        if (rawMessage) {
-          const classified = classifyEntraOAuthFailure({ message: rawMessage, context: 'partner' });
+        if (failedTenant?.errorMessage) {
+          const mapping =
+            mappings.find((m) => m.managedTenantId === failedTenant.managedTenantId) ??
+            mappings.find((m) => m.clientId === failedTenant.clientId);
+          const classified = classifyEntraOAuthFailure({
+            message: failedTenant.errorMessage,
+            context: 'customer',
+            customer: {
+              entraTenantId: mapping?.entraTenantId ?? null,
+              applicationClientId: boundAppClientId,
+              operation: 'users',
+            },
+          });
           decodedFailure = {
             runId: latestFailedReal.runId,
-            managedTenantId: failedTenant?.managedTenantId ?? null,
-            clientId: failedTenant?.clientId ?? null,
-            clientName:
-              mappings.find((m) => m.clientId === failedTenant?.clientId)?.clientName ?? null,
-            message: rawMessage,
+            level: 'tenant',
+            managedTenantId: failedTenant.managedTenantId,
+            clientId: failedTenant.clientId,
+            clientName: mapping?.clientName ?? null,
+            entraTenantId: mapping?.entraTenantId ?? null,
+            message: failedTenant.errorMessage,
             aadstsCode: classified.aadstsCode,
             suberror: classified.suberror,
             oauthError: classified.oauthError,
             remedy: classified.remedy,
           };
           if (classified.recommendation) collect([classified.recommendation]);
+        } else {
+          // Run-level failure with no per-tenant error rows.
+          decodedFailure = {
+            runId: latestFailedReal.runId,
+            level: 'run',
+            status: latestFailedReal.status,
+            message: 'The run failed before any per-tenant result was recorded.',
+            remedy: 'Review the run in Sync history and check worker logs for the run id.',
+          };
         }
       } catch {
         decodedFailure = null;

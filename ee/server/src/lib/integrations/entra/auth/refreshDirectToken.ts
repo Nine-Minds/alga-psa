@@ -16,10 +16,18 @@ export interface RefreshDirectTokenResult {
   scope: string | null;
 }
 
+export interface RefreshDirectTokenOptions {
+  /** Cancellation/deadline signal, used by diagnostics; sync callers omit it. */
+  signal?: AbortSignal;
+  /** Request timeout in milliseconds; sync callers omit it. */
+  timeoutMs?: number;
+}
+
 async function refreshEntraDirectTokenForAuthority(
   tenant: string,
   authorityTenant = 'common',
-  persistAccessToken = true
+  persistAccessToken = true,
+  options: RefreshDirectTokenOptions = {}
 ): Promise<RefreshDirectTokenResult> {
   const credentials = await resolveMicrosoftCredentialsForTenant(tenant);
 
@@ -48,6 +56,8 @@ async function refreshEntraDirectTokenForAuthority(
       tokenParams.toString(),
       {
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        signal: options.signal,
+        timeout: options.timeoutMs,
       }
     );
   } catch (error: unknown) {
@@ -145,14 +155,16 @@ async function refreshEntraDirectTokenForAuthority(
 }
 
 export async function refreshEntraDirectToken(
-  tenant: string
+  tenant: string,
+  options: RefreshDirectTokenOptions = {}
 ): Promise<RefreshDirectTokenResult> {
-  return refreshEntraDirectTokenForAuthority(tenant);
+  return refreshEntraDirectTokenForAuthority(tenant, 'common', true, options);
 }
 
 export async function refreshEntraDirectAccessTokenForTenant(
   tenant: string,
-  authorityTenant: string
+  authorityTenant: string,
+  options: RefreshDirectTokenOptions = {}
 ): Promise<RefreshDirectTokenResult> {
-  return refreshEntraDirectTokenForAuthority(tenant, authorityTenant, false);
+  return refreshEntraDirectTokenForAuthority(tenant, authorityTenant, false, options);
 }

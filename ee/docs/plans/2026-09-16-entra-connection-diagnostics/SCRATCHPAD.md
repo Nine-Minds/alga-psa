@@ -72,6 +72,19 @@ Addressed the review findings:
 
 Checklists reconciled conservatively: 83/87 features and 10/40 tests implemented; emulator fault fixtures, nm-store guide, and console screenshots remain open.
 
+## Review repairs (2026-09-16, round 3)
+
+- Redaction now handles credentials embedded in serialized JSON, including backslash-escaped and single-quoted forms, in both identifier modes; credential metadata (expiry/presence/fingerprint) is explicitly preserved rather than fingerprinted or replaced.
+- Client diagnostics finalizes at most three clients per request and always returns a continuation for the rest. Per-client and per-request abort deadlines flow into the mint (`refreshDirectToken` gained optional signal/timeout) and Graph reads. The optional preview pages the directory through a one-page adapter seam and resumes across requests via a signed `nextLink` cursor (no credential serialized); an unfinished client stays pending and uncounted instead of being marked complete.
+- Continuations validate selection limits, payload shape, and serialized size before expensive work; results are a bounded recent window with cumulative aggregate/status counts so legitimate large runs stay resumable; limits produce a partial terminal state that retains completed clients.
+- Temporal reads the installed SDK's top-level `spec`/`state`/`info` shape with numeric-millisecond intervals, evaluates paused, treats no-pollers as a failure and unknown worker evidence as a warning, closes connections in `finally`, and distinguishes a missing schedule from a lookup failure.
+- CIPP probe distinguishes `ok`, `auth_rejected`, `http_error`, `invalid_payload`, and `unreachable`; failed list requests fail reachability and skip dependent auth/list/mapping checks instead of warning about an empty tenant list.
+- Entitlement-group warnings attach to the step and fold into status; HTTP/request ids are preserved for group lookup and membership. Client checks use the shared timed/dependency runner.
+- Sync health queries real runs directly for the consecutive-failure rule and classifies failed-tenant errors with customer context and the bound application id (handling run-level failures without tenant rows).
+- UI derives completion from the terminal response plus per-client completeness, shows a partial label, records client-run timestamps, resets prior client results on reopen, uses the standard Checkbox with ids, and exports both scopes.
+
+Still absent (required delivery gates): migrated-DB no-write/tenant-isolation tests, msgraph emulator fault scenarios, authenticated browser smoke with green plus two failure screenshots, and the nm-store guide. Full repo `server` tsc still exceeds available memory; EE and integrations typechecks pass.
+
 ## Validation and handoff
 
 Plan-only checks:

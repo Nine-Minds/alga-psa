@@ -412,6 +412,43 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     return tenants;
   }
 
+  private mapUserRows(
+    rows: unknown[],
+    managedTenantId: string,
+    seenObjectIds: Set<string>
+  ): EntraManagedUserRecord[] {
+    const users: EntraManagedUserRecord[] = [];
+    for (const row of rows) {
+      const raw = toObject(row);
+      const entraObjectId = getFirstString(raw.id);
+      if (!entraObjectId || seenObjectIds.has(entraObjectId)) {
+        continue;
+      }
+
+      seenObjectIds.add(entraObjectId);
+
+      const userPrincipalName = getNullableString(raw.userPrincipalName);
+      const email = getNullableString(raw.mail) || userPrincipalName;
+      const entraTenantId = getNullableString(raw.tenantId) || managedTenantId;
+
+      users.push(normalizeEntraSyncUser({
+        entraTenantId,
+        entraObjectId,
+        userPrincipalName,
+        email,
+        displayName: getNullableString(raw.displayName),
+        givenName: getNullableString(raw.givenName),
+        surname: getNullableString(raw.surname),
+        accountEnabled: getBoolean(raw.accountEnabled, true),
+        jobTitle: getNullableString(raw.jobTitle),
+        mobilePhone: getNullableString(raw.mobilePhone),
+        businessPhones: getStringArray(raw.businessPhones),
+        raw,
+      }));
+    }
+    return users;
+  }
+
   private async collectUsers(
     managedTenantId: string,
     fetchPage: (pageUrl: string) => Promise<Record<string, unknown>>,
@@ -450,35 +487,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       const pageUrl = nextUrl;
       const payload = await fetchPage(pageUrl);
       const rows = Array.isArray(payload.value) ? payload.value : [];
-
-      for (const row of rows) {
-        const raw = toObject(row);
-        const entraObjectId = getFirstString(raw.id);
-        if (!entraObjectId || seenObjectIds.has(entraObjectId)) {
-          continue;
-        }
-
-        seenObjectIds.add(entraObjectId);
-
-        const userPrincipalName = getNullableString(raw.userPrincipalName);
-        const email = getNullableString(raw.mail) || userPrincipalName;
-        const entraTenantId = getNullableString(raw.tenantId) || managedTenantId;
-
-        users.push(normalizeEntraSyncUser({
-          entraTenantId,
-          entraObjectId,
-          userPrincipalName,
-          email,
-          displayName: getNullableString(raw.displayName),
-          givenName: getNullableString(raw.givenName),
-          surname: getNullableString(raw.surname),
-          accountEnabled: getBoolean(raw.accountEnabled, true),
-          jobTitle: getNullableString(raw.jobTitle),
-          mobilePhone: getNullableString(raw.mobilePhone),
-          businessPhones: getStringArray(raw.businessPhones),
-          raw,
-        }));
-      }
+      users.push(...this.mapUserRows(rows, managedTenantId, seenObjectIds));
 
       const candidateNextLink = getNullableString(payload['@odata.nextLink']);
       nextUrl = candidateNextLink || null;
@@ -486,6 +495,51 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     }
 
     return { users, pages, truncated };
+  }
+
+  /**
+   * Diagnostics seam: read exactly one page of a managed tenant's directory
+   * with a caller-supplied token, returning the next page URL so an expensive
+   * preview can resume across requests without serializing the token.
+   */
+  public async listUsersPageWithToken(input: {
+    tenant: string;
+    managedTenantId: string;
+    accessToken: string;
+    url?: string;
+    signal?: AbortSignal;
+  }): Promise<{ users: EntraManagedUserRecord[]; nextLink: string | null }> {
+    if (IS_SELF_TENANT_SMOKE) {
+      const users = await this.listSelfTenantUsers(input);
+      return { users, nextLink: null };
+    }
+
+    const select = [
+      'id',
+      'displayName',
+      'givenName',
+      'surname',
+      'mail',
+      'userPrincipalName',
+      'accountEnabled',
+      'jobTitle',
+      'mobilePhone',
+      'businessPhones',
+    ].join(',');
+    const pageUrl = input.url || `${graphBaseUrl()}/users?$select=${select}&$top=999`;
+
+    const response = await axios.get(pageUrl, {
+      headers: { Authorization: `Bearer ${input.accessToken}` },
+      timeout: GRAPH_REQUEST_TIMEOUT_MS,
+      signal: input.signal,
+    });
+    const payload = toObject(response.data);
+    const rows = Array.isArray(payload.value) ? payload.value : [];
+    const users = this.mapUserRows(rows, input.managedTenantId, new Set<string>());
+    return {
+      users,
+      nextLink: getNullableString(payload['@odata.nextLink']) || null,
+    };
   }
 
   public async listUsersForTenant(

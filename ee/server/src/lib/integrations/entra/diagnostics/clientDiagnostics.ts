@@ -28,40 +28,39 @@ import {
 import { filterEntraUsersForTenant } from '../settingsService';
 import { classifyEntraOAuthFailure } from './oauthClassifier';
 import { aggregateClientCategories, dedupeRecommendations } from './recommendations';
-import { sanitizeClient } from './redaction';
+import { sanitizeClient, sanitizeRecommendations } from './redaction';
+import { createEntraStepRunner } from './entraStepRunner';
 import {
   DEFAULT_CONTINUATION_TTL_MS,
+  DiagnosticsContinuationError,
   DiagnosticsSigningSecretUnavailableError,
+  MAX_EMBEDDED_RESULTS,
+  MAX_EMBEDDED_RECOMMENDATIONS,
+  MAX_SELECTION,
+  assertContinuationSigningAvailable,
   signContinuation,
   verifyContinuation,
   type EntraClientContinuationPayload,
   type EntraContinuationSelection,
+  type EntraPendingYield,
 } from './continuation';
 
-export const MAX_CLIENTS_IN_FLIGHT = 3;
+/** Clients finalized per request. */
+export const MAX_CLIENTS_PER_REQUEST = 3;
 /** Wall-clock budget for one continuation request before we yield. */
 const REQUEST_BUDGET_MS = 20_000;
-/** Page cap for the optional full-directory yield preview. */
-const MAX_YIELD_PAGES = 8;
+/** Per-client cancellation budget (mint + reads + one paging slice). */
+const CLIENT_BUDGET_MS = 15_000;
+/** User-directory pages fetched per request for the optional preview. */
+const MAX_PAGES_PER_REQUEST = 10;
 
 interface MappingPortalConfig {
   entitlementGroupId: string | null;
   entitlementMembershipMode: string | null;
 }
 
-interface ClientMutableState {
-  category: EntraClientOutcomeCategory;
-  remedy: string | null;
+interface ClientRecommendationState {
   recommendations: DiagnosticsRecommendation[];
-}
-
-function applyClassification(
-  state: ClientMutableState,
-  classification: ReturnType<typeof classifyEntraOAuthFailure>
-): void {
-  state.category = classification.category;
-  state.remedy = classification.remedy;
-  if (classification.recommendation) state.recommendations.push(classification.recommendation);
 }
 
 async function loadMappingPortalConfig(
@@ -87,9 +86,10 @@ async function loadMappingPortalConfig(
   };
 }
 
-function directUsersRead(
+function directGraphGet(
   accessToken: string,
-  path: string
+  path: string,
+  signal?: AbortSignal
 ): Promise<{ status: number; requestId?: string; clientRequestId: string; data: any }> {
   const clientRequestId = randomUUID();
   return axios
@@ -100,6 +100,7 @@ function directUsersRead(
         'return-client-request-id': 'true',
       },
       timeout: 15000,
+      signal,
     })
     .then((res) => ({
       status: res.status,
@@ -109,615 +110,448 @@ function directUsersRead(
     }));
 }
 
-async function runDirectClient(
-  tenant: string,
-  mapping: ConfirmedEntraMapping,
-  boundClientId: string | null,
-  includeUserYield: boolean
-): Promise<{ result: EntraClientDiagnosticsResult; recommendations: DiagnosticsRecommendation[] }> {
-  const steps: EntraDiagnosticsStep[] = [];
-  const state: ClientMutableState = { category: 'ok', remedy: null, recommendations: [] };
+function collectStepRecommendations(steps: EntraDiagnosticsStep[]): DiagnosticsRecommendation[] {
+  return steps.flatMap((step) => step.recommendations ?? []);
+}
+
+interface DirectClientOptions {
+  tenant: string;
+  mapping: ConfirmedEntraMapping;
+  boundClientId: string | null;
+  includeUserYield: boolean;
+  signal: AbortSignal;
+  deadline: number;
+  resumeYield?: EntraPendingYield | null;
+}
+
+interface ClientRunOutput {
+  result?: EntraClientDiagnosticsResult;
+  pending?: EntraPendingYield;
+}
+
+async function pageUserYield(options: {
+  tenant: string;
+  mapping: ConfirmedEntraMapping;
+  accessToken: string;
+  signal: AbortSignal;
+  deadline: number;
+  startNextLink: string | null;
+  startCounts: EntraPendingYield['counts'];
+}): Promise<{ done: true; counts: EntraPendingYield['counts'] } | { done: false; nextLink: string; counts: EntraPendingYield['counts'] }> {
+  const adapter = new DirectProviderAdapter();
+  const counts = {
+    totalUsers: options.startCounts.totalUsers,
+    includedUsers: options.startCounts.includedUsers,
+    excluded: { ...options.startCounts.excluded },
+  };
+  let nextLink: string | null = options.startNextLink;
+  let pages = 0;
+
+  while (pages < MAX_PAGES_PER_REQUEST && Date.now() < options.deadline) {
+    const page = await adapter.listUsersPageWithToken({
+      tenant: options.tenant,
+      managedTenantId: options.mapping.managedTenantId,
+      accessToken: options.accessToken,
+      url: nextLink ?? undefined,
+      signal: options.signal,
+    });
+    const filtered = await filterEntraUsersForTenant(options.tenant, page.users);
+    counts.totalUsers += page.users.length;
+    counts.includedUsers += filtered.included.length;
+    for (const excluded of filtered.excluded) {
+      counts.excluded[excluded.reason] = (counts.excluded[excluded.reason] ?? 0) + 1;
+    }
+    nextLink = page.nextLink;
+    pages += 1;
+    if (!nextLink) return { done: true, counts };
+  }
+
+  if (!nextLink) return { done: true, counts };
+  return { done: false, nextLink, counts };
+}
+
+async function runDirectClient(options: DirectClientOptions): Promise<ClientRunOutput> {
+  const { tenant, mapping, boundClientId, includeUserYield, signal, deadline } = options;
+  const runner = createEntraStepRunner();
+  const recState: ClientRecommendationState = { recommendations: [] };
   const portal = await loadMappingPortalConfig(tenant, mapping.managedTenantId);
   let accessToken: string | null = null;
   let firstUserId: string | null = null;
   let usersReadOk = false;
-  let groupsTokenUsable = true;
 
-  // 4.1 tenant_token_mint — customer context carries the mapped tenant and the
-  // bound application so AADSTS65001 produces a real consent URL.
-  const mintStarted = Date.now();
-  try {
-    const minted = await refreshEntraDirectAccessTokenForTenant(tenant, mapping.entraTenantId);
-    accessToken = minted.accessToken;
-    const claims = decodeJwtPayload(minted.accessToken);
-    steps.push({
-      id: 'tenant_token_mint',
-      title: 'Mint customer tenant token',
-      status: 'pass',
-      startedAt: new Date().toISOString(),
-      durationMs: Date.now() - mintStarted,
-      data: {
-        entraTenantId: mapping.entraTenantId,
-        tenant: claims?.tid,
-        accessTokenFingerprint: buildTokenFingerprint(minted.accessToken),
-        expiresAt: minted.expiresAt,
-      },
-    });
-  } catch (error: any) {
-    const classified = classifyEntraOAuthFailure({
-      message: error?.message,
-      httpStatus: error?.status ?? error?.response?.status,
-      code: error?.code,
-      oauthError: error?.oauthError,
-      suberror: error?.suberror,
-      aadstsCode: error?.aadstsCode,
-      responseBody: error?.responseBody ?? error?.response?.data,
-      context: 'customer',
-      customer: {
-        entraTenantId: mapping.entraTenantId,
-        applicationClientId: boundClientId,
-        operation: 'token',
-      },
-    });
-    steps.push({
-      id: 'tenant_token_mint',
-      title: 'Mint customer tenant token',
-      status: 'fail',
-      startedAt: new Date().toISOString(),
-      durationMs: Date.now() - mintStarted,
-      error: {
-        message: classified.remedy,
-        status: classified.httpStatus ?? undefined,
-        oauthError: classified.oauthError ?? undefined,
-        suberror: classified.suberror ?? undefined,
-        aadstsCode: classified.aadstsCode ?? undefined,
-        requestId: error?.requestId,
-      },
-      recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
-    });
-    applyClassification(state, classified);
-  }
-
-  // 4.2 users_read
-  if (accessToken) {
-    const usersStarted = Date.now();
+  await runner.runStep('tenant_token_mint', 'Mint customer tenant token', {}, async () => {
     try {
-      const read = await directUsersRead(accessToken, `/users?$select=id&$top=1`);
-      firstUserId = read.data?.value?.[0]?.id ?? null;
-      usersReadOk = true;
-      steps.push({
-        id: 'users_read',
-        title: 'Read directory users',
-        status: 'pass',
-        startedAt: new Date().toISOString(),
-        durationMs: Date.now() - usersStarted,
-        http: {
-          method: 'GET',
-          path: '/users?$select=id&$top=1',
-          status: read.status,
-          requestId: read.requestId,
-          clientRequestId: read.clientRequestId,
-        },
-        data: { userFound: Boolean(firstUserId), emptyDirectory: !firstUserId },
+      const minted = await refreshEntraDirectAccessTokenForTenant(tenant, mapping.entraTenantId, {
+        signal,
+        timeoutMs: CLIENT_BUDGET_MS,
       });
-    } catch (error: any) {
-      const classified = classifyEntraOAuthFailure({
-        message: error?.message,
-        httpStatus: error?.response?.status,
-        code: error?.code,
-        responseBody: error?.response?.data,
-        context: 'customer',
-        customer: {
+      accessToken = minted.accessToken;
+      const claims = decodeJwtPayload(minted.accessToken);
+      return {
+        status: 'pass' as const,
+        data: {
           entraTenantId: mapping.entraTenantId,
-          applicationClientId: boundClientId,
-          operation: 'users',
+          tenant: claims?.tid,
+          accessTokenFingerprint: buildTokenFingerprint(minted.accessToken),
+          expiresAt: minted.expiresAt,
         },
-      });
-      steps.push({
-        id: 'users_read',
-        title: 'Read directory users',
-        status: 'fail',
-        startedAt: new Date().toISOString(),
-        durationMs: Date.now() - usersStarted,
-        http: {
-          method: 'GET',
-          path: '/users?$select=id&$top=1',
-          status: error?.response?.status,
-          requestId: error?.response?.headers?.['request-id'],
-        },
-        error: {
-          message: classified.remedy,
-          status: error?.response?.status,
-          requestId: error?.response?.headers?.['request-id'],
-        },
-        recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
-      });
-      applyClassification(state, classified);
-      groupsTokenUsable = true;
-    }
-  } else {
-    steps.push({
-      id: 'users_read',
-      title: 'Read directory users',
-      status: 'skip',
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
-      blockedBy: 'tenant_token_mint',
-    });
-    groupsTokenUsable = false;
-  }
-
-  // 4.3 groups_read
-  if (accessToken && groupsTokenUsable) {
-    const groupsStarted = Date.now();
-    try {
-      const read = await directUsersRead(accessToken, `/groups?$select=id&$top=1`);
-      steps.push({
-        id: 'groups_read',
-        title: 'Read directory groups',
-        status: 'pass',
-        startedAt: new Date().toISOString(),
-        durationMs: Date.now() - groupsStarted,
-        http: {
-          method: 'GET',
-          path: '/groups?$select=id&$top=1',
-          status: read.status,
-          requestId: read.requestId,
-          clientRequestId: read.clientRequestId,
-        },
-        data: { groupFound: Boolean(read.data?.value?.[0]?.id) },
-      });
-    } catch (error: any) {
-      const classified = classifyEntraOAuthFailure({
-        message: error?.message,
-        httpStatus: error?.response?.status,
-        code: error?.code,
-        responseBody: error?.response?.data,
-        context: 'customer',
-        customer: {
-          entraTenantId: mapping.entraTenantId,
-          applicationClientId: boundClientId,
-          operation: 'groups',
-        },
-      });
-      steps.push({
-        id: 'groups_read',
-        title: 'Read directory groups',
-        status: 'fail',
-        startedAt: new Date().toISOString(),
-        durationMs: Date.now() - groupsStarted,
-        http: {
-          method: 'GET',
-          path: '/groups?$select=id&$top=1',
-          status: error?.response?.status,
-          requestId: error?.response?.headers?.['request-id'],
-        },
-        error: {
-          message: classified.remedy,
-          status: error?.response?.status,
-          requestId: error?.response?.headers?.['request-id'],
-        },
-        recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
-      });
-      if (state.category === 'ok') applyClassification(state, classified);
-    }
-  } else {
-    steps.push({
-      id: 'groups_read',
-      title: 'Read directory groups',
-      status: 'skip',
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
-      blockedBy: accessToken ? 'users_read' : 'tenant_token_mint',
-    });
-  }
-
-  // 4.4 entitlement_group_resolves
-  const entStarted = Date.now();
-  if (!portal.entitlementGroupId) {
-    steps.push({
-      id: 'entitlement_group_resolves',
-      title: 'Resolve entitlement group',
-      status: 'skip',
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
-      data: { reason: 'No entitlement group is configured for this client.' },
-    });
-  } else if (!accessToken) {
-    steps.push({
-      id: 'entitlement_group_resolves',
-      title: 'Resolve entitlement group',
-      status: 'skip',
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
-      blockedBy: 'tenant_token_mint',
-    });
-  } else {
-    try {
-      const group = await directUsersRead(
-        accessToken,
-        `/groups/${encodeURIComponent(portal.entitlementGroupId)}?$select=id,displayName,securityEnabled`
-      );
-      const groupData = group.data;
-      const stepData: Record<string, unknown> = {
-        groupId: groupData?.id,
-        displayName: groupData?.displayName,
-        securityEnabled: groupData?.securityEnabled,
       };
-      if (groupData?.securityEnabled === false) {
-        const rec: DiagnosticsRecommendation = {
-          code: 'entitlement_group_not_security',
-          severity: 'warn',
-          text: 'The configured entitlement group is not a security group; membership may not be enforceable.',
-          messageKey: 'entitlementGroupNotSecurity',
-        };
-        state.recommendations.push(rec);
-        state.remedy = state.remedy ?? rec.text;
-        if (state.category === 'ok') state.category = 'other';
-      }
-      if (!firstUserId) {
-        steps.push({
-          id: 'entitlement_group_resolves',
-          title: 'Resolve entitlement group',
-          status: 'pass',
-          startedAt: new Date().toISOString(),
-          durationMs: Date.now() - entStarted,
-          data: { ...stepData, membershipSkipped: 'No user is available to test membership.' },
-        });
-      } else {
-        const membershipStart = Date.now();
-        const res = await axios.post(
-          `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(firstUserId)}/checkMemberGroups`,
-          { groupIds: [portal.entitlementGroupId] },
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'client-request-id': randomUUID(),
-            },
-            timeout: 15000,
-          }
-        );
-        const isMember =
-          Array.isArray(res.data?.value) && res.data.value.includes(portal.entitlementGroupId);
-        steps.push({
-          id: 'entitlement_group_resolves',
-          title: 'Resolve entitlement group',
-          status: 'pass',
-          startedAt: new Date().toISOString(),
-          durationMs: Date.now() - entStarted,
-          data: {
-            ...stepData,
-            membershipTested: true,
-            membershipDurationMs: Date.now() - membershipStart,
-            sampledUserIsMember: isMember,
-          },
-        });
-      }
     } catch (error: any) {
-      if (error?.response?.status === 404) {
-        const rec: DiagnosticsRecommendation = {
-          code: 'entitlement_group_missing',
-          severity: 'fail',
-          text: 'The configured entitlement group no longer exists in this customer tenant.',
-          messageKey: 'entitlementGroupMissing',
+      const classified = classifyEntraOAuthFailure({
+        message: error?.message,
+        httpStatus: error?.status ?? error?.response?.status,
+        code: error?.code,
+        oauthError: error?.oauthError,
+        suberror: error?.suberror,
+        aadstsCode: error?.aadstsCode,
+        responseBody: error?.responseBody ?? error?.response?.data,
+        context: 'customer',
+        customer: {
+          entraTenantId: mapping.entraTenantId,
+          applicationClientId: boundClientId,
+          operation: 'token',
+        },
+      });
+      recState.recommendations.push(...[classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
+      return {
+        status: 'fail' as const,
+        error: {
+          message: classified.remedy,
+          status: classified.httpStatus ?? undefined,
+          oauthError: classified.oauthError ?? undefined,
+          suberror: classified.suberror ?? undefined,
+          aadstsCode: classified.aadstsCode ?? undefined,
+          requestId: error?.requestId,
+        },
+        recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
+      };
+    }
+  });
+
+  await runner.runStep(
+    'users_read',
+    'Read directory users',
+    { requires: ['tenant_token_mint'] },
+    async () => {
+      if (!accessToken) return { status: 'skip' as const, data: { reason: 'No tenant token.' } };
+      try {
+        const read = await directGraphGet(accessToken, '/users?$select=id&$top=1', signal);
+        firstUserId = read.data?.value?.[0]?.id ?? null;
+        usersReadOk = true;
+        return {
+          status: 'pass' as const,
+          http: {
+            method: 'GET',
+            path: '/users?$select=id&$top=1',
+            status: read.status,
+            requestId: read.requestId,
+            clientRequestId: read.clientRequestId,
+          },
+          data: { userFound: Boolean(firstUserId), emptyDirectory: !firstUserId },
         };
-        state.recommendations.push(rec);
-        state.remedy = rec.text;
-        if (state.category === 'ok') state.category = 'other';
-        steps.push({
-          id: 'entitlement_group_resolves',
-          title: 'Resolve entitlement group',
-          status: 'fail',
-          startedAt: new Date().toISOString(),
-          durationMs: Date.now() - entStarted,
-          error: { message: rec.text, status: 404 },
-          recommendations: [rec],
-        });
-      } else {
+      } catch (error: any) {
         const classified = classifyEntraOAuthFailure({
           message: error?.message,
           httpStatus: error?.response?.status,
           code: error?.code,
           responseBody: error?.response?.data,
           context: 'customer',
-          customer: { entraTenantId: mapping.entraTenantId, operation: 'membership' },
+          customer: {
+            entraTenantId: mapping.entraTenantId,
+            applicationClientId: boundClientId,
+            operation: 'users',
+          },
         });
-        if (state.category === 'ok') applyClassification(state, classified);
-        steps.push({
-          id: 'entitlement_group_resolves',
-          title: 'Resolve entitlement group',
-          status: 'fail',
-          startedAt: new Date().toISOString(),
-          durationMs: Date.now() - entStarted,
-          error: { message: classified.remedy },
+        recState.recommendations.push(...[classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
+        return {
+          status: 'fail' as const,
+          http: {
+            method: 'GET',
+            path: '/users?$select=id&$top=1',
+            status: error?.response?.status,
+            requestId: error?.response?.headers?.['request-id'],
+          },
+          error: {
+            message: classified.remedy,
+            status: error?.response?.status,
+            requestId: error?.response?.headers?.['request-id'],
+          },
           recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
-        });
+        };
       }
     }
-  }
+  );
 
-  // 4.5 user_yield_preview — reuses provider normalization/paging through the
-  // supplied-token seam, so realistic Graph rows are mapped correctly.
+  await runner.runStep(
+    'groups_read',
+    'Read directory groups',
+    { requires: ['tenant_token_mint'] },
+    async () => {
+      if (!accessToken) return { status: 'skip' as const, data: { reason: 'No tenant token.' } };
+      try {
+        const read = await directGraphGet(accessToken, '/groups?$select=id&$top=1', signal);
+        return {
+          status: 'pass' as const,
+          http: {
+            method: 'GET',
+            path: '/groups?$select=id&$top=1',
+            status: read.status,
+            requestId: read.requestId,
+            clientRequestId: read.clientRequestId,
+          },
+          data: { groupFound: Boolean(read.data?.value?.[0]?.id) },
+        };
+      } catch (error: any) {
+        const classified = classifyEntraOAuthFailure({
+          message: error?.message,
+          httpStatus: error?.response?.status,
+          code: error?.code,
+          responseBody: error?.response?.data,
+          context: 'customer',
+          customer: {
+            entraTenantId: mapping.entraTenantId,
+            applicationClientId: boundClientId,
+            operation: 'groups',
+          },
+        });
+        recState.recommendations.push(...[classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
+        return {
+          status: 'fail' as const,
+          http: {
+            method: 'GET',
+            path: '/groups?$select=id&$top=1',
+            status: error?.response?.status,
+            requestId: error?.response?.headers?.['request-id'],
+          },
+          error: {
+            message: classified.remedy,
+            status: error?.response?.status,
+            requestId: error?.response?.headers?.['request-id'],
+          },
+          recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
+        };
+      }
+    }
+  );
+
+  await runner.runStep(
+    'entitlement_group_resolves',
+    'Resolve entitlement group',
+    { requires: ['tenant_token_mint'] },
+    async () => {
+      if (!portal.entitlementGroupId) {
+        return {
+          status: 'skip' as const,
+          data: { reason: 'No entitlement group is configured for this client.' },
+        };
+      }
+      if (!accessToken) return { status: 'skip' as const, data: { reason: 'No tenant token.' } };
+
+      try {
+        const group = await directGraphGet(
+          accessToken,
+          `/groups/${encodeURIComponent(portal.entitlementGroupId)}?$select=id,displayName,securityEnabled`,
+          signal
+        );
+        const groupData = group.data;
+        const recommendations: DiagnosticsRecommendation[] = [];
+        if (groupData?.securityEnabled === false) {
+          recommendations.push({
+            code: 'entitlement_group_not_security',
+            severity: 'warn',
+            text: 'The configured entitlement group is not a security group; membership may not be enforceable.',
+            messageKey: 'entitlementGroupNotSecurity',
+          });
+        }
+        const data: Record<string, unknown> = {
+          groupId: groupData?.id,
+          displayName: groupData?.displayName,
+          securityEnabled: groupData?.securityEnabled,
+        };
+        if (!firstUserId) {
+          return {
+            status: recommendations.length ? ('warn' as const) : ('pass' as const),
+            http: {
+              method: 'GET',
+              path: '/groups/{id}',
+              status: group.status,
+              requestId: group.requestId,
+              clientRequestId: group.clientRequestId,
+            },
+            data: { ...data, membershipSkipped: 'No user is available to test membership.' },
+            recommendations,
+          };
+        }
+        const membership = await axios.post(
+          `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(firstUserId)}/checkMemberGroups`,
+          { groupIds: [portal.entitlementGroupId] },
+          {
+            headers: { Authorization: `Bearer ${accessToken}`, 'client-request-id': randomUUID() },
+            timeout: 15000,
+            signal,
+          }
+        );
+        const isMember =
+          Array.isArray(membership.data?.value) &&
+          membership.data.value.includes(portal.entitlementGroupId);
+        return {
+          status: recommendations.length ? ('warn' as const) : ('pass' as const),
+          http: {
+            method: 'POST',
+            path: '/users/{id}/checkMemberGroups',
+            status: membership.status,
+            requestId: membership.headers?.['request-id'],
+          },
+          data: { ...data, membershipTested: true, sampledUserIsMember: isMember },
+          recommendations,
+        };
+      } catch (error: any) {
+        if (error?.response?.status === 404) {
+          const rec: DiagnosticsRecommendation = {
+            code: 'entitlement_group_missing',
+            severity: 'fail',
+            text: 'The configured entitlement group no longer exists in this customer tenant.',
+            messageKey: 'entitlementGroupMissing',
+          };
+          recState.recommendations.push(rec);
+          return {
+            status: 'fail' as const,
+            http: {
+              method: 'GET',
+              path: '/groups/{id}',
+              status: 404,
+              requestId: error?.response?.headers?.['request-id'],
+            },
+            error: { message: rec.text, status: 404, requestId: error?.response?.headers?.['request-id'] },
+            recommendations: [rec],
+          };
+        }
+        const classified = classifyEntraOAuthFailure({
+          message: error?.message,
+          httpStatus: error?.response?.status,
+          code: error?.code,
+          responseBody: error?.response?.data,
+          context: 'customer',
+          customer: { entraTenantId: mapping.entraTenantId, applicationClientId: boundClientId, operation: 'membership' },
+        });
+        recState.recommendations.push(...[classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
+        return {
+          status: 'fail' as const,
+          http: {
+            method: 'POST',
+            path: '/users/{id}/checkMemberGroups',
+            status: error?.response?.status,
+            requestId: error?.response?.headers?.['request-id'],
+          },
+          error: {
+            message: classified.remedy,
+            status: error?.response?.status,
+            requestId: error?.response?.headers?.['request-id'],
+          },
+          recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
+        };
+      }
+    }
+  );
+
+  // Optional user yield preview, resumable across requests via its nextLink.
   if (!includeUserYield) {
-    steps.push({
-      id: 'user_yield_preview',
-      title: 'User yield preview',
-      status: 'skip',
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
+    await runner.runStep('user_yield_preview', 'User yield preview', {}, async () => ({
+      status: 'skip' as const,
       data: { reason: 'User yield preview is off.' },
-    });
-  } else if (!accessToken) {
-    steps.push({
-      id: 'user_yield_preview',
-      title: 'User yield preview',
-      status: 'skip',
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
-      blockedBy: 'tenant_token_mint',
-    });
-  } else if (!usersReadOk) {
-    steps.push({
-      id: 'user_yield_preview',
-      title: 'User yield preview',
-      status: 'skip',
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
-      blockedBy: 'users_read',
-    });
+    }));
+  } else if (!accessToken || !usersReadOk) {
+    await runner.runStep('user_yield_preview', 'User yield preview', {}, async () => ({
+      status: 'skip' as const,
+      data: { reason: 'No usable tenant token/directory read.' },
+    }));
   } else {
-    const yieldStart = Date.now();
+    const startCounts = options.resumeYield?.counts ?? {
+      totalUsers: 0,
+      includedUsers: 0,
+      excluded: {} as Record<string, number>,
+    };
     try {
-      const adapter = new DirectProviderAdapter();
-      const { users, truncated } = await adapter.listUsersForTenantWithToken({
+      const outcome = await pageUserYield({
         tenant,
-        managedTenantId: mapping.managedTenantId,
+        mapping,
         accessToken,
-        maxPages: MAX_YIELD_PAGES,
+        signal,
+        deadline,
+        startNextLink: options.resumeYield?.nextLink ?? null,
+        startCounts,
       });
-      const filtered = await filterEntraUsersForTenant(tenant, users);
-      const excluded = filtered.excluded.reduce<Record<string, number>>((acc, item) => {
-        acc[item.reason] = (acc[item.reason] ?? 0) + 1;
-        return acc;
-      }, {});
-      const allExcluded = users.length > 0 && filtered.included.length === 0;
-      const recs: DiagnosticsRecommendation[] = [];
+      if (!outcome.done) {
+        const pendingOutcome = outcome as {
+          done: false;
+          nextLink: string;
+          counts: EntraPendingYield['counts'];
+        };
+        return {
+          pending: {
+            clientId: mapping.clientId,
+            managedTenantId: mapping.managedTenantId,
+            entraTenantId: mapping.entraTenantId,
+            nextLink: pendingOutcome.nextLink,
+            counts: pendingOutcome.counts,
+          },
+        };
+      }
+      const counts = outcome.counts;
+      const recommendations: DiagnosticsRecommendation[] = [];
+      const allExcluded = counts.totalUsers > 0 && counts.includedUsers === 0;
       if (allExcluded) {
-        recs.push({
+        recommendations.push({
           code: 'all_users_excluded',
           severity: 'warn',
           text: 'Every user in this directory was excluded by the current filter rules; sync would create no contacts.',
           messageKey: 'allUsersExcluded',
         });
-        state.remedy = state.remedy ?? recs[0].text;
-        if (state.category === 'ok') state.category = 'other';
       }
-      if (truncated) {
-        recs.push({
-          code: 'yield_truncated',
-          severity: 'warn',
-          text: `The yield preview stopped after ${MAX_YIELD_PAGES} pages because the directory is large. Counts are a lower bound, not the full directory.`,
-          messageKey: 'yieldTruncated',
-        });
-        state.remedy = state.remedy ?? recs[0].text;
-        if (state.category === 'ok') state.category = 'other';
-      }
-      state.recommendations.push(...recs);
-      steps.push({
-        id: 'user_yield_preview',
-        title: 'User yield preview',
-        status: allExcluded || truncated ? 'warn' : 'pass',
-        startedAt: new Date().toISOString(),
-        durationMs: Date.now() - yieldStart,
+      await runner.runStep('user_yield_preview', 'User yield preview', {}, async () => ({
+        status: recommendations.length ? ('warn' as const) : ('pass' as const),
         data: {
-          totalUsers: users.length,
-          includedUsers: filtered.included.length,
-          excludedUsers: filtered.excluded.length,
-          excludedByReason: excluded,
-          emptyDirectory: users.length === 0,
-          truncated,
+          totalUsers: counts.totalUsers,
+          includedUsers: counts.includedUsers,
+          excludedByReason: counts.excluded,
+          emptyDirectory: counts.totalUsers === 0,
         },
-        recommendations: recs,
-      });
+        recommendations,
+      }));
+      recState.recommendations.push(...recommendations);
     } catch (error: any) {
       const classified = classifyEntraOAuthFailure({
         message: error?.message,
         httpStatus: error?.response?.status,
         code: error?.code,
         context: 'customer',
-        customer: { entraTenantId: mapping.entraTenantId, operation: 'users' },
+        customer: { entraTenantId: mapping.entraTenantId, applicationClientId: boundClientId, operation: 'users' },
       });
-      if (state.category === 'ok') applyClassification(state, classified);
-      steps.push({
-        id: 'user_yield_preview',
-        title: 'User yield preview',
-        status: 'fail',
-        startedAt: new Date().toISOString(),
-        durationMs: Date.now() - yieldStart,
-        error: { message: classified.remedy },
-        recommendations: [classified.recommendation].filter(Boolean) as DiagnosticsRecommendation[],
-      });
-    }
-  }
-
-  const overallStatus = computeOverallStatus(steps);
-  if (state.category === 'ok' && overallStatus !== 'pass') {
-    state.category = 'other';
-  }
-  const isComplete = !steps.some(
-    (step) => step.id === 'user_yield_preview' && (step.data as any)?.truncated === true
-  );
-
-  return {
-    result: {
-      clientId: mapping.clientId,
-      clientName: mapping.clientName,
-      entraTenantId: mapping.entraTenantId,
-      entraTenantDisplayName: mapping.displayName,
-      overallStatus,
-      category: state.category,
-      remedy: state.remedy,
-      steps,
-      isComplete,
-    },
-    recommendations: state.recommendations,
-  };
-}
-
-async function runCippClient(
-  tenant: string,
-  mapping: ConfirmedEntraMapping,
-  includeUserYield: boolean
-): Promise<{ result: EntraClientDiagnosticsResult; recommendations: DiagnosticsRecommendation[] }> {
-  const steps: EntraDiagnosticsStep[] = [];
-  const state: ClientMutableState = { category: 'ok', remedy: null, recommendations: [] };
-  const started = Date.now();
-  const credentials = await getEntraCippCredentials(tenant);
-
-  if (!credentials) {
-    steps.push({
-      id: 'per_tenant_users',
-      title: 'CIPP per-tenant users',
-      status: 'fail',
-      startedAt: new Date().toISOString(),
-      durationMs: 0,
-      error: { message: 'CIPP credentials are not configured.' },
-    });
-    state.category = 'other';
-    state.remedy = 'Configure CIPP credentials on the Connection tab.';
-  } else {
-    let users: Awaited<ReturnType<CippProviderAdapter['listUsersForTenant']>> = [];
-    let accessOk = false;
-    try {
-      users = await new CippProviderAdapter().listUsersForTenant({
-        tenant,
-        managedTenantId: mapping.entraTenantId,
-      });
-      accessOk = true;
-      steps.push({
-        id: 'per_tenant_users',
-        title: 'CIPP per-tenant users',
-        status: 'pass',
-        startedAt: new Date().toISOString(),
-        durationMs: Date.now() - started,
-        http: { method: 'GET', path: '/api/listusers' },
-        data: {
-          sampledUserCount: users.length,
-          sample: users.slice(0, 3).map((u) => ({ id: u.entraObjectId, upn: u.userPrincipalName })),
-          bounded: true,
-        },
-      });
-    } catch (error: any) {
-      // CIPP failures use CIPP remedies (the API key), never a Microsoft GDAP role.
-      const isCredential = error?.code === 'credential-rejected';
-      const rec: DiagnosticsRecommendation = isCredential
-        ? {
-            code: 'cipp_auth_rejected',
-            severity: 'fail',
-            text: 'CIPP rejected the API credential for this tenant. Rotate the CIPP API key from Settings > CIPP > API access; this is not an Azure client secret.',
-            messageKey: 'cippAuthRejected',
-          }
-        : {
-            code: 'cipp_per_tenant_failed',
-            severity: 'fail',
-            text: error?.message || 'CIPP could not read this tenant directory.',
-            messageKey: 'cippPerTenantFailed',
-          };
-      state.recommendations.push(rec);
-      state.remedy = rec.text;
-      state.category = 'other';
-      steps.push({
-        id: 'per_tenant_users',
-        title: 'CIPP per-tenant users',
-        status: 'fail',
-        startedAt: new Date().toISOString(),
-        durationMs: Date.now() - started,
-        error: { message: rec.text, code: error?.code },
+      const rec: DiagnosticsRecommendation = classified.recommendation ?? {
+        code: 'yield_failed',
+        severity: 'warn',
+        text: error?.message || 'The yield preview could not be computed.',
+        messageKey: 'yieldFailed',
+      };
+      recState.recommendations.push(rec);
+      await runner.runStep('user_yield_preview', 'User yield preview', {}, async () => ({
+        status: 'warn' as const,
+        error: { message: rec.text },
         recommendations: [rec],
-      });
-    }
-
-    // Yield is a separate step so its failure never contradicts the access read.
-    if (!includeUserYield) {
-      steps.push({
-        id: 'user_yield_preview',
-        title: 'User yield preview',
-        status: 'skip',
-        startedAt: new Date().toISOString(),
-        durationMs: 0,
-        data: { reason: 'User yield preview is off.' },
-      });
-    } else if (!accessOk) {
-      steps.push({
-        id: 'user_yield_preview',
-        title: 'User yield preview',
-        status: 'skip',
-        startedAt: new Date().toISOString(),
-        durationMs: 0,
-        blockedBy: 'per_tenant_users',
-      });
-    } else {
-      const yieldStart = Date.now();
-      try {
-        const filtered = await filterEntraUsersForTenant(tenant, users);
-        const excluded = filtered.excluded.reduce<Record<string, number>>((acc, item) => {
-          acc[item.reason] = (acc[item.reason] ?? 0) + 1;
-          return acc;
-        }, {});
-        const allExcluded = users.length > 0 && filtered.included.length === 0;
-        const recs: DiagnosticsRecommendation[] = [];
-        if (allExcluded) {
-          recs.push({
-            code: 'all_users_excluded',
-            severity: 'warn',
-            text: 'Every user in this directory was excluded by the current filter rules; sync would create no contacts.',
-            messageKey: 'allUsersExcluded',
-          });
-          state.remedy = state.remedy ?? recs[0].text;
-          if (state.category === 'ok') state.category = 'other';
-        }
-        state.recommendations.push(...recs);
-        steps.push({
-          id: 'user_yield_preview',
-          title: 'User yield preview',
-          status: allExcluded ? 'warn' : 'pass',
-          startedAt: new Date().toISOString(),
-          durationMs: Date.now() - yieldStart,
-          data: {
-            totalUsers: users.length,
-            includedUsers: filtered.included.length,
-            excludedByReason: excluded,
-            emptyDirectory: users.length === 0,
-          },
-          recommendations: recs,
-        });
-      } catch (error: any) {
-        const rec: DiagnosticsRecommendation = {
-          code: 'yield_failed',
-          severity: 'warn',
-          text: error?.message || 'The yield preview could not be computed.',
-          messageKey: 'yieldFailed',
-        };
-        state.recommendations.push(rec);
-        state.remedy = state.remedy ?? rec.text;
-        if (state.category === 'ok') state.category = 'other';
-        steps.push({
-          id: 'user_yield_preview',
-          title: 'User yield preview',
-          status: 'warn',
-          startedAt: new Date().toISOString(),
-          durationMs: Date.now() - yieldStart,
-          error: { message: rec.text },
-          recommendations: [rec],
-        });
-      }
+      }));
     }
   }
 
-  const overallStatus = computeOverallStatus(steps);
-  if (state.category === 'ok' && overallStatus !== 'pass') {
-    state.category = 'other';
+  const steps = runner.steps;
+  let overallStatus = computeOverallStatus(steps);
+  const categories = classifyClientCategory(steps);
+  if (categories === 'ok' && overallStatus !== 'pass') {
+    overallStatus = overallStatus;
   }
+  const recommendationList = dedupeRecommendations([
+    ...recState.recommendations,
+    ...collectStepRecommendations(steps),
+  ]);
 
   return {
     result: {
@@ -726,12 +560,187 @@ async function runCippClient(
       entraTenantId: mapping.entraTenantId,
       entraTenantDisplayName: mapping.displayName,
       overallStatus,
-      category: state.category,
-      remedy: state.remedy,
+      category: categories,
+      remedy: recommendationList[0]?.text ?? null,
       steps,
       isComplete: true,
     },
-    recommendations: state.recommendations,
+  };
+}
+
+/**
+ * Deterministic primary-failure precedence for a client result. A warning that
+ * needs attention (including all-users-excluded) belongs to `other`, not `ok`.
+ */
+function classifyClientCategory(steps: EntraDiagnosticsStep[]): EntraClientOutcomeCategory {
+  const has = (code: string) =>
+    steps.some((step) => (step.recommendations ?? []).some((rec) => rec.code === code));
+  if (has('customer_consent_required') || has('partner_consent_required')) return 'need_consent';
+  if (has('conditional_access')) return 'conditional_access';
+  if (has('customer_directory_role_missing')) return 'missing_role';
+  const failed = steps.some((step) => step.status === 'fail');
+  const warned = steps.some((step) => step.status === 'warn');
+  if (failed) return 'other';
+  if (warned) return 'other';
+  return 'ok';
+}
+
+async function runCippClient(options: {
+  tenant: string;
+  mapping: ConfirmedEntraMapping;
+  includeUserYield: boolean;
+}): Promise<ClientRunOutput> {
+  const { tenant, mapping, includeUserYield } = options;
+  const runner = createEntraStepRunner();
+  const recState: ClientRecommendationState = { recommendations: [] };
+  const credentials = await getEntraCippCredentials(tenant);
+
+  if (!credentials) {
+    await runner.runStep('per_tenant_users', 'CIPP per-tenant users', {}, async () => {
+      const rec: DiagnosticsRecommendation = {
+        code: 'cipp_credentials_missing',
+        severity: 'fail',
+        text: 'CIPP credentials are not configured.',
+        messageKey: 'cippCredentialsMissing',
+      };
+      recState.recommendations.push(rec);
+      return { status: 'fail' as const, error: { message: rec.text }, recommendations: [rec] };
+    });
+  } else {
+    let users: Awaited<ReturnType<CippProviderAdapter['listUsersForTenant']>> = [];
+    let accessOk = false;
+    await runner.runStep('per_tenant_users', 'CIPP per-tenant users', {}, async () => {
+      try {
+        users = await new CippProviderAdapter().listUsersForTenant({
+          tenant,
+          managedTenantId: mapping.entraTenantId,
+        });
+        accessOk = true;
+        return {
+          status: 'pass' as const,
+          http: { method: 'GET', path: '/api/listusers' },
+          data: { sampledUserCount: users.length, bounded: true },
+        };
+      } catch (error: any) {
+        const isCredential = error?.code === 'credential-rejected';
+        const rec: DiagnosticsRecommendation = isCredential
+          ? {
+              code: 'cipp_auth_rejected',
+              severity: 'fail',
+              text: 'CIPP rejected the API credential for this tenant. Rotate the CIPP API key from Settings > CIPP > API access; this is not an Azure client secret.',
+              messageKey: 'cippAuthRejected',
+            }
+          : {
+              code: 'cipp_per_tenant_failed',
+              severity: 'fail',
+              text: error?.message || 'CIPP could not read this tenant directory.',
+              messageKey: 'cippPerTenantFailed',
+            };
+        recState.recommendations.push(rec);
+        return { status: 'fail' as const, error: { message: rec.text, code: error?.code }, recommendations: [rec] };
+      }
+    });
+
+    await runner.runStep(
+      'user_yield_preview',
+      'User yield preview',
+      { requires: ['per_tenant_users'] },
+      async () => {
+        if (!includeUserYield) {
+          return { status: 'skip' as const, data: { reason: 'User yield preview is off.' } };
+        }
+        if (!accessOk) {
+          return { status: 'skip' as const, data: { reason: 'No usable CIPP directory read.' } };
+        }
+        try {
+          const filtered = await filterEntraUsersForTenant(tenant, users);
+          const excluded = filtered.excluded.reduce<Record<string, number>>((acc, item) => {
+            acc[item.reason] = (acc[item.reason] ?? 0) + 1;
+            return acc;
+          }, {});
+          const allExcluded = users.length > 0 && filtered.included.length === 0;
+          const recommendations: DiagnosticsRecommendation[] = allExcluded
+            ? [
+                {
+                  code: 'all_users_excluded',
+                  severity: 'warn',
+                  text: 'Every user in this directory was excluded by the current filter rules; sync would create no contacts.',
+                  messageKey: 'allUsersExcluded',
+                },
+              ]
+            : [];
+          recState.recommendations.push(...recommendations);
+          return {
+            status: allExcluded ? ('warn' as const) : ('pass' as const),
+            data: {
+              totalUsers: users.length,
+              includedUsers: filtered.included.length,
+              excludedByReason: excluded,
+              emptyDirectory: users.length === 0,
+            },
+            recommendations,
+          };
+        } catch (error: any) {
+          const rec: DiagnosticsRecommendation = {
+            code: 'yield_failed',
+            severity: 'warn',
+            text: error?.message || 'The yield preview could not be computed.',
+            messageKey: 'yieldFailed',
+          };
+          recState.recommendations.push(rec);
+          return { status: 'warn' as const, error: { message: rec.text }, recommendations: [rec] };
+        }
+      }
+    );
+  }
+
+  const steps = runner.steps;
+  const overallStatus = computeOverallStatus(steps);
+  return {
+    result: {
+      clientId: mapping.clientId,
+      clientName: mapping.clientName,
+      entraTenantId: mapping.entraTenantId,
+      entraTenantDisplayName: mapping.displayName,
+      overallStatus,
+      category: classifyClientCategory(steps),
+      remedy: dedupeRecommendations(recState.recommendations)[0]?.text ?? null,
+      steps,
+      isComplete: true,
+    },
+  };
+}
+
+function zeroAggregate(): Record<EntraClientOutcomeCategory, number> {
+  return { ok: 0, need_consent: 0, conditional_access: 0, missing_role: 0, other: 0 };
+}
+
+function partialContinuation(
+  base: {
+    total: number;
+    completed: number;
+    clients: EntraClientDiagnosticsResult[];
+    aggregate: Record<EntraClientOutcomeCategory, number>;
+    recommendations: DiagnosticsRecommendation[];
+    startedAt: number;
+  },
+  error: string
+): EntraClientDiagnosticsContinuation {
+  return {
+    jobId: '',
+    scope: 'clients',
+    total: base.total,
+    completed: base.completed,
+    isDone: false,
+    expiresAt: new Date().toISOString(),
+    clients: base.clients,
+    aggregate: base.aggregate,
+    overallStatus: computeOverallStatus(base.clients.map((c) => ({ status: c.overallStatus }))),
+    error,
+    steps: [],
+    recommendations: base.recommendations,
+    startedAt: new Date(base.startedAt).toISOString(),
+    completedAt: null,
   };
 }
 
@@ -744,11 +753,13 @@ function emptyContinuation(message: string, total = 0): EntraClientDiagnosticsCo
     isDone: true,
     expiresAt: new Date().toISOString(),
     clients: [],
-    aggregate: aggregateClientCategories([]),
+    aggregate: zeroAggregate(),
     overallStatus: 'fail',
     error: message,
     steps: [],
     recommendations: [],
+    startedAt: new Date().toISOString(),
+    completedAt: new Date().toISOString(),
   };
 }
 
@@ -780,8 +791,6 @@ export async function runEntraClientAccessDiagnostics(
     if ((payload.connectionId ?? null) !== (connection.connection_id ?? null)) {
       return emptyContinuation('The Entra connection was reconnected since this run started. Restart the run.');
     }
-    // Revalidate every selected mapping's identity; a removed or changed
-    // mapping must be surfaced, never silently skipped into a green run.
     const changed: string[] = [];
     for (const selection of payload.selection) {
       const current = mappingByClientId.get(selection.clientId);
@@ -805,14 +814,26 @@ export async function runEntraClientAccessDiagnostics(
   let includeUserYield: boolean;
   let offset: number;
   let total: number;
-  let accumulated: EntraClientDiagnosticsResult[];
+  let recentResults: EntraClientDiagnosticsResult[];
+  let aggregate: Record<EntraClientOutcomeCategory, number>;
+  let accumulatedRecs: DiagnosticsRecommendation[];
+  let pending: EntraPendingYield | null;
+  let startedAt: number;
+  let failedCount: number;
+  let warnCount: number;
 
   if (payload) {
     selection = payload.selection;
     includeUserYield = payload.includeUserYield;
     offset = payload.offset;
     total = payload.total;
-    accumulated = payload.results;
+    recentResults = payload.recentResults;
+    aggregate = payload.aggregate;
+    accumulatedRecs = payload.recommendations;
+    pending = payload.pending;
+    startedAt = payload.startedAt;
+    failedCount = payload.failedCount;
+    warnCount = payload.warnCount;
   } else {
     includeUserYield = input.includeUserYield ?? false;
     let chosen: ConfirmedEntraMapping[];
@@ -820,6 +841,12 @@ export async function runEntraClientAccessDiagnostics(
       chosen = allMappings;
     } else if (Array.isArray(input.clientIds)) {
       const unique = Array.from(new Set(input.clientIds));
+      if (unique.length > MAX_SELECTION) {
+        return emptyContinuation(
+          `Too many selected clients (${unique.length}); the maximum is ${MAX_SELECTION}.`,
+          unique.length
+        );
+      }
       const foreign = unique.filter((id) => !mappingByClientId.has(id));
       if (foreign.length > 0) {
         return emptyContinuation(
@@ -838,7 +865,13 @@ export async function runEntraClientAccessDiagnostics(
     }));
     offset = 0;
     total = selection.length;
-    accumulated = [];
+    recentResults = [];
+    aggregate = zeroAggregate();
+    accumulatedRecs = [];
+    pending = null;
+    startedAt = Date.now();
+    failedCount = 0;
+    warnCount = 0;
   }
 
   if (total === 0) {
@@ -850,11 +883,28 @@ export async function runEntraClientAccessDiagnostics(
       isDone: true,
       expiresAt: new Date().toISOString(),
       clients: [],
-      aggregate: aggregateClientCategories([]),
+      aggregate: zeroAggregate(),
       overallStatus: 'pass',
       steps: [],
       recommendations: [],
+      startedAt: new Date(startedAt).toISOString(),
+      completedAt: new Date().toISOString(),
     };
+  }
+
+  // Validate signing capability before doing expensive work when more than one
+  // request will be required.
+  if (total > MAX_CLIENTS_PER_REQUEST) {
+    try {
+      assertContinuationSigningAvailable();
+    } catch (error) {
+      return partialContinuation(
+        { total, completed: offset, clients: [], aggregate, recommendations: accumulatedRecs, startedAt },
+        error instanceof DiagnosticsSigningSecretUnavailableError
+          ? error.message
+          : 'Entra diagnostics cannot continue because signing is misconfigured.'
+      );
+    }
   }
 
   const boundClientId =
@@ -863,81 +913,232 @@ export async function runEntraClientAccessDiagnostics(
       : null;
 
   const deadline = Date.now() + REQUEST_BUDGET_MS;
-  let cursor = offset;
-  const batchResults: EntraClientDiagnosticsResult[] = [];
+  const newResults: EntraClientDiagnosticsResult[] = [];
+  const newRecs: DiagnosticsRecommendation[] = [];
 
-  while (cursor < selection.length && Date.now() < deadline) {
-    const batch = selection.slice(cursor, cursor + MAX_CLIENTS_IN_FLIGHT);
-    const settled = await Promise.all(
-      batch.map(async (entry) => {
-        const mapping = mappingByClientId.get(entry.clientId);
-        if (!mapping) return null;
-        return connection.connection_type === 'cipp'
-          ? runCippClient(tenant, mapping, includeUserYield)
-          : runDirectClient(tenant, mapping, boundClientId, includeUserYield);
-      })
-    );
-    for (const outcome of settled) {
-      if (!outcome) continue;
-      batchResults.push(outcome.result);
+  const recordResult = (result: EntraClientDiagnosticsResult) => {
+    newResults.push(result);
+    recentResults = [...recentResults, result].slice(-MAX_EMBEDDED_RESULTS);
+    aggregate = addCategory(aggregate, result.category);
+    newRecs.push(...collectStepRecommendations(result.steps));
+    if (result.overallStatus === 'fail') failedCount += 1;
+    else if (result.overallStatus === 'warn') warnCount += 1;
+  };
+
+  const base = {
+    tenant,
+    userId,
+    connection,
+    selection,
+    includeUserYield,
+    total,
+    accumulatedRecs,
+    newResults,
+    newRecs,
+    startedAt,
+    get failedCount() {
+      return failedCount;
+    },
+    get warnCount() {
+      return warnCount;
+    },
+  };
+
+  // Resume a pending yield first, else start at the next finalized offset.
+  let cursor = offset;
+  if (pending) {
+    const mapping = mappingByClientId.get(pending.clientId);
+    if (!mapping) {
+      return emptyContinuation('The pending client mapping no longer exists. Restart the run.', total);
     }
-    cursor += batch.length;
-    if (Date.now() >= deadline) break;
+    const outcome = await runClientWithBudget({
+      connection,
+      tenant,
+      mapping,
+      boundClientId,
+      includeUserYield,
+      deadline,
+      resumeYield: pending,
+    });
+    if (outcome.pending) {
+      return finalizeOrContinue({
+        ...base,
+        offset,
+        recentResults,
+        aggregate,
+        pending: outcome.pending,
+      });
+    }
+    if (outcome.result) {
+      recordResult(outcome.result);
+      cursor = offset + 1;
+      pending = null;
+    }
   }
 
-  batchResults.sort(
-    (a, b) => selection.findIndex((s) => s.clientId === a.clientId) - selection.findIndex((s) => s.clientId === b.clientId)
-  );
-  accumulated = [...accumulated, ...batchResults];
+  while (cursor < selection.length && newResults.length < MAX_CLIENTS_PER_REQUEST && Date.now() < deadline) {
+    const entry = selection[cursor];
+    const mapping = mappingByClientId.get(entry.clientId);
+    if (!mapping) {
+      cursor += 1;
+      continue;
+    }
+    const outcome = await runClientWithBudget({
+      connection,
+      tenant,
+      mapping,
+      boundClientId,
+      includeUserYield,
+      deadline,
+      resumeYield: null,
+    });
+    if (outcome.pending) {
+      return finalizeOrContinue({
+        ...base,
+        offset: cursor,
+        recentResults,
+        aggregate,
+        pending: outcome.pending,
+      });
+    }
+    if (outcome.result) {
+      recordResult(outcome.result);
+    }
+    cursor += 1;
+  }
+
   const isDone = cursor >= total;
+  return finalizeOrContinue({
+    ...base,
+    offset: cursor,
+    recentResults,
+    aggregate,
+    pending: null,
+    forceDone: isDone,
+  });
+}
 
-  const aggregate = aggregateClientCategories(accumulated.map((r) => r.category));
-  const overallStatus = computeOverallStatus(
-    accumulated.map((r) => ({ status: r.overallStatus }))
+async function runClientWithBudget(params: {
+  connection: any;
+  tenant: string;
+  mapping: ConfirmedEntraMapping;
+  boundClientId: string | null;
+  includeUserYield: boolean;
+  deadline: number;
+  resumeYield: EntraPendingYield | null;
+}): Promise<ClientRunOutput> {
+  const remaining = params.deadline - Date.now();
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    Math.max(1000, Math.min(CLIENT_BUDGET_MS, remaining))
   );
+  try {
+    if (params.connection.connection_type === 'cipp') {
+      return await runCippClient({
+        tenant: params.tenant,
+        mapping: params.mapping,
+        includeUserYield: params.includeUserYield,
+      });
+    }
+    return await runDirectClient({
+      tenant: params.tenant,
+      mapping: params.mapping,
+      boundClientId: params.boundClientId,
+      includeUserYield: params.includeUserYield,
+      signal: controller.signal,
+      deadline: params.deadline,
+      resumeYield: params.resumeYield,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-  const expiresAt = Date.now() + DEFAULT_CONTINUATION_TTL_MS;
+function addCategory(
+  aggregate: Record<EntraClientOutcomeCategory, number>,
+  category: EntraClientOutcomeCategory
+): Record<EntraClientOutcomeCategory, number> {
+  return { ...aggregate, [category]: aggregate[category] + 1 };
+}
+
+function finalizeOrContinue(params: {
+  tenant: string;
+  userId: string;
+  connection: any;
+  selection: EntraContinuationSelection[];
+  includeUserYield: boolean;
+  offset: number;
+  total: number;
+  recentResults: EntraClientDiagnosticsResult[];
+  aggregate: Record<EntraClientOutcomeCategory, number>;
+  accumulatedRecs: DiagnosticsRecommendation[];
+  pending: EntraPendingYield | null;
+  newResults: EntraClientDiagnosticsResult[];
+  newRecs: DiagnosticsRecommendation[];
+  startedAt: number;
+  failedCount: number;
+  warnCount: number;
+  forceDone?: boolean;
+}): EntraClientDiagnosticsContinuation {
+  const isDone = params.forceDone ?? (params.offset >= params.total && !params.pending);
+  const recommendations = dedupeRecommendations([
+    ...params.accumulatedRecs,
+    ...params.newRecs,
+  ]).slice(-MAX_EMBEDDED_RECOMMENDATIONS);
+
+  const safeNew = params.newResults.map((r) => sanitizeClient(r, true));
+  const safeRecommendations = sanitizeRecommendations(recommendations, true);
+  const overallStatus =
+    params.failedCount > 0 ? 'fail' : params.warnCount > 0 ? 'warn' : 'pass';
+
   let jobId = '';
+  let error: string | undefined;
   if (!isDone) {
     try {
       jobId = signContinuation({
         v: 1,
-        tenant,
-        userId,
+        tenant: params.tenant,
+        userId: params.userId,
         scope: 'clients',
-        connectionType: connection.connection_type,
-        connectionId: connection.connection_id ?? null,
-        selection,
-        includeUserYield,
-        offset: cursor,
-        total,
-        results: accumulated,
-        exp: expiresAt,
+        connectionType: params.connection.connection_type,
+        connectionId: params.connection.connection_id ?? null,
+        selection: params.selection,
+        includeUserYield: params.includeUserYield,
+        offset: params.offset,
+        total: params.total,
+        recentResults: params.recentResults,
+        aggregate: params.aggregate,
+        failedCount: params.failedCount,
+        warnCount: params.warnCount,
+        recommendations,
+        pending: params.pending,
+        startedAt: params.startedAt,
+        exp: Date.now() + DEFAULT_CONTINUATION_TTL_MS,
       });
-    } catch (error) {
-      if (error instanceof DiagnosticsSigningSecretUnavailableError) {
-        return emptyContinuation(error.message, total);
-      }
-      throw error;
+    } catch (signError) {
+      error =
+        signError instanceof DiagnosticsContinuationError ||
+        signError instanceof DiagnosticsSigningSecretUnavailableError
+          ? signError.message
+          : 'Entra diagnostics could not continue.';
     }
   }
-
-  const safeBatch = batchResults.map((r) => sanitizeClient(r, true));
-  const safeAccumulated = accumulated.map((r) => sanitizeClient(r, true));
 
   return {
     jobId,
     scope: 'clients',
-    total,
-    completed: cursor,
-    isDone,
-    expiresAt: new Date(expiresAt).toISOString(),
-    clients: safeBatch,
-    aggregate,
+    total: params.total,
+    completed: params.offset,
+    isDone: isDone && !error,
+    expiresAt: new Date(Date.now() + DEFAULT_CONTINUATION_TTL_MS).toISOString(),
+    clients: safeNew,
+    aggregate: params.aggregate,
     overallStatus,
+    error,
     steps: [],
-    recommendations: dedupeRecommendations(
-      safeAccumulated.flatMap((r) => r.steps.flatMap((s) => s.recommendations ?? []))
-    ),
+    recommendations: safeRecommendations,
+    startedAt: new Date(params.startedAt).toISOString(),
+    completedAt: isDone && !error ? new Date().toISOString() : null,
   };
 }

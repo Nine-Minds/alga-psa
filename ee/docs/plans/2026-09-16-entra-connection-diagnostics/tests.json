@@ -334,7 +334,7 @@
   {
     "id": "T030",
     "description": "Integration: Exercise omitted versus empty selection, tampered/expired continuation, changed mapping/connection, rechecked permissions, interrupted run and retry; reject unsafe continuation before external calls and preserve completed UI results.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F068",
@@ -381,7 +381,7 @@
   {
     "id": "T034",
     "description": "Component: Verify default all-mapped selection, off-by-default yield, explicit empty selection and >20 confirmation; exercise incremental progress, duplicate-start prevention, partial failure/retry and no more polling after close.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075",
       "F077",
@@ -392,7 +392,7 @@
   {
     "id": "T035",
     "description": "Component: Exercise copy/open/navigate recommendations and copy/download support bundle on secret-sentinel fixtures; verify consent URL action, shared export serialization, includeIdentifiers control and no secret leakage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078",
       "F081",

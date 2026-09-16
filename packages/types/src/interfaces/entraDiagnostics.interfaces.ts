@@ -121,6 +121,9 @@ export interface EntraClientDiagnosticsContinuation {
   error?: string;
   steps: EntraDiagnosticsStep[];
   recommendations: DiagnosticsRecommendation[];
+  /** When the client run started and (if finished) completed. */
+  startedAt?: string;
+  completedAt?: string | null;
 }
 
 export interface EntraDiagnosticsActionEnvelope {

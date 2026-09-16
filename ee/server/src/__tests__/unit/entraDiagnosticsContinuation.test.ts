@@ -20,7 +20,13 @@ function basePayload(overrides: Partial<EntraClientContinuationPayload> = {}): E
     includeUserYield: false,
     offset: 0,
     total: 1,
-    results: [],
+    recentResults: [],
+    aggregate: { ok: 0, need_consent: 0, conditional_access: 0, missing_role: 0, other: 0 },
+    failedCount: 0,
+    warnCount: 0,
+    recommendations: [],
+    pending: null,
+    startedAt: Date.now(),
     exp: Date.now() + 60_000,
     ...overrides,
   };
@@ -57,18 +63,38 @@ describe('continuation signing', () => {
     expect(verifyContinuation(token, 'secret-b-1234567890')).toBeNull();
   });
 
-  it('rejects structurally invalid payloads', () => {
-    // Missing selection and connectionId.
+  it('refuses to sign structurally invalid payloads', () => {
     const payload: any = basePayload();
     delete payload.selection;
+    expect(() => signContinuation(payload, SECRET)).toThrow('Continuation selection is missing.');
+  });
+
+  it('rejects a payload whose recentResults exceed the offset', () => {
+    const result = {
+      clientId: 'c1',
+      clientName: null,
+      entraTenantId: 'entra-1',
+      entraTenantDisplayName: null,
+      overallStatus: 'pass' as const,
+      category: 'ok' as const,
+      remedy: null,
+      steps: [],
+      isComplete: true,
+    };
+    const payload = basePayload({ offset: 0, recentResults: [result] });
     const token = signContinuation(payload, SECRET);
     expect(verifyContinuation(token, SECRET)).toBeNull();
   });
 
-  it('rejects a payload whose results length disagrees with offset', () => {
-    const payload = basePayload({ offset: 3, total: 3, results: [] });
-    const token = signContinuation(payload, SECRET);
-    expect(verifyContinuation(token, SECRET)).toBeNull();
+  it('rejects an over-limit selection before signing', () => {
+    const selection = Array.from({ length: 501 }, (_, i) => ({
+      clientId: `c${i}`,
+      managedTenantId: `m${i}`,
+      entraTenantId: `e${i}`,
+    }));
+    expect(() =>
+      signContinuation(basePayload({ selection, total: selection.length }), SECRET)
+    ).toThrow(/Too many selected clients/);
   });
 
   it('fails safely when no deployment signing secret is configured', () => {

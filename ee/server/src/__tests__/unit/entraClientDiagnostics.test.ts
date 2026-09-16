@@ -32,6 +32,8 @@ const hoisted = vi.hoisted(() => {
     filterResult: { included: [], excluded: [] } as any,
     cippUsers: [] as any[],
     cippError: null as any,
+    pageNextLink: null as string | null,
+    pageError: null as any,
   };
 });
 
@@ -76,8 +78,9 @@ vi.mock('@ee/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
 
 vi.mock('@ee/lib/integrations/entra/providers/direct/directProviderAdapter', () => ({
   DirectProviderAdapter: class {
-    async listUsersForTenantWithToken() {
-      return { users: hoisted.users, pages: 1, truncated: false };
+    async listUsersPageWithToken() {
+      if (hoisted.pageError) throw hoisted.pageError;
+      return { users: hoisted.users, nextLink: hoisted.pageNextLink ?? null };
     }
   },
   createDirectProviderAdapter: () => ({ listManagedTenants: async () => [] }),
@@ -121,9 +124,38 @@ vi.mock('axios', () => {
 });
 
 import { runEntraClientAccessDiagnostics } from '@ee/lib/integrations/entra/diagnostics/clientDiagnostics';
-import { signContinuation } from '@ee/lib/integrations/entra/diagnostics/continuation';
+import {
+  signContinuation,
+  type EntraClientContinuationPayload,
+} from '@ee/lib/integrations/entra/diagnostics/continuation';
 
 const SECRET = 'client-test-signing-secret-1234';
+
+function continuationPayload(
+  overrides: Partial<EntraClientContinuationPayload> = {}
+): EntraClientContinuationPayload {
+  return {
+    v: 1,
+    tenant: 'tenant-1',
+    userId: 'user-1',
+    scope: 'clients',
+    connectionType: 'direct',
+    connectionId: 'conn-1',
+    selection: [{ clientId: 'c1', managedTenantId: 'managed-c1', entraTenantId: 'entra-1' }],
+    includeUserYield: false,
+    offset: 0,
+    total: 1,
+    recentResults: [],
+    aggregate: { ok: 0, need_consent: 0, conditional_access: 0, missing_role: 0, other: 0 },
+    failedCount: 0,
+    warnCount: 0,
+    recommendations: [],
+    pending: null,
+    startedAt: Date.now(),
+    exp: Date.now() + 60_000,
+    ...overrides,
+  };
+}
 
 describe('runEntraClientAccessDiagnostics', () => {
   beforeEach(() => {
@@ -137,11 +169,54 @@ describe('runEntraClientAccessDiagnostics', () => {
     hoisted.filterResult = { included: hoisted.users, excluded: [] };
     hoisted.cippError = null;
     hoisted.cippUsers = [];
+    hoisted.pageNextLink = null;
+    hoisted.pageError = null;
     vi.clearAllMocks();
   });
 
   afterAll(() => {
     delete process.env.ENTRA_DIAGNOSTICS_JOB_SECRET;
+  });
+
+  it('processes at most three clients per request and resumes via continuation', async () => {
+    hoisted.mappings = [
+      hoisted.mapping('c1', 'entra-1'),
+      hoisted.mapping('c2', 'entra-2'),
+      hoisted.mapping('c3', 'entra-3'),
+      hoisted.mapping('c4', 'entra-4'),
+    ];
+    const first = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', {
+      clientIds: ['c1', 'c2', 'c3', 'c4'],
+    });
+    expect(first.clients).toHaveLength(3);
+    expect(first.completed).toBe(3);
+    expect(first.isDone).toBe(false);
+    expect(first.jobId).toBeTruthy();
+
+    const second = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', {
+      continuation: first.jobId,
+    });
+    expect(second.clients).toHaveLength(1);
+    expect(second.clients[0].clientId).toBe('c4');
+    expect(second.completed).toBe(4);
+    expect(second.isDone).toBe(true);
+    expect(second.overallStatus).toBe('pass');
+  });
+
+  it('does not finalize a client whose resumable preview is incomplete', async () => {
+    hoisted.users = [
+      { entraObjectId: 'u1', email: 'a@c1.example', userPrincipalName: 'a@c1.example', accountEnabled: true },
+    ];
+    hoisted.filterResult = { included: hoisted.users, excluded: [] };
+    hoisted.pageNextLink = 'https://graph.test/users?$skiptoken=next';
+    const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', {
+      clientIds: ['c1'],
+      includeUserYield: true,
+    });
+    expect(result.clients).toHaveLength(0);
+    expect(result.completed).toBe(0);
+    expect(result.isDone).toBe(false);
+    expect(result.jobId).toBeTruthy();
   });
 
   it('returns empty explicitly and never defaults an empty selection to all', async () => {
@@ -184,20 +259,10 @@ describe('runEntraClientAccessDiagnostics', () => {
       managedTenantId: m.managedTenantId,
       entraTenantId: m.entraTenantId,
     }));
-    const continuation = signContinuation({
-      v: 1,
-      tenant: 'tenant-1',
-      userId: 'user-1',
-      scope: 'clients',
-      connectionType: 'direct',
-      connectionId: 'conn-1',
+    const continuation = signContinuation(continuationPayload({
       selection,
-      includeUserYield: false,
-      offset: 0,
       total: 2,
-      results: [],
-      exp: Date.now() + 60_000,
-    });
+    }));
 
     // The mapping now points at a different Entra tenant.
     hoisted.mappings = [hoisted.mapping('c1', 'entra-CHANGED'), hoisted.mapping('c2', 'entra-2')];
@@ -208,39 +273,21 @@ describe('runEntraClientAccessDiagnostics', () => {
   });
 
   it('rejects a continuation bound to a different connection id', async () => {
-    const continuation = signContinuation({
-      v: 1,
-      tenant: 'tenant-1',
-      userId: 'user-1',
-      scope: 'clients',
-      connectionType: 'direct',
+    const continuation = signContinuation(continuationPayload({
       connectionId: 'other-connection',
       selection: [{ clientId: 'c1', managedTenantId: 'managed-c1', entraTenantId: 'entra-1' }],
-      includeUserYield: false,
-      offset: 0,
       total: 1,
-      results: [],
-      exp: Date.now() + 60_000,
-    });
+    }));
     const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { continuation });
     expect(result.error).toMatch(/reconnected/);
   });
 
   it('rejects a continuation for a different user', async () => {
-    const continuation = signContinuation({
-      v: 1,
-      tenant: 'tenant-1',
+    const continuation = signContinuation(continuationPayload({
       userId: 'someone-else',
-      scope: 'clients',
-      connectionType: 'direct',
-      connectionId: 'conn-1',
       selection: [{ clientId: 'c1', managedTenantId: 'managed-c1', entraTenantId: 'entra-1' }],
-      includeUserYield: false,
-      offset: 0,
       total: 1,
-      results: [],
-      exp: Date.now() + 60_000,
-    });
+    }));
     const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { continuation });
     expect(result.error).toMatch(/invalid or has expired/);
   });

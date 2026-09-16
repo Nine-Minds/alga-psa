@@ -19,6 +19,7 @@ import {
 } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { ColumnDefinition } from '@alga-psa/types';
@@ -131,6 +132,9 @@ export function EntraDiagnosticsDialog({
   const [clientError, setClientError] = React.useState<string | null>(null);
   const [clientRecommendations, setClientRecommendations] = React.useState<DiagnosticsRecommendation[]>([]);
   const [clientAggregate, setClientAggregate] = React.useState<Record<EntraClientOutcomeCategory, number> | null>(null);
+  const [clientRunStartedAt, setClientRunStartedAt] = React.useState<string | null>(null);
+  const [clientRunCompletedAt, setClientRunCompletedAt] = React.useState<string | null>(null);
+  const [clientRunComplete, setClientRunComplete] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
 
   // Staleness guard: increments on each open/close so late responses are dropped.
@@ -187,6 +191,16 @@ export function EntraDiagnosticsDialog({
       runTokenRef.current += 1;
       abortRef.current = true;
       setClientsRunning(false);
+      // Prior client results belong to the previous session and are cleared so
+      // they are never shown beside a fresh connection report.
+      setClientResults([]);
+      setClientProgress(null);
+      setClientAggregate(null);
+      setClientRecommendations([]);
+      setClientError(null);
+      setClientRunStartedAt(null);
+      setClientRunCompletedAt(null);
+      setClientRunComplete(false);
       return;
     }
     abortRef.current = false;
@@ -217,6 +231,9 @@ export function EntraDiagnosticsDialog({
       setClientRecommendations([]);
       setClientAggregate(null);
       setClientProgress({ completed: 0, total: clientIds.length });
+      setClientRunStartedAt(new Date().toISOString());
+      setClientRunCompletedAt(null);
+      setClientRunComplete(false);
       let continuation: string | undefined;
       let completed = 0;
       const accumulated: EntraClientDiagnosticsResult[] = [];
@@ -246,6 +263,11 @@ export function EntraDiagnosticsDialog({
           setClientProgress({ completed, total: payload.total });
           setClientAggregate(payload.aggregate);
           if (payload.recommendations?.length) setClientRecommendations(payload.recommendations);
+          // Completion requires the terminal response AND every client to be
+          // genuinely complete (a resumable preview can leave one incomplete).
+          const complete = payload.isDone && accumulated.every((c) => c.isComplete);
+          setClientRunComplete(complete);
+          setClientRunCompletedAt(complete ? payload.completedAt ?? new Date().toISOString() : null);
           continuation = payload.isDone ? undefined : payload.jobId;
           if (!continuation) break;
         } while (continuation);
@@ -302,7 +324,10 @@ export function EntraDiagnosticsDialog({
           }
         : null,
       clientRun: {
-        isComplete: clientProgress ? clientProgress.completed >= clientProgress.total : false,
+        // Honest completion: terminal response AND every client complete.
+        isComplete: clientRunComplete,
+        startedAt: clientRunStartedAt,
+        completedAt: clientRunCompletedAt,
         completed: clientProgress?.completed ?? 0,
         total: clientProgress?.total ?? 0,
         aggregate: clientAggregate,
@@ -319,6 +344,9 @@ export function EntraDiagnosticsDialog({
     clientProgress,
     clientRecommendations,
     clientResults,
+    clientRunComplete,
+    clientRunCompletedAt,
+    clientRunStartedAt,
     includeIdentifiersExport,
     latestFailuresByClient,
     report,
@@ -363,6 +391,17 @@ export function EntraDiagnosticsDialog({
       title: t('integrations.entra.diagnostics.clients.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'overallStatus',
       render: (value) => <Badge variant={statusVariant(value as any)}>{String(value)}</Badge>,
+    },
+    {
+      title: t('integrations.entra.diagnostics.clients.columns.complete', { defaultValue: 'Complete' }),
+      dataIndex: 'isComplete',
+      render: (_value, record) => (
+        <Badge variant={record.isComplete ? 'success' : 'warning'}>
+          {record.isComplete
+            ? t('integrations.entra.diagnostics.clients.complete', { defaultValue: 'Complete' })
+            : t('integrations.entra.diagnostics.clients.partial', { defaultValue: 'Partial' })}
+        </Badge>
+      ),
     },
     {
       title: t('integrations.entra.diagnostics.clients.columns.remedy', { defaultValue: 'Remedy' }),
@@ -646,18 +685,15 @@ export function EntraDiagnosticsDialog({
                 >
                   {t('integrations.entra.diagnostics.clients.clear', { defaultValue: 'Clear' })}
                 </Button>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    id="entra-diag-yield-toggle"
-                    type="checkbox"
-                    checked={includeYield}
-                    onChange={(e) => setIncludeYield(e.target.checked)}
-                    disabled={clientsRunning}
-                  />
-                  {t('integrations.entra.diagnostics.clients.yieldToggle', {
+                <Checkbox
+                  id="entra-diag-yield-toggle"
+                  checked={includeYield}
+                  onChange={(event) => setIncludeYield(event.target.checked)}
+                  disabled={clientsRunning}
+                  label={t('integrations.entra.diagnostics.clients.yieldToggle', {
                     defaultValue: 'User yield preview (more expensive)',
                   })}
-                </label>
+                />
                 <Button
                   id="entra-diag-run-clients"
                   type="button"
@@ -680,6 +716,13 @@ export function EntraDiagnosticsDialog({
                     })}
                   </span>
                 )}
+                {clientRunStartedAt && (
+                  <span className="text-xs text-muted-foreground" id="entra-diag-client-run-window">
+                    {clientRunStartedAt}
+                    {clientRunCompletedAt ? ` → ${clientRunCompletedAt}` : ' …'}
+                    {!clientRunComplete && clientProgress ? ' (partial)' : ''}
+                  </span>
+                )}
               </div>
 
               {mappings.length > 0 && (
@@ -688,28 +731,27 @@ export function EntraDiagnosticsDialog({
                   id="entra-diag-client-picker"
                 >
                   {mappings.map((mapping) => (
-                    <label key={mapping.clientId} className="flex items-center gap-2 py-0.5">
-                      <input
-                        type="checkbox"
-                        checked={selectedClients.includes(mapping.clientId)}
-                        onChange={(e) =>
-                          setSelectedClients((prev) =>
-                            e.target.checked
-                              ? [...new Set([...prev, mapping.clientId])]
-                              : prev.filter((id) => id !== mapping.clientId)
-                          )
-                        }
-                        disabled={clientsRunning}
-                        aria-label={mapping.clientName || mapping.displayName || mapping.clientId}
-                      />
-                      <span className="truncate">
-                        {mapping.clientName ||
-                          mapping.displayName ||
-                          t('integrations.entra.diagnostics.clients.unavailableName', {
-                            defaultValue: 'Unavailable name',
-                          })}
-                      </span>
-                    </label>
+                    <Checkbox
+                      key={mapping.clientId}
+                      id={`entra-diag-client-${mapping.clientId}`}
+                      containerClassName="py-0.5"
+                      checked={selectedClients.includes(mapping.clientId)}
+                      onChange={(event) =>
+                        setSelectedClients((prev) =>
+                          event.target.checked
+                            ? [...new Set([...prev, mapping.clientId])]
+                            : prev.filter((id) => id !== mapping.clientId)
+                        )
+                      }
+                      disabled={clientsRunning}
+                      label={
+                        mapping.clientName ||
+                        mapping.displayName ||
+                        t('integrations.entra.diagnostics.clients.unavailableName', {
+                          defaultValue: 'Unavailable name',
+                        })
+                      }
+                    />
                   ))}
                 </div>
               )}

@@ -193,7 +193,9 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: vi.fn(() => ({
     table: (name: string) => {
       const chain: any = {
-        where() {
+        __where: null,
+        where(arg?: any) {
+          if (arg && typeof arg === 'object') chain.__where = arg;
           return chain;
         },
         whereIn() {
@@ -232,8 +234,14 @@ vi.mock('@alga-psa/db', () => ({
           if (name === 'microsoft_profiles') return hoisted.profile;
           return undefined;
         },
-        then: (resolve: any, reject: any) =>
-          Promise.resolve(queryResults[name] ?? []).then(resolve, reject),
+        then: (resolve: any, reject: any) => {
+          let rows = queryResults[name] ?? [];
+          const where = chain.__where;
+          if (Array.isArray(rows) && where && 'is_dry_run' in where) {
+            rows = rows.filter((row: any) => row.is_dry_run === where.is_dry_run);
+          }
+          return Promise.resolve(rows).then(resolve, reject);
+        },
       };
       return chain;
     },
@@ -261,6 +269,7 @@ vi.mock('axios', () => {
 });
 
 import { runEntraConnectionDiagnostics } from '@ee/lib/integrations/entra/diagnostics/connectionDiagnostics';
+import { getEntraSyncRunProgress } from '@ee/lib/integrations/entra/entraWorkflowClient';
 
 describe('runEntraConnectionDiagnostics', () => {
   beforeEach(() => {
@@ -395,8 +404,51 @@ describe('runEntraConnectionDiagnostics', () => {
       workerEvidence: 'none',
     };
     const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
-    expect(report.steps.find((s) => s.id === 'sync_worker_and_schedule')?.status).toBe('warn');
+    expect(report.steps.find((s) => s.id === 'sync_worker_and_schedule')?.status).toBe('fail');
     expect(report.recommendations.some((r) => r.code === 'temporal_no_workers')).toBe(true);
+  });
+
+  it('evaluates consecutive real failures despite interspersed dry runs and decodes customer context', async () => {
+    queryResults.entra_sync_runs = [
+      { run_id: 'r1', status: 'failed', run_type: 'all-tenants', started_at: '2026-01-05T00:00:00.000Z', completed_at: '2026-01-05T00:01:00.000Z', is_dry_run: false, total_tenants: 2, succeeded_tenants: 0, failed_tenants: 2 },
+      { run_id: 'r2', status: 'partial', run_type: 'all-tenants', started_at: '2026-01-04T00:00:00.000Z', completed_at: '2026-01-04T00:01:00.000Z', is_dry_run: false, total_tenants: 2, succeeded_tenants: 1, failed_tenants: 1 },
+      { run_id: 'd1', status: 'completed', run_type: 'preflight', started_at: '2026-01-03T00:00:00.000Z', completed_at: '2026-01-03T00:00:30.000Z', is_dry_run: true, total_tenants: 1, succeeded_tenants: 1, failed_tenants: 0 },
+      { run_id: 'd2', status: 'completed', run_type: 'preflight', started_at: '2026-01-02T00:00:00.000Z', completed_at: '2026-01-02T00:00:30.000Z', is_dry_run: true, total_tenants: 1, succeeded_tenants: 1, failed_tenants: 0 },
+    ];
+    queryResults.entra_sync_run_tenants = [
+      { run_id: 'r1', created: 1, linked: 2, updated: 3, ambiguous: 4, inactivated: 5 },
+      { run_id: 'r2', created: 0, linked: 0, updated: 0, ambiguous: 0, inactivated: 0 },
+    ];
+    const progressMock = getEntraSyncRunProgress as unknown as ReturnType<typeof vi.fn>;
+    progressMock.mockResolvedValue({
+      run: null,
+      tenantResults: [
+        {
+          managedTenantId: 'managed-1',
+          clientId: 'client-1',
+          status: 'failed',
+          created: 0, linked: 0, updated: 0, ambiguous: 0, inactivated: 0,
+          errorMessage: 'invalid_grant AADSTS65001 consent_required',
+          startedAt: null,
+          completedAt: '2026-01-05T00:01:00.000Z',
+        },
+      ],
+    });
+
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const step = report.steps.find((s) => s.id === 'last_runs');
+    expect(step?.status).toBe('warn');
+    expect(report.recommendations.some((r) => r.code === 'consecutive_sync_failures')).toBe(true);
+
+    const runs = (step?.data as any)?.runs as any[];
+    expect(runs[0].totals).toEqual({ created: 1, linked: 2, updated: 3, ambiguous: 4, inactivated: 5 });
+
+    const decoded = (step?.data as any)?.decodedFailure;
+    expect(decoded?.aadstsCode).toBe('AADSTS65001');
+    expect(decoded?.clientName).toBe('Acme');
+    expect(decoded?.remedy).toMatch(/Reconnecting the partner will not fix/i);
+    const consentRec = report.recommendations.find((r) => r.code === 'customer_consent_required');
+    expect(consentRec?.action?.payload).toContain('/adminconsent?client_id=app-1');
   });
 
   it('fails connection_row and skips direct checks while keeping independent local checks running', async () => {

@@ -12,9 +12,19 @@ const GUID_PATTERN =
 const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const JWT_PATTERN = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{2,}/g;
 const BEARER_PATTERN = /Bearer\s+[A-Za-z0-9._~+/=-]+/gi;
-// key=value / "key": "value" credential forms that appear in error text.
-const SECRET_PAIR_PATTERN =
-  /((?:access|refresh|id|api|client)?[_-]?(?:token|secret|password|key))\s*[:=]\s*("[^"]*"|'[^']*'|[^\s,;&"']+)/gi;
+// Credential key fragment shared by the serialized-JSON patterns below.
+const SECRET_KEY =
+  '(?:access|refresh|id|api|client|application|app)?[_-]?(?:token|secret|password|passphrase|key)';
+// `"refresh_token":"value"` and the backslash-escaped form inside a JSON string.
+const QUOTED_SECRET_PAIR = new RegExp(
+  String.raw`\\?["']?(${SECRET_KEY})\\?["']?\s*\\?[:=]\s*\\?(["'])((?:\\.|[^\\])*?)\\?\2`,
+  'gi'
+);
+// Unquoted `refresh_token=value` forms.
+const UNQUOTED_SECRET_PAIR = new RegExp(
+  String.raw`(${SECRET_KEY})\s*[:=]\s*([^\s,;&"'}\]]+)`,
+  'gi'
+);
 
 const CORRELATION_KEYS = new Set([
   'requestId',
@@ -24,7 +34,16 @@ const CORRELATION_KEYS = new Set([
 ]);
 
 const SENSITIVE_KEY_PATTERN =
-  /(secret|access[_-]?token|refresh[_-]?token|id[_-]?token|api[_-]?token|api[_-]?key|apikey|password|authorization|bearer|credential|passphrase|private[_-]?key)/i;
+  /(client[_-]?secret|access[_-]?token|refresh[_-]?token|id[_-]?token|api[_-]?token|api[_-]?key|apikey|password|authorization|bearer|credential|passphrase|private[_-]?key|secret)/i;
+
+// Metadata about a credential (expiry, presence, fingerprint) is safe and must
+// not be fingerprinted or replaced by the secret sanitizer.
+const CREDENTIAL_METADATA_KEY_PATTERN =
+  /(expires?|expiry|expire|present|known|fingerprint|lastfour|last_four|scope|type|exists|count)/i;
+
+function isSensitiveKey(key: string): boolean {
+  return SENSITIVE_KEY_PATTERN.test(key) && !CREDENTIAL_METADATA_KEY_PATTERN.test(key);
+}
 
 const IDENTIFIER_KEY_PATTERN =
   /(tenantid|tenant_id|clientid|client_id|userid|user_id|objectid|object_id|appid|app_id|managedtenantid|managed_tenant_id|entratenantid|entra_tenant_id|principalid|profileid|profile_id|connectionid|connection_id|jobid|job_id|runid|run_id|queueitemid|queue_item_id|groupid|group_id|mappingid|mapping_id|assignedby|assigned_by)/i;
@@ -38,7 +57,8 @@ function redactSecrets(text: string): string {
   return text
     .replace(BEARER_PATTERN, 'Bearer <redacted>')
     .replace(JWT_PATTERN, '<redacted-token>')
-    .replace(SECRET_PAIR_PATTERN, (_match, key: string) => `${key}=<redacted>`);
+    .replace(QUOTED_SECRET_PAIR, (_match, key: string) => `${key}=<redacted>`)
+    .replace(UNQUOTED_SECRET_PAIR, (_match, key: string) => `${key}=<redacted>`);
 }
 
 function redactIdentifiers(text: string): string {
@@ -83,7 +103,7 @@ export function sanitizeDeep(value: unknown, includeIdentifiers: boolean): unkno
         out[key] = entry;
         continue;
       }
-      if (SENSITIVE_KEY_PATTERN.test(key)) {
+      if (isSensitiveKey(key)) {
         out[key] = sanitizeSensitiveValue(entry, includeIdentifiers);
         continue;
       }

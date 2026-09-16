@@ -131,6 +131,7 @@ describe('CippProviderAdapter seams', () => {
 
     const probe = await new CippProviderAdapter().probeTenantList('t1');
 
+    expect(probe.outcome).toBe('ok');
     expect(probe.reachable).toBe(true);
     expect(probe.endpoint).toContain('/api/tenant/list');
     expect(probe.tenants.map((t) => t.entraTenantId)).toEqual(['tenant-a']);
@@ -142,7 +143,36 @@ describe('CippProviderAdapter seams', () => {
       Object.assign(new Error('unauthorized'), { isAxiosError: true, response: { status: 401 } })
     );
     const probe = await new CippProviderAdapter().probeTenantList('t1');
+    expect(probe.outcome).toBe('auth_rejected');
     expect(probe.reachable).toBe(true);
     expect(probe.authRejected).toBe(true);
+  });
+
+  it('reports all-candidate HTTP errors as http_error, not an empty list', async () => {
+    hoisted.get.mockRejectedValue(
+      Object.assign(new Error('server error'), { isAxiosError: true, response: { status: 500 } })
+    );
+    const probe = await new CippProviderAdapter().probeTenantList('t1');
+    expect(probe.outcome).toBe('http_error');
+    expect(probe.reachable).toBe(true);
+    expect(probe.tenants).toEqual([]);
+    expect(probe.attempted.length).toBe(3);
+  });
+
+  it('reports a 200 non-list payload as invalid_payload', async () => {
+    hoisted.get.mockResolvedValueOnce({ status: 200, data: { ok: true } });
+    const probe = await new CippProviderAdapter().probeTenantList('t1');
+    expect(probe.outcome).toBe('invalid_payload');
+    expect(probe.reachable).toBe(true);
+  });
+
+  it('reports DNS failures as unreachable with the network cause', async () => {
+    hoisted.get.mockRejectedValue(
+      Object.assign(new Error('getaddrinfo ENOTFOUND cipp.test'), { isAxiosError: true, code: 'ENOTFOUND' })
+    );
+    const probe = await new CippProviderAdapter().probeTenantList('t1');
+    expect(probe.outcome).toBe('unreachable');
+    expect(probe.reachable).toBe(false);
+    expect(probe.networkCode).toBe('ENOTFOUND');
   });
 });

@@ -148,20 +148,18 @@ export async function describeEntraSchedule(tenant: string): Promise<EntraSchedu
   const scheduleId = `${ENTRA_SCHEDULE_ID_PREFIX}:${tenant}`;
   const result = await withTemporalClient(async (client) => {
     const handle = client.schedule.getHandle(scheduleId);
+    // The installed @temporalio/client ScheduleDescription exposes `spec`,
+    // `state`, and `info` at the top level, and IntervalSpecDescription.every
+    // is a number of milliseconds.
     const description: any = await withTimeout(handle.describe() as Promise<any>, 4000);
 
-    const intervals = description?.schedule?.spec?.intervals;
-    const intervalMinutes =
-      Array.isArray(intervals) && intervals.length > 0 && typeof intervals[0]?.every === 'string'
-        ? parseIntervalToMinutes(intervals[0].every)
-        : null;
+    const spec = description?.spec ?? description?.schedule?.spec;
+    const intervals = spec?.intervals;
+    const every = Array.isArray(intervals) && intervals.length > 0 ? intervals[0]?.every : undefined;
+    const intervalMinutes = intervalToMinutes(every);
 
-    const paused =
-      typeof description?.schedule?.state?.paused === 'boolean'
-        ? description.schedule.state.paused
-        : typeof description?.state?.paused === 'boolean'
-          ? description.state.paused
-          : null;
+    const state = description?.state ?? description?.schedule?.state;
+    const paused = state && typeof state.paused === 'boolean' ? state.paused : null;
 
     const nextRaw = description?.info?.nextActionTimes?.[0] ?? null;
     const nextFireTime = nextRaw ? new Date(nextRaw).toISOString() : null;
@@ -191,14 +189,22 @@ export async function describeEntraSchedule(tenant: string): Promise<EntraSchedu
   };
 }
 
-function parseIntervalToMinutes(every: string): number | null {
-  const match = every.trim().match(/^(\d+)\s*(s|m|h|d)$/i);
-  if (!match) return null;
-  const value = Number(match[1]);
-  const unit = match[2].toLowerCase();
-  if (!Number.isFinite(value)) return null;
-  if (unit === 's') return value / 60;
-  if (unit === 'm') return value;
-  if (unit === 'h') return value * 60;
-  return value * 60 * 24;
+/** Accept the SDK's numeric milliseconds or a duration string like `1h`. */
+function intervalToMinutes(every: unknown): number | null {
+  if (typeof every === 'number' && Number.isFinite(every)) {
+    return every / 60_000;
+  }
+  if (typeof every === 'string') {
+    const match = every.trim().match(/^(\d+)\s*(ms|s|m|h|d)$/i);
+    if (!match) return null;
+    const value = Number(match[1]);
+    const unit = match[2].toLowerCase();
+    if (!Number.isFinite(value)) return null;
+    if (unit === 'ms') return value / 60_000;
+    if (unit === 's') return value / 60;
+    if (unit === 'm') return value;
+    if (unit === 'h') return value * 60;
+    return value * 60 * 24;
+  }
+  return null;
 }

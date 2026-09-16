@@ -1,5 +1,5 @@
 export { runEntraConnectionDiagnostics } from './connectionDiagnostics';
-export { runEntraClientAccessDiagnostics, MAX_CLIENTS_IN_FLIGHT } from './clientDiagnostics';
+export { runEntraClientAccessDiagnostics, MAX_CLIENTS_PER_REQUEST } from './clientDiagnostics';
 export { classifyEntraOAuthFailure, buildCustomerConsentUrl, extractOAuthCodes } from './oauthClassifier';
 export { dedupeRecommendations, aggregateClientCategories } from './recommendations';
 export {

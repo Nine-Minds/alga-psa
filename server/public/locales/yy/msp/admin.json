@@ -764,8 +764,11 @@
             "client": "Client",
             "tenant": "Tenant",
             "status": "Status",
-            "remedy": "Remedy"
-          }
+            "remedy": "Remedy",
+            "complete": "Complete"
+          },
+          "complete": "Complete",
+          "partial": "Partial"
         },
         "remedies": {
           "connectEntra": "Connect Microsoft Entra from Settings > Integrations > Entra.",
@@ -812,7 +815,11 @@
           "forbidden": "Microsoft Graph returned 403 (Forbidden). Verify delegated permissions, consent, and role assignments.",
           "request_failed": "The Microsoft request failed. Expand the step for the error code and correlation id.",
           "customer_directory_role_missing": "Microsoft Graph denied a customer directory read (403). The delegated account needs a directory-read role in this customer tenant, typically assigned through GDAP (for example Directory Readers).",
-          "managedTenantsEndpointFault": "Graph rejected the managedTenants request; this is an Alga-side endpoint fault. Contact support with the request id."
+          "managedTenantsEndpointFault": "Graph rejected the managedTenants request; this is an Alga-side endpoint fault. Contact support with the request id.",
+          "cippHttpError": "CIPP answered with HTTP {{status}} for every tenant-list endpoint. This is a CIPP-side list failure, not an empty tenant list.",
+          "cippInvalidPayload": "CIPP returned a response that is not a tenant list. Verify the CIPP-API version and endpoint.",
+          "schedulePaused": "Automatic sync is enabled but the Temporal schedule is paused; no runs will fire.",
+          "temporalWorkerUnknown": "Temporal is reachable but worker poller evidence is unavailable; worker availability could not be confirmed."
         }
       }
     }

@@ -111,7 +111,15 @@ function extractPrimaryDomain(raw: Record<string, unknown>): string | null {
   return null;
 }
 
+export type CippTenantProbeOutcome =
+  | 'ok'
+  | 'auth_rejected'
+  | 'http_error'
+  | 'invalid_payload'
+  | 'unreachable';
+
 export interface CippTenantProbe {
+  outcome: CippTenantProbeOutcome;
   reachable: boolean;
   authRejected: boolean;
   endpoint: string | null;
@@ -120,6 +128,17 @@ export interface CippTenantProbe {
   networkCode?: string;
   error?: string;
   tenants: EntraManagedTenantRecord[];
+}
+
+function isRecognizableTenantList(payload: unknown): boolean {
+  if (Array.isArray(payload)) return true;
+  const obj = toObject(payload);
+  return (
+    Array.isArray(obj.data) ||
+    Array.isArray(obj.tenants) ||
+    Array.isArray(obj.value) ||
+    Array.isArray(obj.items)
+  );
 }
 
 function mapCippTenants(payload: unknown): EntraManagedTenantRecord[] {
@@ -267,7 +286,6 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     const base = credentials.baseUrl.replace(/\/+$/, '');
     const attempted: string[] = [];
     let lastError: unknown = null;
-    let sawHttpResponse = false;
 
     for (const candidate of CIPP_TENANT_LIST_CANDIDATES) {
       const url = `${base}${candidate}`;
@@ -280,8 +298,20 @@ export class CippProviderAdapter implements EntraProviderAdapter {
             'X-API-KEY': credentials.apiToken,
           },
         });
-        sawHttpResponse = true;
+        if (!isRecognizableTenantList(response.data)) {
+          return {
+            outcome: 'invalid_payload',
+            reachable: true,
+            authRejected: false,
+            endpoint: url,
+            attempted,
+            status: response.status,
+            error: 'CIPP returned a payload that is not a tenant list.',
+            tenants: [],
+          };
+        }
         return {
+          outcome: 'ok',
           reachable: true,
           authRejected: false,
           endpoint: url,
@@ -294,6 +324,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
           const status = error.response?.status;
           if (status === 401 || status === 403) {
             return {
+              outcome: 'auth_rejected',
               reachable: true,
               authRejected: true,
               endpoint: url,
@@ -303,12 +334,8 @@ export class CippProviderAdapter implements EntraProviderAdapter {
             };
           }
           if (status === 404) {
-            sawHttpResponse = true;
             lastError = error;
             continue;
-          }
-          if (status) {
-            sawHttpResponse = true;
           }
         }
         lastError = error;
@@ -316,12 +343,24 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     }
 
     const axiosError = axios.isAxiosError(lastError) ? lastError : null;
+    if (axiosError?.response) {
+      return {
+        outcome: 'http_error',
+        reachable: true,
+        authRejected: false,
+        endpoint: null,
+        attempted,
+        status: axiosError.response.status,
+        error: axiosError.message,
+        tenants: [],
+      };
+    }
     return {
-      reachable: sawHttpResponse,
+      outcome: 'unreachable',
+      reachable: false,
       authRejected: false,
       endpoint: null,
       attempted,
-      status: axiosError?.response?.status,
       networkCode: axiosError?.code,
       error: axiosError ? axiosError.message : (lastError as Error)?.message,
       tenants: [],

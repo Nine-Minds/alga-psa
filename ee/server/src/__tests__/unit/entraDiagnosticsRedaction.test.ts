@@ -146,6 +146,39 @@ describe('redaction (adversarial)', () => {
     expect(redactText('Bearer abc123 access_token=xyz', true)).not.toContain('xyz');
   });
 
+  it('redacts credentials embedded in serialized JSON (quoted, escaped, nested)', () => {
+    const cases = [
+      '{"refresh_token":"synthetic-refresh-secret"}',
+      '{"client_secret":"synthetic-client-secret"}',
+      '{"error":{"code":"x"},"access_token":"synthetic-access-secret"}',
+      '{"nested":"{\\"refresh_token\\":\\"synthetic-escaped-secret\\"}"}',
+      "refresh_token='synthetic-single-quoted'",
+      'client_secret=synthetic-unquoted',
+    ];
+    for (const input of cases) {
+      for (const includeIdentifiers of [true, false]) {
+        const out = redactText(input, includeIdentifiers);
+        expect(out).not.toMatch(/synthetic-(refresh|client|access|escaped|single|unquoted)/);
+        expect(out).toContain('<redacted>');
+      }
+    }
+  });
+
+  it('preserves expiry/presence metadata rather than treating it as a secret', () => {
+    const report = makeReport();
+    report.steps[0].data = {
+      accessTokenExpiresAt: '2026-09-16T01:00:00.000Z',
+      secretExpiryKnown: false,
+      refreshTokenPresent: true,
+      accessTokenFingerprint: 'eyJh...(120)',
+    };
+    const sanitized = applyReportRedaction(report, true);
+    expect(sanitized.steps[0].data?.accessTokenExpiresAt).toBe('2026-09-16T01:00:00.000Z');
+    expect(sanitized.steps[0].data?.secretExpiryKnown).toBe(false);
+    expect(sanitized.steps[0].data?.refreshTokenPresent).toBe(true);
+    expect(sanitized.steps[0].data?.accessTokenFingerprint).toBe('eyJh...(120)');
+  });
+
   it('sanitizes continuation results before signing', () => {
     const payload: EntraClientContinuationPayload = {
       v: 1,
@@ -158,7 +191,13 @@ describe('redaction (adversarial)', () => {
       includeUserYield: false,
       offset: 1,
       total: 1,
-      results: [makeClient() as any],
+      recentResults: [makeClient() as any],
+      aggregate: { ok: 0, need_consent: 1, conditional_access: 0, missing_role: 0, other: 0 },
+      failedCount: 1,
+      warnCount: 0,
+      recommendations: [],
+      pending: null,
+      startedAt: Date.now(),
       exp: Date.now() + 60_000,
     };
     const token = signContinuation(payload, 'test-signing-secret-1234');
