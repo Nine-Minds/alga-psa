@@ -386,6 +386,19 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
   }, [isEditingWorkItem, selectedWorkItem, entryData.work_item_id, entryData.work_item_type]);
 
+  // The editor must initialize against the logical target, not a slot object
+  // rebuilt by the host on every render. Keyed on the slot's semantic values,
+  // so a draft survives rerenders triggered by async users/viewer data while a
+  // genuine target change still re-initializes.
+  const slotInitializationKey = slot
+    ? [
+        new Date(slot.start).getTime(),
+        new Date(slot.end).getTime(),
+        (slot.assigned_user_ids ?? []).join(','),
+        slot.defaultAssigneeId ?? '',
+      ].join('|')
+    : null;
+
   useEffect(() => {
     const initializeData = () => {
       if (event) {
@@ -444,7 +457,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     };
 
     initializeData();
-  }, [event, slot]);
+  }, [event, slotInitializationKey]);
 
   const recurrenceOptions = [
     { value: 'none', label: t('entryPopup.recurrence.options.none', { defaultValue: 'None' }) },
