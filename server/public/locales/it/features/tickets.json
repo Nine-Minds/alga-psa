@@ -1603,7 +1603,8 @@
       "additionalAgentsTooltip": "Agenti aggiuntivi:",
       "unknownAgent": "Agente sconosciuto",
       "category": "Categoria",
-      "selectDestinationStatus": "Seleziona uno stato per la nuova bacheca prima di salvare."
+      "selectDestinationStatus": "Seleziona uno stato per la nuova bacheca prima di salvare.",
+      "viewSchedule": "Vedi agenda"
     },
     "layout": {
       "grid": "Griglia",

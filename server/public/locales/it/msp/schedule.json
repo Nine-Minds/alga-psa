@@ -28,7 +28,11 @@
       "loadPermissions": "Impossibile caricare le autorizzazioni utente",
       "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione.",
       "saveFailed": "Impossibile salvare la voce della pianificazione"
-    }
+    },
+    "saved": "{{title}} pianificato",
+    "schedulingFor": "Pianificazione di",
+    "selectSlotHint": "Fai clic o trascina un orario nel calendario per pianificare questo lavoro per questo agente.",
+    "readOnlyHint": "Puoi visualizzare questa agenda, ma hai bisogno del permesso di aggiornamento agenda per aggiungere voci."
   },
   "calendar": {
     "legend": {

@@ -28,7 +28,11 @@
       "loadPermissions": "Falha ao carregar as permissões do usuário",
       "forbidden": "Você não tem permissão para visualizar esta programação.",
       "saveFailed": "Falha ao salvar a entrada da programação"
-    }
+    },
+    "saved": "{{title}} agendado",
+    "schedulingFor": "Agendando",
+    "selectSlotHint": "Clique ou arraste um horário no calendário para agendar este trabalho para este agente.",
+    "readOnlyHint": "Você pode ver esta agenda, mas precisa da permissão de atualização de agenda para adicionar entradas."
   },
   "calendar": {
     "legend": {

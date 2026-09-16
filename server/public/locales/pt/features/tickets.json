@@ -1603,7 +1603,8 @@
       "additionalAgentsTooltip": "Agentes adicionais:",
       "unknownAgent": "Agente desconhecido",
       "category": "Categoria",
-      "selectDestinationStatus": "Selecione um status para o novo quadro antes de salvar."
+      "selectDestinationStatus": "Selecione um status para o novo quadro antes de salvar.",
+      "viewSchedule": "Ver agenda"
     },
     "layout": {
       "grid": "Grade",

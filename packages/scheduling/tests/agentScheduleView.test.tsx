@@ -3,6 +3,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, waitFor } from '@testing-library/react';
 import AgentScheduleView from '../src/components/schedule/AgentScheduleView';
+import toast from 'react-hot-toast';
 
 // vi.hoisted: mock factories run while this module's imports evaluate —
 // plain consts would still be in their temporal dead zone at that point.
@@ -301,6 +302,9 @@ describe('AgentScheduleView', () => {
     expect(popupProps.slot.start).toEqual(new Date('2026-01-05T10:00:00Z'));
     expect(popupProps.slot.end).toEqual(new Date('2026-01-05T10:30:00Z'));
     expect(popupProps.slot.assigned_user_ids).toEqual(['agent-1']);
+    // The drawer only refetches the viewed agent, so reassigning here would
+    // make the saved entry vanish; the assignee stays locked to that agent.
+    expect(popupProps.canAssignOthers).toBe(false);
 
     await act(async () => {
       await popupProps.onSave({
@@ -330,6 +334,37 @@ describe('AgentScheduleView', () => {
       })
     );
     expect(onScheduled).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith('Scheduled Printer offline');
+  });
+
+  it('shows the work item header with a selection hint when the user can schedule', async () => {
+    const { findByText } = render(
+      <AgentScheduleView
+        agentId="agent-1"
+        workItemContext={{ workItemId: 'ticket-1', workItemType: 'ticket', title: 'Printer offline' }}
+      />
+    );
+
+    expect(await findByText('Printer offline')).toBeTruthy();
+    expect(await findByText(/Click or drag a time on the calendar/)).toBeTruthy();
+  });
+
+  it('explains the read-only calendar when the user lacks update permission', async () => {
+    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read:all']);
+    const { findByText } = render(
+      <AgentScheduleView
+        agentId="agent-1"
+        workItemContext={{ workItemId: 'ticket-1', workItemType: 'ticket', title: 'Printer offline' }}
+      />
+    );
+
+    expect(await findByText(/need the schedule update permission/)).toBeTruthy();
+  });
+
+  it('renders no work item header without a work item context', async () => {
+    const { queryByText } = render(<AgentScheduleView agentId="agent-1" />);
+    await waitFor(() => expect(calendarSpy).toHaveBeenCalled());
+    expect(queryByText(/Click or drag a time on the calendar/)).toBeNull();
   });
 
   it('pins month-view slots to 8am for 15 minutes', async () => {

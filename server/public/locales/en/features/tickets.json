@@ -1611,7 +1611,8 @@
       "responseWaitingOnClient": "Waiting on client",
       "responseNone": "No reply needed",
       "category": "Category",
-      "selectDestinationStatus": "Select a status for the new board before saving."
+      "selectDestinationStatus": "Select a status for the new board before saving.",
+      "viewSchedule": "View schedule"
     },
     "layout": {
       "grid": "Grid",

@@ -1743,7 +1743,8 @@
       "additionalAgentsTooltip": "Dodatkowi agenci:",
       "unknownAgent": "Nieznany agent",
       "category": "Kategoria",
-      "selectDestinationStatus": "Wybierz status dla nowej tablicy przed zapisaniem."
+      "selectDestinationStatus": "Wybierz status dla nowej tablicy przed zapisaniem.",
+      "viewSchedule": "Zobacz harmonogram"
     },
     "layout": {
       "grid": "Siatka",

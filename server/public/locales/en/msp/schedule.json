@@ -28,7 +28,11 @@
       "loadPermissions": "Failed to load user permissions",
       "forbidden": "You do not have permission to view this schedule.",
       "saveFailed": "Failed to save schedule entry"
-    }
+    },
+    "saved": "Scheduled {{title}}",
+    "schedulingFor": "Scheduling",
+    "selectSlotHint": "Click or drag a time on the calendar to schedule this work for this agent.",
+    "readOnlyHint": "You can view this schedule, but need the schedule update permission to add entries."
   },
   "calendar": {
     "legend": {

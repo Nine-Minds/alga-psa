@@ -1611,7 +1611,8 @@
       "responseWaitingOnClient": "⟦Ẇȧīŧīƞɠ ȯƞ ƈŀīḗƞŧ⟧",
       "responseNone": "⟦Ƞȯ řḗƥŀẏ ƞḗḗḓḗḓ⟧",
       "category": "⟦Ƈȧŧḗɠȯřẏ⟧",
-      "selectDestinationStatus": "⟦Şḗŀḗƈŧ ȧ şŧȧŧŭş ƒȯř ŧħḗ ƞḗẇ ƀȯȧřḓ ƀḗƒȯřḗ şȧṽīƞɠ.⟧"
+      "selectDestinationStatus": "⟦Şḗŀḗƈŧ ȧ şŧȧŧŭş ƒȯř ŧħḗ ƞḗẇ ƀȯȧřḓ ƀḗƒȯřḗ şȧṽīƞɠ.⟧",
+      "viewSchedule": "⟦Ṽīḗẇ şƈħḗḓŭŀḗ⟧"
     },
     "layout": {
       "grid": "⟦Ɠřīḓ⟧",

@@ -28,7 +28,11 @@
       "loadPermissions": "Échec du chargement des autorisations utilisateur",
       "forbidden": "Vous n'êtes pas autorisé à consulter cet horaire.",
       "saveFailed": "Échec de l'enregistrement de l'entrée de l'horaire"
-    }
+    },
+    "saved": "{{title}} planifié",
+    "schedulingFor": "Planification de",
+    "selectSlotHint": "Cliquez ou faites glisser un créneau dans le calendrier pour planifier ce travail pour cet agent.",
+    "readOnlyHint": "Vous pouvez consulter ce planning, mais vous avez besoin de la permission de mise à jour du planning pour ajouter des entrées."
   },
   "calendar": {
     "legend": {

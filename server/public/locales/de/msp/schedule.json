@@ -28,7 +28,11 @@
       "loadPermissions": "Benutzerberechtigungen konnten nicht geladen werden",
       "forbidden": "Sie sind nicht berechtigt, diesen Zeitplan anzuzeigen.",
       "saveFailed": "Der Termin konnte nicht gespeichert werden"
-    }
+    },
+    "saved": "{{title}} geplant",
+    "schedulingFor": "Planung für",
+    "selectSlotHint": "Klicken oder ziehen Sie eine Zeit im Kalender, um diese Arbeit für diesen Mitarbeiter zu planen.",
+    "readOnlyHint": "Sie können diesen Zeitplan ansehen, benötigen aber die Berechtigung zum Aktualisieren von Zeitplänen, um Einträge hinzuzufügen."
   },
   "calendar": {
     "legend": {

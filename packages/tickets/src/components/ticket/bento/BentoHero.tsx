@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
-import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle } from 'lucide-react';
+import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, CalendarDays } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -1063,6 +1063,19 @@ export function BentoHero({
                 placeholder={t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />
+              {onAgentClick && ticket.assigned_to ? (
+                <Tooltip content={t('bento.hero.viewSchedule', 'View schedule')}>
+                  <button
+                    id={`${id}-assignee-schedule`}
+                    type="button"
+                    aria-label={t('bento.hero.viewSchedule', 'View schedule')}
+                    className="inline-flex items-center justify-center h-6 w-6 rounded text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
+                    onClick={() => onAgentClick(ticket.assigned_to!)}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+              ) : null}
               {assignedTeam ? (
                 <Tooltip content={assignedTeam.team_name}>
                   <Badge variant="info" size="sm" className="gap-1 cursor-help">

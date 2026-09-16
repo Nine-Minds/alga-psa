@@ -779,6 +779,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           size="sm"
           placeholder={t('bento.tiles.addAgentsOrTeam', 'Add agents or a team…')}
           onUserClick={props.onAgentClick}
+          userClickLabel={t('bento.hero.viewSchedule', 'View schedule')}
         />
       </div>
 

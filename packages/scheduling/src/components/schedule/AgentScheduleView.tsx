@@ -238,6 +238,12 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
 
       handleEntryPopupClose();
       setRefreshKey((value) => value + 1);
+      toast.success(
+        t('agentView.saved', {
+          defaultValue: 'Scheduled {{title}}',
+          title: workItemContext.title,
+        })
+      );
       workItemContext.onScheduled?.();
     } catch (err) {
       console.error('Failed to save schedule entry:', err);
@@ -279,7 +285,10 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
         error={null}
         canModifySchedule={canModifySchedule}
         focusedTechnicianId={agentId}
-        canAssignOthers={canModifySchedule}
+        // The drawer refetches only the viewed agent's entries, so an entry
+        // reassigned here would vanish on save and read as a failure. Keep the
+        // assignee locked to the agent whose calendar is open.
+        canAssignOthers={false}
         viewOnly={!isCreating}
       />
     );
@@ -291,10 +300,39 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
     return time;
   }, []);
 
+  const renderWorkItemHeader = () => {
+    if (!workItemContext || !permissionsLoaded || !canViewAgent) return null;
+
+    return (
+      <div
+        id="agent-schedule-work-item-header"
+        className="px-4 py-3 border-b border-[rgb(var(--color-border-200))]"
+      >
+        <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))]">
+          {t('agentView.schedulingFor', { defaultValue: 'Scheduling' })}
+        </div>
+        <div className="text-sm font-medium text-[rgb(var(--color-text-900))] truncate">
+          {workItemContext.title}
+        </div>
+        <div className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
+          {canCreateFromSlot
+            ? t('agentView.selectSlotHint', {
+                defaultValue: 'Click or drag a time on the calendar to schedule this work for this agent.',
+              })
+            : t('agentView.readOnlyHint', {
+                defaultValue:
+                  'You can view this schedule, but need the schedule update permission to add entries.',
+              })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col bg-[rgb(var(--color-border-50))]">
       <CalendarStyleProvider />
       <AgentScheduleDrawerStyles />
+      {renderWorkItemHeader()}
       <div className="flex-grow relative" ref={calendarRef}>
         {isLoading && (
           <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10">

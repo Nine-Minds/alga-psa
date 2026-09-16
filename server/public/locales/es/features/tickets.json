@@ -1603,7 +1603,8 @@
       "additionalAgentsTooltip": "Agentes adicionales:",
       "unknownAgent": "Agente desconocido",
       "category": "Categoría",
-      "selectDestinationStatus": "Seleccione un estado para el nuevo tablero antes de guardar."
+      "selectDestinationStatus": "Seleccione un estado para el nuevo tablero antes de guardar.",
+      "viewSchedule": "Ver agenda"
     },
     "layout": {
       "grid": "Cuadrícula",

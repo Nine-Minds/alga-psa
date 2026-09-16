@@ -28,7 +28,11 @@
       "loadPermissions": "Nie udało się załadować uprawnień użytkownika",
       "forbidden": "Nie masz uprawnień do przeglądania tego harmonogramu.",
       "saveFailed": "Nie udało się zapisać wpisu harmonogramu"
-    }
+    },
+    "saved": "Zaplanowano {{title}}",
+    "schedulingFor": "Planowanie",
+    "selectSlotHint": "Kliknij lub przeciągnij godzinę w kalendarzu, aby zaplanować tę pracę dla tego agenta.",
+    "readOnlyHint": "Możesz przeglądać ten harmonogram, ale potrzebujesz uprawnienia do aktualizacji harmonogramu, aby dodawać wpisy."
   },
   "calendar": {
     "legend": {

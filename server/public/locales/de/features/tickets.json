@@ -1603,7 +1603,8 @@
       "additionalAgentsTooltip": "Weitere Bearbeiter:",
       "unknownAgent": "Unbekannter Bearbeiter",
       "category": "Kategorie",
-      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus."
+      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus.",
+      "viewSchedule": "Zeitplan anzeigen"
     },
     "layout": {
       "grid": "Raster",

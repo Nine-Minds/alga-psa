@@ -28,7 +28,11 @@
       "loadPermissions": "Kan gebruikersrechten niet laden",
       "forbidden": "U heeft geen toestemming om dit schema te bekijken.",
       "saveFailed": "Kan het schema-item niet opslaan"
-    }
+    },
+    "saved": "{{title}} ingepland",
+    "schedulingFor": "Inplannen van",
+    "selectSlotHint": "Klik of sleep een tijd in de kalender om dit werk voor deze medewerker in te plannen.",
+    "readOnlyHint": "U kunt deze agenda bekijken, maar u heeft de agenda-bijwerkrechten nodig om items toe te voegen."
   },
   "calendar": {
     "legend": {
