@@ -64,6 +64,15 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
     try {
       const h = await getAccountingSyncHealth({ preferredAdapterType: adapterType });
       setHealth(h);
+      window.dispatchEvent(
+        new CustomEvent('accounting-sync-health-changed', {
+          detail: {
+            adapterType: h.adapterType,
+            reconnectRequired: h.reconnectRequired,
+            error: h.reconnectRequired ? h.lastCycle?.error ?? null : null
+          }
+        })
+      );
     } catch {
       // CE / no permission — suppress the health card entirely
       setHealthHidden(true);
@@ -110,15 +119,21 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
   const multiRealm = health.realms.length > 1;
   const isXero = health.adapterType === 'xero';
   const providerLabel = isXero ? 'Xero' : 'QuickBooks';
+  const nonzeroCounts = [
+    { value: health.pendingOps, label: t('integrations.qbo.sync.pendingOps', { defaultValue: 'Pending ops' }) },
+    { value: health.erroredOps, label: t('integrations.qbo.sync.erroredOps', { defaultValue: 'Errored ops' }) },
+    { value: health.driftCount, label: t('integrations.qbo.sync.driftCount', { defaultValue: 'Drift' }) },
+    { value: health.openExceptions, label: t('integrations.qbo.sync.openExceptions', { defaultValue: 'Open exceptions' }), href: '/msp/user-activities' }
+  ].filter((item) => item.value > 0);
 
   return (
     <Card id="qbo-integration-sync-health-card">
       <CardHeader>
-        <CardTitle>{t('integrations.qbo.sync.healthCardTitleProvider', { provider: providerLabel, defaultValue: '{{provider}} Sync Health' })}</CardTitle>
+        <CardTitle>{t('integrations.qbo.sync.healthCardTitleProvider', { provider: providerLabel, defaultValue: '{{provider}} sync activity' })}</CardTitle>
         <CardDescription>
           {t('integrations.qbo.sync.healthCardDescriptionProvider', {
             provider: providerLabel,
-            defaultValue: '{{provider}} accounting sync status and controls. Runs every 15 minutes.'
+            defaultValue: 'Review recent activity, outstanding items, and automatic sync settings.'
           })}
         </CardDescription>
       </CardHeader>
@@ -131,12 +146,6 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
             })}</AlertDescription>
           </Alert>
         )}
-        {syncNowFeedback && (
-          <Alert variant={syncNowFeedback.type === 'success' ? 'success' : 'destructive'}>
-            <AlertDescription>{syncNowFeedback.message}</AlertDescription>
-          </Alert>
-        )}
-
         {catalogError && (
           <Alert variant="destructive">
             <AlertDescription>{catalogError}</AlertDescription>
@@ -147,13 +156,15 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
           {/* Last cycle */}
           <div className="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm">
             <p className="font-medium text-foreground">
-              {t('integrations.qbo.sync.lastCycleTitle', { defaultValue: 'Last Sync Cycle' })}
+              {t('integrations.qbo.sync.lastCycleTitle', { defaultValue: 'Most recent sync' })}
             </p>
             {health.lastCycle ? (
               <div className="space-y-1">
                 <div className="flex flex-wrap gap-2 items-center">
                   <Badge variant={health.lastCycle.status === 'succeeded' ? 'success' : health.lastCycle.status === 'failed' ? 'error' : 'secondary'}>
-                    {health.lastCycle.status}
+                    {health.lastCycle.status === 'succeeded'
+                      ? t('integrations.qbo.sync.syncSucceeded', { defaultValue: 'Sync completed' })
+                      : t('integrations.qbo.sync.syncStopped', { defaultValue: 'Sync stopped' })}
                   </Badge>
                   {health.lastCycle.finished_at && (
                     <span className="text-muted-foreground text-xs">
@@ -161,7 +172,7 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
                     </span>
                   )}
                 </div>
-                {health.lastCycle.error && (
+                {health.lastCycle.error && !health.reconnectRequired && (
                   <Alert variant="destructive"><AlertDescription>{health.lastCycle.error}</AlertDescription></Alert>
                 )}
                 {health.lastCycle.stats?.truncated && (
@@ -171,7 +182,7 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
                 )}
                 {health.lastCycle.stats && (
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                    {health.lastCycle.stats.opsProcessed !== undefined && (
+                    {(health.lastCycle.stats.opsProcessed ?? 0) > 0 && (
                       <span>
                         {t('integrations.qbo.sync.statOpsProcessed', {
                           count: health.lastCycle.stats.opsProcessed,
@@ -179,7 +190,7 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
                         })}
                       </span>
                     )}
-                    {health.lastCycle.stats.driftFound !== undefined && (
+                    {(health.lastCycle.stats.driftFound ?? 0) > 0 && (
                       <span>
                         {t('integrations.qbo.sync.statDriftFound', {
                           count: health.lastCycle.stats.driftFound,
@@ -187,7 +198,7 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
                         })}
                       </span>
                     )}
-                    {health.lastCycle.stats.paymentsApplied !== undefined && (
+                    {(health.lastCycle.stats.paymentsApplied ?? 0) > 0 && (
                       <span>
                         {t('integrations.qbo.sync.statPaymentsApplied', {
                           count: health.lastCycle.stats.paymentsApplied,
@@ -203,42 +214,36 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
                 {t('integrations.qbo.sync.noLastCycle', { defaultValue: 'No sync cycle has run yet.' })}
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
-              {t('integrations.qbo.sync.nextRunHint', { defaultValue: 'Runs automatically every 15 minutes when auto-sync is enabled.' })}
-            </p>
+            {!health.reconnectRequired ? (
+              <p className="text-xs text-muted-foreground">
+                {t('integrations.qbo.sync.nextRunHint', { defaultValue: 'Runs automatically every 15 minutes when automatic sync is on.' })}
+              </p>
+            ) : null}
           </div>
 
           {/* Counts row */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
-            <div className="rounded border bg-muted/10 p-3 text-center">
-              <div className="text-2xl font-semibold">{health.pendingOps}</div>
-              <div className="text-xs text-muted-foreground">
-                {t('integrations.qbo.sync.pendingOps', { defaultValue: 'Pending ops' })}
+          {nonzeroCounts.length > 0 ? (
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium text-foreground">{t('integrations.qbo.sync.outstandingItems', { defaultValue: 'Outstanding items' })}</p>
+                <p className="text-xs text-muted-foreground">
+                  {health.reconnectRequired
+                    ? t('integrations.qbo.sync.outstandingItemsReconnect', { defaultValue: 'Across all linked organisations. These items are preserved until you reconnect Xero.' })
+                    : t('integrations.qbo.sync.outstandingItemsDescription', { defaultValue: 'Items that still need review or another sync attempt.' })}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-sm">
+                {nonzeroCounts.map((item) => (
+                  <div key={item.label} className="rounded border bg-muted/10 p-3 text-center">
+                    <div className="text-2xl font-semibold">
+                      {item.href ? <Link href={item.href} className="underline">{item.value}</Link> : item.value}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{item.label}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="rounded border bg-muted/10 p-3 text-center">
-              <div className="text-2xl font-semibold">{health.erroredOps}</div>
-              <div className="text-xs text-muted-foreground">
-                {t('integrations.qbo.sync.erroredOps', { defaultValue: 'Errored ops' })}
-              </div>
-            </div>
-            <div className="rounded border bg-muted/10 p-3 text-center">
-              <div className="text-2xl font-semibold">{health.driftCount}</div>
-              <div className="text-xs text-muted-foreground">
-                {t('integrations.qbo.sync.driftCount', { defaultValue: 'Drift' })}
-              </div>
-            </div>
-            <div className="rounded border bg-muted/10 p-3 text-center">
-              <div className="text-2xl font-semibold">
-                <Link href="/msp/user-activities" className="underline">
-                  {health.openExceptions}
-                </Link>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {t('integrations.qbo.sync.openExceptions', { defaultValue: 'Open exceptions' })}
-              </div>
-            </div>
-          </div>
+          ) : null}
 
           {/* QBO 'Automatically apply credits' conflicts with Alga-driven credit application */}
           {health.autoApplyCreditsEnabled === true && (
@@ -253,18 +258,24 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
           )}
 
           {/* Refresh token expiry / reconnect-required */}
-          {health.refreshTokenExpiresAt && (() => {
+          {!health.reconnectRequired && health.refreshTokenExpiresAt && (() => {
             const expiresMs = new Date(health.refreshTokenExpiresAt!).getTime() - Date.now();
             const expired = expiresMs <= 0;
             const expiresDate = new Date(health.refreshTokenExpiresAt!).toLocaleDateString();
-            return (
-              <Alert variant={expired ? 'destructive' : 'info'}>
+            return expired ? (
+              <Alert variant="destructive">
                 <AlertDescription>
-                  {expired
-                    ? t('integrations.qbo.sync.refreshTokenExpiredProvider', { provider: providerLabel, defaultValue: '{{provider}} token expired — reconnect to resume syncing.' })
-                    : t('integrations.qbo.sync.refreshTokenExpiryProvider', { provider: providerLabel, date: expiresDate, defaultValue: '{{provider}} token expires {{date}}' })}
+                  {t('integrations.qbo.sync.refreshTokenExpiredProvider', { provider: providerLabel, defaultValue: '{{provider}} token expired — reconnect to resume syncing.' })}
                 </AlertDescription>
               </Alert>
+            ) : (
+              <p id="accounting-token-valid-until" className="text-xs text-muted-foreground">
+                {t('integrations.qbo.sync.refreshTokenValidUntilProvider', {
+                  provider: providerLabel,
+                  date: expiresDate,
+                  defaultValue: '{{provider}} authorization valid until {{date}}. Tokens refresh automatically.'
+                })}
+              </p>
             );
           })()}
 
@@ -273,13 +284,18 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
             <div id="qbo-realm-list" className="rounded-lg border p-4 space-y-2 text-sm">
               <p className="font-medium text-foreground">
                 {isXero
-                  ? t('integrations.qbo.sync.connectedOrganisations', { defaultValue: 'Connected Organisations' })
+                  ? t('integrations.qbo.sync.connectedOrganisations', { defaultValue: 'Xero organisations' })
                   : t('integrations.qbo.sync.connectedCompanies', { defaultValue: 'Connected Companies' })}
               </p>
+              {isXero ? (
+                <p className="text-xs text-muted-foreground">
+                  {t('integrations.qbo.sync.defaultOrganisationDescription', { defaultValue: 'The default organisation is used for sync, exports, and mappings.' })}
+                </p>
+              ) : null}
               <div className="space-y-2">
                 {health.realms.map((realm) => (
                   <div key={realm.realmId} className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-muted-foreground">{realm.realmId}</span>
+                    <span className="text-sm text-foreground">{realm.displayName || realm.realmId}</span>
                     {realm.isDefault ? (
                       <Badge variant="secondary">
                         {t('integrations.qbo.sync.defaultRealm', { defaultValue: 'Default' })}
@@ -399,9 +415,9 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
           {/* Auto-sync toggle (connection administration — connections_manage) */}
           {canManageConnections && (
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">
-                {t('integrations.qbo.sync.autoSyncLabel', { defaultValue: 'Auto-sync enabled' })}
-              </span>
+              <label htmlFor="qbo-sync-auto-sync-toggle" className="text-sm font-medium">
+                {t('integrations.qbo.sync.autoSyncLabel', { defaultValue: 'Automatic sync' })}
+              </label>
               <Switch
                 id="qbo-sync-auto-sync-toggle"
                 checked={health.settings.autoSyncEnabled}
@@ -458,7 +474,7 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
           )}
         </>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex-wrap gap-3">
         <Button
           id="qbo-sync-now-button"
           type="button"
@@ -507,6 +523,17 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
             ? t('integrations.qbo.sync.syncNowRunning', { defaultValue: 'Syncing…' })
             : t('integrations.qbo.sync.syncNowButton', { defaultValue: 'Sync Now' })}
         </Button>
+        {syncNowFeedback ? (
+          <Alert
+            id="qbo-sync-now-feedback"
+            className="min-w-64 flex-1"
+            variant={syncNowFeedback.type === 'success' ? 'success' : 'destructive'}
+            role={syncNowFeedback.type === 'success' ? 'status' : 'alert'}
+            aria-live={syncNowFeedback.type === 'success' ? 'polite' : 'assertive'}
+          >
+            <AlertDescription>{syncNowFeedback.message}</AlertDescription>
+          </Alert>
+        ) : null}
       </CardFooter>
     </Card>
   );

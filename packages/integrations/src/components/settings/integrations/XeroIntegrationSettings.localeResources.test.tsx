@@ -77,6 +77,8 @@ const settings = enResource.integrations.xero.settings;
 describe('XeroIntegrationSettings loaded-locale copy', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useSearchParamsMock.mockReset();
+    getXeroConnectionStatusMock.mockReset();
     useSearchParamsMock.mockReturnValue(new URLSearchParams('accounting_integration=xero'));
     getXeroConnectionStatusMock.mockResolvedValue({
       connections: [],
@@ -101,13 +103,12 @@ describe('XeroIntegrationSettings loaded-locale copy', () => {
     cleanup();
   });
 
-  it('renders the updated English how-it-works, mapping and reauthorization copy', async () => {
+  it('renders the updated English mapping and reauthorization copy', async () => {
     const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
 
     render(<XeroIntegrationSettings />);
 
-    expect(await screen.findByText(settings.howItWorksDescription)).toBeInTheDocument();
-    expect(screen.getByText(settings.mapping.alert)).toBeInTheDocument();
+    expect(await screen.findByText(settings.mapping.alert)).toBeInTheDocument();
     expect(screen.getByText(settings.scopeReconnectNote)).toBeInTheDocument();
 
     const rendered = document.body.textContent ?? '';
@@ -125,10 +126,11 @@ describe('XeroIntegrationSettings loaded-locale copy', () => {
 
     expect(await screen.findByText(settings.connectSuccess)).toBeInTheDocument();
     expect(settings.connectSuccess).not.toContain('first connected');
+    expect(window.location.search).not.toContain('xero_status');
   });
 
   it('surfaces an ambiguous default organisation instead of claiming none is connected', async () => {
-    getXeroConnectionStatusMock.mockResolvedValueOnce({
+    getXeroConnectionStatusMock.mockResolvedValue({
       connections: [],
       connected: false,
       defaultConnectionId: undefined,

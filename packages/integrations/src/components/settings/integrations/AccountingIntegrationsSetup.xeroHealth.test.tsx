@@ -105,8 +105,8 @@ describe('AccountingIntegrationsSetup mounts provider-aware health in the Xero f
       />
     );
 
-    expect(await screen.findByText('Xero Sync Health')).toBeInTheDocument();
-    expect(screen.getByText('Xero accounting sync status and controls. Runs every 15 minutes.')).toBeInTheDocument();
+    expect(await screen.findByText('Xero sync activity')).toBeInTheDocument();
+    expect(screen.getByText('Review recent activity, outstanding items, and automatic sync settings.')).toBeInTheDocument();
     expect(screen.getByText('Xero token expired — reconnect to resume syncing.')).toBeInTheDocument();
     expect(catalogsMock).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Make default' }));

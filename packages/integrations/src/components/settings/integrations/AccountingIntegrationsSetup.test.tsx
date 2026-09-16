@@ -87,13 +87,13 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     expect(xeroCsvCard).toBeTruthy();
     expect(qboCard).toBeTruthy();
     expect(
-      within(xeroCard as HTMLElement).getByRole('button', { name: 'Configure Integration' })
+      within(xeroCard as HTMLElement).getByRole('button', { name: 'Configure' })
     ).not.toBeDisabled();
     expect(
-      within(xeroCsvCard as HTMLElement).getByRole('button', { name: 'Configure Integration' })
+      within(xeroCsvCard as HTMLElement).getByRole('button', { name: 'Configure' })
     ).not.toBeDisabled();
     expect(
-      within(qboCard as HTMLElement).getByRole('button', { name: 'Configure Integration' })
+      within(qboCard as HTMLElement).getByRole('button', { name: 'Configure' })
     ).not.toBeDisabled();
     // No Coming Soon button — QBO is now enabled in EE
     expect(screen.queryByRole('button', { name: 'Coming Soon' })).not.toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
 
     const xeroCard = screen.getByText('Xero').closest('#accounting-integration-card-xero');
     const xeroButton = xeroCard
-      ? within(xeroCard as HTMLElement).getByRole('button', { name: 'Configure Integration' })
+      ? within(xeroCard as HTMLElement).getByRole('button', { name: 'Configure' })
       : null;
     expect(xeroButton).toBeTruthy();
     await user.click(xeroButton as HTMLElement);
@@ -136,7 +136,7 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     const qboCard = screen.getByText('QuickBooks Online').closest('#accounting-integration-card-quickbooks_online');
     expect(qboCard).toBeTruthy();
     expect(
-      within(qboCard as HTMLElement).getByRole('button', { name: 'Configure Integration' })
+      within(qboCard as HTMLElement).getByRole('button', { name: 'Configure' })
     ).not.toBeDisabled();
     expect(within(qboCard as HTMLElement).getByText('Pro')).toBeInTheDocument();
   });
@@ -160,7 +160,7 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
 
     const qboCard = screen.getByText('QuickBooks Online').closest('#accounting-integration-card-quickbooks_online');
     const qboButton = qboCard
-      ? within(qboCard as HTMLElement).getByRole('button', { name: 'Configure Integration' })
+      ? within(qboCard as HTMLElement).getByRole('button', { name: 'Configure' })
       : null;
     expect(qboButton).toBeTruthy();
     await user.click(qboButton as HTMLElement);

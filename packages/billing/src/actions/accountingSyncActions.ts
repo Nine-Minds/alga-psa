@@ -416,6 +416,7 @@ export const getInvoiceSyncStatuses = withAuth(async (
 
 export interface AccountingSyncRealmInfo {
   realmId: string;
+  displayName?: string | null;
   isDefault: boolean;
 }
 
@@ -428,6 +429,7 @@ export interface AccountingSyncHealth {
   driftCount: number;
   openExceptions: number;
   refreshTokenExpiresAt: string | null;
+  reconnectRequired: boolean;
   /** All connected realms. Length > 1 means the multi-realm UX should be shown. */
   realms: AccountingSyncRealmInfo[];
   /**
@@ -464,7 +466,11 @@ export const getAccountingSyncHealth = withAuth(async (
   let realms: AccountingSyncRealmInfo[];
   let organisationName: string | null = null;
   if (adapterType === 'xero') {
-    realms = Object.keys(xeroConnections).map((r) => ({ realmId: r, isDefault: r === realm }));
+    realms = Object.keys(xeroConnections).map((r) => ({
+      realmId: r,
+      displayName: xeroConnections[r]?.tenantName ?? null,
+      isDefault: r === realm
+    }));
     organisationName = realm ? xeroConnections[realm]?.tenantName ?? null : null;
   } else {
     const realmIds = Object.keys(qboCredentials);
@@ -482,6 +488,7 @@ export const getAccountingSyncHealth = withAuth(async (
       driftCount: 0,
       openExceptions: 0,
       refreshTokenExpiresAt: null,
+      reconnectRequired: false,
       realms,
       autoApplyCreditsEnabled: null,
       adapterType,
@@ -497,6 +504,20 @@ export const getAccountingSyncHealth = withAuth(async (
     new WorkflowTaskSyncExceptionService(knex, tenant).countOpen(realm),
     adapterType === 'quickbooks_online' ? readAutoApplyCreditsPreference(tenant, realm) : Promise.resolve(null)
   ]);
+
+  const lastCycleError = lastCycle?.error?.toLowerCase() ?? '';
+  const currentXeroConnection = adapterType === 'xero' && realm ? xeroConnections[realm] : undefined;
+  const accessTokenExpiresAt = currentXeroConnection?.accessTokenExpiresAt
+    ? Date.parse(currentXeroConnection.accessTokenExpiresAt)
+    : Number.NaN;
+  const hasFreshXeroAccessToken = Number.isFinite(accessTokenExpiresAt) && accessTokenExpiresAt > Date.now();
+  const reconnectRequired =
+    adapterType === 'xero' &&
+    !hasFreshXeroAccessToken &&
+    (lastCycleError.includes('refresh token was rejected') ||
+      lastCycleError.includes('re-authentication is required') ||
+      lastCycleError.includes('reconnect required') ||
+      lastCycleError.includes('token expired'));
 
   return {
     connected: true,
@@ -514,6 +535,7 @@ export const getAccountingSyncHealth = withAuth(async (
       adapterType === 'xero'
         ? xeroConnections[realm]?.refreshTokenExpiresAt ?? null
         : qboCredentials[realm]?.refreshTokenExpiresAt ?? null,
+    reconnectRequired,
     realms,
     autoApplyCreditsEnabled,
     adapterType,

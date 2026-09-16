@@ -422,17 +422,15 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
     content: (
       <div className="space-y-6">
         {category.id !== 'providers' && (
-          <div className="rounded-xl border bg-muted/30 px-6 py-8 text-center">
-            <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
-              <div className="flex items-center justify-center gap-3">
-                <category.icon className="h-7 w-7 text-primary" />
-                <h2 className="text-3xl font-bold tracking-tight">
+          <div className="rounded-xl border bg-muted/30 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <category.icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <div className="space-y-1">
+                <h2 className="text-xl font-semibold tracking-tight">
                   {t('integrations.categoryHeading', { label: category.label })}
                 </h2>
+                <p className="text-sm text-muted-foreground">{category.description}</p>
               </div>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                {category.description}
-              </p>
             </div>
           </div>
         )}
@@ -467,6 +465,12 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
       {/* Category tabs */}
       <CustomTabs
         tabs={tabContent}
+        tabStyles={{
+          root: 'min-w-0',
+          list: 'max-w-full flex-wrap gap-y-1',
+          trigger: 'shrink-0',
+          content: 'min-w-0'
+        }}
         defaultTab={currentCategory?.id ?? 'accounting'}
         onTabChange={(tabId) => {
           const category = visibleCategories.find(cat => cat.id === tabId);

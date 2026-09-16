@@ -9,6 +9,9 @@ const getLatestCycleMock = vi.hoisted(() => vi.fn(async () => null));
 const countOpenMock = vi.hoisted(() => vi.fn(async () => 0));
 const readAutoApplyMock = vi.hoisted(() => vi.fn(async () => null));
 const qboCredentialsMock = vi.hoisted(() => vi.fn(async () => ({})));
+const xeroConnectionsMock = vi.hoisted(() => vi.fn(async () => ({
+  'conn-1': { tenantName: 'Acme Org' }
+})));
 
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: unknown) => fn }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
@@ -47,7 +50,7 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   getQboEnvironment: vi.fn(() => 'sandbox')
 }));
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
-  getStoredXeroConnections: vi.fn(async () => ({ 'conn-1': { tenantName: 'Acme Org' } }))
+  getStoredXeroConnections: xeroConnectionsMock
 }));
 vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
   isProviderDisconnectActive: vi.fn(async () => false),
@@ -107,6 +110,7 @@ beforeEach(() => {
   queryRecords = [];
   resolveSyncTargetMock.mockResolvedValue(xeroTarget());
   qboCredentialsMock.mockResolvedValue({});
+  xeroConnectionsMock.mockResolvedValue({ 'conn-1': { tenantName: 'Acme Org' } });
   tenantDbMock.mockImplementation((_knex: unknown, _tenant: unknown) => ({
     table: (table: string) => makeBuilder(table, [])
   }));
@@ -185,6 +189,42 @@ describe('accounting sync actions organisation scoping', () => {
     expect(countOperationsByStatusMock).toHaveBeenCalledWith(TENANT, 'xero', 'conn-1');
     expect(health.erroredOps).toBe(4); // 1 skipped + 3 failed
     expect(health.pendingOps).toBe(3); // 1 pending + 2 in_progress
+  });
+
+  it('clears a stale reconnect warning after OAuth stores a fresh Xero access token', async () => {
+    getLatestCycleMock.mockResolvedValue({
+      error: 'Xero refresh token was rejected; re-authentication is required'
+    });
+    xeroConnectionsMock.mockResolvedValue({
+      'conn-1': {
+        tenantName: 'Acme Org',
+        accessTokenExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+      }
+    });
+
+    const health = await (getAccountingSyncHealth as any)(USER, { tenant: TENANT }, {
+      preferredAdapterType: 'xero', preferredTargetRealm: 'conn-1'
+    });
+
+    expect(health.reconnectRequired).toBe(false);
+  });
+
+  it('keeps reconnect required when the failed Xero cycle still has no fresh access token', async () => {
+    getLatestCycleMock.mockResolvedValue({
+      error: 'Xero refresh token was rejected; re-authentication is required'
+    });
+    xeroConnectionsMock.mockResolvedValue({
+      'conn-1': {
+        tenantName: 'Acme Org',
+        accessTokenExpiresAt: new Date(Date.now() - 30 * 60 * 1000).toISOString()
+      }
+    });
+
+    const health = await (getAccountingSyncHealth as any)(USER, { tenant: TENANT }, {
+      preferredAdapterType: 'xero', preferredTargetRealm: 'conn-1'
+    });
+
+    expect(health.reconnectRequired).toBe(true);
   });
 
   it('marks the explicitly selected QBO realm as the health target', async () => {

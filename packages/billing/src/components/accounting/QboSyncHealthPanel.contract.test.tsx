@@ -200,7 +200,7 @@ describe('QboSyncHealthPanel contracts', () => {
       const card = document.getElementById('qbo-integration-sync-health-card');
       expect(card).toBeInTheDocument();
       // cycle status badge
-      expect(card).toHaveTextContent('succeeded');
+      expect(card).toHaveTextContent('Sync completed');
       // stats
       expect(card).toHaveTextContent('10 ops processed');
     });
@@ -263,6 +263,9 @@ describe('QboSyncHealthPanel contracts', () => {
     await waitFor(() => {
       expect(screen.getByText(/Sync completed successfully/)).toBeInTheDocument();
     });
+    const feedback = document.getElementById('qbo-sync-now-feedback');
+    expect(feedback).toHaveAttribute('role', 'status');
+    expect(feedback?.parentElement).toContainElement(syncNowButton);
   });
 
   it('T076: Sync Now shows skipped message when ran=false', async () => {
@@ -515,13 +518,29 @@ describe('QboSyncHealthPanel contracts', () => {
     });
 
     // Xero-labelled card and reconnect information.
-    expect(screen.getByText(/Xero Sync Health/)).toBeInTheDocument();
+    expect(screen.getByText(/Xero sync activity/)).toBeInTheDocument();
     expect(screen.getByText(/Xero token expired — reconnect/)).toBeInTheDocument();
     // No QBO-only sync configuration, and no QBO catalog requests.
     expect(document.getElementById('qbo-sync-config-section')).not.toBeInTheDocument();
     expect(getQboAccountsMock).not.toHaveBeenCalled();
     expect(getQboClassesMock).not.toHaveBeenCalled();
     expect(getQboDepartmentsMock).not.toHaveBeenCalled();
+  });
+
+  it('demotes a healthy Xero token lifetime to quiet connection metadata', async () => {
+    getAccountingSyncHealthMock.mockResolvedValue({
+      ...healthConnected,
+      adapterType: 'xero',
+      refreshTokenExpiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      realms: [{ realmId: 'conn-1', isDefault: true }],
+    });
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel adapterType="xero" />);
+
+    const metadata = await screen.findByText(/Xero authorization valid until/);
+    expect(metadata).toHaveClass('text-muted-foreground');
+    expect(metadata.closest('[role="alert"]')).toBeNull();
   });
 
   it('T086: a Xero connection offers organisation selection and passes the Xero target to Sync Now', async () => {
