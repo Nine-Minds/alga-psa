@@ -278,6 +278,19 @@ export function QboCustomerMappingPanel() {
   const [bulkWorking, setBulkWorking] = React.useState(false);
   const [bulkFeedback, setBulkFeedback] = React.useState<string | null>(null);
 
+  // load() is fired and forgotten from an effect and from handlers, so it can
+  // still be in flight when the panel unmounts. Without this guard the awaited
+  // continuation writes state into a dead tree - which under jsdom teardown
+  // surfaces as an unhandled "window is not defined" rejection rather than
+  // React's warning.
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -286,6 +299,7 @@ export function QboCustomerMappingPanel() {
         getCustomerMatchCandidates(),
         getQboCustomers(),
       ]);
+      if (!mountedRef.current) return;
       if (candidates.error) {
         setError(candidates.error);
       }
@@ -297,10 +311,13 @@ export function QboCustomerMappingPanel() {
       }
       setRows(candidates.rows);
     } catch (err) {
+      if (!mountedRef.current) return;
       console.error('Failed to load customer mappings:', err);
       setError('Failed to load customer mappings.');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 

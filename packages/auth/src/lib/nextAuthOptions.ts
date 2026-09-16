@@ -1896,7 +1896,8 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             return true; // Allow sign in
         },
 	        async jwt({ token, user, trigger }: any) {
-	            console.log('JWT callback - initial token:', {
+	            const logger = (await import('@alga-psa/core/logger')).default;
+	            logger.debug('JWT callback - initial token', {
 	                id: token.id,
 	                email: token.email,
 	                clientId: token.clientId,
@@ -1905,7 +1906,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
 	            if (user) {
 	                const extendedUser = user as ExtendedUser;
-	                console.log('JWT callback - new user login:', {
+	                logger.debug('JWT callback - new user login', {
 	                    id: extendedUser.id,
 	                    email: extendedUser.email,
 	                    tenant: extendedUser.tenant,
@@ -2102,7 +2103,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 // No need to fetch from DB on every request
             };
 
-            console.log('JWT callback - final token:', {
+            logger.debug('JWT callback - final token', {
                 id: result.id,
                 email: result.email,
                 tenant: result.tenant,
@@ -2119,8 +2120,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             }
 
             const logger = (await import('@alga-psa/core/logger')).default;
-            logger.debug("Session Token:", token);
-            console.log('Session callback - token:', {
+            logger.debug('Session callback - token', {
                 id: token.id,
                 email: token.email,
                 tenant: token.tenant,
@@ -2156,8 +2156,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 (user as any).solo_pro_trial_end = token.solo_pro_trial_end ?? null;
                 (user as any).effectiveTier = token.effectiveTier ?? undefined;
             }
-            logger.trace("Session Object:", session);
-            console.log('Session callback - final session.user:', {
+            logger.debug('Session callback - final session.user', {
                 id: session.user?.id,
                 email: session.user?.email,
                 tenant: session.user?.tenant,
@@ -2194,6 +2193,9 @@ export async function buildTeamsAuthOptions(tenantId: string): Promise<NextAuthC
 }
 
 // Synchronous fallback that uses environment variables
+// LEVERAGE: pattern auth-options-duplication — this is a hand-maintained copy of
+// buildAuthOptions(): the credentials provider, jwt and session callbacks are
+// duplicated verbatim, so every callback fix has to be applied twice.
 export const options: NextAuthConfig = {
     // Avoid throwing at module-evaluation time (e.g. during `next build`) when NEXTAUTH_SECRET is not set.
     // NextAuth will still require a secret at runtime for JWT/session operations; keep that enforcement in runtime paths.
@@ -2669,7 +2671,8 @@ export const options: NextAuthConfig = {
             return true; // Allow sign in
         },
         async jwt({ token, user, trigger }: any) {
-            console.log('JWT callback - initial token:', {
+            const logger = (await import('@alga-psa/core/logger')).default;
+            logger.debug('JWT callback - initial token', {
                 id: token.id,
                 email: token.email,
                 clientId: token.clientId,
@@ -2678,7 +2681,7 @@ export const options: NextAuthConfig = {
 
 	            if (user) {
 	                const extendedUser = user as ExtendedUser;
-	                console.log('JWT callback - new user login:', {
+	                logger.debug('JWT callback - new user login', {
 	                    id: extendedUser.id,
 	                    email: extendedUser.email,
 	                    tenant: extendedUser.tenant,
@@ -2875,7 +2878,7 @@ export const options: NextAuthConfig = {
                 // No need to fetch from DB on every request
             };
 
-            console.log('JWT callback - final token:', {
+            logger.debug('JWT callback - final token', {
                 id: result.id,
                 email: result.email,
                 tenant: result.tenant,
@@ -2891,8 +2894,7 @@ export const options: NextAuthConfig = {
             }
 
             const logger = (await import('@alga-psa/core/logger')).default;
-            logger.debug("Session Token:", token);
-            console.log('Session callback - token:', {
+            logger.debug('Session callback - token', {
                 id: token.id,
                 email: token.email,
                 tenant: token.tenant,
@@ -2928,8 +2930,7 @@ export const options: NextAuthConfig = {
                 (user as any).solo_pro_trial_end = token.solo_pro_trial_end ?? null;
                 (user as any).effectiveTier = token.effectiveTier ?? undefined;
             }
-            logger.trace("Session Object:", session);
-            console.log('Session callback - final session.user:', {
+            logger.debug('Session callback - final session.user', {
                 id: session.user?.id,
                 email: session.user?.email,
                 tenant: session.user?.tenant,
