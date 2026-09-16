@@ -5842,10 +5842,11 @@ async function createRecurringCatalogLine(
       service_id: serviceId,
       currency_code: 'USD',
       rate: options.baseRateCents,
+      effective_date: '1970-01-01',
       created_at: contextLike.db.fn.now(),
       updated_at: contextLike.db.fn.now()
     })
-    .onConflict(['tenant', 'service_id', 'currency_code'])
+    .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
     .merge({
       rate: options.baseRateCents,
       updated_at: contextLike.db.fn.now()
@@ -5888,10 +5889,11 @@ async function ensureUsdServicePrice(serviceId: string, rateCents: number): Prom
       service_id: serviceId,
       currency_code: 'USD',
       rate: rateCents,
+      effective_date: '1970-01-01',
       created_at: db.fn.now(),
       updated_at: db.fn.now()
     })
-    .onConflict(['tenant', 'service_id', 'currency_code'])
+    .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
     .merge({
       rate: rateCents,
       updated_at: db.fn.now()

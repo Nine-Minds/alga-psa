@@ -6,7 +6,8 @@ vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(
 const mockGetActiveTokens = vi.fn();
 const mockSendPush = vi.fn();
 
-vi.mock('../../../lib/pushNotifications/pushTokenService', () => ({
+vi.mock('../../../lib/pushNotifications/pushTokenService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/pushNotifications/pushTokenService')>()),
   getActivePushTokensForUser: (...args: unknown[]) => mockGetActiveTokens(...args),
 }));
 
@@ -58,6 +59,31 @@ describe('pushNotificationDispatcher', () => {
       })],
       baseNotification.tenant,
     );
+  });
+
+  it('honors each device push priority threshold (task 35.9.2)', async () => {
+    mockGetActiveTokens.mockResolvedValue([
+      { expo_push_token: 'ExponentPushToken[all]', device_id: 'd1', platform: 'ios', push_priority_threshold: 'low' },
+      { expo_push_token: 'ExponentPushToken[normal]', device_id: 'd2', platform: 'android', push_priority_threshold: 'normal' },
+      { expo_push_token: 'ExponentPushToken[high]', device_id: 'd3', platform: 'ios', push_priority_threshold: 'high' },
+    ]);
+    mockSendPush.mockResolvedValue(undefined);
+
+    await triggerPushForNotification({ ...baseNotification, priority: 'normal' });
+    expect(mockSendPush).toHaveBeenLastCalledWith(
+      [expect.objectContaining({ to: 'ExponentPushToken[all]' }), expect.objectContaining({ to: 'ExponentPushToken[normal]' })],
+      baseNotification.tenant,
+    );
+
+    await triggerPushForNotification({ ...baseNotification, priority: 'low' });
+    expect(mockSendPush).toHaveBeenLastCalledWith([expect.objectContaining({ to: 'ExponentPushToken[all]' })], baseNotification.tenant);
+
+    mockSendPush.mockClear();
+    mockGetActiveTokens.mockResolvedValue([
+      { expo_push_token: 'ExponentPushToken[high]', device_id: 'd3', platform: 'ios', push_priority_threshold: 'high' },
+    ]);
+    await triggerPushForNotification({ ...baseNotification, priority: 'low' });
+    expect(mockSendPush).not.toHaveBeenCalled();
   });
 
   it('skips non-ticket templates', async () => {

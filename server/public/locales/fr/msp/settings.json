@@ -441,7 +441,8 @@
       "boards": "Tableaux",
       "priorities": "Priorités",
       "categories": "Catégories",
-      "checklistTemplates": "Modèles de checklist"
+      "checklistTemplates": "Modèles de checklist",
+      "externalSystems": "Systèmes externes"
     },
     "numbering": {
       "title": "Format de numérotation",
@@ -629,7 +630,8 @@
           "loading": "Chargement des statuts de tickets du tableau…",
           "statusName": "Nom du statut",
           "closed": "Fermé",
-          "default": "Par défaut"
+          "default": "Par défaut",
+          "portalSelectable": "Les utilisateurs du portail client peuvent sélectionner ce statut"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Rouvrir les tickets fermés lors des réponses entrantes",
@@ -985,6 +987,47 @@
           "updateStatusFailed": "Échec de la mise à jour du statut du modèle",
           "itemSaveFailed": "Échec de l'enregistrement de l'élément de checklist",
           "ruleSaveFailed": "Échec de l'enregistrement de la règle d'application automatique"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Systèmes externes",
+      "subtitle": "Ajoutez des systèmes externes personnalisés pour que les tickets puissent pointer vers des enregistrements hors du catalogue intégré.",
+      "addButton": "Ajouter un système",
+      "builtInTitle": "Systèmes intégrés",
+      "builtInSubtitle": "Disponibles pour tous les locataires ; leurs URL sont générées à partir du modèle du système.",
+      "table": {
+        "label": "Libellé",
+        "key": "Clé",
+        "urlTemplate": "Modèle d'URL",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "cancel": "Annuler",
+        "save": "Enregistrer"
+      },
+      "fields": {
+        "key": "Clé",
+        "keyHint": "Doit correspondre à custom:<slug> avec des lettres minuscules, des chiffres ou des traits de soulignement.",
+        "label": "Libellé",
+        "urlTemplate": "Modèle d'URL",
+        "urlTemplateHint": "Facultatif. Utilisez les espaces réservés {realm} et {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Ajouter un système externe",
+        "editTitle": "Modifier le système externe"
+      },
+      "deleteDialog": {
+        "title": "Supprimer le système externe",
+        "message": "Supprimer « {{label}} » ? Les systèmes encore utilisés par des liens ne peuvent pas être supprimés."
+      },
+      "messages": {
+        "success": {
+          "created": "Système externe créé.",
+          "updated": "Système externe mis à jour.",
+          "deleted": "Système externe supprimé."
         }
       }
     }
@@ -1560,7 +1603,8 @@
       "preview": {
         "subjectLabel": "Aperçu de l'objet",
         "iframeTitle": "Aperçu du modèle d'e-mail",
-        "sampleDataNote": "L'aperçu utilise des données d'exemple. Les e-mails réels contiendront des valeurs réelles."
+        "sampleDataNote": "L'aperçu utilise des données d'exemple. Les e-mails réels contiendront des valeurs réelles.",
+        "sourceSyncNote": "Cliquez sur un élément de l’aperçu pour sélectionner le code correspondant ; déplacer le curseur dans le code l’encadre ici."
       },
       "errors": {
         "loadFailed": "Échec du chargement des modèles"
@@ -1609,7 +1653,8 @@
       },
       "tabs": {
         "source": "Source",
-        "preview": "Aperçu"
+        "preview": "Aperçu",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1679,6 +1724,20 @@
           "colors": "couleurs",
           "text": "texte",
           "subject": "objet"
+        },
+        "overwrite": "Écraser",
+        "overwriteHint": "L'écrasement reconstruit un modèle à partir du modèle standard avec votre palette et supprime vos modifications.",
+        "preview": {
+          "open": "Aperçu du résultat",
+          "title": "Aperçu : {{name}}",
+          "loading": "Création de l’aperçu...",
+          "captions": {
+            "create": "Une copie à vos couleurs sera créée à partir du modèle standard.",
+            "update": "Votre copie personnalisée sera recréée à partir du modèle standard avec la palette enregistrée.",
+            "customized": "Vos modifications sont conservées mot pour mot. Seules les couleurs d’origine encore présentes dans ce modèle sont remplacées.",
+            "overwrite": "Vos modifications de ce modèle seront supprimées. Il sera reconstruit à partir du modèle standard avec votre palette.",
+            "skipped": "Rien ne sera écrit — {{reason}}. Voici le modèle tel qu’il est aujourd’hui."
+          }
         },
         "summary": "{{written}} traités, {{skipped}} ignorés, {{failed}} en échec",
         "groups": {
@@ -2113,7 +2172,17 @@
         "upload": "Téléverser le paquet"
       },
       "errors": {
-        "noImportableRecords": "Ce paquet ne contenait aucun enregistrement importable."
+        "noImportableRecords": "Ce paquet ne contenait aucun enregistrement importable.",
+        "permissionDenied": "Vous n'avez pas la permission d'importer ou d'exporter des données.",
+        "invalidSpreadsheet": "Cette feuille de calcul n'a pas pu être lue. Vérifiez qu'il s'agit d'un fichier CSV ou XLSX valide et réessayez.",
+        "notAmpPackage": "Ce fichier n'est pas un paquet AMP. Téléversez un fichier .amp ou .sqlite.",
+        "tooLarge": "Ce téléversement dépasse la taille maximale autorisée.",
+        "sizeMismatch": "Le téléversement ne s'est pas terminé. Veuillez réessayer.",
+        "noRecognizedHeaders": "Aucune des colonnes de cette feuille de calcul n'a été reconnue. Vérifiez la ligne d'en-tête et réessayez.",
+        "storageRejected": "Le serveur a rejeté ce téléversement. Demandez à votre administrateur de vérifier la configuration des types de fichiers du stockage.",
+        "spreadsheetFailed": "La feuille de calcul n'a pas pu être importée. Veuillez réessayer.",
+        "uploadFailed": "Le paquet n'a pas pu être téléversé. Veuillez réessayer.",
+        "unknown": "Le téléversement a échoué. Veuillez réessayer."
       },
       "preflight": {
         "title": "Vérification préalable"
@@ -2121,6 +2190,19 @@
       "run": {
         "queued": "Migration en file d'attente",
         "applying": "Migration en cours"
+      },
+      "badges": {
+        "nothingImported": "Rien n'a été importé"
+      },
+      "results": {
+        "skippedSamePackage": "Les enregistrements ignorés avaient déjà été migrés par une exécution précédente du même paquet.",
+        "skippedOtherPackage": "Les enregistrements ignorés ont été associés à des entités créées par une migration antérieure d'un autre paquet : {{packages}}.",
+        "skippedExistingEntity": "Les enregistrements ignorés ont été associés à des entités existantes.",
+        "nothingImportedTitle": "Rien n'a été importé",
+        "nothingImportedBody": "Cette exécution n'a créé aucun nouvel enregistrement. Chaque ligne correspondait à quelque chose qui existait déjà, donc rien n'a été modifié.",
+        "claimedBySamePackage": "Déjà migré par ce paquet",
+        "claimedByOtherPackage": "Déjà migré par {{file}}",
+        "claimedByExistingEntity": "Associé à une entité existante"
       }
     },
     "jobDetails": {

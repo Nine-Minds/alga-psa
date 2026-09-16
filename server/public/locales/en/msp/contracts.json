@@ -504,7 +504,8 @@
       "addFromPresets": "Add from Presets",
       "collapseLine": "Collapse contract line",
       "createCustom": "Create Custom",
-      "expandLine": "Expand contract line"
+      "expandLine": "Expand contract line",
+      "resetToStandard": "Reset to standard"
     },
     "billingProfile": {
       "hint": "Charges from this line are billed to this profile, overriding the contract.",
@@ -550,7 +551,8 @@
       "readOnly": "This system-managed default contract is attribution-only. Contract line authoring is disabled."
     },
     "dialogs": {
-      "confirmRemove": "Remove contract line \"{{name}}\"?"
+      "confirmRemove": "Remove contract line \"{{name}}\"?",
+      "confirmResetRate": "Reset this line to the standard catalog rate? The stored custom rate will be removed."
     },
     "empty": {
       "noneAdded": "No contract lines added yet.",
@@ -562,7 +564,8 @@
       "failedToLoad": "Failed to load contract lines",
       "failedToRefresh": "Failed to refresh contract lines",
       "failedToRemove": "Failed to remove contract line",
-      "failedToUpdate": "Failed to update contract line"
+      "failedToUpdate": "Failed to update contract line",
+      "failedToResetRate": "Failed to reset the line rate"
     },
     "loading": {
       "contractLines": "Loading contract lines",
@@ -601,7 +604,12 @@
       "semanticsEffectiveFrom": "Service pricing and measurement changes effective from",
       "prospectiveSemanticsHelp": "Changes apply at this service-period boundary; earlier quantities, measurement and pricing are preserved. Changing the date reloads the applicable settings for review."
     },
-    "title": "Contract Lines"
+    "title": "Contract Lines",
+    "rateProvenance": {
+      "standard": "Standard",
+      "custom": "Custom",
+      "unreviewed": "Unreviewed"
+    }
   },
   "contractLineEdit": {
     "actions": {

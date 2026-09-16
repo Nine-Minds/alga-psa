@@ -15,6 +15,7 @@ import {
   type MigrationJobSummary,
   type MigrationOutcomeRecord,
   type MigrationOutcomeSummary,
+  type MigrationSkipProvenance,
   type PreflightResult,
 } from './types';
 
@@ -299,6 +300,18 @@ export async function getMigrationOutcomeRecords(
   const { tenant } = await requirePermission('read');
   const { knex } = await createTenantKnex(tenant);
   return new MigrationReportService(knex, tenant).getOutcomeRecords(migrationJobId, options);
+}
+
+/**
+ * Where this job's skipped records came from, so the results copy only claims
+ * "same package" when that is true.
+ */
+export async function getMigrationSkipProvenance(
+  migrationJobId: string
+): Promise<MigrationSkipProvenance> {
+  const { tenant } = await requirePermission('read');
+  const { knex } = await createTenantKnex(tenant);
+  return new MigrationReportService(knex, tenant).getSkipProvenance(migrationJobId);
 }
 
 /** CSV export of the preflight or outcome report for download. */

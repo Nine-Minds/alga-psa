@@ -43,13 +43,14 @@
       "contractTemplates": "Modelos de contrato",
       "invoicing": "Faturamento",
       "invoiceLayouts": "Layouts de fatura",
-      "taxRates": "Taxas de imposto",
+      "taxRates": "Impostos",
       "contractLinePresets": "Predefinições de linha de contrato",
       "billingCycles": "Ciclos de cobrança",
       "servicePeriods": "Períodos de serviço",
       "usageTracking": "Rastreamento de uso",
       "reports": "Relatórios",
       "serviceTypes": "Tipos de serviço",
+      "serviceCategories": "Categorias de serviço",
       "serviceCatalog": "Serviços",
       "products": "Produtos"
     }

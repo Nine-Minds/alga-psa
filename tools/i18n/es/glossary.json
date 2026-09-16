@@ -2403,7 +2403,8 @@
       "workflow.event",
       "| null",
       "Sage",
-      "×"
+      "×",
+      "Variables"
     ],
     "caseInsensitive": [
       "api",

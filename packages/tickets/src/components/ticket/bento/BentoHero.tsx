@@ -110,6 +110,8 @@ interface BentoHeroProps {
   onTagsChange?: (tags: ITag[]) => void;
   /** Rendered create-task / link-task actions (injected node). */
   taskActions?: React.ReactNode;
+  /** Rendered quick-invoice action (injected node). */
+  quickInvoiceActions?: React.ReactNode;
   /** Opens the dedicated resolution-and-close dialog. */
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
@@ -187,6 +189,7 @@ export function BentoHero({
   tags,
   onTagsChange,
   taskActions,
+  quickInvoiceActions,
   onResolveAndClose,
   resolveAndCloseDisabled = false,
   liveHighlightedFields = [],
@@ -947,6 +950,7 @@ export function BentoHero({
               </span>
             ) : null}
             {taskActions}
+            {quickInvoiceActions}
             {onResolveAndClose ? (
               <Button
                 id={`${id}-resolve-and-close-button`}

@@ -399,7 +399,10 @@
       "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "To okno fakturowania zawiera pozycje do rozliczenia, ale dla {{services}} nie zgłoszono użycia za okres rozliczeniowy od {{periodStart}} do {{periodEnd}}. Najpierw zarejestruj użycie albo wyraźnie potwierdź wygenerowanie bez niego — niezgłoszone usługi pozostaną rozliczalne później.",
       "USAGE_PERIOD_TOTAL_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć aktualne wartości, a następnie wygeneruj fakturę jeszcze raz.",
-      "USAGE_CALCULATION_ERROR": "Użycie dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}} zostało zarejestrowane, ale nie udało się go wycenić. Popraw ceny usługi (cena katalogowa w walucie umowy, stawka indywidualna lub progi stawek) i spróbuj ponownie. Nie rejestruj użycia zastępczego."
+      "USAGE_CALCULATION_ERROR": "Użycie dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}} zostało zarejestrowane, ale nie udało się go wycenić. Popraw ceny usługi (cena katalogowa w walucie umowy, stawka indywidualna lub progi stawek) i spróbuj ponownie. Nie rejestruj użycia zastępczego.",
+      "SOURCE_ALREADY_BILLED": "Niektóre wybrane pozycje nie są już rozliczalne (już rozliczone, niezatwierdzone lub usunięte). Odśwież i spróbuj ponownie.",
+      "SOURCE_NOT_ELIGIBLE": "Wybrana pozycja nie należy do tego zgłoszenia lub nie jest już kwalifikowalna. Odśwież i spróbuj ponownie.",
+      "SOURCE_CURRENCY_MISMATCH": "Niektóre wybrane produkty są wycenione w innej walucie niż waluta fakturowania tego klienta, więc nie można ich dodać. Rozlicz je osobno w ich własnej walucie."
     },
     "warnings": {
       "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej przed wygenerowaniem faktury."
@@ -410,6 +413,27 @@
     },
     "salesOrderContext": {
       "summary": "Z {{lineCount}} pozycji zamówienia można zafakturować {{quantity}} elementów. Ta wersja robocza zostanie powiązana z zamówieniem sprzedaży."
+    }
+  },
+  "quickInvoice": {
+    "currencyExcluded": "Wykluczono {{count}} produkt(y), ponieważ ich waluta różni się od {{currency}}.",
+    "action": "Szybka faktura",
+    "title": "Szybka faktura dla tego zgłoszenia",
+    "loading": "Ładowanie pozycji do rozliczenia…",
+    "empty": "Brak nierozliczonych pozycji w tym zgłoszeniu.",
+    "billableTime": "Czas do rozliczenia",
+    "products": "Produkty",
+    "selectedTotal": "Wybrana suma",
+    "create": "Utwórz fakturę",
+    "creating": "Tworzenie…",
+    "done": "Gotowe",
+    "viewInvoice": "Zobacz fakturę",
+    "created": "Utworzono fakturę",
+    "createdDetail": "Faktura została utworzona i powiązana z tym zgłoszeniem.",
+    "existingInvoices": "Faktury dla tego zgłoszenia",
+    "unknownService": "Pozycja do rozliczenia",
+    "errors": {
+      "ticketNotFound": "To zgłoszenie już nie istnieje."
     }
   },
   "draftsTab": {

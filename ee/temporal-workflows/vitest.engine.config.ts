@@ -15,6 +15,7 @@ export default {
       'src/workflows/__tests__/tenant-product-upgrade-workflow.test.ts',
       'src/workflows/__tests__/trial-payment-reminder-workflow.test.ts',
       'src/workflows/__tests__/tenant-creation-appliance.test.ts',
+      'src/workflows/__tests__/tenant-creation-portal-access.test.ts',
       'src/workflows/__tests__/sla-ticket-workflow.test.ts',
       'src/workflows/__tests__/sla-ticket-workflow.integration.test.ts',
       'src/workflows/__tests__/managed-email-domain-workflow.test.ts',

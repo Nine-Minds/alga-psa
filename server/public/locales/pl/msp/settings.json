@@ -445,7 +445,8 @@
       "boards": "Tablice",
       "priorities": "Priorytety",
       "categories": "Kategorie",
-      "checklistTemplates": "Szablony list kontrolnych"
+      "checklistTemplates": "Szablony list kontrolnych",
+      "externalSystems": "Systemy zewnętrzne"
     },
     "numbering": {
       "title": "Format numeru",
@@ -633,7 +634,8 @@
           "loading": "Ładowanie statusów zgłoszeń tablicy…",
           "statusName": "Nazwa statusu",
           "closed": "Zamknięte",
-          "default": "Domyślne"
+          "default": "Domyślne",
+          "portalSelectable": "Użytkownicy portalu klienta mogą wybrać ten status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Otwórz ponownie zamknięte zgłoszenia przy przychodzących odpowiedziach",
@@ -989,6 +991,47 @@
           "updateStatusFailed": "Nie udało się zaktualizować statusu szablonu",
           "itemSaveFailed": "Nie udało się zapisać elementu listy kontrolnej",
           "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Systemy zewnętrzne",
+      "subtitle": "Dodaj niestandardowe systemy zewnętrzne, aby zgłoszenia mogły odwoływać się do rekordów spoza wbudowanego katalogu.",
+      "addButton": "Dodaj system",
+      "builtInTitle": "Systemy wbudowane",
+      "builtInSubtitle": "Dostępne dla każdej organizacji; ich adresy URL są generowane na podstawie szablonu systemu.",
+      "table": {
+        "label": "Etykieta",
+        "key": "Klucz",
+        "urlTemplate": "Szablon adresu URL",
+        "actions": "Działania"
+      },
+      "actions": {
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj",
+        "save": "Zapisz"
+      },
+      "fields": {
+        "key": "Klucz",
+        "keyHint": "Musi być zgodny z custom:<slug> przy użyciu małych liter, cyfr lub podkreśleń.",
+        "label": "Etykieta",
+        "urlTemplate": "Szablon adresu URL",
+        "urlTemplateHint": "Opcjonalne. Użyj symboli zastępczych {realm} i {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Dodaj system zewnętrzny",
+        "editTitle": "Edytuj system zewnętrzny"
+      },
+      "deleteDialog": {
+        "title": "Usuń system zewnętrzny",
+        "message": "Usunąć \"{{label}}\"? Systemy nadal używane przez łącza nie mogą zostać usunięte."
+      },
+      "messages": {
+        "success": {
+          "created": "Utworzono system zewnętrzny.",
+          "updated": "Zaktualizowano system zewnętrzny.",
+          "deleted": "Usunięto system zewnętrzny."
         }
       }
     }
@@ -1566,7 +1609,8 @@
       "preview": {
         "subjectLabel": "Podgląd tematu",
         "iframeTitle": "Podgląd szablonu e-maila",
-        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości."
+        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości.",
+        "sourceSyncNote": "Kliknij element w podglądzie, aby zaznaczyć odpowiadający mu kod; przesunięcie kursora w kodzie obrysowuje ten element tutaj."
       },
       "errors": {
         "loadFailed": "Nie udało się załadować szablonów"
@@ -1615,7 +1659,8 @@
       },
       "tabs": {
         "source": "Kod źródłowy",
-        "preview": "Podgląd"
+        "preview": "Podgląd",
+        "variables": "Zmienne"
       },
       "common": {
         "notAvailable": "Nd."
@@ -1685,6 +1730,20 @@
           "colors": "kolory",
           "text": "tekst",
           "subject": "temat"
+        },
+        "overwrite": "Nadpisz",
+        "overwriteHint": "Nadpisanie odtwarza szablon na podstawie standardowego z Twoją paletą i usuwa Twoje zmiany.",
+        "preview": {
+          "open": "Zobacz podgląd wyniku",
+          "title": "Podgląd: {{name}}",
+          "loading": "Tworzenie podglądu...",
+          "captions": {
+            "create": "Ze standardowego szablonu powstanie kopia w Państwa kolorystyce.",
+            "update": "Państwa kopia zostanie zbudowana na nowo ze standardowego szablonu z zapisaną paletą.",
+            "customized": "Państwa zmiany pozostają słowo w słowo. Zamieniane są tylko kolory standardowe, które jeszcze zostały w tym szablonie.",
+            "overwrite": "Twoje zmiany w tym szablonie zostaną usunięte. Szablon zostanie odtworzony na podstawie standardowego z Twoją paletą.",
+            "skipped": "Nic nie zostanie zapisane — {{reason}}. Tak wygląda ten szablon dzisiaj."
+          }
         },
         "summary": "{{written}} z brandingiem, {{skipped}} pominiętych, {{failed}} nieudanych",
         "groups": {
@@ -2119,7 +2178,17 @@
         "upload": "Prześlij pakiet"
       },
       "errors": {
-        "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania."
+        "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania.",
+        "permissionDenied": "Nie masz uprawnień do importowania lub eksportowania danych.",
+        "invalidSpreadsheet": "Nie udało się odczytać tego arkusza. Sprawdź, czy to prawidłowy plik CSV lub XLSX, i spróbuj ponownie.",
+        "notAmpPackage": "Ten plik nie jest pakietem AMP. Prześlij plik .amp lub .sqlite.",
+        "tooLarge": "To przesłanie przekracza maksymalny dozwolony rozmiar.",
+        "sizeMismatch": "Przesyłanie nie zostało ukończone. Spróbuj ponownie.",
+        "noRecognizedHeaders": "Nie rozpoznano żadnej z kolumn tego arkusza. Sprawdź wiersz nagłówka i spróbuj ponownie.",
+        "storageRejected": "Serwer odrzucił to przesłanie. Poproś administratora o sprawdzenie konfiguracji typów plików magazynu.",
+        "spreadsheetFailed": "Nie udało się zaimportować arkusza. Spróbuj ponownie.",
+        "uploadFailed": "Nie udało się przesłać pakietu. Spróbuj ponownie.",
+        "unknown": "Przesyłanie nie powiodło się. Spróbuj ponownie."
       },
       "preflight": {
         "title": "Kontrola wstępna"
@@ -2127,6 +2196,19 @@
       "run": {
         "queued": "Migracja w kolejce",
         "applying": "Migracja w toku"
+      },
+      "badges": {
+        "nothingImported": "Nic nie zaimportowano"
+      },
+      "results": {
+        "skippedSamePackage": "Pominięte rekordy zostały już zmigrowane przez poprzednie uruchomienie tego samego pakietu.",
+        "skippedOtherPackage": "Pominięte rekordy dopasowano do encji utworzonych przez wcześniejszą migrację innego pakietu: {{packages}}.",
+        "skippedExistingEntity": "Pominięte rekordy dopasowano do istniejących encji.",
+        "nothingImportedTitle": "Nic nie zaimportowano",
+        "nothingImportedBody": "To uruchomienie nie utworzyło żadnych nowych rekordów. Każdy wiersz odpowiadał czemuś, co już istniało, więc nic nie zmieniono.",
+        "claimedBySamePackage": "Już zmigrowane przez ten pakiet",
+        "claimedByOtherPackage": "Już zmigrowane przez {{file}}",
+        "claimedByExistingEntity": "Dopasowano do istniejącej encji"
       }
     },
     "jobDetails": {

@@ -1802,5 +1802,79 @@
       "internalLabel": "Ne pas notifier non plus les agents et observateurs",
       "internalHelper": "Ignore aussi leurs e-mails et notifications dans l'application"
     }
+  },
+  "externalLinks": {
+    "title": "Liens externes",
+    "empty": "Aucun lien externe",
+    "loading": "Chargement des liens externes...",
+    "noUrl": "Aucune URL disponible pour cette référence",
+    "customSystemOption": "{{label}} (personnalisé)",
+    "actions": {
+      "add": "Ajouter un lien",
+      "edit": "Modifier",
+      "remove": "Supprimer",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "menu": "Actions du lien"
+    },
+    "relationship": {
+      "origin": "Origine",
+      "mirror": "Miroir",
+      "reference": "Référence"
+    },
+    "relationshipDescription": {
+      "origin": "Où ce ticket a commencé. Chaque ticket peut avoir un lien d’origine, qui définit son badge d’origine.",
+      "mirror": "Un autre enregistrement qui suit le même travail que ce ticket.",
+      "reference": "Informations complémentaires pour ce ticket."
+    },
+    "dialog": {
+      "addTitle": "Ajouter un lien externe",
+      "editTitle": "Modifier le lien externe",
+      "intro": "Ajouter un lien ne synchronise pas les données entre les systèmes."
+    },
+    "removeDialog": {
+      "title": "Supprimer le lien externe",
+      "message": "Supprimer ce lien externe du ticket ?"
+    },
+    "fields": {
+      "system": "Système",
+      "loadingSystems": "Chargement des systèmes...",
+      "selectSystem": "Sélectionner un système",
+      "externalId": "ID externe",
+      "externalIdPlaceholder": "p. ex. 42 ou 1234567890",
+      "realm": "Domaine",
+      "url": "URL",
+      "urlOptional": "Remplacement facultatif",
+      "urlRequired": "https://...",
+      "relationship": "Relation",
+      "originExistsHint": "Ce ticket possède déjà un lien d'origine.",
+      "actorGroup": "Personne ou compte (facultatif)",
+      "actorHint": "La personne ou le compte associé à l’enregistrement lié dans le système externe.",
+      "actorHandle": "Nom d’utilisateur ou identifiant",
+      "actorDisplay": "Nom affiché",
+      "builtInGroup": "Systèmes intégrés",
+      "customGroup": "Systèmes personnalisés",
+      "urlPreview": "Ouvre :",
+      "urlPreviewIncomplete": "Renseignez les champs ci-dessus pour prévisualiser le lien."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket introuvable",
+      "commentNotFound": "Commentaire introuvable sur ce ticket",
+      "linkNotFound": "Lien externe introuvable",
+      "systemNotFound": "Système externe inconnu",
+      "externalIdRequired": "L'ID externe est obligatoire",
+      "invalidUrl": "L'URL doit être une URL http(s) valide",
+      "invalidRelationship": "Relation non valide",
+      "invalidEntityType": "Type d'entité non valide",
+      "originExists": "Cette entité possède déjà un lien d'origine",
+      "duplicateExternalLink": "Cet enregistrement externe est déjà lié",
+      "systemInUse": "Ce système externe est utilisé par des liens existants",
+      "systemInUseCount": "Ce système externe est utilisé par {{count}} lien(s)",
+      "invalidSystemKey": "Les clés des systèmes personnalisés doivent correspondre à custom:<slug> avec des lettres minuscules, des chiffres ou des traits de soulignement",
+      "systemLabelRequired": "Le libellé du système est obligatoire",
+      "permissionDenied": "Permission refusée : impossible de gérer les systèmes externes",
+      "systemRequired": "Choisissez un système externe.",
+      "urlRequired": "Une URL est requise pour les systèmes sans modèle d'URL."
+    }
   }
 }

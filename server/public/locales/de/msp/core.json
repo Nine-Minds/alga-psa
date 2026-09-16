@@ -69,9 +69,10 @@
       "servicePeriods": "Leistungszeiträume",
       "credits": "Gutschriften",
       "serviceTypes": "Servicetypen",
+      "serviceCategories": "Servicekategorien",
       "serviceCatalog": "Dienste",
       "products": "Produkte",
-      "taxRates": "Steuersätze",
+      "taxRates": "Steuern",
       "usageTracking": "Nutzungsverfolgung",
       "reports": "Berichte",
       "accountingExports": "Buchhaltungsexporte"

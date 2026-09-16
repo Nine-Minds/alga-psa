@@ -441,7 +441,8 @@
       "boards": "Quadros",
       "priorities": "Prioridades",
       "categories": "Categorias",
-      "checklistTemplates": "Modelos de lista de verificação"
+      "checklistTemplates": "Modelos de lista de verificação",
+      "externalSystems": "Sistemas externos"
     },
     "numbering": {
       "title": "Formato numérico",
@@ -629,7 +630,8 @@
           "loading": "Carregando status de tickets de bordo…",
           "statusName": "Nome do status",
           "closed": "Fechado",
-          "default": "Padrão"
+          "default": "Padrão",
+          "portalSelectable": "Os usuários do portal do cliente podem selecionar este status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reabrir tickets fechados em respostas recebidas",
@@ -985,6 +987,47 @@
           "updateStatusFailed": "Falha ao atualizar o status do modelo",
           "itemSaveFailed": "Falha ao salvar o item da lista de verificação",
           "ruleSaveFailed": "Falha ao salvar a regra de aplicação automática"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Sistemas externos",
+      "subtitle": "Adicione sistemas externos personalizados para que os tickets possam apontar para registros fora do catálogo integrado.",
+      "addButton": "Adicionar sistema",
+      "builtInTitle": "Sistemas integrados",
+      "builtInSubtitle": "Disponíveis para todos os locatários; suas URLs são geradas a partir do modelo do sistema.",
+      "table": {
+        "label": "Rótulo",
+        "key": "Chave",
+        "urlTemplate": "Modelo de URL",
+        "actions": "Ações"
+      },
+      "actions": {
+        "edit": "Editar",
+        "delete": "Excluir",
+        "cancel": "Cancelar",
+        "save": "Salvar"
+      },
+      "fields": {
+        "key": "Chave",
+        "keyHint": "Deve corresponder a custom:<slug> usando letras minúsculas, dígitos ou sublinhados.",
+        "label": "Rótulo",
+        "urlTemplate": "Modelo de URL",
+        "urlTemplateHint": "Opcional. Use os marcadores {realm} e {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Adicionar sistema externo",
+        "editTitle": "Editar sistema externo"
+      },
+      "deleteDialog": {
+        "title": "Excluir sistema externo",
+        "message": "Excluir \"{{label}}\"? Sistemas ainda usados por links não podem ser excluídos."
+      },
+      "messages": {
+        "success": {
+          "created": "Sistema externo criado.",
+          "updated": "Sistema externo atualizado.",
+          "deleted": "Sistema externo excluído."
         }
       }
     }
@@ -1560,7 +1603,8 @@
       "preview": {
         "subjectLabel": "Pré-visualização do assunto",
         "iframeTitle": "Pré-visualização do modelo de e-mail",
-        "sampleDataNote": "A pré-visualização usa dados de exemplo. Os e-mails reais conterão valores reais."
+        "sampleDataNote": "A pré-visualização usa dados de exemplo. Os e-mails reais conterão valores reais.",
+        "sourceSyncNote": "Clique em qualquer elemento da pré-visualização para selecionar o código correspondente; mover o cursor no código destaca o elemento aqui."
       },
       "errors": {
         "loadFailed": "Falha ao carregar os modelos"
@@ -1609,7 +1653,8 @@
       },
       "tabs": {
         "source": "Código-fonte",
-        "preview": "Pré-visualização"
+        "preview": "Pré-visualização",
+        "variables": "Variáveis"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1679,6 +1724,20 @@
           "colors": "cores",
           "text": "texto",
           "subject": "assunto"
+        },
+        "overwrite": "Substituir",
+        "overwriteHint": "A substituição recria um modelo a partir do padrão com a sua paleta e descarta as suas edições.",
+        "preview": {
+          "open": "Ver o resultado",
+          "title": "Pré-visualização: {{name}}",
+          "loading": "Gerando a pré-visualização...",
+          "captions": {
+            "create": "Será criada uma cópia com a sua marca a partir do modelo padrão.",
+            "update": "A sua cópia com a marca será refeita a partir do modelo padrão com a paleta salva.",
+            "customized": "As suas edições são mantidas palavra por palavra. Só são substituídas as cores originais que ainda restam neste modelo.",
+            "overwrite": "As suas edições neste modelo serão descartadas. Ele será recriado a partir do modelo padrão com a sua paleta.",
+            "skipped": "Nada será gravado — {{reason}}. Este é o modelo como ele está hoje."
+          }
         },
         "summary": "{{written}} com sua marca, {{skipped}} ignorados, {{failed}} com falha",
         "groups": {
@@ -2113,7 +2172,17 @@
         "upload": "Enviar pacote"
       },
       "errors": {
-        "noImportableRecords": "Este pacote não continha registros importáveis."
+        "noImportableRecords": "Este pacote não continha registros importáveis.",
+        "permissionDenied": "Você não tem permissão para importar ou exportar dados.",
+        "invalidSpreadsheet": "Não foi possível ler essa planilha. Verifique se é um arquivo CSV ou XLSX válido e tente novamente.",
+        "notAmpPackage": "Esse arquivo não é um pacote AMP. Envie um arquivo .amp ou .sqlite.",
+        "tooLarge": "Este upload é maior que o tamanho máximo permitido.",
+        "sizeMismatch": "O upload não foi concluído. Tente novamente.",
+        "noRecognizedHeaders": "Nenhuma das colunas dessa planilha foi reconhecida. Verifique a linha de cabeçalho e tente novamente.",
+        "storageRejected": "O servidor rejeitou este upload. Peça ao administrador para verificar a configuração de tipos de arquivo do armazenamento.",
+        "spreadsheetFailed": "Não foi possível importar a planilha. Tente novamente.",
+        "uploadFailed": "Não foi possível enviar o pacote. Tente novamente.",
+        "unknown": "O upload falhou. Tente novamente."
       },
       "preflight": {
         "title": "Verificação prévia"
@@ -2121,6 +2190,19 @@
       "run": {
         "queued": "Migração na fila",
         "applying": "Migração em andamento"
+      },
+      "badges": {
+        "nothingImported": "Nada foi importado"
+      },
+      "results": {
+        "skippedSamePackage": "Os registros ignorados já foram migrados por uma execução anterior do mesmo pacote.",
+        "skippedOtherPackage": "Os registros ignorados corresponderam a entidades criadas por uma migração anterior de um pacote diferente: {{packages}}.",
+        "skippedExistingEntity": "Os registros ignorados corresponderam a entidades existentes.",
+        "nothingImportedTitle": "Nada foi importado",
+        "nothingImportedBody": "Esta execução não criou novos registros. Cada linha correspondeu a algo que já existia, então nada foi alterado.",
+        "claimedBySamePackage": "Já migrado por este pacote",
+        "claimedByOtherPackage": "Já migrado por {{file}}",
+        "claimedByExistingEntity": "Corresponde a uma entidade existente"
       }
     },
     "jobDetails": {

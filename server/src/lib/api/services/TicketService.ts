@@ -5,16 +5,17 @@ import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments'
  * Business logic for ticket-related operations
  */
 
-import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
+import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
+import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
-import { TICKET_ORIGINS } from '@alga-psa/types';
+import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
@@ -34,6 +35,10 @@ import {
 } from '@alga-psa/tickets/lib/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  persistExternalLinksForCreate,
+  publishExternalLinkEvent,
+} from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -69,6 +74,7 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { generateDocumentPreviews, type PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -227,6 +233,43 @@ export interface BundleView {
   master: BundleMemberTicket | null;
   children: BundleMemberTicket[];
   settings: { mode: BundleMode; reopen_on_child_reply: boolean } | null;
+}
+
+export type TicketDocumentVariant = 'thumbnail' | 'preview';
+
+// Same job the web composer arms; publishScheduledCommentHandler flips the row
+// to 'published' and dispatches the withheld TICKET_COMMENT_ADDED event.
+const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
+
+type ScheduledCommentPublication = { publishAt: Date; timeZone: string };
+
+function resolveScheduledCommentPublication(
+  data: { scheduled_publish_at?: string; scheduled_publish_tz?: string },
+  isInternal: boolean,
+): ScheduledCommentPublication | null {
+  if (!data.scheduled_publish_at) return null;
+  const publishAt = new Date(data.scheduled_publish_at);
+  if (Number.isNaN(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_at'], message: 'Scheduled publication time must be in the future' },
+    ]);
+  }
+  if (isInternal) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_at'], message: 'Only client-visible comments can be scheduled' },
+    ]);
+  }
+  if (!data.scheduled_publish_tz) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_tz'], message: 'A valid IANA time zone is required for scheduled comments' },
+    ]);
+  }
+  return { publishAt, timeZone: data.scheduled_publish_tz };
+}
+
+function isPreviewableMime(mimeType: string | null | undefined): boolean {
+  const mime = (mimeType ?? '').toLowerCase();
+  return mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('video/');
 }
 
 export class TicketService extends BaseService<ITicket> {
@@ -1124,6 +1167,7 @@ export class TicketService extends BaseService<ITicket> {
     });
 
     documentCommitted = true;
+    await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
@@ -1176,6 +1220,85 @@ export class TicketService extends BaseService<ITicket> {
       fileName: doc.document_name || result.metadata.original_name,
       mimeType: doc.mime_type || result.metadata.mime_type,
     };
+  }
+
+  /**
+   * Serve the cached thumbnail (200x200) or preview (800x600) image for a
+   * ticket document. Images and PDFs uploaded before previews existed get
+   * their previews generated on first request and persisted.
+   */
+  async downloadTicketDocumentVariant(
+    ticketId: string,
+    documentId: string,
+    variant: TicketDocumentVariant,
+    context: ServiceContext
+  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const scopedDb = tenantDb(knex, context.tenant);
+    const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
+    scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      docQuery.where('d.is_client_visible', true);
+    }
+
+    const doc = await docQuery
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+      })
+      .select('d.*')
+      .first() as IDocument | undefined;
+
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+      throw new NotFoundError('Document not found');
+    }
+
+    const column = variant === 'thumbnail' ? 'thumbnail_file_id' : 'preview_file_id';
+    let fileId = doc[column] ?? null;
+
+    if (!fileId && !doc.preview_generated_at && isPreviewableMime(doc.mime_type)) {
+      const original = await StorageService.downloadFile(doc.file_id);
+      const generated = await this.persistDocumentPreviews(knex, doc, original.buffer, context.tenant);
+      fileId = generated?.[column] ?? null;
+    }
+
+    if (!fileId) {
+      throw new NotFoundError(`Document ${variant} not available`);
+    }
+
+    const result = await StorageService.downloadFile(fileId);
+    return {
+      buffer: result.buffer,
+      fileId,
+      mimeType: result.metadata.mime_type || 'image/jpeg',
+    };
+  }
+
+  private async persistDocumentPreviews(
+    knex: Knex,
+    document: IDocument,
+    buffer: Buffer,
+    tenant: string,
+  ): Promise<PreviewGenerationResult | null> {
+    try {
+      const result = await generateDocumentPreviews(document, buffer);
+      await tenantScopedTable(knex, 'documents', tenant)
+        .where({ document_id: document.document_id })
+        .update({
+          thumbnail_file_id: result.thumbnail_file_id,
+          preview_file_id: result.preview_file_id,
+          preview_generated_at: result.preview_generated_at,
+        });
+      return result;
+    } catch (error) {
+      console.error(`[TicketService] Preview generation failed for document ${document.document_id}:`, error);
+      return null;
+    }
   }
 
   async deleteTicketDocument(
@@ -1442,7 +1565,7 @@ export class TicketService extends BaseService<ITicket> {
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
       const { knex } = await this.getKnex();
   
-      const fullTicket = await withTransaction(knex, async (trx) => {
+      const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -1496,6 +1619,18 @@ export class TicketService extends BaseService<ITicket> {
           await this.handleTags(ticketResult.ticket_id, data.tags, context, trx);
         }
 
+        // Persist ticket-level external links in the same transaction so a bot's
+        // create-with-links is atomic. Any invalid link — a second origin, a
+        // duplicate external record, or an unusable destination — throws and
+        // rolls back the whole ticket create.
+        const externalLinks = await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketResult.ticket_id,
+          data.external_links ?? null,
+          context.userId,
+        );
+
         // Get the full ticket data for return
         const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
           .where({ ticket_id: ticketResult.ticket_id })
@@ -1533,7 +1668,7 @@ export class TicketService extends BaseService<ITicket> {
           },
         });
 
-        return fullTicket as ITicket;
+        return { fullTicket, externalLinks };
       });
 
       await this.safePublishEvent('TICKET_CREATED', context, {
@@ -1547,7 +1682,29 @@ export class TicketService extends BaseService<ITicket> {
         board_id: fullTicket.board_id,
         priority_id: fullTicket.priority_id,
         client_id: fullTicket.client_id,
+        ...(externalLinks.length > 0
+          ? {
+              externalLinks: externalLinks.map((link) => ({
+                linkId: link.link_id,
+                entityType: link.entity_type,
+                entityId: link.entity_id,
+                system: link.system,
+                externalId: link.external_id,
+                externalParentId: link.external_parent_id ?? null,
+                realm: link.realm ?? null,
+                url: link.url ?? null,
+                relationship: link.relationship,
+              })),
+            }
+          : {}),
       });
+
+      // Post-commit: announce each inline ticket link so subscribers see the
+      // same events as links added through the dedicated endpoint. Publishing
+      // here (not inside the transaction) means a rollback emits nothing.
+      for (const link of externalLinks) {
+        await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', context.tenant, link, context.userId ?? null);
+      }
 
       return fullTicket;
     }
@@ -1586,6 +1743,9 @@ export class TicketService extends BaseService<ITicket> {
       delete (cleanedData as any).override_close_rules_reason;
       delete (cleanedData as any).suppressContactNotifications;
       delete (cleanedData as any).suppressInternalNotifications;
+      // Create-only field: never a `tickets` column, so it must not reach the
+      // UPDATE statement. Inline links are written by the create paths only.
+      delete (cleanedData as any).external_links;
 
       const isBoardChange =
         cleanedData.board_id !== undefined &&
@@ -2060,6 +2220,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<any> {
     const { knex } = await this.getKnex();
     const notificationSuppression = resolveTicketNotificationSuppression(data);
+    let createdExternalLinks: IExternalEntityLink[] = [];
 
     const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
@@ -2147,6 +2308,10 @@ export class TicketService extends BaseService<ITicket> {
         });
       }
 
+      // A reply into an internal thread inherits is_internal=true, so this
+      // check runs after visibility is resolved rather than on the raw body.
+      const scheduledPublication = resolveScheduledCommentPublication(data, apiIsInternal);
+
       const commentData = {
         comment_id: apiCommentId,
         thread_id: apiThreadId,
@@ -2160,11 +2325,34 @@ export class TicketService extends BaseService<ITicket> {
         created_at: apiNowIso,
         updated_at: apiNowIso,
         metadata: data.metadata,
+        ...(scheduledPublication
+          ? {
+              publish_state: 'scheduled',
+              scheduled_publish_at: scheduledPublication.publishAt.toISOString(),
+              scheduled_publish_tz: scheduledPublication.timeZone,
+            }
+          : {}),
       };
 
       const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
 
       await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
+
+      // Persist comment-level external links in the same transaction as the
+      // comment they describe. Invalid links roll back the comment create.
+      if (data.external_links && data.external_links.length > 0) {
+        createdExternalLinks = await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketId,
+          data.external_links.map((link) => ({
+            ...link,
+            entity_type: 'comment' as const,
+            comment_id: comment.comment_id,
+          })),
+          context.userId,
+        );
+      }
 
       if (apiIsReply) {
         await tenantScopedTable(trx, 'comment_threads', context.tenant)
@@ -2175,7 +2363,8 @@ export class TicketService extends BaseService<ITicket> {
           });
       }
 
-      if (!comment.is_internal) {
+      // A scheduled public comment is not a client reply until publication.
+      if (!comment.is_internal && !scheduledPublication) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
       }
 
@@ -2211,13 +2400,91 @@ export class TicketService extends BaseService<ITicket> {
         comment: { id: comment.comment_id, content: comment.note, author: authorName, isInternal: comment.is_internal },
         ...notificationSuppression,
       };
-      await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
-      return { response };
+      if (scheduledPublication) {
+        // Never arm the worker before the row is committed; the boot
+        // reconciler repairs a post-commit scheduling failure.
+        registerAfterCommit(trx, async () => {
+          const scheduled = await scheduleBackgroundJobAt(
+            SCHEDULED_COMMENT_JOB,
+            { tenantId: context.tenant, ticketId, commentId: comment.comment_id },
+            scheduledPublication.publishAt,
+            { singletonKey: `publish-comment:${comment.comment_id}`, metadata: { scheduledPublishTz: scheduledPublication.timeZone } },
+          );
+          await tenantScopedTable(knex, 'comments', context.tenant)
+            .where({ comment_id: comment.comment_id, publish_state: 'scheduled' })
+            .update({ schedule_job_id: scheduled.jobId });
+        }, `schedule comment publication ${comment.comment_id}`);
+      } else {
+        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
+      }
+      return { response, externalLinks: createdExternalLinks };
     });
 
     // Intent is persisted; after-commit dispatch and recurring recovery deliver it.
 
+    // Post-commit: announce comment-level inline links. A rolled-back comment
+    // create never reaches this point, so no event is emitted for it.
+    for (const link of result.externalLinks) {
+      await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', context.tenant, link, context.userId ?? null);
+    }
+
     return result.response;
+  }
+
+  /**
+   * Cancel a scheduled (not yet published) comment. Mirrors the web
+   * cancelScheduledComment action: cancellation is a retained audit state and
+   * the compare-and-set on publish_state races safely against the worker.
+   */
+  async cancelScheduledComment(
+    ticketId: string,
+    commentId: string,
+    context: ServiceContext
+  ): Promise<{ comment_id: string; publish_state: 'canceled' }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    return withTransaction(knex, async (trx) => {
+      const existing = await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, ticket_id: ticketId })
+        .first();
+
+      if (!existing) {
+        throw new NotFoundError('Comment not found');
+      }
+      if (existing.publish_state !== 'scheduled') {
+        throw new ValidationError('Only scheduled comments can be canceled');
+      }
+      if (existing.user_id !== context.userId && context.user?.user_type !== 'internal') {
+        throw new ForbiddenError('You can only cancel your own scheduled comments');
+      }
+
+      await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, publish_state: 'scheduled' })
+        .update({
+          publish_state: 'canceled',
+          deleted_at: trx.fn.now(),
+          schedule_job_id: null,
+          updated_at: trx.fn.now(),
+        });
+      await withdrawCommentAttachments(trx, context.tenant, commentId);
+      if (existing.schedule_job_id) {
+        await cancelScheduledJob(existing.schedule_job_id, context.tenant);
+      }
+
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED',
+        entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+        entityId: commentId,
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: { canceled: true },
+      });
+
+      return { comment_id: commentId, publish_state: 'canceled' as const };
+    });
   }
 
   /**
@@ -2523,8 +2790,30 @@ export class TicketService extends BaseService<ITicket> {
    */
   private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData, knex: Knex, tenant: string): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
+
+    // external_system + external_id must match the SAME external-link row when
+    // both are supplied; separate EXISTS clauses would let a ticket with
+    // github/42 and jira/99 match github + 99.
+    const externalSystem = filters.external_system;
+    const externalId = filters.external_id;
+    if (externalSystem || externalId) {
+      const externalLinkSubquery = scopedDb.subquery('external_entity_links as eel')
+        .select('*')
+        .whereRaw('eel.ticket_id = t.ticket_id')
+        .andWhere('eel.entity_type', 'ticket');
+      if (externalSystem) {
+        externalLinkSubquery.andWhere('eel.system', externalSystem);
+      }
+      if (externalId) {
+        externalLinkSubquery.andWhere('eel.external_id', externalId);
+      }
+      query.whereExists(externalLinkSubquery);
+    }
+    const handledExternalFilters = new Set(['external_system', 'external_id']);
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
+      if (handledExternalFilters.has(key)) return;
 
       switch (key) {
         case 'title':

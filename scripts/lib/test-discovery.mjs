@@ -48,7 +48,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.engine.test.ts') return true;
     return file === 'ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.integration.test.ts'
       || file === 'ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts'
-      || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|trial-payment-reminder-workflow|tenant-creation-appliance|sla-ticket-workflow|managed-email-domain-workflow)\.test\.ts$/.test(file);
+      || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|trial-payment-reminder-workflow|tenant-creation-appliance|tenant-creation-portal-access|sla-ticket-workflow|managed-email-domain-workflow)\.test\.ts$/.test(file);
   }
   if (lane === 'temporal-readiness') {
     if ([
@@ -65,6 +65,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-external-links.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/scripts/__tests__/upgrade-tenant-product.test.ts') return true;
@@ -77,7 +78,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || file === 'ee/temporal-workflows/src/db/__tests__/product-bootstrap-resolver.test.ts'
       || file === 'ee/temporal-workflows/src/db/__tests__/permission-catalog-packaging.test.ts'
       || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(portal-domain-activities(?:\.git)?|portal-domain-nextauth-url)\.test\.ts$/.test(file)
-      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
+      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|customer-tracking-activities|email-activities-portal-status|portal-user-operations|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
   }
   if (lane === 'api-e2e') {
     return (/^server\/src\/test\/e2e\/api\//.test(file)

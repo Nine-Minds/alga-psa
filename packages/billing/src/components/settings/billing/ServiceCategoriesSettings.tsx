@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, MoreVertical } from "lucide-react";
+import { Plus, MoreVertical, FolderTree } from "lucide-react";
 import { IServiceCategory, IStandardServiceCategory } from '@alga-psa/types';
 import { 
   getServiceCategories, 
@@ -26,6 +26,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   DropdownMenu,
@@ -41,6 +42,7 @@ const isReturnedActionError = (result: unknown) => (
 const ServiceCategoriesSettings: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -83,6 +85,8 @@ const ServiceCategoriesSettings: React.FC = () => {
   }, []);
 
   const fetchCategories = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       const allCategories = await getServiceCategories();
       if (isReturnedActionError(allCategories)) {
@@ -93,6 +97,27 @@ const ServiceCategoriesSettings: React.FC = () => {
     } catch (error) {
       console.error('Error fetching service categories:', error);
       setError(t('serviceCategories.errors.fetch', { defaultValue: 'Failed to fetch service categories' }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const openAddDialog = () => {
+    setEditingCategory(null);
+    setFormData({ category_name: '', description: '', display_order: categories.length + 1 });
+    setShowAddEditDialog(true);
+  };
+
+  const openImportDialog = async () => {
+    try {
+      const available = await getAvailableReferenceData('service_categories');
+      setAvailableReferenceCategories(available || []);
+      setSelectedImportCategories([]);
+      setShowImportDialog(true);
+    } catch (error) {
+      handleError(error, t('serviceCategories.import.fetchError', {
+        defaultValue: 'Failed to fetch available service categories for import'
+      }));
     }
   };
 
@@ -265,58 +290,81 @@ const ServiceCategoriesSettings: React.FC = () => {
   return (
     <div className="bg-card p-6 rounded-lg shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-[rgb(var(--color-text-800))]">
+        <h3 className="text-lg font-semibold mb-2 text-[rgb(var(--color-text-800))]">
           {t('serviceCategories.title', { defaultValue: 'Service Categories' })}
         </h3>
+        <p className="text-sm text-muted-foreground mb-4 max-w-3xl">
+          {t('serviceCategories.description', {
+            defaultValue: 'Optional groups for your products. Categories drive the Category column and filter on the Products tab, and are separate from Service Types, which are required and used in reporting and time entry.'
+          })}
+        </p>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <DataTable
-          id="service-categories-table"
-          data={categories}
-          columns={columns}
-          pagination={true}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          pageSize={pageSize}
-          onItemsPerPageChange={handlePageSizeChange}
-        />
-        <div className="mt-4 flex gap-2">
-          <Button 
-            id="add-service-category"
-            onClick={() => {
-              setEditingCategory(null);
-              setFormData({ category_name: '', description: '', display_order: categories.length + 1 });
-              setShowAddEditDialog(true);
-            }} 
-            className="bg-primary-500 text-white hover:bg-primary-600"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t('serviceCategories.actions.add', { defaultValue: 'Add Service Category' })}
-          </Button>
-          <Button 
-            id="import-service-categories"
-            variant="outline"
-            onClick={async () => {
-              try {
-                const available = await getAvailableReferenceData('service_categories');
-                setAvailableReferenceCategories(available || []);
-                setSelectedImportCategories([]);
-                setShowImportDialog(true);
-              } catch (error) {
-                handleError(error, t('serviceCategories.import.fetchError', {
-                  defaultValue: 'Failed to fetch available service categories for import'
-                }));
-              }
-            }}
-          >
-            {t('serviceCategories.actions.importFromStandard', {
-              defaultValue: 'Import from Standard Categories'
+        {isLoading ? (
+          <div className="py-8 text-center text-sm text-muted-foreground" role="status">
+            {t('common.loading', { defaultValue: 'Loading...' })}
+          </div>
+        ) : categories.length === 0 && !error ? (
+          <EmptyState
+            icon={<FolderTree className="h-6 w-6" />}
+            title={t('serviceCategories.empty.title', { defaultValue: 'No service categories yet' })}
+            description={t('serviceCategories.empty.description', {
+              defaultValue: 'Import the standard list to get started, or add your own. Categories are optional and only needed if you want to group products.'
             })}
-          </Button>
-        </div>
+            action={
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  id="empty-import-service-categories"
+                  onClick={openImportDialog}
+                  className="bg-primary-500 text-white hover:bg-primary-600"
+                >
+                  {t('serviceCategories.empty.importPrimary', {
+                    defaultValue: 'Import Standard Service Categories'
+                  })}
+                </Button>
+                <Button id="empty-add-service-category" variant="outline" onClick={openAddDialog}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('serviceCategories.actions.add', { defaultValue: 'Add Service Category' })}
+                </Button>
+              </div>
+            }
+          />
+        ) : (
+          <>
+            <DataTable
+              id="service-categories-table"
+              data={categories}
+              columns={columns}
+              pagination={true}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onItemsPerPageChange={handlePageSizeChange}
+            />
+            <div className="mt-4 flex gap-2">
+              <Button
+                id="add-service-category"
+                onClick={openAddDialog}
+                className="bg-primary-500 text-white hover:bg-primary-600"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {t('serviceCategories.actions.add', { defaultValue: 'Add Service Category' })}
+              </Button>
+              <Button
+                id="import-service-categories"
+                variant="outline"
+                onClick={openImportDialog}
+              >
+                {t('serviceCategories.actions.importFromStandard', {
+                  defaultValue: 'Import from Standard Categories'
+                })}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       <ConfirmationDialog

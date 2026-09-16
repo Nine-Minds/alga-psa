@@ -441,7 +441,8 @@
       "boards": "Boards",
       "priorities": "Priorities",
       "categories": "Categories",
-      "checklistTemplates": "Checklist Templates"
+      "checklistTemplates": "Checklist Templates",
+      "externalSystems": "External systems"
     },
     "numbering": {
       "title": "Number Format",
@@ -629,7 +630,8 @@
           "loading": "Loading board ticket statuses…",
           "statusName": "Status name",
           "closed": "Closed",
-          "default": "Default"
+          "default": "Default",
+          "portalSelectable": "Client portal users can select this status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reopen closed tickets on inbound replies",
@@ -985,6 +987,47 @@
           "updateStatusFailed": "Failed to update template status",
           "itemSaveFailed": "Failed to save checklist item",
           "ruleSaveFailed": "Failed to save auto-apply rule"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "External systems",
+      "subtitle": "Add custom external systems so tickets can link to records outside the built-in catalog.",
+      "addButton": "Add system",
+      "builtInTitle": "Built-in systems",
+      "builtInSubtitle": "Available to every tenant; their URLs are rendered from the system template.",
+      "table": {
+        "label": "Label",
+        "key": "Key",
+        "urlTemplate": "URL template",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "fields": {
+        "key": "Key",
+        "keyHint": "Must match custom:<slug> using lowercase letters, digits, or underscores.",
+        "label": "Label",
+        "urlTemplate": "URL template",
+        "urlTemplateHint": "Optional. Use {realm} and {external_id} placeholders."
+      },
+      "dialog": {
+        "addTitle": "Add external system",
+        "editTitle": "Edit external system"
+      },
+      "deleteDialog": {
+        "title": "Delete external system",
+        "message": "Delete \"{{label}}\"? Systems still used by links cannot be deleted."
+      },
+      "messages": {
+        "success": {
+          "created": "External system created.",
+          "updated": "External system updated.",
+          "deleted": "External system deleted."
         }
       }
     }
@@ -1560,7 +1603,8 @@
       "preview": {
         "subjectLabel": "Subject Preview",
         "iframeTitle": "Email template preview",
-        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values."
+        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values.",
+        "sourceSyncNote": "Click anything in the preview to select the markup behind it; moving the cursor in the source outlines it here."
       },
       "errors": {
         "loadFailed": "Failed to load templates"
@@ -1609,7 +1653,8 @@
       },
       "tabs": {
         "source": "Source",
-        "preview": "Preview"
+        "preview": "Preview",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/A"
@@ -1679,6 +1724,20 @@
           "colors": "colors",
           "text": "text",
           "subject": "subject"
+        },
+        "overwrite": "Overwrite",
+        "overwriteHint": "Overwrite rebuilds a template from the standard one in your palette and discards your edits.",
+        "preview": {
+          "open": "Preview the result",
+          "title": "Preview: {{name}}",
+          "loading": "Building the preview...",
+          "captions": {
+            "create": "A branded copy of the standard template will be created for you.",
+            "update": "Your branded copy will be rebuilt from the standard template with the saved palette.",
+            "customized": "Your edits are kept word for word. Only the stock colors still left in this template are replaced.",
+            "overwrite": "Your edits to this template will be discarded. It will be rebuilt from the standard template in your palette.",
+            "skipped": "Nothing will be written — {{reason}}. This is the template as it stands today."
+          }
         },
         "summary": "{{written}} branded, {{skipped}} skipped, {{failed}} failed",
         "groups": {
@@ -2108,10 +2167,43 @@
       "comingSoon": "Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs."
     },
     "migration": {
-      "actions": { "back": "Back to migrations", "upload": "Upload package" },
-      "errors": { "noImportableRecords": "This package contained no importable records." },
-      "preflight": { "title": "Preflight" },
-      "run": { "queued": "Migration queued", "applying": "Migration in progress" }
+      "actions": {
+        "back": "Back to migrations",
+        "upload": "Upload package"
+      },
+      "errors": {
+        "noImportableRecords": "This package contained no importable records.",
+        "permissionDenied": "You do not have permission to import or export data.",
+        "invalidSpreadsheet": "That spreadsheet could not be read. Check that it is a valid CSV or XLSX file and try again.",
+        "notAmpPackage": "That file is not an AMP package. Upload a .amp or .sqlite file.",
+        "tooLarge": "This upload is larger than the maximum allowed size.",
+        "sizeMismatch": "The upload did not complete. Please try again.",
+        "noRecognizedHeaders": "None of the columns in that spreadsheet were recognized. Check the header row and try again.",
+        "storageRejected": "The server rejected this upload. Ask your administrator to check the storage file-type configuration.",
+        "spreadsheetFailed": "The spreadsheet could not be imported. Please try again.",
+        "uploadFailed": "The package could not be uploaded. Please try again.",
+        "unknown": "The upload failed. Please try again."
+      },
+      "preflight": {
+        "title": "Preflight"
+      },
+      "run": {
+        "queued": "Migration queued",
+        "applying": "Migration in progress"
+      },
+      "badges": {
+        "nothingImported": "Nothing imported"
+      },
+      "results": {
+        "skippedSamePackage": "Skipped records were already migrated by an earlier run of the same package.",
+        "skippedOtherPackage": "Skipped records were matched to entities created by an earlier migration of a different package: {{packages}}.",
+        "skippedExistingEntity": "Skipped records were matched to existing entities.",
+        "nothingImportedTitle": "Nothing was imported",
+        "nothingImportedBody": "This run created no new records. Every row matched something that already existed, so nothing was changed.",
+        "claimedBySamePackage": "Already migrated by this package",
+        "claimedByOtherPackage": "Already migrated by {{file}}",
+        "claimedByExistingEntity": "Matched to an existing entity"
+      }
     },
     "jobDetails": {
       "title": "Import Job Details",

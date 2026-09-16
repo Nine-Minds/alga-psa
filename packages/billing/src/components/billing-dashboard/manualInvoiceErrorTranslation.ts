@@ -15,6 +15,9 @@ const translatedManualInvoiceErrorCodes = new Set<ManualInvoiceErrorCode>([
   'NO_TAX_RATE',
   'DISCOUNT_TARGET_NOT_FOUND',
   'INVOICE_NUMBER_CONFLICT',
+  'SOURCE_ALREADY_BILLED',
+  'SOURCE_NOT_ELIGIBLE',
+  'SOURCE_CURRENCY_MISMATCH',
   'PERMISSION_DENIED',
   'UNEXPECTED',
 ]);

@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2, MapPin } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2, MapPin, RotateCcw } from 'lucide-react';
 import { IContract, IContractLineServiceRateTier } from '@alga-psa/types';
 import { UsageServiceConfigPanel } from '../service-configurations/UsageServiceConfigPanel';
 import { getNextContractServiceBoundary } from '@alga-psa/billing/actions/contractLineSemanticsActions';
@@ -17,6 +17,7 @@ import {
   updateContractLineAssociation,
 } from '@alga-psa/billing/actions/contractLineMappingActions';
 import { checkContractHasInvoices } from '@alga-psa/billing/actions/contractActions';
+import { resetContractLineRateToStandard, previewContractLineRateReset } from '@alga-psa/billing/actions/rateReviewActions';
 import {
   applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations,
@@ -33,6 +34,7 @@ import {
   type BillingLocationSummary,
 } from '@alga-psa/billing/actions/billingClientLocationActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -76,6 +78,8 @@ interface DetailedContractLineMapping {
   contract_line_id: string;
   display_order: number;
   custom_rate?: number | null;
+  /** Who owns `custom_rate`; drives the Standard/Custom/Unreviewed badge. */
+  rate_provenance?: 'custom' | 'inherited' | 'unreviewed' | null;
   created_at: string | Date;
   contract_line_name: string;
   billing_frequency: string;
@@ -209,6 +213,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
   const [pendingServiceAdditions, setPendingServiceAdditions] = useState<PendingServiceAddition[]>([]);
   const [pendingServiceRemovalIds, setPendingServiceRemovalIds] = useState<string[]>([]);
+  // "Reset to standard" confirmation (plan §3.3): shows the current rate and the
+  // catalog rate it will fall back to. Fetched from the resolver so the dialog
+  // and the apply cannot disagree.
+  const [resetConfirmation, setResetConfirmation] = useState<{
+    line: DetailedContractLineMapping;
+    currentRateCents: number | null;
+    targetRateCents: number | null;
+  } | null>(null);
+  const [isPreparingReset, setIsPreparingReset] = useState(false);
+  const [isResettingLine, setIsResettingLine] = useState(false);
 
   // Location grouping state
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
@@ -532,6 +546,61 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       setError(err instanceof Error
         ? err.message
         : t('contractLines.errors.failedToRemove', { defaultValue: 'Failed to remove contract line' }));
+    }
+  };
+
+  const openResetConfirmation = async (line: DetailedContractLineMapping) => {
+    setIsPreparingReset(true);
+    try {
+      const preview = await previewContractLineRateReset(line.contract_line_id);
+      if (isReturnedActionError(preview)) {
+        setError(getErrorMessage(preview));
+        return;
+      }
+      if (preview.targetRateCents === null) {
+        setError(preview.reason ?? t('contractLines.errors.failedToResetRate', {
+          defaultValue: 'Failed to reset the line rate',
+        }));
+        return;
+      }
+      setResetConfirmation({
+        line,
+        currentRateCents: preview.currentRateCents,
+        targetRateCents: preview.targetRateCents,
+      });
+    } catch (err) {
+      console.error('Error preparing line rate reset:', err);
+      setError(err instanceof Error
+        ? err.message
+        : t('contractLines.errors.failedToResetRate', { defaultValue: 'Failed to reset the line rate' }));
+    } finally {
+      setIsPreparingReset(false);
+    }
+  };
+
+  const confirmResetLineRateToStandard = async () => {
+    if (!resetConfirmation) return;
+    setIsResettingLine(true);
+    try {
+      const result = await resetContractLineRateToStandard(resetConfirmation.line.contract_line_id);
+      if ('refused' in result && result.refused.length > 0) {
+        setError(result.refused[0].reason);
+        return;
+      }
+      if (!('applied' in result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      await fetchData();
+      onContractLinesChanged?.();
+      setResetConfirmation(null);
+    } catch (err) {
+      console.error('Error resetting line rate:', err);
+      setError(err instanceof Error
+        ? err.message
+        : t('contractLines.errors.failedToResetRate', { defaultValue: 'Failed to reset the line rate' }));
+    } finally {
+      setIsResettingLine(false);
     }
   };
 
@@ -1157,14 +1226,51 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                             </span>
                           </>
                         )}
-                        {line.custom_rate !== null && line.custom_rate !== undefined && (
-                          <>
-                            <span>•</span>
-                            <span className="text-blue-600 font-medium">
-                              {t('contractLines.customRate', { defaultValue: 'Custom' })}: {formatRate(line.custom_rate)}
-                            </span>
-                          </>
-                        )}
+                        {(() => {
+                          const provenance = line.rate_provenance ?? null;
+                          if (provenance === 'inherited') {
+                            return (
+                              <>
+                                <span>•</span>
+                                <Badge variant="default-muted">
+                                  {t('contractLines.rateProvenance.standard', { defaultValue: 'Standard' })}
+                                </Badge>
+                              </>
+                            );
+                          }
+                          if (provenance === 'unreviewed') {
+                            return (
+                              <>
+                                <span>•</span>
+                                <Badge variant="warning">
+                                  {t('contractLines.rateProvenance.unreviewed', { defaultValue: 'Unreviewed' })}
+                                </Badge>
+                              </>
+                            );
+                          }
+                          // A stored rate with no label is a pre-migration row;
+                          // the resolver treats it as custom/unreviewed by rate
+                          // presence, so the badge does the same.
+                          const isCustom =
+                            provenance === 'custom' ||
+                            (provenance === null &&
+                              line.custom_rate !== null &&
+                              line.custom_rate !== undefined);
+                          if (!isCustom) {
+                            return null;
+                          }
+                          return (
+                            <>
+                              <span>•</span>
+                              <span className="inline-flex items-center gap-1 font-medium text-[rgb(var(--color-primary-700))]">
+                                <Badge variant="secondary">
+                                  {t('contractLines.rateProvenance.custom', { defaultValue: 'Custom' })}
+                                </Badge>
+                                {formatRate(line.custom_rate)}
+                              </span>
+                            </>
+                          );
+                        })()}
                         {line.location_id && (
                           <>
                             <span>•</span>
@@ -1197,6 +1303,23 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                         <Edit className="h-4 w-4 mr-1" />
                         {t('common.actions.edit', { defaultValue: 'Edit' })}
                       </Button>
+                      {line.custom_rate !== null && line.custom_rate !== undefined && (
+                        <Button
+                          id={`reset-line-rate-to-standard-${line.contract_line_id}`}
+                          data-line-id={line.contract_line_id}
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void openResetConfirmation(line);
+                          }}
+                          className="h-8 text-muted-foreground hover:text-[rgb(var(--color-text-700))] hover:bg-muted"
+                          disabled={isReadOnly || isPreparingReset || isResettingLine}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-1" />
+                          {t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
+                        </Button>
+                      )}
                       <Button
                         id={`remove-${line.contract_line_id}`}
                         variant="ghost"
@@ -1876,6 +1999,33 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
           )}
         </>
       ) : null}
+
+      <ConfirmationDialog
+        isOpen={resetConfirmation !== null}
+        onClose={() => setResetConfirmation(null)}
+        onConfirm={confirmResetLineRateToStandard}
+        isConfirming={isResettingLine}
+        title={t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
+        message={
+          <div className="space-y-2">
+            <p>
+              {t('contractLines.dialogs.confirmResetRate', {
+                defaultValue: 'Reset this line to the standard catalog rate? The stored custom rate will be removed.',
+              })}
+            </p>
+            {resetConfirmation && (
+              <p className="font-medium text-foreground">
+                {t('contractLines.columns.rate', { defaultValue: 'Rate' })}:{' '}
+                {formatRate(resetConfirmation.currentRateCents)} &rarr;{' '}
+                {formatRate(resetConfirmation.targetRateCents)}
+              </p>
+            )}
+          </div>
+        }
+        confirmLabel={t('contractLines.actions.resetToStandard', { defaultValue: 'Reset to standard' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        id="reset-line-rate-to-standard-confirmation"
+      />
     </Card>
   );
 };

@@ -43,13 +43,14 @@
       "contractTemplates": "〖Ƈȯƞŧřȧƈŧ Ŧḗḿƥŀȧŧḗş ········〗",
       "invoicing": "〖Īƞṽȯīƈīƞɠ ····〗",
       "invoiceLayouts": "〖Īƞṽȯīƈḗ Ŀȧẏȯŭŧş ······〗",
-      "taxRates": "〖Ŧȧẋ řȧŧḗş ····〗",
+      "taxRates": "〖Ŧȧẋ ··〗",
       "contractLinePresets": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƥřḗşḗŧş ·········〗",
       "billingCycles": "〖Ɓīŀŀīƞɠ Ƈẏƈŀḗş ······〗",
       "servicePeriods": "〖Şḗřṽīƈḗ Ƥḗřīȯḓş ······〗",
       "usageTracking": "〖Ŭşȧɠḗ Ŧřȧƈķīƞɠ ······〗",
       "reports": "〖Řḗƥȯřŧş ···〗",
       "serviceTypes": "〖Şḗřṽīƈḗ Ŧẏƥḗş ······〗",
+      "serviceCategories": "〖Şḗřṽīƈḗ Ƈȧŧḗɠȯřīḗş ········〗",
       "serviceCatalog": "〖Şḗřṽīƈḗş ····〗",
       "products": "〖Ƥřȯḓŭƈŧş ····〗"
     }

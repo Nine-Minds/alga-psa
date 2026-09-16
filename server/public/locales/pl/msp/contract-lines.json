@@ -694,7 +694,10 @@
       "allServicesAssociated": "Wszystkie dostępne usługi są już powiązane z tą linią kontraktu.",
       "badges": {
         "billingMismatch": "Niezgodność rozliczeń",
-        "defaultConfigType": "Domyślny"
+        "defaultConfigType": "Domyślny",
+        "standard": "Standardowa",
+        "custom": "Niestandardowa",
+        "unreviewed": "Niezweryfikowana"
       },
       "billingMethod": {
         "fixed": "Stała cena",

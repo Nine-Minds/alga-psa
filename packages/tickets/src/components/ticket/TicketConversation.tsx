@@ -38,6 +38,7 @@ export const DEFAULT_BLOCK: PartialBlock[] = [{
   }]
 }];
 import CommentItem from './CommentItem';
+import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import styles from './TicketDetails.module.css';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -108,6 +109,8 @@ interface TicketConversationProps {
   defaultNewestFirst?: boolean;
   canViewCommentMetadataDebug?: boolean;
   reactionRefreshVersion?: number;
+  /** Comment-level external links keyed by comment_id (read-only chips). */
+  externalLinksByCommentId?: Record<string, ITicketExternalLinkView[]>;
 }
 
 const ALL_COMMENTS_TAB_ID = 'all-comments';
@@ -154,6 +157,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   defaultNewestFirst = false,
   canViewCommentMetadataDebug = false,
   reactionRefreshVersion = 0,
+  externalLinksByCommentId = {},
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
@@ -512,6 +516,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onToggleReaction={handleToggleReaction}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+          externalLinks={externalLinksByCommentId[mergedConversation.comment_id || ''] ?? []}
         />
         {replyingToCommentId === mergedConversation.comment_id && mergedConversation.comment_id && (
           <InlineReplyComposer
@@ -627,6 +632,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 onDelete={() => {}}
                 hideInternalTab={hideInternalTab}
                 canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+                externalLinks={externalLinksByCommentId[conversation.comment_id || ''] ?? []}
               />
             </div>
           );
