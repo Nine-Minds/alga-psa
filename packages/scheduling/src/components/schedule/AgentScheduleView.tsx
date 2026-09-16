@@ -48,8 +48,12 @@ const workItemColors: Record<WorkItemType, string> = {
  * already shows the time), wrapping to at most two lines. The full title is
  * in the chip's tooltip.
  */
-function AgentScheduleEventChip({ title }: EventProps<IScheduleEntry>) {
-  return <div className="agent-schedule-chip__title">{title}</div>;
+const CHIP_TWO_LINE_MINUTES = 45;
+
+function AgentScheduleEventChip({ event, title }: EventProps<IScheduleEntry>) {
+  const minutes = (new Date(event.scheduled_end).getTime() - new Date(event.scheduled_start).getTime()) / 60000;
+  const lines = minutes >= CHIP_TWO_LINE_MINUTES ? 'two' : 'one';
+  return <div className={`agent-schedule-chip__title agent-schedule-chip__title--${lines}`}>{title}</div>;
 }
 
 interface AgentScheduleViewProps {
@@ -141,8 +145,8 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
     };
   }, [agentId, canViewAgent, currentUserId, permissionsLoaded, dateRange.end, dateRange.start, refreshKey, t]);
 
-  // First paint lands on the working day, or earlier if this work item's
-  // first entry starts before 8am, so the dispatcher's target is in view.
+  // First paint lands on this work item's first entry, or the working day
+  // when it has none in view, so the dispatcher's target is at the top.
   // Measured from the gutter rows rather than a fixed pixel guess, which
   // drifted with the row height.
   useEffect(() => {
@@ -154,7 +158,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
     const ownEntryHours = events
       .filter((event) => belongsToWorkItem(event) && !hasAllDayDates(event))
       .map((event) => new Date(event.scheduled_start).getHours());
-    const targetHour = Math.max(0, Math.min(8, ...ownEntryHours) - 1);
+    const targetHour = Math.min(8, ...ownEntryHours);
     const row = gutterRows[Math.min(targetHour, gutterRows.length - 1)] as HTMLElement;
     timeContent.scrollTop = row.offsetTop;
     setHasScrolled(true);
@@ -409,6 +413,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
             onEventDrop={handleEventDrop}
             onEventResize={handleEventResize}
             components={{ event: AgentScheduleEventChip, toolbar: AgentToolbar }}
+            dayLayoutAlgorithm="no-overlap"
             step={15}
             timeslots={4}
             defaultView="week"

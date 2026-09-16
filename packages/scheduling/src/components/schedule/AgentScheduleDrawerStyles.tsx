@@ -81,7 +81,25 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         overflow: hidden;
         white-space: normal;
         word-break: normal;
-        overflow-wrap: anywhere;
+        /* Wrap between words; split a word only when it cannot fit a line by itself. */
+        overflow-wrap: break-word;
+      }
+      .agent-schedule-chip__title--one {
+        -webkit-line-clamp: 1;
+      }
+
+      /* Today and now are the dispatcher's anchors. */
+      .agent-schedule-view .rbc-day-slot.rbc-today,
+      .agent-schedule-view .rbc-header.rbc-today {
+        background-color: rgb(var(--color-primary-500) / 0.14) !important;
+      }
+      .agent-schedule-view .rbc-header.rbc-today {
+        color: rgb(var(--color-primary-600));
+        font-weight: 600;
+      }
+      .agent-schedule-view .rbc-current-time-indicator {
+        height: 2px;
+        background-color: rgb(var(--color-accent-500)) !important;
       }
       .agent-schedule-toolbar .rbc-toolbar-label {
         font-size: 1.05rem !important;

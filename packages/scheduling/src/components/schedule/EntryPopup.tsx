@@ -9,7 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ExternalLink, Check, X, Download, FileText, Video } from 'lucide-react';
+import { ExternalLink, Check, X, Download, FileText, Video, Trash2 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
@@ -185,6 +185,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
   });
   const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(initialWorkItem ?? null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [recurrencePattern, setRecurrencePattern] = useState<IRecurrencePattern | null>(null);
   const [isEditingWorkItem, setIsEditingWorkItem] = useState(false);
   const [availableWorkItems, setAvailableWorkItems] = useState<IWorkItem[]>([]);
@@ -947,6 +948,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             ? t('entryPopup.title.newForWorkItem', { defaultValue: 'Schedule {{name}}', name: selectedWorkItem.name })
             : t('entryPopup.title.new', { defaultValue: 'New Entry' });
 
+  // The host dialog and drawer both move focus on open (to their container or
+  // first control); the field a user came to edit is the title, so take focus
+  // after they have finished.
+  useEffect(() => {
+    if (viewOnly) return;
+    const timer = setTimeout(() => titleInputRef.current?.focus({ preventScroll: true }), 50);
+    return () => clearTimeout(timer);
+  }, [viewOnly]);
+
   const showDetailsButton = Boolean(
     event && event.work_item_type &&
     (event.work_item_type === 'ticket' || event.work_item_type === 'project_task' || event.work_item_type === 'interaction') &&
@@ -1309,11 +1319,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         <div className="min-w-0">
           <div className="relative">
             {viewOnly || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
-              <div className="flex justify-between items-center gap-3 p-2">
+              <div className="flex justify-between items-center gap-3 py-1">
                 {selectedWorkItem ? (
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{selectedWorkItem.name}</div>
-                    <div className="text-sm text-gray-500 capitalize">{selectedWorkItem.type.replace('_', ' ')}</div>
+                  <div className="min-w-0 text-sm text-gray-500 truncate">
+                    <span className="capitalize">{selectedWorkItem.type.replace('_', ' ')}</span>
+                    <span aria-hidden="true"> · </span>
+                    <span className="text-[rgb(var(--color-text-800))]">{selectedWorkItem.name}</span>
                   </div>
                 ) : isSourceOwnedWorkItemType(entryData.work_item_type) ? (
                   // A deal step's entry is written from the opportunity's plan;
@@ -1398,7 +1409,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               name="title"
               value={entryData.title}
               onChange={handleInputChange}
-              autoFocus={canEditFields}
+              ref={titleInputRef}
               className=""
               disabled={!canEditFields} // Disable based on permissions
             />
@@ -1488,20 +1499,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 minDate={entryData.scheduled_start}
                 disabled={!canEditFields} // Disable based on permissions
               />
+              {/* Always rendered: letting this line appear and disappear resized the
+                  dialog under an open time popover, moving the rows mid-click. */}
+              <p
+                id="schedule-time-hint"
+                className={`min-h-[1rem] mt-1 text-xs leading-4 ${endsBeforeStart ? 'text-red-500' : 'text-gray-500'}`}
+              >
+                {endsBeforeStart
+                  ? t('entryPopup.validation.endAfterStart', {
+                      defaultValue: 'End date must be after start date',
+                    })
+                  : ''}
+              </p>
             </div>
           </div>
-          {/* Always rendered: letting this line appear and disappear resized the
-              dialog under an open time popover, moving the rows mid-click. */}
-          <p
-            id="schedule-time-hint"
-            className={`min-h-[1.25rem] text-sm ${endsBeforeStart ? 'text-red-500' : 'text-gray-500'}`}
-          >
-            {endsBeforeStart
-              ? t('entryPopup.validation.endAfterStart', {
-                  defaultValue: 'End date must be after start date',
-                })
-              : ''}
-          </p>
           <div>
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
               {t('entryPopup.fields.notes', { defaultValue: 'Notes' })}
@@ -1694,9 +1705,10 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             id="delete-entry-btn"
             type="button"
             variant="ghost"
-            className="mr-auto text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-accent-600))]"
+            className="mr-auto gap-1 text-[rgb(var(--color-accent-500))] hover:text-[rgb(var(--color-accent-600))]"
             onClick={startDelete}
           >
+            <Trash2 className="w-4 h-4" />
             {t('entryPopup.actions.delete', { defaultValue: 'Delete Entry' })}
           </Button>
         )}
@@ -1873,9 +1885,9 @@ const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
     <Button
       id="open-drawer-btn"
       onClick={handleOpenDrawer}
-      variant="outline"
+      variant="ghost"
       size="sm"
-      className="flex items-center gap-1"
+      className="flex items-center gap-1 text-[rgb(var(--color-primary-600))]"
     >
       <ExternalLink className="w-4 h-4" />
       <span>{t('entryPopup.workItem.openDetails', { defaultValue: 'Details' })}</span>
