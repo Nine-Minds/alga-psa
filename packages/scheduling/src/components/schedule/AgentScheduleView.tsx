@@ -20,7 +20,7 @@ import { isSourceOwnedWorkItemType } from '../../lib/entryOwnedWorkItems';
 import { droppedEntryDates, movedEntryUpdate, resizedEntryDates } from '../../lib/entryMoves';
 import { useScheduleViewer } from '../../hooks/useScheduleViewer';
 import { useUsers } from '@alga-psa/user-composition/hooks';
-import { hasAllDayDates } from '../../lib/calendarDateDisplay';
+import { hasAllDayDates, occupiesAllDayRow } from '../../lib/calendarDateDisplay';
 import {
   WORK_ITEM_ENTRY_DEFAULT_DURATION_MS,
   slotFromCalendarSelection,
@@ -107,7 +107,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
 
   const belongsToWorkItem = (event: IScheduleEntry) =>
     Boolean(workItemContext) && event.work_item_id === workItemContext?.workItemId;
-  const hasAllDayEvents = events.some((event) => hasAllDayDates(event));
+  const hasAllDayEvents = events.some((event) => occupiesAllDayRow(event));
   const hasOtherWork = Boolean(workItemContext) && events.some((event) => !belongsToWorkItem(event));
 
   // Creating an entry from a slot assigns it to the viewed agent, which needs
@@ -397,12 +397,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
             events={events}
             startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
             endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
-            allDayAccessor={(event: object) => {
-              const scheduleEvent = event as IScheduleEntry;
-              const start = new Date(scheduleEvent.scheduled_start);
-              const end = new Date(scheduleEvent.scheduled_end);
-              return start.toDateString() !== end.toDateString();
-            }}
+            allDayAccessor={(event: object) => occupiesAllDayRow(event as IScheduleEntry)}
             eventPropGetter={(event: object) => {
               const scheduleEvent = event as IScheduleEntry;
               const isThisWorkItem = belongsToWorkItem(scheduleEvent);

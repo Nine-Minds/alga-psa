@@ -551,4 +551,69 @@ describe('AgentScheduleView', () => {
     expect(popupProps.slot.start.getMinutes()).toBe(0);
     expect(popupProps.slot.end.getTime() - popupProps.slot.start.getTime()).toBe(60 * 60 * 1000);
   });
+
+  describe('all-day header row visibility', () => {
+    const entry = (overrides: Record<string, unknown>) => ({
+      entry_id: 'entry-1',
+      title: 'Entry',
+      work_item_type: 'ticket',
+      assigned_user_ids: ['agent-1'],
+      ...overrides,
+    });
+    const overnight = entry({
+      scheduled_start: new Date(2026, 8, 15, 23, 30),
+      scheduled_end: new Date(2026, 8, 16, 0, 30),
+    });
+    const multiDay = entry({
+      scheduled_start: new Date(2026, 8, 14, 23, 0),
+      scheduled_end: new Date(2026, 8, 16, 1, 0),
+    });
+    const sameDay = entry({
+      scheduled_start: new Date(2026, 8, 15, 9, 0),
+      scheduled_end: new Date(2026, 8, 15, 10, 0),
+    });
+    const rowHidden = (container: HTMLElement) =>
+      container.querySelector('.agent-schedule-view')?.classList.contains('agent-schedule-view--no-all-day');
+
+    it.each(['week', 'day'] as const)(
+      'shows the header row for an overnight timed entry in %s view',
+      async (view) => {
+        getScheduleEntries.mockResolvedValue({ success: true, entries: [overnight] });
+        const { container } = render(<AgentScheduleView agentId="agent-1" />);
+        await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
+        const props = calendarSpy.mock.calls.at(-1)[0];
+        expect(props.allDayAccessor(overnight)).toBe(true);
+        if (view === 'day') act(() => props.onView('day'));
+        await waitFor(() => expect(rowHidden(container)).toBe(false));
+      }
+    );
+
+    it.each(['week', 'day'] as const)(
+      'shows the header row for a multi-day timed entry in %s view',
+      async (view) => {
+        getScheduleEntries.mockResolvedValue({ success: true, entries: [multiDay] });
+        const { container } = render(<AgentScheduleView agentId="agent-1" />);
+        await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
+        const props = calendarSpy.mock.calls.at(-1)[0];
+        expect(props.allDayAccessor(multiDay)).toBe(true);
+        if (view === 'day') act(() => props.onView('day'));
+        await waitFor(() => expect(rowHidden(container)).toBe(false));
+      }
+    );
+
+    it('hides the header row when no entry occupies it', async () => {
+      const { container } = render(<AgentScheduleView agentId="agent-1" />);
+      await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(rowHidden(container)).toBe(true));
+    });
+
+    it('hides the header row for a same-day timed entry', async () => {
+      getScheduleEntries.mockResolvedValue({ success: true, entries: [sameDay] });
+      const { container } = render(<AgentScheduleView agentId="agent-1" />);
+      await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
+      const props = calendarSpy.mock.calls.at(-1)[0];
+      expect(props.allDayAccessor(sameDay)).toBe(false);
+      await waitFor(() => expect(rowHidden(container)).toBe(true));
+    });
+  });
 });
