@@ -1,90 +1,102 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
-
-const sweepMock = vi.fn();
+import { describe, expect, it, vi } from 'vitest';
+import type { IJobRunner } from 'server/src/lib/jobs/interfaces';
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock('server/src/lib/jobs/handlers/replenishContractCadenceServicePeriodsHandler', () => ({
-  CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME: 'replenishContractCadenceServicePeriods',
-  replenishContractCadenceServicePeriodsSweep: (...args: unknown[]) => sweepMock(...args),
-}));
+import {
+  CONTRACT_CADENCE_REPLENISHMENT_CRON,
+  CONTRACT_CADENCE_REPLENISHMENT_SCHEDULE_ID,
+  registerContractCadenceReplenishmentSchedule,
+} from 'server/src/lib/jobs/scheduleContractCadenceReplenishment';
 
-import { registerContractCadenceReplenishmentSchedule } from 'server/src/lib/jobs/scheduleContractCadenceReplenishment';
-
-function createFakeScheduler(existingJobs: unknown[] = []) {
-  const registered = new Map<string, () => Promise<void>>();
-  const scheduled: Array<{ jobName: string; interval: string; data: unknown }> = [];
-  const scheduler = {
-    getJobs: vi.fn(async () => existingJobs),
-    registerJobHandler: vi.fn((name: string, handler: () => Promise<void>) => {
-      registered.set(name, handler);
-    }),
-    scheduleRecurringJob: vi.fn(async (jobName: string, interval: string, data: unknown) => {
-      scheduled.push({ jobName, interval, data });
-      return 'job-1';
-    }),
-  };
-  return { scheduler, registered, scheduled };
+function fakeRunner(overrides: Partial<IJobRunner> = {}): IJobRunner {
+  return {
+    getRunnerType: () => 'pgboss',
+    registerHandler: vi.fn(),
+    scheduleJob: vi.fn(),
+    scheduleJobAt: vi.fn(),
+    scheduleRecurringJob: vi.fn(),
+    scheduleGlobalRecurringJob: vi.fn(async () => ({
+      scheduleId: CONTRACT_CADENCE_REPLENISHMENT_SCHEDULE_ID,
+    })),
+    cancelJob: vi.fn(),
+    getJobStatus: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+    isHealthy: vi.fn(),
+    ...overrides,
+  } as unknown as IJobRunner;
 }
 
 describe('registerContractCadenceReplenishmentSchedule', () => {
-  beforeEach(() => {
-    sweepMock.mockReset();
-    sweepMock.mockResolvedValue({ tenantsProcessed: 0, tenantsFailed: 0, summaries: [] });
-  });
+  it('does not schedule on pg-boss when Enterprise owns scheduling', async () => {
+    const runner = fakeRunner();
 
-  it('does not use the pg-boss scheduler when Enterprise owns scheduling', async () => {
-    const { scheduler } = createFakeScheduler();
-
-    const outcome = await registerContractCadenceReplenishmentSchedule(
-      scheduler as unknown as IJobScheduler,
-      { isEnterprise: true },
-    );
+    const outcome = await registerContractCadenceReplenishmentSchedule({
+      isEnterprise: true,
+      getRunner: () => runner,
+    });
 
     expect(outcome).toBe('temporal-authority');
-    expect(scheduler.getJobs).not.toHaveBeenCalled();
-    expect(scheduler.registerJobHandler).not.toHaveBeenCalled();
-    expect(scheduler.scheduleRecurringJob).not.toHaveBeenCalled();
+    expect(runner.scheduleGlobalRecurringJob).not.toHaveBeenCalled();
   });
 
-  it('registers, schedules daily, and executes the sweep', async () => {
-    const { scheduler, registered, scheduled } = createFakeScheduler();
+  it('schedules the daily global cron through the pg-boss runner', async () => {
+    const runner = fakeRunner();
 
-    const outcome = await registerContractCadenceReplenishmentSchedule(
-      scheduler as unknown as IJobScheduler,
-      { isEnterprise: false },
-    );
+    const outcome = await registerContractCadenceReplenishmentSchedule({
+      isEnterprise: false,
+      getRunner: () => runner,
+    });
 
     expect(outcome).toBe('scheduled');
-    expect(scheduler.registerJobHandler).toHaveBeenCalledWith(
+    expect(runner.scheduleGlobalRecurringJob).toHaveBeenCalledWith(
       'replenishContractCadenceServicePeriods',
-      expect.any(Function),
+      CONTRACT_CADENCE_REPLENISHMENT_CRON,
+      { scheduleId: CONTRACT_CADENCE_REPLENISHMENT_SCHEDULE_ID },
     );
-    expect(scheduled).toEqual([
-      {
-        jobName: 'replenishContractCadenceServicePeriods',
-        interval: '24 hours',
-        data: { tenantId: 'system' },
-      },
-    ]);
-
-    await registered.get('replenishContractCadenceServicePeriods')?.();
-    expect(sweepMock).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves an existing recurring job untouched on repeated initialization', async () => {
-    const { scheduler } = createFakeScheduler([{ name: 'replenishContractCadenceServicePeriods' }]);
+  it('uses one stable schedule id across repeated initialization', async () => {
+    const runner = fakeRunner();
 
-    const outcome = await registerContractCadenceReplenishmentSchedule(
-      scheduler as unknown as IJobScheduler,
-      { isEnterprise: false },
+    await registerContractCadenceReplenishmentSchedule({ isEnterprise: false, getRunner: () => runner });
+    await registerContractCadenceReplenishmentSchedule({ isEnterprise: false, getRunner: () => runner });
+
+    const scheduleIds = vi.mocked(runner.scheduleGlobalRecurringJob!).mock.calls.map(
+      ([, , options]) => options?.scheduleId,
     );
+    expect(scheduleIds).toEqual([
+      CONTRACT_CADENCE_REPLENISHMENT_SCHEDULE_ID,
+      CONTRACT_CADENCE_REPLENISHMENT_SCHEDULE_ID,
+    ]);
+  });
 
-    expect(outcome).toBe('already-scheduled');
-    expect(scheduler.registerJobHandler).not.toHaveBeenCalled();
-    expect(scheduler.scheduleRecurringJob).not.toHaveBeenCalled();
+  it('returns temporal-authority when the runner is not pg-boss', async () => {
+    const runner = fakeRunner({ getRunnerType: () => 'temporal' });
+
+    const outcome = await registerContractCadenceReplenishmentSchedule({
+      isEnterprise: false,
+      getRunner: () => runner,
+    });
+
+    expect(outcome).toBe('temporal-authority');
+    expect(runner.scheduleGlobalRecurringJob).not.toHaveBeenCalled();
+  });
+
+  it('fails loudly when the runner is unavailable', async () => {
+    await expect(
+      registerContractCadenceReplenishmentSchedule({ isEnterprise: false, getRunner: () => null }),
+    ).rejects.toThrow(/job runner is not initialized/);
+  });
+
+  it('fails loudly when the pg-boss runner lacks global scheduling', async () => {
+    const runner = fakeRunner({ scheduleGlobalRecurringJob: undefined });
+
+    await expect(
+      registerContractCadenceReplenishmentSchedule({ isEnterprise: false, getRunner: () => runner }),
+    ).rejects.toThrow(/does not support global recurring schedules/);
   });
 });

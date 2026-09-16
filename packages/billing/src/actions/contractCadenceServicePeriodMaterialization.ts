@@ -397,6 +397,8 @@ export interface ContractCadenceObligationSyncResult {
   hitPeriodCap: boolean;
   /** True when the line's active coverage was already short of the run date. */
   wasExhaustedBeforeRun: boolean;
+  /** Preserved-override/candidate mismatches surfaced instead of discarded. */
+  overrideConflicts: number;
   furthestServicePeriodEnd: ISO8601String | null;
   expectedCoverageEnd: ISO8601String | null;
   meetsExpectedCoverage: boolean;
@@ -410,6 +412,7 @@ function emptyObligationSyncResult(changed: boolean): ContractCadenceObligationS
     periodsSuperseded: 0,
     hitPeriodCap: false,
     wasExhaustedBeforeRun: false,
+    overrideConflicts: 0,
     furthestServicePeriodEnd: null,
     expectedCoverageEnd: null,
     meetsExpectedCoverage: false,
@@ -433,36 +436,12 @@ function servicePeriodIdentity(record: Pick<IRecurringServicePeriodRecord, 'serv
 }
 
 /**
- * Capped generation that refused to reach the rolling horizon must resume
- * somewhere other than the historical boundary, otherwise every run would stop
- * at the same period and never make progress. Resume at the earliest candidate
- * slot the active ledger does not already cover (recovering an interior gap),
- * or at the end of the generated prefix when the whole prefix is covered (plain
- * continuation). Rows at or before the resume point are retained untouched by
- * the backfill boundary floor.
+ * Upper bound on the number of capped batches a single run will walk while
+ * looking for the true resumption point. Guards against a pathological ledger
+ * that never advances; at 200 periods per batch this is well past any real
+ * assignment history.
  */
-function resolveContractCadenceContinuationStart(
-  candidateRecords: IRecurringServicePeriodRecord[],
-  existingRecords: IRecurringServicePeriodRecord[],
-): ISO8601String | null {
-  const coveredPeriods = new Set(
-    existingRecords
-      .filter(
-        (record) =>
-          record.lifecycleState !== 'superseded' && record.lifecycleState !== 'archived',
-      )
-      .map(servicePeriodIdentity),
-  );
-
-  for (const candidate of candidateRecords) {
-    if (!coveredPeriods.has(servicePeriodIdentity(candidate))) {
-      return candidate.servicePeriod.start;
-    }
-  }
-
-  const lastCandidate = candidateRecords[candidateRecords.length - 1];
-  return lastCandidate ? lastCandidate.servicePeriod.end : null;
-}
+const MAX_CONTINUATION_SCAN_BATCHES = 500;
 
 async function syncContractCadenceObligation(
   trx: Knex.Transaction,
@@ -579,27 +558,72 @@ async function syncContractCadenceObligation(
   });
 
   // A capped generation stops before the rolling horizon. Re-running from the
-  // historical boundary would regenerate the same initial batch forever, so
-  // resume from the earliest recoverable gap (or the end of the generated prefix
-  // when the prefix is fully covered). The retained boundary floor keeps every
-  // already-covered row untouched while the continuation advances.
+  // historical boundary would regenerate the same initial batch forever, so walk
+  // the already-covered batches forward to find the true resumption point: the
+  // earliest candidate the active ledger does not cover (an interior gap), or
+  // the end of the covered prefix (plain continuation). Scanning every covered
+  // batch — not just the first — lets one run advance past arbitrarily many
+  // fully-covered batches without skipping a gap. The retained boundary floor
+  // keeps every already-covered row untouched.
+  const horizonEnd = `${materialized.coverage.targetHorizonEnd}T00:00:00Z` as ISO8601String;
   let historicalBoundaryFloor = billedBoundaryEnd;
+
   if (materialized.hitPeriodCap) {
-    const horizonEnd = `${materialized.coverage.targetHorizonEnd}T00:00:00Z` as ISO8601String;
-    const continuationStart = resolveContractCadenceContinuationStart(
-      materialized.records,
-      existingRecords,
+    const coveredPeriods = new Set(
+      existingRecords
+        .filter(
+          (record) =>
+            record.lifecycleState !== 'superseded' && record.lifecycleState !== 'archived',
+        )
+        .map(servicePeriodIdentity),
     );
-    if (
-      continuationStart
-      && compareIsoDateOnly(continuationStart, regenerationStart) > 0
-      && compareIsoDateOnly(continuationStart, horizonEnd) < 0
-    ) {
-      historicalBoundaryFloor = continuationStart;
+    let continuationStart: ISO8601String = regenerationStart;
+
+    for (let batchIndex = 0; batchIndex < MAX_CONTINUATION_SCAN_BATCHES; batchIndex += 1) {
+      const missingCandidate = materialized.records.find(
+        (candidate) => !coveredPeriods.has(servicePeriodIdentity(candidate)),
+      );
+      const lastRecord = materialized.records[materialized.records.length - 1];
+
+      if (missingCandidate) {
+        continuationStart = missingCandidate.servicePeriod.start;
+        break;
+      }
+      if (
+        !lastRecord
+        || !materialized.hitPeriodCap
+        || compareIsoDateOnly(lastRecord.servicePeriod.end, horizonEnd) >= 0
+      ) {
+        continuationStart = lastRecord?.servicePeriod.end ?? regenerationStart;
+        break;
+      }
+      if (compareIsoDateOnly(lastRecord.servicePeriod.end, continuationStart) <= 0) {
+        // Safety: the generator stopped advancing; do not loop forever.
+        continuationStart = lastRecord.servicePeriod.end;
+        break;
+      }
+      continuationStart = lastRecord.servicePeriod.end;
       materialized = materializeContractCadenceServicePeriods({
         ...materializeInputBase,
         asOf: continuationStart,
       });
+    }
+
+    if (compareIsoDateOnly(continuationStart, regenerationStart) > 0) {
+      historicalBoundaryFloor = continuationStart;
+      if (compareIsoDateOnly(continuationStart, horizonEnd) < 0) {
+        materialized = materializeContractCadenceServicePeriods({
+          ...materializeInputBase,
+          asOf: continuationStart,
+        });
+      } else {
+        // The ledger already reaches the horizon: nothing left to generate.
+        materialized = {
+          ...materialized,
+          records: [],
+          hitPeriodCap: false,
+        };
+      }
     }
   }
 
@@ -608,10 +632,13 @@ async function syncContractCadenceObligation(
     assignmentStart,
     assignmentEnd,
   );
+  const candidateCoverageEnd =
+    candidateRecords[candidateRecords.length - 1]?.servicePeriod.end;
 
   const regenerationPlan = backfillRecurringServicePeriods({
     candidateRecords,
     existingRecords,
+    candidateCoverageEnd,
     backfilledAt: materializedAt,
     sourceRuleVersion,
     sourceRunKey,
@@ -649,6 +676,7 @@ async function syncContractCadenceObligation(
     periodsSuperseded: regenerationPlan.supersededRecords.length,
     hitPeriodCap: materialized.hitPeriodCap,
     wasExhaustedBeforeRun,
+    overrideConflicts: regenerationPlan.conflicts.length,
     furthestServicePeriodEnd,
     expectedCoverageEnd,
     meetsExpectedCoverage,
@@ -724,6 +752,8 @@ export interface ContractCadenceReplenishmentSummary {
   linesAwaitingCoverage: number;
   /** Lines whose active coverage was already short of the run date. */
   linesExhaustedBeforeRun: number;
+  /** Preserved-override/candidate mismatches surfaced instead of discarded. */
+  overrideConflicts: number;
   failures: ContractCadenceReplenishmentLineFailure[];
 }
 
@@ -770,6 +800,7 @@ export async function replenishContractCadenceServicePeriodsForTenant(
     linesAtPeriodCap: 0,
     linesAwaitingCoverage: 0,
     linesExhaustedBeforeRun: 0,
+    overrideConflicts: 0,
     failures: [],
   };
 
@@ -795,6 +826,7 @@ export async function replenishContractCadenceServicePeriodsForTenant(
       if (result.wasExhaustedBeforeRun) {
         summary.linesExhaustedBeforeRun += 1;
       }
+      summary.overrideConflicts += result.overrideConflicts;
       if (result.hitPeriodCap) {
         summary.linesAtPeriodCap += 1;
       }
@@ -871,6 +903,7 @@ export function summarizeContractCadenceReplenishment(
     linesExhaustedBeforeRun: summary.linesExhaustedBeforeRun,
     linesAtPeriodCap: summary.linesAtPeriodCap,
     remainingCoverageGaps: summary.linesAwaitingCoverage,
+    overrideConflicts: summary.overrideConflicts,
     failedObligations: summary.failures.length,
     failures: summary.failures.slice(0, 20),
   };

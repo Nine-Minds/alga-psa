@@ -570,12 +570,12 @@ async function initializeJobScheduler(storageService: StorageService) {
     );
   }
 
-  // Register the nightly contract-cadence service-period replenishment job if it
-  // doesn't exist. This is independent of client billing-cycle creation: it
-  // enumerates contract-cadence lines directly and advances their rolling
-  // coverage, including recovering already-missing periods. Enterprise schedules
-  // the same sweep on the durable Temporal maintenance fan-out instead.
-  await registerContractCadenceReplenishmentSchedule(jobScheduler, { isEnterprise });
+  // Ensure the nightly contract-cadence service-period replenishment schedule
+  // exists. This is independent of client billing-cycle creation: it enumerates
+  // contract-cadence lines directly and advances their rolling coverage,
+  // including recovering already-missing periods. Enterprise schedules the same
+  // sweep on the durable Temporal maintenance fan-out instead.
+  await registerContractCadenceReplenishmentSchedule({ isEnterprise });
 
   // Register the nightly time period creation job per tenant
   jobScheduler.registerJobHandler<{ tenantId: string }>('createNextTimePeriods', async (job) => {

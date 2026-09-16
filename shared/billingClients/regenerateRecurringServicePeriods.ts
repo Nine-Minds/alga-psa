@@ -278,6 +278,21 @@ export function regenerateRecurringServicePeriods(
       if (candidate) {
         candidateIndex += 1;
       }
+      // The override owns its entire service-period range. A candidate wholly
+      // inside that range (for example the next slot after an override expanded
+      // a period) is already covered by the override and must not be inserted
+      // beside it as a second, overlapping charge. Candidates that only
+      // partially overlap belong to a neighbouring record and still pair
+      // positionally.
+      while (
+        candidateRecords[candidateIndex]
+        && toDateOnly(candidateRecords[candidateIndex].servicePeriod.start)
+          >= toDateOnly(existing.servicePeriod.start)
+        && toDateOnly(candidateRecords[candidateIndex].servicePeriod.end)
+          <= toDateOnly(existing.servicePeriod.end)
+      ) {
+        candidateIndex += 1;
+      }
       continue;
     }
 

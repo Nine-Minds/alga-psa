@@ -985,4 +985,161 @@ describe('Contract-cadence service-period replenishment', () => {
     expect(dateOnly(annualRows[0].invoice_window_start)).toBe('2027-02-28');
     expect(dateOnly(annualRows[0].invoice_window_end)).toBe('2028-02-28');
   });
+
+  it('advances past multiple capped batches and eventually reaches the horizon', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '1980-01-08T00:00:00Z',
+      name: 'Ancient Assignment Line',
+    });
+    const params = {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    };
+
+    const first = await runContractCadenceReplenishmentForTenant(context.db, params);
+    const second = await runContractCadenceReplenishmentForTenant(context.db, params);
+    const third = await runContractCadenceReplenishmentForTenant(context.db, params);
+
+    expect(first.periodsGenerated).toBe(200);
+    expect(second.periodsGenerated).toBe(200);
+    // The continuation must walk every already-covered batch, not resume at the
+    // end of the first one forever.
+    expect(third.periodsGenerated).toBeGreaterThan(0);
+
+    let summary = third;
+    let runs = 3;
+    while (summary.linesAwaitingCoverage > 0 && runs < 12) {
+      summary = await runContractCadenceReplenishmentForTenant(context.db, params);
+      runs += 1;
+    }
+    expect(summary.linesAwaitingCoverage).toBe(0);
+    expect(summary.linesAtPeriodCap).toBe(0);
+
+    const rows = await loadContractPeriods(obligationId);
+    const active = rows.filter((row) => row.lifecycle_state !== 'superseded');
+    const furthest = active.map((row) => dateOnly(row.service_period_end)).sort().at(-1);
+    expect(furthest >= '2027-03-14').toBe(true);
+
+    // Once complete, no further run writes anything.
+    const finalRun = await runContractCadenceReplenishmentForTenant(context.db, params);
+    expect(finalRun.periodsGenerated).toBe(0);
+    expect(finalRun.periodsSuperseded).toBe(0);
+    expect(await loadContractPeriods(obligationId)).toEqual(rows);
+  });
+
+  it('retains valid later coverage while filling a capped historical gap', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '1980-01-08T00:00:00Z',
+      name: 'Capped Historical Gap Line',
+    });
+    const laterRecordId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2026-08-08',
+      serviceEnd: '2026-09-08',
+      invoiceStart: '2026-09-08',
+      invoiceEnd: '2026-10-08',
+      lifecycleState: 'generated',
+    });
+    const before = (await loadContractPeriods(obligationId)).find(
+      (row) => row.record_id === laterRecordId,
+    );
+
+    const result = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(result.failures).toEqual([]);
+
+    const after = (await loadContractPeriods(obligationId)).find(
+      (row) => row.record_id === laterRecordId,
+    );
+    // Reconciliation is bounded to the generated batch, so a valid later period
+    // outside it is neither superseded nor rewritten.
+    expect(after).toEqual(before);
+    expect(after.lifecycle_state).toBe('generated');
+  });
+
+  it('does not create overlapping charges beside an expanded manual override', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '2026-08-08T00:00:00Z',
+      name: 'Expanded Override Line',
+    });
+    const overrideId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2026-08-08',
+      serviceEnd: '2026-10-08',
+      invoiceStart: '2026-10-08',
+      invoiceEnd: '2026-11-08',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+    });
+    await context.db('recurring_service_periods')
+      .where({ tenant: context.tenantId, record_id: overrideId })
+      .update({ period_key: 'period:2026-08-08:2026-09-08' });
+    const before = (await loadContractPeriods(obligationId)).find(
+      (row) => row.record_id === overrideId,
+    );
+
+    const result = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(result.failures).toEqual([]);
+    // The mismatch is surfaced rather than silently swallowed.
+    expect(result.overrideConflicts).toBeGreaterThanOrEqual(1);
+
+    const after = await loadContractPeriods(obligationId);
+    expect(after.find((row) => row.record_id === overrideId)).toEqual(before);
+    const overlaps = after.filter(
+      (row) =>
+        row.record_id !== overrideId
+        && row.lifecycle_state !== 'superseded'
+        && dateOnly(row.service_period_start) < '2026-10-08'
+        && dateOnly(row.service_period_end) > '2026-08-08',
+    );
+    expect(overlaps).toEqual([]);
+  });
+
+  it('does not create overlapping charges beside a shifted manual override', async () => {
+    const obligationId = await createContractCadenceLine({
+      startDate: '2026-08-08T00:00:00Z',
+      name: 'Shifted Override Line',
+    });
+    const overrideId = await seedContractPeriod({
+      obligationId,
+      serviceStart: '2026-09-08',
+      serviceEnd: '2026-10-08',
+      invoiceStart: '2026-10-08',
+      invoiceEnd: '2026-11-08',
+      lifecycleState: 'edited',
+      provenanceKind: 'user_edited',
+    });
+    await context.db('recurring_service_periods')
+      .where({ tenant: context.tenantId, record_id: overrideId })
+      .update({ period_key: 'period:2026-08-08:2026-09-08' });
+    const before = (await loadContractPeriods(obligationId)).find(
+      (row) => row.record_id === overrideId,
+    );
+
+    const result = await runContractCadenceReplenishmentForTenant(context.db, {
+      tenant: context.tenantId,
+      sourceRunPrefix: 'test-nightly',
+      asOf: '2026-09-15T00:00:00Z',
+    });
+    expect(result.failures).toEqual([]);
+
+    const after = await loadContractPeriods(obligationId);
+    expect(after.find((row) => row.record_id === overrideId)).toEqual(before);
+    const overlaps = after.filter(
+      (row) =>
+        row.record_id !== overrideId
+        && row.lifecycle_state !== 'superseded'
+        && dateOnly(row.service_period_start) < '2026-10-08'
+        && dateOnly(row.service_period_end) > '2026-09-08',
+    );
+    expect(overlaps).toEqual([]);
+  });
 });

@@ -63,139 +63,101 @@ line appears under `failures` and contributes no generated count.
 
 ## Proposed read-only audit
 
-Run against the Citus coordinator in a read-only transaction. `:as_of` is the
-audit date, `:target` is `today + 180 days`, `:threshold` is `today + 45 days`.
+The executable source of truth is
+`packages/billing/src/actions/contractCadenceCoverageAudit.ts`
+(`runContractCadenceCoverageAudit`), validated by
+`contractCadenceCoverageAudit.test.ts`. Run it in a read-only transaction; it
+performs no writes. It returns per-line coverage and interior gaps.
+
+Coverage query (abridged; see the module for the exact SQL). It:
+
+- applies the same eligibility rules as the replenisher (active assignment,
+  contract and line; not system-managed; `cadence_owner = 'contract'`;
+  supported frequency; advance/arrears timing; assignment live at `:as_of`);
+- clips the target, threshold and "today" comparisons to the assignment end via
+  `least(..., coalesce(assignment_end, ...))`, so a short assignment that ends
+  before the horizon is not reported as permanently short;
+- computes `coverage_floor_start = greatest(assignment_start, billed_floor_end)`
+  and flags a **leading gap** when the first active row starts after that floor
+  (the case a `lag()`-only interior scan misses when there is no billed
+  history).
 
 ```sql
-begin read only;
-
--- 1. Per contract-cadence schedule: furthest active coverage, obligation
---    window, and whether the schedule is exhausted, below threshold, or short
---    of the rolling target. The schedule identity (schedule_key) is projected so
---    a result can be grouped before any tenant is named.
-with active as (
-  select
-    rsp.tenant,
-    rsp.schedule_key,
-    rsp.obligation_id,
-    min(rsp.service_period_start) as first_start,
-    max(rsp.service_period_end)   as furthest_end,
-    count(*)                      as active_periods
-  from recurring_service_periods rsp
-  where rsp.obligation_type = 'contract_line'
-    and rsp.cadence_owner = 'contract'
-    and rsp.lifecycle_state not in ('superseded', 'archived')
-  group by rsp.tenant, rsp.schedule_key, rsp.obligation_id
-)
-select
-  a.tenant,
-  a.schedule_key,
-  cl.contract_line_name,
-  cc.start_date            as assignment_start,
-  cc.end_date              as assignment_end,
-  cc.is_active             as assignment_active,
-  ct.is_active             as contract_active,
-  cl.is_active             as line_active,
-  cl.cadence_owner,
-  cl.billing_frequency,
-  cl.billing_timing,
-  a.active_periods,
-  a.first_start,
-  a.furthest_end,
-  (:target)::date          as target_horizon_end,
-  (a.furthest_end is null or a.furthest_end < (:as_of)::date)                 as exhausted,
-  (a.furthest_end is null or a.furthest_end < (:threshold)::date)             as below_threshold,
-  (a.furthest_end >= (:target)::date)                                         as meets_target
-from active a
-join contract_lines cl
-  on cl.tenant = a.tenant and cl.contract_line_id = a.obligation_id
-join contracts ct
-  on ct.tenant = cl.tenant and ct.contract_id = cl.contract_id
-join client_contracts cc
-  on cc.tenant = cl.tenant and cc.contract_id = cl.contract_id
-where cc.is_active
-  and cl.is_active
-  and ct.is_active
-  and (cc.end_date is null or cc.end_date > (:as_of)::date)
-order by exhausted desc, below_threshold desc, meets_target, a.furthest_end;
-
--- 2. Interior gaps (accidental holes after the billed floor). A row appears
---    when the previous active period's end is before the next period's start.
---    `is_intentional` flags gaps whose start is at or before the historical
---    billed floor (do not auto-recover).
-with active as (
-  select
-    rsp.tenant,
-    rsp.schedule_key,
-    rsp.obligation_id,
-    rsp.service_period_start,
-    rsp.service_period_end,
-    lag(rsp.service_period_end) over (
-      partition by rsp.tenant, rsp.schedule_key
-      order by rsp.service_period_start
-    ) as previous_end
-  from recurring_service_periods rsp
-  where rsp.obligation_type = 'contract_line'
-    and rsp.cadence_owner = 'contract'
-    and rsp.lifecycle_state not in ('superseded', 'archived')
+with params as (
+  select cast(:as_of as date) as as_of,
+         cast(:target as date) as target_end,
+         cast(:threshold as date) as threshold_end,
+         cast(:tenant as uuid) as tenant_filter
 ),
-floor as (
-  select
-    rsp.tenant,
-    rsp.schedule_key,
-    max(rsp.service_period_end) as billed_floor_end
-  from recurring_service_periods rsp
-  where rsp.obligation_type = 'contract_line'
-    and rsp.cadence_owner = 'contract'
-    and (rsp.lifecycle_state = 'billed' or rsp.invoice_charge_detail_id is not null)
-  group by rsp.tenant, rsp.schedule_key
+eligible as (
+  select cl.tenant, cl.contract_line_id, cl.contract_line_name,
+         cl.billing_frequency, cl.billing_timing,
+         cc.start_date as assignment_start, cc.end_date as assignment_end
+  from contract_lines cl
+  join contracts ct on ct.tenant = cl.tenant and ct.contract_id = cl.contract_id
+  join client_contracts cc on cc.tenant = cl.tenant and cc.contract_id = cl.contract_id
+  cross join params p
+  where cl.cadence_owner = 'contract'
+    and cl.is_active and ct.is_active and cc.is_active
+    and coalesce(ct.is_system_managed_default, false) = false
+    and cl.billing_timing in ('advance', 'arrears')
+    and lower(cl.billing_frequency) in (
+      'monthly', 'quarterly', 'semi-annually', 'semiannually', 'annually', 'annual'
+    )
+    and cc.start_date is not null
+    and cc.start_date <= p.as_of
+    and (cc.end_date is null or cc.end_date > p.as_of)
+    and (p.tenant_filter is null or cl.tenant = p.tenant_filter)
+),
+active as (
+  select tenant, obligation_id,
+         min(service_period_start) as first_start,
+         max(service_period_end) as furthest_end,
+         count(*) as active_periods
+  from recurring_service_periods
+  where obligation_type = 'contract_line' and cadence_owner = 'contract'
+    and lifecycle_state not in ('superseded', 'archived')
+  group by tenant, obligation_id
+),
+billed_floor as (
+  select tenant, obligation_id, max(service_period_end) as billed_floor_end
+  from recurring_service_periods
+  where obligation_type = 'contract_line' and cadence_owner = 'contract'
+    and (lifecycle_state = 'billed' or invoice_charge_detail_id is not null)
+  group by tenant, obligation_id
 )
 select
-  a.tenant,
-  a.schedule_key,
-  a.obligation_id,
-  a.previous_end,
-  a.service_period_start as gap_end,
-  (a.service_period_start - a.previous_end) as gap_days,
-  coalesce(f.billed_floor_end, date '0001-01-01') as billed_floor_end,
-  (a.service_period_start <= coalesce(f.billed_floor_end, date '0001-01-01')) as is_intentional
-from active a
-left join floor f
-  on f.tenant = a.tenant and f.schedule_key = a.schedule_key
-where a.previous_end is not null
-  and a.service_period_start > a.previous_end
-order by is_intentional, a.tenant, a.schedule_key, a.service_period_start;
-
--- 3. Schedules with no active future row at all (silent exhaustion).
-with active as (
-  select distinct rsp.tenant, rsp.obligation_id
-  from recurring_service_periods rsp
-  where rsp.obligation_type = 'contract_line'
-    and rsp.cadence_owner = 'contract'
-    and rsp.lifecycle_state not in ('superseded', 'archived')
-    and rsp.service_period_end >= (:as_of)::date
-)
-select cl.tenant, cl.contract_line_id, cl.contract_line_name
-from contract_lines cl
-join contracts ct
-  on ct.tenant = cl.tenant and ct.contract_id = cl.contract_id
-join client_contracts cc
-  on cc.tenant = cl.tenant and cc.contract_id = cl.contract_id
-left join active a
-  on a.tenant = cl.tenant and a.obligation_id = cl.contract_line_id
-where cl.cadence_owner = 'contract'
-  and cl.is_active and ct.is_active and cc.is_active
-  and (cc.end_date is null or cc.end_date > (:as_of)::date)
-  and a.obligation_id is null
-order by cl.tenant, cl.contract_line_name;
-
-rollback;
+  e.tenant, e.contract_line_id, e.contract_line_name,
+  e.assignment_start, e.assignment_end, e.billing_frequency, e.billing_timing,
+  a.first_start, a.furthest_end, a.active_periods, b.billed_floor_end,
+  greatest(e.assignment_start, coalesce(b.billed_floor_end, e.assignment_start)) as coverage_floor_start,
+  least(p.target_end, coalesce(e.assignment_end, p.target_end)) as effective_target_end,
+  least(p.threshold_end, coalesce(e.assignment_end, p.threshold_end)) as effective_threshold_end,
+  (a.furthest_end is null
+     or a.furthest_end < least(p.as_of, coalesce(e.assignment_end, p.as_of))) as exhausted,
+  (a.furthest_end is null
+     or a.furthest_end < least(p.threshold_end, coalesce(e.assignment_end, p.threshold_end))) as below_threshold,
+  (a.furthest_end is not null
+     and a.furthest_end >= least(p.target_end, coalesce(e.assignment_end, p.target_end))) as meets_target,
+  (a.first_start is null
+     or a.first_start > greatest(e.assignment_start, coalesce(b.billed_floor_end, e.assignment_start))) as leading_gap
+from eligible e
+cross join params p
+left join active a on a.tenant = e.tenant and a.obligation_id = e.contract_line_id
+left join billed_floor b on b.tenant = e.tenant and b.obligation_id = e.contract_line_id
+order by exhausted desc, below_threshold desc, meets_target, a.furthest_end nulls first;
 ```
 
-Cross-tenant impact is unmeasured. Query 1 projects `tenant` and `schedule_key`
-so results can be grouped as counts per tenant (`count(*) filter (where
-exhausted)`, `... below_threshold`, `... not meets_target`) before any tenant is
-named.
+Interior gaps use the same `eligible` CTE and a `lag()` over
+`(tenant, schedule_key)`; `is_intentional` marks a gap whose start is at or
+before the billed floor (see the module for the full query). A line absent from
+`coverage` is ineligible; a line with `furthest_end is null` is silently
+exhausted.
+
+Cross-tenant impact is unmeasured. Both queries project `tenant` (and coverage
+projects `contract_line_id`), so results can be grouped as counts per tenant
+(`count(*) filter (where exhausted)`, `... below_threshold`, `... not
+meets_target`, `... leading_gap`) before any tenant is named.
 
 ## Pre-deployment aggregate impact assessment
 
@@ -252,16 +214,29 @@ read or changed.
   written twice.
 - `materializeContractCadenceServicePeriods.domain.test.ts` covers the
   `coverageAnchorDate` decoupling and the period-cap reporting.
-- `contractCadenceReplenishmentScheduling.test.ts` proves the pg-boss schedule
-  is registered once, executes the sweep, is idempotent on repeat
-  initialization, and is skipped when Enterprise owns scheduling.
-- `maintenanceJobFanout.unit.test.ts` proves the job runs once as a system
-  maintenance job and does not re-enumerate tenants.
+- `contractCadenceReplenishmentScheduling.test.ts` proves the pg-boss schedule is
+  routed through the job runner, uses one stable schedule id across repeat
+  initialization, returns without scheduling when Enterprise owns scheduling,
+  and fails loudly when the runner is unavailable or lacks global schedules.
+- `contractCadenceReplenishmentScheduling.db.test.ts` (real pg-boss) proves the
+  daily schedule is persisted in `pgboss.schedule`, successive firings reach the
+  worker, it survives a runner restart, and repeat initialization converges on
+  one schedule.
+- `maintenanceJobFanout.unit.test.ts` proves the job runs once as a system job,
+  aggregates tenant- and line-level failures instead of reporting unconditional
+  success, and propagates a total failure.
+- `maintenanceJobSubscriber.unit.test.ts` proves a reported partial failure does
+  not trigger event-bus redelivery while a thrown total failure does.
+- `maintenance-fanout-activities.test.ts` proves the Temporal activity reports
+  publication success independently of later replenishment execution.
 - `setupSchedules.contract-cadence-replenishment.test.ts` proves the Temporal
   maintenance fan-out schedule is created with the daily cron and overlap policy
   and is updated rather than duplicated on repeat setup.
-- `regenerateRecurringServicePeriods` gap-aware pairing is covered by the shared
-  and server unit suites.
+- `contractCadenceCoverageAudit.test.ts` validates the read-only audit against
+  absent, leading-gap, interior-gap, intentional-exclusion, bounded-assignment,
+  and ineligible-line fixtures.
+- `regenerateRecurringServicePeriods` gap-aware pairing and expanded/shifted
+  override preservation are covered by the shared and server suites.
 
 Not performed: any production query in the audit section, any UI check of Ready
 to Bill, any measurement of cross-tenant impact, deployed-image equivalence, or
