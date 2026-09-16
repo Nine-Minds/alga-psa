@@ -78,3 +78,25 @@ The page follows the business-documentation workflow and uses the actual smoke s
 ## Review first and coverage limits
 
 Review the unconditional sanitizer (including nested serialized errors), continuation signing and resumable page boundaries, new real-DB isolation tests, and server-action runtime fix first. Existing email behavior is protected by its unchanged regression suite. Non-English diagnostics values remain English fallbacks with complete key parity. The remaining false acceptance checklist groups document combinations not yet fully covered; they should not be represented as executed. No production Microsoft/Graph or production deployment validation is claimed.
+
+## Independent re-verification (2026-09-16, takeover 2)
+
+Re-ran every gate above against the checkout at `867952c646` before changing anything, then repaired the one regression found.
+
+Defect: the takeover commit added an unconditional `client-request-id` header to the shared Direct probe (`probeEntraDirectAccess`) for Graph correlation. It updated `entraOAuthCallback.validation.test.ts` to expect that header but missed two unchanged suites, so `entraDirectProbe.test.ts` and `entraValidateDirectRoute.test.ts` asserted the old exact `headers` object and failed. The focused diagnostics lane never ran them, which is why the original validation missed it. Repair: aligned the two stale assertions with the intended correlation header, matching the already-updated callback test; production code was left as committed.
+
+Re-run results after the repair:
+
+| Lane | Result |
+| --- | --- |
+| Broad EE Entra unit suite (`src/__tests__/unit/entra`) | 302 passed (52 files), including the two repaired suites |
+| EE focused diagnostics/dialog/Temporal/OAuth callback | 80 passed |
+| Migrated PostgreSQL + HTTP Microsoft Graph emulator | 24 passed |
+| Shared diagnostics + unchanged email regression | 14 passed |
+| Microsoft Graph emulator regressions | 92 passed |
+| server guard/delegator/guide/translation plus all server Entra tests | 42 passed |
+| `packages/integrations` | 851 passed (101 files) |
+| Translation key parity | 137 diagnostics keys across 10 locales, no mismatches |
+| TypeScript | server (12288 MB heap), EE server, integrations and nm-store all exit 0 |
+
+The full shared suite reports 9 DB-backed workflow suites failing on `ECONNREFUSED 127.0.0.1:5432`; those require a database on the default port and are unrelated to diagnostics. The migrated-DB lane deliberately targets `entra_diagnostics_takeover` on port 5472 and passed. Remaining limitations are unchanged.
