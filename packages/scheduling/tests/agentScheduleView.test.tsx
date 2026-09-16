@@ -306,8 +306,9 @@ describe('AgentScheduleView', () => {
     );
     await waitFor(() => expect(calendarSpy).toHaveBeenCalled());
     const { eventPropGetter } = calendarSpy.mock.calls.at(-1)[0];
-    const mine = eventPropGetter({ work_item_type: 'ticket', work_item_id: 'ticket-1' });
-    const other = eventPropGetter({ work_item_type: 'ticket', work_item_id: 'ticket-2' });
+    const hour = { scheduled_start: new Date('2026-01-05T10:00:00'), scheduled_end: new Date('2026-01-05T11:00:00') };
+    const mine = eventPropGetter({ work_item_type: 'ticket', work_item_id: 'ticket-1', ...hour });
+    const other = eventPropGetter({ work_item_type: 'ticket', work_item_id: 'ticket-2', ...hour });
     expect(mine.className).toBe('agent-schedule-event--this-work-item');
     expect(other.className).toBe('agent-schedule-event--other');
   });

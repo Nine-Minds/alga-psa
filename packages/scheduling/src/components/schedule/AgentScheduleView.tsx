@@ -411,8 +411,13 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
               const backgroundColor = workItemContext && !isThisWorkItem
                 ? 'rgb(var(--color-border-300))'
                 : workItemColors[scheduleEvent.work_item_type] || 'rgb(var(--color-border-200))';
+              const durationMinutes =
+                (new Date(scheduleEvent.scheduled_end).getTime() - new Date(scheduleEvent.scheduled_start).getTime()) / 60000;
               return {
-                className: isThisWorkItem ? 'agent-schedule-event--this-work-item' : 'agent-schedule-event--other',
+                className: [
+                  isThisWorkItem ? 'agent-schedule-event--this-work-item' : 'agent-schedule-event--other',
+                  durationMinutes < CHIP_TIME_LINE_MINUTES ? 'agent-schedule-event--short' : '',
+                ].join(' ').trim(),
                 style: {
                   backgroundColor,
                   borderRadius: '6px',

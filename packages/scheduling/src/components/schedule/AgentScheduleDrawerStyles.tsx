@@ -75,9 +75,8 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
       }
       .agent-schedule-view .rbc-event-content {
         overflow: hidden !important;
-        font-size: 11px;
+        font-size: 12px;
         line-height: 14px;
-        letter-spacing: -0.01em;
       }
       .agent-schedule-chip__time {
         font-size: 10.5px;
@@ -88,7 +87,7 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         text-overflow: ellipsis;
       }
       .agent-schedule-chip__inline-time {
-        opacity: 0.8;
+        opacity: 0.9;
         font-weight: 400;
       }
       .agent-schedule-chip__title {
@@ -188,6 +187,10 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         background: rgb(var(--color-text-900));
         opacity: 0.3;
         transition: opacity 120ms ease;
+      }
+      /* A 15-minute chip has no room under its text; its grip appears on hover. */
+      .agent-schedule-view .rbc-event.agent-schedule-event--short .rbc-addons-dnd-resize-ns-anchor:last-child::after {
+        opacity: 0;
       }
       .agent-schedule-view .rbc-event:hover .rbc-addons-dnd-resize-ns-anchor:last-child::after {
         opacity: 0.7;
