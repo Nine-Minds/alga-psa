@@ -104,6 +104,20 @@ function makeClient() {
 }
 
 describe('redaction (adversarial)', () => {
+  it('scrubs repeatedly serialized errors and prefixed log fragments without losing safe metadata', () => {
+    let nested = JSON.stringify({ refresh_token: REFRESH, client_secret: SECRET });
+    for (let depth = 0; depth < 6; depth += 1) {
+      nested = JSON.stringify({ cause: nested });
+      for (const includeIdentifiers of [false, true]) {
+        for (const message of [nested, `Temporal activity failed AADSTS65001: ${nested}`]) {
+          const report = makeReport();
+          report.steps[0].data = { storedValidationMessage: message };
+          expect(JSON.stringify(applyReportRedaction(report, includeIdentifiers))).not.toContain(REFRESH);
+          expect(JSON.stringify(createSupportBundle(report, includeIdentifiers))).not.toContain(SECRET);
+        }
+      }
+    }
+  });
   it('strips secrets from every field even when identifiers are included', () => {
     const sanitized = applyReportRedaction(makeReport(), true);
     const serialized = JSON.stringify(sanitized);

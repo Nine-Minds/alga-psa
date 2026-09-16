@@ -242,7 +242,6 @@ export {
 export {
   runEntraConnectionDiagnostics,
   runEntraClientAccessDiagnostics,
-  type EntraDiagnosticsResult,
 } from './integrations/entraDiagnosticsActions';
 export {
   getTacticalRmmSettings,

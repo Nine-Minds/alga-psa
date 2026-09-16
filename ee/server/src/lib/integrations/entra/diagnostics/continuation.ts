@@ -129,6 +129,9 @@ export function signContinuation(
       .slice(-MAX_EMBEDDED_RECOMMENDATIONS)
       .map((rec) => sanitizeDeep(rec, true) as DiagnosticsRecommendation),
   };
+  if (!isValidPayload(sanitized)) {
+    throw new DiagnosticsContinuationError('Continuation state is inconsistent.');
+  }
   const body = Buffer.from(JSON.stringify(sanitized), 'utf8').toString('base64url');
   const token = `${body}.${sign(body, resolveSecret(secret))}`;
   if (token.length > MAX_TOKEN_LENGTH) {

@@ -767,7 +767,8 @@
             "tenant": "Tenant",
             "status": "Status",
             "remedy": "Remedy",
-            "complete": "Complete"
+            "complete": "Complete",
+            "details": "Details"
           },
           "complete": "Complete",
           "partial": "Partial"
@@ -821,7 +822,8 @@
           "cippHttpError": "CIPP answered with HTTP {{status}} for every tenant-list endpoint. This is a CIPP-side list failure, not an empty tenant list.",
           "cippInvalidPayload": "CIPP returned a response that is not a tenant list. Verify the CIPP-API version and endpoint.",
           "schedulePaused": "Automatic sync is enabled but the Temporal schedule is paused; no runs will fire.",
-          "temporalWorkerUnknown": "Temporal is reachable but worker poller evidence is unavailable; worker availability could not be confirmed."
+          "temporalWorkerUnknown": "Temporal is reachable but worker poller evidence is unavailable; worker availability could not be confirmed.",
+          "managedTenantConsentMissing": "Microsoft accepted the sign-in but refused the managed tenant list. A Global Administrator must grant admin consent for the requested permissions."
         }
       }
     }

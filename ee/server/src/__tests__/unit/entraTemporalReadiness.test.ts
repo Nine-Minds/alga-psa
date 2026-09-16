@@ -1,7 +1,9 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
+  close: vi.fn(async () => {}),
+  connect: vi.fn(),
   describeNamespace: vi.fn(async () => ({})),
   describeTaskQueue: vi.fn(async () => ({ pollers: [{ identity: 'worker-1' }] })),
   scheduleDescribe: vi.fn(async () => ({
@@ -15,9 +17,9 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('@temporalio/client', () => {
   class Connection {
-    close = vi.fn();
+    close = hoisted.close;
     static async connect() {
-      return new Connection();
+      return hoisted.connect() ?? new Connection();
     }
   }
   class Client {
@@ -41,6 +43,7 @@ import {
 describe('temporalReadiness with SDK-shaped responses', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    hoisted.connect.mockReset();
     hoisted.describeNamespace.mockResolvedValue({});
     hoisted.describeTaskQueue.mockResolvedValue({ pollers: [{ identity: 'worker-1' }] });
     hoisted.scheduleDescribe.mockResolvedValue({
@@ -48,6 +51,19 @@ describe('temporalReadiness with SDK-shaped responses', () => {
       state: { paused: false },
       info: { nextActionTimes: [new Date('2026-09-16T02:00:00.000Z')], recentActions: [] },
     });
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('closes a connection that arrives after the deadline', async () => {
+    vi.useFakeTimers();
+    let finish: (value: unknown) => void = () => {};
+    hoisted.connect.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const running = probeTemporalReadiness();
+    await vi.advanceTimersByTimeAsync(4001);
+    expect((await running).reachable).toBe(false);
+    finish({ close: hoisted.close });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(hoisted.close).toHaveBeenCalledTimes(1);
   });
 
   it('reads top-level SDK spec intervals (ms) and paused state', async () => {

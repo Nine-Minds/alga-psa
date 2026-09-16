@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response, Router } from 'express';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
@@ -9,6 +10,7 @@ import { deliverCalendarNotifications, deliverNotifications, validateNotificatio
 
 interface Authed {
   clientId: string;
+  tenantId: string;
 }
 
 function authed(res: Response): Authed {
@@ -69,12 +71,12 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   });
 
   router.post('/:tenant/oauth2/v2.0/token', (req, res) => {
-    const fault = core.consumeFault('token');
+    const fault = core.consumeFault(`token:${req.params.tenant}`) ?? core.consumeFault('token');
     if (fault) {
       res.status(fault.status).json(fault.body);
       return;
     }
-    res.json(core.grantToken(req.body ?? {}));
+    res.json(core.grantToken({ ...req.body, authorityTenant: String(req.params.tenant) }));
   });
 
   router.get('/:tenant/v2.0/adminconsent', (req, res) => {
@@ -145,11 +147,15 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   const graph = express.Router();
   router.use('/v1.0', graph);
+  router.use('/beta', graph);
 
   graph.use((req, res, next) => {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
     res.locals.access = core.authenticate(bearer);
-    const fault = core.consumeFault(`${req.method} ${req.path}`);
+    res.set('request-id', randomUUID());
+    if (req.get('client-request-id')) res.set('client-request-id', req.get('client-request-id')!);
+    const fault = core.consumeFault(`${authed(res).tenantId}:${req.method} ${req.path}`)
+      ?? core.consumeFault(`${req.method} ${req.path}`);
     if (fault) {
       res.status(fault.status).json(fault.body);
       return;
@@ -188,8 +194,32 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.json({ value: core.listOrganizations() });
   });
 
-  graph.get('/users', (_req, res) => {
-    res.json({ value: core.listDirectoryUsers() });
+  const page = (req: Request, values: unknown[]) => {
+    const top = Math.max(1, Math.min(999, Number(req.query.$top) || 100));
+    const skip = Math.max(0, Number(req.query.$skip) || 0);
+    const next = new URL(req.originalUrl, `${req.protocol}://${req.get('host')}`);
+    next.searchParams.set('$skip', String(skip + top));
+    return { value: values.slice(skip, skip + top),
+      ...(skip + top < values.length ? { '@odata.nextLink': next.toString() } : {}) };
+  };
+  graph.get('/tenantRelationships/managedTenants/tenants', (req, res) => {
+    res.json(page(req, core.listOrganizations().map(org => ({
+      tenantId: org.id, displayName: org.displayName,
+      defaultDomainName: org.verifiedDomains.find(domain => domain.isDefault)?.name,
+    }))));
+  });
+  graph.get('/users', (req, res) => {
+    res.json(page(req, core.listDirectoryUsers()));
+  });
+  graph.get('/groups', (req, res) => res.json(page(req, [...core.directoryGroups.values()])));
+  graph.get('/groups/:groupId', (req, res) => {
+    const group = core.directoryGroups.get(String(req.params.groupId));
+    if (!group) throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound', message: 'Group not found' } });
+    res.json(group);
+  });
+  graph.post('/users/:userId/checkMemberGroups', (req, res) => {
+    res.json({ value: (req.body.groupIds ?? []).filter((id: string) =>
+      core.directoryGroups.get(id)?.memberIds.includes(String(req.params.userId))) });
   });
 
   graph.get('/users/:userId', (req, res) => {

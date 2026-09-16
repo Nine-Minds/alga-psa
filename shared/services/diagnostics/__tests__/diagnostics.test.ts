@@ -107,6 +107,7 @@ describe('token fingerprint / decode', () => {
     const payload = Buffer.from(JSON.stringify({ tid: 'abc' })).toString('base64url');
     const token = `header.${payload}.sig`;
     expect(buildTokenFingerprint(token)).toMatch(/^head\.\.\.\(\d+\)$/);
+    expect(buildTokenFingerprint('synthetic-secret-1234', 'end')).toBe('1234...(21)');
     expect(decodeJwtPayload(token)).toEqual({ tid: 'abc' });
   });
 });

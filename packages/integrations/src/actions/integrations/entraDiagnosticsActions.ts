@@ -152,5 +152,3 @@ export const runEntraClientAccessDiagnostics = withAuth(
     });
   }
 );
-
-export type { EntraDiagnosticsResult };

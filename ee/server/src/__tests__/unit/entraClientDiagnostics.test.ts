@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const mapping = (clientId: string, entraTenantId: string) => ({
@@ -34,6 +34,7 @@ const hoisted = vi.hoisted(() => {
     cippError: null as any,
     pageNextLink: null as string | null,
     pageError: null as any,
+    pageRead: vi.fn(),
   };
 });
 
@@ -78,7 +79,9 @@ vi.mock('@ee/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
 
 vi.mock('@ee/lib/integrations/entra/providers/direct/directProviderAdapter', () => ({
   DirectProviderAdapter: class {
-    async listUsersPageWithToken() {
+    async listUsersPageWithToken(input: any) {
+      const scripted = await hoisted.pageRead(input);
+      if (scripted) return scripted;
       if (hoisted.pageError) throw hoisted.pageError;
       return { users: hoisted.users, nextLink: hoisted.pageNextLink ?? null };
     }
@@ -171,11 +174,36 @@ describe('runEntraClientAccessDiagnostics', () => {
     hoisted.cippUsers = [];
     hoisted.pageNextLink = null;
     hoisted.pageError = null;
+    hoisted.pageRead.mockReset();
     vi.clearAllMocks();
   });
 
   afterAll(() => {
     delete process.env.ENTRA_DIAGNOSTICS_JOB_SECRET;
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it('resumes the interrupted page after a deadline and preserves counts already read', async () => {
+    vi.useFakeTimers();
+    hoisted.pageRead
+      .mockResolvedValueOnce({ users: hoisted.users, nextLink: 'https://graph.test/users?page=2' })
+      .mockImplementationOnce(({ signal }: { signal: AbortSignal }) => new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(Object.assign(new Error('canceled'), { code: 'ERR_CANCELED' })));
+      }));
+    const running = runEntraClientAccessDiagnostics('tenant-1', 'user-1', { clientIds: ['c1'], includeUserYield: true });
+    await vi.advanceTimersByTimeAsync(15_001);
+    const first = await running;
+    expect(first.completed).toBe(0);
+    expect(first.isDone).toBe(false);
+    expect(first.clients).toEqual([]);
+    expect(first.jobId).toBeTruthy();
+    hoisted.pageRead.mockResolvedValueOnce({ users: hoisted.users, nextLink: null });
+    const last = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { continuation: first.jobId });
+    expect(hoisted.pageRead).toHaveBeenLastCalledWith(expect.objectContaining({ url: 'https://graph.test/users?page=2' }));
+    expect(last.completed).toBe(1);
+    expect(last.isDone).toBe(true);
+    expect(last.clients[0].steps.find((s) => s.id === 'user_yield_preview')?.data).toMatchObject({ totalUsers: 2, includedUsers: 2 });
   });
 
   it('processes at most three clients per request and resumes via continuation', async () => {

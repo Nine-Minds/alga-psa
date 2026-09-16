@@ -37,6 +37,7 @@ import { getEntraSyncSchedule } from '../scheduleService';
 import { getEntraSyncRunProgress } from '../entraWorkflowClient';
 import { classifyEntraOAuthFailure } from './oauthClassifier';
 import { dedupeRecommendations } from './recommendations';
+import { decodeEntraStoredError } from './storedError';
 import { applyReportRedaction, createSupportBundle } from './redaction';
 import { createEntraStepRunner } from './entraStepRunner';
 import { probeTemporalReadiness, describeEntraSchedule } from './temporalReadiness';
@@ -493,7 +494,7 @@ export async function runEntraConnectionDiagnostics(
           recommendations: [rec],
         };
       }
-      const fingerprint = buildTokenFingerprint(binding.clientSecret);
+      const fingerprint = buildTokenFingerprint(binding.clientSecret, 'end');
       collect([
         {
           code: 'secret_expiry_unknown',
@@ -522,7 +523,7 @@ export async function runEntraConnectionDiagnostics(
     data: {
       manualComparisonOnly: true,
       callbackUrl,
-      delegatedScopes: expectedScopes(),
+      delegatedScopes: [...ENTRA_DIRECT_DELEGATED_SCOPES],
       offlineAccess: true,
       accountTypeRequirement: 'AzureADMultipleOrgs (multi-tenant)',
       boundClientId: binding?.clientId ?? null,
@@ -724,7 +725,7 @@ export async function runEntraConnectionDiagnostics(
         return { status: 'skip' as const, data: { reason: 'Not a Direct connection.' } };
       }
       try {
-        const refreshed = await refreshEntraDirectToken(tenant);
+        const refreshed = await refreshEntraDirectToken(tenant, { timeoutMs: 15000 });
         refreshedAccessToken = refreshed.accessToken;
         return {
           status: 'pass' as const,
@@ -876,7 +877,8 @@ export async function runEntraConnectionDiagnostics(
       if (isSuccessfulEntraDirectProbe(probe)) {
         return {
           status: 'pass' as const,
-          http: { method: 'GET', path: endpoint, status: 200 },
+          http: { method: 'GET', path: endpoint, status: 200,
+            requestId: probe.requestId, clientRequestId: probe.clientRequestId },
           data: { endpoint, managedTenantSampleCount: probe.managedTenantSampleCount },
         };
       }
@@ -891,8 +893,9 @@ export async function runEntraConnectionDiagnostics(
         collect([rec]);
         return {
           status: 'fail' as const,
-          http: { method: 'GET', path: endpoint, status: 400 },
-          error: { message: rec.text, status: 400 },
+          http: { method: 'GET', path: endpoint, status: 400,
+            requestId: failedProbe.requestId, clientRequestId: failedProbe.clientRequestId },
+          error: { message: rec.text, status: 400, requestId: failedProbe.requestId },
           recommendations: [rec],
         };
       }
@@ -902,6 +905,11 @@ export async function runEntraConnectionDiagnostics(
         message: failedProbe.error,
         context: 'partner',
       });
+      if (failedProbe.status === 403) {
+        rec.remedy = failedProbe.error;
+        rec.recommendation = { code: 'managed_tenant_consent_missing', severity: 'fail',
+          text: failedProbe.error, messageKey: 'managedTenantConsentMissing' };
+      }
       collect([rec.recommendation].filter(Boolean) as DiagnosticsRecommendation[]);
       return {
         status: 'fail' as const,
@@ -910,6 +918,7 @@ export async function runEntraConnectionDiagnostics(
           path: endpoint,
           status: failedProbe.status,
           requestId: failedProbe.requestId,
+          clientRequestId: failedProbe.clientRequestId,
         },
         error: {
           message: rec.remedy,
@@ -1283,7 +1292,7 @@ export async function runEntraConnectionDiagnostics(
             mappings.find((m) => m.managedTenantId === failedTenant.managedTenantId) ??
             mappings.find((m) => m.clientId === failedTenant.clientId);
           const classified = classifyEntraOAuthFailure({
-            message: failedTenant.errorMessage,
+            message: decodeEntraStoredError(failedTenant.errorMessage) ?? undefined,
             context: 'customer',
             customer: {
               entraTenantId: mapping?.entraTenantId ?? null,
@@ -1298,7 +1307,7 @@ export async function runEntraConnectionDiagnostics(
             clientId: failedTenant.clientId,
             clientName: mapping?.clientName ?? null,
             entraTenantId: mapping?.entraTenantId ?? null,
-            message: failedTenant.errorMessage,
+            message: decodeEntraStoredError(failedTenant.errorMessage),
             aadstsCode: classified.aadstsCode,
             suberror: classified.suberror,
             oauthError: classified.oauthError,
@@ -1307,12 +1316,16 @@ export async function runEntraConnectionDiagnostics(
           if (classified.recommendation) collect([classified.recommendation]);
         } else {
           // Run-level failure with no per-tenant error rows.
+          const message = decodeEntraStoredError(progress.run?.summary);
+          const classified = message ? classifyEntraOAuthFailure({ message, context: 'partner' }) : null;
+          if (classified?.recommendation) collect([classified.recommendation]);
           decodedFailure = {
             runId: latestFailedReal.runId,
             level: 'run',
             status: latestFailedReal.status,
-            message: 'The run failed before any per-tenant result was recorded.',
-            remedy: 'Review the run in Sync history and check worker logs for the run id.',
+            message: message ?? 'The run failed before any per-tenant result was recorded.',
+            aadstsCode: classified?.aadstsCode ?? null,
+            remedy: classified?.remedy ?? 'Review the run in Sync history and check worker logs for the run id.',
           };
         }
       } catch {
@@ -1356,7 +1369,7 @@ export async function runEntraConnectionDiagnostics(
           clientName: t.clientId ? clientById.get(t.clientId)?.clientName ?? null : null,
           entraTenantId: t.clientId ? clientById.get(t.clientId)?.entraTenantId ?? null : null,
           status: t.status,
-          errorMessage: t.errorMessage,
+          errorMessage: decodeEntraStoredError(t.errorMessage),
           completedAt: t.completedAt,
         })),
       },
@@ -1400,6 +1413,7 @@ export async function runEntraConnectionDiagnostics(
   });
 
   const summary = buildSummary(runner.steps, connection, connectionType, binding, cippProbe);
+  summary.mappedClientCount = mappings.length;
   const dedupedRecommendations = dedupeRecommendations(recommendations);
 
   const report: EntraDiagnosticsReport = {
@@ -1438,7 +1452,8 @@ function buildSummary(
     connectionType,
     connectionStatus: connection?.status ?? null,
     profileName: binding?.profileDisplayName ?? null,
-    partnerTenantId: connection?.connection_type === 'direct' ? (binding?.tenantId ?? null) : null,
+    partnerTenantId: connection?.connection_type === 'direct'
+      ? ((byId.get('token_claims')?.data as any)?.tid ?? binding?.tenantId ?? null) : null,
     authenticatedUpn:
       (byId.get('token_claims')?.data as any)?.preferredUsername ??
       (byId.get('token_claims')?.data as any)?.upn ??

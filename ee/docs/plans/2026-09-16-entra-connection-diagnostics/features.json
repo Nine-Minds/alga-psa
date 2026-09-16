@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "Decode safe stored/nested Temporal errors and apply the same OAuth classifier to historical AADSTS text.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "OAuth and Graph remedies"
     ]
@@ -666,7 +666,7 @@
   {
     "id": "F084",
     "description": "Add or reuse Graph emulator scenarios for healthy runs, partner consent, per-client consent/role errors, empty discovery, and expired client secret.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Documentation and validation"
     ]
@@ -682,7 +682,7 @@
   {
     "id": "F086",
     "description": "Add an nm-store user documentation page for Run diagnostics, client results, and remediation using the business-documentation workflow and sanitized screenshots.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Documentation and validation"
     ]
@@ -690,7 +690,7 @@
   {
     "id": "F087",
     "description": "Record dev-stack emulator smoke evidence for connection/client scopes, one green run, and at least two distinct failure runs with screenshots.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Documentation and validation"
     ]

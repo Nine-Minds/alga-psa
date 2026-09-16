@@ -329,6 +329,34 @@ describe('EntraDiagnosticsDialog', () => {
     await waitFor(() => {
       expect(screen.queryByText('Client One')).toBeNull();
     });
+    view.rerender(<EntraDiagnosticsDialog isOpen onClose={() => {}} />);
+    await waitFor(() => expect(mocks.runConnection).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText('Client One Tenant')).toBeNull();
+    expect(mocks.runClients).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains newly completed clients when a continuation limit returns a partial error', async () => {
+    const writeText = vi.fn(async (_text: string) => {});
+    Object.assign(navigator, { clipboard: { writeText } });
+    mocks.runConnection.mockResolvedValue({ success: true, data: connectionReport });
+    mocks.getMappings.mockResolvedValue({ success: true,
+      data: { mappings: [mappingFixture('c1', 'Client One'), mappingFixture('c2', 'Client Two')] } });
+    mocks.runClients.mockResolvedValue({ success: true, data: {
+      total: 2, completed: 1, isDone: false, jobId: '',
+      clients: [clientFixture('c1', 'Client One', true)],
+      aggregate: { ok: 1, need_consent: 0, conditional_access: 0, missing_role: 0, other: 0 },
+      error: 'The continuation exceeds its size limit. Select fewer clients.',
+      recommendations: [],
+    } });
+    render(<EntraDiagnosticsDialog isOpen onClose={() => {}} />);
+    await waitFor(() => expect(document.getElementById('entra-diag-run-clients')).toBeTruthy());
+    fireEvent.click(document.getElementById('entra-diag-run-clients')!);
+    await waitFor(() => expect(screen.getByText('Client One')).toBeTruthy());
+    expect(screen.getByText(/continuation exceeds/)).toBeTruthy();
+    fireEvent.click(document.getElementById('entra-diag-copy-bundle')!);
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    expect(writeText.mock.calls[0][0]).toContain('Client One');
+    expect(writeText.mock.calls[0][0]).toContain('"isComplete": false');
   });
 });
 

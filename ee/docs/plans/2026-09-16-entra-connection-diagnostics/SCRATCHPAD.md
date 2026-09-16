@@ -111,3 +111,9 @@ Use repository integration-test bootstrap for the migrated-DB tests, and the msg
 The OOD planning assignment does not advance, approve, merge, or mark the board step complete; those mechanics belong to XO/captain.
 
 Validation result (2026-09-16): plan validator passed (87 features, 40 tests). Additional checks passed for unique IDs, all implementation flags false, resolved PRD headings, complete feature-to-test mapping, and whitespace/conflict markers in all four new files. Application tests were not run because this assignment changes plan artifacts only.
+
+## Takeover completion (2026-09-16)
+
+Supersedes the earlier missing-delivery and heap-blocker notes. Added the migrated-DB/emulator lane, six scenarios, authenticated console screenshots (green plus three failure states), and the nm-store guide. Full server tsc now passes with a 12 GB heap. Additional fixes close nested serialized-secret leaks, aborted preview resumption, partial-result retention, callback request correlation, Temporal late-connection cleanup/task-queue type, stored causal errors and the runtime server-action type export. Client secrets use the requested last-four fingerprint while email retains its original prefix contract.
+
+See VALIDATION.md for exact commands, test boundaries, screenshots and review priorities. Features: 87/87 implemented. Broad acceptance test groups: 29/40 marked implemented; the rest remain false conservatively. The unrelated package-lock.json is preserved. No push, PR or website publication.

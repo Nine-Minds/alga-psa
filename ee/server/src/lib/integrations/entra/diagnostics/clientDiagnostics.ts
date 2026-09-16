@@ -137,7 +137,7 @@ async function pageUserYield(options: {
   deadline: number;
   startNextLink: string | null;
   startCounts: EntraPendingYield['counts'];
-}): Promise<{ done: true; counts: EntraPendingYield['counts'] } | { done: false; nextLink: string; counts: EntraPendingYield['counts'] }> {
+}): Promise<{ done: true; counts: EntraPendingYield['counts'] } | { done: false; nextLink: string | null; counts: EntraPendingYield['counts'] }> {
   const adapter = new DirectProviderAdapter();
   const counts = {
     totalUsers: options.startCounts.totalUsers,
@@ -147,14 +147,22 @@ async function pageUserYield(options: {
   let nextLink: string | null = options.startNextLink;
   let pages = 0;
 
-  while (pages < MAX_PAGES_PER_REQUEST && Date.now() < options.deadline) {
-    const page = await adapter.listUsersPageWithToken({
-      tenant: options.tenant,
-      managedTenantId: options.mapping.managedTenantId,
-      accessToken: options.accessToken,
-      url: nextLink ?? undefined,
-      signal: options.signal,
-    });
+  while (pages < MAX_PAGES_PER_REQUEST && Date.now() < options.deadline && !options.signal.aborted) {
+    let page: Awaited<ReturnType<DirectProviderAdapter['listUsersPageWithToken']>>;
+    try {
+      page = await adapter.listUsersPageWithToken({
+        tenant: options.tenant,
+        managedTenantId: options.mapping.entraTenantId,
+        accessToken: options.accessToken,
+        url: nextLink ?? undefined,
+        signal: options.signal,
+      });
+    } catch (error) {
+      // Our request budget is not a directory failure. Retry this same page
+      // next request, preserving only counts from fully processed pages.
+      if (options.signal.aborted) return { done: false, nextLink, counts };
+      throw error;
+    }
     const filtered = await filterEntraUsersForTenant(options.tenant, page.users);
     counts.totalUsers += page.users.length;
     counts.includedUsers += filtered.included.length;
@@ -166,7 +174,6 @@ async function pageUserYield(options: {
     if (!nextLink) return { done: true, counts };
   }
 
-  if (!nextLink) return { done: true, counts };
   return { done: false, nextLink, counts };
 }
 
@@ -484,7 +491,7 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
       if (!outcome.done) {
         const pendingOutcome = outcome as {
           done: false;
-          nextLink: string;
+          nextLink: string | null;
           counts: EntraPendingYield['counts'];
         };
         return {
@@ -543,11 +550,8 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
   }
 
   const steps = runner.steps;
-  let overallStatus = computeOverallStatus(steps);
+  const overallStatus = computeOverallStatus(steps);
   const categories = classifyClientCategory(steps);
-  if (categories === 'ok' && overallStatus !== 'pass') {
-    overallStatus = overallStatus;
-  }
   const recommendationList = dedupeRecommendations([
     ...recState.recommendations,
     ...collectStepRecommendations(steps),
@@ -589,6 +593,7 @@ async function runCippClient(options: {
   tenant: string;
   mapping: ConfirmedEntraMapping;
   includeUserYield: boolean;
+  signal: AbortSignal;
 }): Promise<ClientRunOutput> {
   const { tenant, mapping, includeUserYield } = options;
   const runner = createEntraStepRunner();
@@ -614,7 +619,7 @@ async function runCippClient(options: {
         users = await new CippProviderAdapter().listUsersForTenant({
           tenant,
           managedTenantId: mapping.entraTenantId,
-        });
+        }, { signal: options.signal });
         accessOk = true;
         return {
           status: 'pass' as const,
@@ -894,7 +899,10 @@ export async function runEntraClientAccessDiagnostics(
 
   // Validate signing capability before doing expensive work when more than one
   // request will be required.
-  if (total > MAX_CLIENTS_PER_REQUEST) {
+  if (total > MAX_SELECTION) {
+    return emptyContinuation(`Too many selected clients (${total}); the maximum is ${MAX_SELECTION}.`, total);
+  }
+  if (total > MAX_CLIENTS_PER_REQUEST || includeUserYield) {
     try {
       assertContinuationSigningAvailable();
     } catch (error) {
@@ -1039,6 +1047,7 @@ async function runClientWithBudget(params: {
         tenant: params.tenant,
         mapping: params.mapping,
         includeUserYield: params.includeUserYield,
+        signal: controller.signal,
       });
     }
     return await runDirectClient({
@@ -1047,7 +1056,7 @@ async function runClientWithBudget(params: {
       boundClientId: params.boundClientId,
       includeUserYield: params.includeUserYield,
       signal: controller.signal,
-      deadline: params.deadline,
+      deadline: Math.min(params.deadline, Date.now() + CLIENT_BUDGET_MS),
       resumeYield: params.resumeYield,
     });
   } finally {
@@ -1085,7 +1094,7 @@ function finalizeOrContinue(params: {
   const recommendations = dedupeRecommendations([
     ...params.accumulatedRecs,
     ...params.newRecs,
-  ]).slice(-MAX_EMBEDDED_RECOMMENDATIONS);
+  ]).slice(0, MAX_EMBEDDED_RECOMMENDATIONS);
 
   const safeNew = params.newResults.map((r) => sanitizeClient(r, true));
   const safeRecommendations = sanitizeRecommendations(recommendations, true);

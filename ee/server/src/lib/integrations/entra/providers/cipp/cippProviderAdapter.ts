@@ -197,7 +197,8 @@ export class CippProviderAdapter implements EntraProviderAdapter {
   private async requestFromCandidates(
     baseUrl: string,
     apiToken: string,
-    candidates: string[]
+    candidates: string[],
+    signal?: AbortSignal
   ): Promise<unknown> {
     let lastError: Error | null = null;
 
@@ -206,6 +207,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
       try {
         const response = await axios.get(url, {
           timeout: CIPP_REQUEST_TIMEOUT_MS,
+          signal,
           headers: {
             Authorization: `Bearer ${apiToken}`,
             'X-API-KEY': apiToken,
@@ -368,7 +370,8 @@ export class CippProviderAdapter implements EntraProviderAdapter {
   }
 
   public async listUsersForTenant(
-    input: EntraListUsersForTenantInput
+    input: EntraListUsersForTenantInput,
+    options: { signal?: AbortSignal } = {}
   ): Promise<EntraManagedUserRecord[]> {
     const credentials = await getEntraCippCredentials(input.tenant);
     if (!credentials) {
@@ -381,7 +384,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     const tenantId = encodeURIComponent(input.managedTenantId);
     const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
       `/api/listusers?tenantFilter=${tenantId}`,
-    ]);
+    ], options.signal);
     const rows = extractCollection(payload);
 
     const users: EntraManagedUserRecord[] = [];

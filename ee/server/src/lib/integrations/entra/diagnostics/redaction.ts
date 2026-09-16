@@ -54,6 +54,30 @@ function isFingerprint(value: string): boolean {
 
 /** Secret-bearing text is always redacted, regardless of identifier mode. */
 function redactSecrets(text: string): string {
+  // Temporal and stored validation errors can wrap JSON in JSON strings more
+  // than once. Decode the structure before inspecting keys, instead of trying
+  // to count backslashes with a regular expression.
+  if (/^\s*[\[{"]/.test(text)) {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (typeof parsed === 'string') return JSON.stringify(redactSecrets(parsed));
+      if (parsed && typeof parsed === 'object') {
+        return JSON.stringify(sanitizeDeep(parsed, true), (key, value) =>
+          isSensitiveKey(key) ? '<redacted>' : value
+        );
+      }
+    } catch {
+      // A log prefix or a truncated error is not necessarily valid JSON.
+    }
+  }
+  const readable = text.replace(/\\+(?=["'])/g, '');
+  // Fail closed for credential assignments in malformed/embedded JSON. Such
+  // text is untrusted evidence, not an API contract we need to preserve.
+  const assignment = new RegExp(`${SECRET_KEY}["']?\\s*[:=]`, 'i');
+  if (assignment.test(readable)) {
+    const codes = [...new Set(text.match(/AADSTS\d+/g) ?? [])];
+    return ['<redacted> credential-bearing text', ...codes].join(' ');
+  }
   return text
     .replace(BEARER_PATTERN, 'Bearer <redacted>')
     .replace(JWT_PATTERN, '<redacted-token>')
@@ -100,7 +124,7 @@ export function sanitizeDeep(value: unknown, includeIdentifiers: boolean): unkno
     for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
       if (CORRELATION_KEYS.has(key)) {
         // Correlation ids are safe and useful; never redact them.
-        out[key] = entry;
+        out[key] = sanitizeDeep(entry, true);
         continue;
       }
       if (isSensitiveKey(key)) {

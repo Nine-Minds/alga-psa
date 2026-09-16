@@ -509,11 +509,6 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     url?: string;
     signal?: AbortSignal;
   }): Promise<{ users: EntraManagedUserRecord[]; nextLink: string | null }> {
-    if (IS_SELF_TENANT_SMOKE) {
-      const users = await this.listSelfTenantUsers(input);
-      return { users, nextLink: null };
-    }
-
     const select = [
       'id',
       'displayName',
@@ -527,11 +522,17 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       'businessPhones',
     ].join(',');
     const pageUrl = input.url || `${graphBaseUrl()}/users?$select=${select}&$top=999`;
+    const expected = new URL(`${graphBaseUrl()}/users`);
+    const requested = new URL(pageUrl);
+    if (requested.origin !== expected.origin || requested.pathname !== expected.pathname) {
+      throw new Error('Graph returned an unexpected users paging URL. Restart diagnostics or contact support.');
+    }
 
     const response = await axios.get(pageUrl, {
       headers: { Authorization: `Bearer ${input.accessToken}` },
       timeout: GRAPH_REQUEST_TIMEOUT_MS,
       signal: input.signal,
+      maxRedirects: 0,
     });
     const payload = toObject(response.data);
     const rows = Array.isArray(payload.value) ? payload.value : [];

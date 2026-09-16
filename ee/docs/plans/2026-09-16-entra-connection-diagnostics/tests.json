@@ -81,7 +81,7 @@
   {
     "id": "T008",
     "description": "DB integration: Against migrated schema, seed connection/profile/binding/mappings/settings/history/queue and run a successful report using test secret/Temporal/Graph adapters; assert actual query outputs and unchanged domain tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F013",
@@ -107,7 +107,7 @@
   {
     "id": "T010",
     "description": "DB integration: Run missing-connection/missing-settings/no-history paths against migrated schema and assert useful results with no defaults, preflight records, settings rows, discovery, or validation writes inserted.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F019",
@@ -163,7 +163,7 @@
   {
     "id": "T015",
     "description": "Emulator integration: Run a green Direct connection end to end against msgraph emulator with paged discovery and mapped/unmapped tenants; verify layer order, me/probe correlation data, counts/samples and no customer token mint.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F063",
@@ -177,7 +177,7 @@
   {
     "id": "T016",
     "description": "Emulator integration: Inject partner consent_missing 403 and verify actionable partner consent failure, request-id, dependent discovery skips, preserved local history, and no persisted connection verdict.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F028",
@@ -188,7 +188,7 @@
   {
     "id": "T017",
     "description": "Emulator integration: Inject AADSTS7000222 on refresh and verify secret-rotation remedy, preserved OAuth/suberror metadata, skipped Graph layers, no forbidden writes and no raw secret in report.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F022",
@@ -199,7 +199,7 @@
   {
     "id": "T018",
     "description": "Emulator integration: Return zero managed tenants and verify warning with Lighthouse/GDAP explanation, zero count, and missing-mapping warnings rather than a healthy pass.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F030",
@@ -219,7 +219,7 @@
   {
     "id": "T020",
     "description": "Emulator integration: Run selected clients where one succeeds and another mints AADSTS65001; verify tenant-specific consent URL/remedy, independent successful result, correct aggregate, and exactly one mint per ordinary client attempt.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F040",
@@ -233,7 +233,7 @@
   {
     "id": "T021",
     "description": "Emulator integration: Return per-client /users 403 and verify GDAP directory-role remedy/request-id and missing-role category, while an independently accessible groups read and other clients still complete.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F036",
@@ -265,7 +265,7 @@
   {
     "id": "T024",
     "description": "DB integration: Run opt-in yield with real stored custom filter settings and adapter user fixtures; verify expected counts, existing token reuse, and zero new contacts/queue/sync-run/settings rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046",
       "F048",
@@ -276,7 +276,7 @@
   {
     "id": "T025",
     "description": "Integration: CIPP candidate fixture returns 404 then successful alternative list; verify candidate order, selected endpoint, normalized count/sample, mapping warnings and no Direct secret dependency.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050",
       "F051",
@@ -287,7 +287,7 @@
   {
     "id": "T026",
     "description": "Unit/integration: Table-test missing CIPP credentials, DNS/TLS/timeout, HTTP error and 401/403; verify reachability versus auth attribution, API-key-specific remedy, skips and secret redaction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050",
       "F052",
@@ -322,7 +322,7 @@
   {
     "id": "T029",
     "description": "Integration: Drive a 50-client continuation fixture through multiple requests, asserting bounded batches and at most three active clients, incremental completed results, one-client failure isolation and no process-local background dependency.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F067",
@@ -346,7 +346,7 @@
   {
     "id": "T031",
     "description": "Integration: Exercise multi-page optional preview exceeding a request budget; return honest partial/continuation state, preserve counts without duplicate pages, and never expose credentials in job state or mark unfinished work green.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069",
       "F067",
@@ -413,7 +413,7 @@
   {
     "id": "T037",
     "description": "Component/build: Verify Connection and unhealthy Overview entry points, diagnostics localization keys, keyboard/status labels and theme-aware standard components; type/build-check EE and CE route exports.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073",
       "F082",
@@ -432,7 +432,7 @@
   {
     "id": "T039",
     "description": "Manual smoke: On the dev stack wired to msgraph emulator, run connection and selected-client diagnostics; capture green screenshot and two failure screenshots (partner consent or expired secret, and customer consent or GDAP role); inspect resulting safe bundles and unchanged connection state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087",
       "F084",
@@ -444,7 +444,7 @@
   {
     "id": "T040",
     "description": "Documentation acceptance: Locate nm-store using alga-business-documentation, validate/build its new page, verify click paths and client-table explanations against actual smoke screenshots, and record page/evidence paths without claiming unperformed publication.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086",
       "F085",

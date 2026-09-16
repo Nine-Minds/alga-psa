@@ -82,8 +82,7 @@ describe('continuation signing', () => {
       isComplete: true,
     };
     const payload = basePayload({ offset: 0, recentResults: [result] });
-    const token = signContinuation(payload, SECRET);
-    expect(verifyContinuation(token, SECRET)).toBeNull();
+    expect(() => signContinuation(payload, SECRET)).toThrow('Continuation state is inconsistent.');
   });
 
   it('rejects an over-limit selection before signing', () => {

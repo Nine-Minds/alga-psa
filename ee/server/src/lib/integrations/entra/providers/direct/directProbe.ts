@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { randomUUID } from 'node:crypto';
 import {
   getMicrosoftGraphBaseUrl,
   getMicrosoftGraphBetaBaseUrl,
@@ -34,6 +35,8 @@ export type EntraDirectProbeResult =
       checkedAt: string;
       managedTenantSampleCount: number;
       endpoint: string;
+      requestId?: string;
+      clientRequestId?: string;
     }
   | {
       valid: false;
@@ -43,6 +46,7 @@ export type EntraDirectProbeResult =
       status?: number;
       /** Graph request id, preserved for support correlation. */
       requestId?: string;
+      clientRequestId?: string;
       /** Graph's own error code/message, for logs — never shown to the operator. */
       detail?: string;
     };
@@ -96,10 +100,11 @@ export async function probeEntraDirectAccess(
   accessToken: string
 ): Promise<EntraDirectProbeResult> {
   const endpoint = entraDirectProbeEndpoint();
+  const clientRequestId = randomUUID();
 
   try {
     const response = await axios.get(endpoint, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, 'client-request-id': clientRequestId },
       timeout: 15000,
     });
 
@@ -110,6 +115,8 @@ export async function probeEntraDirectAccess(
       checkedAt: new Date().toISOString(),
       managedTenantSampleCount: Array.isArray(value) ? value.length : 0,
       endpoint,
+      requestId: response.headers?.['request-id'],
+      clientRequestId,
     };
   } catch (error: unknown) {
     const status = axios.isAxiosError(error) ? error.response?.status : undefined;
@@ -126,6 +133,7 @@ export async function probeEntraDirectAccess(
         code: 'auth_rejected',
         status,
         requestId,
+        clientRequestId,
         detail,
       };
     }
@@ -140,6 +148,7 @@ export async function probeEntraDirectAccess(
         code: 'consent_missing',
         status,
         requestId,
+        clientRequestId,
         detail,
       };
     }
@@ -151,6 +160,7 @@ export async function probeEntraDirectAccess(
       code: 'validation_failed',
       status,
       requestId,
+      clientRequestId,
       detail,
     };
   }

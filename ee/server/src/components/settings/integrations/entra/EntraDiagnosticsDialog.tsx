@@ -128,6 +128,7 @@ export function EntraDiagnosticsDialog({
   const [includeIdentifiersExport, setIncludeIdentifiersExport] = React.useState(false);
   const [clientsRunning, setClientsRunning] = React.useState(false);
   const [clientResults, setClientResults] = React.useState<EntraClientDiagnosticsResult[]>([]);
+  const [expandedClients, setExpandedClients] = React.useState<Set<string>>(new Set());
   const [clientProgress, setClientProgress] = React.useState<{ completed: number; total: number } | null>(null);
   const [clientError, setClientError] = React.useState<string | null>(null);
   const [clientRecommendations, setClientRecommendations] = React.useState<DiagnosticsRecommendation[]>([]);
@@ -194,6 +195,7 @@ export function EntraDiagnosticsDialog({
       // Prior client results belong to the previous session and are cleared so
       // they are never shown beside a fresh connection report.
       setClientResults([]);
+      setExpandedClients(new Set());
       setClientProgress(null);
       setClientAggregate(null);
       setClientRecommendations([]);
@@ -228,6 +230,7 @@ export function EntraDiagnosticsDialog({
       setClientsRunning(true);
       setClientError(null);
       setClientResults([]);
+      setExpandedClients(new Set());
       setClientRecommendations([]);
       setClientAggregate(null);
       setClientProgress({ completed: 0, total: clientIds.length });
@@ -252,17 +255,28 @@ export function EntraDiagnosticsDialog({
             return;
           }
           const payload: EntraClientDiagnosticsContinuation = response.data;
-          if (payload.error) {
-            setClientError(payload.error);
-            setClientResults([...accumulated]);
-            return;
-          }
           accumulated.push(...payload.clients);
           completed = payload.completed;
           setClientResults([...accumulated]);
           setClientProgress({ completed, total: payload.total });
           setClientAggregate(payload.aggregate);
-          if (payload.recommendations?.length) setClientRecommendations(payload.recommendations);
+          if (payload.recommendations?.length) {
+            setClientRecommendations(previous => {
+              const unique = new Map(previous.map(rec => [JSON.stringify(rec), rec]));
+              for (const rec of payload.recommendations) unique.set(JSON.stringify(rec), rec);
+              for (const client of payload.clients) {
+                for (const step of client.steps) {
+                  for (const rec of step.recommendations ?? []) unique.set(JSON.stringify(rec), rec);
+                }
+              }
+              return [...unique.values()];
+            });
+          }
+          if (payload.error) {
+            setClientError(payload.error);
+            setClientRunComplete(false);
+            return;
+          }
           // Completion requires the terminal response AND every client to be
           // genuinely complete (a resumable preview can leave one incomplete).
           const complete = payload.isDone && accumulated.every((c) => c.isComplete);
@@ -376,6 +390,8 @@ export function EntraDiagnosticsDialog({
     {
       title: t('integrations.entra.diagnostics.clients.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'clientName',
+      width: '150px',
+      cellClassName: 'whitespace-normal',
       render: (_v, record) =>
         record.clientName ||
         t('integrations.entra.diagnostics.clients.unavailableName', { defaultValue: 'Unavailable name' }),
@@ -383,6 +399,8 @@ export function EntraDiagnosticsDialog({
     {
       title: t('integrations.entra.diagnostics.clients.columns.tenant', { defaultValue: 'Tenant' }),
       dataIndex: 'entraTenantDisplayName',
+      width: '160px',
+      cellClassName: 'whitespace-normal',
       render: (_v, record) =>
         record.entraTenantDisplayName ||
         t('integrations.entra.diagnostics.clients.unavailableName', { defaultValue: 'Unavailable name' }),
@@ -390,40 +408,50 @@ export function EntraDiagnosticsDialog({
     {
       title: t('integrations.entra.diagnostics.clients.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'overallStatus',
-      render: (value) => <Badge variant={statusVariant(value as any)}>{String(value)}</Badge>,
-    },
-    {
-      title: t('integrations.entra.diagnostics.clients.columns.complete', { defaultValue: 'Complete' }),
-      dataIndex: 'isComplete',
-      render: (_value, record) => (
-        <Badge variant={record.isComplete ? 'success' : 'warning'}>
-          {record.isComplete
-            ? t('integrations.entra.diagnostics.clients.complete', { defaultValue: 'Complete' })
-            : t('integrations.entra.diagnostics.clients.partial', { defaultValue: 'Partial' })}
-        </Badge>
+      width: '92px',
+      render: (value, record) => (
+        <span className="flex flex-col gap-1">
+          <Badge variant={statusVariant(value as any)}>{String(value)}</Badge>
+          {!record.isComplete && <Badge variant="warning">{t('integrations.entra.diagnostics.clients.partial')}</Badge>}
+        </span>
       ),
     },
     {
       title: t('integrations.entra.diagnostics.clients.columns.remedy', { defaultValue: 'Remedy' }),
       dataIndex: 'remedy',
+      width: '230px',
+      cellClassName: 'whitespace-normal',
       render: (value) => <span className="text-sm text-muted-foreground">{value || ''}</span>,
+    },
+    {
+      title: t('integrations.entra.diagnostics.clients.columns.details', { defaultValue: 'Details' }),
+      dataIndex: 'clientId',
+      width: '80px',
+      render: (_value, record) => (
+        <Button id={`entra-diag-expand-${record.clientId}`} variant="ghost" size="sm"
+          aria-expanded={expandedClients.has(record.clientId)}
+          onClick={() => setExpandedClients(previous => {
+            const next = new Set(previous);
+            if (next.has(record.clientId)) next.delete(record.clientId);
+            else next.add(record.clientId);
+            return next;
+          })}>
+          {t('integrations.entra.diagnostics.clients.columns.details', { defaultValue: 'Details' })}
+        </Button>
+      ),
     },
   ];
 
   const footer = (
     <div className="flex w-full flex-wrap items-center justify-between gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1 text-xs text-muted-foreground">
-          <input
+          <Checkbox
             id="entra-diag-export-identifiers"
-            type="checkbox"
             checked={includeIdentifiersExport}
             onChange={(e) => setIncludeIdentifiersExport(e.target.checked)}
-          />
-          {t('integrations.entra.diagnostics.actions.includeIdentifiers', {
+            label={t('integrations.entra.diagnostics.actions.includeIdentifiers', {
             defaultValue: 'Include identifiers in export',
-          })}
-        </label>
+          })} />
         <Button id="entra-diag-copy-bundle" type="button" size="sm" variant="outline" onClick={copySupportBundle}>
           <Copy className="mr-2 h-4 w-4" />
           {copied
@@ -777,8 +805,26 @@ export function EntraDiagnosticsDialog({
 
               {clientRecommendations.length > 0 && (
                 <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground" id="entra-diag-client-recommendations">
-                  {clientRecommendations.map((rec) => (
-                    <li key={`${rec.code}-${JSON.stringify(rec.params ?? {})}`}>{remedyText(rec)}</li>
+                  {clientRecommendations.map((rec, index) => (
+                    <li key={`${rec.code}-${index}`}>
+                      {remedyText(rec)}{' '}
+                      {rec.action && (
+                        <span className="inline-flex gap-1">
+                        <Button id={`entra-diag-client-rec-${index}`} size="sm" variant="outline"
+                          onClick={() => {
+                            if (rec.action!.kind === 'copy') void navigator.clipboard.writeText(rec.action!.payload);
+                            else if (rec.action!.kind === 'open_url') window.open(rec.action!.payload, '_blank', 'noopener,noreferrer');
+                            else onNavigate?.(rec.action!.payload);
+                          }}>
+                          {t(`integrations.entra.diagnostics.actions.${rec.action.kind}`)}
+                        </Button>
+                        {rec.action.kind === 'open_url' && <Button id={`entra-diag-client-rec-copy-${index}`}
+                          size="sm" variant="outline" onClick={() => void navigator.clipboard.writeText(rec.action!.payload)}>
+                          {t('integrations.entra.diagnostics.actions.copy')}
+                        </Button>}
+                        </span>
+                      )}
+                    </li>
                   ))}
                 </ul>
               )}
@@ -788,7 +834,7 @@ export function EntraDiagnosticsDialog({
                   id="entra-diagnostics-client-table"
                   data={clientResults}
                   columns={columns}
-                  expandedRowRender={(record) => (
+                  expandedRowRender={(record) => expandedClients.has(record.clientId) ? (
                     <div className="space-y-2 p-2 text-xs">
                       <div className="text-muted-foreground">
                         {t('integrations.entra.diagnostics.clients.details.completed', {
@@ -809,9 +855,16 @@ export function EntraDiagnosticsDialog({
                           </div>
                         </div>
                       )}
-                      <pre className="overflow-auto rounded bg-muted p-2">{JSON.stringify(record.steps, null, 2)}</pre>
+                      {record.steps.map(step => (
+                        <details key={step.id} className="rounded border p-2">
+                          <summary className="cursor-pointer">{stepTitle(step)} <Badge variant={statusVariant(step.status)}>{step.status}</Badge></summary>
+                          {step.error?.message && <p className="my-2">{step.error.message}</p>}
+                          {step.recommendations?.map((rec, index) => <p key={index} className="my-2">{remedyText(rec)}</p>)}
+                          <pre className="overflow-auto rounded bg-muted p-2">{JSON.stringify({ data: step.data, http: step.http, error: step.error }, null, 2)}</pre>
+                        </details>
+                      ))}
                     </div>
-                  )}
+                  ) : null}
                 />
               )}
             </div>

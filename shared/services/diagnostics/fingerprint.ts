@@ -1,10 +1,10 @@
 /**
- * Produce a safe, non-reversible fingerprint of a credential. The first four
- * characters are retained so an operator can match without exposing the value.
+ * Retain four characters and the length for operator comparison. Email keeps
+ * its existing prefix contract; callers may request a suffix for client secrets.
  */
-export function buildTokenFingerprint(token?: string | null): string | undefined {
+export function buildTokenFingerprint(token?: string | null, edge: 'start' | 'end' = 'start'): string | undefined {
   if (!token) return undefined;
-  return `${token.slice(0, 4)}...(${token.length})`;
+  return `${edge === 'end' ? token.slice(-4) : token.slice(0, 4)}...(${token.length})`;
 }
 
 /**

@@ -66,7 +66,19 @@ async function withTemporalClient<T>(
       return { ok: false, error: 'Temporal client is not available in this deployment.' };
     }
     const { address, namespace } = temporalConfig();
-    connection = await withTimeout(mod.Connection.connect({ address }), 4000);
+    let waitingForConnection = true;
+    const connecting = mod.Connection.connect({ address }).then(async (opened: any) => {
+      if (!waitingForConnection) {
+        await opened.close();
+        throw new Error('Temporal connection arrived after the diagnostics deadline');
+      }
+      return opened;
+    });
+    try {
+      connection = await withTimeout(connecting, 4000);
+    } finally {
+      waitingForConnection = false;
+    }
     const client = new mod.Client({ connection, namespace });
     const value = await fn(client);
     return { ok: true, value };
@@ -74,7 +86,7 @@ async function withTemporalClient<T>(
     return { ok: false, error: error?.message || 'Temporal frontend is unreachable.' };
   } finally {
     try {
-      connection?.close?.();
+      await connection?.close?.();
     } catch {
       // best-effort close
     }
@@ -105,6 +117,7 @@ export async function probeTemporalReadiness(): Promise<TemporalReadiness> {
         client.workflowService.describeTaskQueue({
           namespace,
           taskQueue: { name: taskQueue },
+          taskQueueType: 1, // TASK_QUEUE_TYPE_WORKFLOW
           includeTaskQueueStatus: true,
         }),
         4000
