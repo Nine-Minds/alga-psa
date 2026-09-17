@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   assembleDiagnosticsReport,
-  computeOverallStatus,
   defaultErrorMeta,
   runDiagnosticsSteps,
   type DiagnosticsStepDefinition,
-} from '../diagnosticsRunner';
+} from '../runner';
+import { computeOverallStatus } from '../status';
 
 type Ctx = { calls: string[] };
 

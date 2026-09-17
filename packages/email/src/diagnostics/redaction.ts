@@ -15,7 +15,7 @@
 import type {
   DiagnosticsErrorMeta,
   DiagnosticsHttpMeta,
-} from '@alga-psa/shared/interfaces/diagnostics.interfaces';
+} from '@alga-psa/types';
 import type {
   OutboundDiagnosticsSummary,
   OutboundEmailDiagnosticsReport,

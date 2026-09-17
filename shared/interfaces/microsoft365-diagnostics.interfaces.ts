@@ -1,26 +1,20 @@
-/**
- * Microsoft 365 diagnostics public types.
- *
- * The generic diagnostics kernel types are the source of truth; this module
- * preserves the existing Microsoft365-named aliases and exports so current
- * imports keep compiling.
- */
-
 import type {
-  DiagnosticsStep,
-  DiagnosticsStepData,
   DiagnosticsStepStatus,
-} from './diagnostics.interfaces';
+  DiagnosticsStep,
+} from '@alga-psa/types';
 
 export type {
-  DiagnosticsErrorMeta,
-  DiagnosticsHttpMeta,
   DiagnosticsStepStatus,
-} from './diagnostics.interfaces';
+  DiagnosticsHttpMeta,
+  DiagnosticsErrorMeta,
+} from '@alga-psa/types';
 
-export type Microsoft365DiagnosticsStep = DiagnosticsStep<DiagnosticsStepData> & {
-  startedAt: string;
-};
+/**
+ * Shared mirror of the canonical Microsoft 365 diagnostics contract in
+ * `@alga-psa/types`. The generic step envelope now lives in
+ * `diagnostics.interfaces`, so the email step is an alias of it.
+ */
+export type Microsoft365DiagnosticsStep = DiagnosticsStep;
 
 export interface Microsoft365DiagnosticsSummary {
   providerId: string;

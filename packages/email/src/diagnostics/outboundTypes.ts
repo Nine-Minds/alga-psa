@@ -11,10 +11,10 @@ import type {
   DiagnosticsStep,
   DiagnosticsStepData,
   DiagnosticsStepStatus,
-} from '@alga-psa/shared/interfaces/diagnostics.interfaces';
+} from '@alga-psa/types';
 import type {
   DiagnosticsStepDefinition,
-} from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
+} from '@alga-psa/shared/services/diagnostics';
 import type { TenantEmailSettings } from '@alga-psa/types';
 import type { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { EmailProviderConfig as InboundEmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';

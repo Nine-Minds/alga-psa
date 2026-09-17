@@ -16,8 +16,6 @@ export default defineConfig({
     'events/publisher': 'events/publisher.ts',
     'utils/encryption': 'utils/encryption.ts',
     'utils/retryUtils': 'utils/retryUtils.ts',
-    'interfaces/diagnostics.interfaces': 'interfaces/diagnostics.interfaces.ts',
-    'services/diagnostics/diagnosticsRunner': 'services/diagnostics/diagnosticsRunner.ts',
     'services/email/microsoftEmailProviderConfig': 'services/email/microsoftEmailProviderConfig.ts',
     'services/email/microsoftGraphDiagnostics': 'services/email/microsoftGraphDiagnostics.ts',
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',

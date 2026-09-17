@@ -8,7 +8,7 @@
  */
 
 import axios from 'axios';
-import type { DiagnosticsStepOutcome } from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
+import type { DiagnosticsStepOutcome } from '@alga-psa/shared/services/diagnostics';
 import type {
   OutboundStepData,
   OutboundStepDefinition,

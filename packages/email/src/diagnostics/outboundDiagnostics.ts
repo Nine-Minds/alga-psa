@@ -19,15 +19,15 @@ import {
 } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import {
   normalizeOutboundGraphFailure,
-  toDiagnosticsErrorMeta,
-  type GraphFailure,
 } from '@alga-psa/shared/services/email/microsoftGraphDiagnostics';
 import {
   assembleDiagnosticsReport,
   computeOverallStatus,
   runDiagnosticsSteps,
+  toDiagnosticsErrorMeta,
   type DiagnosticsStepDefinition,
-} from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
+  type GraphFailure,
+} from '@alga-psa/shared/services/diagnostics';
 import type { EmailProviderConfig as InboundEmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { TenantEmailService } from '../TenantEmailService';
 import { resolveDefaultFromAddress, resolveTenantCompanyName } from '../senderIdentity';

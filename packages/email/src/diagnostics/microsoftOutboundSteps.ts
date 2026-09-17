@@ -6,7 +6,7 @@
  * send-specific advice. They are not a method on the adapter.
  */
 
-import type { DiagnosticsStepOutcome } from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
+import type { DiagnosticsStepOutcome } from '@alga-psa/shared/services/diagnostics';
 import {
   classifySendPermissionDenial,
   normalizeOutboundGraphFailure,

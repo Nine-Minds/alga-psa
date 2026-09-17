@@ -10,7 +10,7 @@ import {
   type DiagnosticsStep,
   type DiagnosticsStepDefinition,
   type DiagnosticsStepStatus,
-} from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
+} from '@alga-psa/shared/services/diagnostics';
 
 import {
   resolveTeamsRecipientLink,

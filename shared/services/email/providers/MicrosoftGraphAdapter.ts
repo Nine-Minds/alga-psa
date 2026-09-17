@@ -6,20 +6,20 @@ import type {
   Microsoft365DiagnosticsOptions,
   Microsoft365DiagnosticsReport,
 } from '../../../interfaces/microsoft365-diagnostics.interfaces';
-import type { DiagnosticsHttpMeta } from '../../../interfaces/diagnostics.interfaces';
+import type { DiagnosticsHttpMeta } from '@alga-psa/types';
 import {
   assembleDiagnosticsReport,
   runDiagnosticsSteps,
   type DiagnosticsStepDefinition,
-} from '../../diagnostics/diagnosticsRunner';
+} from '../../diagnostics/runner';
 import {
   classifyGraphFailure as classifyGraphFailureShared,
   extractGraphBodyCorrelationIds,
   extractGraphIds as extractGraphIdsShared,
-  mapInboundRecommendations,
   toDiagnosticsErrorMeta,
   type GraphFailure,
-} from '../microsoftGraphDiagnostics';
+} from '../../diagnostics/graphFailure';
+import { mapInboundRecommendations } from '../microsoftGraphDiagnostics';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
 import { getAdminConnection } from '../../../db/admin';

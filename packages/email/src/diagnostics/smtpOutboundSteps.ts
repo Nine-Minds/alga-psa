@@ -9,7 +9,7 @@
  */
 
 import nodemailer from 'nodemailer';
-import type { DiagnosticsStepOutcome } from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
+import type { DiagnosticsStepOutcome } from '@alga-psa/shared/services/diagnostics';
 import { buildSmtpTransportOptions } from '../providers/SMTPEmailProvider';
 import type {
   OutboundDiagnosticsContext,
