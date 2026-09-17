@@ -766,7 +766,8 @@
       "driftReexport": "Eksportuj ponownie do QuickBooks",
       "syncNow": "Synchronizuj z QuickBooks",
       "viewInQbo": "Zobacz w QuickBooks",
-      "voidInvoice": "Anuluj fakturę"
+      "voidInvoice": "Anuluj fakturę",
+      "viewInXero": "Wyświetl w Xero"
     },
     "loading": "Ładowanie podglądu...",
     "empty": "Wybierz fakturę do podglądu",
@@ -1145,7 +1146,9 @@
     "tooltip": {
       "qboNumberPrefix": "Nr QBO",
       "lastSynced": "Ostatnia synchronizacja:",
-      "viewInQuickBooks": "Wyświetl w QuickBooks"
+      "viewInQuickBooks": "Wyświetl w QuickBooks",
+      "viewInXero": "Wyświetl w Xero",
+      "xeroNumberPrefix": "Nr Xero "
     }
   },
   "templateManager": {

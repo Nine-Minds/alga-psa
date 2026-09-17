@@ -30,7 +30,7 @@ import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
 import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
 import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
-import { registerQboConnectionChangeHandler } from '@alga-psa/integrations/lib/qbo/qboConnectionChangeProvider';
+import { registerAccountingConnectionChangeHandler } from '@alga-psa/integrations/lib/accountingConnectionChangeProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -190,9 +190,9 @@ export async function initializeApp() {
       return runner.cancelJob(jobId, tenantId);
     });
     // Converge the accounting-sync schedule the moment a tenant connects or
-    // disconnects QuickBooks, so connected-only scheduling doesn't wait for the
-    // next startup reconcile.
-    registerQboConnectionChangeHandler(async (tenantId) => {
+    // disconnects either provider, so connected-only scheduling doesn't wait
+    // for the next startup reconcile.
+    registerAccountingConnectionChangeHandler(async (tenantId) => {
       const { scheduleAccountingSyncCycleJob } = await import('./jobs/handlers/accountingSyncCycleHandler');
       await scheduleAccountingSyncCycleJob(tenantId);
     });

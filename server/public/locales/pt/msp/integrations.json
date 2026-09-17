@@ -78,7 +78,12 @@
         "noPermission": {
           "title": "Sem acesso às integrações contábeis",
           "description": "Você não tem permissão para visualizar ou configurar integrações contábeis. Solicite acesso a um administrador."
-        }
+        },
+        "changeIntegration": "Escolher outra",
+        "currentIntegration": "Integração contábil",
+        "selectedAction": "Selecionada",
+        "reconnectRequired": "É necessário reconectar",
+        "settingsTitle": "Configurações de {{title}}"
       },
       "modules": {
         "tabs": {
@@ -1974,6 +1979,10 @@
         "syncNowSuccess": "Sincronização concluída com sucesso.",
         "syncNowSkipped": "Sincronização ignorada: {{reason}}",
         "syncNowError": "Falha na sincronização: {{error}}",
+        "connectionUnavailableProvider": "A conexão {{provider}} está indisponível. Reconecte para retomar a sincronização.",
+        "defaultRealmError": "Não foi possível selecionar esta organização. Reconecte e tente novamente.",
+        "syncIncomplete": "A sincronização está incompleta. O cursor foi preservado porque o provedor retornou um conjunto de alterações parcial.",
+        "syncOperationsFailed": "Algumas operações contábeis falharam. Revise os erros de sincronização antes de tentar novamente.",
         "viewExceptionsLink": "Ver exceções",
         "autoApplyCreditsWarning": "QuickBooks está configurado para aplicar créditos automaticamente, o que entra em conflito com os aplicativos de crédito gerados pela Alga: QuickBooks pode aplicar notas de crédito exportadas a uma fatura diferente antes da sincronização. No QuickBooks, vá para Conta e Configurações → Avançado → Automação e desative “Aplicar créditos automaticamente”.",
         "configTitle": "Configuração de sincronização",
@@ -1986,7 +1995,20 @@
         "noDefault": "Sem padrão",
         "saving": "Salvando…",
         "undepositedFunds": "Fundos não depositados (padrão)",
-        "catalogLoadError": "Falha ao carregar as opções de configuração da sincronização com o QuickBooks."
+        "catalogLoadError": "Falha ao carregar as opções de configuração da sincronização com o QuickBooks.",
+        "healthCardTitleProvider": "Status de sincronização do {{provider}}",
+        "healthCardDescriptionProvider": "Status e controles da sincronização contábil do {{provider}}. Executa a cada 15 minutos.",
+        "refreshTokenExpiredProvider": "Token do {{provider}} expirado — reconecte para retomar a sincronização.",
+        "refreshTokenExpiryProvider": "O token do {{provider}} expira em {{date}}",
+        "autoProvisionCustomersLabelProvider": "Criar clientes do {{provider}} automaticamente",
+        "connectedOrganisations": "Organizações Xero",
+        "defaultOrganisationDescription": "A organização padrão é utilizada para sincronização, exportações e mapeamentos.",
+        "outstandingItems": "Itens pendentes",
+        "outstandingItemsDescription": "Itens que ainda precisam de revisão ou de outra tentativa de sincronização.",
+        "outstandingItemsReconnect": "Em todas as organizações associadas. Estes itens são preservados até reconectar o Xero.",
+        "refreshTokenValidUntilProvider": "Autorização {{provider}} válida até {{date}}. Os tokens são renovados automaticamente.",
+        "syncSucceeded": "Sincronização concluída",
+        "syncStopped": "Sincronização interrompida"
       },
       "itemImport": {
         "description": "Importe seus produtos e serviços do QuickBooks para o catálogo de serviços do Alga para a empresa conectada do QuickBooks. O QuickBooks continua sendo a fonte oficial para nomes, preços, SKUs, descrições e custos; o método de faturamento, a unidade de medida e o tipo de serviço são definidos aqui e depois passam a ser gerenciados no Alga. Esta etapa é opcional — pule-a com Avançar.",
@@ -3500,7 +3522,9 @@
           "saveCredentials": "Salvar credenciais Xero",
           "saving": "Salvando…",
           "retryDisconnect": "Tentar desconectar novamente",
-          "forceFinalizeDisconnect": "Finalizar à força"
+          "forceFinalizeDisconnect": "Finalizar à força",
+          "disconnectAll": "Desconectar todas as organizações Xero",
+          "replaceCredentials": "Substituir credenciais"
         },
         "badges": {
           "connectionExpired": "Conexão expirada",
@@ -3529,14 +3553,22 @@
         "clientIdPlaceholder": "Cole seu ID de cliente Xero de propriedade do locatário",
         "clientSecretLabel": "Segredo do cliente Xero",
         "clientSecretPlaceholder": "Cole o segredo do cliente Xero de propriedade do locatário",
-        "connectSuccess": "Xero conectado com sucesso. A primeira organização conectada agora é o contexto ativo padrão do Xero.",
+        "connectSuccess": "Xero conectado. {{count}} organizações associadas; {{organisation}} é a padrão para sincronização.",
         "connection": {
           "connectionId": "ID de conexão: {{id}}",
           "defaultOrganisation": "Organização padrão",
           "description": "Inicie o OAuth somente depois que o aplicativo Xero de propriedade do locatário estiver configurado. A desconexão remove os tokens de acesso Xero armazenados, mas mantém as credenciais do aplicativo de propriedade do locatário.",
           "notConnected": "Nenhuma organização Xero ativa está conectada ainda. Salve as credenciais e clique em Conectar Xero.",
           "title": "Conexão Xero ao vivo",
-          "unknown": "desconhecido"
+          "unknown": "desconhecido",
+          "defaultBadge": "Padrão para sincronização",
+          "linkedOrganisations": "Organizações associadas ({{count}})",
+          "multipleOrganisationScope": "Esta autorização inclui {{count}} organizações Xero. Reconectar e desconectar se aplica a todas.",
+          "reconnectRequiredBadge": "É necessário reconectar",
+          "organisationScope": "Reconectar e desconectar se aplica a todas as organizações desta lista.",
+          "reconnectRequiredDescription": "A sincronização e as exportações estão em pausa. Reconecte uma vez para retomá-las nas {{count}} organizações associadas.",
+          "reconnectRequiredTitle": "Conexão expirada",
+          "singleOrganisationScope": "Reconectar e desconectar se aplica a esta organização Xero."
         },
         "credentialsSaved": "Credenciais Xero salvas. Agora você pode iniciar o fluxo Xero OAuth ao vivo.",
         "csvAvailableMiddle": "nesta mesma seção de Contabilidade e gerenciar as exportações de",
@@ -3549,11 +3581,11 @@
           "load": "Falha ao carregar as configurações do Xero.",
           "saveCredentials": "Falha ao salvar as credenciais do Xero."
         },
-        "howItWorksDescription": "Salve aqui um ID de cliente Xero de propriedade do locatário e um segredo de cliente, conclua o fluxo Xero OAuth e o AlgaPSA usará a primeira organização Xero conectada como contexto ativo padrão.",
+        "howItWorksDescription": "Salve aqui um ID de cliente Xero de propriedade do locatário e um segredo de cliente, conclua o fluxo Xero OAuth e o AlgaPSA usará a organização Xero selecionada como padrão para exportações e sincronização ao vivo.",
         "howItWorksTitle": "Como o Xero ao vivo funciona nesta versão",
         "loading": "Carregando configurações do Xero…",
         "mapping": {
-          "alert": "Itens Xero, contas de receita, taxas de impostos e categorias de rastreamento são carregados da organização conectada padrão para que as exportações ao vivo possam continuar usando a primeira conexão Xero armazenada na v1.",
+          "alert": "Itens Xero, contas de receita, taxas de impostos e categorias de rastreamento são carregados da organização padrão selecionada, e os mapeamentos são salvos para essa conexão, para que exportações ao vivo e reconciliação usem a mesma organização.",
           "descriptionPrefix": "Configure mapeamentos Xero em tempo real para a organização conectada padrão. Esses mapeamentos têm como escopo",
           "placeholderAlert": "O gerenciador de mapeamento fica disponível depois que a primeira organização Xero é conectada e definida como o contexto Xero ativo padrão.",
           "placeholderDescription": "Conecte uma organização Xero ativa antes de configurar mapeamentos fiscais e de itens Xero ativos.",
@@ -3566,7 +3598,7 @@
         "requiredScopes": "Escopos necessários",
         "scopeOverride": "Substituição da implantação (XERO_OAUTH_SCOPES)",
         "scopeOverrideInvalid": "A substituição XERO_OAUTH_SCOPES foi ignorada porque contém entradas inválidas ({{scopes}}). Os escopos padrão serão usados em seu lugar.",
-        "scopeReconnectNote": "Esses escopos se aplicam a novas autorizações. Uma conexão existente mantém os escopos concedidos originalmente. Para aplicar o conjunto atual, desconecte e reconecte o Xero. Você também pode remover este aplicativo de Connected apps no Xero para revogar permissões anteriores.",
+        "scopeReconnectNote": "Esses escopos se aplicam a novas autorizações. Uma conexão existente mantém os escopos concedidos originalmente. Para aplicar o conjunto atual, desconecte e reconecte o Xero. Atualizar o token mantém as permissões existentes; somente uma nova autorização concede novas permissões. Você também pode remover este aplicativo de Connected apps no Xero para revogar permissões anteriores.",
         "storedClientId": "ID do cliente armazenado: {{value}}",
         "storedClientSecret": "Segredo do cliente armazenado: {{value}}",
         "tenantOauthDescription": "Cole as credenciais do aplicativo Xero registradas para este locatário. Os valores secretos nunca são retornados ao navegador depois de salvos.",
@@ -3585,8 +3617,14 @@
           "targetRevoked": "Revogado",
           "targetFailed": "Precisa de atenção",
           "targetPending": "Pendente",
-          "failedPermanentDescription": "A limpeza do provedor encontrou um erro permanente. Você pode tentar novamente ou finalizar à força para remover as credenciais armazenadas com um registro de auditoria."
-        }
+          "failedPermanentDescription": "A limpeza do provedor encontrou um erro permanente. Você pode tentar novamente ou finalizar à força para remover as credenciais armazenadas com um registro de auditoria.",
+          "confirmDescription": "Esta ação desconecta {{organisations}} e pausa a sincronização e as exportações. As credenciais da aplicação Xero permanecerão salvas.",
+          "confirmTitle": "Desconectar o Xero do Alga PSA?",
+          "dangerDescription": "Interrompe a sincronização e as exportações e remove todas as {{count}} organizações associadas. As credenciais da aplicação permanecem salvas.",
+          "dangerTitle": "Desconectar Xero"
+        },
+        "connectNeedsAttention": "A autorização do Xero foi concluída, mas a conexão ainda precisa de atenção. A sincronização permanece em pausa.",
+        "credentialsStoredDescription": "O ID e o segredo do cliente são armazenados de forma segura."
       }
     },
     "stripe": {
@@ -3816,6 +3854,7 @@
       "enterpriseOnly": "A integração com o Xero está disponível apenas na Enterprise Edition.",
       "viewPermission": "Proibido: você não tem permissão para visualizar as configurações da integração com o Xero.",
       "organisationDisconnected": "A organização do Xero selecionada não está mais conectada. Reconecte o Xero e tente novamente.",
+      "organisationAmbiguous": "A organização Xero padrão salva pertence a mais de uma conexão. Escolha qual conexão é a padrão nas configurações de contabilidade.",
       "accounts": {
         "notConnected": "Conecte o Xero antes de carregar as contas do Xero.",
         "reconnect": "Reconecte o Xero antes de carregar as contas do Xero.",

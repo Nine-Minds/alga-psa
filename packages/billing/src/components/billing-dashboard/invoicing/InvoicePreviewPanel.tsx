@@ -28,7 +28,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { voidInvoice } from '../../../actions/voidInvoiceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
-import { InvoiceSyncBadge, qboInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
+import { InvoiceSyncBadge, qboInvoiceDeepLink, xeroInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
@@ -121,6 +121,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const syncIds = invoiceId ? [invoiceId] : [];
   const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(syncIds);
   const syncStatus = invoiceId ? syncStatuses[invoiceId] : undefined;
+  const syncProviderLabel = syncStatus?.provider === 'xero' ? 'Xero' : 'QuickBooks';
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
   // then fall back to the invoice's resolved client/default template.
@@ -475,7 +476,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 try {
                   await queueInvoiceSync(invoiceId);
                   await runAccountingSyncNow();
-                  setSyncActionFeedback({ type: 'success', message: 'Invoice queued for QuickBooks sync.' });
+                  setSyncActionFeedback({ type: 'success', message: `Invoice queued for ${syncProviderLabel} sync.` });
                 } catch (err) {
                   setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Sync failed.' });
                 } finally {
@@ -483,7 +484,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 }
               }}
             >
-              {t('invoicePreview.actions.syncNow', { defaultValue: 'Sync to QuickBooks' })}
+              {t('invoicePreview.actions.syncNow', { defaultValue: `Sync to ${syncProviderLabel}` })}
             </Button>
 
             {syncStatus.state === 'drift' && (
@@ -499,7 +500,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     setSyncActionFeedback(null);
                     try {
                       await resolveAccountingDriftReExport(invoiceId);
-                      setSyncActionFeedback({ type: 'success', message: 'Re-export to QuickBooks queued.' });
+                      setSyncActionFeedback({ type: 'success', message: `Re-export to ${syncProviderLabel} queued.` });
                     } catch (err) {
                       setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Re-export failed.' });
                     } finally {
@@ -507,7 +508,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     }
                   }}
                 >
-                  {t('invoicePreview.actions.driftReexport', { defaultValue: 'Re-export to QuickBooks' })}
+                  {t('invoicePreview.actions.driftReexport', { defaultValue: `Re-export to ${syncProviderLabel}` })}
                 </Button>
 
                 <Button
@@ -521,7 +522,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     setSyncActionFeedback(null);
                     try {
                       await resolveAccountingDriftAccept(invoiceId);
-                      setSyncActionFeedback({ type: 'success', message: 'QuickBooks version accepted.' });
+                      setSyncActionFeedback({ type: 'success', message: `${syncProviderLabel} version accepted.` });
                     } catch (err) {
                       setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Accept failed.' });
                     } finally {
@@ -529,7 +530,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     }
                   }}
                 >
-                  {t('invoicePreview.actions.driftAccept', { defaultValue: 'Accept QuickBooks Version' })}
+                  {t('invoicePreview.actions.driftAccept', { defaultValue: `Accept ${syncProviderLabel} Version` })}
                 </Button>
               </>
             )}
@@ -542,11 +543,17 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 asChild
               >
                 <a
-                  href={qboInvoiceDeepLink(syncStatus.externalId, syncStatus.environment)}
+                  href={
+                    syncStatus.provider === 'xero'
+                      ? xeroInvoiceDeepLink(syncStatus.externalId)
+                      : qboInvoiceDeepLink(syncStatus.externalId, syncStatus.environment)
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {t('invoicePreview.actions.viewInQbo', { defaultValue: 'View in QuickBooks' })}
+                  {syncStatus.provider === 'xero'
+                    ? t('invoicePreview.actions.viewInXero', { defaultValue: 'View in Xero' })
+                    : t('invoicePreview.actions.viewInQbo', { defaultValue: 'View in QuickBooks' })}
                 </a>
               </Button>
             )}

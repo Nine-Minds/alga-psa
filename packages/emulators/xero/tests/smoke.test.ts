@@ -20,7 +20,7 @@ function api(path: string): string {
   return `${base}/api.xro/2.0${path}`;
 }
 
-const SCOPE = 'offline_access accounting.settings.read accounting.invoices accounting.contacts';
+const SCOPE = 'offline_access accounting.settings.read accounting.invoices accounting.payments.read accounting.contacts';
 
 beforeAll(async () => {
   host = new EmulatorHost({ emulators: [xeroEmulator], controlPort: 0, ports: { xero: 0 } });

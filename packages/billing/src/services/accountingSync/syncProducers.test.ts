@@ -4,7 +4,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 const getStoredXeroConnectionsMock = vi.hoisted(() => vi.fn(async () => ({})));
 
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
-  getDefaultQboRealmId: vi.fn(async () => 'realm-1')
+  getDefaultQboRealmId: vi.fn(async () => 'realm-1'),
+  getStoredQboCredentialsMap: vi.fn(async () => ({ 'realm-1': {} }))
 }));
 
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
@@ -78,6 +79,7 @@ function makeVoidKnex(hasMapping: boolean | { mappingRealm: string | null } = tr
       }
       return query;
     }),
+    whereNull: vi.fn(() => query),
     first: vi.fn(async (..._args: any[]) => {
       if (!seeded) return null;
       if ('external_realm_id' in criteria && criteria.external_realm_id !== seeded.mappingRealm) {

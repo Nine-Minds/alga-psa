@@ -172,6 +172,37 @@ describe('the rail', () => {
 });
 
 describe('the exit contract', () => {
+  it('commits a typed datetime on Enter and closes without submitting the enclosing form', () => {
+    const onChange = vi.fn();
+    const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <DateTimeField
+          variant="datetime"
+          value={new Date(2026, 8, 17, 12, 0)}
+          onChange={onChange}
+          timeFormat="12h"
+        />
+        <button type="submit">Save entry</button>
+      </form>
+    );
+
+    const [, timeInput] = fields();
+    fireEvent.focus(timeInput);
+    fireEvent.change(timeInput, { target: { value: '12:30 PM' } });
+    expect(timeInput.getAttribute('aria-expanded')).toBe('true');
+
+    // Prevent the Enter default action as well as closing the panel: the
+    // schedule entry should only submit when its Save button is clicked.
+    expect(fireEvent.keyDown(timeInput, { key: 'Enter' })).toBe(false);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(new Date(2026, 8, 17, 12, 30));
+    expect(timeInput.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(onSubmit).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save entry' }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the panel for the time half after a day is picked, then closes on the time', () => {
     const onChange = vi.fn();
     render(
