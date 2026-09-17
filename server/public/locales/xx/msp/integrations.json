@@ -2020,7 +2020,7 @@
         "undepositedFunds": "⟦Ŭƞḓḗƥȯşīŧḗḓ Ƒŭƞḓş (ḓḗƒȧŭŀŧ)⟧",
         "catalogLoadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ɊŭīƈķƁȯȯķş şẏƞƈ ƈȯƞƒīɠŭřȧŧīȯƞ ȯƥŧīȯƞş.⟧",
         "healthCardTitleProvider": "⟦{{provider}} şẏƞƈ ȧƈŧīṽīŧẏ⟧",
-        "healthCardDescriptionProvider": "⟦Řḗṽīḗẇ řḗƈḗƞŧ ȧƈŧīṽīŧẏ, ȯŭŧşŧȧƞḓīƞɠ īŧḗḿş, ȧƞḓ ȧŭŧȯḿȧŧīƈ şẏƞƈ şḗŧŧīƞɠş.⟧",
+        "healthCardDescriptionProvider": "⟦Řḗṽīḗẇ řḗƈḗƞŧ {{provider}} ȧƈŧīṽīŧẏ, ȯŭŧşŧȧƞḓīƞɠ īŧḗḿş, ȧƞḓ ȧŭŧȯḿȧŧīƈ şẏƞƈ şḗŧŧīƞɠş.⟧",
         "connectedOrganisations": "⟦Ẋḗřȯ ȯřɠȧƞīşȧŧīȯƞş⟧",
         "defaultOrganisationDescription": "⟦Ŧħḗ ḓḗƒȧŭŀŧ ȯřɠȧƞīşȧŧīȯƞ īş ŭşḗḓ ƒȯř şẏƞƈ, ḗẋƥȯřŧş, ȧƞḓ ḿȧƥƥīƞɠş.⟧",
         "outstandingItems": "⟦Ȯŭŧşŧȧƞḓīƞɠ īŧḗḿş⟧",

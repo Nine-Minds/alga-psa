@@ -121,7 +121,9 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
       .locator('xpath=ancestor::div[contains(@class,"dtf-fields")][1]')
       .getByRole('combobox', { name: 'Select time', exact: true });
     await deniedTime.fill('12:30 PM');
-    await deniedTime.press('Tab');
+    // Enter commits and closes the picker; Tab opens the next date field.
+    await deniedTime.press('Enter');
+    await expect(deniedTime).toHaveAttribute('aria-expanded', 'false');
     await reopened.locator('#save-entry-btn').click();
     await expect(reopened).toBeHidden();
     await expect(page.getByText('Entry moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.', { exact: true })).toBeVisible();
@@ -147,7 +149,8 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
       .locator('xpath=ancestor::div[contains(@class,"dtf-fields")][1]')
       .getByRole('combobox', { name: 'Select time', exact: true });
     await startTime.fill('1:00 PM');
-    await startTime.press('Tab');
+    await startTime.press('Enter');
+    await expect(startTime).toHaveAttribute('aria-expanded', 'false');
     await reopened.locator('#save-entry-btn').click();
     await expect(reopened).toBeHidden();
     title = rescheduledTitle;

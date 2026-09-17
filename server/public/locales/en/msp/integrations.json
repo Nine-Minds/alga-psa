@@ -2020,7 +2020,7 @@
         "undepositedFunds": "Undeposited Funds (default)",
         "catalogLoadError": "Failed to load QuickBooks sync configuration options.",
         "healthCardTitleProvider": "{{provider}} sync activity",
-        "healthCardDescriptionProvider": "Review recent activity, outstanding items, and automatic sync settings.",
+        "healthCardDescriptionProvider": "Review recent {{provider}} activity, outstanding items, and automatic sync settings.",
         "connectedOrganisations": "Xero organisations",
         "defaultOrganisationDescription": "The default organisation is used for sync, exports, and mappings.",
         "outstandingItems": "Outstanding items",

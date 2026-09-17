@@ -133,7 +133,7 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
         <CardDescription>
           {t('integrations.qbo.sync.healthCardDescriptionProvider', {
             provider: providerLabel,
-            defaultValue: 'Review recent activity, outstanding items, and automatic sync settings.'
+            defaultValue: 'Review recent {{provider}} activity, outstanding items, and automatic sync settings.'
           })}
         </CardDescription>
       </CardHeader>
