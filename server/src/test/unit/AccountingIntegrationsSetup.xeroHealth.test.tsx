@@ -106,7 +106,7 @@ describe('AccountingIntegrationsSetup mounts provider-aware health in the Xero f
     );
 
     expect(await screen.findByText('Xero sync activity')).toBeInTheDocument();
-    expect(screen.getByText('Review recent activity, outstanding items, and automatic sync settings.')).toBeInTheDocument();
+    expect(screen.getByText('Review recent Xero activity, outstanding items, and automatic sync settings.')).toBeInTheDocument();
     expect(screen.getByText('Xero token expired — reconnect to resume syncing.')).toBeInTheDocument();
     expect(catalogsMock).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
@@ -115,5 +115,25 @@ describe('AccountingIntegrationsSetup mounts provider-aware health in the Xero f
     fireEvent.click(screen.getByRole('button', { name: 'Sync Now' }));
     await waitFor(() => expect(syncMock).toHaveBeenCalledWith({ preferredAdapterType: 'xero', preferredTargetRealm: 'conn-2' }));
     expect(healthMock.mock.calls.every(([selection]) => selection.preferredAdapterType === 'xero')).toBe(true);
+  });
+
+  it.each([
+    ['xero', 'Xero'],
+    ['quickbooks_online', 'QuickBooks']
+  ] as const)('renders the %s health description with its provider name from real English resources', async (adapterType, provider) => {
+    const { default: Panel } = await import('@alga-psa/billing/components/accounting/QboSyncHealthPanel');
+    healthMock.mockResolvedValue({
+      connected: true, adapterType,
+      settings: { autoSyncEnabled: true },
+      realms: [{ realmId: 'realm-1', isDefault: true }],
+      lastCycle: null, pendingOps: 0, erroredOps: 0, driftCount: 0, openExceptions: 0,
+      refreshTokenExpiresAt: null
+    });
+
+    render(<Panel adapterType={adapterType} />);
+
+    expect(await screen.findByText(`${provider} sync activity`)).toBeInTheDocument();
+    expect(screen.getByText(`Review recent ${provider} activity, outstanding items, and automatic sync settings.`)).toBeInTheDocument();
+    expect(healthMock).toHaveBeenCalledWith({ preferredAdapterType: adapterType });
   });
 });
