@@ -1541,7 +1541,10 @@
     "callArtifacts": {
       "sectionTitle": "⟦Ƈȧŀŀ řḗƈȯřḓīƞɠ ȧƞḓ ŧřȧƞşƈřīƥŧ⟧",
       "viewTranscript": "⟦Ṽīḗẇ ŧřȧƞşƈřīƥŧ⟧",
-      "downloadRecording": "⟦Ḓȯẇƞŀȯȧḓ řḗƈȯřḓīƞɠ⟧"
+      "downloadRecording": "⟦Ḓȯẇƞŀȯȧḓ řḗƈȯřḓīƞɠ⟧",
+      "transcriptTitle": "⟦Ƈȧŀŀ ŧřȧƞşƈřīƥŧ⟧",
+      "loading": "⟦Ŀȯȧḓīƞɠ ŧřȧƞşƈřīƥŧ…⟧",
+      "loadFailed": "⟦Ŧħḗ ŧřȧƞşƈřīƥŧ ƈȯŭŀḓ ƞȯŧ ƀḗ ŀȯȧḓḗḓ.⟧"
     }
   },
   "clientDrawer": {

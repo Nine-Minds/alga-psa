@@ -1593,7 +1593,10 @@
     "callArtifacts": {
       "sectionTitle": "Nagranie i transkrypcja rozmowy",
       "viewTranscript": "Zobacz transkrypcję",
-      "downloadRecording": "Pobierz nagranie"
+      "downloadRecording": "Pobierz nagranie",
+      "transcriptTitle": "Transkrypcja rozmowy",
+      "loading": "Ładowanie transkrypcji…",
+      "loadFailed": "Nie udało się załadować transkrypcji."
     }
   },
   "clientDrawer": {

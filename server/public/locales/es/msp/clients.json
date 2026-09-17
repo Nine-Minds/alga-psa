@@ -1541,7 +1541,10 @@
     "callArtifacts": {
       "sectionTitle": "Grabación y transcripción de la llamada",
       "viewTranscript": "Ver transcripción",
-      "downloadRecording": "Descargar grabación"
+      "downloadRecording": "Descargar grabación",
+      "transcriptTitle": "Transcripción de la llamada",
+      "loading": "Cargando la transcripción…",
+      "loadFailed": "No se pudo cargar la transcripción."
     }
   },
   "clientDrawer": {

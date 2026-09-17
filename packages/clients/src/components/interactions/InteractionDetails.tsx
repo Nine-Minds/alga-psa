@@ -19,6 +19,7 @@ import { getClientById, getAllClients } from '@alga-psa/clients/actions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { deleteInteraction } from '@alga-psa/clients/actions';
 import { getInteractionCallArtifacts, type InteractionCallArtifact } from '@alga-psa/clients/actions';
+import { CallTranscriptDrawerContent } from './CallTranscriptDrawerContent';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -534,13 +535,11 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                 ? new Date(artifact.createdDateTime).toLocaleString()
                 : null;
               const isTranscript = artifact.artifactType === 'transcript';
-              // Transcripts are block documents: open them in the viewer, not as a download.
-              const artifactUrl = isTranscript && artifact.documentId
-                ? `/msp/documents?doc=${encodeURIComponent(artifact.documentId)}`
-                : artifact.fileId
-                  ? `/api/telephony/call-recordings/${encodeURIComponent(artifact.artifactId)}`
-                  : null;
-              if (!artifactUrl) return null;
+              const transcriptDocumentId = isTranscript ? artifact.documentId : null;
+              const recordingUrl = !isTranscript && artifact.fileId
+                ? `/api/telephony/call-recordings/${encodeURIComponent(artifact.artifactId)}`
+                : null;
+              if (!transcriptDocumentId && !recordingUrl) return null;
 
               return (
                 <div
@@ -560,18 +559,27 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                     </span>
                     {createdAt && <span className="text-gray-500">{createdAt}</span>}
                   </div>
-                  <Button
-                    id={`interaction-call-${artifact.artifactType}-${artifact.artifactId}`}
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                  >
-                    <a href={artifactUrl} target="_blank" rel="noopener noreferrer">
-                      {isTranscript
-                        ? t('interactions.callArtifacts.viewTranscript', { defaultValue: 'View transcript' })
-                        : t('interactions.callArtifacts.downloadRecording', { defaultValue: 'Download recording' })}
-                    </a>
-                  </Button>
+                  {transcriptDocumentId ? (
+                    <Button
+                      id={`interaction-call-transcript-${artifact.artifactId}`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDrawer(<CallTranscriptDrawerContent documentId={transcriptDocumentId} />)}
+                    >
+                      {t('interactions.callArtifacts.viewTranscript', { defaultValue: 'View transcript' })}
+                    </Button>
+                  ) : (
+                    <Button
+                      id={`interaction-call-recording-${artifact.artifactId}`}
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <a href={recordingUrl!} target="_blank" rel="noopener noreferrer">
+                        {t('interactions.callArtifacts.downloadRecording', { defaultValue: 'Download recording' })}
+                      </a>
+                    </Button>
+                  )}
                 </div>
               );
             })}

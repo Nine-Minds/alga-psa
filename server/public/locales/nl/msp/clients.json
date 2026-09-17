@@ -1541,7 +1541,10 @@
     "callArtifacts": {
       "sectionTitle": "Gespreksopname en transcript",
       "viewTranscript": "Transcript bekijken",
-      "downloadRecording": "Opname downloaden"
+      "downloadRecording": "Opname downloaden",
+      "transcriptTitle": "Gesprekstranscript",
+      "loading": "Transcript wordt geladen…",
+      "loadFailed": "Het transcript kon niet worden geladen."
     }
   },
   "clientDrawer": {

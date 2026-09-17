@@ -63,3 +63,39 @@ export const getInteractionCallArtifacts = withAuth(async (
     })),
   };
 });
+
+export interface InteractionTranscriptResult {
+  documentId: string;
+  documentName: string;
+  text: string;
+}
+
+/**
+ * Plain text of a call transcript document, for the in-place drawer. The
+ * transcript is a block document; its paragraphs are rendered to Markdown.
+ */
+export const getInteractionTranscript = withAuth(async (
+  user,
+  { tenant },
+  documentId: string,
+): Promise<InteractionTranscriptResult | null> => {
+  if (!documentId) {
+    throw new Error('Document ID is required');
+  }
+  await assertMspPermission(user, 'document', 'read', 'Forbidden');
+
+  const { knex } = await createTenantKnex(tenant);
+  const db = tenantDb(knex, tenant);
+  const document = await db.table('documents').where({ document_id: documentId }).first('document_id', 'document_name');
+  if (!document) return null;
+  const block = await db.table('document_block_content').where({ document_id: documentId }).first('block_data');
+  if (!block) return null;
+
+  const { convertBlockNoteToMarkdown } = await import('@alga-psa/formatting/blocknoteUtils');
+  const blockData = typeof block.block_data === 'string' ? JSON.parse(block.block_data) : block.block_data;
+  return {
+    documentId: document.document_id,
+    documentName: document.document_name ?? '',
+    text: convertBlockNoteToMarkdown(blockData) ?? '',
+  };
+});

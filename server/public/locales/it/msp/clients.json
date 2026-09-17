@@ -1541,7 +1541,10 @@
     "callArtifacts": {
       "sectionTitle": "Registrazione e trascrizione della chiamata",
       "viewTranscript": "Vedi trascrizione",
-      "downloadRecording": "Scarica registrazione"
+      "downloadRecording": "Scarica registrazione",
+      "transcriptTitle": "Trascrizione della chiamata",
+      "loading": "Caricamento della trascrizione…",
+      "loadFailed": "Impossibile caricare la trascrizione."
     }
   },
   "clientDrawer": {

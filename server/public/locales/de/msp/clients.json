@@ -1541,7 +1541,10 @@
     "callArtifacts": {
       "sectionTitle": "Anrufaufzeichnung und Transkript",
       "viewTranscript": "Transkript anzeigen",
-      "downloadRecording": "Aufzeichnung herunterladen"
+      "downloadRecording": "Aufzeichnung herunterladen",
+      "transcriptTitle": "Anruftranskript",
+      "loading": "Transkript wird geladen …",
+      "loadFailed": "Das Transkript konnte nicht geladen werden."
     }
   },
   "clientDrawer": {

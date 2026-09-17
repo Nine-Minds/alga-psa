@@ -1541,7 +1541,10 @@
     "callArtifacts": {
       "sectionTitle": "Call recording and transcript",
       "viewTranscript": "View transcript",
-      "downloadRecording": "Download recording"
+      "downloadRecording": "Download recording",
+      "transcriptTitle": "Call transcript",
+      "loading": "Loading transcript…",
+      "loadFailed": "The transcript could not be loaded."
     }
   },
   "clientDrawer": {
