@@ -238,6 +238,7 @@ describe('QboOnboardingWizard flag gating', () => {
     expect(useFeatureFlagMock).toHaveBeenCalledWith('qbo-item-import');
     expect(screen.getByText('Products & Services')).toBeInTheDocument();
     await screen.findByText('No clients found.');
+    expect(getQboCustomersMock).toHaveBeenCalledTimes(1);
   });
 
   it('omits the step when the flag is off', async () => {
