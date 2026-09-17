@@ -10,12 +10,12 @@ import { Knex } from 'knex';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
-import { applyVisibilityBoardFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
+import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
-import { TICKET_ORIGINS } from '@alga-psa/types';
+import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
@@ -35,6 +35,10 @@ import {
 } from '@alga-psa/tickets/lib/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  persistExternalLinksForCreate,
+  publishExternalLinkEvent,
+} from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -325,7 +329,7 @@ export class TicketService extends BaseService<ITicket> {
     visibility: ContactVisibilityContext
   ): Knex.QueryBuilder {
     query = query.where('t.client_id', visibility.clientId);
-    return applyVisibilityBoardFilter(query, visibility.visibleBoardIds, 't.board_id');
+    return applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
   }
 
   /**
@@ -1561,7 +1565,7 @@ export class TicketService extends BaseService<ITicket> {
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
       const { knex } = await this.getKnex();
   
-      const fullTicket = await withTransaction(knex, async (trx) => {
+      const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -1615,6 +1619,18 @@ export class TicketService extends BaseService<ITicket> {
           await this.handleTags(ticketResult.ticket_id, data.tags, context, trx);
         }
 
+        // Persist ticket-level external links in the same transaction so a bot's
+        // create-with-links is atomic. Any invalid link — a second origin, a
+        // duplicate external record, or an unusable destination — throws and
+        // rolls back the whole ticket create.
+        const externalLinks = await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketResult.ticket_id,
+          data.external_links ?? null,
+          context.userId,
+        );
+
         // Get the full ticket data for return
         const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
           .where({ ticket_id: ticketResult.ticket_id })
@@ -1652,7 +1668,7 @@ export class TicketService extends BaseService<ITicket> {
           },
         });
 
-        return fullTicket as ITicket;
+        return { fullTicket, externalLinks };
       });
 
       await this.safePublishEvent('TICKET_CREATED', context, {
@@ -1666,7 +1682,29 @@ export class TicketService extends BaseService<ITicket> {
         board_id: fullTicket.board_id,
         priority_id: fullTicket.priority_id,
         client_id: fullTicket.client_id,
+        ...(externalLinks.length > 0
+          ? {
+              externalLinks: externalLinks.map((link) => ({
+                linkId: link.link_id,
+                entityType: link.entity_type,
+                entityId: link.entity_id,
+                system: link.system,
+                externalId: link.external_id,
+                externalParentId: link.external_parent_id ?? null,
+                realm: link.realm ?? null,
+                url: link.url ?? null,
+                relationship: link.relationship,
+              })),
+            }
+          : {}),
       });
+
+      // Post-commit: announce each inline ticket link so subscribers see the
+      // same events as links added through the dedicated endpoint. Publishing
+      // here (not inside the transaction) means a rollback emits nothing.
+      for (const link of externalLinks) {
+        await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', context.tenant, link, context.userId ?? null);
+      }
 
       return fullTicket;
     }
@@ -1705,6 +1743,9 @@ export class TicketService extends BaseService<ITicket> {
       delete (cleanedData as any).override_close_rules_reason;
       delete (cleanedData as any).suppressContactNotifications;
       delete (cleanedData as any).suppressInternalNotifications;
+      // Create-only field: never a `tickets` column, so it must not reach the
+      // UPDATE statement. Inline links are written by the create paths only.
+      delete (cleanedData as any).external_links;
 
       const isBoardChange =
         cleanedData.board_id !== undefined &&
@@ -2179,6 +2220,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<any> {
     const { knex } = await this.getKnex();
     const notificationSuppression = resolveTicketNotificationSuppression(data);
+    let createdExternalLinks: IExternalEntityLink[] = [];
 
     const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
@@ -2296,6 +2338,22 @@ export class TicketService extends BaseService<ITicket> {
 
       await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
 
+      // Persist comment-level external links in the same transaction as the
+      // comment they describe. Invalid links roll back the comment create.
+      if (data.external_links && data.external_links.length > 0) {
+        createdExternalLinks = await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketId,
+          data.external_links.map((link) => ({
+            ...link,
+            entity_type: 'comment' as const,
+            comment_id: comment.comment_id,
+          })),
+          context.userId,
+        );
+      }
+
       if (apiIsReply) {
         await tenantScopedTable(trx, 'comment_threads', context.tenant)
           .where({ thread_id: apiThreadId })
@@ -2359,10 +2417,16 @@ export class TicketService extends BaseService<ITicket> {
       } else {
         await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
       }
-      return { response };
+      return { response, externalLinks: createdExternalLinks };
     });
 
     // Intent is persisted; after-commit dispatch and recurring recovery deliver it.
+
+    // Post-commit: announce comment-level inline links. A rolled-back comment
+    // create never reaches this point, so no event is emitted for it.
+    for (const link of result.externalLinks) {
+      await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', context.tenant, link, context.userId ?? null);
+    }
 
     return result.response;
   }
@@ -2726,8 +2790,30 @@ export class TicketService extends BaseService<ITicket> {
    */
   private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData, knex: Knex, tenant: string): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
+
+    // external_system + external_id must match the SAME external-link row when
+    // both are supplied; separate EXISTS clauses would let a ticket with
+    // github/42 and jira/99 match github + 99.
+    const externalSystem = filters.external_system;
+    const externalId = filters.external_id;
+    if (externalSystem || externalId) {
+      const externalLinkSubquery = scopedDb.subquery('external_entity_links as eel')
+        .select('*')
+        .whereRaw('eel.ticket_id = t.ticket_id')
+        .andWhere('eel.entity_type', 'ticket');
+      if (externalSystem) {
+        externalLinkSubquery.andWhere('eel.system', externalSystem);
+      }
+      if (externalId) {
+        externalLinkSubquery.andWhere('eel.external_id', externalId);
+      }
+      query.whereExists(externalLinkSubquery);
+    }
+    const handledExternalFilters = new Set(['external_system', 'external_id']);
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
+      if (handledExternalFilters.has(key)) return;
 
       switch (key) {
         case 'title':

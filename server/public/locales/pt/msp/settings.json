@@ -441,7 +441,8 @@
       "boards": "Quadros",
       "priorities": "Prioridades",
       "categories": "Categorias",
-      "checklistTemplates": "Modelos de lista de verificação"
+      "checklistTemplates": "Modelos de lista de verificação",
+      "externalSystems": "Sistemas externos"
     },
     "numbering": {
       "title": "Formato numérico",
@@ -549,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Ativo",
-        "inactive": "Inativo"
+        "inactive": "Inativo",
+        "hiddenFromPortal": "Oculto no portal"
       },
       "actions": {
         "addBoard": "Adicionar quadro",
@@ -646,6 +648,10 @@
         "liveTimer": {
           "label": "Ativar cronômetro de ticket ao vivo",
           "help": "Mostra o cronômetro ao vivo e os intervalos rastreados nos tickets neste quadro. A entrada manual de hora permanece disponível."
+        },
+        "clientPortalVisible": {
+          "label": "Visível no portal do cliente",
+          "help": "Quando desativado, este quadro e seus tickets ficam ocultos para todos os usuários do portal do cliente, independentemente dos grupos de visibilidade."
         },
         "defaultBoard": {
           "label": "Quadro padrão para tickets do portal do cliente",
@@ -986,6 +992,47 @@
           "updateStatusFailed": "Falha ao atualizar o status do modelo",
           "itemSaveFailed": "Falha ao salvar o item da lista de verificação",
           "ruleSaveFailed": "Falha ao salvar a regra de aplicação automática"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Sistemas externos",
+      "subtitle": "Adicione sistemas externos personalizados para que os tickets possam apontar para registros fora do catálogo integrado.",
+      "addButton": "Adicionar sistema",
+      "builtInTitle": "Sistemas integrados",
+      "builtInSubtitle": "Disponíveis para todos os locatários; suas URLs são geradas a partir do modelo do sistema.",
+      "table": {
+        "label": "Rótulo",
+        "key": "Chave",
+        "urlTemplate": "Modelo de URL",
+        "actions": "Ações"
+      },
+      "actions": {
+        "edit": "Editar",
+        "delete": "Excluir",
+        "cancel": "Cancelar",
+        "save": "Salvar"
+      },
+      "fields": {
+        "key": "Chave",
+        "keyHint": "Deve corresponder a custom:<slug> usando letras minúsculas, dígitos ou sublinhados.",
+        "label": "Rótulo",
+        "urlTemplate": "Modelo de URL",
+        "urlTemplateHint": "Opcional. Use os marcadores {realm} e {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Adicionar sistema externo",
+        "editTitle": "Editar sistema externo"
+      },
+      "deleteDialog": {
+        "title": "Excluir sistema externo",
+        "message": "Excluir \"{{label}}\"? Sistemas ainda usados por links não podem ser excluídos."
+      },
+      "messages": {
+        "success": {
+          "created": "Sistema externo criado.",
+          "updated": "Sistema externo atualizado.",
+          "deleted": "Sistema externo excluído."
         }
       }
     }

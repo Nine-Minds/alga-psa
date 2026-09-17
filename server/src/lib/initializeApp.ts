@@ -13,6 +13,7 @@ import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHan
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { initializeJobRunner, stopJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
+import { registerContractCadenceReplenishmentSchedule } from 'server/src/lib/jobs/scheduleContractCadenceReplenishment';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
@@ -568,6 +569,13 @@ async function initializeJobScheduler(storageService: StorageService) {
       { tenantId: 'system' }
     );
   }
+
+  // Ensure the nightly contract-cadence service-period replenishment schedule
+  // exists. This is independent of client billing-cycle creation: it enumerates
+  // contract-cadence lines directly and advances their rolling coverage,
+  // including recovering already-missing periods. Enterprise schedules the same
+  // sweep on the durable Temporal maintenance fan-out instead.
+  await registerContractCadenceReplenishmentSchedule({ isEnterprise });
 
   // Register the nightly time period creation job per tenant
   jobScheduler.registerJobHandler<{ tenantId: string }>('createNextTimePeriods', async (job) => {

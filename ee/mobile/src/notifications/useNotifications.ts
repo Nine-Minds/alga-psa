@@ -66,6 +66,12 @@ Notifications.setNotificationHandler({
   },
 });
 
+export const REMINDER_RESYNC_INTERVAL_MS = 60 * 60_000;
+
+export function shouldResyncReminders(lastSyncedAtMs: number, nowMs: number): boolean {
+  return nowMs - lastSyncedAtMs >= REMINDER_RESYNC_INTERVAL_MS;
+}
+
 /**
  * Manages push notification registration, token sync, and tap handling.
  * Gated behind `phase2Features.notifications`.
@@ -77,6 +83,7 @@ export function useNotifications(): void {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { showToast } = useToast();
   const registering = useRef(false);
+  const lastReminderSyncAtMs = useRef(0);
 
   const registerToken = useCallback(async () => {
     if (!session?.accessToken || registering.current) return;
@@ -134,19 +141,20 @@ export function useNotifications(): void {
     } finally {
       registering.current = false;
     }
-  }, [session?.accessToken, session?.tenantId, session?.user?.id, refreshSession]);
+  }, [session, refreshSession]);
 
   // Keep local schedule reminders in sync even when the Schedule tab is
   // never opened: fetch the current week and (re)schedule reminders.
   const syncUpcomingReminders = useCallback(async () => {
     if (!session?.accessToken) return;
+    lastReminderSyncAtMs.current = Date.now();
     await resyncScheduleReminders({
       accessToken: session.accessToken,
       tenantId: session.tenantId,
       userId: session.user?.id,
       refreshSession,
     });
-  }, [session?.accessToken, session?.tenantId, session?.user?.id, refreshSession]);
+  }, [session, refreshSession]);
 
   // Register after login
   useEffect(() => {
@@ -154,10 +162,12 @@ export function useNotifications(): void {
     void syncUpcomingReminders();
   }, [registerToken, syncUpcomingReminders]);
 
-  // Re-register on app resume (token may have rotated)
+  // Re-register on app resume. The reminder window is two weeks, so a resync
+  // per hour is plenty; every resume was one more schedule fetch in the
+  // launch burst.
   useAppResume(() => {
     void registerToken();
-    void syncUpcomingReminders();
+    if (shouldResyncReminders(lastReminderSyncAtMs.current, Date.now())) void syncUpcomingReminders();
   });
 
   // Show in-app toast when notification arrives while app is foregrounded

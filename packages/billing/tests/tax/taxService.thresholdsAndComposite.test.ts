@@ -148,6 +148,83 @@ describe('TaxService threshold-based tax', () => {
     expect(result.taxAmount).toBe(25);
   });
 
+  it('clamps the summed progressive tax to the rate cap', async () => {
+    setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false, cap_amount: 6000 });
+    vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([
+      { tax_rate_threshold_id: 't1', tax_rate_id: 'rate-1', min_amount: 0, max_amount: 100000, rate: 5 },
+      { tax_rate_threshold_id: 't2', tax_rate_id: 'rate-1', min_amount: 100000, max_amount: null, rate: 10 },
+    ] as any);
+
+    // Uncapped: 5000 + 5000 = 10000; cap 6000 -> 6000.
+    const result = await new TaxService().calculateTax('client-1', 150000, DATE);
+
+    expect(result.taxAmount).toBe(6000);
+    expect(result.taxRate).toBeCloseTo((6000 / 150000) * 100, 10);
+    expect(result.appliedThresholds).toHaveLength(2);
+  });
+
+  it('leaves progressive tax below the cap unchanged', async () => {
+    setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false, cap_amount: 1000 });
+    vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([
+      { tax_rate_threshold_id: 't1', tax_rate_id: 'rate-1', min_amount: 0, max_amount: null, rate: 5 },
+    ] as any);
+
+    // 10000 * 5% = 500, below the 1000 cap.
+    const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+    expect(result.taxAmount).toBe(500);
+    expect(result.taxRate).toBe(5);
+  });
+
+  it('leaves progressive tax unchanged when the sum exactly equals the cap', async () => {
+    setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false, cap_amount: 10000 });
+    vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([
+      { tax_rate_threshold_id: 't1', tax_rate_id: 'rate-1', min_amount: 0, max_amount: 100000, rate: 5 },
+      { tax_rate_threshold_id: 't2', tax_rate_id: 'rate-1', min_amount: 100000, max_amount: null, rate: 10 },
+    ] as any);
+
+    // Uncapped 5000 + 5000 = 10000 exactly equals the cap.
+    const result = await new TaxService().calculateTax('client-1', 150000, DATE);
+
+    expect(result.taxAmount).toBe(10000);
+    expect(result.taxRate).toBeCloseTo((10000 / 150000) * 100, 10);
+    expect(result.appliedThresholds).toHaveLength(2);
+  });
+
+  it('charges no progressive tax when the cap is zero', async () => {
+    setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false, cap_amount: 0 });
+    vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([
+      { tax_rate_threshold_id: 't1', tax_rate_id: 'rate-1', min_amount: 0, max_amount: null, rate: 5 },
+    ] as any);
+
+    const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+    expect(result.taxAmount).toBe(0);
+    expect(result.taxRate).toBe(0);
+  });
+
+  it('leaves progressive tax uncapped when cap_amount is null', async () => {
+    setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false, cap_amount: null });
+    vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([
+      { tax_rate_threshold_id: 't1', tax_rate_id: 'rate-1', min_amount: 0, max_amount: null, rate: 5 },
+    ] as any);
+
+    const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+    expect(result.taxAmount).toBe(500);
+    expect(result.taxRate).toBe(5);
+  });
+
+  it('rejects a negative cap on the progressive path', async () => {
+    setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false, cap_amount: -1 });
+    vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([
+      { tax_rate_threshold_id: 't1', tax_rate_id: 'rate-1', min_amount: 0, max_amount: null, rate: 5 },
+    ] as any);
+
+    await expect(new TaxService().calculateTax('client-1', 10000, DATE))
+      .rejects.toThrow('Tax rate cap amount must be a non-negative whole number.');
+  });
+
   it.each([0, -10000])('returns finite zero tax for a non-positive bracket base (%s)', async amount => {
     setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false });
     vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([

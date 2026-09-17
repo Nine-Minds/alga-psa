@@ -26,7 +26,17 @@
     "loading": "Cargando...",
     "errors": {
       "loadPermissions": "No se pudieron cargar los permisos de usuario",
-      "forbidden": "No tiene permiso para ver este programa."
+      "forbidden": "No tiene permiso para ver este programa.",
+      "moveFailed": "No se pudo mover la entrada de agenda"
+    },
+    "schedulingFor": "Programando",
+    "selectSlotHint": "Arrastre para crear, mover o redimensionar entradas. Haga clic en una entrada para editarla.",
+    "readOnlyHint": "Puede ver esta agenda, pero necesita el permiso de actualización de agenda para añadir o cambiar entradas.",
+    "workItemLegend": "Este elemento de trabajo",
+    "schedulingForAgent": "Programando para {{name}}",
+    "otherWorkLegend": "Otro trabajo",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -553,7 +563,8 @@
       "appointmentRequest": "Solicitud de cita",
       "view": "Ver entrada",
       "edit": "Editar entrada",
-      "new": "Nueva entrada"
+      "new": "Nueva entrada",
+      "newForWorkItem": "Programar {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Esta es una entrada privada. Sólo el creador puede ver o editar detalles."
@@ -578,7 +589,9 @@
       "privateEntry": "Entrada privada (no visible para otros usuarios)",
       "start": "Comenzar *",
       "end": "Fin *",
-      "notes": "Notas"
+      "notes": "Notas",
+      "technician": "Técnico",
+      "notesPlaceholder": "Todo lo que el técnico debe saber antes de empezar"
     },
     "actions": {
       "cancel": "Cancelar",
@@ -588,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Entrada ad hoc (sin elemento de trabajo)",
-      "openDetails": "Detalles"
+      "openDetails": "Detalles",
+      "loading": "Cargando elemento de trabajo…",
+      "openTicket": "Abrir ticket",
+      "openTask": "Abrir tarea",
+      "openInteraction": "Abrir interacción"
     },
     "appointmentRequest": {
       "approved": {
@@ -691,6 +708,11 @@
       "created": "Reunión de Microsoft Teams creada",
       "createFailed": "No se pudo crear la reunión de Teams",
       "recurringUnsupported": "Las reuniones de Teams solo se pueden añadir a entradas individuales, no a series recurrentes."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {
@@ -744,5 +766,15 @@
       "graphThrottled": "Microsoft Graph está limitando la velocidad de las descargas de grabaciones. Inténtelo de nuevo en breve.",
       "graphHttpStatus": "Microsoft Graph devolvió HTTP {{status}} al descargar la grabación de Teams."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} programado",
+    "updated": "Entrada de agenda actualizada",
+    "deleted": "Entrada de agenda eliminada",
+    "createFailed": "No se pudo programar este trabajo",
+    "updateFailed": "No se pudo actualizar la entrada de agenda",
+    "deleteFailed": "No se pudo eliminar la entrada de agenda",
+    "loadFailed": "No se pudo cargar la entrada de agenda",
+    "noPermission": "Necesita el permiso de actualización de agenda para programar trabajo."
   }
 }

@@ -26,7 +26,17 @@
     "loading": "Ładowanie...",
     "errors": {
       "loadPermissions": "Nie udało się załadować uprawnień użytkownika",
-      "forbidden": "Nie masz uprawnień do przeglądania tego harmonogramu."
+      "forbidden": "Nie masz uprawnień do przeglądania tego harmonogramu.",
+      "moveFailed": "Nie udało się przenieść wpisu harmonogramu"
+    },
+    "schedulingFor": "Planowanie",
+    "selectSlotHint": "Przeciągnij, aby tworzyć, przenosić lub zmieniać długość wpisów. Kliknij wpis, aby go edytować.",
+    "readOnlyHint": "Możesz przeglądać ten harmonogram, ale potrzebujesz uprawnienia do aktualizacji harmonogramu, aby dodawać lub zmieniać wpisy.",
+    "workItemLegend": "Ten element pracy",
+    "schedulingForAgent": "Planowanie dla {{name}}",
+    "otherWorkLegend": "Inna praca",
+    "workItemTypeLabel": {
+      "ticket": "Zgłoszenie"
     }
   },
   "calendar": {
@@ -553,7 +563,8 @@
       "appointmentRequest": "Zapytanie o spotkanie",
       "view": "Zobacz wpis",
       "edit": "Edytuj wpis",
-      "new": "Nowy wpis"
+      "new": "Nowy wpis",
+      "newForWorkItem": "Zaplanuj {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "To jest wpis prywatny. Tylko twórca może przeglądać i edytować szczegóły."
@@ -578,7 +589,9 @@
       "privateEntry": "Wpis prywatny (niewidoczny dla innych użytkowników)",
       "start": "Rozpocznij *",
       "end": "Koniec *",
-      "notes": "Notatki"
+      "notes": "Notatki",
+      "technician": "Technik",
+      "notesPlaceholder": "Wszystko, co technik powinien wiedzieć przed rozpoczęciem"
     },
     "actions": {
       "cancel": "Anuluj",
@@ -588,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Wpis ad-hoc (brak elementu roboczego)",
-      "openDetails": "Szczegóły"
+      "openDetails": "Szczegóły",
+      "loading": "Ładowanie elementu pracy…",
+      "openTicket": "Otwórz zgłoszenie",
+      "openTask": "Otwórz zadanie",
+      "openInteraction": "Otwórz interakcję"
     },
     "appointmentRequest": {
       "approved": {
@@ -691,6 +708,11 @@
       "created": "Utworzono spotkanie Microsoft Teams",
       "createFailed": "Nie udało się utworzyć spotkania Teams",
       "recurringUnsupported": "Spotkania Teams można dodawać tylko do pojedynczych wpisów, nie do serii cyklicznych."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} godz.",
+      "hoursMinutes": "{{hours}} godz. {{minutes}} min"
     }
   },
   "actions": {
@@ -744,5 +766,15 @@
       "graphThrottled": "Microsoft Graph ogranicza tempo pobierania nagrań. Spróbuj ponownie za chwilę.",
       "graphHttpStatus": "Microsoft Graph zwrócił HTTP {{status}} podczas pobierania nagrania Teams."
     }
+  },
+  "workItemEditor": {
+    "created": "Zaplanowano {{title}}",
+    "updated": "Wpis harmonogramu zaktualizowany",
+    "deleted": "Wpis harmonogramu usunięty",
+    "createFailed": "Nie udało się zaplanować tej pracy",
+    "updateFailed": "Nie udało się zaktualizować wpisu harmonogramu",
+    "deleteFailed": "Nie udało się usunąć wpisu harmonogramu",
+    "loadFailed": "Nie udało się wczytać wpisu harmonogramu",
+    "noPermission": "Potrzebujesz uprawnienia do aktualizacji harmonogramu, aby planować pracę."
   }
 }

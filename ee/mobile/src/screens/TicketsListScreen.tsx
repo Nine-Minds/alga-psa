@@ -30,6 +30,7 @@ import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { DatePickerField } from "../ui/components/DatePickerField";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
+import { clearInheritedScreenParams } from "../navigation/inheritedScreenParams";
 import { withClientFilter, withContactFilter } from "./ticketsClientFilter";
 import { normalizeSavedTags, removeTagFilter, withTagsFilter } from "./ticketsTagsFilter";
 import { computeVisibleTagCount, TAG_CHIP_MAX_TEXT_WIDTH } from "./ticketRowTags";
@@ -240,10 +241,12 @@ export function TicketsListScreen({ navigation, route }: Props) {
 
   const clearClientFilter = useCallback(() => {
     navigation.setParams({ clientId: undefined, clientName: undefined });
+    clearInheritedScreenParams(navigation);
   }, [navigation]);
 
   const clearContactFilter = useCallback(() => {
     navigation.setParams({ contactId: undefined, contactName: undefined });
+    clearInheritedScreenParams(navigation);
   }, [navigation]);
 
   // "Clear all" must also drop the client/contact drill-down that arrived as
@@ -352,14 +355,16 @@ export function TicketsListScreen({ navigation, route }: Props) {
             lastRefreshedAtIso: refreshedIso,
           });
         }
-        const toPrefetch = nextItems.slice(0, 5);
-        void Promise.all(
-          toPrefetch.map(async (t) => {
-            if (getCachedTicketDetail(t.ticket_id)) return;
+        // Warm the first few details one at a time: five parallel fetches on
+        // top of the list and stats calls is the launch burst that starves
+        // small appliances of DB connections.
+        void (async () => {
+          for (const t of nextItems.slice(0, 5)) {
+            if (getCachedTicketDetail(t.ticket_id)) continue;
             const detail = await getTicketById(client, { apiKey: session.accessToken, ticketId: t.ticket_id });
             if (detail.ok) setCachedTicketDetail(t.ticket_id, detail.data.data);
-          }),
-        );
+          }
+        })();
       }
     },
     [apiFilters, client, filters.sortField, filters.sortOrder, isOffline, listCacheKey, search, session],

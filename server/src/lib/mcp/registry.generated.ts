@@ -50005,6 +50005,503 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_id_externallinks",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/external-links",
+    "displayName": "List Ticket External Links",
+    "summary": "List external links for a ticket",
+    "description": "Returns structured references from the ticket to records in external systems (Discord, Slack, GitHub, Jira, email, custom systems). Each entry carries the registry key, external id, realm, relationship (origin/mirror/reference), actor, and a resolved display object with a readable label and link-out href. The origin link, when present, is how the ticket arrived in Alga.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_externallinks",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/external-links",
+    "displayName": "Add Ticket External Link",
+    "summary": "Add an external link to a ticket",
+    "description": "Creates an external-system reference for a ticket. Defaults to a ticket-level link; set entity_type to 'comment' with a comment_id to attach the reference to one of the ticket's comments. Only one origin link per entity is permitted; a duplicate external record is rejected. Provide an http(s) url when the system has no URL template. Use GET /api/v1/tickets/by-external-link to find an existing ticket for the same external record before creating one.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "comment"
+          ],
+          "description": "Defaults to 'ticket'."
+        },
+        "comment_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required when entity_type is 'comment'."
+        },
+        "system": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Built-in system key or custom:<slug>."
+        },
+        "external_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "external_parent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "realm": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri",
+          "description": "Optional explicit link-out; must be http(s)."
+        },
+        "relationship": {
+          "type": "string",
+          "enum": [
+            "origin",
+            "mirror",
+            "reference"
+          ]
+        },
+        "actor": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "handle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "display_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri"
+            }
+          }
+        },
+        "external_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "external_updated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "system",
+        "external_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_tickets_id_externallinks_linkid",
+    "method": "patch",
+    "path": "/api/v1/tickets/{id}/external-links/{linkId}",
+    "displayName": "Update Ticket External Link",
+    "summary": "Update a ticket external link",
+    "description": "Updates mutable fields on an existing link belonging to the ticket: relationship, url, actor, external_status, external_updated_at, last_synced_at, and metadata. system and external_id are immutable.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "linkId",
+        "in": "path",
+        "required": true,
+        "description": "External link UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "External link UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "relationship": {
+          "type": "string",
+          "enum": [
+            "origin",
+            "mirror",
+            "reference"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "actor": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "handle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "display_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri"
+            }
+          }
+        },
+        "external_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "external_updated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_synced_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_externallinks_linkid",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/external-links/{linkId}",
+    "displayName": "Remove Ticket External Link",
+    "summary": "Remove an external link from a ticket",
+    "description": "Deletes a link belonging to the ticket and records a ticket activity entry. Any inbound integration that relies on the link for deduplication should stop using it after removal.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "linkId",
+        "in": "path",
+        "required": true,
+        "description": "External link UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "External link UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_byexternallink",
+    "method": "get",
+    "path": "/api/v1/tickets/by-external-link",
+    "displayName": "Find Ticket By External Link",
+    "summary": "Find a ticket by its external record",
+    "description": "Returns the ticket and matching link for a system/external_id pair, with an optional external_parent_id for comment-level records. Returns 404 when no ticket carries the external record. Use this as the dedupe check before creating a ticket from an external source.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "system",
+        "in": "query",
+        "required": true,
+        "description": "Registry key of the external system.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Registry key of the external system."
+        }
+      },
+      {
+        "name": "external_id",
+        "in": "query",
+        "required": true,
+        "description": "External record identifier.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "description": "External record identifier."
+        }
+      },
+      {
+        "name": "external_parent_id",
+        "in": "query",
+        "required": false,
+        "description": "Ticket-level external id, for comment-level records.",
+        "schema": {
+          "type": "string",
+          "description": "Ticket-level external id, for comment-level records."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_documents_documentid",
     "method": "get",
     "path": "/api/v1/tickets/{id}/documents/{documentId}",

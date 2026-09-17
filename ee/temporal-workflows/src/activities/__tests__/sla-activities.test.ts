@@ -6,6 +6,7 @@ import {
   checkAndEscalate,
   updateSlaStatus,
   recordSlaAuditLog,
+  getTicketSlaPauseState,
 } from '../sla-activities';
 
 const { publishToStream, checkEscalationNeeded, escalateTicket, withTransaction } = vi.hoisted(() => ({
@@ -248,5 +249,46 @@ describe('sla activities', () => {
     expect(lastTrx('sla_audit_log').insert).toHaveBeenCalledWith(expect.objectContaining({
       tenant: 'tenant-1', ticket_id: 'ticket-1', event_type: 'sla_test_event', event_data: JSON.stringify({ foo: 'bar' }),
     }));
+  });
+  describe('getTicketSlaPauseState', () => {
+    const run = async (opts: { ticket: any; settings?: any; statusConfig?: any }) => {
+      withTransaction.mockImplementation(async (_tenant, fn) => {
+        lastTrx = createMockTrx();
+        lastTrx('tickets').first.mockResolvedValue(opts.ticket);
+        lastTrx('sla_settings').first.mockResolvedValue(opts.settings ?? null);
+        lastTrx('status_sla_pause_config').first.mockResolvedValue(opts.statusConfig ?? null);
+        return fn(lastTrx);
+      });
+      return getTicketSlaPauseState({ tenantId: 'tenant-1', ticketId: 'ticket-1' });
+    };
+
+    it('reports awaiting_client when the tenant pauses on awaiting client (default)', async () => {
+      await expect(run({ ticket: { status_id: 's1', response_state: 'awaiting_client' } }))
+        .resolves.toEqual({ paused: true, reason: 'awaiting_client' });
+    });
+
+    it('ignores awaiting_client when the tenant disabled that pause', async () => {
+      await expect(run({
+        ticket: { status_id: 's1', response_state: 'awaiting_client' },
+        settings: { pause_on_awaiting_client: false },
+      })).resolves.toEqual({ paused: false, reason: null });
+    });
+
+    it('reports status_pause when the current status pauses SLA', async () => {
+      await expect(run({
+        ticket: { status_id: 's1', response_state: 'awaiting_internal' },
+        statusConfig: { pauses_sla: true },
+      })).resolves.toEqual({ paused: true, reason: 'status_pause' });
+      expect(lastTrx('status_sla_pause_config').where).toHaveBeenCalledWith({ status_id: 's1' });
+    });
+
+    it('reports not paused when nothing pauses the ticket', async () => {
+      await expect(run({ ticket: { status_id: 's1', response_state: 'awaiting_internal' } }))
+        .resolves.toEqual({ paused: false, reason: null });
+    });
+
+    it('stays paused when the ticket row is gone', async () => {
+      await expect(run({ ticket: undefined })).resolves.toEqual({ paused: true, reason: null });
+    });
   });
 });

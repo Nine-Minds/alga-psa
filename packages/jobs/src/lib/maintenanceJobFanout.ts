@@ -2,6 +2,8 @@ import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import type { TenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from '@alga-psa/types';
+import { replenishContractCadenceServicePeriodsSweep } from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
 
 // Sibling handlers live in this same package; imported relatively so the
 // wildcard './handlers/*' export-map entry is not self-referenced (which would
@@ -47,8 +49,21 @@ const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
 // per tenant just to discover there is nothing to do. Returns distinct tenant ids.
 type TenantSelector = (db: TenantDb) => PromiseLike<Array<{ tenant: string }>>;
 
+/**
+ * Aggregate outcome a system job may report so partial failures are not
+ * flattened into "succeeded". Returning nothing keeps the historical
+ * single-unit success result.
+ */
+export type MaintenanceJobExecutionOutcome = {
+  total: number;
+  succeeded: number;
+  failed: number;
+};
+
 type MaintenanceJobDef =
   | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number }
+  // System jobs may return anything; a result carrying numeric total/succeeded/
+  // failed is treated as an execution outcome, everything else is a single unit.
   | { scope: 'system'; run: () => Promise<unknown> };
 
 const DEFAULT_CONCURRENCY = 10;
@@ -126,6 +141,28 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
   'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }), tenants: tenantsWithInboundEmail, concurrency: 3 },
   'provider-disconnect-retry': { scope: 'tenant', run: (tenantId) => providerDisconnectRetryHandler({ tenantId }) },
+  // The sweep owns tenant enumeration and per-tenant advisory locking itself,
+  // so it runs once as a system job rather than being fanned out twice. Its
+  // per-tenant and per-line failures are aggregated so the maintenance result
+  // reports them instead of an unconditional success.
+  [CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME]: {
+    scope: 'system',
+    run: async () => {
+      const sweep = await replenishContractCadenceServicePeriodsSweep({
+        sourceRunPrefix: 'temporal-contract-cadence-replenishment',
+      });
+      const lineFailures = sweep.summaries.reduce(
+        (count, summary) => count + summary.failures.length,
+        0,
+      );
+      const failed = sweep.tenantsFailed + lineFailures;
+      return {
+        total: sweep.tenantsProcessed + failed,
+        succeeded: sweep.tenantsProcessed,
+        failed,
+      };
+    },
+  },
 };
 
 export type MaintenanceJobResult = {
@@ -166,9 +203,24 @@ export async function runMaintenanceJob(
   }
 
   if (def.scope === 'system') {
-    await def.run();
-    logger.info('[maintenance] system job complete', { jobName });
-    return { jobName, scope: 'system', total: 1, succeeded: 1, failed: 0 };
+    const raw = await def.run();
+    const outcome = raw && typeof raw === 'object'
+      ? (raw as Partial<MaintenanceJobExecutionOutcome>)
+      : undefined;
+    const total = typeof outcome?.total === 'number' ? outcome.total : 1;
+    const succeeded = typeof outcome?.succeeded === 'number' ? outcome.succeeded : 1;
+    const failed = typeof outcome?.failed === 'number' ? outcome.failed : 0;
+    if (failed > 0) {
+      logger.warn('[maintenance] system job completed with failures', {
+        jobName,
+        total,
+        succeeded,
+        failed,
+      });
+    } else {
+      logger.info('[maintenance] system job complete', { jobName, total, succeeded, failed });
+    }
+    return { jobName, scope: 'system', total, succeeded, failed };
   }
 
   const db = tenantDb(await getAdminConnection(), '__maintenance_job_fanout_tenant_enumeration__');

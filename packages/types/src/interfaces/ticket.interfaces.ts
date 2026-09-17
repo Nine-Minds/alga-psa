@@ -4,6 +4,7 @@ import { ITaggable } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
+import type { IExternalEntityLink } from './externalSystem.interfaces';
 
 /**
  * Response state tracking for tickets.
@@ -76,6 +77,8 @@ export interface ITicket extends TenantEntity, ITaggable {
   sla_resolution_met?: boolean | null;     // Whether resolution SLA was met
   sla_paused_at?: string | null;           // When SLA was paused (null = not paused)
   sla_total_pause_minutes?: number;        // Cumulative pause time in minutes
+  // Structured references to records in external systems. Not shown to client contacts.
+  external_links?: IExternalEntityLink[];
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {

@@ -98,7 +98,7 @@ const Drawer = ({
         )}
         <Dialog.Content
           ref={contentRef}
-          className={`fixed inset-y-0 right-0 ${widthClasses} bg-[rgb(var(--color-card))] shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
+          className={`fixed inset-y-0 right-0 ${widthClasses} bg-[rgb(var(--color-card))] shadow-lg focus:outline-none overflow-y-auto flex flex-col transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           style={isInsideDialog ? { ...widthStyle, pointerEvents: 'auto' } : widthStyle}
           onOpenAutoFocus={(e) => {
             // Prevent Radix from auto-focusing the first tabbable child element.
@@ -117,8 +117,12 @@ const Drawer = ({
           </Dialog.Title>
           <InsideDialogContext.Provider value={true}>
             <InsideDrawerContext.Provider value={true}>
-              <Theme>
-                <div className="p-6">
+              {/* Flex items with a definite height, so content sized
+                  `h-full` (e.g. a calendar) fills the panel exactly instead
+                  of overflowing it by the padding; auto-height content still
+                  scrolls the panel as before. */}
+              <Theme className="flex-1 min-h-0 flex flex-col">
+                <div className="p-6 flex-1 min-h-0">
                   {children}
                 </div>
               </Theme>

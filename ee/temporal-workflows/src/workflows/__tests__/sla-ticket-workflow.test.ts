@@ -41,6 +41,7 @@ async function setupWorkflowTest(activitiesOverrides: Record<string, any> = {}) 
       responseMet: null,
       resolutionMet: null,
     }),
+    getTicketSlaPauseState: async () => ({ paused: true, reason: 'awaiting_client' }),
     ...activitiesOverrides,
   };
 
@@ -378,6 +379,137 @@ describe('slaTicketWorkflow', () => {
 
       expect(closeChecks).toBeGreaterThanOrEqual(2);
       expect(sendCalls).toEqual([]);
+    } finally {
+      await env.teardown();
+    }
+  });
+  it('self-heals a missed resume from the ticket pause state', async () => {
+    let pauseChecks = 0;
+    const sendCalls: Array<{ phase: string; thresholdPercent: number }> = [];
+    const { env, worker, taskQueue, calculateCalls } = await setupWorkflowTest({
+      getTicketSlaPauseState: async () => {
+        pauseChecks += 1;
+        // First sweep still paused, second sweep finds the ticket active again.
+        return pauseChecks < 2
+          ? { paused: true, reason: 'awaiting_client' }
+          : { paused: false, reason: null };
+      },
+      sendSlaNotification: async (input: { phase: string; thresholdPercent: number }) => {
+        sendCalls.push(input);
+      },
+    });
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [
+            {
+              ticketId: 'ticket-lost-resume',
+              tenantId: 'tenant-lost-resume',
+              policyTargets: [target],
+              businessHoursSchedule: schedule24x7,
+            },
+          ],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-lost-resume-ticket-lost-resume',
+        });
+
+        await handle.signal('pause', { reason: 'awaiting_client' });
+        // No resume signal is ever sent; the sweep must notice on its own.
+        await handle.result();
+      });
+
+      expect(pauseChecks).toBeGreaterThanOrEqual(2);
+      expect(calculateCalls.some((call) => call.pauseMinutes >= 5)).toBe(true);
+      expect(sendCalls.map((c) => `${c.phase}:${c.thresholdPercent}`)).toEqual([
+        'response:50', 'response:75', 'response:90', 'response:100',
+        'resolution:50', 'resolution:75', 'resolution:90', 'resolution:100',
+      ]);
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('continues as new while paused and carries the pause across runs', async () => {
+    const { env, worker, taskQueue } = await setupWorkflowTest();
+    try {
+      await worker.runUntil(async () => {
+        const workflowId = 'sla-ticket-tenant-can-ticket-can';
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [
+            {
+              ticketId: 'ticket-can',
+              tenantId: 'tenant-can',
+              policyTargets: [target],
+              businessHoursSchedule: schedule24x7,
+              continueAsNewAfterEvents: 40,
+            },
+          ],
+          taskQueue,
+          workflowId,
+        });
+        const firstRunId = handle.firstExecutionRunId;
+
+        await handle.signal('pause', { reason: 'awaiting_client' });
+        const pausedState = await handle.query('getState');
+        expect(pausedState.pauseState.isPaused).toBe(true);
+
+        // Let a few sweeps run; each adds history until the run rolls over.
+        for (let i = 0; i < 10; i += 1) {
+          await env.sleep(5 * 60 * 1000);
+          const desc = await env.client.workflow.getHandle(workflowId, firstRunId).describe();
+          if (desc.status.name === 'CONTINUED_AS_NEW') break;
+        }
+        const firstRun = await env.client.workflow.getHandle(workflowId, firstRunId).describe();
+        expect(firstRun.status.name).toBe('CONTINUED_AS_NEW');
+
+        const latest = env.client.workflow.getHandle(workflowId);
+        const carried = await latest.query('getState');
+        expect(carried.pauseState.isPaused).toBe(true);
+        expect(carried.pauseState.pauseStartedAt).toBe(pausedState.pauseState.pauseStartedAt);
+        expect(carried.currentStatus).toBe('paused');
+
+        await latest.signal('resume');
+        await latest.signal('cancel');
+        await handle.result();
+      });
+    } finally {
+      await env.teardown();
+    }
+  });
+
+  it('continues as new while active without repeating or skipping thresholds', async () => {
+    const sendCalls: Array<{ phase: string; thresholdPercent: number }> = [];
+    const { env, worker, taskQueue } = await setupWorkflowTest({
+      sendSlaNotification: async (input: { phase: string; thresholdPercent: number }) => {
+        sendCalls.push(input);
+      },
+    });
+    try {
+      await worker.runUntil(async () => {
+        const workflowId = 'sla-ticket-tenant-can-active-ticket-can-active';
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [
+            {
+              ticketId: 'ticket-can-active',
+              tenantId: 'tenant-can-active',
+              policyTargets: [target],
+              businessHoursSchedule: schedule24x7,
+              continueAsNewAfterEvents: 30,
+            },
+          ],
+          taskQueue,
+          workflowId,
+        });
+        await handle.result();
+
+        const firstRun = await env.client.workflow.getHandle(workflowId, handle.firstExecutionRunId).describe();
+        expect(firstRun.status.name).toBe('CONTINUED_AS_NEW');
+      });
+
+      expect(sendCalls.map((c) => `${c.phase}:${c.thresholdPercent}`)).toEqual([
+        'response:50', 'response:75', 'response:90', 'response:100',
+        'resolution:50', 'resolution:75', 'resolution:90', 'resolution:100',
+      ]);
     } finally {
       await env.teardown();
     }

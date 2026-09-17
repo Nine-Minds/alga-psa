@@ -516,7 +516,7 @@ export function DocumentsSection({
         >
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "center", alignItems: "center" }}>
             <Text
-              style={{ ...typography.body, color: "#fff", position: "absolute", top: 60, left: 16, right: 120 }}
+              style={{ ...typography.body, color: colors.overlayText, position: "absolute", top: 60, left: 16, right: 120 }}
               numberOfLines={1}
             >
               {previewDocument.document_name}
@@ -531,9 +531,9 @@ export function DocumentsSection({
                 style={{ padding: spacing.sm }}
               >
                 {downloading === previewDocument.document_id ? (
-                  <ActivityIndicator size={22} color="#fff" />
+                  <ActivityIndicator size={22} color={colors.overlayText} />
                 ) : (
-                  <Feather name="share" size={24} color="#fff" />
+                  <Feather name="share" size={24} color={colors.overlayText} />
                 )}
               </Pressable>
               <Pressable
@@ -543,7 +543,7 @@ export function DocumentsSection({
                 hitSlop={8}
                 style={{ padding: spacing.sm }}
               >
-                <Feather name="x" size={28} color="#fff" />
+                <Feather name="x" size={28} color={colors.overlayText} />
               </Pressable>
             </View>
             <Image
@@ -557,7 +557,7 @@ export function DocumentsSection({
               resizeMode="contain"
             />
             {previewLoading ? (
-              <ActivityIndicator size="large" color="#fff" style={{ position: "absolute" }} />
+              <ActivityIndicator size="large" color={colors.overlayText} style={{ position: "absolute" }} />
             ) : null}
             {imageDocuments.length > 1 ? (
               <View
@@ -579,9 +579,9 @@ export function DocumentsSection({
                   hitSlop={8}
                   style={{ padding: spacing.sm, opacity: previewIndex === 0 ? 0.3 : 1 }}
                 >
-                  <Feather name="chevron-left" size={32} color="#fff" />
+                  <Feather name="chevron-left" size={32} color={colors.overlayText} />
                 </Pressable>
-                <Text style={{ ...typography.body, color: "#fff" }}>
+                <Text style={{ ...typography.body, color: colors.overlayText }}>
                   {t("documents.previewCounter", { current: (previewIndex ?? 0) + 1, total: imageDocuments.length })}
                 </Text>
                 <Pressable
@@ -592,7 +592,7 @@ export function DocumentsSection({
                   hitSlop={8}
                   style={{ padding: spacing.sm, opacity: previewIndex === imageDocuments.length - 1 ? 0.3 : 1 }}
                 >
-                  <Feather name="chevron-right" size={32} color="#fff" />
+                  <Feather name="chevron-right" size={32} color={colors.overlayText} />
                 </Pressable>
               </View>
             ) : null}
