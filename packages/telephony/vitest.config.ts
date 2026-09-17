@@ -5,12 +5,14 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
     testTimeout: 10000,
   },
   resolve: {
-    alias: {
-      '@alga-psa/types': path.resolve(__dirname, '../types/src'),
-    },
+    alias: [
+      { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src') },
+      { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
+      { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') },
+    ],
   },
 });

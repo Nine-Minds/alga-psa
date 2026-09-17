@@ -1509,7 +1509,15 @@
       "allContacts": "Alle contacten",
       "allStatuses": "Alle statussen",
       "allUsers": "Alle gebruikers",
-      "columns": { "type": "Type", "title": "Titel", "client": "Klant", "contact": "Contact", "user": "Gebruiker", "date": "Datum", "status": "Status" },
+      "columns": {
+        "type": "Type",
+        "title": "Titel",
+        "client": "Klant",
+        "contact": "Contact",
+        "user": "Gebruiker",
+        "date": "Datum",
+        "status": "Status"
+      },
       "empty": "Geen interacties komen overeen met deze filters.",
       "loading": "Interacties laden…",
       "openClient": "Klant {{name}} openen",
@@ -1529,6 +1537,14 @@
       "statusPlaceholder": "Status",
       "title": "Recente interacties",
       "statusesLoadFailed": "Interactiestatussen konden niet worden geladen. Probeer het opnieuw."
+    },
+    "callArtifacts": {
+      "sectionTitle": "Gespreksopname en transcript",
+      "viewTranscript": "Transcript bekijken",
+      "downloadRecording": "Opname downloaden",
+      "transcriptTitle": "Gesprekstranscript",
+      "loading": "Transcript wordt geladen…",
+      "loadFailed": "Het transcript kon niet worden geladen."
     }
   },
   "clientDrawer": {

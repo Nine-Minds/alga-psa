@@ -3718,7 +3718,88 @@
       "providers": {
         "teamsPhone": {
           "description": "Legt Teams Phone-gesprekken na afloop vast als interacties. Gespreksgeschiedenis, geen live schermmelding.",
-          "prerequisite": "Stel eerst de Microsoft Teams-integratie in — Teams Phone hergebruikt het Microsoft-profiel daarvan."
+          "prerequisite": "Stel eerst de Microsoft Teams-integratie in — Teams Phone hergebruikt het Microsoft-profiel daarvan.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Legt 3CX-gesprekken vast als interacties en herkent bellers in de 3CX-client via het CRM-sjabloon.",
+          "permission": "U hebt de systeeminstellingen-permissie nodig om de 3CX-integratie te beheren.",
+          "endpoint": "Basis-URL van eindpunt",
+          "copy": "Kopiëren",
+          "apiKey": "API-sleutel",
+          "rotate": "Roteren",
+          "fullKeyWarning": "Kopieer deze sleutel nu — hij wordt niet opnieuw getoond.",
+          "download": "Sjabloon downloaden",
+          "tierRequired": "3CX-telefonie vereist het Pro-abonnement.",
+          "templateStale": "Er is een nieuwer sjabloon beschikbaar. Download het en upload het opnieuw in de 3CX-console.",
+          "pbx": {
+            "title": "PBX-API (3CX Enterprise/AI)",
+            "help": "Oproepmelding, click-to-call, import van de belgeschiedenis en telefoonboeksynchronisatie gebruiken de 3CX Call Control- en Configuration-API, waarvoor een 3CX Enterprise- of AI-licentie (8SC+) nodig is. Maak in de 3CX-beheerconsole onder Integraties → API een API-app, vink beide API-toegangen aan en vermeld elk toestel dat u wilt volgen.",
+            "baseUrl": "PBX-adres",
+            "clientId": "Client-id (toestel van de API-app)",
+            "clientSecret": "Clientgeheim",
+            "replaceSecret": "Vervangen",
+            "save": "Gegevens opslaan",
+            "test": "Verbinding testen",
+            "clear": "Verwijderen",
+            "connected": "Verbonden",
+            "granted": "toegekend",
+            "notGranted": "niet toegekend",
+            "callControl": "Oproepbesturing",
+            "xapi": "Configuratie-API",
+            "lastChecked": "Laatst gecontroleerd",
+            "notConnectedHint": "Verbind hierboven de PBX-API om deze functie te gebruiken."
+          },
+          "extensions": {
+            "title": "Toestellen",
+            "sync": "Synchroniseren vanaf PBX",
+            "lastSync": "Laatste synchronisatie",
+            "empty": "Nog geen toestellen gesynchroniseerd.",
+            "dn": "Toestel",
+            "pbxUser": "PBX-gebruiker",
+            "algaUser": "AlgaPSA-gebruiker",
+            "unmapped": "Niet gekoppeld",
+            "auto": "gekoppeld op e-mail"
+          },
+          "cdr": {
+            "title": "Import van belgeschiedenis",
+            "help": "Leest elk uur het belregister van de PBX en registreert externe oproepen die nog niet in het logboek staan.",
+            "lookback": "Dagen geschiedenis bij de eerste run",
+            "lastRun": "Laatste run",
+            "added": "Records toegevoegd"
+          },
+          "phonebook": {
+            "title": "Telefoonboeksynchronisatie",
+            "help": "Stuurt contacten met telefoonnummers naar het 3CX-bedrijfstelefoonboek en voegt nummers die alleen in de PBX staan toe aan overeenkomende contacten.",
+            "schedule": "Afstemmingsschema",
+            "daily": "Dagelijks",
+            "hourly": "Elk uur",
+            "pushNow": "Nu versturen",
+            "importNow": "Nu importeren",
+            "lastPush": "Laatste verzending",
+            "lastImport": "Laatste import",
+            "countsLegend": "Aantallen: aangemaakt/bijgewerkt/verwijderd/geïmporteerd/overgeslagen"
+          },
+          "queue": {
+            "title": "Contacten aangemaakt vanuit 3CX",
+            "empty": "Niets in de wachtrij. Contacten die vanuit de 3CX-client zijn aangemaakt zonder overeenkomende klant verschijnen hier.",
+            "pendingBadge": "e-mail vereist",
+            "unmappedBadge": "geen klant",
+            "company": "Bedrijf",
+            "chooseClient": "Kies een klant…",
+            "apply": "Toepassen",
+            "leaveWithoutClient": "Zonder klant laten",
+            "complete": "Aanvullen",
+            "dismiss": "Negeren",
+            "completeTitle": "Contact uit 3CX aanvullen",
+            "firstName": "Voornaam",
+            "lastName": "Achternaam",
+            "email": "E-mail",
+            "number": "Telefoonnummer",
+            "cancel": "Annuleren",
+            "save": "Contact aanmaken"
+          }
         }
       },
       "subscriptionExpires": "Abonnement wordt vernieuwd vóór",
@@ -3755,7 +3836,8 @@
         "assignTo": "Toewijzen aan",
         "searchPlaceholder": "Zoek contacten en klanten…",
         "noTargets": "Geen overeenkomende contacten of klanten.",
-        "chooseTarget": "Toewijzen aan een klant…"
+        "chooseTarget": "Toewijzen aan een klant…",
+        "chatBadge": "Chat"
       },
       "forbidden": "U hebt geen toestemming om de telefonie-instellingen van deze tenant te bekijken.",
       "paywall": {
@@ -3890,6 +3972,23 @@
       "contactWithoutClient": "Er bestaat al een contact met dit e-mailadres in het systeem zonder klanttoewijzing",
       "emailOnAnotherClient": "Dit e-mailadres is al gekoppeld aan een andere klant",
       "emailOnAnotherClientNamed": "Dit e-mailadres is al gekoppeld aan {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Inkomende oproep",
+      "unknownCaller": "Onbekende beller",
+      "noNumber": "Geen nummerweergave",
+      "extension": "Toestel {{dn}} gaat over",
+      "openTickets": "Openstaande tickets",
+      "recentInteractions": "Recente interacties",
+      "openContact": "Contact openen",
+      "openClient": "Klant openen",
+      "newTicket": "Nieuw ticket",
+      "createContact": "Contact aanmaken",
+      "dismiss": "Sluiten",
+      "answer": "Opnemen",
+      "answerFailed": "De PBX kon de oproep niet opnemen"
     }
   }
 }

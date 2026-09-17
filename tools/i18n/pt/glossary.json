@@ -2705,7 +2705,9 @@
       "Shift",
       "×",
       "{{count}} h",
-      "{{hours}} h {{minutes}} min"
+      "{{hours}} h {{minutes}} min",
+      "3CX",
+      "Teams Phone"
     ],
     "caseInsensitive": [
       "api",

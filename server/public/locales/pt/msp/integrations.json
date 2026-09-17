@@ -3718,7 +3718,88 @@
       "providers": {
         "teamsPhone": {
           "description": "Registra as chamadas do Teams Phone como interações assim que cada chamada termina. Histórico de chamadas, não alerta na tela em tempo real.",
-          "prerequisite": "Configure primeiro a integração com o Microsoft Teams — o Teams Phone reaproveita o perfil Microsoft dela."
+          "prerequisite": "Configure primeiro a integração com o Microsoft Teams — o Teams Phone reaproveita o perfil Microsoft dela.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Registra chamadas do 3CX como interações e reconhece os autores das chamadas no cliente 3CX por meio do modelo CRM.",
+          "permission": "Você precisa da permissão de configurações do sistema para gerenciar a integração do 3CX.",
+          "endpoint": "URL base do endpoint",
+          "copy": "Copiar",
+          "apiKey": "Chave de API",
+          "rotate": "Rotacionar",
+          "fullKeyWarning": "Copie esta chave agora — ela não será mostrada novamente.",
+          "download": "Baixar modelo",
+          "tierRequired": "A telefonia 3CX requer o plano Pro.",
+          "templateStale": "Há um modelo mais recente. Baixe-o e envie-o novamente no console do 3CX.",
+          "pbx": {
+            "title": "API do PBX (3CX Enterprise/AI)",
+            "help": "O pop-up de chamada, a chamada com um clique, a importação do histórico e a sincronização da agenda usam as APIs Call Control e Configuration do 3CX, que exigem uma licença 3CX Enterprise ou AI (8SC+). Crie um aplicativo de API no console de administração do 3CX em Integrações → API, marque os dois acessos e liste cada ramal que deseja monitorar.",
+            "baseUrl": "Endereço do PBX",
+            "clientId": "ID do cliente (ramal do aplicativo de API)",
+            "clientSecret": "Segredo do cliente",
+            "replaceSecret": "Substituir",
+            "save": "Salvar credenciais",
+            "test": "Testar conexão",
+            "clear": "Remover",
+            "connected": "Conectado",
+            "granted": "concedido",
+            "notGranted": "não concedido",
+            "callControl": "Controle de chamadas",
+            "xapi": "API de configuração",
+            "lastChecked": "Última verificação",
+            "notConnectedHint": "Conecte a API do PBX acima para usar este recurso."
+          },
+          "extensions": {
+            "title": "Ramais",
+            "sync": "Sincronizar do PBX",
+            "lastSync": "Última sincronização",
+            "empty": "Nenhum ramal sincronizado ainda.",
+            "dn": "Ramal",
+            "pbxUser": "Usuário do PBX",
+            "algaUser": "Usuário do AlgaPSA",
+            "unmapped": "Não mapeado",
+            "auto": "correspondido por e-mail"
+          },
+          "cdr": {
+            "title": "Importação do histórico de chamadas",
+            "help": "Lê o registro de chamadas do PBX a cada hora e registra chamadas externas que ainda não estão no diário.",
+            "lookback": "Dias de histórico na primeira execução",
+            "lastRun": "Última execução",
+            "added": "Registros adicionados"
+          },
+          "phonebook": {
+            "title": "Sincronização da agenda",
+            "help": "Envia contatos com números de telefone para a agenda da empresa no 3CX e adiciona aos contatos correspondentes os números encontrados apenas no PBX.",
+            "schedule": "Agenda de reconciliação",
+            "daily": "Diária",
+            "hourly": "A cada hora",
+            "pushNow": "Enviar agora",
+            "importNow": "Importar agora",
+            "lastPush": "Último envio",
+            "lastImport": "Última importação",
+            "countsLegend": "Contagens: criados/atualizados/excluídos/importados/ignorados"
+          },
+          "queue": {
+            "title": "Contatos criados a partir do 3CX",
+            "empty": "Nada pendente. Contatos criados no cliente 3CX sem um cliente correspondente aparecem aqui.",
+            "pendingBadge": "precisa de e-mail",
+            "unmappedBadge": "sem cliente",
+            "company": "Empresa",
+            "chooseClient": "Escolha um cliente…",
+            "apply": "Aplicar",
+            "leaveWithoutClient": "Deixar sem cliente",
+            "complete": "Completar",
+            "dismiss": "Descartar",
+            "completeTitle": "Completar contato do 3CX",
+            "firstName": "Nome",
+            "lastName": "Sobrenome",
+            "email": "E-mail",
+            "number": "Número de telefone",
+            "cancel": "Cancelar",
+            "save": "Criar contato"
+          }
         }
       },
       "subscriptionExpires": "A assinatura é renovada antes de",
@@ -3755,7 +3836,8 @@
         "assignTo": "Atribuir a",
         "searchPlaceholder": "Pesquisar contatos e clientes…",
         "noTargets": "Nenhum contato ou cliente correspondente.",
-        "chooseTarget": "Atribuir a um cliente…"
+        "chooseTarget": "Atribuir a um cliente…",
+        "chatBadge": "Bate-papo"
       },
       "forbidden": "Você não tem permissão para ver as configurações de telefonia deste inquilino.",
       "paywall": {
@@ -3890,6 +3972,23 @@
       "contactWithoutClient": "Já existe no sistema um contato com este endereço de email sem atribuição de cliente",
       "emailOnAnotherClient": "Este email já está associado a outro cliente",
       "emailOnAnotherClientNamed": "Este email já está associado a {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Chamada recebida",
+      "unknownCaller": "Chamador desconhecido",
+      "noNumber": "Sem identificação de chamada",
+      "extension": "Tocando no ramal {{dn}}",
+      "openTickets": "Tickets abertos",
+      "recentInteractions": "Interações recentes",
+      "openContact": "Abrir contato",
+      "openClient": "Abrir cliente",
+      "newTicket": "Novo ticket",
+      "createContact": "Criar contato",
+      "dismiss": "Dispensar",
+      "answer": "Atender",
+      "answerFailed": "O PBX não conseguiu atender a chamada"
     }
   }
 }

@@ -3718,7 +3718,88 @@
       "providers": {
         "teamsPhone": {
           "description": "Registra le chiamate di Teams Phone come interazioni al termine di ogni chiamata. Cronologia delle chiamate, non avviso a schermo in tempo reale.",
-          "prerequisite": "Configura prima l'integrazione Microsoft Teams: Teams Phone riusa il suo profilo Microsoft."
+          "prerequisite": "Configura prima l'integrazione Microsoft Teams: Teams Phone riusa il suo profilo Microsoft.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Registra le chiamate 3CX come interazioni e riconosce i chiamanti nel client 3CX tramite il modello CRM.",
+          "permission": "È necessaria l’autorizzazione alle impostazioni di sistema per gestire l’integrazione 3CX.",
+          "endpoint": "URL di base dell’endpoint",
+          "copy": "Copia",
+          "apiKey": "Chiave API",
+          "rotate": "Ruota",
+          "fullKeyWarning": "Copia questa chiave ora — non verrà più mostrata.",
+          "download": "Scarica modello",
+          "tierRequired": "La telefonia 3CX richiede il piano Pro.",
+          "templateStale": "È disponibile un modello più recente. Scaricalo e caricalo di nuovo nella console 3CX.",
+          "pbx": {
+            "title": "API del centralino (3CX Enterprise/AI)",
+            "help": "Il pop-up chiamata, la chiamata con un clic, l'importazione dello storico e la sincronizzazione della rubrica usano le API Call Control e Configuration di 3CX, che richiedono una licenza 3CX Enterprise o AI (8SC+). Crea un'app API nella console di amministrazione 3CX in Integrazioni → API, attiva entrambi gli accessi ed elenca ogni interno da monitorare.",
+            "baseUrl": "Indirizzo del centralino",
+            "clientId": "ID client (interno dell'app API)",
+            "clientSecret": "Segreto client",
+            "replaceSecret": "Sostituisci",
+            "save": "Salva credenziali",
+            "test": "Prova connessione",
+            "clear": "Rimuovi",
+            "connected": "Connesso",
+            "granted": "concesso",
+            "notGranted": "non concesso",
+            "callControl": "Controllo chiamate",
+            "xapi": "API di configurazione",
+            "lastChecked": "Ultimo controllo",
+            "notConnectedHint": "Collega l'API del centralino qui sopra per usare questa funzione."
+          },
+          "extensions": {
+            "title": "Interni",
+            "sync": "Sincronizza dal centralino",
+            "lastSync": "Ultima sincronizzazione",
+            "empty": "Nessun interno sincronizzato finora.",
+            "dn": "Interno",
+            "pbxUser": "Utente del centralino",
+            "algaUser": "Utente AlgaPSA",
+            "unmapped": "Non associato",
+            "auto": "associato tramite e-mail"
+          },
+          "cdr": {
+            "title": "Importazione dello storico chiamate",
+            "help": "Legge ogni ora il registro chiamate del centralino e registra le chiamate esterne non ancora presenti.",
+            "lookback": "Giorni di storico alla prima esecuzione",
+            "lastRun": "Ultima esecuzione",
+            "added": "Record aggiunti"
+          },
+          "phonebook": {
+            "title": "Sincronizzazione rubrica",
+            "help": "Invia i contatti con numero di telefono alla rubrica aziendale 3CX e aggiunge ai contatti corrispondenti i numeri presenti solo nel centralino.",
+            "schedule": "Pianificazione della riconciliazione",
+            "daily": "Giornaliera",
+            "hourly": "Ogni ora",
+            "pushNow": "Invia ora",
+            "importNow": "Importa ora",
+            "lastPush": "Ultimo invio",
+            "lastImport": "Ultima importazione",
+            "countsLegend": "Conteggi: creati/aggiornati/eliminati/importati/saltati"
+          },
+          "queue": {
+            "title": "Contatti creati da 3CX",
+            "empty": "Nulla in attesa. Qui compaiono i contatti creati dal client 3CX senza un cliente corrispondente.",
+            "pendingBadge": "e-mail mancante",
+            "unmappedBadge": "senza cliente",
+            "company": "Azienda",
+            "chooseClient": "Scegli un cliente…",
+            "apply": "Applica",
+            "leaveWithoutClient": "Lascia senza cliente",
+            "complete": "Completa",
+            "dismiss": "Ignora",
+            "completeTitle": "Completa il contatto da 3CX",
+            "firstName": "Nome",
+            "lastName": "Cognome",
+            "email": "E-mail",
+            "number": "Numero di telefono",
+            "cancel": "Annulla",
+            "save": "Crea contatto"
+          }
         }
       },
       "subscriptionExpires": "L'abbonamento si rinnova entro",
@@ -3755,7 +3836,8 @@
         "assignTo": "Assegna a",
         "searchPlaceholder": "Cerca contatti e clienti…",
         "noTargets": "Nessun contatto o cliente corrispondente.",
-        "chooseTarget": "Assegna a un cliente…"
+        "chooseTarget": "Assegna a un cliente…",
+        "chatBadge": "Chat"
       },
       "forbidden": "Non hai il permesso di visualizzare le impostazioni di telefonia di questo tenant.",
       "paywall": {
@@ -3890,6 +3972,23 @@
       "contactWithoutClient": "Nel sistema esiste già un contatto con questo indirizzo email senza assegnazione a un cliente",
       "emailOnAnotherClient": "Questa email è già associata a un altro cliente",
       "emailOnAnotherClientNamed": "Questa email è già associata a {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Chiamata in arrivo",
+      "unknownCaller": "Chiamante sconosciuto",
+      "noNumber": "Nessun ID chiamante",
+      "extension": "Squilla l'interno {{dn}}",
+      "openTickets": "Ticket aperti",
+      "recentInteractions": "Interazioni recenti",
+      "openContact": "Apri contatto",
+      "openClient": "Apri cliente",
+      "newTicket": "Nuovo ticket",
+      "createContact": "Crea contatto",
+      "dismiss": "Ignora",
+      "answer": "Rispondi",
+      "answerFailed": "Il centralino non è riuscito a rispondere alla chiamata"
     }
   }
 }

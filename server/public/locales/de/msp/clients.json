@@ -1509,7 +1509,15 @@
       "allContacts": "Alle Kontakte",
       "allStatuses": "Alle Status",
       "allUsers": "Alle Benutzer",
-      "columns": { "type": "Typ", "title": "Titel", "client": "Kunde", "contact": "Kontakt", "user": "Benutzer", "date": "Datum", "status": "Status" },
+      "columns": {
+        "type": "Typ",
+        "title": "Titel",
+        "client": "Kunde",
+        "contact": "Kontakt",
+        "user": "Benutzer",
+        "date": "Datum",
+        "status": "Status"
+      },
       "empty": "Keine Interaktionen entsprechen diesen Filtern.",
       "loading": "Interaktionen werden geladen…",
       "openClient": "Kunden {{name}} öffnen",
@@ -1529,6 +1537,14 @@
       "statusPlaceholder": "Status",
       "title": "Letzte Interaktionen",
       "statusesLoadFailed": "Interaktionsstatus konnten nicht geladen werden. Versuchen Sie es erneut."
+    },
+    "callArtifacts": {
+      "sectionTitle": "Anrufaufzeichnung und Transkript",
+      "viewTranscript": "Transkript anzeigen",
+      "downloadRecording": "Aufzeichnung herunterladen",
+      "transcriptTitle": "Anruftranskript",
+      "loading": "Transkript wird geladen …",
+      "loadFailed": "Das Transkript konnte nicht geladen werden."
     }
   },
   "clientDrawer": {

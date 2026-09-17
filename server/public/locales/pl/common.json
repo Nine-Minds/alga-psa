@@ -1633,7 +1633,10 @@
     "defaultClosedHelp": "Status zamknięty nie może być domyślny dla nowych elementów."
   },
   "callLink": {
-    "teamsCall": "Zadzwoń w Microsoft Teams"
+    "teamsCall": "Zadzwoń w Microsoft Teams",
+    "threecxCall": "Zadzwoń przez 3CX",
+    "threecxDialing": "Wybieranie numeru z Twojego numeru wewnętrznego 3CX",
+    "threecxFailed": "Centrala nie mogła nawiązać połączenia"
   },
   "editor": {
     "attachFiles": "Załącz pliki",
