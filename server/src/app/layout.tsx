@@ -170,8 +170,11 @@ export default async function RootLayout({
         : DEFAULT_TENANT_THEME
     : DEFAULT_TENANT_THEME;
 
+  // Always derived from the stored tokens, never from the CSS cached beside them:
+  // a tenant who saved a custom pair before a generator fix would otherwise keep
+  // the old ramps forever. The build is a few hundred bytes of string work.
   const customThemeStyles = theme.pairId === 'custom' && theme.customTheme
-    ? theme.customTheme.computedStyles || generateCustomThemeStyles(theme.customTheme)
+    ? generateCustomThemeStyles(theme.customTheme)
     : '';
 
   // Drives screen-reader pronunciation, browser translation prompts and CSS

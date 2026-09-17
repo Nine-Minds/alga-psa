@@ -740,7 +740,8 @@
       "driftReexport": "Opnieuw exporteren naar QuickBooks",
       "syncNow": "Synchroniseren met QuickBooks",
       "viewInQbo": "Bekijken in QuickBooks",
-      "voidInvoice": "Factuur ongeldig maken"
+      "voidInvoice": "Factuur ongeldig maken",
+      "viewInXero": "Bekijken in Xero"
     },
     "loading": "Voorbeeld laden...",
     "empty": "Selecteer een factuur waarvan u een voorbeeld wilt bekijken",
@@ -1095,7 +1096,9 @@
     "tooltip": {
       "qboNumberPrefix": "QBO #",
       "lastSynced": "Laatst gesynchroniseerd:",
-      "viewInQuickBooks": "Bekijken in QuickBooks"
+      "viewInQuickBooks": "Bekijken in QuickBooks",
+      "viewInXero": "Bekijken in Xero",
+      "xeroNumberPrefix": "Xero-nr. "
     }
   },
   "templateManager": {

@@ -1599,7 +1599,10 @@
     "defaultClosedHelp": "Un estado cerrado no puede ser el predeterminado para los elementos nuevos."
   },
   "callLink": {
-    "teamsCall": "Llamar en Microsoft Teams"
+    "teamsCall": "Llamar en Microsoft Teams",
+    "threecxCall": "Llamar mediante 3CX",
+    "threecxDialing": "Marcando desde su extensión de 3CX",
+    "threecxFailed": "La centralita no pudo realizar la llamada"
   },
   "editor": {
     "attachFiles": "Adjuntar archivos",

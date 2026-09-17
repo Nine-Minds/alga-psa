@@ -310,6 +310,7 @@ export interface OperationFault {
 }
 
 export interface TokenGrantInput {
+  authorityTenant?: string;
   grant_type?: string;
   client_id?: string;
   client_secret?: string;
@@ -404,11 +405,12 @@ export class MsGraphCore implements EmulatorCore {
     scope?: string;
   }>();
   private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string }>();
-  private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
+  private readonly accessTokens = new Map<string, { clientId: string; tenantId: string; expiresAt: number }>();
   readonly messages = new Map<string, GraphMessage>();
   readonly subscriptions = new Map<string, GraphSubscription>();
   readonly organizations = new Map<string, GraphOrganization>();
   readonly directoryUsers = new Map<string, GraphDirectoryUser>();
+  readonly directoryGroups = new Map<string, { id: string; displayName: string; securityEnabled: boolean; memberIds: string[] }>();
   readonly applications = new Map<string, GraphApplication>();
   readonly servicePrincipals = new Map<string, GraphServicePrincipal>();
   readonly teams = new Map<string, GraphTeam>();
@@ -449,6 +451,7 @@ export class MsGraphCore implements EmulatorCore {
     this.subscriptions.clear();
     this.organizations.clear();
     this.directoryUsers.clear();
+    this.directoryGroups.clear();
     this.applications.clear();
     this.servicePrincipals.clear();
     this.teams.clear();
@@ -534,7 +537,10 @@ export class MsGraphCore implements EmulatorCore {
       if (!refresh || refresh.revoked || refresh.clientId !== input.client_id) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
-      return this.issueTokens(String(input.client_id), String(input.refresh_token), { scope: refresh.scope });
+      return this.issueTokens(String(input.client_id), String(input.refresh_token), {
+        scope: refresh.scope,
+        tenantId: input.authorityTenant,
+      });
     }
     if (input.grant_type === 'client_credentials') {
       // App-only flow used by the Teams bot connector
@@ -558,9 +564,10 @@ export class MsGraphCore implements EmulatorCore {
   private issueTokens(
     clientId: string,
     existingRefreshToken?: string,
-    claims?: { nonce?: string; scope?: string; appOnly?: boolean }
+    claims?: { nonce?: string; scope?: string; appOnly?: boolean; tenantId?: string }
   ) {
-    const tenantId = EMULATED_TENANT_ID;
+    const tenantId = claims?.tenantId && !['common', 'organizations'].includes(claims.tenantId)
+      ? claims.tenantId : EMULATED_TENANT_ID;
     // OAuth requests accept resource-qualified Graph scopes; Graph access
     // tokens expose permission names in scp, which the application validates.
     const scope = (claims?.scope || 'Mail.Read Mail.Read.Shared offline_access')
@@ -575,6 +582,8 @@ export class MsGraphCore implements EmulatorCore {
       // refreshes and clients cannot overwrite another token's stored identity.
       jti: this.newId('access'),
       tid: tenantId,
+      appid: clientId,
+      preferred_username: 'operator@northwind.example',
       iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
       ...(claims?.appOnly
         ? { roles: this.clients.get(clientId)?.appRoles ?? [] }
@@ -588,10 +597,12 @@ export class MsGraphCore implements EmulatorCore {
       : undefined;
     this.accessTokens.set(accessToken, {
       clientId,
+      tenantId,
       expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000,
     });
     if (refreshToken) this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope });
-    if (existingRefreshToken && existingRefreshToken !== refreshToken) {
+    if (existingRefreshToken && existingRefreshToken !== refreshToken &&
+        (!claims?.tenantId || ['common', 'organizations'].includes(claims.tenantId))) {
       this.refreshTokens.delete(existingRefreshToken);
     }
     return {
@@ -606,7 +617,7 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   /** Returns the token record for a valid bearer token, else throws 401. */
-  authenticate(bearerToken: string): { clientId: string } {
+  authenticate(bearerToken: string): { clientId: string; tenantId: string } {
     const record = this.accessTokens.get(bearerToken);
     if (!record || record.expiresAt <= this.nowMs()) {
       throw new GraphApiError(401, {
@@ -1399,6 +1410,7 @@ export class MsGraphCore implements EmulatorCore {
       subscriptions: [...this.subscriptions.values()],
       organizations: [...this.organizations.values()],
       directoryUsers: [...this.directoryUsers.values()],
+      directoryGroups: [...this.directoryGroups.values()],
       applications: [...this.applications.values()],
       servicePrincipals: [...this.servicePrincipals.values()],
       teams: [...this.teams.values()],
@@ -1445,6 +1457,7 @@ export class MsGraphCore implements EmulatorCore {
     load(this.subscriptions, snapshot.subscriptions, (row) => row.id);
     load(this.organizations, snapshot.organizations, (row) => row.id);
     load(this.directoryUsers, snapshot.directoryUsers, (row) => row.id);
+    load(this.directoryGroups, snapshot.directoryGroups, (row) => row.id);
     load(this.applications, snapshot.applications, (row) => row.id);
     load(this.servicePrincipals, snapshot.servicePrincipals, (row) => row.id);
     load(this.teams, snapshot.teams, (row) => row.id);

@@ -41,6 +41,8 @@ export * from './document-association.interface';
 export * from './document.interface';
 export * from './documentBlockContent.interface';
 export * from './drag.interfaces';
+export * from './diagnostics.interfaces';
+export * from './entraDiagnostics.interfaces';
 export * from './event.interfaces';
 export * from './externalSystem.interfaces';
 export * from './interaction.interfaces';

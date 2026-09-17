@@ -740,7 +740,8 @@
       "driftReexport": "Erneut nach QuickBooks exportieren",
       "syncNow": "Mit QuickBooks synchronisieren",
       "viewInQbo": "In QuickBooks anzeigen",
-      "voidInvoice": "Rechnung stornieren"
+      "voidInvoice": "Rechnung stornieren",
+      "viewInXero": "In Xero anzeigen"
     },
     "loading": "Vorschau wird geladen...",
     "empty": "Wählen Sie eine Rechnung zur Vorschau aus",
@@ -1095,7 +1096,9 @@
     "tooltip": {
       "qboNumberPrefix": "QBO #",
       "lastSynced": "Zuletzt synchronisiert:",
-      "viewInQuickBooks": "In QuickBooks anzeigen"
+      "viewInQuickBooks": "In QuickBooks anzeigen",
+      "viewInXero": "In Xero anzeigen",
+      "xeroNumberPrefix": "Xero-Nr. "
     }
   },
   "templateManager": {

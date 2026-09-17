@@ -13,10 +13,20 @@ import {
   setTelephonyProviderEnabled,
 } from '../../../../actions/integrations/telephonyActions';
 import type { TelephonyOverview } from '../../../../actions/integrations/telephonyActions';
+import { getTelephonyProviderRegistryEntry } from '../../../../lib/telephony/providerRegistry';
 import { TelephonyUnavailableCard } from './TelephonyUnavailableCard';
+import { ThreecxProviderCard } from './ThreecxProviderCard';
 
-const PROVIDER_LABELS: Record<string, string> = {
+const PROVIDER_LABEL_DEFAULTS: Record<string, string> = {
   'teams-phone': 'Teams Phone',
+  '3cx': '3CX',
+};
+
+const PROVIDER_DESCRIPTION_DEFAULTS: Record<string, string> = {
+  'teams-phone':
+    'Journal Teams Phone calls as interactions once each call ends. Call history, not live screen pop.',
+  '3cx':
+    'Journal 3CX calls as interactions and recognise callers in the 3CX client through the CRM template.',
 };
 
 export function TelephonyIntegrationSettings() {
@@ -103,7 +113,21 @@ export function TelephonyIntegrationSettings() {
   return (
     <div className="space-y-6" id="telephony-integrations-setup">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {providers.map((provider) => (
+        {providers.map((provider) => {
+          // The 3CX card is a richer, self-gating surface (release flag + Pro
+          // tier + key/rotate/download); every other provider uses the generic
+          // card below.
+          if (provider.provider === '3cx') {
+            return <ThreecxProviderCard key="3cx" />;
+          }
+          const entry = getTelephonyProviderRegistryEntry(provider.provider);
+          const label = entry
+            ? t(entry.labelKey, { defaultValue: PROVIDER_LABEL_DEFAULTS[provider.provider] ?? provider.provider })
+            : provider.provider;
+          const description = entry
+            ? t(entry.descriptionKey, { defaultValue: PROVIDER_DESCRIPTION_DEFAULTS[provider.provider] ?? '' })
+            : '';
+          return (
           <Card
             key={provider.provider}
             className="relative overflow-hidden transition-shadow hover:shadow-md"
@@ -118,12 +142,10 @@ export function TelephonyIntegrationSettings() {
               </div>
               <div className="space-y-1">
                 <CardTitle className="text-base">
-                  {PROVIDER_LABELS[provider.provider] ?? provider.provider}
+                  {label}
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  {t('integrations.telephony.providers.teamsPhone.description', {
-                    defaultValue: 'Journal Teams Phone calls as interactions once each call ends. Call history, not live screen pop.',
-                  })}
+                  {description}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -180,7 +202,8 @@ export function TelephonyIntegrationSettings() {
               </Button>
             </CardFooter>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {error && (

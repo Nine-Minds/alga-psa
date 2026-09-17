@@ -78,7 +78,12 @@
         "noPermission": {
           "title": "Sin acceso a las integraciones de contabilidad",
           "description": "No tiene permiso para ver ni configurar las integraciones de contabilidad. Solicite acceso a un administrador."
-        }
+        },
+        "changeIntegration": "Elegir otra",
+        "currentIntegration": "Integración contable",
+        "selectedAction": "Seleccionada",
+        "reconnectRequired": "Es necesario volver a conectar",
+        "settingsTitle": "Configuración de {{title}}"
       },
       "modules": {
         "tabs": {
@@ -1974,6 +1979,10 @@
         "syncNowSuccess": "Sincronización completada correctamente.",
         "syncNowSkipped": "Sincronización omitida: {{reason}}",
         "syncNowError": "Error de sincronización: {{error}}",
+        "connectionUnavailableProvider": "La conexión de {{provider}} no está disponible. Vuelva a conectar para reanudar la sincronización.",
+        "defaultRealmError": "No se pudo seleccionar esta organización. Vuelva a conectar e inténtelo de nuevo.",
+        "syncIncomplete": "La sincronización está incompleta. El cursor se conservó porque el proveedor devolvió un conjunto de cambios parcial.",
+        "syncOperationsFailed": "Algunas operaciones contables fallaron. Revise los errores de sincronización antes de reintentar.",
         "viewExceptionsLink": "Ver excepciones",
         "autoApplyCreditsWarning": "QuickBooks está configurado para aplicar créditos automáticamente, lo que entra en conflicto con las aplicaciones de crédito gestionadas desde Alga: QuickBooks puede aplicar las notas de crédito exportadas a otra factura antes de la sincronización. En QuickBooks, vaya a «Account and Settings → Advanced → Automation» y desactive «Automatically apply credits».",
         "configTitle": "Configuración de sincronización",
@@ -1986,7 +1995,20 @@
         "noDefault": "Sin valor predeterminado",
         "saving": "Guardando…",
         "undepositedFunds": "Fondos sin depositar (predeterminado)",
-        "catalogLoadError": "No se pudieron cargar las opciones de configuración de sincronización de QuickBooks."
+        "catalogLoadError": "No se pudieron cargar las opciones de configuración de sincronización de QuickBooks.",
+        "healthCardTitleProvider": "Estado de sincronización de {{provider}}",
+        "healthCardDescriptionProvider": "Estado y controles de sincronización contable de {{provider}}. Se ejecuta cada 15 minutos.",
+        "refreshTokenExpiredProvider": "Token de {{provider}} caducado: vuelva a conectar para reanudar la sincronización.",
+        "refreshTokenExpiryProvider": "El token de {{provider}} caduca el {{date}}",
+        "autoProvisionCustomersLabelProvider": "Crear clientes de {{provider}} automáticamente",
+        "connectedOrganisations": "Organizaciones de Xero",
+        "defaultOrganisationDescription": "La organización predeterminada se utiliza para la sincronización, las exportaciones y las asignaciones.",
+        "outstandingItems": "Elementos pendientes",
+        "outstandingItemsDescription": "Elementos que aún requieren revisión u otro intento de sincronización.",
+        "outstandingItemsReconnect": "En todas las organizaciones vinculadas. Estos elementos se conservan hasta que vuelva a conectar Xero.",
+        "refreshTokenValidUntilProvider": "Autorización de {{provider}} válida hasta {{date}}. Los tokens se renuevan automáticamente.",
+        "syncSucceeded": "Sincronización completada",
+        "syncStopped": "Sincronización detenida"
       },
       "itemImport": {
         "description": "Importe sus productos y servicios de QuickBooks al catálogo de servicios de Alga para la empresa de QuickBooks conectada. QuickBooks seguirá siendo la fuente de referencia para nombres, tarifas, SKU, descripciones y costos; el método de facturación, la unidad de medida y el tipo de servicio se configuran aquí y después quedan administrados por Alga. Este paso es opcional; puede omitirlo con Siguiente.",
@@ -3500,7 +3522,9 @@
           "saveCredentials": "Guardar credenciales de Xero",
           "saving": "Guardando…",
           "retryDisconnect": "Reintentar desconexión",
-          "forceFinalizeDisconnect": "Forzar finalización"
+          "forceFinalizeDisconnect": "Forzar finalización",
+          "disconnectAll": "Desconectar todas las organizaciones de Xero",
+          "replaceCredentials": "Reemplazar credenciales"
         },
         "badges": {
           "connectionExpired": "Conexión caducada",
@@ -3529,14 +3553,22 @@
         "clientIdPlaceholder": "Pegue su Xero Client ID propio del inquilino",
         "clientSecretLabel": "Secreto de cliente de Xero",
         "clientSecretPlaceholder": "Pegue su Xero Client Secret propio del inquilino",
-        "connectSuccess": "Xero conectado correctamente. La primera organización conectada es ahora el contexto predeterminado de Xero en vivo.",
+        "connectSuccess": "Xero conectado. {{count}} organizaciones vinculadas; {{organisation}} es la predeterminada para la sincronización.",
         "connection": {
           "connectionId": "ID de conexión: {{id}}",
           "defaultOrganisation": "Organización predeterminada",
           "description": "Inicie OAuth solo después de configurar la aplicación Xero propia del inquilino. Desconectarse elimina los tokens de acceso de Xero almacenados pero mantiene las credenciales de la aplicación propias del inquilino.",
           "notConnected": "Aún no hay ninguna organización de Xero en vivo conectada. Guarde las credenciales y haga clic en Conectar Xero.",
           "title": "Conexión en vivo con Xero",
-          "unknown": "desconocido"
+          "unknown": "desconocido",
+          "defaultBadge": "Predeterminada para sincronización",
+          "linkedOrganisations": "Organizaciones vinculadas ({{count}})",
+          "multipleOrganisationScope": "Esta autorización incluye {{count}} organizaciones de Xero. La reconexión y la desconexión se aplican a todas.",
+          "reconnectRequiredBadge": "Es necesario volver a conectar",
+          "organisationScope": "La reconexión y la desconexión se aplican a todas las organizaciones de esta lista.",
+          "reconnectRequiredDescription": "La sincronización y las exportaciones están en pausa. Vuelva a conectar una vez para reanudarlas en las {{count}} organizaciones vinculadas.",
+          "reconnectRequiredTitle": "Conexión caducada",
+          "singleOrganisationScope": "La reconexión y la desconexión se aplican a esta organización de Xero."
         },
         "credentialsSaved": "Credenciales de Xero guardadas. Ahora puede iniciar el flujo de OAuth en vivo de Xero.",
         "csvAvailableMiddle": "en esta misma sección de Contabilidad y gestione las exportaciones desde",
@@ -3549,11 +3581,11 @@
           "load": "No se pudo cargar la configuración de Xero.",
           "saveCredentials": "No se pudieron guardar las credenciales de Xero."
         },
-        "howItWorksDescription": "Guarde aquí un Xero Client ID y Client Secret propios del inquilino, complete el flujo OAuth de Xero, y AlgaPSA usará la primera organización de Xero conectada como contexto predeterminado en vivo.",
+        "howItWorksDescription": "Guarde aquí un Xero Client ID y Client Secret propios del inquilino, complete el flujo OAuth de Xero, y AlgaPSA usará la organización de Xero seleccionada como predeterminada para las exportaciones y la sincronización en vivo.",
         "howItWorksTitle": "Cómo funciona Xero en vivo en esta versión",
         "loading": "Cargando configuración de Xero…",
         "mapping": {
-          "alert": "Los artículos, cuentas de ingresos, tasas fiscales y categorías de seguimiento de Xero se cargan desde la organización conectada predeterminada para que las exportaciones en vivo puedan seguir usando la primera conexión de Xero almacenada en la v1.",
+          "alert": "Los artículos, cuentas de ingresos, tasas fiscales y categorías de seguimiento de Xero se cargan desde la organización predeterminada seleccionada, y las asignaciones se guardan para esa conexión, de modo que las exportaciones y la conciliación en vivo usan la misma organización.",
           "descriptionPrefix": "Configure las asignaciones de Xero en vivo para la organización conectada predeterminada. Estas asignaciones se limitan a",
           "placeholderAlert": "El administrador de asignaciones estará disponible después de conectar la primera organización de Xero y establecerla como contexto predeterminado de Xero en vivo.",
           "placeholderDescription": "Conecte una organización de Xero en vivo antes de configurar las asignaciones de artículos e impuestos de Xero en vivo.",
@@ -3566,7 +3598,7 @@
         "requiredScopes": "Scopes requeridos",
         "scopeOverride": "Anulación de despliegue (XERO_OAUTH_SCOPES)",
         "scopeOverrideInvalid": "La anulación XERO_OAUTH_SCOPES se ignoró porque contiene entradas no válidas ({{scopes}}). En su lugar, se utilizan los scopes predeterminados.",
-        "scopeReconnectNote": "Estos scopes se aplican a las autorizaciones nuevas. Una conexión existente conserva los scopes que se le concedieron originalmente. Para aplicar el conjunto actual, desconecte y vuelva a conectar Xero. También puede eliminar esta aplicación de Connected apps en Xero para revocar concesiones anteriores.",
+        "scopeReconnectNote": "Estos scopes se aplican a las autorizaciones nuevas. Una conexión existente conserva los scopes que se le concedieron originalmente. Para aplicar el conjunto actual, desconecte y vuelva a conectar Xero. Actualizar el token conserva los permisos existentes; solo una nueva autorización otorga permisos nuevos. También puede eliminar esta aplicación de Connected apps en Xero para revocar concesiones anteriores.",
         "storedClientId": "Client ID almacenado: {{value}}",
         "storedClientSecret": "Client secret almacenado: {{value}}",
         "tenantOauthDescription": "Pegue las credenciales de la aplicación Xero registradas para este inquilino. Los valores de secreto nunca se devuelven al navegador después de guardarse.",
@@ -3585,8 +3617,14 @@
           "targetRevoked": "revocado",
           "targetFailed": "requiere atención",
           "targetPending": "pendiente",
-          "failedPermanentDescription": "La limpieza del proveedor encontró un error permanente. Puede reintentar o forzar la finalización para eliminar las credenciales almacenadas con un registro de auditoría."
-        }
+          "failedPermanentDescription": "La limpieza del proveedor encontró un error permanente. Puede reintentar o forzar la finalización para eliminar las credenciales almacenadas con un registro de auditoría.",
+          "confirmDescription": "Esto desconecta {{organisations}} y pausa la sincronización y las exportaciones. Las credenciales de su aplicación Xero seguirán guardadas.",
+          "confirmTitle": "¿Desconectar Xero de Alga PSA?",
+          "dangerDescription": "Detiene la sincronización y las exportaciones y elimina las {{count}} organizaciones vinculadas. Las credenciales de la aplicación siguen guardadas.",
+          "dangerTitle": "Desconectar Xero"
+        },
+        "connectNeedsAttention": "La autorización de Xero se ha completado, pero la conexión aún requiere atención. La sincronización sigue en pausa.",
+        "credentialsStoredDescription": "El ID y el secreto de cliente se almacenan de forma segura."
       }
     },
     "stripe": {
@@ -3680,7 +3718,88 @@
       "providers": {
         "teamsPhone": {
           "description": "Registra las llamadas de Teams Phone como interacciones al terminar cada llamada. Historial de llamadas, no aviso en pantalla en vivo.",
-          "prerequisite": "Configure primero la integración de Microsoft Teams: Teams Phone reutiliza su perfil de Microsoft."
+          "prerequisite": "Configure primero la integración de Microsoft Teams: Teams Phone reutiliza su perfil de Microsoft.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Registra las llamadas de 3CX como interacciones y reconoce a los llamantes en el cliente de 3CX mediante la plantilla CRM.",
+          "permission": "Necesita el permiso de configuración del sistema para gestionar la integración de 3CX.",
+          "endpoint": "URL base del endpoint",
+          "copy": "Copiar",
+          "apiKey": "Clave de API",
+          "rotate": "Rotar",
+          "fullKeyWarning": "Copie esta clave ahora — no se volverá a mostrar.",
+          "download": "Descargar plantilla",
+          "tierRequired": "La telefonía 3CX requiere el plan Pro.",
+          "templateStale": "Hay una plantilla más reciente. Descárguela y vuelva a subirla en la consola de 3CX.",
+          "pbx": {
+            "title": "API de la centralita (3CX Enterprise/AI)",
+            "help": "La ventana emergente, la llamada con un clic, la importación del historial y la sincronización de la agenda usan las API Call Control y Configuration de 3CX, que requieren una licencia 3CX Enterprise o AI (8SC+). Cree una aplicación de API en la consola de administración de 3CX en Integraciones → API, marque ambos accesos y añada cada extensión que quiera supervisar.",
+            "baseUrl": "Dirección de la centralita",
+            "clientId": "Id. de cliente (extensión de la aplicación de API)",
+            "clientSecret": "Secreto de cliente",
+            "replaceSecret": "Reemplazar",
+            "save": "Guardar credenciales",
+            "test": "Probar conexión",
+            "clear": "Quitar",
+            "connected": "Conectado",
+            "granted": "concedido",
+            "notGranted": "no concedido",
+            "callControl": "Control de llamadas",
+            "xapi": "API de configuración",
+            "lastChecked": "Última comprobación",
+            "notConnectedHint": "Conecte la API de la centralita arriba para usar esta función."
+          },
+          "extensions": {
+            "title": "Extensiones",
+            "sync": "Sincronizar desde la centralita",
+            "lastSync": "Última sincronización",
+            "empty": "Aún no se han sincronizado extensiones.",
+            "dn": "Extensión",
+            "pbxUser": "Usuario de la centralita",
+            "algaUser": "Usuario de AlgaPSA",
+            "unmapped": "Sin asignar",
+            "auto": "asignado por correo"
+          },
+          "cdr": {
+            "title": "Importación del historial de llamadas",
+            "help": "Lee el registro de llamadas de la centralita cada hora y registra las llamadas externas que aún no están en el libro.",
+            "lookback": "Días de historial en la primera ejecución",
+            "lastRun": "Última ejecución",
+            "added": "Registros añadidos"
+          },
+          "phonebook": {
+            "title": "Sincronización de la agenda",
+            "help": "Envía los contactos con número de teléfono a la agenda de empresa de 3CX y añade a los contactos coincidentes los números que solo existen en la centralita.",
+            "schedule": "Programación de la conciliación",
+            "daily": "Diaria",
+            "hourly": "Cada hora",
+            "pushNow": "Enviar ahora",
+            "importNow": "Importar ahora",
+            "lastPush": "Último envío",
+            "lastImport": "Última importación",
+            "countsLegend": "Recuentos: creados/actualizados/eliminados/importados/omitidos"
+          },
+          "queue": {
+            "title": "Contactos creados desde 3CX",
+            "empty": "Nada pendiente. Aquí aparecen los contactos creados desde el cliente 3CX sin un cliente coincidente.",
+            "pendingBadge": "falta el correo",
+            "unmappedBadge": "sin cliente",
+            "company": "Empresa",
+            "chooseClient": "Elija un cliente…",
+            "apply": "Aplicar",
+            "leaveWithoutClient": "Dejar sin cliente",
+            "complete": "Completar",
+            "dismiss": "Descartar",
+            "completeTitle": "Completar el contacto de 3CX",
+            "firstName": "Nombre",
+            "lastName": "Apellidos",
+            "email": "Correo electrónico",
+            "number": "Número de teléfono",
+            "cancel": "Cancelar",
+            "save": "Crear contacto"
+          }
         }
       },
       "subscriptionExpires": "La suscripción se renueva antes de",
@@ -3717,7 +3836,8 @@
         "assignTo": "Asignar a",
         "searchPlaceholder": "Buscar contactos y clientes…",
         "noTargets": "No hay contactos ni clientes coincidentes.",
-        "chooseTarget": "Asignar a un cliente…"
+        "chooseTarget": "Asignar a un cliente…",
+        "chatBadge": "Chat"
       },
       "forbidden": "No tiene permiso para ver la configuración de telefonía de este inquilino.",
       "paywall": {
@@ -3816,6 +3936,7 @@
       "enterpriseOnly": "La integración con Xero solo está disponible en Enterprise Edition.",
       "viewPermission": "Prohibido: no tiene permiso para ver los ajustes de la integración con Xero.",
       "organisationDisconnected": "La organización de Xero seleccionada ya no está conectada. Vuelva a conectar Xero e inténtelo de nuevo.",
+      "organisationAmbiguous": "La organización Xero predeterminada guardada pertenece a más de una conexión. Elija qué conexión es la predeterminada en la configuración de contabilidad.",
       "accounts": {
         "notConnected": "Conecte Xero antes de cargar las cuentas de Xero.",
         "reconnect": "Vuelva a conectar Xero antes de cargar las cuentas de Xero.",
@@ -3851,6 +3972,23 @@
       "contactWithoutClient": "Ya existe en el sistema un contacto con esta dirección de correo electrónico sin asignación de cliente",
       "emailOnAnotherClient": "Este correo electrónico ya está asociado a otro cliente",
       "emailOnAnotherClientNamed": "Este correo electrónico ya está asociado a {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Llamada entrante",
+      "unknownCaller": "Llamante desconocido",
+      "noNumber": "Sin identificador de llamada",
+      "extension": "Sonando en la extensión {{dn}}",
+      "openTickets": "Tickets abiertos",
+      "recentInteractions": "Interacciones recientes",
+      "openContact": "Abrir contacto",
+      "openClient": "Abrir cliente",
+      "newTicket": "Nuevo ticket",
+      "createContact": "Crear contacto",
+      "dismiss": "Descartar",
+      "answer": "Contestar",
+      "answerFailed": "La centralita no pudo contestar la llamada"
     }
   }
 }

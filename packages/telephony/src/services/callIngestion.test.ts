@@ -500,6 +500,78 @@ describe('ingestCanonicalCall', () => {
   });
 });
 
+describe('ingestCanonicalCall preferredContactId', () => {
+  beforeEach(() => {
+    for (const name of Object.keys(hoisted.tables)) {
+      hoisted.tables[name].length = 0;
+    }
+    hoisted.interactionCreate.mockClear();
+    seedTenantBasics();
+  });
+
+  it('T178: an active preferred contact is the match even when the number points elsewhere', async () => {
+    knownContact();
+    table('contacts').push({
+      tenant: TENANT,
+      contact_name_id: 'contact-scarecrow',
+      client_id: 'client-emerald',
+      is_inactive: false,
+    });
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: inboundCall,
+      preferredContactId: 'contact-scarecrow',
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'matched', created: true });
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      matched_contact_id: 'contact-scarecrow',
+      matched_client_id: 'client-emerald',
+      match_candidates: '[]',
+    });
+    expect(table('interactions')[0]).toMatchObject({
+      contact_name_id: 'contact-scarecrow',
+      client_id: 'client-emerald',
+    });
+  });
+
+  it('T179: an inactive preferred contact falls back to number matching', async () => {
+    knownContact();
+    table('contacts').push({
+      tenant: TENANT,
+      contact_name_id: 'contact-scarecrow',
+      client_id: 'client-emerald',
+      is_inactive: true,
+    });
+
+    await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall, preferredContactId: 'contact-scarecrow' });
+
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      match_status: 'matched',
+      matched_contact_id: 'contact-dorothy',
+      matched_client_id: 'client-oz',
+    });
+  });
+
+  it('T179: a preferred contact that does not exist in the tenant falls back to number matching', async () => {
+    table('contacts').push({
+      tenant: 'tenant-other',
+      contact_name_id: 'contact-foreign',
+      client_id: 'client-foreign',
+      is_inactive: false,
+    });
+
+    await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall, preferredContactId: 'contact-foreign' });
+
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      match_status: 'unmatched',
+      matched_contact_id: null,
+    });
+    expect(table('interactions')).toHaveLength(0);
+  });
+});
+
 describe('resolveCallMatch', () => {
   beforeEach(() => {
     for (const name of Object.keys(hoisted.tables)) {

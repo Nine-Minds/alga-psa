@@ -660,5 +660,173 @@
       "fail": "Niepowodzenie",
       "skip": "Pominięto"
     }
+  },
+  "integrations": {
+    "entra": {
+      "diagnostics": {
+        "title": "Diagnostyka Entra",
+        "description": "Kontrole połączenia Entra, uwierzytelniania partnera, wykrywania i stanu synchronizacji w trybie tylko do odczytu.",
+        "run": "Uruchom diagnostykę",
+        "labels": {
+          "overall": "Ogółem",
+          "connectionType": "Połączenie",
+          "status": "Status",
+          "mappedClients": "Przypisani klienci",
+          "managedTenants": "Zarządzane organizacje",
+          "recommendations": "Zalecenia",
+          "blockedBy": "Blokowane przez",
+          "error": "Błąd",
+          "readiness": "Gotowość dostępu"
+        },
+        "statuses": {
+          "pass": "Powodzenie",
+          "warn": "Ostrzeżenie",
+          "fail": "Niepowodzenie",
+          "skip": "Pominięto"
+        },
+        "steps": {
+          "edition_tier_rbac": "Edycja, poziom i gotowość dostępu",
+          "connection_row": "Aktywne połączenie Entra",
+          "app_registration_binding": "Powiązanie rejestracji aplikacji Microsoft",
+          "client_secret_present": "Klucz tajny klienta rejestracji aplikacji",
+          "expected_app_registration_values": "Oczekiwane wartości rejestracji aplikacji",
+          "sync_worker_and_schedule": "Proces synchronizacji i harmonogram",
+          "token_set_present": "Zapisane tokeny bezpośredniego OAuth",
+          "token_refresh": "Odśwież token dostępu partnera",
+          "token_claims": "Dekoduj oświadczenia i zakresy tokenu dostępu",
+          "graph_me": "Podstawowa kontrola Microsoft Graph /me",
+          "managed_tenants_endpoint": "Dostępność punktu końcowego zarządzanych organizacji",
+          "managed_tenants_count": "Wykrywanie zarządzanych organizacji",
+          "mappings_vs_discovery": "Potwierdzone przypisania a bieżące wykrywanie",
+          "cipp_credentials_present": "Poświadczenia CIPP",
+          "cipp_reachable": "Dostępność interfejsu API CIPP",
+          "cipp_auth": "Poświadczenie interfejsu API CIPP",
+          "cipp_tenant_list": "Lista organizacji CIPP",
+          "cipp_mappings_vs_list": "Potwierdzone przypisania a lista organizacji CIPP",
+          "last_runs": "Ostatnie synchronizacje",
+          "per_tenant_last_result": "Wynik ostatniej synchronizacji dla każdej organizacji",
+          "reconciliation_queue": "Kolejka uzgadniania",
+          "tenant_token_mint": "Wystaw token organizacji klienta",
+          "users_read": "Odczytaj użytkowników katalogu",
+          "groups_read": "Odczytaj grupy katalogu",
+          "entitlement_group_resolves": "Znajdź grupę uprawnień",
+          "user_yield_preview": "Podgląd uwzględnionych użytkowników",
+          "per_tenant_users": "Użytkownicy CIPP według organizacji"
+        },
+        "readiness": {
+          "authenticated": "Zalogowano",
+          "notClientPortal": "Nie jest użytkownikiem portalu klienta",
+          "edition": "Edycja Enterprise",
+          "integrationsTier": "Poziom integracji",
+          "entraSyncTier": "Poziom synchronizacji Entra (Pro)",
+          "systemSettingsRead": "Odczyt system_settings"
+        },
+        "states": {
+          "running": "Trwa diagnostyka..."
+        },
+        "errors": {
+          "failed": "Diagnostyka nie powiodła się",
+          "clientFailed": "Diagnostyka klienta nie powiodła się"
+        },
+        "actions": {
+          "copySupportBundle": "Kopiuj pakiet pomocy technicznej",
+          "copied": "Skopiowano",
+          "downloadJson": "Pobierz JSON",
+          "copy": "Kopiuj",
+          "open": "Otwórz",
+          "open_url": "Otwórz",
+          "navigate": "Przejdź do",
+          "goToStep": "Przejdź do kroku",
+          "includeIdentifiers": "Uwzględnij identyfikatory w eksporcie"
+        },
+        "clients": {
+          "title": "Diagnostyka wybranych klientów",
+          "selectedCount": "Wybrano: {{count}}",
+          "yieldToggle": "Podgląd uwzględnionych użytkowników (większy koszt)",
+          "run": "Uruchom diagnostykę klientów",
+          "progress": "Ukończono {{completed}} z {{total}}",
+          "confirmTitle": "Uruchomić diagnostykę dla wielu klientów?",
+          "confirmMessage": "Wybrano {{count}} klientów. Dla każdego klienta wystawiany jest token i wykonywana jest niewielka liczba żądań Graph.",
+          "confirmRun": "Uruchom",
+          "unavailableName": "Nazwa niedostępna",
+          "selectAll": "Zaznacz wszystko",
+          "clear": "Wyczyść zaznaczenie",
+          "categories": {
+            "ok": "Poprawnie",
+            "need_consent": "Wymagana zgoda",
+            "conditional_access": "Dostęp warunkowy",
+            "missing_role": "Brak roli",
+            "other": "Inne"
+          },
+          "details": {
+            "completed": "Ukończono",
+            "latestSyncFailure": "Ostatni błąd synchronizacji"
+          },
+          "columns": {
+            "client": "Klient",
+            "tenant": "Organizacja",
+            "status": "Status",
+            "remedy": "Rozwiązanie",
+            "complete": "Ukończono",
+            "details": "Szczegóły"
+          },
+          "complete": "Ukończono",
+          "partial": "Częściowo"
+        },
+        "remedies": {
+          "connectEntra": "Połącz Microsoft Entra w sekcji Ustawienia > Integracje > Entra.",
+          "selectAppRegistration": "Wybierz rejestrację aplikacji Microsoft dla Entra, a następnie połącz ponownie.",
+          "selectExistingApp": "Powiązana aplikacja Microsoft już nie istnieje. Wybierz istniejącą rejestrację aplikacji, a następnie połącz ponownie.",
+          "chooseAnotherApp": "Powiązana rejestracja aplikacji Microsoft jest zarchiwizowana. Wybierz inną rejestrację, a następnie połącz ponownie.",
+          "addEntraCapability": "Edytuj rejestrację aplikacji w sekcji Ustawienia > Integracje > Microsoft i włącz funkcję Entra.",
+          "secretExpiryUnknown": "Termin ważności klucza tajnego klienta jest nieznany. Klucze tajne klientów Microsoft wygasają po 6–24 miesiącach; odnawiaj je terminowo w Azure.",
+          "clientSecretMissing": "Brakuje klucza tajnego klienta rejestracji aplikacji lub jest on pusty. Odnów klucz w Azure i zaktualizuj rejestrację w sekcji Ustawienia > Integracje > Microsoft.",
+          "entraAccessDenied": "Odmówiono dostępu do diagnostyki Entra dla tego użytkownika lub obszaru roboczego.",
+          "temporalUnreachable": "Nie można połączyć się z usługą frontend Temporal. Automatyczna synchronizacja nie może działać, dopóki usługa nie będzie dostępna.",
+          "temporalNoWorkers": "Temporal jest dostępny, ale żaden proces nie odpytuje kolejki zadań Entra. Zaplanowane synchronizacje nie będą przetwarzane.",
+          "syncDisabled": "Automatyczna synchronizacja Entra jest wyłączona dla tego obszaru roboczego.",
+          "scheduleLookupFailed": "Nie udało się sprawdzić harmonogramu Temporal. Sprawdź uprawnienia i łączność z Temporal.",
+          "scheduleMissing": "Automatyczna synchronizacja jest włączona, ale nie znaleziono harmonogramu Temporal. Zapisz harmonogram, aby go zastosować.",
+          "scheduleIntervalMismatch": "Interwał harmonogramu Temporal ({{interval}} min) różni się od zapisanego ustawienia ({{configured}} min). Zapisz harmonogram, aby je uzgodnić.",
+          "reconnectEntra": "Nie zapisano tokenu odświeżania. Połącz ponownie Microsoft Entra.",
+          "noManagedTenants": "Nie zwrócono zarządzanych organizacji. Partner musi być wdrożony w Microsoft 365 Lighthouse z aktywnymi relacjami GDAP.",
+          "mappedTenantMissing": "Wykrywanie nie zwróciło przypisanej organizacji „{{client}}”. Relacja GDAP mogła wygasnąć lub zostać zakończona.",
+          "mappingsLookupFailed": "Nie udało się odczytać potwierdzonych przypisań organizacji. Uruchom diagnostykę ponownie; jeśli problem się utrzymuje, sprawdź przypisania.",
+          "cippCredentialsMissing": "Wymagane są bazowy adres URL CIPP i token API. Skonfiguruj je na karcie Połączenie.",
+          "cippAuthRejected": "CIPP odrzucił poświadczenie API. Odnów klucz API CIPP w sekcji Ustawienia > CIPP > Dostęp do API; nie jest to klucz tajny klienta Azure.",
+          "cippEmptyTenantList": "CIPP nie zwrócił organizacji. Sprawdź widoczność klientów i konfigurację CIPP.",
+          "cippUnreachable": "Nie można połączyć się z CIPP. Sprawdź bazowy adres URL, DNS/TLS i łączność wychodzącą.",
+          "cippPerTenantFailed": "CIPP nie mógł odczytać katalogu tej organizacji.",
+          "consecutiveSyncFailures": "Dwie ostatnie synchronizacje nie zakończyły się pomyślnie. Sprawdź historię synchronizacji i błędy poszczególnych organizacji.",
+          "reconciliationOpenItems": "W kolejce weryfikacji czeka {{count}} elementów; niejednoznaczne dopasowania nigdy nie są łączone automatycznie.",
+          "customerConsentRequired": "Aplikacja wymaga zgody administratora w organizacji tego klienta. Ponowne połączenie partnera nie pomoże; otwórz link zgody i udziel jej jako administrator klienta.",
+          "entitlementGroupNotSecurity": "Skonfigurowana grupa uprawnień nie jest grupą zabezpieczeń; egzekwowanie członkostwa może być niemożliwe.",
+          "entitlementGroupMissing": "Skonfigurowana grupa uprawnień już nie istnieje w organizacji tego klienta.",
+          "allUsersExcluded": "Bieżące reguły filtrowania wykluczyły wszystkich użytkowników tego katalogu; synchronizacja nie utworzyłaby kontaktów.",
+          "yieldTruncated": "Podgląd został przerwany wcześniej ze względu na duży katalog. Liczby są wartościami minimalnymi i nie obejmują całego katalogu.",
+          "yieldFailed": "Nie udało się obliczyć podglądu uwzględnionych użytkowników.",
+          "missingScope": "W tokenie brakuje {{scope}}. Udziel zgody administratora, a następnie połącz ponownie Microsoft Entra.",
+          "appClientIdMismatch": "Token został wystawiony dla innej aplikacji niż powiązana rejestracja. Połącz ponownie Microsoft Entra z właściwą aplikacją.",
+          "client_secret_invalid": "Microsoft odrzucił poświadczenie aplikacji (invalid_client / AADSTS7000222). Odnów klucz tajny klienta w Azure, zaktualizuj rejestrację Microsoft w sekcji Ustawienia > Integracje > Microsoft, a następnie połącz ponownie.",
+          "app_not_found": "Microsoft nie znalazł aplikacji (AADSTS700016). Sprawdź powiązany identyfikator klienta i czy aplikacja obsługuje wiele organizacji.",
+          "partner_consent_required": "Brakuje zgody administratora organizacji partnera (AADSTS65001 / consent_required). Udziel zgody aplikacji w organizacji partnera, a następnie połącz ponownie.",
+          "conditional_access": "Dostęp warunkowy zablokował żądanie (AADSTS50076/AADSTS50079). Konto używane do połączenia musi spełniać zasady MFA i zgodności urządzenia.",
+          "refresh_token_invalid": "Uprawnienie do odświeżania wygasło lub zostało odwołane. Połącz ponownie Microsoft Entra, aby wystawić nowy token odświeżania.",
+          "tenant_not_found": "Microsoft nie mógł znaleźć organizacji (AADSTS90002). Sprawdź jej identyfikator w połączeniu lub przypisaniu.",
+          "account_not_allowed": "Konto używane do połączenia nie jest dozwolone w organizacji (AADSTS50020). Sprawdź, czy ma dostęp lub jest kontem gościa.",
+          "network_unreachable": "Nie można połączyć się z Microsoft Graph. Sprawdź łączność wychodzącą, DNS i zaufanie TLS.",
+          "token_rejected": "Microsoft odrzucił token (401). Połącz ponownie Microsoft Entra lub sprawdź zgodę klienta.",
+          "forbidden": "Microsoft Graph zwrócił 403 (Zabronione). Sprawdź delegowane uprawnienia, zgodę i przypisania ról.",
+          "request_failed": "Żądanie do Microsoft nie powiodło się. Rozwiń krok, aby zobaczyć kod błędu i identyfikator korelacji.",
+          "customer_directory_role_missing": "Microsoft Graph odmówił odczytu katalogu klienta (403). Konto delegowane wymaga roli odczytu katalogu w tej organizacji, zwykle przypisanej przez GDAP (np. Czytelnicy katalogów).",
+          "managedTenantsEndpointFault": "Graph odrzucił żądanie managedTenants; jest to błąd punktu końcowego po stronie Alga. Skontaktuj się z pomocą techniczną i podaj identyfikator żądania.",
+          "cippHttpError": "CIPP odpowiedział kodem HTTP {{status}} dla każdego punktu końcowego listy organizacji. Jest to błąd pobierania listy po stronie CIPP, a nie pusta lista.",
+          "cippInvalidPayload": "CIPP zwrócił odpowiedź, która nie jest listą organizacji. Sprawdź wersję interfejsu API CIPP i punkt końcowy.",
+          "schedulePaused": "Automatyczna synchronizacja jest włączona, ale harmonogram Temporal jest wstrzymany; żadne wykonania się nie rozpoczną.",
+          "temporalWorkerUnknown": "Temporal jest dostępny, ale brak danych o procesach odpytujących kolejkę; nie udało się potwierdzić ich dostępności.",
+          "managedTenantConsentMissing": "Microsoft zaakceptował logowanie, ale odmówił dostępu do listy zarządzanych organizacji. Administrator globalny musi wyrazić zgodę na żądane uprawnienia."
+        }
+      }
+    }
   }
 }

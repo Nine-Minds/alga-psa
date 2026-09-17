@@ -1,7 +1,49 @@
-import { describe, expect, it } from 'vitest';
+/** @vitest-environment jsdom */
+import React from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams('category=providers'),
+}));
+vi.mock('next/dynamic', () => ({ default: () => () => null }));
+vi.mock('@alga-psa/core', () => ({
+  get isEnterprise() { return process.env.NEXT_PUBLIC_EDITION === 'enterprise'; },
+}));
+vi.mock('./useHuduIntegrationEnabled', () => ({ useHuduIntegrationEnabled: () => ({ enabled: false }) }));
+vi.mock('./AccountingIntegrationsSetup', () => ({ default: () => null }));
+vi.mock('./RmmIntegrationsSetup', () => ({ default: () => null }));
+vi.mock('../../email/EmailProviderConfiguration', () => ({
+  EmailProviderConfiguration: () => <div>Email configuration</div>,
+}));
+vi.mock('./ProviderCredentialsWorkbench', () => ({
+  ProviderCredentialsWorkbench: ({ canUseTeams, isEnterpriseEdition }: {
+    canUseTeams: boolean;
+    isEnterpriseEdition: boolean;
+  }) => (
+    <div data-testid="provider-workbench" data-teams-enabled={canUseTeams} data-enterprise={isEnterpriseEdition}>
+      Shared provider credentials
+    </div>
+  ),
+}));
+vi.mock('./CalendarEnterpriseIntegrationSettings', () => ({ CalendarEnterpriseIntegrationSettings: () => null }));
+// Keep the real EE-safe wrapper and category navigation; only stub the inner panel.
+vi.mock('./TeamsIntegrationSettings', () => ({
+  TeamsIntegrationSettings: () => <div>Teams configuration</div>,
+}));
+vi.mock('./telephony/TelephonyEnterpriseIntegrationSettings', () => ({ TelephonyEnterpriseIntegrationSettings: () => null }));
+vi.mock('@alga-psa/integrations/entra/components/entry', () => ({ EntraIntegrationSummaryCard: () => null }));
+
+import IntegrationsSettingsPage from './IntegrationsSettingsPage';
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllEnvs();
+  window.history.replaceState({}, '', '/');
+});
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.join(__dirname, '../../../../../..');
@@ -34,7 +76,7 @@ describe('IntegrationsSettingsPage providers tab', () => {
     expect(source).toContain("id: 'communication'");
     expect(source).toContain("id: 'teams'");
     expect(source).toContain('...(isEEAvailable ? [{');
-    expect(source).toContain('component: TeamsEnterpriseIntegrationSettings');
+    expect(source).toContain('content: <TeamsEnterpriseIntegrationSettings />');
     expect(source).toContain("t('integrations.categories.communication.description')");
     expect(source).toContain("t('integrations.categories.providers.description.ee')");
     expect(source).toContain("t('integrations.categories.providers.description.oss')");
@@ -45,6 +87,34 @@ describe('IntegrationsSettingsPage providers tab', () => {
       'Set up Google or Microsoft for staff sign-in, email, calendar, and other integrations.'
     );
     expect(source).not.toContain('Configure Teams from the Providers tab');
+  });
+
+  it.each(['enterprise', 'community'])('renders shared providers and gates Teams under Communication in %s edition', (edition) => {
+    vi.stubEnv('NEXT_PUBLIC_EDITION', edition);
+    render(<IntegrationsSettingsPage />);
+
+    const isEnterprise = edition === 'enterprise';
+    expect(screen.getByTestId('provider-workbench')).toBeVisible();
+    expect(screen.getByTestId('provider-workbench')).toHaveAttribute('data-teams-enabled', String(isEnterprise));
+    expect(screen.getByTestId('provider-workbench')).toHaveAttribute('data-enterprise', String(isEnterprise));
+    expect(screen.queryByText('Teams configuration')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'integrations.items.teams.name' })).not.toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'integrations.categories.communication.label' }), {
+      button: 0, ctrlKey: false,
+    });
+    expect(screen.getByText('Email configuration')).toBeVisible();
+    expect(screen.queryByTestId('provider-workbench')).not.toBeInTheDocument();
+
+    if (isEnterprise) {
+      expect(screen.getByText('Teams configuration')).not.toBeVisible();
+      fireEvent.click(screen.getByRole('button', { name: 'integrations.items.teams.name' }));
+      expect(screen.getByText('Teams configuration')).toBeVisible();
+      expect(screen.getByText('Email configuration')).not.toBeVisible();
+    } else {
+      expect(screen.queryByRole('button', { name: 'integrations.items.teams.name' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Teams configuration')).not.toBeInTheDocument();
+    }
   });
 
   it('T081/T082/T347/T348/T349/T350/T363/T364: exports the EE-safe Teams settings wrapper instead of any legacy shared Teams card naming', () => {

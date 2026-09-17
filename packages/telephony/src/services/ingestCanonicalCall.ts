@@ -18,6 +18,12 @@ export interface IngestCanonicalCallInput {
   knex?: any;
   /** Overrides the tenant's own-company country for imports/tests. */
   defaultCountryCode?: string | null;
+  /**
+   * Contact the provider already resolved for this call (3CX echoes the
+   * lookup's EntityId back on ReportCall). Wins over number matching when the
+   * contact exists and is active.
+   */
+  preferredContactId?: string | null;
 }
 
 export type IngestCanonicalCallOutcome =
@@ -95,6 +101,32 @@ async function resolvePendingCallIntent(input: {
   return eligible.length === 1 ? eligible[0] : null;
 }
 
+async function resolvePreferredContactMatch(
+  knex: any,
+  tenantId: string,
+  contactId: string | null | undefined,
+): Promise<CallMatchResult | null> {
+  if (!contactId) return null;
+
+  const contact = await tenantDb(knex, tenantId).table('contacts')
+    .where({ contact_name_id: contactId })
+    .first('contact_name_id', 'client_id', 'is_inactive');
+  if (!contact || contact.is_inactive === true) {
+    logger.info('[Telephony] Preferred contact is missing or inactive; falling back to number matching', {
+      tenantId,
+      contactId,
+    });
+    return null;
+  }
+
+  return {
+    status: 'matched',
+    contactId: contact.contact_name_id,
+    clientId: contact.client_id ?? null,
+    candidates: [],
+  };
+}
+
 /**
  * Idempotent ingestion of one canonical call.
  *
@@ -136,7 +168,8 @@ export async function ingestCanonicalCall(
   // The counterparty is whoever is not us: the caller on the way in, the callee
   // on the way out.
   const counterpartyE164 = call.direction === 'outbound' ? calleeE164 : callerE164;
-  const numberMatch = await matchCallParty({
+  const preferredMatch = await resolvePreferredContactMatch(knex, input.tenantId, input.preferredContactId);
+  const numberMatch = preferredMatch ?? await matchCallParty({
     knex,
     tenantId: input.tenantId,
     phoneNumber: counterpartyE164,
