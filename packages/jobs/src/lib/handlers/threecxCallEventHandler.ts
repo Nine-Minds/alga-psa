@@ -24,6 +24,7 @@ export interface ThreecxCallEvent {
   partyCallerId?: string | null;
   partyCallerName?: string | null;
   partyDid?: string | null;
+  directControl?: boolean;
   at: string;
 }
 
@@ -154,6 +155,7 @@ export async function buildIncomingCallPayload(
   if (event.kind !== 'ringing') {
     return { event: event.kind, call: identity };
   }
+  const directControl = event.directControl === true;
 
   const raw = event.partyCallerId ?? null;
   const numberE164 = normalizeToE164(raw, { defaultCountryCode });
@@ -184,6 +186,7 @@ export async function buildIncomingCallPayload(
     event: 'ringing',
     call: {
       ...identity,
+      directControl,
       number: formatCallNumber(numberE164, raw),
       numberE164,
       callerName: contact?.name || event.partyCallerName || null,

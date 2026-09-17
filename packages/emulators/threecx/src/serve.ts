@@ -157,6 +157,24 @@ export async function serve(core: ThreecxEmulatorCore, port: number, _env: HostE
     res.json(makeCallResult(core.makeCall(String(req.params.dn), String(destination), 'callcontrol')));
   });
 
+  app.post('/callcontrol/:dn/participants/:id/answer', (req, res) => {
+    const participant = core.participants.get(intParam(req.params.id));
+    if (!participant || participant.dn !== req.params.dn) {
+      res.status(404).json({ message: 'Unknown participant' });
+      return;
+    }
+    if (!participant.direct_control) {
+      res.status(422).json({ message: 'Participant is not under direct control' });
+      return;
+    }
+    if (participant.status !== 'Ringing') {
+      res.status(422).json({ message: `Participant is ${participant.status}, not Ringing` });
+      return;
+    }
+    const answered = core.answer(participant.id);
+    res.json({ finalstatus: 'Success', reason: '', result: answered });
+  });
+
   app.get('/callcontrol/:dn/participants/:id', (req, res) => {
     const participant = core.participants.get(intParam(req.params.id));
     if (!participant || participant.dn !== req.params.dn) res.status(404).json({ error: 'not found' });

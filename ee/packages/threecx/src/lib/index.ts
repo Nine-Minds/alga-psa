@@ -18,3 +18,4 @@ export * from './phonebook';
 export * from './reportChat';
 export * from './cdr';
 export * from './contacts';
+export * from './callControl';

@@ -61,6 +61,7 @@ describe('ThreecxParticipantTracker', () => {
       partyCallerId: '+15551234567',
       partyCallerName: 'Ada',
       partyDid: '+15550000000',
+      directControl: false,
       at: at.toISOString(),
     });
   });

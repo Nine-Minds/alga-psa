@@ -3947,7 +3947,9 @@
       "openClient": "Abrir cliente",
       "newTicket": "Nuevo ticket",
       "createContact": "Crear contacto",
-      "dismiss": "Descartar"
+      "dismiss": "Descartar",
+      "answer": "Contestar",
+      "answerFailed": "La centralita no pudo contestar la llamada"
     }
   }
 }

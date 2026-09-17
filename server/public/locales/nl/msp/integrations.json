@@ -3947,7 +3947,9 @@
       "openClient": "Klant openen",
       "newTicket": "Nieuw ticket",
       "createContact": "Contact aanmaken",
-      "dismiss": "Sluiten"
+      "dismiss": "Sluiten",
+      "answer": "Opnemen",
+      "answerFailed": "De PBX kon de oproep niet opnemen"
     }
   }
 }

@@ -3947,7 +3947,9 @@
       "openClient": "Kunden öffnen",
       "newTicket": "Neues Ticket",
       "createContact": "Kontakt erstellen",
-      "dismiss": "Schließen"
+      "dismiss": "Schließen",
+      "answer": "Annehmen",
+      "answerFailed": "Die PBX konnte den Anruf nicht annehmen"
     }
   }
 }

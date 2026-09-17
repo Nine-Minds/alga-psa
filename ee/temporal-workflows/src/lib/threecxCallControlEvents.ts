@@ -19,6 +19,7 @@ export interface ThreecxParticipant {
   party_dn?: string;
   callid?: number | string;
   legid?: number | string;
+  direct_control?: boolean;
 }
 
 export interface ThreecxRingingEvent {
@@ -29,6 +30,8 @@ export interface ThreecxRingingEvent {
   partyCallerId: string;
   partyCallerName: string;
   partyDid: string;
+  /** True when the PBX lets the API answer on this extension (uaCSTA). */
+  directControl: boolean;
   at: string;
 }
 
@@ -113,6 +116,7 @@ export class ThreecxParticipantTracker {
         partyCallerId: text(participant.party_caller_id),
         partyCallerName: text(participant.party_caller_name),
         partyDid: text(participant.party_did),
+        directControl: participant.direct_control === true,
         at: this.now().toISOString(),
       };
     }

@@ -2050,5 +2050,41 @@
       "F136"
     ],
     "description": "The PBX API help text names the 3CX edition requirement and monitored extensions"
+  },
+  {
+    "id": "T228",
+    "commitGroup": "answer-call",
+    "implemented": true,
+    "featureIds": [
+      "F155"
+    ],
+    "description": "POST participants/:id/answer connects a ringing participant under direct control, pushes an Upsert, and refuses repeat/wrong-dn/no-control"
+  },
+  {
+    "id": "T229",
+    "commitGroup": "answer-call",
+    "implemented": true,
+    "featureIds": [
+      "F154"
+    ],
+    "description": "Answer shows only when the PBX grants direct control and an answer handler exists"
+  },
+  {
+    "id": "T230",
+    "commitGroup": "answer-call",
+    "implemented": true,
+    "featureIds": [
+      "F152"
+    ],
+    "description": "answerThreecxCall posts to the participant answer endpoint, refuses blank input, and surfaces the PBX refusal"
+  },
+  {
+    "id": "T231",
+    "commitGroup": "answer-call",
+    "implemented": true,
+    "featureIds": [
+      "F151"
+    ],
+    "description": "The tracker's ringing event carries directControl from the participant"
   }
 ]

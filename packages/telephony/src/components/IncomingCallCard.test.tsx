@@ -112,6 +112,21 @@ describe('IncomingCallCard', () => {
     expect(onCreateContact).toHaveBeenCalledWith(unknown);
   });
 
+  it('T229: Answer shows only when the PBX grants direct control and an answer handler exists', () => {
+    const onAnswer = vi.fn();
+    const { unmount } = renderCard({ ...matched, directControl: true }, { onAnswer });
+    fireEvent.click(document.getElementById('incoming-call-answer')!);
+    expect(onAnswer).toHaveBeenCalledWith({ ...matched, directControl: true });
+    unmount();
+
+    renderCard({ ...matched, directControl: false }, { onAnswer: vi.fn() });
+    expect(document.getElementById('incoming-call-answer')).toBeNull();
+    cleanup();
+
+    renderCard({ ...matched, directControl: true });
+    expect(document.getElementById('incoming-call-answer')).toBeNull();
+  });
+
   it('T059: New ticket hands the matched call to the host', () => {
     const { onNewTicket } = renderCard(matched);
     fireEvent.click(document.getElementById('incoming-call-new-ticket')!);

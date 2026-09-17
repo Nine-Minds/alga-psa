@@ -3947,7 +3947,9 @@
       "openClient": "Otwórz klienta",
       "newTicket": "Nowe zgłoszenie",
       "createContact": "Utwórz kontakt",
-      "dismiss": "Zamknij"
+      "dismiss": "Zamknij",
+      "answer": "Odbierz",
+      "answerFailed": "Centrala nie mogła odebrać połączenia"
     }
   }
 }

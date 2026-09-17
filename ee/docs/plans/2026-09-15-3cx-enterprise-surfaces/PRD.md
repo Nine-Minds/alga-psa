@@ -60,7 +60,8 @@ transcripts never reach the contact record.
 
 ## Non-goals
 
-- Audio streams, DTMF, answer, transfer, divert or drop from Alga.
+- Audio streams, DTMF, transfer, divert or drop from Alga. Answer is in
+  scope where the PBX grants direct control.
 - Personal phonebooks, or creating Alga contacts from the phonebook import.
 - Sending SMS or replying to live chats from Alga.
 - Transcribing recordings on our side; transcripts come from the PBX.
@@ -143,6 +144,10 @@ Existing content stays. New sections, each behind the provider being active:
   dialog prefilled with client and contact), Dismiss. For an unknown caller:
   Create contact (opens quick-add contact prefilled with the number) and
   Dismiss.
+- An Answer button appears when the PBX reports the extension as under
+  direct control (uaCSTA). It answers through the Call Control API on the
+  technician's own extension; the resulting `connected` event closes the
+  card. Extensions without direct control show no button.
 - Closes on `connected` or `ended` events, on Dismiss, or after 60 seconds.
 - Appears only when the realtime socket is connected. No notification row is
   written; missed calls are journaled by `report-call`.

@@ -3947,7 +3947,9 @@
       "openClient": "Open client",
       "newTicket": "New ticket",
       "createContact": "Create contact",
-      "dismiss": "Dismiss"
+      "dismiss": "Dismiss",
+      "answer": "Answer",
+      "answerFailed": "The PBX could not answer the call"
     }
   }
 }

@@ -315,6 +315,30 @@ describe('WebSocket event feed', () => {
     expect((await pbx('GET', '/callcontrol/100/participants/999', accessToken)).status).toBe(404);
   });
 
+  it('T228: POST participants/:id/answer connects a ringing participant under direct control and pushes an Upsert', async () => {
+    const accessToken = await bearer();
+    const { next } = await connectWs(accessToken);
+
+    const rung = await action('pbx-ring', { dn: '100', callerNumber: '+15550002222' });
+    expect(rung.result.direct_control).toBe(true);
+    await next();
+
+    const answered = await pbx('POST', `/callcontrol/100/participants/${rung.result.id}/answer`, accessToken, {});
+    expect(answered.status).toBe(200);
+    expect(await answered.json()).toMatchObject({ finalstatus: 'Success', result: { id: rung.result.id, status: 'Connected' } });
+    const event = await next();
+    expect(event.event).toMatchObject({ event_type: EVENT_UPSERT, entity: `/callcontrol/100/participants/${rung.result.id}` });
+
+    // Already connected: the PBX refuses a second answer.
+    expect((await pbx('POST', `/callcontrol/100/participants/${rung.result.id}/answer`, accessToken, {})).status).toBe(422);
+    // Wrong extension for the participant.
+    expect((await pbx('POST', `/callcontrol/101/participants/${rung.result.id}/answer`, accessToken, {})).status).toBe(404);
+
+    const noControl = await action('pbx-ring', { dn: '100', callerNumber: '+15550003333', directControl: false });
+    await next();
+    expect((await pbx('POST', `/callcontrol/100/participants/${noControl.result.id}/answer`, accessToken, {})).status).toBe(422);
+  });
+
   it('T196: pbx-answer pushes an Upsert with Connected and pbx-hangup pushes a Remove; sequence climbs', async () => {
     const accessToken = await bearer();
     const { next } = await connectWs(accessToken);

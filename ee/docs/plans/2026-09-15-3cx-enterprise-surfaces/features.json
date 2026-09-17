@@ -1348,5 +1348,50 @@
       "NFR"
     ],
     "description": "`telephonyJobWiring.wiring.test.ts` covers the new job names in both the worker forwarders and the server registry"
+  },
+  {
+    "id": "F151",
+    "commitGroup": "answer-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "The worker's `ringing` event and the incoming-call payload carry `directControl` from the participant's `direct_control` flag"
+  },
+  {
+    "id": "F152",
+    "commitGroup": "answer-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "`answerThreecxCall(tenantId, { dn, participantId })` posts `/callcontrol/<dn>/participants/<id>/answer` through the PBX client"
+  },
+  {
+    "id": "F153",
+    "commitGroup": "answer-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "Server action `answerThreecxCall` refuses portal users, a disconnected PBX, and any extension other than the caller's own mapped one"
+  },
+  {
+    "id": "F154",
+    "commitGroup": "answer-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "`IncomingCallCard` shows an Answer button only when `directControl` is true and an `onAnswer` handler is supplied; the provider wires it and toasts on failure"
+  },
+  {
+    "id": "F155",
+    "commitGroup": "answer-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "The emulator serves `POST /callcontrol/:dn/participants/:id/answer` (422 without direct control or when not ringing, 404 for another extension) and `pbx-ring` accepts `directControl`"
   }
 ]

@@ -15,6 +15,8 @@ export interface IncomingCallCardProps {
   onDismiss: () => void;
   onNewTicket: (call: IncomingCallPayload) => void;
   onCreateContact: (call: IncomingCallPayload) => void;
+  /** Present only when the PBX can answer on this extension. */
+  onAnswer?: (call: IncomingCallPayload) => void;
   autoCloseMs?: number;
 }
 
@@ -27,8 +29,10 @@ export function IncomingCallCard({
   onDismiss,
   onNewTicket,
   onCreateContact,
+  onAnswer,
   autoCloseMs = INCOMING_CALL_AUTO_CLOSE_MS,
 }: IncomingCallCardProps) {
+  const canAnswer = call.directControl === true && Boolean(onAnswer);
   const { t } = useTranslation('msp/integrations');
   const { formatDate } = useFormatters();
 
@@ -174,6 +178,11 @@ export function IncomingCallCard({
               {t('telephony.incomingCall.createContact', { defaultValue: 'Create contact' })}
             </Button>
           </>
+        )}
+        {canAnswer && (
+          <Button id="incoming-call-answer" size="sm" onClick={() => onAnswer?.(call)}>
+            {t('telephony.incomingCall.answer', { defaultValue: 'Answer' })}
+          </Button>
         )}
         <Button id="incoming-call-dismiss-action" variant="ghost" size="sm" onClick={onDismiss}>
           {t('telephony.incomingCall.dismiss', { defaultValue: 'Dismiss' })}

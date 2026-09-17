@@ -184,6 +184,7 @@ export function register(reg: ControlRegistry, core: ThreecxEmulatorCore): void 
       dn: z.string(),
       callerNumber: z.string(),
       callerName: z.string().optional(),
+      directControl: z.boolean().optional(),
       did: z.string().optional(),
     }),
     run: (input) => core.ring(input),

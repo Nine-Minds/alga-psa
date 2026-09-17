@@ -33,6 +33,8 @@ export interface IncomingCallPayload {
   callId: string;
   participantId: string;
   dn: string;
+  /** The PBX allows the API to answer on this extension; drives the Answer button. */
+  directControl?: boolean;
   number?: string | null;
   numberE164?: string | null;
   callerName?: string | null;

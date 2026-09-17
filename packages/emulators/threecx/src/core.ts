@@ -145,6 +145,7 @@ export interface Participant {
   party_did: string;
   callid: number;
   legid: number;
+  direct_control: boolean;
 }
 
 export const EVENT_UPSERT = 0;
@@ -589,18 +590,21 @@ export class ThreecxEmulatorCore implements EmulatorCore {
       party_caller_id: destination,
       party_caller_name: '',
       party_did: '',
+      direct_control: true,
     });
     this.makecalls.push({ dn, destination, via, participantId: participant.id, at: this.env.clock.now().toISOString() });
     return participant;
   }
 
-  ring(input: { dn: string; callerNumber: string; callerName?: string; did?: string }): Participant {
+  ring(input: { dn: string; callerNumber: string; callerName?: string; did?: string; directControl?: boolean }): Participant {
     return this.newParticipant({
       status: 'Ringing',
       dn: input.dn,
       party_caller_id: input.callerNumber,
       party_caller_name: input.callerName ?? '',
       party_did: input.did ?? '',
+      // Real PBXs grant this only on uaCSTA-capable extensions; default on so the Answer path is testable.
+      direct_control: input.directControl ?? true,
     });
   }
 

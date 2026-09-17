@@ -902,6 +902,37 @@ export const placeThreecxCall = withAuth(async (
   }
 });
 
+/**
+ * Answers the call ringing on the caller's own mapped extension. The
+ * extension in the request must be the user's; nobody answers someone
+ * else's phone through the API.
+ */
+export const answerThreecxCall = withAuth(async (
+  user,
+  { tenant },
+  input: { dn: string; participantId: string },
+): Promise<{ success: boolean; message?: string }> => {
+  if (isClientPortalUser(user)) {
+    return { success: false, message: 'Forbidden' };
+  }
+  const threecx = await readThreecxCallLinkState(tenant, (user as any).user_id);
+  if (!threecx.connected) {
+    return { success: false, message: '3CX is not connected.' };
+  }
+  if (!threecx.extension || threecx.extension !== input.dn) {
+    return { success: false, message: 'This call is not ringing on your extension.' };
+  }
+  try {
+    const ee = await import('@alga-psa/ee-threecx/lib');
+    await ee.answerThreecxCall(tenant, input);
+    return { success: true };
+  } catch (error) {
+    const body = error instanceof Error && 'body' in error && typeof (error as any).body === 'string' ? String((error as any).body) : '';
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, message: body ? `${message}: ${body.slice(0, 200)}` : message };
+  }
+});
+
 export interface TelephonyChatSummary {
   chatRecordId: string;
   provider: string;
