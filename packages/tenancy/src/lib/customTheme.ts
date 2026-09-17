@@ -554,6 +554,15 @@ export function validateCustomThemeContrast(
   return issues;
 }
 
+/**
+ * How dark the light-mode shell ground (shade 100) may sit under the card,
+ * as a fraction of the card's brightness. The shipped presets land between
+ * 89.7% (Ocean) and 94.6% (Alga), so a floor below that range leaves every one
+ * of them untouched and only catches palettes — High contrast is the one that
+ * shipped — whose border is dark enough to drag the ground into a mid-tone.
+ */
+export const LIGHT_GROUND_FLOOR = 0.88;
+
 function modeBlock(selector: string, tokens: CustomThemeTokens, mode: CustomThemeMode): string {
   const rgb = (key: CustomThemeTokenKey): Rgb => hexToRgbTuple(tokens[key]) ?? [0, 0, 0];
   const background = rgb('background');
@@ -574,7 +583,20 @@ function modeBlock(selector: string, tokens: CustomThemeTokens, mode: CustomThem
   const brightness = (color: Rgb) => color[0] + color[1] + color[2];
   const lowStops: Array<[number, Rgb]> = (() => {
     const ground = mix(surface, border, 0.5);
-    if (mode === 'light' || brightness(ground) <= brightness(card)) {
+    if (mode === 'light') {
+      // Light has the mirror failure: an ink-black border (high contrast) drags
+      // shade-100 — the shell ground the whole app paints — down to a mid-grey
+      // under near-white cards, and every ink rung tuned for a light ground
+      // loses its contrast. Lift it back toward the card, hue intact, so it
+      // stays the small step under the card that shipped palettes already are.
+      const floor = brightness(card) * LIGHT_GROUND_FLOOR;
+      if (brightness(ground) >= floor) {
+        return [[0, surface], [2 / 9, border]];
+      }
+      const lift = (floor - brightness(ground)) / (brightness(card) - brightness(ground));
+      return [[0, surface], [1 / 9, mix(ground, card, lift)], [2 / 9, border]];
+    }
+    if (brightness(ground) <= brightness(card)) {
       return [[0, surface], [2 / 9, border]];
     }
     const cappedGround = mix(background, card, 0.7);
