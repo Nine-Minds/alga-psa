@@ -4,6 +4,7 @@ import { localizeTimePresentation } from './timePresentationLocalization';
 import type { TemplateLabelTranslator } from './i18nLabels';
 import React from 'react';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type {
   TemplateAst,
   TemplateFieldBorderStyle,
@@ -45,6 +46,8 @@ type RenderScope = {
 type RenderContext = {
   ast: TemplateAst;
   locale: string;
+  /** The recipient country's date shape: digit order, separator and clock. */
+  dateFormat: CountryDateFormat;
   currencyCode: string;
 };
 
@@ -232,7 +235,7 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
     // Shared UTC-pinned formatter: date-only values must not shift with the
     // server process timezone (e.g. YYYY-MM-DD snapshot dates in negative
     // UTC offsets), and preview/PDF must agree with field formatting.
-    return formatTemplateDateValue(String(value), ctx.locale);
+    return formatTemplateDateValue(String(value), ctx.locale, ctx.dateFormat);
   }
 
   if (normalizedFormat === 'currency') {
@@ -587,6 +590,7 @@ const renderNode = (
         format: node.format,
         currencyCode: ctx.currencyCode,
         locale: ctx.locale,
+        dateFormat: ctx.dateFormat,
         displayFormat: node.displayFormat,
       });
       const multilineFieldAdjustments: React.CSSProperties | null = formattedValue.multiline
@@ -777,10 +781,21 @@ export interface TemplateReactRendererProps {
    * currency so formatting never diverges from the language of the labels.
    */
   locale?: string;
+  /**
+   * The recipient country's date shape. Digit order, separator and 12/24h clock
+   * come from WHERE the document is addressed, never from the language it is
+   * written in; omitted, the fixed system default applies.
+   */
+  dateFormat?: CountryDateFormat;
   t?: TemplateLabelTranslator;
 }
 
-export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast, evaluation, locale: localeOverride }) => {
+export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
+  ast,
+  evaluation,
+  locale: localeOverride,
+  dateFormat,
+}) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
   const currencyCode = String(
@@ -791,7 +806,13 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast,
 
   return (
     <div className="invoice-template-root">
-      {renderNode(ast.layout, evaluation, {}, { ast, currencyCode, locale }, rootDocumentStyleOverride)}
+      {renderNode(
+        ast.layout,
+        evaluation,
+        {},
+        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT },
+        rootDocumentStyleOverride
+      )}
     </div>
   );
 };
@@ -804,6 +825,8 @@ export interface TemplateRenderOutput {
 export interface TemplateRenderOptions {
   /** The recipient's locale; falls back to `metadata.locale`, then `en-US`. */
   locale?: string;
+  /** The recipient country's date shape; the fixed system default when omitted. */
+  dateFormat?: CountryDateFormat;
   t?: TemplateLabelTranslator;
 }
 
@@ -818,7 +841,12 @@ export const renderEvaluatedTemplateAst = async (
   const normalizedAst = normalizeTemplateAstFieldBorderDefaults(ast);
   return {
     html: renderToStaticMarkup(
-      <TemplateAstRenderer ast={normalizedAst} evaluation={localizeTimePresentation(evaluation, options.t)} locale={options.locale} />
+      <TemplateAstRenderer
+        ast={normalizedAst}
+        evaluation={localizeTimePresentation(evaluation, options.t)}
+        locale={options.locale}
+        dateFormat={options.dateFormat}
+      />
     ),
     css: buildAstCss(normalizedAst),
   };

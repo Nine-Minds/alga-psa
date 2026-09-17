@@ -47,6 +47,10 @@ export default defineConfig({
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
+      // Country-driven date shape: a document is dated the way its recipient
+      // writes dates, whatever language it is written in.
+      'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
+      'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
