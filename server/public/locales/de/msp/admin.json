@@ -658,5 +658,173 @@
       "fail": "Fehlgeschlagen",
       "skip": "Übersprungen"
     }
+  },
+  "integrations": {
+    "entra": {
+      "diagnostics": {
+        "title": "Entra-Diagnose",
+        "description": "Schreibgeschützte Prüfungen der Entra-Verbindung, Partnerauthentifizierung, Erkennung und Synchronisierungsfunktion.",
+        "run": "Diagnose ausführen",
+        "labels": {
+          "overall": "Gesamt",
+          "connectionType": "Verbindung",
+          "status": "Status",
+          "mappedClients": "Zugeordnete Kunden",
+          "managedTenants": "Verwaltete Mandanten",
+          "recommendations": "Empfehlungen",
+          "blockedBy": "Blockiert durch",
+          "error": "Fehler",
+          "readiness": "Zugriffsbereitschaft"
+        },
+        "statuses": {
+          "pass": "Bestanden",
+          "warn": "Warnung",
+          "fail": "Fehlgeschlagen",
+          "skip": "Übersprungen"
+        },
+        "steps": {
+          "edition_tier_rbac": "Edition, Tarif und Zugriffsbereitschaft",
+          "connection_row": "Aktive Entra-Verbindung",
+          "app_registration_binding": "Verknüpfung der Microsoft-App-Registrierung",
+          "client_secret_present": "Geheimer Clientschlüssel der App-Registrierung",
+          "expected_app_registration_values": "Erwartete Werte der App-Registrierung",
+          "sync_worker_and_schedule": "Synchronisierungs-Worker und Zeitplan",
+          "token_set_present": "Gespeicherte direkte OAuth-Token",
+          "token_refresh": "Partnerzugriffstoken aktualisieren",
+          "token_claims": "Ansprüche und Berechtigungsbereiche des Zugriffstokens dekodieren",
+          "graph_me": "Basisprüfung von Microsoft Graph /me",
+          "managed_tenants_endpoint": "Erreichbarkeit des Endpunkts für verwaltete Mandanten",
+          "managed_tenants_count": "Erkennung verwalteter Mandanten",
+          "mappings_vs_discovery": "Bestätigte Zuordnungen mit aktueller Erkennung vergleichen",
+          "cipp_credentials_present": "CIPP-Anmeldedaten",
+          "cipp_reachable": "Erreichbarkeit der CIPP-API",
+          "cipp_auth": "CIPP-API-Anmeldedaten",
+          "cipp_tenant_list": "CIPP-Mandantenliste",
+          "cipp_mappings_vs_list": "Bestätigte Zuordnungen mit CIPP-Mandantenliste vergleichen",
+          "last_runs": "Letzte Synchronisierungsläufe",
+          "per_tenant_last_result": "Ergebnis der letzten Synchronisierung je Mandant",
+          "reconciliation_queue": "Abgleichwarteschlange",
+          "tenant_token_mint": "Token für Kundenmandanten ausstellen",
+          "users_read": "Verzeichnisbenutzer lesen",
+          "groups_read": "Verzeichnisgruppen lesen",
+          "entitlement_group_resolves": "Berechtigungsgruppe auflösen",
+          "user_yield_preview": "Vorschau der berücksichtigten Benutzer",
+          "per_tenant_users": "CIPP-Benutzer je Mandant"
+        },
+        "readiness": {
+          "authenticated": "Angemeldet",
+          "notClientPortal": "Kein Kundenportalbenutzer",
+          "edition": "Enterprise-Edition",
+          "integrationsTier": "Integrationstarif",
+          "entraSyncTier": "Entra-Synchronisierungstarif (Pro)",
+          "systemSettingsRead": "Leserecht für system_settings"
+        },
+        "states": {
+          "running": "Diagnose wird ausgeführt..."
+        },
+        "errors": {
+          "failed": "Diagnose fehlgeschlagen",
+          "clientFailed": "Kundendiagnose fehlgeschlagen"
+        },
+        "actions": {
+          "copySupportBundle": "Supportpaket kopieren",
+          "copied": "Kopiert",
+          "downloadJson": "JSON herunterladen",
+          "copy": "Kopieren",
+          "open": "Öffnen",
+          "open_url": "Öffnen",
+          "navigate": "Gehe zu",
+          "goToStep": "Zum Schritt",
+          "includeIdentifiers": "Kennungen in den Export aufnehmen"
+        },
+        "clients": {
+          "title": "Diagnose ausgewählter Kunden",
+          "selectedCount": "{{count}} ausgewählt",
+          "yieldToggle": "Benutzervorschau (höherer Aufwand)",
+          "run": "Kundendiagnose ausführen",
+          "progress": "{{completed}} von {{total}} abgeschlossen",
+          "confirmTitle": "Diagnose für viele Kunden ausführen?",
+          "confirmMessage": "Sie haben {{count}} Kunden ausgewählt. Für jeden Kunden wird ein Token ausgestellt und eine kleine Anzahl von Graph-Anfragen gesendet.",
+          "confirmRun": "Ausführen",
+          "unavailableName": "Name nicht verfügbar",
+          "selectAll": "Alle auswählen",
+          "clear": "Auswahl aufheben",
+          "categories": {
+            "ok": "In Ordnung",
+            "need_consent": "Zustimmung erforderlich",
+            "conditional_access": "Bedingter Zugriff",
+            "missing_role": "Rolle fehlt",
+            "other": "Sonstige"
+          },
+          "details": {
+            "completed": "Abgeschlossen",
+            "latestSyncFailure": "Letzter Synchronisierungsfehler"
+          },
+          "columns": {
+            "client": "Kunde",
+            "tenant": "Mandant",
+            "status": "Status",
+            "remedy": "Abhilfe",
+            "complete": "Abgeschlossen",
+            "details": "Details"
+          },
+          "complete": "Abgeschlossen",
+          "partial": "Teilweise"
+        },
+        "remedies": {
+          "connectEntra": "Verbinden Sie Microsoft Entra unter Einstellungen > Integrationen > Entra.",
+          "selectAppRegistration": "Wählen Sie eine Microsoft-App-Registrierung für Entra und stellen Sie die Verbindung erneut her.",
+          "selectExistingApp": "Die verknüpfte Microsoft-App existiert nicht mehr. Wählen Sie eine vorhandene App-Registrierung und stellen Sie die Verbindung erneut her.",
+          "chooseAnotherApp": "Die verknüpfte Microsoft-App-Registrierung ist archiviert. Wählen Sie eine andere App-Registrierung und stellen Sie die Verbindung erneut her.",
+          "addEntraCapability": "Bearbeiten Sie die App-Registrierung unter Einstellungen > Integrationen > Microsoft und aktivieren Sie die Entra-Funktion.",
+          "secretExpiryUnknown": "Das Ablaufdatum des geheimen Clientschlüssels ist unbekannt. Geheime Microsoft-Clientschlüssel laufen nach 6–24 Monaten ab; erneuern Sie sie rechtzeitig in Azure.",
+          "clientSecretMissing": "Der geheime Clientschlüssel der App-Registrierung fehlt oder ist leer. Erneuern Sie den Schlüssel in Azure und aktualisieren Sie die App-Registrierung unter Einstellungen > Integrationen > Microsoft.",
+          "entraAccessDenied": "Der Zugriff auf die Entra-Diagnose wurde für diesen Benutzer oder Arbeitsbereich verweigert.",
+          "temporalUnreachable": "Das Temporal-Frontend ist nicht erreichbar. Die automatische Synchronisierung kann erst ausgeführt werden, wenn es verfügbar ist.",
+          "temporalNoWorkers": "Temporal ist erreichbar, aber kein Worker fragt die Entra-Aufgabenwarteschlange ab. Geplante Synchronisierungen werden nicht verarbeitet.",
+          "syncDisabled": "Die automatische Entra-Synchronisierung ist für diesen Arbeitsbereich deaktiviert.",
+          "scheduleLookupFailed": "Der Temporal-Zeitplan konnte nicht geprüft werden. Überprüfen Sie die Temporal-Berechtigungen und die Verbindung.",
+          "scheduleMissing": "Die automatische Synchronisierung ist aktiviert, aber es wurde kein Temporal-Zeitplan gefunden. Speichern Sie den Zeitplan, um ihn anzuwenden.",
+          "scheduleIntervalMismatch": "Das Temporal-Zeitplanintervall ({{interval}} Min.) stimmt nicht mit der gespeicherten Einstellung ({{configured}} Min.) überein. Speichern Sie den Zeitplan zum Abgleich.",
+          "reconnectEntra": "Es ist kein Aktualisierungstoken gespeichert. Verbinden Sie Microsoft Entra erneut.",
+          "noManagedTenants": "Es wurden keine verwalteten Mandanten zurückgegeben. Der Partner muss in Microsoft 365 Lighthouse mit aktiven GDAP-Beziehungen eingerichtet sein.",
+          "mappedTenantMissing": "Der zugeordnete Mandant „{{client}}“ wurde bei der Erkennung nicht gefunden. GDAP ist möglicherweise abgelaufen oder wurde beendet.",
+          "mappingsLookupFailed": "Bestätigte Mandantenzuordnungen konnten nicht gelesen werden. Führen Sie die Diagnose erneut aus; prüfen Sie bei anhaltenden Problemen die Mandantenzuordnungen.",
+          "cippCredentialsMissing": "Die CIPP-Basis-URL und ein API-Token sind erforderlich. Konfigurieren Sie diese auf der Registerkarte Verbindung.",
+          "cippAuthRejected": "CIPP hat die API-Anmeldedaten abgelehnt. Erneuern Sie den CIPP-API-Schlüssel unter Einstellungen > CIPP > API-Zugriff; dies ist kein geheimer Azure-Clientschlüssel.",
+          "cippEmptyTenantList": "CIPP hat keine Mandanten zurückgegeben. Prüfen Sie die Sichtbarkeit der Kunden und die CIPP-Konfiguration.",
+          "cippUnreachable": "CIPP ist nicht erreichbar. Prüfen Sie die Basis-URL, DNS/TLS und ausgehende Verbindungen.",
+          "cippPerTenantFailed": "CIPP konnte das Verzeichnis dieses Mandanten nicht lesen.",
+          "consecutiveSyncFailures": "Die letzten beiden Synchronisierungen wurden nicht erfolgreich abgeschlossen. Prüfen Sie den Synchronisierungsverlauf und die Fehler je Mandant.",
+          "reconciliationOpenItems": "In der Prüfwarteschlange warten {{count}} Einträge; mehrdeutige Treffer werden nie automatisch verknüpft.",
+          "customerConsentRequired": "Die App benötigt die Administratorzustimmung in diesem Kundenmandanten. Eine erneute Partnerverbindung hilft nicht; öffnen Sie den Zustimmungslink und erteilen Sie die Zustimmung als Kundenadministrator.",
+          "entitlementGroupNotSecurity": "Die konfigurierte Berechtigungsgruppe ist keine Sicherheitsgruppe; die Mitgliedschaft lässt sich möglicherweise nicht erzwingen.",
+          "entitlementGroupMissing": "Die konfigurierte Berechtigungsgruppe existiert in diesem Kundenmandanten nicht mehr.",
+          "allUsersExcluded": "Alle Benutzer dieses Verzeichnisses wurden durch die aktuellen Filterregeln ausgeschlossen; die Synchronisierung würde keine Kontakte erstellen.",
+          "yieldTruncated": "Die Benutzervorschau wurde wegen der Verzeichnisgröße vorzeitig beendet. Die Zahlen sind Mindestwerte und umfassen nicht das gesamte Verzeichnis.",
+          "yieldFailed": "Die Benutzervorschau konnte nicht berechnet werden.",
+          "missingScope": "Dem Token fehlt {{scope}}. Erteilen Sie die Administratorzustimmung und verbinden Sie Microsoft Entra erneut.",
+          "appClientIdMismatch": "Das Token wurde für eine andere Anwendung als die verknüpfte App-Registrierung ausgestellt. Verbinden Sie Microsoft Entra erneut mit der richtigen App.",
+          "client_secret_invalid": "Microsoft hat die App-Anmeldedaten abgelehnt (invalid_client / AADSTS7000222). Erneuern Sie den geheimen Clientschlüssel in Azure, aktualisieren Sie die Microsoft-App-Registrierung unter Einstellungen > Integrationen > Microsoft und verbinden Sie sich erneut.",
+          "app_not_found": "Microsoft konnte die Anwendung nicht finden (AADSTS700016). Prüfen Sie die verknüpfte Client-ID und ob die App mandantenfähig ist.",
+          "partner_consent_required": "Die Administratorzustimmung im Partnermandanten fehlt (AADSTS65001 / consent_required). Erteilen Sie die Zustimmung für die App im Partnermandanten und verbinden Sie sich erneut.",
+          "conditional_access": "Der bedingte Zugriff hat die Anfrage blockiert (AADSTS50076/AADSTS50079). Das verwendete Konto muss die Richtlinie für MFA und konforme Geräte erfüllen.",
+          "refresh_token_invalid": "Die Aktualisierungsberechtigung ist abgelaufen oder wurde widerrufen. Verbinden Sie Microsoft Entra erneut, um ein neues Aktualisierungstoken auszustellen.",
+          "tenant_not_found": "Microsoft konnte den Mandanten nicht auflösen (AADSTS90002). Prüfen Sie die Mandanten-ID in der Verbindung oder Zuordnung.",
+          "account_not_allowed": "Das verwendete Konto ist im Mandanten nicht zugelassen (AADSTS50020). Prüfen Sie, ob das Konto Zugriff hat oder als Gast eingeladen ist.",
+          "network_unreachable": "Microsoft Graph ist nicht erreichbar. Prüfen Sie ausgehende Verbindungen, DNS und das TLS-Vertrauen.",
+          "token_rejected": "Microsoft hat das Token abgelehnt (401). Verbinden Sie Microsoft Entra erneut oder prüfen Sie die Kundenzustimmung.",
+          "forbidden": "Microsoft Graph hat 403 (Zugriff verweigert) zurückgegeben. Prüfen Sie delegierte Berechtigungen, Zustimmung und Rollenzuweisungen.",
+          "request_failed": "Die Microsoft-Anfrage ist fehlgeschlagen. Klappen Sie den Schritt auf, um Fehlercode und Korrelations-ID anzuzeigen.",
+          "customer_directory_role_missing": "Microsoft Graph hat den Lesezugriff auf ein Kundenverzeichnis verweigert (403). Das delegierte Konto benötigt eine Verzeichnisleserolle in diesem Kundenmandanten, üblicherweise über GDAP zugewiesen (z. B. Verzeichnisleser).",
+          "managedTenantsEndpointFault": "Graph hat die managedTenants-Anfrage abgelehnt; der Endpunktfehler liegt auf Alga-Seite. Wenden Sie sich mit der Anfrage-ID an den Support.",
+          "cippHttpError": "CIPP hat für jeden Mandantenlisten-Endpunkt mit HTTP {{status}} geantwortet. Das Abrufen der Liste ist auf CIPP-Seite fehlgeschlagen; die Mandantenliste ist nicht leer.",
+          "cippInvalidPayload": "CIPP hat eine Antwort zurückgegeben, die keine Mandantenliste ist. Prüfen Sie die CIPP-API-Version und den Endpunkt.",
+          "schedulePaused": "Die automatische Synchronisierung ist aktiviert, aber der Temporal-Zeitplan ist pausiert; es werden keine Läufe gestartet.",
+          "temporalWorkerUnknown": "Temporal ist erreichbar, aber es fehlen Nachweise über abfragende Worker; deren Verfügbarkeit konnte nicht bestätigt werden.",
+          "managedTenantConsentMissing": "Microsoft hat die Anmeldung akzeptiert, aber die Liste verwalteter Mandanten verweigert. Ein globaler Administrator muss den angeforderten Berechtigungen zustimmen."
+        }
+      }
+    }
   }
 }
