@@ -166,6 +166,17 @@ describe('TicketExternalLinksSection behaviour', () => {
     ));
   });
 
+  it.each([false, true])('persists an explicit visibility change from %s without changing relationship', async (portal_visible) => {
+    const user = await openEdit(link({ portal_visible }));
+    const visibility = document.getElementById('ticket-external-links-visibility')!;
+    expect(visibility).toHaveTextContent(portal_visible ? 'Visible in client portal' : 'Internal only');
+    await user.click(visibility);
+    await user.click(screen.getByRole('option', { name: portal_visible ? 'Internal only' : 'Visible in client portal' }));
+    await user.click(document.getElementById('ticket-external-links-dialog-save')!);
+    await waitFor(() => expect(actionMocks.updateExternalLink).toHaveBeenCalledWith('l1',
+      expect.objectContaining({ portal_visible: !portal_visible, relationship: 'origin' })));
+  });
+
   it('T133: editing preserves actor id and url alongside the edited handle/display name', async () => {
     const user = await openEdit(
       link({

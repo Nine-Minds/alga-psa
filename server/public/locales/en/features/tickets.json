@@ -1816,7 +1816,8 @@
       "remove": "Remove",
       "cancel": "Cancel",
       "save": "Save",
-      "menu": "Link actions"
+      "menu": "Link actions",
+      "openRecord": "Open external record"
     },
     "relationship": {
       "origin": "Origin",
@@ -1875,7 +1876,14 @@
       "systemLabelRequired": "System label is required",
       "permissionDenied": "Permission denied: Cannot manage external systems",
       "systemRequired": "Choose an external system.",
-      "urlRequired": "A URL is required for systems without a URL template."
+      "urlRequired": "A URL is required for systems without a URL template.",
+      "invalidVisibility": "Only ticket links can be shared, using a boolean visibility value"
+    },
+    "visibility": {
+      "label": "Visibility",
+      "internal": "Internal only",
+      "shared": "Visible in client portal",
+      "help": "Customers with access to this ticket can see this link. Sharing the link does not grant access to the external system."
     }
   }
 }

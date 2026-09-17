@@ -53,6 +53,19 @@ describe('Ticket external links REST API contract', () => {
     expect(updateExternalLinkSchema.safeParse({ url: 'file:///etc/passwd' }).success).toBe(false);
   });
 
+  it('validates visibility without defaulting an omitted update or permitting inline sharing', () => {
+    const input = { system: 'generic', external_id: 'Vendor case', url: 'https://example.com/case' };
+    expect(createExternalLinkSchema.parse(input).portal_visible).toBeUndefined();
+    expect(createExternalLinkSchema.parse({ ...input, portal_visible: true }).portal_visible).toBe(true);
+    expect(updateExternalLinkSchema.parse({})).not.toHaveProperty('portal_visible');
+    expect(updateExternalLinkSchema.parse({ portal_visible: false })).toEqual({ portal_visible: false });
+    for (const portal_visible of [null, 'true', 1]) {
+      expect(createExternalLinkSchema.safeParse({ ...input, portal_visible }).success).toBe(false);
+      expect(updateExternalLinkSchema.safeParse({ portal_visible }).success).toBe(false);
+    }
+    expect(createTicketExternalLinkSchema.safeParse({ ...input, portal_visible: true }).success).toBe(false);
+  });
+
   it('requires system and external_id on the by-external-link lookup', () => {
     expect(externalLinkLookupQuerySchema.parse({ system: 'jira', external_id: 'OPS-1' })).toEqual({
       system: 'jira',

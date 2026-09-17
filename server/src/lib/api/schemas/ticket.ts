@@ -63,6 +63,7 @@ export const externalLinkActorSchema = z.object({
 });
 
 export const createExternalLinkSchema = z.object({
+  portal_visible: z.boolean().optional(),
   entity_type: z.enum(['ticket', 'comment']).optional(),
   comment_id: uuidSchema.optional(),
   system: z.string().trim().min(1, 'System is required'),
@@ -86,9 +87,11 @@ export const createExternalLinkSchema = z.object({
 export const createTicketExternalLinkSchema = createExternalLinkSchema.omit({
   entity_type: true,
   comment_id: true,
+  portal_visible: true,
 });
 
 export const updateExternalLinkSchema = z.object({
+  portal_visible: z.boolean().optional(),
   relationship: externalLinkRelationshipSchema.optional(),
   url: httpUrlSchema.nullable().optional(),
   actor: externalLinkActorSchema.nullable().optional(),

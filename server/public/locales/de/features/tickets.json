@@ -1816,7 +1816,8 @@
       "remove": "Entfernen",
       "cancel": "Abbrechen",
       "save": "Speichern",
-      "menu": "Link-Aktionen"
+      "menu": "Link-Aktionen",
+      "openRecord": "Externen Datensatz öffnen"
     },
     "relationship": {
       "origin": "Ursprung",
@@ -1875,7 +1876,14 @@
       "systemLabelRequired": "Systembezeichnung ist erforderlich",
       "permissionDenied": "Zugriff verweigert",
       "systemRequired": "Wählen Sie ein externes System.",
-      "urlRequired": "Für Systeme ohne URL-Vorlage ist eine URL erforderlich."
+      "urlRequired": "Für Systeme ohne URL-Vorlage ist eine URL erforderlich.",
+      "invalidVisibility": "Nur Ticket-Links können geteilt werden; die Sichtbarkeit muss ein boolescher Wert sein"
+    },
+    "visibility": {
+      "label": "Sichtbarkeit",
+      "internal": "Nur intern",
+      "shared": "Im Kundenportal sichtbar",
+      "help": "Kunden mit Zugriff auf dieses Ticket können diesen Link sehen. Das Teilen des Links gewährt keinen Zugriff auf das externe System."
     }
   }
 }

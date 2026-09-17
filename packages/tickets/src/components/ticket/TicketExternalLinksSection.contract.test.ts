@@ -92,14 +92,13 @@ describe('ticket external links UI contract', () => {
     expect(details).toContain('externalLinksByCommentId={externalLinksByCommentId}');
   });
 
-  it('T124: the client portal never selects or renders external links', () => {
-    const portalDetails = readRepoFile('packages/client-portal/src/components/tickets/TicketDetails.tsx');
+  it('T124: portal links use a minimal DTO loaded only after ticket authorization', () => {
     const portalActions = readRepoFile('packages/client-portal/src/actions/client-portal-actions/client-tickets.ts');
-
-    expect(portalDetails).not.toContain('externalLinks');
-    expect(portalDetails).not.toContain('external_links');
-    expect(portalActions).not.toContain('external_entity_links');
-    expect(portalActions).not.toContain('external_links');
+    const portalLinks = readRepoFile('packages/client-portal/src/lib/portalTicketExternalLinks.ts');
+    expect(portalActions).toContain('ticket ? await loadPortalTicketExternalLinks');
+    expect(portalLinks).toContain("entity_type: 'ticket', portal_visible: true");
+    expect(portalLinks).toContain(".select('system', 'external_id', 'realm', 'url')");
+    expect(portalLinks).not.toContain(".select('*')");
   });
 
   it('T125: the External systems settings tab is registered', () => {
