@@ -137,6 +137,24 @@ describe('scheduleAccountingSyncCycleJob (connected-only)', () => {
     expect(result).toBe('job-1');
   });
 
+  it('schedules a Xero-only tenant', async () => {
+    resolveConnectedAccountingIntegrationMock.mockResolvedValue({
+      adapterType: 'xero',
+      targetRealm: 'conn-123',
+    });
+
+    const result = await scheduleAccountingSyncCycleJob('t-xero');
+
+    expect(scheduleRecurringJobMock).toHaveBeenCalledWith(
+      'accounting-sync-cycle',
+      { tenantId: 't-xero' },
+      '*/15 * * * *',
+      { singletonKey: 'accounting-sync-cycle:t-xero' },
+    );
+    expect(cancelJobMock).not.toHaveBeenCalled();
+    expect(result).toBe('job-1');
+  });
+
   it('does NOT schedule an unconnected tenant, and cancels a stray schedule', async () => {
     resolveConnectedAccountingIntegrationMock.mockResolvedValue(null);
     firstMock.mockResolvedValue({ job_id: 'stale-job' }); // a leftover schedule exists

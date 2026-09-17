@@ -8,6 +8,7 @@ import {
   withProviderCredentialLock,
 } from '../providerDisconnect/lock';
 import { PROVIDER_XERO } from '../providerDisconnect/types';
+import { notifyAccountingConnectionChanged } from '../accountingConnectionChangeProvider';
 import {
   resolveXeroDefaultSelection,
   type XeroDefaultSelection
@@ -1256,7 +1257,7 @@ export async function upsertStoredXeroConnections(
   // persisting its record and invalidating outstanding flows. Active records
   // block every write; a finalized record is retired only for an OAuth flow
   // provably started after finalization. Record-read failures fail closed.
-  return withProviderCredentialLock(knex, tenantId, PROVIDER_XERO, async (trx) => {
+  const storedConnections = await withProviderCredentialLock<XeroConnectionsStore>(knex, tenantId, PROVIDER_XERO, async (trx) => {
     const disposition = await getProviderCredentialWriteDisposition(
       trx,
       tenantId,
@@ -1309,6 +1310,9 @@ export async function upsertStoredXeroConnections(
     await storeTenantConnections(tenantId, merged);
     return merged;
   });
+
+  await notifyAccountingConnectionChanged(tenantId);
+  return storedConnections;
 }
 
 export async function resolveXeroOAuthCredentials(
