@@ -1,4 +1,6 @@
 'use server'
+
+import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
@@ -463,7 +465,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         linkedAssetsQuery
       ]);
 
-      return { ticket, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
+      // Never fetch link data until the existing client/board/contact ticket scope succeeds.
+      const portalExternalLinks = ticket ? await loadPortalTicketExternalLinks(trx, tenant, ticketId) : [];
+      return { ticket, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
@@ -555,6 +559,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       // the consumer side via a small augmentation since ITicketWithDetails
       // doesn't model this today.
       linkedAssets: result.linkedAssets,
+      portalExternalLinks: result.portalExternalLinks,
       userMap,
       contactMap
     };

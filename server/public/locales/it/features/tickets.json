@@ -1816,7 +1816,8 @@
       "remove": "Rimuovi",
       "cancel": "Annulla",
       "save": "Salva",
-      "menu": "Azioni del collegamento"
+      "menu": "Azioni del collegamento",
+      "openRecord": "Apri record esterno"
     },
     "relationship": {
       "origin": "Origine",
@@ -1875,7 +1876,14 @@
       "systemLabelRequired": "L'etichetta del sistema è obbligatoria",
       "permissionDenied": "Autorizzazione negata: impossibile gestire i sistemi esterni",
       "systemRequired": "Scegli un sistema esterno.",
-      "urlRequired": "Per i sistemi senza modello di URL è necessario un URL."
+      "urlRequired": "Per i sistemi senza modello di URL è necessario un URL.",
+      "invalidVisibility": "È possibile condividere solo i link dei ticket; la visibilità deve essere un valore booleano"
+    },
+    "visibility": {
+      "label": "Visibilità",
+      "internal": "Solo interno",
+      "shared": "Visibile nel portale clienti",
+      "help": "I clienti con accesso a questo ticket possono vedere questo link. La condivisione del link non concede accesso al sistema esterno."
     }
   }
 }

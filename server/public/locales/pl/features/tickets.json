@@ -1958,7 +1958,8 @@
       "remove": "Usuń",
       "cancel": "Anuluj",
       "save": "Zapisz",
-      "menu": "Działania łącza"
+      "menu": "Działania łącza",
+      "openRecord": "Otwórz rekord zewnętrzny"
     },
     "relationship": {
       "origin": "Źródło",
@@ -2017,7 +2018,14 @@
       "systemLabelRequired": "Etykieta systemu jest wymagana",
       "permissionDenied": "Odmowa dostępu: nie można zarządzać systemami zewnętrznymi",
       "systemRequired": "Wybierz system zewnętrzny.",
-      "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL."
+      "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL.",
+      "invalidVisibility": "Można udostępniać tylko linki zgłoszeń; widoczność musi być wartością logiczną"
+    },
+    "visibility": {
+      "label": "Widoczność",
+      "internal": "Tylko wewnętrznie",
+      "shared": "Widoczny w portalu klienta",
+      "help": "Klienci z dostępem do tego zgłoszenia mogą zobaczyć ten link. Udostępnienie linku nie przyznaje dostępu do systemu zewnętrznego."
     }
   }
 }

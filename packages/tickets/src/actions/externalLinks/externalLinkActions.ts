@@ -33,6 +33,7 @@ import {
   loadTenantExternalSystems,
   prepareExternalLink,
   publishExternalLinkEvent,
+  validatePortalVisibility,
   type AddExternalLinkInput,
   type UpdateExternalLinkPatch,
 } from './externalLinkPersistence';
@@ -62,6 +63,7 @@ export interface ExternalLinkDisplay {
 }
 
 export interface ITicketExternalLinkView {
+  portal_visible?: boolean;
   link_id: string;
   ticket_id: string;
   entity_type: ExternalEntityLinkEntityType;
@@ -150,6 +152,7 @@ function toView(
 ): ITicketExternalLinkView {
   const definition = resolveExternalSystem(tenantSystems, row.system);
   return {
+    portal_visible: row.portal_visible === true,
     link_id: row.link_id ?? '',
     ticket_id: row.ticket_id,
     entity_type: row.entity_type,
@@ -239,6 +242,7 @@ export const addExternalLink = withAuth(
             external_id: row.external_id,
             relationship: row.relationship,
             entity_type: row.entity_type,
+            portal_visible: row.portal_visible === true,
           },
         });
         return { row, systems };
@@ -266,6 +270,7 @@ export const updateExternalLink = withAuth(
       const result = await withTransaction(knex, async (trx) => {
         const existing = await tenantTable(trx, tenant, 'external_entity_links')
           .where({ link_id: linkId })
+          .forUpdate()
           .first();
         if (!existing) {
           throw new ExternalLinkValidationError('link_not_found', 'External link not found');
@@ -273,6 +278,9 @@ export const updateExternalLink = withAuth(
         await authorizeTicketAccess(user, trx, tenant, existing.ticket_id, 'update');
 
         const updates: Record<string, unknown> = { updated_at: trx.fn.now() };
+        if (patch.portal_visible !== undefined) {
+          updates.portal_visible = validatePortalVisibility(patch.portal_visible, existing.entity_type);
+        }
 
         if (patch.relationship !== undefined && patch.relationship !== existing.relationship) {
           if (patch.relationship === 'origin') {
@@ -322,6 +330,27 @@ export const updateExternalLink = withAuth(
           .where({ link_id: linkId })
           .update(updates)
           .returning('*');
+        if (patch.portal_visible !== undefined && patch.portal_visible !== (existing.portal_visible === true)) {
+          await writeTicketActivity(trx, {
+            tenant,
+            ticketId: row.ticket_id,
+            eventType: TICKET_ACTIVITY_EVENT.EXTERNAL_LINK_UPDATED,
+            entityType: TICKET_ACTIVITY_ENTITY.SYSTEM,
+            entityId: row.link_id,
+            actor: {
+              actorType: TICKET_ACTIVITY_ACTOR.USER,
+              userId: user.user_id,
+              displayName: [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username,
+            },
+            source: TICKET_ACTIVITY_SOURCE.EXTERNAL_LINK,
+            occurredAt: new Date().toISOString(),
+            changes: { portal_visible: { old: existing.portal_visible === true, new: row.portal_visible } },
+            details: {
+              system_label: resolveExternalSystem(systems, row.system)?.label ?? 'External record',
+              external_id: row.external_id,
+            },
+          });
+        }
         return { row: row as IExternalEntityLink, systems };
       });
       await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_UPDATED', tenant, result.row, user.user_id);
@@ -347,6 +376,7 @@ export const removeExternalLink = withAuth(
       const removed = await withTransaction(knex, async (trx) => {
         const existing = await tenantTable(trx, tenant, 'external_entity_links')
           .where({ link_id: linkId })
+          .forUpdate()
           .first();
         if (!existing) {
           throw new ExternalLinkValidationError('link_not_found', 'External link not found');

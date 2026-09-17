@@ -1816,7 +1816,8 @@
       "remove": "Verwijderen",
       "cancel": "Annuleren",
       "save": "Opslaan",
-      "menu": "Koppelingsacties"
+      "menu": "Koppelingsacties",
+      "openRecord": "Extern record openen"
     },
     "relationship": {
       "origin": "Oorsprong",
@@ -1875,7 +1876,14 @@
       "systemLabelRequired": "Systeemlabel is vereist",
       "permissionDenied": "Toegang geweigerd",
       "systemRequired": "Kies een extern systeem.",
-      "urlRequired": "Voor systemen zonder URL-sjabloon is een URL vereist."
+      "urlRequired": "Voor systemen zonder URL-sjabloon is een URL vereist.",
+      "invalidVisibility": "Alleen ticketlinks kunnen worden gedeeld; zichtbaarheid moet een booleaanse waarde zijn"
+    },
+    "visibility": {
+      "label": "Zichtbaarheid",
+      "internal": "Alleen intern",
+      "shared": "Zichtbaar in het klantenportaal",
+      "help": "Klanten met toegang tot dit ticket kunnen deze link zien. Het delen van de link geeft geen toegang tot het externe systeem."
     }
   }
 }

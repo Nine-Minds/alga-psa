@@ -4,7 +4,7 @@ import { ITaggable } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
-import type { IExternalEntityLink } from './externalSystem.interfaces';
+import type { IExternalEntityLink, PortalTicketExternalLink } from './externalSystem.interfaces';
 
 /**
  * Response state tracking for tickets.
@@ -182,6 +182,7 @@ export interface IAgentSchedule {
 }
 
 export interface ITicketWithDetails extends ITicket {
+  portalExternalLinks?: PortalTicketExternalLink[];
   status_name?: string;
   priority_name?: string;
   priority_color?: string;

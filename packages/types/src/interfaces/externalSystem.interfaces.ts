@@ -113,7 +113,15 @@ export interface ITenantExternalSystem {
   updated_at?: string;
 }
 
+/** Deliberately excludes internal link identifiers, actor data, and metadata. */
+export interface PortalTicketExternalLink {
+  label: string;
+  url: string;
+}
+
 export interface IExternalEntityLink {
+  /** Missing legacy values are private. */
+  portal_visible?: boolean;
   tenant?: string;
   link_id?: string;
   entity_type: ExternalEntityLinkEntityType;

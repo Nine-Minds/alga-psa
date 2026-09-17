@@ -11,6 +11,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { TicketDocumentsSection, TicketConversation, TicketAppointmentRequests, TicketOriginBadge, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Link2 } from 'lucide-react';
+import { PortalTicketExternalLinks } from './PortalTicketExternalLinks';
 import { AssetDetails } from '../assets/AssetDetails';
 import { getClientAssetById } from '@alga-psa/client-portal/actions';
 import type { Asset, ProductCode } from '@alga-psa/types';
@@ -859,6 +860,8 @@ export function TicketDetails({
               </div>
             </div>
           </div>
+
+          <PortalTicketExternalLinks links={ticket.portalExternalLinks ?? []} />
 
           {/* Comments Section */}
           {ticket.conversations && (
