@@ -116,6 +116,7 @@ export function EntraDiagnosticsDialog({
   onNavigate,
 }: EntraDiagnosticsDialogProps) {
   const { t } = useTranslation('msp/admin');
+  const { t: tCommon } = useTranslation('common');
   const [report, setReport] = React.useState<EntraDiagnosticsReport | null>(null);
   const [readiness, setReadiness] = React.useState<EntraDiagnosticsReadiness | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -888,7 +889,7 @@ export function EntraDiagnosticsDialog({
           count: selectedClients.length,
         })}
         confirmLabel={t('integrations.entra.diagnostics.clients.confirmRun', { defaultValue: 'Run' })}
-        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        cancelLabel={tCommon('actions.cancel', { defaultValue: 'Cancel' })}
         id="entra-diag-client-confirm"
       />
     </Dialog>

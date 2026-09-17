@@ -204,6 +204,7 @@ export function EntraConsole({
   onStatusChanged,
 }: EntraConsoleProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
+  const { t: tAdmin } = useTranslation('msp/admin');
 
   const [tab, setTab] = React.useState<EntraConsoleTab>('overview');
   const [mappings, setMappings] = React.useState<EntraConfirmedMapping[]>([]);
@@ -812,7 +813,7 @@ export function EntraConsole({
             className="gap-1"
           >
             <Stethoscope className="h-3.5 w-3.5" />
-            {t('integrations.entra.diagnostics.run', { defaultValue: 'Run diagnostics' })}
+            {tAdmin('integrations.entra.diagnostics.run', { defaultValue: 'Run diagnostics' })}
           </Button>
         }
       >
@@ -1199,7 +1200,7 @@ export function EntraConsole({
               className="gap-1"
             >
               <Stethoscope className="h-3.5 w-3.5" />
-              {t('integrations.entra.diagnostics.run', { defaultValue: 'Run diagnostics' })}
+              {tAdmin('integrations.entra.diagnostics.run', { defaultValue: 'Run diagnostics' })}
             </Button>
             <Button
               id="entra-console-rotate"

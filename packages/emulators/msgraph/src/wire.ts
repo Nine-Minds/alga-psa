@@ -143,13 +143,9 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.json({ id: captured.id });
   });
 
-  // --- Graph v1.0 surface ---
+  // --- Graph API surfaces: shared authentication, versioned routes ---
 
-  const graph = express.Router();
-  router.use('/v1.0', graph);
-  router.use('/beta', graph);
-
-  graph.use((req, res, next) => {
+  router.use(['/v1.0', '/beta'], (req, res, next) => {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
     res.locals.access = core.authenticate(bearer);
     res.set('request-id', randomUUID());
@@ -162,6 +158,12 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     }
     next();
   });
+
+  const graph = express.Router();
+  const graphBeta = express.Router();
+  router.use('/beta', graphBeta);
+  router.use('/v1.0', graph);
+  router.use('/beta', graph);
 
   const mailboxUser = { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' };
   graph.get('/me', (_req, res) => res.json(mailboxUser));
@@ -202,7 +204,7 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     return { value: values.slice(skip, skip + top),
       ...(skip + top < values.length ? { '@odata.nextLink': next.toString() } : {}) };
   };
-  graph.get('/tenantRelationships/managedTenants/tenants', (req, res) => {
+  graphBeta.get('/tenantRelationships/managedTenants/tenants', (req, res) => {
     res.json(page(req, core.listOrganizations().map(org => ({
       tenantId: org.id, displayName: org.displayName,
       defaultDomainName: org.verifiedDomains.find(domain => domain.isDefault)?.name,

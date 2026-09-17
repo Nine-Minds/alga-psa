@@ -71,23 +71,23 @@ describe('Entra diagnostics: migrated DB and Microsoft Graph emulator', () => {
   }
 
   beforeAll(async () => {
-    const database = process.env.ENTRA_DIAGNOSTICS_TEST_DB;
-    if (!database || !/^(test_|entra_diagnostics_)/.test(database)) {
-      throw new Error('Set ENTRA_DIAGNOSTICS_TEST_DB to a disposable migrated test_ or entra_diagnostics_ database');
+    const database = process.env.ENTRA_DIAGNOSTICS_TEST_DB || process.env.TEST_DB_NAME;
+    if (!database || !/^(test_|entra_diagnostics_)|_test$/.test(database)) {
+      throw new Error('Set ENTRA_DIAGNOSTICS_TEST_DB or TEST_DB_NAME to a disposable migrated test database');
     }
     db = knex({ client: 'pg', connection: { host: process.env.DB_HOST || '127.0.0.1',
-      port: Number(process.env.ENTRA_DIAGNOSTICS_DB_PORT || 5472), database,
-      user: process.env.ENTRA_DIAGNOSTICS_DB_USER || 'postgres',
-      password: process.env.ENTRA_DIAGNOSTICS_DB_PASSWORD ||
+      port: Number(process.env.ENTRA_DIAGNOSTICS_DB_PORT || process.env.DB_PORT || 5472), database,
+      user: process.env.ENTRA_DIAGNOSTICS_DB_USER || process.env.DB_USER_ADMIN || 'postgres',
+      password: process.env.ENTRA_DIAGNOSTICS_DB_PASSWORD || process.env.DB_PASSWORD_ADMIN ||
         readFileSync(resolve('../../secrets/postgres_password'), 'utf8').trim() }, pool: { min: 0, max: 2 } });
     expect(await db.schema.hasTable('entra_sync_run_tenants')).toBe(true);
     expect((await db('knex_migrations').count('* as count').first())?.count).not.toBe('0');
     const env = { clock: { now: () => new Date() }, rng: Math.random, log: () => undefined };
-    // Build the emulator workspace first. Loading its runtime through a URL
-    // avoids folding the emulator host's separate TS project into the EE app.
-    const dist = resolve('../../packages/emulators/msgraph/dist');
-    const { MsGraphCore } = await import(pathToFileURL(`${dist}/core.js`).href);
-    const { wire } = await import(pathToFileURL(`${dist}/wire.js`).href);
+    // Load source at runtime so clean CI needs no emulator build, while its
+    // separate TypeScript project stays outside the EE application's type graph.
+    const source = resolve('../../packages/emulators/msgraph/src');
+    const { MsGraphCore } = await import(pathToFileURL(`${source}/core.ts`).href);
+    const { wire } = await import(pathToFileURL(`${source}/wire.ts`).href);
     core = new MsGraphCore(env);
     const app = express();
     app.use((req, _res, next) => { requests.push(`${req.method} ${req.path}`); next(); });

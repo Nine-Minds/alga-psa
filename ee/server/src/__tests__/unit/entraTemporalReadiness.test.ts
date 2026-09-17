@@ -56,9 +56,12 @@ describe('temporalReadiness with SDK-shaped responses', () => {
 
   it('closes a connection that arrives after the deadline', async () => {
     vi.useFakeTimers();
+    const connected = Promise.withResolvers<void>();
     let finish: (value: unknown) => void = () => {};
-    hoisted.connect.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    hoisted.connect.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; connected.resolve(); }));
     const running = probeTemporalReadiness();
+    // Dynamic SDK loading must finish before advancing the connection deadline.
+    await connected.promise;
     await vi.advanceTimersByTimeAsync(4001);
     expect((await running).reachable).toBe(false);
     finish({ close: hoisted.close });
