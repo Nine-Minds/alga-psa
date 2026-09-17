@@ -1,5 +1,7 @@
 'use client';
 
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+
 import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { calendarDisplayDates, calendarStoredDates, moveCalendarStart } from '../../lib/calendarDateDisplay';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -1405,12 +1407,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 ) : entryData.work_item_id && !ENTRY_OWNED_WORK_ITEM_TYPES.has(entryData.work_item_type) ? (
                   // The linked work item is still loading; showing the ad-hoc
                   // label here flashed a wrong answer before the right one.
-                  <span
+                  <Skeleton
                     id="entry-popup-work-item-loading"
-                    className="text-sm text-[rgb(var(--color-text-500))] animate-pulse"
-                  >
-                    {t('entryPopup.workItem.loading', { defaultValue: 'Loading work item…' })}
-                  </span>
+                    className="h-5 w-48"
+                    role="status"
+                    aria-label={t('entryPopup.workItem.loading', { defaultValue: 'Loading work item…' })}
+                  />
                 ) : (
                   <span className="font-bold text-[rgb(var(--color-text-900))]">
                     {t('entryPopup.workItem.adHocFallback', {
@@ -1424,12 +1426,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               // Same as the read-only branch: the linked work item is still
               // loading, so don't flash the ad-hoc label in its place.
               <div className="flex items-center p-2">
-                <span
+                <Skeleton
                   id="entry-popup-work-item-loading"
-                  className="text-sm text-[rgb(var(--color-text-500))] animate-pulse"
-                >
-                  {t('entryPopup.workItem.loading', { defaultValue: 'Loading work item…' })}
-                </span>
+                  className="h-5 w-48"
+                  role="status"
+                  aria-label={t('entryPopup.workItem.loading', { defaultValue: 'Loading work item…' })}
+                />
               </div>
             ) : (
               <div className="flex items-start gap-3">

@@ -531,6 +531,9 @@ export const updateScheduleEntry = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const canUpdateGlobally = await hasPermission(user, 'user_schedule', 'update', db);
+    if (!canUpdateGlobally) {
+      return { success: false, error: 'Permission denied to update this schedule entry.' };
+    }
 
     const masterEntryId =
       (typeof entry.original_entry_id === 'string' && entry.original_entry_id.length > 0
@@ -545,9 +548,6 @@ export const updateScheduleEntry = withAuth(async (
       return { success: false, error: 'Schedule entry not found.' };
     }
 
-    // --- Permission Check ---
-    let canEditThisEntry = false;
-
     // Check if the entry is private
     const isPrivateEntry = existingEntry.is_private;
     const isOwnEntry =
@@ -558,29 +558,6 @@ export const updateScheduleEntry = withAuth(async (
     if (isPrivateEntry && !isOwnEntry) {
       return { success: false, error: 'Permission denied to edit a private schedule entry.' };
     }
-
-    if (canUpdateGlobally) {
-      // Global update permission allows editing any non-private entry
-      canEditThisEntry = true;
-    } else {
-      // User might only have 'user_schedule:read' (implicitly checked by reaching here)
-
-      // Check if the update attempts to change assignment *away* from solely the current user
-      // If assigned_user_ids is not part of the update, assignment doesn't change.
-      // If it is part of the update, it must contain *only* the current user's ID.
-      const assignmentRemainsOwn = entry.assigned_user_ids
-        ? (entry.assigned_user_ids.length === 1 && entry.assigned_user_ids[0] === user.user_id)
-        : true; // If assigned_user_ids is not being updated, the assignment aspect is permitted
-
-      if (isOwnEntry && assignmentRemainsOwn) {
-        canEditThisEntry = true; // Allowed to edit own entry if assignment isn't changed to others
-      }
-    }
-
-    if (!canEditThisEntry) {
-      return { success: false, error: 'Permission denied to update this schedule entry.' };
-    }
-    // --- End Permission Check ---
 
     let teamsMeetingWarning: string | undefined;
 
@@ -866,6 +843,18 @@ export const deleteScheduleEntry = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; isPrivateError?: boolean; error?: string }> => {
   try {
     const { knex: db } = await createTenantKnex();
+    if (!await hasPermission(user, 'user_schedule', 'update', db)) {
+      const message = 'Permission denied to delete this schedule entry.';
+      return {
+        success: false,
+        error: message,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message,
+        dependencies: [],
+        alternatives: [],
+      };
+    }
 
     const isVirtualId = entry_id.includes('_');
     const masterEntryId = isVirtualId ? entry_id.split('_')[0] : entry_id;

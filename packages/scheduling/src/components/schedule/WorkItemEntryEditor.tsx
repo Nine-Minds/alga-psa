@@ -8,7 +8,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
 import { useUsers } from '@alga-psa/user-composition/hooks';
 import type { DeletionValidationResult, IEditScope, IScheduleEntry, IWorkItem } from '@alga-psa/types';
-import { getErrorMessage, isActionResultError } from '@alga-psa/ui/lib/errorHandling';
+import { isActionResultError } from '@alga-psa/ui/lib/errorHandling';
 import {
   addScheduleEntry,
   deleteScheduleEntry,
@@ -89,7 +89,7 @@ export default function WorkItemEntryEditor({
           return;
         }
         if (isActionResultError(result)) {
-          setLoadError(getErrorMessage(result));
+          setLoadError(t('workItemEditor.loadFailed'));
           return;
         }
         setFetchedEvent(result);
@@ -167,7 +167,7 @@ export default function WorkItemEntryEditor({
         });
         if (!result.success || !result.entry) {
           toast.error(
-            result.error || t('workItemEditor.updateFailed', { defaultValue: 'Failed to update schedule entry' })
+            t('workItemEditor.updateFailed', { defaultValue: 'Failed to update schedule entry' })
           );
           return;
         }
@@ -188,7 +188,7 @@ export default function WorkItemEntryEditor({
       });
       if (!result.success || !result.entry) {
         toast.error(
-          result.error || t('workItemEditor.createFailed', { defaultValue: 'Failed to schedule this work' })
+          t('workItemEditor.createFailed', { defaultValue: 'Failed to schedule this work' })
         );
         return;
       }
@@ -225,9 +225,7 @@ export default function WorkItemEntryEditor({
         onClose();
       } else {
         toast.error(
-          result.error ||
-            result.message ||
-            t('workItemEditor.deleteFailed', { defaultValue: 'Failed to delete schedule entry' })
+          t('workItemEditor.deleteFailed', { defaultValue: 'Failed to delete schedule entry' })
         );
       }
       return result;
