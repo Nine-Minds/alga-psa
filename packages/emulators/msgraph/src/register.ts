@@ -25,6 +25,13 @@ const directoryUserParams = {
 };
 
 export function register(reg: ControlRegistry, core: MsGraphCore): void {
+  reg.seeder({
+    name: 'directory-group',
+    description: 'Add an Entra group and its membership for read-only access diagnostics',
+    params: z.object({ id: z.string(), displayName: z.string(),
+      securityEnabled: z.boolean().default(true), memberIds: z.array(z.string()).default([]) }),
+    run: (group) => { core.directoryGroups.set(group.id, group); return group; },
+  });
   reg.action({
     name: 'deliver-message',
     description: 'Redeliver an existing mailbox message notification and report each callback outcome without creating another message',

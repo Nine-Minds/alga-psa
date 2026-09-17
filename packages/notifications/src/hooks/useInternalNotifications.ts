@@ -18,6 +18,7 @@ import {
   markAsReadAction,
   markAllAsReadAction,
 	} from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
+import { reduceIncomingCall, type IncomingCallEntry } from './incomingCall';
 	
 	const getHocuspocusUrl = () => {
 	  const configuredUrl = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
@@ -61,6 +62,9 @@ interface UseInternalNotificationsReturn {
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Latest ringing call for this user, until connected/ended, dismiss, or expiry. */
+  incomingCall: IncomingCallEntry | null;
+  dismissIncomingCall: () => void;
 }
 
 export function useInternalNotifications(
@@ -74,6 +78,7 @@ export function useInternalNotifications(
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCallEntry | null>(null);
 
   const providerRef = useRef<HocuspocusProvider | null>(null);
   const ydocRef = useRef<Y.Doc | null>(null);
@@ -225,6 +230,12 @@ export function useInternalNotifications(
       }
     });
 
+    const incomingCallMap = ydoc.getMap('incomingCall');
+    incomingCallMap.observe(() => {
+      const entry = incomingCallMap.get('data');
+      setIncomingCall((current) => reduceIncomingCall(current, entry));
+    });
+
     return () => {
       provider.destroy();
       ydoc.destroy();
@@ -274,6 +285,8 @@ export function useInternalNotifications(
     await fetchUnreadCount();
   }, [fetchNotifications, fetchUnreadCount]);
 
+  const dismissIncomingCall = useCallback(() => setIncomingCall(null), []);
+
   return {
     notifications,
     unreadCount,
@@ -284,5 +297,7 @@ export function useInternalNotifications(
     markAsRead,
     markAllAsRead,
     refresh,
+    incomingCall,
+    dismissIncomingCall,
   };
 }

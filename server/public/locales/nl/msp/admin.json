@@ -658,5 +658,173 @@
       "fail": "Mislukt",
       "skip": "Overgeslagen"
     }
+  },
+  "integrations": {
+    "entra": {
+      "diagnostics": {
+        "title": "Entra-diagnose",
+        "description": "Alleen-lezencontroles van de Entra-verbinding, partnerverificatie, detectie en synchronisatiestatus.",
+        "run": "Diagnose uitvoeren",
+        "labels": {
+          "overall": "Algemeen",
+          "connectionType": "Verbinding",
+          "status": "Status",
+          "mappedClients": "Gekoppelde klanten",
+          "managedTenants": "Beheerde tenants",
+          "recommendations": "Aanbevelingen",
+          "blockedBy": "Geblokkeerd door",
+          "error": "Fout",
+          "readiness": "Toegangsgereedheid"
+        },
+        "statuses": {
+          "pass": "Geslaagd",
+          "warn": "Waarschuwing",
+          "fail": "Mislukt",
+          "skip": "Overgeslagen"
+        },
+        "steps": {
+          "edition_tier_rbac": "Editie, abonnementsniveau en toegangsgereedheid",
+          "connection_row": "Actieve Entra-verbinding",
+          "app_registration_binding": "Koppeling van Microsoft-appregistratie",
+          "client_secret_present": "Clientgeheim van appregistratie",
+          "expected_app_registration_values": "Verwachte waarden van appregistratie",
+          "sync_worker_and_schedule": "Synchronisatieproces en planning",
+          "token_set_present": "Opgeslagen directe OAuth-tokens",
+          "token_refresh": "Toegangstoken van partner vernieuwen",
+          "token_claims": "Claims en bereiken van toegangstoken decoderen",
+          "graph_me": "Basiscontrole van Microsoft Graph /me",
+          "managed_tenants_endpoint": "Bereikbaarheid van eindpunt voor beheerde tenants",
+          "managed_tenants_count": "Detectie van beheerde tenants",
+          "mappings_vs_discovery": "Bevestigde koppelingen tegenover actuele detectie",
+          "cipp_credentials_present": "CIPP-inloggegevens",
+          "cipp_reachable": "Bereikbaarheid van CIPP-API",
+          "cipp_auth": "CIPP-API-inloggegeven",
+          "cipp_tenant_list": "CIPP-tenantlijst",
+          "cipp_mappings_vs_list": "Bevestigde koppelingen tegenover CIPP-tenantlijst",
+          "last_runs": "Recente synchronisaties",
+          "per_tenant_last_result": "Resultaat per tenant van de laatste synchronisatie",
+          "reconciliation_queue": "Afstemmingswachtrij",
+          "tenant_token_mint": "Token voor klanttenant uitgeven",
+          "users_read": "Directorygebruikers lezen",
+          "groups_read": "Directorygroepen lezen",
+          "entitlement_group_resolves": "Rechtengroep opzoeken",
+          "user_yield_preview": "Voorbeeld van opgenomen gebruikers",
+          "per_tenant_users": "CIPP-gebruikers per tenant"
+        },
+        "readiness": {
+          "authenticated": "Aangemeld",
+          "notClientPortal": "Geen gebruiker van het klantportaal",
+          "edition": "Enterprise-editie",
+          "integrationsTier": "Integratieniveau",
+          "entraSyncTier": "Entra-synchronisatieniveau (Pro)",
+          "systemSettingsRead": "Leesrecht voor system_settings"
+        },
+        "states": {
+          "running": "Diagnose wordt uitgevoerd..."
+        },
+        "errors": {
+          "failed": "Diagnose mislukt",
+          "clientFailed": "Klantdiagnose mislukt"
+        },
+        "actions": {
+          "copySupportBundle": "Ondersteuningspakket kopiëren",
+          "copied": "Gekopieerd",
+          "downloadJson": "JSON downloaden",
+          "copy": "Kopiëren",
+          "open": "Openen",
+          "open_url": "Openen",
+          "navigate": "Ga naar",
+          "goToStep": "Ga naar stap",
+          "includeIdentifiers": "Identificatiegegevens opnemen in export"
+        },
+        "clients": {
+          "title": "Diagnose van geselecteerde klanten",
+          "selectedCount": "{{count}} geselecteerd",
+          "yieldToggle": "Voorbeeld van opgenomen gebruikers (meer verwerkingskosten)",
+          "run": "Klantdiagnose uitvoeren",
+          "progress": "{{completed}} van {{total}} voltooid",
+          "confirmTitle": "Diagnose voor veel klanten uitvoeren?",
+          "confirmMessage": "U hebt {{count}} klanten geselecteerd. Voor elke klant wordt een token uitgegeven en een klein aantal Graph-aanvragen uitgevoerd.",
+          "confirmRun": "Uitvoeren",
+          "unavailableName": "Naam niet beschikbaar",
+          "selectAll": "Alles selecteren",
+          "clear": "Selectie wissen",
+          "categories": {
+            "ok": "In orde",
+            "need_consent": "Toestemming vereist",
+            "conditional_access": "Voorwaardelijke toegang",
+            "missing_role": "Rol ontbreekt",
+            "other": "Overig"
+          },
+          "details": {
+            "completed": "Voltooid",
+            "latestSyncFailure": "Laatste synchronisatiefout"
+          },
+          "columns": {
+            "client": "Klant",
+            "tenant": "Tenant",
+            "status": "Status",
+            "remedy": "Oplossing",
+            "complete": "Voltooid",
+            "details": "Details"
+          },
+          "complete": "Voltooid",
+          "partial": "Gedeeltelijk"
+        },
+        "remedies": {
+          "connectEntra": "Verbind Microsoft Entra via Instellingen > Integraties > Entra.",
+          "selectAppRegistration": "Selecteer een Microsoft-appregistratie voor Entra en maak opnieuw verbinding.",
+          "selectExistingApp": "De gekoppelde Microsoft-app bestaat niet meer. Selecteer een bestaande appregistratie en maak opnieuw verbinding.",
+          "chooseAnotherApp": "De gekoppelde Microsoft-appregistratie is gearchiveerd. Kies een andere appregistratie en maak opnieuw verbinding.",
+          "addEntraCapability": "Bewerk de appregistratie in Instellingen > Integraties > Microsoft en schakel de Entra-functionaliteit in.",
+          "secretExpiryUnknown": "De vervaldatum van het clientgeheim is onbekend. Microsoft-clientgeheimen verlopen na 6–24 maanden; vernieuw ze tijdig in Azure.",
+          "clientSecretMissing": "Het clientgeheim van de appregistratie ontbreekt of is leeg. Vernieuw het geheim in Azure en werk de appregistratie bij in Instellingen > Integraties > Microsoft.",
+          "entraAccessDenied": "Toegang tot Entra-diagnose is geweigerd voor deze gebruiker of werkruimte.",
+          "temporalUnreachable": "De Temporal-frontend is niet bereikbaar. Automatische synchronisatie kan pas worden uitgevoerd wanneer deze beschikbaar is.",
+          "temporalNoWorkers": "Temporal is bereikbaar, maar geen werkproces bevraagt de Entra-taakwachtrij. Geplande synchronisaties worden niet verwerkt.",
+          "syncDisabled": "Automatische Entra-synchronisatie is uitgeschakeld voor deze werkruimte.",
+          "scheduleLookupFailed": "De Temporal-planning kon niet worden gecontroleerd. Controleer de Temporal-machtigingen en de verbinding.",
+          "scheduleMissing": "Automatische synchronisatie is ingeschakeld, maar er is geen Temporal-planning gevonden. Sla de planning op om deze toe te passen.",
+          "scheduleIntervalMismatch": "Het Temporal-interval ({{interval}} min) komt niet overeen met de opgeslagen instelling ({{configured}} min). Sla de planning op om dit af te stemmen.",
+          "reconnectEntra": "Er is geen vernieuwingstoken opgeslagen. Verbind Microsoft Entra opnieuw.",
+          "noManagedTenants": "Er zijn geen beheerde tenants geretourneerd. De partner moet zijn ingericht in Microsoft 365 Lighthouse met actieve GDAP-relaties.",
+          "mappedTenantMissing": "De gekoppelde tenant ‘{{client}}’ is niet gevonden bij de detectie. GDAP is mogelijk verlopen of beëindigd.",
+          "mappingsLookupFailed": "Bevestigde tenantkoppelingen konden niet worden gelezen. Voer de diagnose opnieuw uit; controleer de koppelingen als het probleem aanhoudt.",
+          "cippCredentialsMissing": "De CIPP-basis-URL en een API-token zijn vereist. Configureer deze op het tabblad Verbinding.",
+          "cippAuthRejected": "CIPP heeft het API-inloggegeven geweigerd. Vernieuw de CIPP-API-sleutel via Instellingen > CIPP > API-toegang; dit is geen Azure-clientgeheim.",
+          "cippEmptyTenantList": "CIPP heeft geen tenants geretourneerd. Controleer de zichtbaarheid van klanten en de CIPP-configuratie.",
+          "cippUnreachable": "CIPP is niet bereikbaar. Controleer de basis-URL, DNS/TLS en uitgaande verbindingen.",
+          "cippPerTenantFailed": "CIPP kon de directory van deze tenant niet lezen.",
+          "consecutiveSyncFailures": "De laatste twee synchronisaties zijn niet voltooid. Controleer de synchronisatiegeschiedenis en de fouten per tenant.",
+          "reconciliationOpenItems": "Er wachten {{count}} items in de beoordelingswachtrij; dubbelzinnige overeenkomsten worden nooit automatisch gekoppeld.",
+          "customerConsentRequired": "De app heeft beheerderstoestemming nodig in deze klanttenant. Opnieuw verbinden van de partner helpt niet; open de toestemmingslink en verleen toestemming als klantbeheerder.",
+          "entitlementGroupNotSecurity": "De geconfigureerde rechtengroep is geen beveiligingsgroep; lidmaatschap kan mogelijk niet worden afgedwongen.",
+          "entitlementGroupMissing": "De geconfigureerde rechtengroep bestaat niet meer in deze klanttenant.",
+          "allUsersExcluded": "Alle gebruikers in deze directory zijn uitgesloten door de huidige filterregels; synchronisatie zou geen contacten aanmaken.",
+          "yieldTruncated": "Het voorbeeld is vroegtijdig gestopt omdat de directory groot is. De aantallen zijn een ondergrens en omvatten niet de volledige directory.",
+          "yieldFailed": "Het gebruikersvoorbeeld kon niet worden berekend.",
+          "missingScope": "Het token mist {{scope}}. Verleen beheerderstoestemming en verbind Microsoft Entra opnieuw.",
+          "appClientIdMismatch": "Het token is uitgegeven voor een andere toepassing dan de gekoppelde appregistratie. Verbind Microsoft Entra opnieuw met de juiste app.",
+          "client_secret_invalid": "Microsoft heeft de app-inloggegevens geweigerd (invalid_client / AADSTS7000222). Vernieuw het clientgeheim in Azure, werk de Microsoft-appregistratie bij in Instellingen > Integraties > Microsoft en maak opnieuw verbinding.",
+          "app_not_found": "Microsoft kon de toepassing niet vinden (AADSTS700016). Controleer de gekoppelde client-ID en of de app meerdere tenants ondersteunt.",
+          "partner_consent_required": "Beheerderstoestemming in de partnertenant ontbreekt (AADSTS65001 / consent_required). Verleen toestemming voor de app in de partnertenant en maak opnieuw verbinding.",
+          "conditional_access": "Voorwaardelijke toegang heeft de aanvraag geblokkeerd (AADSTS50076/AADSTS50079). Het gebruikte account moet voldoen aan het beleid voor MFA en conforme apparaten.",
+          "refresh_token_invalid": "De vernieuwingsmachtiging is verlopen of ingetrokken. Verbind Microsoft Entra opnieuw om een nieuw vernieuwingstoken uit te geven.",
+          "tenant_not_found": "Microsoft kon de tenant niet vinden (AADSTS90002). Controleer de tenant-ID in de verbinding of koppeling.",
+          "account_not_allowed": "Het gebruikte account is niet toegestaan in de tenant (AADSTS50020). Controleer of het account toegang heeft of een gast is.",
+          "network_unreachable": "Microsoft Graph is niet bereikbaar. Controleer uitgaande verbindingen, DNS en TLS-vertrouwen.",
+          "token_rejected": "Microsoft heeft het token geweigerd (401). Verbind Microsoft Entra opnieuw of controleer de klanttoestemming.",
+          "forbidden": "Microsoft Graph heeft 403 (Verboden) geretourneerd. Controleer gedelegeerde machtigingen, toestemming en roltoewijzingen.",
+          "request_failed": "De Microsoft-aanvraag is mislukt. Vouw de stap uit voor de foutcode en correlatie-ID.",
+          "customer_directory_role_missing": "Microsoft Graph heeft het lezen van een klantdirectory geweigerd (403). Het gedelegeerde account heeft in deze klanttenant een directoryleesrol nodig, doorgaans toegewezen via GDAP (bijvoorbeeld Directorylezers).",
+          "managedTenantsEndpointFault": "Graph heeft de managedTenants-aanvraag geweigerd; dit is een eindpuntfout aan de kant van Alga. Neem contact op met ondersteuning en vermeld de aanvraag-ID.",
+          "cippHttpError": "CIPP antwoordde met HTTP {{status}} voor elk eindpunt voor tenantlijsten. Dit is een fout bij het ophalen aan de kant van CIPP, geen lege lijst.",
+          "cippInvalidPayload": "CIPP heeft een antwoord geretourneerd dat geen tenantlijst is. Controleer de CIPP-API-versie en het eindpunt.",
+          "schedulePaused": "Automatische synchronisatie is ingeschakeld, maar de Temporal-planning is gepauzeerd; er worden geen uitvoeringen gestart.",
+          "temporalWorkerUnknown": "Temporal is bereikbaar, maar er zijn geen gegevens over de werkprocessen die de wachtrij bevragen; hun beschikbaarheid kon niet worden bevestigd.",
+          "managedTenantConsentMissing": "Microsoft heeft de aanmelding geaccepteerd, maar de lijst met beheerde tenants geweigerd. Een globale beheerder moet toestemming verlenen voor de gevraagde machtigingen."
+        }
+      }
+    }
   }
 }

@@ -740,7 +740,8 @@
       "driftReexport": "Réexporter vers QuickBooks",
       "syncNow": "Synchroniser avec QuickBooks",
       "viewInQbo": "Afficher dans QuickBooks",
-      "voidInvoice": "Annuler la facture"
+      "voidInvoice": "Annuler la facture",
+      "viewInXero": "Voir dans Xero"
     },
     "loading": "Chargement de l'aperçu...",
     "empty": "Sélectionnez une facture à prévisualiser",
@@ -1095,7 +1096,9 @@
     "tooltip": {
       "qboNumberPrefix": "QBO #",
       "lastSynced": "Dernière synchronisation :",
-      "viewInQuickBooks": "Voir dans QuickBooks"
+      "viewInQuickBooks": "Voir dans QuickBooks",
+      "viewInXero": "Voir dans Xero",
+      "xeroNumberPrefix": "N° Xero "
     }
   },
   "templateManager": {

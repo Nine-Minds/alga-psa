@@ -240,6 +240,10 @@ export {
   type EntraSyncScheduleSettings,
 } from './integrations/entraActions';
 export {
+  runEntraConnectionDiagnostics,
+  runEntraClientAccessDiagnostics,
+} from './integrations/entraDiagnosticsActions';
+export {
   getTacticalRmmSettings,
   saveTacticalRmmConfiguration,
   testTacticalRmmConnection,

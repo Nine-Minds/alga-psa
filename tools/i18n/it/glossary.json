@@ -2350,7 +2350,9 @@
       "{{count}} asset",
       "{{count}} assets",
       "{{count}} h",
-      "{{hours}} h {{minutes}} min"
+      "{{hours}} h {{minutes}} min",
+      "3CX",
+      "Teams Phone"
     ],
     "caseInsensitive": [
       "account",

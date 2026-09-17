@@ -42,7 +42,9 @@
           "enterprise": "Pro"
         },
         "comingSoon": "Coming Soon",
-        "configure": "Configure Integration",
+        "configure": "Configure",
+        "changeIntegration": "Choose another",
+        "currentIntegration": "Accounting integration",
         "highlightValues": {
           "csv": "CSV",
           "instant": "Instant",
@@ -58,19 +60,22 @@
         },
         "options": {
           "qbo": {
-            "description": "Connect your realm to sync invoices and manage mappings."
+            "description": "Keep invoices, payments, and customers in sync."
           },
           "qboCsv": {
-            "description": "Export invoices to CSV for manual import into QuickBooks and import tax data from reports."
+            "description": "Export invoices for manual import into QuickBooks."
           },
           "xero": {
-            "description": "Connect your organisation with tenant-owned OAuth credentials for live accounting exports and mappings."
+            "description": "Keep invoices, payments, and contacts in sync."
           },
           "xeroCsv": {
-            "description": "Export invoices to CSV for manual import into Xero and import tax data from Xero reports."
+            "description": "Export invoices and import Xero tax reports."
           }
         },
         "selected": "{{title}} selected",
+        "selectedAction": "Selected",
+        "reconnectRequired": "Reconnect required",
+        "settingsTitle": "{{title}} settings",
         "unavailable": {
           "description": "This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.",
           "title": "Configuration unavailable"
@@ -1911,7 +1916,7 @@
         },
         "credentialsSaved": "QuickBooks credentials saved. You can now start the QuickBooks OAuth flow.",
         "csvAvailableMiddle": "in this same Accounting section and manage exports from",
-        "csvAvailablePrefix": "If you prefer a manual workflow, keep using",
+        "csvAvailablePrefix": "Prefer a file-based workflow?",
         "csvAvailableTitle": "QuickBooks CSV remains available",
         "description": "Configure QuickBooks OAuth credentials, connect your QuickBooks company, and keep live QuickBooks available beside the manual QuickBooks CSV workflow.",
         "disconnectSuccess": "The stored QuickBooks connection was removed. Tenant-owned QuickBooks app credentials were preserved.",
@@ -1974,7 +1979,7 @@
       "sync": {
         "healthCardTitle": "Sync Health",
         "healthCardDescription": "QuickBooks accounting sync status and controls. Runs every 15 minutes.",
-        "lastCycleTitle": "Last Sync Cycle",
+        "lastCycleTitle": "Most recent sync",
         "lastCycleStatus": "Status",
         "lastCycleFinishedAt": "Finished",
         "lastCycleStats": "Results",
@@ -1982,14 +1987,14 @@
         "statDriftFound": "{{count}} drift",
         "statPaymentsApplied": "{{count}} payments applied",
         "noLastCycle": "No sync cycle has run yet.",
-        "nextRunHint": "Runs automatically every 15 minutes when auto-sync is enabled.",
+        "nextRunHint": "Runs automatically every 15 minutes when automatic sync is on.",
         "pendingOps": "Pending ops",
         "erroredOps": "Errored ops",
         "driftCount": "Drift",
         "openExceptions": "Open exceptions",
         "refreshTokenExpiry": "QuickBooks token expires {{date}}",
         "refreshTokenExpired": "QuickBooks token expired — reconnect to resume syncing.",
-        "autoSyncLabel": "Auto-sync enabled",
+        "autoSyncLabel": "Automatic sync",
         "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
         "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
         "syncNowButton": "Sync Now",
@@ -1997,6 +2002,10 @@
         "syncNowSuccess": "Sync completed successfully.",
         "syncNowSkipped": "Sync skipped: {{reason}}",
         "syncNowError": "Sync failed: {{error}}",
+        "connectionUnavailableProvider": "{{provider}} connection is unavailable. Reconnect to resume syncing.",
+        "defaultRealmError": "Could not select this organisation. Reconnect and try again.",
+        "syncIncomplete": "Sync is incomplete. The cursor was preserved because the provider returned a partial change set.",
+        "syncOperationsFailed": "Some accounting operations failed. Review the sync errors before retrying.",
         "viewExceptionsLink": "View exceptions",
         "autoApplyCreditsWarning": "QuickBooks is set to automatically apply credits, which conflicts with credit applications driven from Alga: QuickBooks may apply exported credit memos to a different invoice before the sync does. In QuickBooks, go to Account and Settings → Advanced → Automation and turn off \"Automatically apply credits\".",
         "configTitle": "Sync Configuration",
@@ -2009,7 +2018,20 @@
         "noDefault": "No default",
         "saving": "Saving…",
         "undepositedFunds": "Undeposited Funds (default)",
-        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options.",
+        "healthCardTitleProvider": "{{provider}} sync activity",
+        "healthCardDescriptionProvider": "Review recent {{provider}} activity, outstanding items, and automatic sync settings.",
+        "connectedOrganisations": "Xero organisations",
+        "defaultOrganisationDescription": "The default organisation is used for sync, exports, and mappings.",
+        "outstandingItems": "Outstanding items",
+        "outstandingItemsDescription": "Items that still need review or another sync attempt.",
+        "outstandingItemsReconnect": "Across all linked organisations. These items are preserved until you reconnect Xero.",
+        "refreshTokenExpiredProvider": "{{provider}} token expired — reconnect to resume syncing.",
+        "refreshTokenExpiryProvider": "{{provider}} token expires {{date}}",
+        "refreshTokenValidUntilProvider": "{{provider}} authorization valid until {{date}}. Tokens refresh automatically.",
+        "autoProvisionCustomersLabelProvider": "Create {{provider}} customers automatically",
+        "syncSucceeded": "Sync completed",
+        "syncStopped": "Sync stopped"
       },
       "itemImport": {
         "description": "Import your QuickBooks products and services into the Alga service catalog for the connected QuickBooks company. QuickBooks stays the source of truth for names, rates, SKUs, descriptions, and costs; billing method, unit of measure, and service type are set here and owned by Alga afterwards. This step is optional — skip it with Next.",
@@ -3517,20 +3539,22 @@
         "actions": {
           "connect": "Connect Xero",
           "disconnect": "Disconnect Xero",
+          "disconnectAll": "Disconnect all Xero organisations",
           "disconnecting": "Disconnecting…",
           "reconnect": "Reconnect Xero",
           "refresh": "Refresh",
           "saveCredentials": "Save Xero Credentials",
           "saving": "Saving…",
           "retryDisconnect": "Retry Disconnect",
-          "forceFinalizeDisconnect": "Force Finalize"
+          "forceFinalizeDisconnect": "Force Finalize",
+          "replaceCredentials": "Replace credentials"
         },
         "badges": {
-          "connectionExpired": "Connection Expired",
-          "credentialsReady": "Credentials Ready",
-          "credentialsRequired": "Credentials Required",
-          "defaultConnected": "Default Organisation Connected",
-          "noOrganisation": "No Organisation Connected"
+          "connectionExpired": "Action required",
+          "credentialsReady": "Credentials saved",
+          "credentialsRequired": "Credentials required",
+          "defaultConnected": "Connected",
+          "noOrganisation": "Not connected"
         },
         "callback": {
           "accessDenied": "Xero access was denied before the connection completed.",
@@ -3548,17 +3572,26 @@
           "tenantMismatch": "This Xero connection request belongs to another workspace. Sign in to the correct workspace and start again.",
           "userMismatch": "This Xero connection request belongs to another user. Sign in as the user who started it and try again."
         },
-        "clientIdLabel": "Xero Client ID",
-        "clientIdPlaceholder": "Paste your tenant-owned Xero client ID",
-        "clientSecretLabel": "Xero Client Secret",
-        "clientSecretPlaceholder": "Paste your tenant-owned Xero client secret",
-        "connectSuccess": "Xero connected successfully. The first connected organisation is now the default live Xero context.",
+        "clientIdLabel": "Client ID",
+        "clientIdPlaceholder": "Paste the Client ID from Xero",
+        "clientSecretLabel": "Client Secret",
+        "clientSecretPlaceholder": "Paste the Client Secret from Xero",
+        "connectSuccess": "Xero connected. {{count}} organisations linked; {{organisation}} is the default for sync.",
+        "connectNeedsAttention": "Xero authorization completed, but the connection still needs attention. Sync remains paused.",
         "connection": {
           "connectionId": "Connection ID: {{id}}",
-          "defaultOrganisation": "Default organisation",
-          "description": "Start OAuth only after the tenant-owned Xero app is configured. Disconnecting removes stored Xero access tokens but keeps the tenant-owned app credentials in place.",
+          "defaultBadge": "Default for sync",
+          "defaultOrganisation": "Default for sync and exports",
+          "description": "One Xero authorization links these organisations to Alga PSA.",
+          "linkedOrganisations": "Linked organisations ({{count}})",
+          "multipleOrganisationScope": "This authorization includes {{count}} Xero organisations. Reconnect and disconnect apply to all of them.",
           "notConnected": "No live Xero organisation is connected yet. Save credentials, then click Connect Xero.",
-          "title": "Live Xero Connection",
+          "reconnectRequiredBadge": "Reconnect required",
+          "organisationScope": "Reconnect and disconnect apply to every organisation in this list.",
+          "reconnectRequiredDescription": "Sync and exports are paused. Reconnect once to resume them for all {{count}} linked organisations.",
+          "reconnectRequiredTitle": "Connection expired",
+          "singleOrganisationScope": "Reconnect and disconnect apply to this Xero organisation.",
+          "title": "Xero connection",
           "unknown": "unknown"
         },
         "credentialsSaved": "Xero credentials saved. You can now start the live Xero OAuth flow.",
@@ -3572,11 +3605,11 @@
           "load": "Failed to load Xero settings.",
           "saveCredentials": "Failed to save Xero credentials."
         },
-        "howItWorksDescription": "Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and AlgaPSA will use the first connected Xero organisation as the default live context.",
-        "howItWorksTitle": "How live Xero works in this release",
+        "howItWorksDescription": "Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and AlgaPSA will use the Xero organisation selected as the default for live exports and sync.",
+        "howItWorksTitle": "Xero app setup details",
         "loading": "Loading Xero settings…",
         "mapping": {
-          "alert": "Xero items, revenue accounts, tax rates, and tracking categories are loaded from the default connected organisation so live exports can keep using the first stored Xero connection in v1.",
+          "alert": "Xero items, revenue accounts, tax rates, and tracking categories are loaded from the selected default organisation, and mappings are saved against that connection so live exports and reconciliation use the same organisation.",
           "descriptionPrefix": "Configure live Xero mappings for the default connected organisation. These mappings are scoped to",
           "placeholderAlert": "The mapping manager becomes available after the first Xero organisation is connected and set as the default live Xero context.",
           "placeholderDescription": "Connect a live Xero organisation before configuring live Xero item and tax mappings.",
@@ -3586,21 +3619,25 @@
         "noClientId": "No client ID is stored for this tenant yet.",
         "noClientSecret": "No client secret is stored for this tenant yet.",
         "redirectUri": "Redirect URI",
-        "requiredScopes": "Required Scopes",
+        "requiredScopes": "Permissions requested from Xero",
         "scopeOverride": "Deployment override (XERO_OAUTH_SCOPES)",
         "scopeOverrideInvalid": "The XERO_OAUTH_SCOPES override was ignored because it contains invalid entries ({{scopes}}). The default scopes are used instead.",
-        "scopeReconnectNote": "These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. You can also remove this app from Connected apps in Xero to revoke earlier grants.",
+        "scopeReconnectNote": "Reconnect Xero after changing permissions. Token refreshes keep the permissions granted during the last authorization.",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
-        "tenantOauthDescription": "Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.",
-        "tenantOauthTitle": "Tenant-Owned OAuth App",
+        "tenantOauthDescription": "Enter the Client ID and Client Secret from your Xero app. Alga PSA stores them securely.",
+        "tenantOauthTitle": "Xero app credentials",
         "title": "Xero",
-        "xeroCsv": "Xero CSV",
+        "xeroCsv": "Use Xero CSV",
         "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
         "connectionsPermissionNotice": "You can view Xero settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.",
         "disconnectPending": "Xero is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
         "disconnectForceFinalized": "The Xero disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
         "disconnect": {
+          "confirmDescription": "This disconnects {{organisations}} and pauses sync and exports. Your Xero app credentials will remain saved.",
+          "confirmTitle": "Disconnect Xero from Alga PSA?",
+          "dangerDescription": "Stops sync and exports and removes all {{count}} linked organisations. App credentials remain saved.",
+          "dangerTitle": "Disconnect Xero",
           "forceFinalizePrompt": "Reason for force-finalizing the Xero disconnect (recorded in the audit log):",
           "inProgressTitle": "Xero disconnect in progress",
           "inProgressDescription": "Provider connections are being revoked. Sync and exports stay paused until every connection is confirmed removed.",
@@ -3609,7 +3646,8 @@
           "targetFailed": "needs attention",
           "targetPending": "pending",
           "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
-        }
+        },
+        "credentialsStoredDescription": "The Client ID and Client Secret are stored securely."
       }
     },
     "stripe": {
@@ -3680,7 +3718,88 @@
       "providers": {
         "teamsPhone": {
           "description": "Journal Teams Phone calls as interactions once each call ends. Call history, not live screen pop.",
-          "prerequisite": "Configure the Microsoft Teams integration first — Teams Phone reuses its Microsoft profile."
+          "prerequisite": "Configure the Microsoft Teams integration first — Teams Phone reuses its Microsoft profile.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Journal 3CX calls as interactions and recognise callers in the 3CX client through the CRM template.",
+          "permission": "You need the system settings permission to manage the 3CX integration.",
+          "endpoint": "Endpoint base URL",
+          "copy": "Copy",
+          "apiKey": "API key",
+          "rotate": "Rotate",
+          "fullKeyWarning": "Copy this key now — it will not be shown again.",
+          "download": "Download template",
+          "tierRequired": "3CX telephony requires the Pro plan.",
+          "templateStale": "A newer template is available. Download and re-upload it in the 3CX console.",
+          "pbx": {
+            "title": "PBX API (3CX Enterprise/AI)",
+            "help": "Screen pop, click-to-call, call-history import and phonebook sync use the 3CX Call Control and Configuration APIs, which need a 3CX Enterprise or AI license (8SC+). Create an API app in the 3CX Admin Console under Integrations → API, tick both API accesses, and list every extension you want to monitor.",
+            "baseUrl": "PBX address",
+            "clientId": "Client id (API app extension)",
+            "clientSecret": "Client secret",
+            "replaceSecret": "Replace",
+            "save": "Save credentials",
+            "test": "Test connection",
+            "clear": "Remove",
+            "connected": "Connected",
+            "granted": "granted",
+            "notGranted": "not granted",
+            "callControl": "Call control",
+            "xapi": "Configuration API",
+            "lastChecked": "Last checked",
+            "notConnectedHint": "Connect the PBX API above to use this feature."
+          },
+          "extensions": {
+            "title": "Extensions",
+            "sync": "Sync from PBX",
+            "lastSync": "Last sync",
+            "empty": "No extensions synced yet.",
+            "dn": "Extension",
+            "pbxUser": "PBX user",
+            "algaUser": "AlgaPSA user",
+            "unmapped": "Not mapped",
+            "auto": "matched by email"
+          },
+          "cdr": {
+            "title": "Call history import",
+            "help": "Reads the PBX call log every hour and journals external calls that are not in the ledger yet.",
+            "lookback": "Days of history on the first run",
+            "lastRun": "Last run",
+            "added": "Records added"
+          },
+          "phonebook": {
+            "title": "Phonebook sync",
+            "help": "Pushes contacts with phone numbers to the 3CX company phonebook and adds numbers found only in the PBX to matching contacts.",
+            "schedule": "Reconcile schedule",
+            "daily": "Daily",
+            "hourly": "Hourly",
+            "pushNow": "Push now",
+            "importNow": "Import now",
+            "lastPush": "Last push",
+            "lastImport": "Last import",
+            "countsLegend": "Counts: created/updated/deleted/imported/skipped"
+          },
+          "queue": {
+            "title": "Contacts created from 3CX",
+            "empty": "Nothing waiting. Contacts created from the 3CX client without a matching client show up here.",
+            "pendingBadge": "needs email",
+            "unmappedBadge": "no client",
+            "company": "Company",
+            "chooseClient": "Choose a client…",
+            "apply": "Apply",
+            "leaveWithoutClient": "Leave without client",
+            "complete": "Complete",
+            "dismiss": "Dismiss",
+            "completeTitle": "Complete contact from 3CX",
+            "firstName": "First name",
+            "lastName": "Last name",
+            "email": "Email",
+            "number": "Phone number",
+            "cancel": "Cancel",
+            "save": "Create contact"
+          }
         }
       },
       "subscriptionExpires": "Subscription renews before",
@@ -3717,7 +3836,8 @@
         "assignTo": "Assign to",
         "searchPlaceholder": "Search contacts and clients…",
         "noTargets": "No matching contacts or clients.",
-        "chooseTarget": "Assign to client…"
+        "chooseTarget": "Assign to client…",
+        "chatBadge": "Chat"
       },
       "forbidden": "You do not have permission to view telephony settings for this tenant.",
       "paywall": {
@@ -3816,6 +3936,7 @@
       "enterpriseOnly": "Xero integration is only available in Enterprise Edition.",
       "viewPermission": "Forbidden: You do not have permission to view Xero integration settings.",
       "organisationDisconnected": "The selected Xero organisation is no longer connected. Reconnect Xero and try again.",
+      "organisationAmbiguous": "The saved default Xero organisation is owned by more than one connection. Choose which connection is the default in the accounting settings.",
       "accounts": {
         "notConnected": "Connect Xero before loading Xero accounts.",
         "reconnect": "Reconnect Xero before loading Xero accounts.",
@@ -3851,6 +3972,23 @@
       "contactWithoutClient": "A contact with this email address already exists in the system without a client assignment",
       "emailOnAnotherClient": "This email is already associated with another client",
       "emailOnAnotherClientNamed": "This email is already associated with {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Incoming call",
+      "unknownCaller": "Unknown caller",
+      "noNumber": "No caller ID",
+      "extension": "Ringing extension {{dn}}",
+      "openTickets": "Open tickets",
+      "recentInteractions": "Recent interactions",
+      "openContact": "Open contact",
+      "openClient": "Open client",
+      "newTicket": "New ticket",
+      "createContact": "Create contact",
+      "dismiss": "Dismiss",
+      "answer": "Answer",
+      "answerFailed": "The PBX could not answer the call"
     }
   }
 }

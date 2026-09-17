@@ -215,7 +215,6 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/types/src/interfaces/contractSimulation.interfaces.ts',
   'packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx',
   'packages/billing/src/components/invoice-designer/inspector/TableEditorWidget.integration.test.tsx',
-  'packages/billing/src/components/invoice-designer/inspector/widgets/TableEditorWidget.tsx',
   // Ticket-time designer bindings suite (feature/invoice-layouts-ticket-level-
   // billed-time-details) landed after the pass-0 snapshot; it asserts the
   // non-time tables keep their recurring service-period binding suggestions.
@@ -232,6 +231,9 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/tests/automaticInvoices.groupedParentRows.test.tsx',
   'packages/billing/tests/recurringApprovalBlockers.servicePeriodBoundary.test.ts',
   'packages/integrations/src/lib/xero/__tests__/xeroInvoiceMapping.test.ts',
+  // Two-way Xero reconciliation fixtures persist export-line service periods;
+  // this suite was introduced after the pass-0 snapshot.
+  'server/src/test/integration/accounting/xeroInboundReconciliation.integration.test.ts',
   'server/src/lib/api/services/InvoiceService.ts',
   // seedBillingChargeSources backs fabricated usage charges with usage_tracking
   // rows keyed off the charge's servicePeriodStart.
@@ -333,15 +335,17 @@ describe('service-period-first billing plan artifacts', () => {
     ).filter((file) =>
       file !== 'packages/billing/src/lib/billing/billingEngine.ts'
       && !persistedReaderExclusions.has(file)
-      && !servicePeriodPostInventoryRefs.has(file)
     );
 
+    // Include post-snapshot readers in the equality check so additions remain
+    // accounted for and stale entries are detected when references move.
     expect(
-      inventory.periodFieldInventory.servicePeriodFieldRefs
-        .filter((file) => file !== 'packages/billing/src/lib/billing/billingEngine.ts')
-        .filter((file) => !servicePeriodPostInventoryRemovals.has(file))
-        .slice()
-        .sort()
+      [...new Set([
+        ...inventory.periodFieldInventory.servicePeriodFieldRefs
+          .filter((file) => file !== 'packages/billing/src/lib/billing/billingEngine.ts')
+          .filter((file) => !servicePeriodPostInventoryRemovals.has(file)),
+        ...servicePeriodPostInventoryRefs,
+      ])].sort()
     ).toEqual(outsideEngine);
   });
 

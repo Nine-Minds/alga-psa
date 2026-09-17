@@ -78,7 +78,12 @@
         "noPermission": {
           "title": "Kein Zugriff auf Buchhaltungsintegrationen",
           "description": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren. Bitten Sie einen Administrator um Zugriff."
-        }
+        },
+        "changeIntegration": "Andere auswählen",
+        "currentIntegration": "Buchhaltungsintegration",
+        "selectedAction": "Ausgewählt",
+        "reconnectRequired": "Erneute Verbindung erforderlich",
+        "settingsTitle": "{{title}}-Einstellungen"
       },
       "modules": {
         "tabs": {
@@ -1974,6 +1979,10 @@
         "syncNowSuccess": "Synchronisierung erfolgreich abgeschlossen.",
         "syncNowSkipped": "Synchronisierung übersprungen: {{reason}}",
         "syncNowError": "Synchronisierung fehlgeschlagen: {{error}}",
+        "connectionUnavailableProvider": "{{provider}}-Verbindung ist nicht verfügbar. Stellen Sie die Verbindung wieder her, um die Synchronisierung fortzusetzen.",
+        "defaultRealmError": "Diese Organisation konnte nicht ausgewählt werden. Stellen Sie die Verbindung wieder her und versuchen Sie es erneut.",
+        "syncIncomplete": "Die Synchronisierung ist unvollständig. Der Cursor wurde beibehalten, weil der Anbieter einen teilweisen Änderungssatz zurückgegeben hat.",
+        "syncOperationsFailed": "Einige Buchhaltungsvorgänge sind fehlgeschlagen. Prüfen Sie die Synchronisierungsfehler, bevor Sie es erneut versuchen.",
         "viewExceptionsLink": "Ausnahmen anzeigen",
         "autoApplyCreditsWarning": "QuickBooks ist so eingestellt, dass Guthaben automatisch angewendet werden. Das steht im Konflikt mit den von Alga gesteuerten Guthabenanwendungen: QuickBooks kann exportierte Gutschriften vor der Synchronisierung auf eine andere Rechnung anwenden. Öffnen Sie in QuickBooks „Account and Settings → Advanced → Automation“ und deaktivieren Sie „Automatically apply credits“.",
         "configTitle": "Synchronisierungskonfiguration",
@@ -1986,7 +1995,20 @@
         "noDefault": "Kein Standard",
         "saving": "Speichern…",
         "undepositedFunds": "Nicht eingezahlte Mittel (Standard)",
-        "catalogLoadError": "Die Konfigurationsoptionen für die QuickBooks-Synchronisierung konnten nicht geladen werden."
+        "catalogLoadError": "Die Konfigurationsoptionen für die QuickBooks-Synchronisierung konnten nicht geladen werden.",
+        "healthCardTitleProvider": "{{provider}}-Synchronisierungsstatus",
+        "healthCardDescriptionProvider": "Status und Steuerung der {{provider}}-Buchhaltungssynchronisierung. Läuft alle 15 Minuten.",
+        "refreshTokenExpiredProvider": "{{provider}}-Token abgelaufen — stellen Sie die Verbindung wieder her, um die Synchronisierung fortzusetzen.",
+        "refreshTokenExpiryProvider": "{{provider}}-Token läuft am {{date}} ab",
+        "autoProvisionCustomersLabelProvider": "{{provider}}-Kunden automatisch erstellen",
+        "connectedOrganisations": "Xero-Organisationen",
+        "defaultOrganisationDescription": "Die Standardorganisation wird für Synchronisierung, Exporte und Zuordnungen verwendet.",
+        "outstandingItems": "Offene Elemente",
+        "outstandingItemsDescription": "Elemente, die noch geprüft oder erneut synchronisiert werden müssen.",
+        "outstandingItemsReconnect": "Über alle verknüpften Organisationen hinweg. Diese Elemente bleiben erhalten, bis Sie Xero erneut verbinden.",
+        "refreshTokenValidUntilProvider": "{{provider}}-Autorisierung gültig bis {{date}}. Tokens werden automatisch erneuert.",
+        "syncSucceeded": "Synchronisierung abgeschlossen",
+        "syncStopped": "Synchronisierung gestoppt"
       },
       "itemImport": {
         "description": "Importieren Sie Ihre QuickBooks-Produkte und -Dienste für das verbundene QuickBooks-Unternehmen in den Alga-Servicekatalog. QuickBooks bleibt die maßgebliche Quelle für Namen, Sätze, SKUs, Beschreibungen und Kosten; Abrechnungsmethode, Maßeinheit und Diensttyp werden hier festgelegt und anschließend von Alga verwaltet. Dieser Schritt ist optional — überspringen Sie ihn mit „Weiter“.",
@@ -3500,7 +3522,9 @@
           "saveCredentials": "Xero-Anmeldedaten speichern",
           "saving": "Speichern…",
           "retryDisconnect": "Trennung wiederholen",
-          "forceFinalizeDisconnect": "Abschluss erzwingen"
+          "forceFinalizeDisconnect": "Abschluss erzwingen",
+          "disconnectAll": "Alle Xero-Organisationen trennen",
+          "replaceCredentials": "Zugangsdaten ersetzen"
         },
         "badges": {
           "connectionExpired": "Verbindung abgelaufen",
@@ -3529,14 +3553,22 @@
         "clientIdPlaceholder": "Fügen Sie Ihre mandanteneigene Xero Client ID ein",
         "clientSecretLabel": "Xero Client Secret",
         "clientSecretPlaceholder": "Fügen Sie Ihr mandanteneigenes Xero Client Secret ein",
-        "connectSuccess": "Xero erfolgreich verbunden. Die erste verbundene Organisation ist nun der Standard-Live-Xero-Kontext.",
+        "connectSuccess": "Xero verbunden. {{count}} Organisationen verknüpft; {{organisation}} ist die Standardorganisation für die Synchronisierung.",
         "connection": {
           "connectionId": "Verbindungs-ID: {{id}}",
           "defaultOrganisation": "Standardorganisation",
           "description": "Starten Sie OAuth erst, nachdem die mandanteneigene Xero-App konfiguriert ist. Beim Trennen werden gespeicherte Xero-Zugriffstoken entfernt, die mandanteneigenen App-Anmeldedaten bleiben jedoch erhalten.",
           "notConnected": "Es ist noch keine Live-Xero-Organisation verbunden. Speichern Sie die Anmeldedaten und klicken Sie anschließend auf „Xero verbinden“.",
           "title": "Live-Xero-Verbindung",
-          "unknown": "unbekannt"
+          "unknown": "unbekannt",
+          "defaultBadge": "Standard für Synchronisierung",
+          "linkedOrganisations": "Verknüpfte Organisationen ({{count}})",
+          "multipleOrganisationScope": "Diese Autorisierung umfasst {{count}} Xero-Organisationen. Erneutes Verbinden und Trennen gelten für alle.",
+          "reconnectRequiredBadge": "Erneute Verbindung erforderlich",
+          "organisationScope": "Erneutes Verbinden und Trennen gelten für jede Organisation in dieser Liste.",
+          "reconnectRequiredDescription": "Synchronisierung und Exporte sind pausiert. Verbinden Sie Xero einmal erneut, um sie für alle {{count}} verknüpften Organisationen fortzusetzen.",
+          "reconnectRequiredTitle": "Verbindung abgelaufen",
+          "singleOrganisationScope": "Erneutes Verbinden und Trennen gelten für diese Xero-Organisation."
         },
         "credentialsSaved": "Xero-Anmeldedaten gespeichert. Sie können jetzt den Live-Xero-OAuth-Flow starten.",
         "csvAvailableMiddle": "in diesem Buchhaltungsbereich und verwalten Sie Exporte über",
@@ -3549,11 +3581,11 @@
           "load": "Xero-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "Xero-Anmeldedaten konnten nicht gespeichert werden."
         },
-        "howItWorksDescription": "Speichern Sie hier eine mandanteneigene Xero Client ID und ein Client Secret, schließen Sie den Xero-OAuth-Flow ab, und AlgaPSA verwendet die erste verbundene Xero-Organisation als Standard-Live-Kontext.",
+        "howItWorksDescription": "Speichern Sie hier eine mandanteneigene Xero Client ID und ein Client Secret, schließen Sie den Xero-OAuth-Flow ab, und AlgaPSA verwendet die als Standard ausgewählte Xero-Organisation für Live-Exporte und Synchronisierung.",
         "howItWorksTitle": "So funktioniert Live-Xero in dieser Version",
         "loading": "Xero-Einstellungen werden geladen…",
         "mapping": {
-          "alert": "Xero-Artikel, Umsatzkonten, Steuersätze und Tracking-Kategorien werden aus der verbundenen Standardorganisation geladen, damit Live-Exporte in v1 weiterhin die erste gespeicherte Xero-Verbindung nutzen können.",
+          "alert": "Xero-Artikel, Umsatzkonten, Steuersätze und Tracking-Kategorien werden aus der ausgewählten Standardorganisation geladen, und Zuordnungen werden für diese Verbindung gespeichert, damit Live-Exporte und Abgleich dieselbe Organisation verwenden.",
           "descriptionPrefix": "Konfigurieren Sie Live-Xero-Zuordnungen für die verbundene Standardorganisation. Diese Zuordnungen sind begrenzt auf",
           "placeholderAlert": "Der Zuordnungsmanager wird verfügbar, nachdem die erste Xero-Organisation verbunden und als Standard-Live-Xero-Kontext festgelegt wurde.",
           "placeholderDescription": "Verbinden Sie eine Live-Xero-Organisation, bevor Sie Live-Xero-Artikel- und Steuer-Zuordnungen konfigurieren.",
@@ -3566,7 +3598,7 @@
         "requiredScopes": "Erforderliche Scopes",
         "scopeOverride": "Bereitstellungsüberschreibung (XERO_OAUTH_SCOPES)",
         "scopeOverrideInvalid": "Die Überschreibung XERO_OAUTH_SCOPES wurde ignoriert, da sie ungültige Einträge enthält ({{scopes}}). Stattdessen werden die Standard-Scopes verwendet.",
-        "scopeReconnectNote": "Diese Scopes gelten für neue Autorisierungen. Eine bestehende Verbindung behält die ursprünglich gewährten Scopes. Um die aktuelle Auswahl anzuwenden, trennen Sie Xero und stellen Sie die Verbindung erneut her. Sie können diese App auch unter „Connected apps“ in Xero entfernen, um frühere Berechtigungen zu widerrufen.",
+        "scopeReconnectNote": "Diese Scopes gelten für neue Autorisierungen. Eine bestehende Verbindung behält die ursprünglich gewährten Scopes. Um die aktuelle Auswahl anzuwenden, trennen Sie Xero und stellen Sie die Verbindung erneut her. Eine Token-Aktualisierung behält die bestehenden Berechtigungen — nur eine neue Autorisierung gewährt neue. Sie können diese App auch unter „Connected apps“ in Xero entfernen, um frühere Berechtigungen zu widerrufen.",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
         "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Xero-App-Anmeldedaten ein. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
@@ -3585,8 +3617,14 @@
           "targetRevoked": "widerrufen",
           "targetFailed": "benötigt Aufmerksamkeit",
           "targetPending": "ausstehend",
-          "failedPermanentDescription": "Bei der Anbieterbereinigung ist ein dauerhafter Fehler aufgetreten. Sie können es erneut versuchen oder den Abschluss erzwingen, um die gespeicherten Anmeldedaten mit einem Audit-Eintrag zu entfernen."
-        }
+          "failedPermanentDescription": "Bei der Anbieterbereinigung ist ein dauerhafter Fehler aufgetreten. Sie können es erneut versuchen oder den Abschluss erzwingen, um die gespeicherten Anmeldedaten mit einem Audit-Eintrag zu entfernen.",
+          "confirmDescription": "Dies trennt {{organisations}} und pausiert Synchronisierung und Exporte. Ihre Xero-App-Zugangsdaten bleiben gespeichert.",
+          "confirmTitle": "Xero von Alga PSA trennen?",
+          "dangerDescription": "Stoppt Synchronisierung und Exporte und entfernt alle {{count}} verknüpften Organisationen. App-Zugangsdaten bleiben gespeichert.",
+          "dangerTitle": "Xero trennen"
+        },
+        "connectNeedsAttention": "Die Xero-Autorisierung ist abgeschlossen, aber die Verbindung erfordert noch Aufmerksamkeit. Die Synchronisierung bleibt pausiert.",
+        "credentialsStoredDescription": "Client-ID und Client-Geheimnis werden sicher gespeichert."
       }
     },
     "stripe": {
@@ -3680,7 +3718,88 @@
       "providers": {
         "teamsPhone": {
           "description": "Protokolliert Teams-Phone-Anrufe nach Gesprächsende als Interaktionen. Anrufverlauf, kein Live-Screenpop.",
-          "prerequisite": "Richten Sie zuerst die Microsoft-Teams-Integration ein — Teams Phone nutzt deren Microsoft-Profil."
+          "prerequisite": "Richten Sie zuerst die Microsoft-Teams-Integration ein — Teams Phone nutzt deren Microsoft-Profil.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Protokolliert 3CX-Anrufe als Interaktionen und erkennt Anrufer im 3CX-Client über die CRM-Vorlage.",
+          "permission": "Sie benötigen die Berechtigung „Systemeinstellungen“, um die 3CX-Integration zu verwalten.",
+          "endpoint": "Endpunkt-Basis-URL",
+          "copy": "Kopieren",
+          "apiKey": "API-Schlüssel",
+          "rotate": "Rotieren",
+          "fullKeyWarning": "Kopieren Sie diesen Schlüssel jetzt — er wird nicht erneut angezeigt.",
+          "download": "Vorlage herunterladen",
+          "tierRequired": "3CX-Telefonie erfordert den Pro-Tarif.",
+          "templateStale": "Eine neuere Vorlage ist verfügbar. Laden Sie sie herunter und laden Sie sie erneut in der 3CX-Konsole hoch.",
+          "pbx": {
+            "title": "PBX-API (3CX Enterprise/AI)",
+            "help": "Anrufer-Popup, Click-to-Call, Anrufverlauf-Import und Telefonbuch-Abgleich nutzen die 3CX Call-Control- und Configuration-APIs, die eine 3CX-Enterprise- oder AI-Lizenz (8SC+) erfordern. Erstellen Sie in der 3CX-Verwaltungskonsole unter Integrationen → API eine API-App, aktivieren Sie beide API-Zugriffe und tragen Sie jede zu überwachende Nebenstelle ein.",
+            "baseUrl": "PBX-Adresse",
+            "clientId": "Client-ID (Nebenstelle der API-App)",
+            "clientSecret": "Client-Geheimnis",
+            "replaceSecret": "Ersetzen",
+            "save": "Zugangsdaten speichern",
+            "test": "Verbindung testen",
+            "clear": "Entfernen",
+            "connected": "Verbunden",
+            "granted": "gewährt",
+            "notGranted": "nicht gewährt",
+            "callControl": "Anrufsteuerung",
+            "xapi": "Konfigurations-API",
+            "lastChecked": "Zuletzt geprüft",
+            "notConnectedHint": "Verbinden Sie oben die PBX-API, um diese Funktion zu nutzen."
+          },
+          "extensions": {
+            "title": "Nebenstellen",
+            "sync": "Von PBX abgleichen",
+            "lastSync": "Letzter Abgleich",
+            "empty": "Noch keine Nebenstellen abgeglichen.",
+            "dn": "Nebenstelle",
+            "pbxUser": "PBX-Benutzer",
+            "algaUser": "AlgaPSA-Benutzer",
+            "unmapped": "Nicht zugeordnet",
+            "auto": "per E-Mail zugeordnet"
+          },
+          "cdr": {
+            "title": "Anrufverlauf importieren",
+            "help": "Liest stündlich das Anrufprotokoll der PBX und erfasst externe Anrufe, die noch nicht im Journal stehen.",
+            "lookback": "Tage Verlauf beim ersten Lauf",
+            "lastRun": "Letzter Lauf",
+            "added": "Hinzugefügte Einträge"
+          },
+          "phonebook": {
+            "title": "Telefonbuch-Abgleich",
+            "help": "Überträgt Kontakte mit Telefonnummern in das 3CX-Firmentelefonbuch und ergänzt passende Kontakte um Nummern, die nur in der PBX vorhanden sind.",
+            "schedule": "Abgleichzeitplan",
+            "daily": "Täglich",
+            "hourly": "Stündlich",
+            "pushNow": "Jetzt übertragen",
+            "importNow": "Jetzt importieren",
+            "lastPush": "Letzte Übertragung",
+            "lastImport": "Letzter Import",
+            "countsLegend": "Zähler: erstellt/aktualisiert/gelöscht/importiert/übersprungen"
+          },
+          "queue": {
+            "title": "Aus 3CX erstellte Kontakte",
+            "empty": "Nichts wartet. Kontakte, die im 3CX-Client ohne passenden Kunden erstellt wurden, erscheinen hier.",
+            "pendingBadge": "E-Mail fehlt",
+            "unmappedBadge": "kein Kunde",
+            "company": "Firma",
+            "chooseClient": "Kunden auswählen …",
+            "apply": "Übernehmen",
+            "leaveWithoutClient": "Ohne Kunden belassen",
+            "complete": "Vervollständigen",
+            "dismiss": "Verwerfen",
+            "completeTitle": "Kontakt aus 3CX vervollständigen",
+            "firstName": "Vorname",
+            "lastName": "Nachname",
+            "email": "E-Mail",
+            "number": "Telefonnummer",
+            "cancel": "Abbrechen",
+            "save": "Kontakt erstellen"
+          }
         }
       },
       "subscriptionExpires": "Abonnement wird erneuert vor",
@@ -3717,7 +3836,8 @@
         "assignTo": "Zuordnen zu",
         "searchPlaceholder": "Kontakte und Kunden suchen…",
         "noTargets": "Keine passenden Kontakte oder Kunden.",
-        "chooseTarget": "Einem Kunden zuordnen…"
+        "chooseTarget": "Einem Kunden zuordnen…",
+        "chatBadge": "Chat"
       },
       "forbidden": "Sie haben keine Berechtigung, die Telefonie-Einstellungen dieses Mandanten anzuzeigen.",
       "paywall": {
@@ -3816,6 +3936,7 @@
       "enterpriseOnly": "Die Xero-Integration ist nur in der Enterprise Edition verfügbar.",
       "viewPermission": "Verboten: Sie haben keine Berechtigung, die Einstellungen der Xero-Integration anzuzeigen.",
       "organisationDisconnected": "Die ausgewählte Xero-Organisation ist nicht mehr verbunden. Verbinden Sie Xero neu und versuchen Sie es erneut.",
+      "organisationAmbiguous": "Die gespeicherte Standard-Xero-Organisation gehört zu mehr als einer Verbindung. Wählen Sie in den Buchhaltungseinstellungen aus, welche Verbindung als Standard verwendet werden soll.",
       "accounts": {
         "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Konten laden.",
         "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Konten laden.",
@@ -3851,6 +3972,23 @@
       "contactWithoutClient": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits im System ohne Kundenzuordnung",
       "emailOnAnotherClient": "Diese E-Mail-Adresse ist bereits einem anderen Kunden zugeordnet",
       "emailOnAnotherClientNamed": "Diese E-Mail-Adresse ist bereits {{clientName}} zugeordnet"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Eingehender Anruf",
+      "unknownCaller": "Unbekannter Anrufer",
+      "noNumber": "Keine Rufnummer",
+      "extension": "Nebenstelle {{dn}} klingelt",
+      "openTickets": "Offene Tickets",
+      "recentInteractions": "Letzte Interaktionen",
+      "openContact": "Kontakt öffnen",
+      "openClient": "Kunden öffnen",
+      "newTicket": "Neues Ticket",
+      "createContact": "Kontakt erstellen",
+      "dismiss": "Schließen",
+      "answer": "Annehmen",
+      "answerFailed": "Die PBX konnte den Anruf nicht annehmen"
     }
   }
 }
