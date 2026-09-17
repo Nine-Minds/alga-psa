@@ -7,7 +7,7 @@
 
 import type { PublishError, MappingValue, InputMapping } from '../types';
 import { isExpr, isSecretRef } from '../types';
-import { validateExpressionSource } from '../expressionEngine';
+import { validateExpressionSource, describeExpressionError } from '../expressionEngine';
 import { secretNameSchema } from '../../secrets';
 
 /**
@@ -81,7 +81,7 @@ function validateMappingValue(
         stepPath: options.stepPath,
         stepId: options.stepId,
         code: 'EMPTY_EXPRESSION',
-        message: `Empty expression at ${keyPath}`
+        message: `Empty expression at ${keyPath}. Pick a source field, enter an expression, or remove the mapping.`
       });
       return;
     }
@@ -94,7 +94,7 @@ function validateMappingValue(
         stepPath: options.stepPath,
         stepId: options.stepId,
         code: 'INVALID_EXPRESSION',
-        message: `Invalid expression at ${keyPath}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Invalid expression at ${keyPath}: ${describeExpressionError(error) ?? 'Unknown error'}`
       });
     }
     return;

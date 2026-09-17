@@ -185,8 +185,13 @@ const QuoteItem = {
           .first();
         const currencyCode = quote?.currency_code ?? 'USD';
 
+        // Only the price effective today: a future-dated row scheduled through
+        // the catalog rollout is not the price to quote yet.
+        const today = new Date().toISOString().slice(0, 10);
         const priceRow = await quoteTable<ServicePriceLookupRow>(knexOrTrx, tenant, 'service_prices')
           .where({ service_id: item.service_id, currency_code: currencyCode })
+          .where('effective_date', '<=', today)
+          .orderBy('effective_date', 'desc')
           .select('rate')
           .first();
 

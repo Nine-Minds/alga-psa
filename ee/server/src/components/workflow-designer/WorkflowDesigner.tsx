@@ -119,6 +119,7 @@ import {
   normalizeWorkflowSaveAsPath,
   validateWorkflowSaveAsPathShape,
 } from './workflowSaveAsPath';
+import { normalizeWorkflowDefinitionSteps } from './workflowDefinitionNormalization';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 import { WorkflowActionInputFixedPicker } from './WorkflowActionInputFixedPicker';
 import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
@@ -158,7 +159,7 @@ import {
   resolveComposeTextOutputSchemaFromConfig,
   resolveWorkflowAiSchemaFromConfig,
 } from '@alga-psa/workflows/authoring';
-import { validateExpressionSource } from '@alga-psa/workflows/authoring';
+import { describeExpressionError, validateExpressionSource } from '@alga-psa/workflows/authoring';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import {
   composeTimeWaitDurationMs,
@@ -375,9 +376,11 @@ const isTimeTrigger = (trigger?: WorkflowTrigger | null): boolean =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
 
 const normalizeDesignerDefinition = (definition: WorkflowDefinition): WorkflowDefinition =>
-  isTimeTrigger(definition.trigger)
-    ? { ...definition, trigger: undefined }
-    : definition;
+  normalizeWorkflowDefinitionSteps(
+    isTimeTrigger(definition.trigger)
+      ? { ...definition, trigger: undefined }
+      : definition
+  );
 
 type WorkflowDesignerMode = 'control-panel' | 'editor-list' | 'editor-designer';
 
@@ -2924,6 +2927,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         });
         toast.success(t('designer.toasts.saved', { defaultValue: 'Workflow saved' }));
       }
+      // Saving re-validates the draft server-side, so the last publish attempt's errors are
+      // stale; drop them or they keep the badge Invalid and Publish disabled until a reload.
+      setPublishErrors([]);
+      setPublishWarnings([]);
       // Refresh list in the background; do not block the UI on it (it can be slow during dev + Playwright).
       void loadDefinitions();
     } catch (error) {
@@ -7555,7 +7562,8 @@ const ExpressionField: React.FC<{
       }
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid expression');
+      const reason = describeExpressionError(err);
+      setError(reason ? `Invalid expression: ${reason}` : 'Invalid expression');
     }
     onChange(expr);
   }, [onChange]);

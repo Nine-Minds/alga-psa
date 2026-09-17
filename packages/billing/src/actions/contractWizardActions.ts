@@ -1203,6 +1203,7 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
+        rate_provenance: 'inherited',
         billing_timing: recurringAuthoringPolicy.billingTiming,
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
@@ -1225,8 +1226,13 @@ export const createClientContractFromWizard = withAuth(async (
           service_id: service.service_id,
         });
 
-        let serviceBaseRate = 0;
+        // The operator's explicit rate is a snapshot (`custom`); absent one the
+        // member is left rate-less (`inherited`) so a later catalog change
+        // reaches it. Snapshotting the catalog here would shadow it forever.
+        let serviceBaseRate: number | null = null;
+        let serviceBaseProvenance: 'custom' | 'inherited' = 'inherited';
         if (submission.fixed_base_rate) {
+          serviceBaseProvenance = 'custom';
           const share = quantity / totalQuantity;
           const provisionalValue = submission.fixed_base_rate * share;
           if (index === filteredFixedServices.length - 1) {
@@ -1236,11 +1242,19 @@ export const createClientContractFromWizard = withAuth(async (
             allocated = Math.round(allocated + serviceBaseRate);
           }
         } else {
-          serviceBaseRate =
-            firstPositiveRateInCents(
-              fixedModeDefaultsByServiceId.get(service.service_id),
-              serviceCatalogById.get(service.service_id)?.default_rate
-            ) ?? 0;
+          // A configured fixed-mode default is a chosen rate for this service,
+          // and the rate resolver does not read that table — so it must be
+          // preserved as a custom member rate or it is silently lost. The
+          // legacy currency-untagged catalog `default_rate` is deliberately NOT
+          // snapshotted: absent a mode default the line follows the effective
+          // `service_prices` catalog.
+          const modeDefault = firstPositiveRateInCents(
+            fixedModeDefaultsByServiceId.get(service.service_id),
+          );
+          if (modeDefault !== undefined) {
+            serviceBaseRate = modeDefault;
+            serviceBaseProvenance = 'custom';
+          }
         }
 
         await planServiceConfigService.createConfiguration(
@@ -1252,14 +1266,16 @@ export const createClientContractFromWizard = withAuth(async (
             tenant,
             custom_rate: undefined,
           },
-          { base_rate: serviceBaseRate ?? 0 }  // Already in cents from frontend
+          { base_rate: serviceBaseRate, rate_provenance: serviceBaseProvenance }
         );
       }
 
       const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
       await fixedConfigModel.upsert({
         contract_line_id: planId,
-        base_rate: submission.fixed_base_rate ?? 0,  // Already in cents from frontend
+        // No operator rate means "follow the catalog" (null + inherited), not a
+        // stored zero that would shadow it forever. Already in cents when set.
+        base_rate: submission.fixed_base_rate ?? null,
         enable_proration: recurringAuthoringPolicy.enableProration,
         billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         tenant,

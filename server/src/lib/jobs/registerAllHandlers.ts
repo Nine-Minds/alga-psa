@@ -162,6 +162,10 @@ import {
   publishScheduledCommentHandler,
   PublishScheduledCommentJobData,
 } from './handlers/publishScheduledCommentHandler';
+import {
+  CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME,
+  replenishContractCadenceServicePeriodsSweep,
+} from './handlers/replenishContractCadenceServicePeriodsHandler';
 
 /**
  * Options for registering handlers
@@ -221,6 +225,21 @@ export async function registerAllJobHandlers(
   // ============================================================================
   // BILLING & INVOICE HANDLERS
   // ============================================================================
+
+  // Nightly contract-cadence service-period replenishment. Registered on every
+  // boot (independent of whether a schedule already exists) so a restarted
+  // process can always execute the durable schedule.
+  JobHandlerRegistry.register<BaseJobData>(
+    {
+      name: CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME,
+      handler: async () => {
+        await replenishContractCadenceServicePeriodsSweep();
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 1800000, // 30 minutes: one sweep across all tenants
+    },
+    registerOpts
+  );
 
   // Generate invoice handler
   JobHandlerRegistry.register<GenerateInvoiceData & BaseJobData>(

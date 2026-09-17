@@ -9,7 +9,7 @@ function MockModal(props: Record<string, unknown>) {
     : null;
 }
 function MockImage(props: Record<string, unknown>) {
-  return React.createElement("MockImage", { ...props, testID: "preview-image" });
+  return React.createElement("MockImage", { ...props, testID: props.testID ?? "preview-image" });
 }
 
 const mockAlert = vi.fn();
@@ -28,6 +28,8 @@ const uploadTicketDocumentMock = vi.fn();
 const deleteTicketDocumentMock = vi.fn();
 const requestCameraPermissionsAsyncMock = vi.fn();
 const launchCameraAsyncMock = vi.fn();
+const requestMediaLibraryPermissionsAsyncMock = vi.fn();
+const launchImageLibraryAsyncMock = vi.fn();
 const getDocumentAsyncMock = vi.fn();
 const downloadFileAsyncMock = vi.fn();
 const shareAsyncMock = vi.fn();
@@ -57,7 +59,8 @@ vi.mock("../../../ui/components/SectionHeader", () => ({
   SectionHeader: (props: Record<string, unknown>) => React.createElement("MockSectionHeader", props, props.action as React.ReactNode),
 }));
 
-vi.mock("../../../api/documents", () => ({
+vi.mock("../../../api/documents", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../api/documents")>()),
   getTicketDocuments: (...args: unknown[]) => getTicketDocumentsMock(...args),
   uploadTicketDocument: (...args: unknown[]) => uploadTicketDocumentMock(...args),
   deleteTicketDocument: (...args: unknown[]) => deleteTicketDocumentMock(...args),
@@ -85,6 +88,8 @@ vi.mock("expo-file-system", () => {
 vi.mock("expo-image-picker", () => ({
   requestCameraPermissionsAsync: (...args: unknown[]) => requestCameraPermissionsAsyncMock(...args),
   launchCameraAsync: (...args: unknown[]) => launchCameraAsyncMock(...args),
+  requestMediaLibraryPermissionsAsync: (...args: unknown[]) => requestMediaLibraryPermissionsAsyncMock(...args),
+  launchImageLibraryAsync: (...args: unknown[]) => launchImageLibraryAsyncMock(...args),
 }));
 
 vi.mock("expo-document-picker", () => ({
@@ -158,6 +163,8 @@ describe("DocumentsSection", () => {
     uploadTicketDocumentMock.mockResolvedValue({ ok: true, data: { data: { document_id: "doc-1" } } });
     deleteTicketDocumentMock.mockResolvedValue({ ok: true, data: { data: null } });
     downloadFileAsyncMock.mockResolvedValue({ uri: mockFileUri });
+    requestMediaLibraryPermissionsAsyncMock.mockResolvedValue({ granted: true });
+    launchImageLibraryAsyncMock.mockResolvedValue({ canceled: true, assets: null });
     shareAsyncMock.mockResolvedValue(undefined);
     requestCameraPermissionsAsyncMock.mockResolvedValue({ granted: true });
     launchCameraAsyncMock.mockResolvedValue({ canceled: true, assets: [] });
@@ -232,10 +239,14 @@ describe("DocumentsSection", () => {
     const modal = renderer.root.findAllByProps({ testID: "preview-modal" });
     expect(modal.length).toBe(1);
 
-    // Preview image rendered
-    const previewImage = renderer.root.findAllByProps({ testID: "preview-image" });
+    // Preview streams the 800x600 server variant with the API key, no full download
+    const previewImage = renderer.root.findAllByProps({ testID: "preview-image" }).filter((node) => typeof node.type === "string");
     expect(previewImage.length).toBe(1);
-    expect(previewImage[0].props.source.uri).toBe(mockFileUri);
+    expect(previewImage[0].props.source).toEqual({
+      uri: "https://example.com/api/v1/tickets/ticket-1/documents/doc-img/preview",
+      headers: { "x-api-key": "api-key-1" },
+    });
+    expect(downloadFileAsyncMock).not.toHaveBeenCalled();
 
     // File name shown in preview
     const previewTexts = getTextContent(renderer);
@@ -583,5 +594,239 @@ describe("DocumentsSection", () => {
     await act(async () => {
       resolveDownload?.({ uri: mockFileUri });
     });
+  });
+
+  it("renders server thumbnails for image documents and icons for the rest", async () => {
+    getTicketDocumentsMock.mockResolvedValue({ ok: true, data: { data: [imageDoc, pdfDoc] } });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+
+    const thumbnail = renderer.root.findByProps({ testID: "document-thumbnail-doc-img" });
+    expect(thumbnail.props.source).toEqual({
+      uri: "https://example.com/api/v1/tickets/ticket-1/documents/doc-img/thumbnail",
+      headers: { "x-api-key": "api-key-1" },
+    });
+    expect(renderer.root.findAllByProps({ testID: "document-thumbnail-doc-1" })).toHaveLength(0);
+  });
+
+  it("falls back to the type icon when a thumbnail fails to load", async () => {
+    getTicketDocumentsMock.mockResolvedValue({ ok: true, data: { data: [imageDoc] } });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+
+    await act(async () => {
+      renderer.root.findByProps({ testID: "document-thumbnail-doc-img" }).props.onError();
+    });
+
+    expect(renderer.root.findAllByProps({ testID: "document-thumbnail-doc-img" })).toHaveLength(0);
+  });
+
+  it("uploads several photos picked from the library one after another and refreshes once each lands", async () => {
+    const uploadOrder: string[] = [];
+    uploadTicketDocumentMock.mockImplementation(async (_client: unknown, params: { file: { name: string } }) => {
+      uploadOrder.push(params.file.name);
+      return { ok: true, data: { data: { document_id: params.file.name } } };
+    });
+    launchImageLibraryAsyncMock.mockResolvedValue({
+      canceled: false,
+      assets: [
+        { uri: "file:///tmp/a.jpg", fileName: "a.jpg", mimeType: "image/jpeg" },
+        { uri: "file:///tmp/b.png", fileName: "b.png", mimeType: "image/png" },
+        { uri: "file:///tmp/c.heic", fileName: null, mimeType: null },
+      ],
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: "documents.attach" }).props.onPress();
+    });
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "documents.photos" }).props.onPress();
+    });
+    await flushAsyncWork();
+    await flushAsyncWork();
+
+    expect(launchImageLibraryAsyncMock).toHaveBeenCalledWith(expect.objectContaining({
+      allowsMultipleSelection: true,
+      mediaTypes: ["images"],
+    }));
+    expect(uploadOrder).toEqual(["a.jpg", "b.png", expect.stringMatching(/^ticket-photo-\d+-3\.jpg$/)]);
+    expect(uploadTicketDocumentMock).toHaveBeenNthCalledWith(3, expect.anything(), expect.objectContaining({
+      file: expect.objectContaining({ uri: "file:///tmp/c.heic", mimeType: "image/jpeg" }),
+    }));
+    // Initial load + one refresh per successful upload
+    expect(getTicketDocumentsMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("shows batch progress while several files upload", async () => {
+    let resolveFirst: ((value: unknown) => void) | undefined;
+    uploadTicketDocumentMock
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockResolvedValue({ ok: true, data: { data: { document_id: "x" } } });
+    getDocumentAsyncMock.mockResolvedValue({
+      canceled: false,
+      assets: [
+        { uri: "file:///tmp/1.pdf", name: "1.pdf", mimeType: "application/pdf" },
+        { uri: "file:///tmp/2.pdf", name: "2.pdf", mimeType: "application/pdf" },
+      ],
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: "documents.attach" }).props.onPress();
+    });
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "documents.file" }).props.onPress();
+    });
+    await flushAsyncWork();
+
+    expect(getDocumentAsyncMock).toHaveBeenCalledWith(expect.objectContaining({ multiple: true }));
+    expect(getTextContent(renderer)).toContain("documents.uploadingProgress");
+
+    await act(async () => {
+      resolveFirst?.({ ok: true, data: { data: { document_id: "1" } } });
+    });
+    await flushAsyncWork();
+    await flushAsyncWork();
+
+    expect(uploadTicketDocumentMock).toHaveBeenCalledTimes(2);
+    expect(getTextContent(renderer)).not.toContain("documents.uploadingProgress");
+  });
+
+  it("keeps a failed upload visible with retry and uploads it again on retry", async () => {
+    uploadTicketDocumentMock
+      .mockResolvedValueOnce({ ok: false, error: { message: "too large" } })
+      .mockResolvedValueOnce({ ok: true, data: { data: { document_id: "doc-9" } } });
+    getDocumentAsyncMock.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: "file:///tmp/big.zip", name: "big.zip", mimeType: "application/zip" }],
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: "documents.attach" }).props.onPress();
+    });
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "documents.file" }).props.onPress();
+    });
+    await flushAsyncWork();
+
+    const texts = getTextContent(renderer);
+    expect(texts).toContain("big.zip");
+    expect(texts).toContain("too large");
+
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: "documents.retry big.zip" }).props.onPress();
+    });
+    await flushAsyncWork();
+    await flushAsyncWork();
+
+    expect(uploadTicketDocumentMock).toHaveBeenCalledTimes(2);
+    expect(renderer.root.findAllByProps({ accessibilityLabel: "documents.retry big.zip" })).toHaveLength(0);
+  });
+
+  it("dismisses a failed upload without retrying", async () => {
+    uploadTicketDocumentMock.mockResolvedValueOnce({ ok: false, error: { message: "nope" } });
+    getDocumentAsyncMock.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: "file:///tmp/x.txt", name: "x.txt", mimeType: "text/plain" }],
+    });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: "documents.attach" }).props.onPress();
+    });
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "documents.file" }).props.onPress();
+    });
+    await flushAsyncWork();
+
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: "documents.dismiss x.txt" }).props.onPress();
+    });
+
+    expect(getTextContent(renderer)).not.toContain("x.txt");
+    expect(uploadTicketDocumentMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a photo library permission error when access is denied", async () => {
+    requestMediaLibraryPermissionsAsyncMock.mockResolvedValue({ granted: false });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: "documents.attach" }).props.onPress();
+    });
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "documents.photos" }).props.onPress();
+    });
+
+    expect(launchImageLibraryAsyncMock).not.toHaveBeenCalled();
+    expect(getTextContent(renderer)).toContain("documents.errors.photosPermission");
+  });
+
+  it("steps through image documents in the preview gallery", async () => {
+    const secondImage = { ...imageDoc, document_id: "doc-img-2", document_name: "second.jpg" };
+    getTicketDocumentsMock.mockResolvedValue({ ok: true, data: { data: [imageDoc, pdfDoc, secondImage] } });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "photo.jpg" }).props.onPress();
+    });
+
+    expect(getTextContent(renderer)).toContain("documents.previewCounter");
+    expect(renderer.root.findByProps({ accessibilityLabel: "documents.previousImage" }).props.disabled).toBe(true);
+
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: "documents.nextImage" }).props.onPress();
+    });
+
+    expect(renderer.root.findByProps({ testID: "preview-image" }).props.source.uri)
+      .toBe("https://example.com/api/v1/tickets/ticket-1/documents/doc-img-2/preview");
+    expect(renderer.root.findByProps({ accessibilityLabel: "documents.nextImage" }).props.disabled).toBe(true);
+    expect(getTextContent(renderer)).toContain("second.jpg");
+  });
+
+  it("falls back to the full download when the preview variant fails to load", async () => {
+    getTicketDocumentsMock.mockResolvedValue({ ok: true, data: { data: [imageDoc] } });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "photo.jpg" }).props.onPress();
+    });
+
+    await act(async () => {
+      await renderer.root.findByProps({ testID: "preview-image" }).props.onError();
+    });
+
+    expect(downloadFileAsyncMock).toHaveBeenCalledWith(
+      "https://example.com/api/v1/tickets/ticket-1/documents/doc-img",
+      expect.anything(),
+      { headers: { "x-api-key": "api-key-1" } },
+    );
+    expect(renderer.root.findByProps({ testID: "preview-image" }).props.source).toEqual({ uri: mockFileUri, headers: undefined });
+  });
+
+  it("shares the full-size file from the preview gallery", async () => {
+    getTicketDocumentsMock.mockResolvedValue({ ok: true, data: { data: [imageDoc] } });
+
+    const renderer = renderSection();
+    await flushAsyncWork();
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "photo.jpg" }).props.onPress();
+    });
+    await act(async () => {
+      await renderer.root.findByProps({ accessibilityLabel: "documents.share" }).props.onPress();
+    });
+
+    expect(shareAsyncMock).toHaveBeenCalledWith(mockFileUri, { mimeType: "image/jpeg", dialogTitle: "photo.jpg" });
   });
 });

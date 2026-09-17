@@ -6,7 +6,7 @@ import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { ReflectionParentContext } from '../ui-reflection/ReflectionParentContext';
-import { ModalityContext, InsideDialogContext, useInsideDialog } from './ModalityContext';
+import { ModalityContext, InsideDialogContext, useInsideDialog, useForceModal } from './ModalityContext';
 import { useRadixEscapeOwner } from '../keyboard-shortcuts';
 import { DialogComponent, AutomationProps } from '../ui-reflection/types';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
@@ -86,6 +86,14 @@ interface DialogProps {
   allowOverflow?: boolean;
   /** Disable focus trapping to allow interaction with portaled elements outside the dialog */
   disableFocusTrap?: boolean;
+  /**
+   * When this dialog is nested inside a Drawer or another Dialog, render it as a
+   * true top-level modal (Radix portal, centered on the viewport) instead of the
+   * inline variant that is confined to the parent panel. Large forms opened from a
+   * focus-view Drawer use this so they are not squeezed into the panel. No effect
+   * when the dialog is not nested.
+   */
+  forceModal?: boolean;
   /** Content rendered in a sticky footer below the scrollable body */
   footer?: ReactNode;
 }
@@ -105,11 +113,18 @@ export function Dialog({
   initialPosition,
   constrainToViewport = false,
   allowOverflow = false,
-  disableFocusTrap = false,
+  disableFocusTrap: disableFocusTrapProp = false,
+  forceModal: forceModalProp = false,
   footer
 }: DialogProps & AutomationProps): React.ReactElement {
   // Auto-detect when this Dialog is nested inside a Drawer or another Dialog.
-  const isInsideDialog = useInsideDialog();
+  const insideDialogContext = useInsideDialog();
+  const inheritedForceModal = useForceModal();
+  // `forceModal` only changes behaviour for nested dialogs: it opts out of the
+  // inline nested rendering so the dialog pops to the viewport as a real modal.
+  const forceModal = (forceModalProp || inheritedForceModal) && insideDialogContext;
+  const isInsideDialog = insideDialogContext && !forceModal;
+  const disableFocusTrap = forceModal ? false : disableFocusTrapProp;
 
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: `${id}-dialog`,
@@ -439,7 +454,7 @@ export function Dialog({
       >
         {/* Overlay */}
         <div
-          className="absolute inset-0 bg-black/50"
+          className="absolute inset-0 bg-black/60"
           onClick={onClose}
         />
         {/* Dialog content */}
@@ -529,6 +544,14 @@ export function Dialog({
               onClose();
             }
             handleDialogKeyDown(e);
+          }}
+          onEscapeKeyDown={(event) => {
+            // A nested dialog renders inline inside this content. Radix listens
+            // for Escape on the document in the capture phase, so the nested
+            // dialog cannot stop it — let it keep its own Escape instead.
+            if (dialogRef.current?.querySelector('[role="dialog"]')) {
+              event.preventDefault();
+            }
           }}
           onOpenAutoFocus={(event) => {
             if (onOpenAutoFocus) {

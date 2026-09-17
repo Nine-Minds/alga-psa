@@ -43,13 +43,14 @@
       "contractTemplates": "Wzory umów",
       "invoicing": "Fakturowanie",
       "invoiceLayouts": "Układy faktur",
-      "taxRates": "Stawki podatkowe",
+      "taxRates": "Podatki",
       "contractLinePresets": "Ustawienia linii kontraktu",
       "billingCycles": "Cykle rozliczeniowe",
       "servicePeriods": "Okresy świadczenia usług",
       "usageTracking": "Śledzenie użycia",
       "reports": "Raporty",
       "serviceTypes": "Typy usług",
+      "serviceCategories": "Kategorie usług",
       "serviceCatalog": "Usługi",
       "products": "Produkty"
     }

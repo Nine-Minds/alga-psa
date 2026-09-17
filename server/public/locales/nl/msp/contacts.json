@@ -729,5 +729,15 @@
       "groupNameRequired": "Groepsnaam is verplicht",
       "readPermission": "Toestemming geweigerd: contacten kunnen niet worden gelezen"
     }
+  },
+  "portal": {
+    "visibilityGroups": {
+      "scopeLabel": "Ticketzichtbaarheid",
+      "scopeClient": "Alle tickets van deze klant",
+      "scopeContact": "Alleen hun eigen tickets",
+      "scopeClientDescription": "Leden zien alle tickets van deze klant op de geselecteerde borden.",
+      "scopeContactDescription": "Leden zien alleen tickets waarop zij als contactpersoon staan. Klantbeheerders zien alle tickets op de geselecteerde borden, ook tickets zonder contactpersoon.",
+      "assignmentHelp": "Wijs een groep toe om borden en tickets te beperken, of behoud volledige toegang tot de klant."
+    }
   }
 }

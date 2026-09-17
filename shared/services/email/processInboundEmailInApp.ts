@@ -30,6 +30,11 @@ import {
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId } from './inboundEmailIdentity';
+import { withTenantAdminTransaction } from './tenantAdminTransaction';
+import {
+  detectOutboundNotificationLoop,
+  type NotificationLoopDetectionResult,
+} from './notificationLoopDetection';
 import {
   allowsContactSenderAttribution,
   allowsInternalSenderAttribution,
@@ -134,12 +139,20 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
       | 'invalid_email_data'
       | 'missing_defaults'
       | 'self_notification'
+      | 'notification_loop'
       | 'rule_skip'
       | 'new_ticket_created'
       | 'deduped'
       | 'quarantined'
       | null;
   };
+  /**
+   * Present only when `outcome.reason === 'notification_loop'`: the composite
+   * evidence that decided this was our own outbound notification looping back
+   * through a different connected mailbox, not genuine correspondence. See
+   * `notificationLoopDetection.ts` for what each field means.
+   */
+  notificationLoop?: NotificationLoopDetectionResult;
   outcome?: {
     kind: 'skipped' | 'deduped' | 'replied' | 'created' | 'quarantined';
     matchedBy?: 'reply_token' | 'thread_headers';
@@ -147,7 +160,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
     ticketNumber?: string;
     commentId?: string;
     dedupeKey?: string;
-    reason?: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'rule_skip';
+    reason?: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'notification_loop' | 'rule_skip';
     rule?: { ruleId: string; ruleName: string };
   };
 }
@@ -155,7 +168,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
 type ProcessInboundEmailInAppBaseResult =
   | {
       outcome: 'skipped';
-      reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'rule_skip';
+      reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'notification_loop' | 'rule_skip';
       rule?: { ruleId: string; ruleName: string };
     }
   | {
@@ -392,15 +405,6 @@ function toIsoOrNull(value: unknown): string | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(String(value));
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-async function withTenantAdminTransaction<T>(
-  tenantId: string,
-  callback: (trx: any, db: any) => Promise<T>,
-  existingConnection?: any
-): Promise<T> {
-  const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
-  return withAdminTransaction(async (trx: any) => callback(trx, tenantDb(trx, tenantId)), existingConnection);
 }
 
 function isClosedTicketBeyondReopenCutoff(params: {
@@ -1169,6 +1173,55 @@ export async function processInboundEmailInApp(
         conversationToken,
       })
     : undefined;
+
+  // Cross-mailbox notification-loop guard: runs before the narrower
+  // single-mailbox self_notification heuristics below (and before any
+  // ticket/comment/watch-list mutation) because it is the most authoritative
+  // signal available — a tenant-scoped ledger correlation, not a sender-string
+  // heuristic. See notificationLoopDetection.ts for the full predicate and why
+  // it cannot fire on genuine replies (including replies that legitimately
+  // thread via In-Reply-To/References into our own outbound Message-ID, or
+  // that quote the same reply token).
+  let loopDetection: NotificationLoopDetectionResult | null = null;
+  try {
+    loopDetection = await detectOutboundNotificationLoop({
+      tenantId,
+      emailData,
+      senderEmail,
+      providerMailboxEmail,
+      conversationToken,
+    });
+  } catch (error) {
+    console.warn('processInboundEmailInApp: notification-loop detection failed (continuing)', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  if (diagnostics && loopDetection) {
+    // Attached whether or not it suppressed: "we checked and here's why we
+    // did/didn't" is useful forensic signal either way.
+    diagnostics.notificationLoop = loopDetection;
+  }
+
+  if (loopDetection?.isLoop) {
+    console.info('processInboundEmailInApp: skipping outbound-notification loop redelivery', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      senderEmail,
+      providerMailboxEmail,
+      tier: loopDetection.tier,
+      matchedEntityType: loopDetection.matchedEntityType,
+      matchedEntityId: loopDetection.matchedEntityId,
+    });
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'notification_loop';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
+  }
 
   if (conversationToken && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
     console.info('processInboundEmailInApp: skipping token-only inbound email with no reply content', {

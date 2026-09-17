@@ -478,7 +478,33 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
       ]
     });
     expect(result.ok).toBe(false);
-    expect(result.errors?.some((err: any) => err.code === 'INVALID_EXPR')).toBe(true);
+    expect(result.errors?.some((err: any) => err.code === 'INVALID_EXPRESSION')).toBe(true);
+  });
+
+  it('Publish reports an empty action input expression once, with no type warning. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    const result = await publishWorkflow(workflowId, 1, {
+      id: workflowId,
+      version: 1,
+      name: 'Action inputMapping empty',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'action-1',
+          type: 'action.call',
+          config: {
+            actionId: 'test.echo',
+            version: 1,
+            inputMapping: { value: { $expr: '' } }
+          }
+        }
+      ]
+    });
+    expect(result.ok).toBe(false);
+    const stepErrors = (result.errors ?? []).filter((err: any) => err.stepId === 'action-1');
+    expect(stepErrors.map((err: any) => err.code)).toEqual(['EMPTY_EXPRESSION']);
+    expect(stepErrors[0].message).toContain('remove the mapping');
+    expect((result.warnings ?? []).some((warn: any) => warn.code === 'MAPPING_TYPE_UNKNOWN')).toBe(false);
   });
 
   it('Publish fails when required action inputs are not mapped. Mocks: non-target dependencies.', async () => {

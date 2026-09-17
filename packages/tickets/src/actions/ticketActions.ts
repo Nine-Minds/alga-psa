@@ -1,4 +1,6 @@
-'use server'
+'use server';
+
+import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -86,6 +88,7 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
 
@@ -230,29 +233,23 @@ function toTicketAuthorizationRecord(
     assignedUserIds: Array.from(assignees),
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
+    contactId: ticket.contact_name_id ?? null,
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
 
-async function resolveClientSelectedBoardIds(
+async function resolveClientVisibility(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles
-): Promise<string[] | undefined> {
-  if (user.user_type !== 'client') {
-    return undefined;
-  }
-
-  if (!user.contact_id) {
-    return [];
-  }
-
+): Promise<ContactVisibilityContext | null | undefined> {
+  if (user.user_type !== 'client') return undefined;
+  if (!user.contact_id) return null;
   try {
-    const visibilityContext = await getClientContactVisibilityContext(trx, tenant, user.contact_id);
-    return visibilityContext.visibleBoardIds ?? undefined;
+    return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
   } catch {
-    // Fail closed for client portal users when visibility context cannot be resolved safely.
-    return [];
+    // A failed resolution is distinct from an internal user: deny all.
+    return null;
   }
 }
 
@@ -678,6 +675,13 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     if (suppressInternalNotifications && !suppressContactNotifications) {
       throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+    }
+
+    // MSP ticket write surface. A client-portal session can reach server actions
+    // through the page bundle it is rendered on, so block non-internal callers
+    // before they can update any tenant ticket by id.
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
     }
 
     const {knex: db} = await createTenantKnex();
@@ -1270,9 +1274,10 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         tenant,
         user as IUserWithRoles
       );
-      const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user as IUserWithRoles);
+      const contactVisibility = await resolveClientVisibility(trx, tenant, user as IUserWithRoles);
+      const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
       const relationshipRules =
-        selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+        contactVisibility === undefined ? [] : [{ template: 'contact_visibility' as const }];
       const authorizationKernel = createAuthorizationKernel({
         builtinProvider: new BuiltinAuthorizationKernelProvider({
           relationshipRules,
@@ -1428,6 +1433,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
             },
             record: toTicketAuthorizationRecord(ticket),
             selectedBoardIds,
+            contactVisibility,
             requestCache,
             knex: trx,
           })
@@ -2056,6 +2062,15 @@ export const bulkUpdateTicketStatus = withAuth(async (
     return { updatedIds: [], failed: [] };
   }
 
+  // MSP bulk status write surface. Reject client-portal callers before the
+  // permission lookup or any per-ticket transaction, mirroring updateTicket.
+  if (user.user_type !== 'internal') {
+    return {
+      updatedIds: [],
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: operation not available in client portal'),
+    };
+  }
+
   // Authorize once up front instead of paying a permission lookup per ticket.
   const { knex } = await createTenantKnex();
   if (!(await hasPermission(user, 'ticket', 'update', knex))) {
@@ -2242,9 +2257,10 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         tenant,
         user as IUserWithRoles
       );
-      const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user as IUserWithRoles);
+      const contactVisibility = await resolveClientVisibility(trx, tenant, user as IUserWithRoles);
+      const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
       const relationshipRules =
-        selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+        contactVisibility === undefined ? [] : [{ template: 'contact_visibility' as const }];
       const authorizationKernel = createAuthorizationKernel({
         builtinProvider: new BuiltinAuthorizationKernelProvider({
           relationshipRules,
@@ -2315,6 +2331,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         },
         record: toTicketAuthorizationRecord(ticket),
         selectedBoardIds,
+        contactVisibility,
         requestCache,
         knex: trx,
       });

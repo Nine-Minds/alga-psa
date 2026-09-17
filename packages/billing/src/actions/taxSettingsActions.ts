@@ -265,7 +265,7 @@ export const updateTaxRegion = withAuth(async (
   user,
   { tenant },
   region_code: string,
-  data: { region_code?: string; region_name?: string; is_active?: boolean }
+  data: { region_name?: string; is_active?: boolean }
 ): Promise<ITaxRegion | TaxRegionActionError> => {
   try {
     if (!(await hasPermission(user, 'billing', 'update'))) {
@@ -273,11 +273,10 @@ export const updateTaxRegion = withAuth(async (
     }
 
     const { knex } = await createTenantKnex();
-    const updateData: Partial<Pick<ITaxRegion, 'region_code' | 'region_name' | 'is_active'>> = {};
+    // region_code is immutable: tax_rates, clients and client_locations reference
+    // it by value, so a rename would either violate the tax_rates FK or orphan rows.
+    const updateData: Partial<Pick<ITaxRegion, 'region_name' | 'is_active'>> = {};
 
-  if (data.region_code !== undefined) {
-    updateData.region_code = data.region_code;
-  }
   if (data.region_name !== undefined) {
     updateData.region_name = data.region_name;
   }
@@ -298,17 +297,6 @@ export const updateTaxRegion = withAuth(async (
     // Or: throw new Error('No update data provided.');
   }
 
-
-    // If updating the region_code, check for uniqueness
-    if (data.region_code !== undefined && data.region_code !== region_code) {
-      const existingRegion = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
-        .where('region_code', data.region_code)
-        .first();
-
-      if (existingRegion) {
-        return actionError(`Tax region with code "${data.region_code}" already exists.`, 'msp/billing-settings:errors.taxRegion.duplicateCode', { code: data.region_code });
-      }
-    }
 
     const [updatedRegion] = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .where('region_code', region_code)

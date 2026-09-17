@@ -7,7 +7,7 @@ import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
 import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { validateData } from '@alga-psa/validation';
-import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
+import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -31,7 +31,7 @@ import {
 } from '@shared/lib/ticketActivity';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
-  applyVisibilityBoardFilter,
+  applyTicketVisibilityFilter,
   getTicketOrigin,
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
@@ -162,7 +162,7 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
-      applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 't.board_id');
+      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
     })
     .first();
 
@@ -265,7 +265,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyVisibilityBoardFilter(query, visibility.visibleBoardIds);
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -350,7 +350,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyVisibilityBoardFilter(ticketQuery, visibility.visibleBoardIds);
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
         })
         .first();
 
@@ -782,6 +782,84 @@ export const updateClientTicketComment = withAuth(async (
   }
 });
 
+/**
+ * Portal-facing ticket status read. Returns only the statuses a client portal
+ * user is allowed to SET for the given board, preserving the board's ordering.
+ *
+ * Kept separate from the shared `getTicketStatuses` (15 MSP call sites) so MSP
+ * behavior cannot change based on caller identity. `currentStatusId` is always
+ * included even when it is not selectable, so a ticket parked in a restricted
+ * status still renders its current value instead of a blank picker.
+ */
+export const getClientPortalTicketStatuses = withAuth(async (
+  user,
+  { tenant },
+  boardId: string,
+  currentStatusId?: string | null
+): Promise<ClientTicketActionResult<IStatus[]>> => {
+  try {
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
+    }
+
+    const db = await getConnection(tenant);
+
+    const userForPermission = {
+      user_id: userId,
+      email: user.email,
+      user_type: 'client',
+      is_inactive: false,
+      tenant
+    } as IUser;
+    const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
+    if (!canRead) {
+      return permissionError('Insufficient permissions to view ticket statuses', 'common:errors.permissions.tickets.read');
+    }
+
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const userRecord = await tenantDb(trx, tenant).table('users')
+        .where({
+          user_id: userId
+        })
+        .first();
+
+      if (!userRecord?.contact_id) {
+        throw expectedClientTicketActionError('User not associated with a contact');
+      }
+
+      const visibility = await getClientContactVisibilityContext(trx, tenant, userRecord.contact_id);
+      if (visibility.visibleBoardIds !== null && !visibility.visibleBoardIds.includes(boardId)) {
+        throw expectedClientTicketActionError(
+          'Ticket not found or access denied',
+          'client-portal:errors.tickets.notFoundOrDenied',
+        );
+      }
+
+      const query = tenantDb(trx, tenant).table<IStatus>('statuses')
+        .where({
+          board_id: boardId,
+          status_type: 'ticket',
+        })
+        .select('*')
+        .orderBy('order_number', 'asc')
+        .orderBy('name', 'asc');
+
+      if (currentStatusId) {
+        query.where((builder: Knex.QueryBuilder) => {
+          builder.where('portal_selectable', true).orWhere('status_id', currentStatusId);
+        });
+      } else {
+        query.where('portal_selectable', true);
+      }
+
+      return await query as IStatus[];
+    });
+  } catch (error) {
+    return expectedOrThrow(error, 'Failed to fetch client portal ticket statuses:');
+  }
+});
+
 export const updateTicketStatus = withAuth(async (
   user,
   { tenant },
@@ -838,10 +916,20 @@ export const updateTicketStatus = withAuth(async (
           status_type: 'ticket',
           board_id: ticket.board_id,
         })
-        .first('status_id', 'is_closed', 'name');
+        .first('status_id', 'is_closed', 'name', 'portal_selectable');
 
       if (!statusForBoard) {
         throw expectedClientTicketActionError('Selected status is not valid for the ticket board');
+      }
+
+      if (statusForBoard.portal_selectable === false) {
+        // Checked in the same lookup that proves board membership: there is one
+        // place a target status can be admitted from, and the rejection happens
+        // before any ticket mutation or event publication.
+        throw expectedClientTicketActionError(
+          'This status cannot be selected from the client portal',
+          'client-portal:errors.tickets.statusNotPortalSelectable',
+        );
       }
 
       // Get old status for change tracking
@@ -1085,7 +1173,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds);
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' });
         })
         .first();
 
@@ -1170,43 +1258,44 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       })();
 
       const requestedBoardId = validatedData.board_id?.trim() || null;
-      let assignedBoardId: string | null = requestedBoardId;
 
       if (visibility.visibleBoardIds !== null && visibility.visibleBoardIds.length === 0) {
         throw expectedClientTicketActionError('Selected visibility group does not allow any boards');
       }
 
-      if (visibility.visibleBoardIds !== null) {
-        if (!requestedBoardId) {
-          assignedBoardId = visibility.visibleBoardIds[0] || null;
-        } else if (!visibility.visibleBoardIds.includes(requestedBoardId)) {
-          throw expectedClientTicketActionError(VISIBILITY_NOT_FOUND_ERROR);
-        }
+      if (
+        requestedBoardId &&
+        visibility.visibleBoardIds !== null &&
+        !visibility.visibleBoardIds.includes(requestedBoardId)
+      ) {
+        throw expectedClientTicketActionError(VISIBILITY_NOT_FOUND_ERROR);
       }
 
-      const resolvedBoard = !assignedBoardId
-        ? await tenantDb(trx, tenant).table('boards')
-            .where({
-              is_default: true,
-              is_inactive: false
-            })
-            .first()
-        : await tenantDb(trx, tenant).table('boards')
-            .where({
-              board_id: assignedBoardId,
-              is_inactive: false
-            })
-            .first();
+      // No board sent: prefer the tenant default when the contact may see it,
+      // otherwise the first active board they may see. Hidden boards are
+      // already subtracted from visibleBoardIds, so a hidden default never wins.
+      const boardCandidates = tenantDb(trx, tenant).table('boards')
+        .where({ is_inactive: false })
+        .modify((query) => {
+          if (requestedBoardId) {
+            query.where({ board_id: requestedBoardId });
+          } else if (visibility.visibleBoardIds !== null) {
+            query.whereIn('board_id', visibility.visibleBoardIds);
+          } else {
+            query.where({ is_default: true });
+          }
+        })
+        .orderBy([{ column: 'is_default', order: 'desc' }, 'display_order', 'board_name']);
+
+      const resolvedBoard = await boardCandidates.first();
 
       if (!resolvedBoard) {
         throw expectedClientTicketActionError(
-          assignedBoardId
+          requestedBoardId
             ? VISIBILITY_NOT_FOUND_ERROR
             : 'No default board configured for tickets'
         );
       }
-
-      assignedBoardId = resolvedBoard.board_id;
 
       // Fetch default status for tickets
       const defaultStatusId = await TicketModel.getDefaultStatusId(

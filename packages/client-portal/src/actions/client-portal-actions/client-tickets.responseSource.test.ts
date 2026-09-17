@@ -130,6 +130,10 @@ describe('addClientTicketComment response source metadata', () => {
               return usersBuilder();
             }
 
+            if (table === 'boards') {
+              return { select: async () => [] };
+            }
+
             if (table === 'contacts') {
               return {
                 where: () => ({
@@ -233,6 +237,10 @@ describe('addClientTicketComment response source metadata', () => {
               return usersBuilder();
             }
 
+            if (table === 'boards') {
+              return { select: async () => [] };
+            }
+
             if (table === 'contacts') {
               return {
                 where: () => ({
@@ -321,6 +329,10 @@ describe('addClientTicketComment response source metadata', () => {
           (table: string) => {
             if (table === 'users') {
               return usersBuilder();
+            }
+
+            if (table === 'boards') {
+              return { select: async () => [] };
             }
 
             if (table === 'contacts') {

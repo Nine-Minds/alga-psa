@@ -26,8 +26,10 @@ import type {
   ITeam,
 } from '@alga-psa/types';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
+import type { ITicketExternalLinkView } from '../../../actions/externalLinks/externalLinkActions';
 import TicketChecklistSection from './../TicketChecklistSection';
 import { TicketCredentialsSection } from './../TicketCredentialsSection';
+import { TicketExternalLinksSection } from './../TicketExternalLinksSection';
 import { DocumentsTile } from './DocumentsTile';
 import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
@@ -41,7 +43,7 @@ import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/compo
 import { BentoHero } from './BentoHero';
 import { BentoTimelineTile } from './BentoTimelineTile';
 import { SlaClocksTile } from './SlaClocksTile';
-import { NextVisitTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
+import { ScheduledWorkTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
 import { TimeLoggedSummary } from './TimeLoggedSummary';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import { resolveTicketCallPhone } from './ticketCallPhone';
@@ -85,13 +87,15 @@ export interface TicketBentoLayoutProps {
   hideSlaStatus?: boolean;
   /** Hides the billing rollup tile (AlgaDesk has no billing surface). */
   hideBilling?: boolean;
-  /** Hides the Next visit / Appointment requests tiles (AlgaDesk has no scheduling surface). */
+  /** Hides the Scheduled work / Appointment requests tiles (AlgaDesk has no scheduling surface). */
   hideScheduling?: boolean;
   workflowLocked?: boolean;
   onOpenAllFields: () => void;
   tags?: any[];
   onTagsChange?: (tags: any[]) => void;
   taskActions?: React.ReactNode;
+  /** Injected quick-invoice-a-ticket action (billing package). */
+  quickInvoiceActions?: React.ReactNode;
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
   liveHighlightedFields?: string[];
@@ -113,9 +117,11 @@ export interface TicketBentoLayoutProps {
     phone?: string | null;
   }[];
   /** Opens the scheduler drawer pre-scoped to this ticket (global drawer system). */
-  onScheduleVisit?: () => void;
-  /** Bumped by the parent after a visit is scheduled so the "Next visit" tile refetches. */
-  nextVisitRefreshKey?: number;
+  onScheduleWork?: () => void;
+  /** Opens an existing schedule entry linked to this ticket for editing. */
+  onOpenScheduleEntry?: (entryId: string) => void;
+  /** Bumped by the parent after scheduled work changes so the "Scheduled work" tile refetches. */
+  scheduleRefreshKey?: number;
   // Timeline
   conversations: IComment[];
   userMap: Record<string, CommentUserAuthor>;
@@ -175,6 +181,9 @@ export interface TicketBentoLayoutProps {
   // Checklist
   checklistItems: any[];
   onChecklistItemsChanged: (items: any[]) => void;
+  // External system links
+  externalLinks?: ITicketExternalLinkView[];
+  onExternalLinksChanged?: (links: ITicketExternalLinkView[]) => void;
   // Timer / time entries
   hideTimeEntry?: boolean;
   isLiveTicketTimerEnabled?: boolean;
@@ -560,19 +569,20 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
 
       {!props.hideScheduling ? (
         <>
-          <Suspense fallback={<BentoTileSkeleton id={`${id}-next-visit-tile-loading`} title={t('bento.tiles.nextVisit', 'Next visit')} />}>
-            <NextVisitTile
-              id={`${id}-next-visit-tile`}
+          <Suspense fallback={<BentoTileSkeleton id={`${id}-scheduled-work-tile-loading`} title={t('bento.tiles.scheduledWork', 'Scheduled work')} />}>
+            <ScheduledWorkTile
+              id={`${id}-scheduled-work-tile`}
               ticketId={ticketId}
-              refreshKey={props.nextVisitRefreshKey}
+              refreshKey={props.scheduleRefreshKey}
               initialData={props.bentoStreams?.scheduleEntries}
-              onScheduleVisit={props.onScheduleVisit}
+              onSchedule={props.onScheduleWork}
+              onOpenEntry={props.onOpenScheduleEntry}
             />
           </Suspense>
           <AppointmentRequestsTile
             id={`${id}-appointment-requests-tile`}
             ticketId={ticketId}
-            refreshKey={props.nextVisitRefreshKey}
+            refreshKey={props.scheduleRefreshKey}
           />
         </>
       ) : null}
@@ -779,6 +789,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           size="sm"
           placeholder={t('bento.tiles.addAgentsOrTeam', 'Add agents or a team…')}
           onUserClick={props.onAgentClick}
+          userClickLabel={t('bento.hero.viewSchedule', 'View schedule')}
         />
       </div>
 
@@ -846,6 +857,13 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       {/* Flag-gated; adapts to the bento variant via useContentCardVariant.
           Mirrors the Entry view's placement after Documents. */}
       <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} />
+
+      <TicketExternalLinksSection
+        id={`${id}-external-links-section`}
+        ticketId={ticketId}
+        initialLinks={props.externalLinks}
+        onLinksChanged={props.onExternalLinksChanged}
+      />
     </div>
   );
 
@@ -881,6 +899,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           tags={props.tags}
           onTagsChange={props.onTagsChange}
           taskActions={props.taskActions}
+          quickInvoiceActions={props.quickInvoiceActions}
           onResolveAndClose={props.onResolveAndClose}
           resolveAndCloseDisabled={props.resolveAndCloseDisabled}
           liveHighlightedFields={props.liveHighlightedFields}

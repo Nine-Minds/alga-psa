@@ -278,6 +278,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Appointment
   'appointment_requests',
 
+  // External references depend on tickets and their creating users. Purge them
+  // explicitly before either parent, along with the tenant's custom systems.
+  'external_entity_links', 'tenant_external_systems',
+
   // SLA leaf tables (must be before tickets, statuses, priorities, boards)
   // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,
   // delete before ticket/user rows are removed.

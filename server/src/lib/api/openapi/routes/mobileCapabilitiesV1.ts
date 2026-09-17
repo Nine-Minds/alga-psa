@@ -1,6 +1,33 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 
+/** The 15 seed tokens a theme pair is authored in; the app derives its ramps from them. */
+const SeedTokenKeys = [
+  'background',
+  'card',
+  'surface',
+  'textPrimary',
+  'textSecondary',
+  'textMuted',
+  'border',
+  'borderStrong',
+  'primary',
+  'secondary',
+  'accent',
+  'sidebarBg',
+  'sidebarText',
+  'sidebarHover',
+  'headerBg',
+] as const;
+
 export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry) {
+  const SeedTokens = registry.registerSchema(
+    'MobileThemeSeedTokensV1',
+    zOpenApi.object(
+      Object.fromEntries(
+        SeedTokenKeys.map((key) => [key, zOpenApi.string().describe('6-digit hex color, e.g. #8a4dea')]),
+      ) as Record<(typeof SeedTokenKeys)[number], ReturnType<typeof zOpenApi.string>>,
+    ),
+  );
   const CapabilitiesSuccess = registry.registerSchema(
     'MobileCapabilitiesSuccessV1',
     zOpenApi.object({
@@ -10,6 +37,13 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
           opportunities: zOpenApi.boolean(),
           opportunitiesCreate: zOpenApi.boolean(),
         }),
+        theme: zOpenApi.object({
+          pairId: zOpenApi.string().describe("Tenant theme pair id, e.g. 'forest' or 'custom'."),
+          label: zOpenApi.string().describe("English pair name; 'Custom' for a tenant-authored pair."),
+          light: SeedTokens,
+          dark: SeedTokens,
+          version: zOpenApi.string().describe('Stable hash of pairId plus both token sets.'),
+        }).describe('Tenant theme pair the mobile app renders; always present, defaults to Alga.'),
       }),
     }),
   );

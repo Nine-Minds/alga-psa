@@ -26,7 +26,17 @@
     "loading": "Chargement...",
     "errors": {
       "loadPermissions": "Échec du chargement des autorisations utilisateur",
-      "forbidden": "Vous n'êtes pas autorisé à consulter cet horaire."
+      "forbidden": "Vous n'êtes pas autorisé à consulter cet horaire.",
+      "moveFailed": "Impossible de déplacer l’entrée de planning"
+    },
+    "schedulingFor": "Planification de",
+    "selectSlotHint": "Faites glisser pour créer, déplacer ou redimensionner des entrées. Cliquez sur une entrée pour la modifier.",
+    "readOnlyHint": "Vous pouvez consulter ce planning, mais vous avez besoin de la permission de mise à jour du planning pour ajouter ou modifier des entrées.",
+    "workItemLegend": "Cet élément de travail",
+    "schedulingForAgent": "Planification pour {{name}}",
+    "otherWorkLegend": "Autre travail",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -553,7 +563,8 @@
       "appointmentRequest": "Demande de rendez-vous",
       "view": "Voir l'entrée",
       "edit": "Modifier l'entrée",
-      "new": "Nouvelle entrée"
+      "new": "Nouvelle entrée",
+      "newForWorkItem": "Planifier {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Ceci est une entrée privée. Seul le créateur peut afficher ou modifier les détails."
@@ -578,7 +589,9 @@
       "privateEntry": "Entrée privée (non visible par les autres utilisateurs)",
       "start": "Commencer *",
       "end": "Fin *",
-      "notes": "Remarques"
+      "notes": "Remarques",
+      "technician": "Technicien",
+      "notesPlaceholder": "Tout ce que le technicien doit savoir avant de commencer"
     },
     "actions": {
       "cancel": "Annuler",
@@ -588,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Entrée ad hoc (aucun élément de travail)",
-      "openDetails": "Détails"
+      "openDetails": "Détails",
+      "loading": "Chargement de l’élément de travail…",
+      "openTicket": "Ouvrir le ticket",
+      "openTask": "Ouvrir la tâche",
+      "openInteraction": "Ouvrir l’interaction"
     },
     "appointmentRequest": {
       "approved": {
@@ -691,6 +708,11 @@
       "created": "Réunion Microsoft Teams créée",
       "createFailed": "Échec de la création de la réunion Teams",
       "recurringUnsupported": "Les réunions Teams ne peuvent être ajoutées qu'à des entrées autonomes, pas à des séries récurrentes."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {
@@ -744,5 +766,15 @@
       "graphThrottled": "Microsoft Graph limite le débit des téléchargements d’enregistrements. Veuillez réessayer dans un instant.",
       "graphHttpStatus": "Microsoft Graph a renvoyé HTTP {{status}} lors du téléchargement de l’enregistrement Teams."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} planifié",
+    "updated": "Entrée de planning mise à jour",
+    "deleted": "Entrée de planning supprimée",
+    "createFailed": "Impossible de planifier ce travail",
+    "updateFailed": "Impossible de mettre à jour l’entrée de planning",
+    "deleteFailed": "Impossible de supprimer l’entrée de planning",
+    "loadFailed": "Impossible de charger l’entrée de planning",
+    "noPermission": "Vous avez besoin de la permission de mise à jour du planning pour planifier du travail."
   }
 }

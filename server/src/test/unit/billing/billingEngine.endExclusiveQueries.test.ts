@@ -22,6 +22,8 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, tenant: string) => ({
     table: (t: string) => conn(t),
     unscoped: (t: string) => conn(t),
+    // These tests supply already-priced rows; SQL price selection has its own DB coverage.
+    tenantJoinFirstMatching: (q: any) => q,
     tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
       o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
   }),

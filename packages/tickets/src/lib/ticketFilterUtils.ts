@@ -20,6 +20,53 @@ export const DEFAULT_TICKET_LIST_FILTERS: ITicketListFilters = {
 };
 
 /**
+ * URL pseudo-value for "tickets with no assignee". The list models unassigned
+ * with the `includeUnassigned` boolean, so this sentinel is translated at the
+ * serialization boundary rather than stored as a fake user id.
+ */
+export const UNASSIGNED_FILTER_SENTINEL = 'unassigned';
+
+const ASSIGNEE_UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Normalize the `assignedToIds` CSV URL token into assignee ids the list query
+ * can trust.
+ *
+ * The list serializes the assignee filter as a comma-separated list, but a URL
+ * is a public boundary — it can be hand-edited, stale, or shared — and any
+ * token that is not an assignee id used to reach ticketListFiltersSchema's
+ * `z.string().uuid()` and throw, blanking the list. Parsing here means the
+ * schema only ever sees well-formed ids. The `unassigned` pseudo-value is
+ * translated to the `includeUnassigned` boolean the list already uses for
+ * "no assignee" instead of being dropped.
+ */
+export function normalizeAssignedToIds(raw: string | null | undefined): {
+  assignedToIds?: string[];
+  includeUnassigned?: boolean;
+} {
+  if (!raw) return {};
+
+  const assignedToIds: string[] = [];
+  let includeUnassigned = false;
+
+  for (const token of raw.split(',')) {
+    const value = token.trim();
+    if (value.length === 0) continue;
+    if (value === UNASSIGNED_FILTER_SENTINEL) {
+      includeUnassigned = true;
+    } else if (ASSIGNEE_UUID_PATTERN.test(value) && !assignedToIds.includes(value)) {
+      assignedToIds.push(value);
+    }
+  }
+
+  return {
+    assignedToIds: assignedToIds.length > 0 ? assignedToIds : undefined,
+    includeUnassigned: includeUnassigned || undefined,
+  };
+}
+
+/**
  * Parse a returnFilters query string (from the ticket detail URL) back into
  * ITicketListFilters with proper defaults applied.
  *
@@ -32,6 +79,7 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
   const params = new URLSearchParams(decoded);
 
   const statusId = params.get('statusId') || TICKET_STATUS_FILTER_OPEN;
+  const assignedTo = normalizeAssignedToIds(params.get('assignedToIds'));
 
   return {
     boardId: params.get('boardId') || undefined,
@@ -48,9 +96,9 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
     boardFilterState: (params.get('boardFilterState') as 'active' | 'inactive' | 'all') || 'active',
     showOpenOnly: isTicketStatusOpenFilter(statusId),
     tags: params.get('tags') ? params.get('tags')!.split(',').map(t => decodeURIComponent(t)) : undefined,
-    assignedToIds: params.get('assignedToIds') ? params.get('assignedToIds')!.split(',') : undefined,
+    assignedToIds: assignedTo.assignedToIds,
     assignedTeamIds: params.get('assignedTeamIds') ? params.get('assignedTeamIds')!.split(',') : undefined,
-    includeUnassigned: params.get('includeUnassigned') === 'true' || undefined,
+    includeUnassigned: params.get('includeUnassigned') === 'true' || assignedTo.includeUnassigned || undefined,
     dueDateFilter: (params.get('dueDateFilter') as ITicketListFilters['dueDateFilter']) || undefined,
     dueDateFrom: params.get('dueDateFrom') || undefined,
     dueDateTo: params.get('dueDateTo') || undefined,

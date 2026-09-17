@@ -441,7 +441,8 @@
       "boards": "Quadros",
       "priorities": "Prioridades",
       "categories": "Categorias",
-      "checklistTemplates": "Modelos de lista de verificação"
+      "checklistTemplates": "Modelos de lista de verificação",
+      "externalSystems": "Sistemas externos"
     },
     "numbering": {
       "title": "Formato numérico",
@@ -549,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Ativo",
-        "inactive": "Inativo"
+        "inactive": "Inativo",
+        "hiddenFromPortal": "Oculto no portal"
       },
       "actions": {
         "addBoard": "Adicionar quadro",
@@ -629,7 +631,8 @@
           "loading": "Carregando status de tickets de bordo…",
           "statusName": "Nome do status",
           "closed": "Fechado",
-          "default": "Padrão"
+          "default": "Padrão",
+          "portalSelectable": "Os usuários do portal do cliente podem selecionar este status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reabrir tickets fechados em respostas recebidas",
@@ -645,6 +648,10 @@
         "liveTimer": {
           "label": "Ativar cronômetro de ticket ao vivo",
           "help": "Mostra o cronômetro ao vivo e os intervalos rastreados nos tickets neste quadro. A entrada manual de hora permanece disponível."
+        },
+        "clientPortalVisible": {
+          "label": "Visível no portal do cliente",
+          "help": "Quando desativado, este quadro e seus tickets ficam ocultos para todos os usuários do portal do cliente, independentemente dos grupos de visibilidade."
         },
         "defaultBoard": {
           "label": "Quadro padrão para tickets do portal do cliente",
@@ -985,6 +992,47 @@
           "updateStatusFailed": "Falha ao atualizar o status do modelo",
           "itemSaveFailed": "Falha ao salvar o item da lista de verificação",
           "ruleSaveFailed": "Falha ao salvar a regra de aplicação automática"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Sistemas externos",
+      "subtitle": "Adicione sistemas externos personalizados para que os tickets possam apontar para registros fora do catálogo integrado.",
+      "addButton": "Adicionar sistema",
+      "builtInTitle": "Sistemas integrados",
+      "builtInSubtitle": "Disponíveis para todos os locatários; suas URLs são geradas a partir do modelo do sistema.",
+      "table": {
+        "label": "Rótulo",
+        "key": "Chave",
+        "urlTemplate": "Modelo de URL",
+        "actions": "Ações"
+      },
+      "actions": {
+        "edit": "Editar",
+        "delete": "Excluir",
+        "cancel": "Cancelar",
+        "save": "Salvar"
+      },
+      "fields": {
+        "key": "Chave",
+        "keyHint": "Deve corresponder a custom:<slug> usando letras minúsculas, dígitos ou sublinhados.",
+        "label": "Rótulo",
+        "urlTemplate": "Modelo de URL",
+        "urlTemplateHint": "Opcional. Use os marcadores {realm} e {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Adicionar sistema externo",
+        "editTitle": "Editar sistema externo"
+      },
+      "deleteDialog": {
+        "title": "Excluir sistema externo",
+        "message": "Excluir \"{{label}}\"? Sistemas ainda usados por links não podem ser excluídos."
+      },
+      "messages": {
+        "success": {
+          "created": "Sistema externo criado.",
+          "updated": "Sistema externo atualizado.",
+          "deleted": "Sistema externo excluído."
         }
       }
     }
@@ -1473,6 +1521,9 @@
       "notice": "Está a pré-visualizar um tema não guardado. Os restantes mantêm o tema guardado até o aplicar.",
       "save": "Aplicar a todos",
       "discard": "Descartar"
+    },
+    "upgrade": {
+      "pitch": "Pares de temas para toda a organização, um editor de paleta personalizada e o white-label do aplicativo MSP fazem parte da edição Enterprise."
     }
   },
   "mspLanguage": {
@@ -1500,6 +1551,7 @@
     "emailTabs": {
       "settings": "Configurações",
       "emailTemplates": "Modelos de e-mail",
+      "emailBranding": "Marca dos e-mails",
       "categories": "Categorias",
       "telemetry": "Telemetria"
     },
@@ -1556,7 +1608,8 @@
       "preview": {
         "subjectLabel": "Pré-visualização do assunto",
         "iframeTitle": "Pré-visualização do modelo de e-mail",
-        "sampleDataNote": "A pré-visualização usa dados de exemplo. Os e-mails reais conterão valores reais."
+        "sampleDataNote": "A pré-visualização usa dados de exemplo. Os e-mails reais conterão valores reais.",
+        "sourceSyncNote": "Clique em qualquer elemento da pré-visualização para selecionar o código correspondente; mover o cursor no código destaca o elemento aqui."
       },
       "errors": {
         "loadFailed": "Falha ao carregar os modelos"
@@ -1605,7 +1658,8 @@
       },
       "tabs": {
         "source": "Código-fonte",
-        "preview": "Pré-visualização"
+        "preview": "Pré-visualização",
+        "variables": "Variáveis"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1622,6 +1676,110 @@
         "it": "Italiano",
         "pl": "Polonês",
         "pt": "Português"
+      }
+    },
+    "emailBranding": {
+      "title": "Marca dos e-mails",
+      "description": "Aplique suas cores a todos os e-mails enviados. Veja a pré-visualização aqui e escolha em quais modelos aplicá-las.",
+      "unsavedHint": "Salve a paleta antes de aplicá-la.",
+      "source": {
+        "saved": "Salva",
+        "custom-theme": "Do seu tema personalizado",
+        "theme-pair": "Do seu tema",
+        "portal-branding": "Da marca do seu portal do cliente",
+        "default": "Padrão da AlgaPSA"
+      },
+      "fields": {
+        "primary": "Cor principal",
+        "secondary": "Cor secundária",
+        "singleColor": "Cor única (o gradiente é derivado da cor principal)"
+      },
+      "tokens": {
+        "dark": "Destaque escuro",
+        "outerBg": "Plano de fundo externo",
+        "footerBg": "Plano de fundo do rodapé",
+        "cardBorder": "Borda do cartão",
+        "infoBoxBg": "Plano de fundo da caixa de informações",
+        "infoBoxBorder": "Borda da caixa de informações"
+      },
+      "preview": {
+        "title": "Pré-visualização"
+      },
+      "actions": {
+        "save": "Salvar paleta",
+        "saving": "Salvando...",
+        "useSuggested": "Usar as cores sugeridas",
+        "adjust": "Ajustar as cores derivadas",
+        "apply": "Aplicar aos modelos",
+        "applying": "Aplicando...",
+        "applyCount": "Aplicar a {{count}} modelos",
+        "applyToTemplate": "Aplicar minha paleta",
+        "remove": "Remover a marca de todos os modelos",
+        "removing": "Removendo...",
+        "cancel": "Cancelar",
+        "done": "Concluído"
+      },
+      "apply": {
+        "title": "Aplicar a marca aos modelos",
+        "languages": "Idiomas",
+        "selectAll": "Selecionar tudo",
+        "selectNone": "Desmarcar tudo",
+        "differs": "Difere em {{parts}}",
+        "differsParts": {
+          "colors": "cores",
+          "text": "texto",
+          "subject": "assunto"
+        },
+        "overwrite": "Substituir",
+        "overwriteHint": "A substituição recria um modelo a partir do padrão com a sua paleta e descarta as suas edições.",
+        "preview": {
+          "open": "Ver o resultado",
+          "title": "Pré-visualização: {{name}}",
+          "loading": "Gerando a pré-visualização...",
+          "captions": {
+            "create": "Será criada uma cópia com a sua marca a partir do modelo padrão.",
+            "update": "A sua cópia com a marca será refeita a partir do modelo padrão com a paleta salva.",
+            "customized": "As suas edições são mantidas palavra por palavra. Só são substituídas as cores originais que ainda restam neste modelo.",
+            "overwrite": "As suas edições neste modelo serão descartadas. Ele será recriado a partir do modelo padrão com a sua paleta.",
+            "skipped": "Nada será gravado — {{reason}}. Este é o modelo como ele está hoje."
+          }
+        },
+        "summary": "{{written}} com sua marca, {{skipped}} ignorados, {{failed}} com falha",
+        "groups": {
+          "system": {
+            "title": "Sem personalização",
+            "action": "Criar cópia com sua marca"
+          },
+          "branded": {
+            "title": "Com sua marca",
+            "action": "Atualizar as cores"
+          },
+          "customized": {
+            "title": "Personalizados",
+            "action": "Substituir apenas as cores originais restantes"
+          },
+          "no-stock-colors": {
+            "title": "Sem cores originais",
+            "action": "Nada a substituir"
+          }
+        },
+        "skipReasons": {
+          "customized": "Personalizado — não selecionado",
+          "nothing-to-replace": "Nada a substituir",
+          "unchanged": "Já está atualizado"
+        }
+      },
+      "newTemplates": {
+        "message": "{{count}} modelos foram adicionados desde a última vez que você aplicou sua paleta.",
+        "action": "Aplicar a paleta aos novos modelos",
+        "dismiss": "Dispensar"
+      },
+      "enterprise": {
+        "useLogo": "Usar meu logo no cabeçalho do e-mail",
+        "logoWide": "Logo largo",
+        "logoDefault": "Logo quadrado",
+        "noLogo": "Envie um logo em Configurações → Portal do cliente → Marca para usá-lo aqui.",
+        "showAttribution": "Mostrar “Powered by AlgaPSA” no rodapé"
       }
     },
     "categoriesUi": {
@@ -2019,7 +2177,17 @@
         "upload": "Enviar pacote"
       },
       "errors": {
-        "noImportableRecords": "Este pacote não continha registros importáveis."
+        "noImportableRecords": "Este pacote não continha registros importáveis.",
+        "permissionDenied": "Você não tem permissão para importar ou exportar dados.",
+        "invalidSpreadsheet": "Não foi possível ler essa planilha. Verifique se é um arquivo CSV ou XLSX válido e tente novamente.",
+        "notAmpPackage": "Esse arquivo não é um pacote AMP. Envie um arquivo .amp ou .sqlite.",
+        "tooLarge": "Este upload é maior que o tamanho máximo permitido.",
+        "sizeMismatch": "O upload não foi concluído. Tente novamente.",
+        "noRecognizedHeaders": "Nenhuma das colunas dessa planilha foi reconhecida. Verifique a linha de cabeçalho e tente novamente.",
+        "storageRejected": "O servidor rejeitou este upload. Peça ao administrador para verificar a configuração de tipos de arquivo do armazenamento.",
+        "spreadsheetFailed": "Não foi possível importar a planilha. Tente novamente.",
+        "uploadFailed": "Não foi possível enviar o pacote. Tente novamente.",
+        "unknown": "O upload falhou. Tente novamente."
       },
       "preflight": {
         "title": "Verificação prévia"
@@ -2027,6 +2195,19 @@
       "run": {
         "queued": "Migração na fila",
         "applying": "Migração em andamento"
+      },
+      "badges": {
+        "nothingImported": "Nada foi importado"
+      },
+      "results": {
+        "skippedSamePackage": "Os registros ignorados já foram migrados por uma execução anterior do mesmo pacote.",
+        "skippedOtherPackage": "Os registros ignorados corresponderam a entidades criadas por uma migração anterior de um pacote diferente: {{packages}}.",
+        "skippedExistingEntity": "Os registros ignorados corresponderam a entidades existentes.",
+        "nothingImportedTitle": "Nada foi importado",
+        "nothingImportedBody": "Esta execução não criou novos registros. Cada linha correspondeu a algo que já existia, então nada foi alterado.",
+        "claimedBySamePackage": "Já migrado por este pacote",
+        "claimedByOtherPackage": "Já migrado por {{file}}",
+        "claimedByExistingEntity": "Corresponde a uma entidade existente"
       }
     },
     "jobDetails": {
@@ -2876,7 +3057,8 @@
         "fieldCount": "Campos",
         "order": "Ordem",
         "actions": "Ações",
-        "openMenu": "Abrir menu"
+        "openMenu": "Abrir menu",
+        "searchPlaceholder": "Pesquisar tipos de ativos…"
       },
       "actions": {
         "addType": "Adicionar tipo de ativo",

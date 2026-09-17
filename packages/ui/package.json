@@ -137,7 +137,7 @@
     "i18next-browser-languagedetector": "^8.2.0",
     "i18next-fs-backend": "^2.6.1",
     "i18next-http-backend": "^3.0.6",
-    "jsondiffpatch": "^0.7.3",
+    "jsondiffpatch": "^0.7.6",
     "lucide-react": "^0.428.0",
     "react-day-picker": "^9.5.0",
     "react-hot-toast": "^2.5.1",

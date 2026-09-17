@@ -11,6 +11,7 @@ export const AUTHORIZATION_TEMPLATE_CATALOG: ReadonlySet<RelationshipTemplateKey
   'selected_clients',
   'same_team',
   'selected_boards',
+  'contact_visibility',
 ]);
 
 export type AuthorizationConstraintKey =

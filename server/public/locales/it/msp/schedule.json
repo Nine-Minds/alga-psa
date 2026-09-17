@@ -26,7 +26,17 @@
     "loading": "Caricamento...",
     "errors": {
       "loadPermissions": "Impossibile caricare le autorizzazioni utente",
-      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione."
+      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione.",
+      "moveFailed": "Impossibile spostare la voce di agenda"
+    },
+    "schedulingFor": "Pianificazione di",
+    "selectSlotHint": "Trascina per creare, spostare o ridimensionare le voci. Fai clic su una voce per modificarla.",
+    "readOnlyHint": "Puoi visualizzare questa agenda, ma hai bisogno del permesso di aggiornamento agenda per aggiungere o modificare voci.",
+    "workItemLegend": "Questo elemento di lavoro",
+    "schedulingForAgent": "Pianificazione per {{name}}",
+    "otherWorkLegend": "Altro lavoro",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -553,7 +563,8 @@
       "appointmentRequest": "Richiesta di appuntamento",
       "view": "Visualizza voce",
       "edit": "Modifica voce",
-      "new": "Nuova voce"
+      "new": "Nuova voce",
+      "newForWorkItem": "Pianifica {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Questa è un'entrata privata. Solo il creatore può visualizzare o modificare i dettagli."
@@ -578,7 +589,9 @@
       "privateEntry": "Ingresso privato (non visibile agli altri utenti)",
       "start": "Inizio *",
       "end": "Fine *",
-      "notes": "Note"
+      "notes": "Note",
+      "technician": "Tecnico",
+      "notesPlaceholder": "Tutto ciò che il tecnico deve sapere prima di iniziare"
     },
     "actions": {
       "cancel": "Annulla",
@@ -588,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Voce ad hoc (nessun elemento di lavoro)",
-      "openDetails": "Dettagli"
+      "openDetails": "Dettagli",
+      "loading": "Caricamento elemento di lavoro…",
+      "openTicket": "Apri ticket",
+      "openTask": "Apri attività",
+      "openInteraction": "Apri interazione"
     },
     "appointmentRequest": {
       "approved": {
@@ -691,6 +708,11 @@
       "created": "Riunione di Microsoft Teams creata",
       "createFailed": "Impossibile creare la riunione Teams",
       "recurringUnsupported": "Le riunioni Teams possono essere aggiunte solo a voci singole, non a serie ricorrenti."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {
@@ -744,5 +766,15 @@
       "graphThrottled": "Microsoft Graph sta limitando i download delle registrazioni. Riprovare tra poco.",
       "graphHttpStatus": "Microsoft Graph ha restituito HTTP {{status}} durante il download della registrazione di Teams."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} pianificato",
+    "updated": "Voce di agenda aggiornata",
+    "deleted": "Voce di agenda eliminata",
+    "createFailed": "Impossibile pianificare questo lavoro",
+    "updateFailed": "Impossibile aggiornare la voce di agenda",
+    "deleteFailed": "Impossibile eliminare la voce di agenda",
+    "loadFailed": "Impossibile caricare la voce di agenda",
+    "noPermission": "Hai bisogno del permesso di aggiornamento agenda per pianificare il lavoro."
   }
 }

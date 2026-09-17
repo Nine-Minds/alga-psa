@@ -9,6 +9,7 @@ import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
+import { normalizeAssignedToIds } from '@alga-psa/tickets/lib/ticketFilterUtils';
 import {
   hasBoardFilterParam,
   hasTicketViewFilterParams,
@@ -145,9 +146,14 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       filtersFromURL.tags = normalizeTags(params.tags);
     }
     if (params?.assignedToIds && typeof params.assignedToIds === 'string') {
-      const assignedToIds = params.assignedToIds.split(',').filter(id => id.trim().length > 0);
-      if (assignedToIds.length > 0) {
-        filtersFromURL.assignedToIds = assignedToIds;
+      // The CSV comes straight off the URL; only well-formed assignee ids may
+      // reach ticketListFiltersSchema (uuid array) or the list query throws.
+      const assignedTo = normalizeAssignedToIds(params.assignedToIds);
+      if (assignedTo.assignedToIds) {
+        filtersFromURL.assignedToIds = assignedTo.assignedToIds;
+      }
+      if (assignedTo.includeUnassigned) {
+        filtersFromURL.includeUnassigned = true;
       }
     }
     if (params?.assignedTeamIds && typeof params.assignedTeamIds === 'string') {
