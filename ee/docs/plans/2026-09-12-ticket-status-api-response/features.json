@@ -1,0 +1,32 @@
+[
+  {
+    "id": "F001",
+    "description": "Return the final tenant-scoped transaction row from TicketService.update after an actual status change, preserving description rendering and the existing update response shape.",
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Both ticket PUT endpoints return is_closed=true and persisted closed_at/closed_by on an open-to-closed transition.",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Both ticket PUT endpoints return is_closed=false and null closed_at/closed_by when reopening.",
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Preserve closure timestamp and actor when moving between closed statuses or repeating the current closed status.",
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Preserve correct closure metadata for open-to-open, same-open-status, and non-status updates.",
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Keep the refresh tenant-scoped and transactional while preserving existing invalid-status and close-rule rejection behavior.",
+    "implemented": false
+  }
+]

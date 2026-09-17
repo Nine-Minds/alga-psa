@@ -79,6 +79,7 @@ const activities = proxyActivities<{
   createCustomerClientActivity(input: {
     tenantName: string;
     adminUserEmail: string;
+    tenantId?: string;
   }): Promise<{ customerId: string; reused: boolean }>;
   createCustomerContactActivity(input: {
     clientId: string;
@@ -123,6 +124,8 @@ const activities = proxyActivities<{
       'DuplicateError',
       'AmbiguousCustomerMatchError',
       'ContactEmailConflictError',
+      'UnverifiedCustomerMatchError',
+      'PortalUserIdentityMismatchError',
     ],
   },
 });
@@ -382,6 +385,7 @@ export async function runTenantCreationOrchestration(
         const customerClientResult = await activities.createCustomerClientActivity({
           tenantName: input.tenantName,
           adminUserEmail: input.adminUser.email,
+          tenantId: tenantResult.tenantId,
         });
         customerClientId = customerClientResult.customerId;
         workflowState.customerTracking.clientId = customerClientId;

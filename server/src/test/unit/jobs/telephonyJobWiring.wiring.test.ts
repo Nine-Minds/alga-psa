@@ -19,6 +19,7 @@ const maintenanceFanoutSource = read('packages/jobs/src/lib/maintenanceJobFanout
 const setupSchedulesSource = read('ee/temporal-workflows/src/schedules/setupSchedules.ts');
 const middlewareSource = read('server/src/middleware.ts');
 const handlerSource = read('packages/jobs/src/lib/handlers/telephonyCallNotificationHandler.ts');
+const canonicalHandlerSource = read('packages/jobs/src/lib/handlers/telephonyCanonicalCallHandler.ts');
 
 describe('Telephony job wiring', () => {
   it('T036: the Temporal worker forwards the call notification back to the server', () => {
@@ -32,6 +33,31 @@ describe('Telephony job wiring', () => {
     expect(registerHandlersSource).toContain('await processTelephonyCallNotification(data);');
     expect(registerHandlersSource).toContain("name: 'renew-telephony-call-subscriptions',");
     expect(registerHandlersSource).toContain('await renewTelephonyCallSubscriptions(data);');
+  });
+
+  it('T084: the Temporal worker forwards the canonical-call job to the server', () => {
+    expect(jobActivitiesSource).toContain(
+      "registerJobHandlerForActivities(\n    'process-telephony-canonical-call',\n    forwardJobToServer('process-telephony-canonical-call'),\n  );",
+    );
+  });
+
+  it('T084: the canonical-call handler is registered EE-only with maxAttempts 3', () => {
+    expect(registerHandlersSource).toContain("name: 'process-telephony-canonical-call',");
+    expect(registerHandlersSource).toContain('await processTelephonyCanonicalCall(data);');
+    // Registration lives inside the includeEnterprise branch beside the other
+    // telephony handlers, and the EE job-name allowlist includes it.
+    expect(registerHandlersSource).toContain("'process-telephony-canonical-call'");
+    const registration = registerHandlersSource.slice(
+      registerHandlersSource.indexOf("name: 'process-telephony-canonical-call',"),
+    );
+    expect(registration).toContain('retry: { maxAttempts: 3 }');
+  });
+
+  it('T089: both call handlers run the shared post-ingest auto-ticket tail', () => {
+    expect(handlerSource).toContain("import { runTelephonyAutoTicketTail } from './telephonyPostIngest';");
+    expect(handlerSource).toContain('await runTelephonyAutoTicketTail(');
+    expect(canonicalHandlerSource).toContain("import { runTelephonyAutoTicketTail } from './telephonyPostIngest';");
+    expect(canonicalHandlerSource).toContain('await runTelephonyAutoTicketTail(');
   });
 
   it('T028: the notification handler sets tenant context before touching the database', () => {
@@ -72,6 +98,31 @@ describe('Telephony job wiring', () => {
   it('T078: the notification handler starts the artifact poll inside the tenant scope', () => {
     const body = handlerSource.slice(handlerSource.indexOf('export async function processTelephonyCallNotification'));
     expect(body.indexOf('runWithTenant')).toBeLessThan(body.indexOf('captureTelephonyCallArtifacts({'));
+  });
+
+  it('T226: the 3CX server-side jobs are forwarded by the worker and registered on the server', () => {
+    for (const jobName of ['process-threecx-call-event', 'process-threecx-chat', 'sync-threecx-phonebook-contact']) {
+      expect(jobActivitiesSource).toContain(
+        `registerJobHandlerForActivities(\n    '${jobName}',\n    forwardJobToServer('${jobName}'),\n  );`,
+      );
+    }
+    expect(registerHandlersSource).toContain('name: THREECX_CALL_EVENT_JOB,');
+    expect(registerHandlersSource).toContain('await processThreecxCallEvent(data);');
+    expect(registerHandlersSource).toContain('name: THREECX_CHAT_JOB,');
+    expect(registerHandlersSource).toContain('await processThreecxChat(data);');
+    expect(registerHandlersSource).toContain('name: THREECX_PHONEBOOK_CONTACT_JOB,');
+    expect(registerHandlersSource).toContain('await syncThreecxPhonebookContactHandler(data);');
+    // The EE job-name allowlist carries all three.
+    expect(registerHandlersSource).toContain('THREECX_CALL_EVENT_JOB, THREECX_CHAT_JOB, THREECX_PHONEBOOK_CONTACT_JOB]');
+  });
+
+  it('T226: the 3CX maintenance jobs are fanned out and scheduled', () => {
+    expect(maintenanceFanoutSource).toContain('[THREECX_CALL_CONTROL_RECONCILE_JOB]: { scope: \'tenant\', run: (tenantId) => reconcileThreecxCallControlHandler({ tenantId }), tenants: tenantsWithActiveThreecx },');
+    expect(maintenanceFanoutSource).toContain('[THREECX_CDR_BACKFILL_JOB]: { scope: \'tenant\', run: (tenantId) => backfillThreecxCdrHandler({ tenantId }), tenants: tenantsWithThreecxCdrImport },');
+    expect(maintenanceFanoutSource).toContain('[THREECX_PHONEBOOK_RECONCILE_JOB]: { scope: \'tenant\', run: (tenantId) => reconcileThreecxPhonebookHandler({ tenantId }), tenants: tenantsWithThreecxPhonebookSync },');
+    expect(setupSchedulesSource).toContain("{ jobName: 'reconcile-threecx-call-control', cron: '*/5 * * * *' },");
+    expect(setupSchedulesSource).toContain("{ jobName: 'backfill-threecx-cdr', cron: '5 * * * *' },");
+    expect(setupSchedulesSource).toContain("{ jobName: 'reconcile-threecx-phonebook', cron: '10 * * * *' },");
   });
 
   it('T035: the Graph webhook path is allowlisted while the rest of /api stays guarded', () => {

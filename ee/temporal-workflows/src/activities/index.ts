@@ -26,6 +26,7 @@ export * from "./appliance-license-redeem-activities";
 export * from "./workflow-runtime-v2-activities";
 export * from "./product-upgrade-activities";
 export * from "./trial-payment-reminder-activities";
+export * from "./threecx-call-control-activities";
 // Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
 export {
   getTenant,

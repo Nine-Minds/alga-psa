@@ -13,6 +13,7 @@ export default defineConfig({
       'tests/**/*.test.tsx',
       'src/actions/projectBillingActions.contract.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
+      'src/lib/taxRateApplicability.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/lib/billing/pricing/**/*.test.ts',
       'src/schemas/**/*.test.ts',
@@ -31,6 +32,10 @@ export default defineConfig({
       // coverage run that globs ../packages/**.
       'src/components/settings/billing/ServiceCatalogManager.rollout.contract.test.tsx',
       'src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx',
+      // Multi-select bulk actions on the catalog and product lists — listed for
+      // the same reason as the suites above.
+      'src/components/settings/billing/ServiceCatalogManager.bulkActions.contract.test.tsx',
+      'src/components/settings/billing/ProductsManager.bulkActions.contract.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
@@ -43,6 +48,12 @@ export default defineConfig({
       'src/lib/adapters/invoiceAdapters.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
+      // Rich Terms & Conditions: write-path projection + designer richText
+      // round-trip. Listed so this package's own `npm test` target covers them
+      // alongside the server-wide glob.
+      'src/lib/quoteTermsContent.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
+      'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',

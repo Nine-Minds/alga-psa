@@ -1,0 +1,698 @@
+[
+  {
+    "id": "F001",
+    "description": "Extract canonical generic status, step, HTTP/error metadata, and report envelope types with compatible email exports and shared-interface mirrors.",
+    "implemented": true,
+    "prdRefs": [
+      "Shared engine and report contract"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Extract the timed runStep wrapper with injectable domain error and recommendation policy; preserve returned data and HTTP metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Shared engine and report contract"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Extract the existing overall-status fold without changing email pass/warn/fail/skip semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Shared engine and report contract"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Extract Graph failure classification and request-id/client-request-id capture for shared use.",
+    "implemented": true,
+    "prdRefs": [
+      "Shared engine and report contract"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Move MicrosoftGraphAdapter diagnostics onto shared primitives without changing its report, recommendations, or optional live-subscription behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Shared engine and report contract"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Define Entra connection/client report, summary, client result, structured recommendation, action, and support-bundle contracts.",
+    "implemented": true,
+    "prdRefs": [
+      "Shared engine and report contract"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Implement stable step IDs, ordered execution, timed results, and dependency-aware blocked-by skips while preserving independent checks.",
+    "implemented": true,
+    "prdRefs": [
+      "Shared engine and report contract"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Deduplicate recommendations by code/context/action and order by severity without merging distinct customer consent actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Shared engine and report contract"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Populate connection type/status/profile/partner identity/token expiry/discovery count/mapping count and fold completed client outcomes into report status.",
+    "implemented": true,
+    "prdRefs": [
+      "Shared engine and report contract"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Share requireEntraAccess read-policy evaluation to report edition, both tier grants, and RBAC safely without weakening authentication or client-portal denial.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Preserve safe structured readiness failures through routes/actions, including Pro-tier explanation and CE edition-unavailable behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Implement connection_row with active-row detection and connection type/status/timestamps/stored validation snapshot without updating it.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Implement app_registration_binding with distinct binding/profile/archive/capability outcomes and profile name.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement client_secret_present using the tenant secret provider, non-empty check, and last-four fingerprint only.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Report stored secret expiry if available, warn within 30 days, fail expired secrets, and otherwise show the specified unknown-expiry explanation.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Share server-side Entra callback URL resolution across connect, setup metadata, and diagnostics, preserving intended URL precedence without client reconstruction.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Implement informational expected_app_registration_values with exact callback, delegated scopes, multi-tenant requirement, available bound app id, and copy actions without Graph application reads.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Implement read-only Temporal namespace/task-queue/worker-poller checks with explicit unreachable or unknown-evidence results and no probe workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Describe the existing Entra schedule, compare enablement/interval, report next fire time, and warn on drift or sync-off without reconciliation.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Skip credential-dependent checks for missing readiness prerequisites while continuing expected-value information and independent sync health.",
+    "implemented": true,
+    "prdRefs": [
+      "Connection diagnostics: layer 1"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Implement token_set_present with access/refresh fingerprints and expiry presence; missing refresh fails, refreshable access/expiry gaps warn.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Implement token_refresh against common with current bound credentials and only the existing refreshed-token persistence exception.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Preserve safe Microsoft OAuth error, suberror, AADSTS code, and correlation metadata through token refresh operator errors.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Decode token claims without signature verification and report tid, account, appid, aud, and expiry with clear opaque-token handling.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Warn separately for missing ManagedTenants.Read.All and Directory.Read.All with consent-then-reconnect remedies.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Fail token_claims when minted appid differs from the bound application and skip dependent Graph checks.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Implement graph_me baseline GET with shared HTTP/Graph error metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Implement managed_tenants_endpoint using entraDirectProbeEndpoint with distinct 400 endpoint fault, 401 token rejection, and 403 consent remedies.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Reuse full managed-tenant pagination/normalization with the refreshed token and report count plus at most ten display names.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Warn on zero Direct managed tenants with Lighthouse onboarding and active GDAP explanation.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Compare live discovery with confirmed mappings, warn for missing mapped tenants, and count unmapped discovered tenants without persistence.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Honor Graph/login emulator endpoint overrides and self-tenant smoke mode throughout Direct connection and client reads.",
+    "implemented": true,
+    "prdRefs": [
+      "Direct connection: layers 2 and 3"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Classify AADSTS7000222/700016/65001/50076/50079/70000/90002/50020, invalid_client, invalid_grant, consent_required, and network failures with specific-code precedence.",
+    "implemented": true,
+    "prdRefs": [
+      "OAuth and Graph remedies"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Give customer-context consent, account, Conditional Access, and app/service-principal remedies distinct from partner reconnect advice.",
+    "implemented": true,
+    "prdRefs": [
+      "OAuth and Graph remedies"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Generate validated customer adminconsent URLs using managed tenant id and bound application client id, with copy/open actions and no secrets.",
+    "implemented": true,
+    "prdRefs": [
+      "OAuth and Graph remedies"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Classify customer users/groups 403 as delegated directory-role/GDAP failure and retain Graph request-id.",
+    "implemented": true,
+    "prdRefs": [
+      "OAuth and Graph remedies"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Decode safe stored/nested Temporal errors and apply the same OAuth classifier to historical AADSTS text.",
+    "implemented": true,
+    "prdRefs": [
+      "OAuth and Graph remedies"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Resolve selected confirmed mappings inside the authenticated tenant; omitted ids select all, empty ids select none, and foreign/unmapped ids are rejected.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Execute ordered steps per client with at most three clients in flight and independent outcomes across clients.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Implement tenant_token_mint and reuse one token for normal reads; preserve rotated refresh-token semantics without replacing partner access-token state.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Implement one-item users_read and retain the first user id internally for membership diagnostics; empty users does not fail access.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Implement one-item groups_read independently when the tenant token is usable.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Resolve the configured entitlement group, report displayName/securityEnabled, and distinguish deleted and non-security groups.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Probe checkMemberGroups read-only for the first sampled user, retaining group resolution when membership must skip for no user.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Skip entitlement checks when unconfigured and user_yield_preview when not requested, with clear reasons.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Reuse listUsersForTenant and the existing pure filter/settings logic for optional total/included/excluded-by-reason counts without calling writing preflight helpers.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Warn when a non-empty directory is entirely excluded and distinguish a genuinely empty directory.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Expose narrow adapter read/paging/token-context seams needed for diagnostics without changing sync behavior or losing error metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Return per-client names/tenant display names/steps/status/remedy and count each result once as ok, need consent, conditional access, missing role, or other.",
+    "implemented": true,
+    "prdRefs": [
+      "Client access diagnostics: layer 4"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Implement cipp_credentials_present with sanitized base URL and API-token fingerprint, without Direct credential requirements.",
+    "implemented": true,
+    "prdRefs": [
+      "CIPP connection and client checks"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Implement cipp_reachable using the existing three candidate endpoints, preserving fallback order and attempted/answering endpoint evidence.",
+    "implemented": true,
+    "prdRefs": [
+      "CIPP connection and client checks"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Distinguish CIPP DNS, TLS, timeout, and HTTP failures without exposing request secrets.",
+    "implemented": true,
+    "prdRefs": [
+      "CIPP connection and client checks"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Attribute reachable 401/403 to cipp_auth with the exact CIPP API-key rotation explanation, avoiding duplicate failure cascades.",
+    "implemented": true,
+    "prdRefs": [
+      "CIPP connection and client checks"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Reuse successful CIPP tenant-list normalization to report count and at most ten display names, with CIPP-specific zero-list warning.",
+    "implemented": true,
+    "prdRefs": [
+      "CIPP connection and client checks"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Implement cipp_mappings_vs_list warnings and unmapped count from confirmed tenant-scoped mappings.",
+    "implemented": true,
+    "prdRefs": [
+      "CIPP connection and client checks"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Implement per_tenant_users with a bounded one-page CIPP adapter read for each selected client.",
+    "implemented": true,
+    "prdRefs": [
+      "CIPP connection and client checks"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Support opt-in full CIPP user yield using the shared exclusion counter and the same no-write boundary.",
+    "implemented": true,
+    "prdRefs": [
+      "CIPP connection and client checks"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Implement last_runs for five runs with trigger/status/duration and created/linked/updated/ambiguous/inactivated totals, including no-history presentation.",
+    "implemented": true,
+    "prdRefs": [
+      "Sync pipeline health: layer 5"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Warn for two consecutive real failed/partial syncs using notification-rule semantics, excluding dry runs from health conclusions.",
+    "implemented": true,
+    "prdRefs": [
+      "Sync pipeline health: layer 5"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Implement per_tenant_last_result from the latest actual sync and resolve failed mappings to client names with safe errors.",
+    "implemented": true,
+    "prdRefs": [
+      "Sync pipeline health: layer 5"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Cross-reference historical tenant failures with client diagnostics using identities and timestamps without presenting stale failures as current.",
+    "implemented": true,
+    "prdRefs": [
+      "Sync pipeline health: layer 5"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Implement reconciliation_queue count/oldest age and a review-queue recommendation when open items exist.",
+    "implemented": true,
+    "prdRefs": [
+      "Sync pipeline health: layer 5"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Expose runEntraConnectionDiagnostics through withAuth and the EE read guard, returning one connection report with no client fan-out.",
+    "implemented": true,
+    "prdRefs": [
+      "API, progress, and persistence boundaries"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Expose runEntraClientAccessDiagnostics with optional selected client ids and yield flag plus continuation response types.",
+    "implemented": true,
+    "prdRefs": [
+      "API, progress, and persistence boundaries"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Wire diagnostics EE routes, base-server delegators, packages/ee CE stubs, and integrations EE/OSS route entries.",
+    "implemented": true,
+    "prdRefs": [
+      "API, progress, and persistence boundaries"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Use tenantDb-scoped reads/joins for connections, profiles, mappings, settings, clients, history, and queue; derive tenant/user only from authentication.",
+    "implemented": true,
+    "prdRefs": [
+      "API, progress, and persistence boundaries"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Return authenticated expiring job/continuation state and bounded incremental client results instead of one request for all clients.",
+    "implemented": true,
+    "prdRefs": [
+      "API, progress, and persistence boundaries"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Bind continuations to user/tenant/selection/options and revalidate access, mapping, and connection context for every batch; reject tampering/expiry.",
+    "implemented": true,
+    "prdRefs": [
+      "API, progress, and persistence boundaries"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Bound external requests and large-directory preview pages; preserve completed clients and report unfinished work rather than a false completed pass.",
+    "implemented": true,
+    "prdRefs": [
+      "API, progress, and persistence boundaries"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Keep progress request-driven without persistent jobs, background promises, Temporal workflows, or DB/secret-store progress writes.",
+    "implemented": true,
+    "prdRefs": [
+      "API, progress, and persistence boundaries"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Prevent diagnostics from mutating connection verdicts, discovery, settings, mappings, contacts, sync history, queue, or schedules; allow only existing OAuth rotation writes.",
+    "implemented": true,
+    "prdRefs": [
+      "API, progress, and persistence boundaries"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Build EntraDiagnosticsDialog with standard Dialog/Badge/DataTable/Button controls, overall badge, summary grid, and expandable ordered steps.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Open the same dialog from Connection beside Validate and unhealthy Overview attention entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Render HTTP/error/correlation metadata, blocked reasons, informational expected values, and severity-ordered remediation actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Default client picker to all confirmed mappings, default yield off, require confirmation above 20, and prevent an empty selection from starting all clients.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Render client and tenant display names rather than GUIDs in table rows, with status/remedy and expanded identity/step details.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Accumulate completed client results and counts during continuations, show running/partial/failure states, stop after close, and prevent duplicate starts.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Offer copy/open/navigate actions for expected values, customer consent, Microsoft app settings, connection remediation, and review queue.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Serialize server-side support reports with only secret/token fingerprints and scrub nested errors/headers/URLs; always retain Graph request IDs.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Default exports to redacted identifiers and allow explicit includeIdentifiers exports without ever including full secrets/tokens.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Provide Copy support bundle and Download JSON from the same non-recursive serializer for available connection/client results.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Localize diagnostics strings under msp/admin integrations.entra.diagnostics.*, including stable step titles, remedies, status, confirmation, and blocked reasons.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Use theme-aware standard controls, unique interaction IDs, accessible status/progress labels, and the standard sticky dialog footer.",
+    "implemented": true,
+    "prdRefs": [
+      "Redaction and UI"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Add or reuse Graph emulator scenarios for healthy runs, partner consent, per-client consent/role errors, empty discovery, and expired client secret.",
+    "implemented": true,
+    "prdRefs": [
+      "Documentation and validation"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Extend the Entra guide with diagnostics flows/layers and consolidate AADSTS remediation into one table while preserving existing doc contracts.",
+    "implemented": true,
+    "prdRefs": [
+      "Documentation and validation"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Add an nm-store user documentation page for Run diagnostics, client results, and remediation using the business-documentation workflow and sanitized screenshots.",
+    "implemented": true,
+    "prdRefs": [
+      "Documentation and validation"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Record dev-stack emulator smoke evidence for connection/client scopes, one green run, and at least two distinct failure runs with screenshots.",
+    "implemented": true,
+    "prdRefs": [
+      "Documentation and validation"
+    ]
+  }
+]

@@ -110,6 +110,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const principal = await getUserWithRoles(userId, tenantId);
+    if (!principal || principal.user_type !== 'internal') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id: ticketId } = await params;
     if (!ticketId) {
       return NextResponse.json({ error: 'Ticket ID is required' }, { status: 400 });

@@ -126,6 +126,26 @@ describe('TelephonyIntegrationSettings', () => {
     expect(screen.queryByRole('button', { name: 'Enable' })).toBeNull();
   });
 
+  it('T105: on CE the section renders the unavailable card and no 3CX card', async () => {
+    mocks.getOverview.mockResolvedValue({
+      success: true,
+      available: false,
+      reason: 'ce_unavailable',
+      error: 'Telephony integrations are only available in Enterprise Edition.',
+      canManage: true,
+      canResolve: true,
+      providers: [],
+      recentCalls: [],
+      unresolvedCalls: [],
+    });
+
+    const { container } = render(<TelephonyIntegrationSettings />);
+
+    expect(await screen.findByText(/only available in Enterprise Edition/i)).toBeTruthy();
+    expect(container.querySelector('#telephony-provider-card-3cx')).toBeNull();
+    expect(screen.queryByText('Teams Phone')).toBeNull();
+  });
+
   it('T044: a refused caller is told so, not sent to buy an add-on', async () => {
     mocks.getOverview.mockResolvedValue({
       success: false,

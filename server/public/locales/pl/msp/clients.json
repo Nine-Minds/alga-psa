@@ -1561,7 +1561,15 @@
       "allContacts": "Wszystkie kontakty",
       "allStatuses": "Wszystkie statusy",
       "allUsers": "Wszyscy użytkownicy",
-      "columns": { "type": "Typ", "title": "Tytuł", "client": "Klient", "contact": "Kontakt", "user": "Użytkownik", "date": "Data", "status": "Status" },
+      "columns": {
+        "type": "Typ",
+        "title": "Tytuł",
+        "client": "Klient",
+        "contact": "Kontakt",
+        "user": "Użytkownik",
+        "date": "Data",
+        "status": "Status"
+      },
       "empty": "Brak interakcji pasujących do tych filtrów.",
       "loading": "Ładowanie interakcji…",
       "openClient": "Otwórz klienta {{name}}",
@@ -1581,6 +1589,14 @@
       "statusPlaceholder": "Status",
       "title": "Ostatnie interakcje",
       "statusesLoadFailed": "Nie udało się wczytać statusów interakcji. Spróbuj ponownie."
+    },
+    "callArtifacts": {
+      "sectionTitle": "Nagranie i transkrypcja rozmowy",
+      "viewTranscript": "Zobacz transkrypcję",
+      "downloadRecording": "Pobierz nagranie",
+      "transcriptTitle": "Transkrypcja rozmowy",
+      "loading": "Ładowanie transkrypcji…",
+      "loadFailed": "Nie udało się załadować transkrypcji."
     }
   },
   "clientDrawer": {

@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Zarządzaj regionami podatkowymi",
+      "title": "Regiony i stawki podatkowe",
       "loading": "Ładowanie regionów...",
       "fields": {
         "code": {
           "label": "Kod regionu",
-          "placeholder": "np. Kalifornia, Nowy Jork, VAT-UK"
+          "placeholder": "np. Kalifornia, Nowy Jork, VAT-UK",
+          "immutableHint": "Kod regionu identyfikuje ten region dla stawek podatkowych, klientów i lokalizacji, dlatego nie można go zmienić."
         },
         "name": {
           "label": "Nazwa regionu",
@@ -268,6 +269,57 @@
         "update": "Nie udało się zaktualizować regionu podatkowego.",
         "activate": "Nie udało się aktywować regionu podatkowego.",
         "deactivate": "Nie udało się dezaktywować regionu podatkowego."
+      },
+      "search": {
+        "placeholder": "Szukaj regionów"
+      },
+      "columns": {
+        "region": "Region podatkowy",
+        "currentRate": "Bieżąca stawka",
+        "rates": "Stawki"
+      },
+      "rateSummary": {
+        "noRates": "Brak stawki",
+        "noCurrentRate": "Brak obowiązującej stawki",
+        "combined": "{{count}} łącznie",
+        "combinedHint": "{{count}} aktywne stawki obowiązują dziś i są sumowane na fakturach."
+      },
+      "empty": {
+        "title": "Brak regionów podatkowych",
+        "description": "Dodaj region dla każdego miejsca, w którym naliczasz podatek, a następnie przypisz mu stawkę.",
+        "noMatch": "Żaden region nie pasuje do \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Pokaż stawki",
+        "collapse": "Ukryj stawki"
+      },
+      "rates": {
+        "empty": "Ten region nie ma stawek. Faktury opodatkowane w tym regionie nie powiodą się, dopóki nie zostanie dodana stawka.",
+        "composite": "Złożona",
+        "effectiveRange": "Od {{start}} do {{end}}",
+        "effectiveFrom": "Od {{start}}",
+        "deleteEntity": "stawkę {{rate}} dla regionu {{region}}",
+        "columns": {
+          "rate": "Stawka",
+          "description": "Opis",
+          "effective": "Obowiązuje"
+        },
+        "status": {
+          "current": "Obowiązująca",
+          "scheduled": "Zaplanowana",
+          "expired": "Wygasła",
+          "inactive": "Nieaktywna"
+        },
+        "actions": {
+          "add": "Dodaj stawkę",
+          "edit": "Edytuj",
+          "advanced": "Ustawienia zaawansowane",
+          "delete": "Usuń"
+        },
+        "errors": {
+          "validateDeletion": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie.",
+          "delete": "Nie udało się usunąć stawki podatkowej."
+        }
       }
     },
     "thresholds": {
@@ -723,6 +775,33 @@
       "cancel": "Anuluj",
       "saveChanges": "Zapisz zmiany"
     },
+    "bulk": {
+      "selectedCount": "Zaznaczono {{count}}",
+      "selectAll": "Zaznacz wszystkie usługi",
+      "clear": "Wyczyść zaznaczenie",
+      "actions": {
+        "activate": "Aktywuj",
+        "deactivate": "Dezaktywuj",
+        "delete": "Usuń"
+      },
+      "deleteDialog": {
+        "title": "Usuń usługi",
+        "message": "Trwale usunąć zaznaczone usługi ({{count}})? Usługi nadal używane przez umowy lub faktury zostaną pominięte. Tej akcji nie można cofnąć."
+      },
+      "feedback": {
+        "activateSuccess": "Aktywowano usługi: {{count}}",
+        "activatePartial": "Aktywowano usługi: {{count}}; nie udało się aktywować: {{failed}}",
+        "activateError": "Nie udało się aktywować usług: {{count}}",
+        "deactivateSuccess": "Dezaktywowano usługi: {{count}}",
+        "deactivatePartial": "Dezaktywowano usługi: {{count}}; nie udało się dezaktywować: {{failed}}",
+        "deactivateError": "Nie udało się dezaktywować usług: {{count}}",
+        "deleteSuccess": "Usunięto usługi: {{count}}",
+        "deletePartial": "Usunięto usługi: {{count}}; nie udało się usunąć: {{failed}}",
+        "deletePartialBlocked": "Usunięto usługi: {{count}}; nie udało się usunąć: {{failed}} — {{names}}",
+        "deleteBlocked": "Nie udało się usunąć usług ({{count}}) — nadal w użyciu: {{names}}",
+        "deleteError": "Nie udało się usunąć usług: {{count}}"
+      }
+    },
     "table": {
       "serviceName": "Nazwa usługi",
       "serviceType": "Typ usługi",
@@ -762,6 +841,33 @@
       "restore": "Przywrócić",
       "archive": "Archiwum",
       "delete": "Usuwać"
+    },
+    "bulk": {
+      "selectedCount": "Zaznaczono {{count}}",
+      "selectAll": "Zaznacz wszystkie produkty",
+      "clear": "Wyczyść zaznaczenie",
+      "actions": {
+        "archive": "Archiwizuj",
+        "restore": "Przywróć",
+        "delete": "Usuń"
+      },
+      "deleteDialog": {
+        "title": "Trwale usuń produkty",
+        "message": "Trwale usunąć zaznaczone produkty ({{count}})? Produkty powiązane z istniejącymi danymi zostaną pominięte. Tej akcji nie można cofnąć."
+      },
+      "feedback": {
+        "archiveSuccess": "Zarchiwizowano produkty: {{count}}",
+        "archivePartial": "Zarchiwizowano produkty: {{count}}; nie udało się zarchiwizować: {{failed}}",
+        "archiveError": "Nie udało się zarchiwizować produktów: {{count}}",
+        "restoreSuccess": "Przywrócono produkty: {{count}}",
+        "restorePartial": "Przywrócono produkty: {{count}}; nie udało się przywrócić: {{failed}}",
+        "restoreError": "Nie udało się przywrócić produktów: {{count}}",
+        "deleteSuccess": "Trwale usunięto produkty: {{count}}",
+        "deletePartial": "Usunięto produkty: {{count}}; nie udało się usunąć: {{failed}}",
+        "deletePartialBlocked": "Usunięto produkty: {{count}}; nie udało się usunąć: {{failed}} — {{names}}",
+        "deleteBlocked": "Nie udało się usunąć produktów ({{count}}) — nadal w użyciu: {{names}}",
+        "deleteError": "Nie udało się usunąć produktów: {{count}}"
+      }
     },
     "filters": {
       "searchPlaceholder": "Szukaj według nazwy, SKU, opisu...",

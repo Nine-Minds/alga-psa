@@ -16,6 +16,14 @@ import {
   getMicrosoftGraphBaseUrl,
   getMicrosoftTokenUrl,
 } from '../microsoftGraphEndpoints';
+import {
+  buildTokenFingerprint as buildTokenFingerprintShared,
+  classifyGraphFailure as classifyGraphFailureShared,
+  computeOverallStatus as computeOverallStatusShared,
+  createDiagnosticsRunner,
+  decodeJwtPayload as decodeJwtPayloadShared,
+  extractGraphIds as extractGraphIdsShared,
+} from '../../diagnostics';
 
 export type MicrosoftSubscriptionErrorKind = 'validation' | 'authentication' | 'other';
 
@@ -995,30 +1003,19 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
   }
 
+  // These helpers are shared with the Entra diagnostics engine. They are kept
+  // as thin instance methods so existing call sites and the email report
+  // contract are unchanged.
   private buildTokenFingerprint(token?: string): string | undefined {
-    if (!token) return undefined;
-    return `${token.slice(0, 4)}...(${token.length})`;
+    return buildTokenFingerprintShared(token);
   }
 
   private decodeJwtPayload(token: string): Record<string, any> | null {
-    try {
-      const parts = token.split('.');
-      if (parts.length < 2) return null;
-      const payload = parts[1];
-      const padded = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=');
-      const json = Buffer.from(padded, 'base64').toString('utf8');
-      return JSON.parse(json);
-    } catch {
-      return null;
-    }
+    return decodeJwtPayloadShared(token);
   }
 
   private extractGraphIds(headers: any): { requestId?: string; clientRequestId?: string } {
-    const lower = (k: string) => (headers?.[k] ?? headers?.[k.toLowerCase()]);
-    return {
-      requestId: lower('request-id'),
-      clientRequestId: lower('client-request-id'),
-    };
+    return extractGraphIdsShared(headers);
   }
 
   private classifyGraphFailure(error: any): {
@@ -1029,26 +1026,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     clientRequestId?: string;
     responseBody?: unknown;
   } {
-    const res = error?.response;
-    // Already-sanitized errors (e.g. from token refresh inside the request
-    // interceptor) carry status/code/responseBody at the top level.
-    const status = res?.status ?? error?.status;
-    const body = res?.data ?? error?.responseBody;
-    const graphErr = body?.error || body;
-    const message =
-      graphErr?.message ||
-      error?.message ||
-      (typeof error === 'string' ? error : 'Unknown error');
-    const code = graphErr?.code || error?.code || (status ? String(status) : undefined);
-    const ids = this.extractGraphIds(res?.headers);
-    return {
-      status,
-      code,
-      message,
-      requestId: ids.requestId,
-      clientRequestId: ids.clientRequestId,
-      responseBody: body,
-    };
+    return classifyGraphFailureShared(error);
   }
 
   private toSanitizedGraphError(error: unknown, context: string): Error {
@@ -1115,9 +1093,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   }
 
   private computeOverallStatus(steps: Microsoft365DiagnosticsStep[]): DiagnosticsStepStatus {
-    if (steps.some((s) => s.status === 'fail')) return 'fail';
-    if (steps.some((s) => s.status === 'warn')) return 'warn';
-    return 'pass';
+    return computeOverallStatusShared(steps);
   }
 
   /**
@@ -1128,7 +1104,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   async runMicrosoft365Diagnostics(options: Microsoft365DiagnosticsOptions = {}): Promise<Microsoft365DiagnosticsReport> {
     const startedAt = new Date().toISOString();
-    const steps: Microsoft365DiagnosticsStep[] = [];
     const recommendations = new Set<string>();
 
     const requiredScopes = options.requiredScopes?.length
@@ -1137,43 +1112,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
     const folderListTop = Math.max(1, Math.min(options.folderListTop ?? 100, 250));
 
-    const addStep = (step: Microsoft365DiagnosticsStep) => steps.push(step);
-
-    const runStep = async (id: string, title: string, fn: () => Promise<Omit<Microsoft365DiagnosticsStep, 'id' | 'title' | 'startedAt' | 'durationMs'>>): Promise<void> => {
-      const stepStarted = Date.now();
-      const stepIso = new Date().toISOString();
-      try {
-        const partial = await fn();
-        addStep({
-          id,
-          title,
-          startedAt: stepIso,
-          durationMs: Date.now() - stepStarted,
-          status: partial.status,
-          http: partial.http,
-          data: partial.data,
-          error: partial.error,
-        });
-      } catch (e: any) {
-        const classified = this.classifyGraphFailure(e);
-        this.mapRecommendations({ ...classified, missingScopes: undefined }).forEach((r) => recommendations.add(r));
-        addStep({
-          id,
-          title,
-          startedAt: stepIso,
-          durationMs: Date.now() - stepStarted,
-          status: 'fail',
-          error: {
-            message: classified.message,
-            status: classified.status,
-            code: classified.code,
-            requestId: classified.requestId,
-            clientRequestId: classified.clientRequestId,
-            responseBody: classified.responseBody,
-          },
-        });
-      }
-    };
+    // Generic timed runner shared with the Entra diagnostics engine.
+    const runner = createDiagnosticsRunner({
+      classifyError: (error) => this.classifyGraphFailure(error),
+      onError: (error) => {
+        const classified = this.classifyGraphFailure(error);
+        this.mapRecommendations({ ...classified, missingScopes: undefined }).forEach((r) =>
+          recommendations.add(r)
+        );
+      },
+    });
+    const steps: Microsoft365DiagnosticsStep[] = runner.steps;
+    const runStep = runner.runStep;
 
     // Step: load credentials (tokens present)
     await runStep('tokens_present', 'Load stored OAuth tokens', async () => {

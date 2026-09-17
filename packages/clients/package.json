@@ -20,6 +20,10 @@
       "types": "./src/actions/interactionCreateHelper.ts",
       "import": "./src/actions/interactionCreateHelper.ts"
     },
+    "./actions/clientNoteActions": {
+      "types": "./src/actions/clientNoteActions.ts",
+      "import": "./src/actions/clientNoteActions.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./dist/components/index.js",
@@ -37,6 +41,10 @@
     "./lib/contactActionErrorCodes": {
       "import": "./src/lib/contactActionErrorCodes.ts",
       "types": "./src/lib/contactActionErrorCodes.ts"
+    },
+    "./lib/createContactRoute": {
+      "import": "./src/lib/createContactRoute.ts",
+      "types": "./src/lib/createContactRoute.ts"
     },
     "./context/ClientCrossFeatureContext": {
       "types": "./src/context/ClientCrossFeatureContext.tsx",

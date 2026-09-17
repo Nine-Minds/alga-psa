@@ -681,7 +681,14 @@
       "fullAccess": "Acceso completo",
       "cancel": "Cancelar",
       "assignSuccess": "Asignación de visibilidad del contacto actualizada",
-      "assignError": "No se pudo asignar el grupo de visibilidad"
+      "assignError": "No se pudo asignar el grupo de visibilidad",
+      "scopeLabel": "Visibilidad de tickets",
+      "scopeClient": "Todos los tickets de este cliente",
+      "scopeContact": "Solo sus propios tickets",
+      "scopeClientDescription": "Los miembros ven todos los tickets de este cliente en los tableros seleccionados.",
+      "scopeContactDescription": "Los miembros solo ven los tickets en los que figuran como contacto. Los administradores del cliente ven todos los tickets de los tableros seleccionados, incluidos los que no tienen contacto.",
+      "assignmentHelp": "Asigne un grupo para limitar los tableros y los tickets, o mantenga el acceso completo al cliente.",
+      "boardHiddenFromPortal": "Oculto en el portal de clientes"
     },
     "messages": {
       "saveChanges": "Guardar cambios",

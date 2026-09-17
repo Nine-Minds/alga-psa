@@ -10,6 +10,7 @@ const h = vi.hoisted(() => {
   const state = {
     users: [] as Array<Record<string, unknown>>,
     userRoles: [] as Array<Record<string, unknown>>,
+    contacts: [] as Array<Record<string, unknown>>,
   };
 
   const makeQuery = (rows: any[]) => {
@@ -20,6 +21,7 @@ const h = vi.hoisted(() => {
         filtered = filtered.filter((row) => entries.every(([key, value]) => row[key] === value));
         return query;
       },
+      select: () => query,
       first: async () => filtered[0],
       then: (resolve: (value: any[]) => unknown, reject?: (reason: unknown) => unknown) =>
         Promise.resolve(filtered).then(resolve, reject),
@@ -31,6 +33,7 @@ const h = vi.hoisted(() => {
     table: (table: string) => {
       if (table === 'users') return makeQuery(state.users);
       if (table === 'user_roles') return makeQuery(state.userRoles);
+      if (table === 'contacts') return makeQuery(state.contacts);
       return makeQuery([]);
     },
   });
@@ -63,7 +66,10 @@ vi.mock('@alga-psa/core/encryption', () => ({
 
 import { createPortalUserInDB as createPortalUserInSharedModel } from '@alga-psa/shared/models/userModel.js';
 import { generateSecurePassword } from '@alga-psa/core/encryption';
-import { createPortalUserInDB } from '../../db/portal-user-operations.js';
+import {
+  createPortalUserInDB,
+  PortalUserIdentityMismatchError,
+} from '../../db/portal-user-operations.js';
 
 const sharedCreateMock = vi.mocked(createPortalUserInSharedModel);
 const generatePasswordMock = vi.mocked(generateSecurePassword);
@@ -86,11 +92,19 @@ describe('createPortalUserInDB reuse behavior', () => {
     generatePasswordMock.mockReturnValue('generated-password');
     h.state.users = [];
     h.state.userRoles = [];
+    h.state.contacts = [{ contact_name_id: 'contact-1', client_id: 'client-1' }];
   });
 
   it('returns the existing client-portal account without re-hashing or re-roling', async () => {
     h.state.users = [
-      { user_id: 'portal-existing', email: 'admin@cloudvbs.test', user_type: 'client', is_inactive: false },
+      {
+        user_id: 'portal-existing',
+        email: 'admin@cloudvbs.test',
+        user_type: 'client',
+        is_inactive: false,
+        contact_id: 'contact-1',
+        password_hash: 'original-hash',
+      },
     ];
     h.state.userRoles = [{ user_id: 'portal-existing', role_id: 'role-existing' }];
 
@@ -103,6 +117,14 @@ describe('createPortalUserInDB reuse behavior', () => {
     });
     expect(sharedCreateMock).not.toHaveBeenCalled();
     expect(generatePasswordMock).not.toHaveBeenCalled();
+    // Nothing about the existing account or its grants was touched.
+    expect(h.state.users).toHaveLength(1);
+    expect(h.state.users[0]).toMatchObject({
+      password_hash: 'original-hash',
+      is_inactive: false,
+      contact_id: 'contact-1',
+    });
+    expect(h.state.userRoles).toEqual([{ user_id: 'portal-existing', role_id: 'role-existing' }]);
   });
 
   it('creates a portal user when none exists and reports created', async () => {
@@ -130,6 +152,7 @@ describe('createPortalUserInDB reuse behavior', () => {
         email: 'admin@cloudvbs.test',
         user_type: 'client',
         is_inactive: false,
+        contact_id: 'contact-1',
       });
       h.state.userRoles.push({ user_id: 'portal-raced', role_id: 'role-raced' });
       return { success: false, error: 'A client portal user with this email already exists' };
@@ -142,5 +165,80 @@ describe('createPortalUserInDB reuse behavior', () => {
       roleId: 'role-raced',
       status: 'existing',
     });
+  });
+
+  it('refuses to reuse a portal account linked to a different contact/client', async () => {
+    // The email matches, but the account grants access to a different
+    // customer. Returning `existing` would report working portal access for
+    // the wrong record, so the activity refuses and changes nothing.
+    h.state.users = [
+      {
+        user_id: 'portal-other',
+        email: 'admin@cloudvbs.test',
+        user_type: 'client',
+        is_inactive: false,
+        contact_id: 'other-contact',
+      },
+    ];
+    h.state.userRoles = [{ user_id: 'portal-other', role_id: 'other-role' }];
+    h.state.contacts = [{ contact_name_id: 'other-contact', client_id: 'other-client' }];
+
+    const error = await createPortalUserInDB(baseInput).catch((err) => err);
+
+    expect(error).toBeInstanceOf(PortalUserIdentityMismatchError);
+    expect((error as PortalUserIdentityMismatchError).existingUserId).toBe('portal-other');
+    expect((error as PortalUserIdentityMismatchError).expectedClientId).toBe('client-1');
+    expect(sharedCreateMock).not.toHaveBeenCalled();
+    expect(generatePasswordMock).not.toHaveBeenCalled();
+    // Nothing about the existing account was mutated.
+    expect(h.state.users).toHaveLength(1);
+    expect(h.state.userRoles).toEqual([{ user_id: 'portal-other', role_id: 'other-role' }]);
+  });
+
+  it('refuses when the linked contact now belongs to a different client', async () => {
+    // The portal account points at the resolved contact id, but that contact
+    // moved to another client. The client half of the identity check must
+    // still refuse rather than report access under the wrong customer.
+    h.state.users = [
+      {
+        user_id: 'portal-moved',
+        email: 'admin@cloudvbs.test',
+        user_type: 'client',
+        is_inactive: false,
+        contact_id: 'contact-1',
+      },
+    ];
+    h.state.userRoles = [{ user_id: 'portal-moved', role_id: 'role-moved' }];
+    h.state.contacts = [{ contact_name_id: 'contact-1', client_id: 'other-client' }];
+
+    const error = await createPortalUserInDB(baseInput).catch((err) => err);
+
+    expect(error).toBeInstanceOf(PortalUserIdentityMismatchError);
+    expect((error as PortalUserIdentityMismatchError).existingContactId).toBe('contact-1');
+    expect((error as PortalUserIdentityMismatchError).expectedClientId).toBe('client-1');
+    expect(sharedCreateMock).not.toHaveBeenCalled();
+    expect(h.state.userRoles).toEqual([{ user_id: 'portal-moved', role_id: 'role-moved' }]);
+  });
+
+  it('refuses to reuse an unlinked legacy portal account', async () => {
+    // A portal account with no contact linkage cannot be proven to belong to
+    // this customer; refuse and leave it untouched.
+    h.state.users = [
+      {
+        user_id: 'portal-unlinked',
+        email: 'admin@cloudvbs.test',
+        user_type: 'client',
+        is_inactive: false,
+        contact_id: null,
+      },
+    ];
+    h.state.userRoles = [{ user_id: 'portal-unlinked', role_id: 'role-unlinked' }];
+
+    const error = await createPortalUserInDB(baseInput).catch((err) => err);
+
+    expect(error).toBeInstanceOf(PortalUserIdentityMismatchError);
+    expect((error as PortalUserIdentityMismatchError).existingContactId).toBeNull();
+    expect(sharedCreateMock).not.toHaveBeenCalled();
+    expect(h.state.userRoles).toEqual([{ user_id: 'portal-unlinked', role_id: 'role-unlinked' }]);
   });
 });

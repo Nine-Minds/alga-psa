@@ -13,6 +13,7 @@ import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 export const entryLayoutBootstrap: TicketScreenBootstrap = {
   layoutPreference: { layout: 'entry', timelineOrder: 'asc' },
   checklistItems: null,
+  externalLinks: null,
   autoCloseState: null,
   canViewCommentMetadataDebug: null,
   teams: null,

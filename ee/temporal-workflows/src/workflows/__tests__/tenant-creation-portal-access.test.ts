@@ -31,6 +31,7 @@ interface Harness {
     portal: AnyInput[];
     welcomeEmail: AnyInput[];
     order: string[];
+    roleGrants: AnyInput[];
   };
 }
 
@@ -46,6 +47,14 @@ const baseInput: TenantCreationInput = {
   productCode: 'psa',
 };
 
+// Temporal derives an activity failure's type from `error.constructor.name`, so
+// these must be real named classes (matching the production error names) for
+// the proxyActivities `nonRetryableErrorTypes` list to classify them and stop
+// retrying. A plain `Error` with `.name` overridden would still retry.
+class AmbiguousCustomerMatchError extends Error {}
+class UnverifiedCustomerMatchError extends Error {}
+class PortalUserIdentityMismatchError extends Error {}
+
 async function setupWorkflowTest(overrides: HarnessOverrides = {}): Promise<Harness> {
   const env = await TestWorkflowEnvironment.createTimeSkipping();
   const taskQueue = `test-portal-access-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -56,6 +65,7 @@ async function setupWorkflowTest(overrides: HarnessOverrides = {}): Promise<Harn
     portal: [],
     welcomeEmail: [],
     order: [],
+    roleGrants: [],
   };
 
   const activities = {
@@ -97,9 +107,21 @@ async function setupWorkflowTest(overrides: HarnessOverrides = {}): Promise<Harn
     createPortalUser: async (input: AnyInput) => {
       calls.portal.push(input);
       calls.order.push('portal');
-      return overrides.createPortalUser
-        ? overrides.createPortalUser(input)
+      const result = overrides.createPortalUser
+        ? await overrides.createPortalUser(input)
         : { userId: 'portal-1', roleId: 'portal-role-1', status: 'created' };
+      // Provisioning a *new* portal account grants the client-admin role. Record
+      // it so the refusal tests can assert the incident's concrete harm — an
+      // Admin grant under someone else's client — did not happen.
+      if (result.status === 'created') {
+        calls.roleGrants.push({
+          userId: result.userId,
+          roleId: result.roleId,
+          contactId: input.contactId,
+          clientId: input.clientId,
+        });
+      }
+      return result;
     },
     fetchStripeDetailsFromCheckout: async () => ({ stripeCustomerId: 'cus_x' }),
     rollbackTenant: async () => {},
@@ -149,6 +171,9 @@ describe('tenant onboarding portal access', () => {
 
       expect(result.success).toBe(true);
       expect(harness.calls.order).toEqual(['client', 'contact', 'tag', 'portal']);
+      // The resolved customer tenant id is threaded into the client lookup so
+      // the association marker can bind the client to this onboarding.
+      expect(harness.calls.client[0]).toMatchObject({ tenantId: 'generated-tenant-id' });
       expect(harness.calls.portal).toHaveLength(1);
       expect(harness.calls.portal[0]).toMatchObject({
         contactId: 'existing-contact',
@@ -156,6 +181,7 @@ describe('tenant onboarding portal access', () => {
       });
       expect(harness.calls.welcomeEmail).toHaveLength(1);
       expect(harness.calls.welcomeEmail[0].portalStatus).toBe('created');
+      expect(harness.calls.roleGrants).toHaveLength(1);
       expect(state.customerTracking).toMatchObject({
         clientReused: true,
         contactReused: true,
@@ -174,6 +200,7 @@ describe('tenant onboarding portal access', () => {
       expect(result.success).toBe(true);
       expect(harness.calls.order).toEqual(['client', 'contact', 'tag', 'portal']);
       expect(harness.calls.welcomeEmail[0].portalStatus).toBe('created');
+      expect(harness.calls.roleGrants).toHaveLength(1);
       expect(state.customerTracking).toMatchObject({
         clientReused: false,
         contactReused: false,
@@ -263,21 +290,79 @@ describe('tenant onboarding portal access', () => {
   it('skips the downstream chain and sends conservative email on an ambiguous client match', async () => {
     const harness = await setupWorkflowTest({
       createCustomerClientActivity: async () => {
-        const error = new Error('Multiple clients named "CloudVBS" exist in the management tenant');
-        error.name = 'AmbiguousCustomerMatchError';
-        throw error;
+        throw new AmbiguousCustomerMatchError(
+          'Multiple clients named "CloudVBS" exist in the management tenant',
+        );
       },
     });
     try {
       const { result, state } = await runWorkflow(harness);
 
       expect(result.success).toBe(true);
+      // Non-retryable: the client activity ran exactly once.
+      expect(harness.calls.client).toHaveLength(1);
       expect(harness.calls.contact).toHaveLength(0);
       expect(harness.calls.tag).toHaveLength(0);
       expect(harness.calls.portal).toHaveLength(0);
+      expect(harness.calls.roleGrants).toHaveLength(0);
       expect(harness.calls.welcomeEmail[0].portalStatus).toBe('skipped');
       expect(state.customerTracking?.clientError).toContain('Multiple clients named');
       expect(state.customerTracking?.portalStatus).toBe('skipped');
+    } finally {
+      await harness.env.teardown();
+    }
+  });
+
+  it('skips downstream customer tracking and sends conservative email when the client is unverified', async () => {
+    // The Harbor Point regression at the workflow level: an exact-name client
+    // with no trusted association is refused, so no contact, portal user, or
+    // role grant is created and the email must not promise portal access.
+    const harness = await setupWorkflowTest({
+      createCustomerClientActivity: async () => {
+        throw new UnverifiedCustomerMatchError(
+          'A client named "Harbor Point IT" already exists in the management tenant ' +
+            '(harbor-client) but has no trusted association with the onboarding admin',
+        );
+      },
+    });
+    try {
+      const { result, state } = await runWorkflow(harness);
+
+      expect(result.success).toBe(true);
+      // Refusal is non-retryable and non-fatal: one attempt, nothing downstream.
+      expect(harness.calls.client).toHaveLength(1);
+      expect(harness.calls.contact).toHaveLength(0);
+      expect(harness.calls.tag).toHaveLength(0);
+      expect(harness.calls.portal).toHaveLength(0);
+      expect(harness.calls.roleGrants).toHaveLength(0);
+      expect(harness.calls.welcomeEmail[0].portalStatus).toBe('skipped');
+      expect(state.customerTracking?.clientError).toContain('no trusted association');
+      expect(state.customerTracking?.portalStatus).toBe('skipped');
+    } finally {
+      await harness.env.teardown();
+    }
+  });
+
+  it('keeps tenant creation successful when a portal account identity mismatches', async () => {
+    const harness = await setupWorkflowTest({
+      createPortalUser: async () => {
+        throw new PortalUserIdentityMismatchError(
+          'A client-portal account already exists but is linked to a different contact; ' +
+            'refusing to reuse an unrelated portal account.',
+        );
+      },
+    });
+    try {
+      const { result, state } = await runWorkflow(harness);
+
+      expect(result.success).toBe(true);
+      // Non-retryable: the portal activity ran exactly once.
+      expect(harness.calls.order).toEqual(['client', 'contact', 'tag', 'portal']);
+      expect(harness.calls.portal).toHaveLength(1);
+      expect(harness.calls.roleGrants).toHaveLength(0);
+      expect(harness.calls.welcomeEmail[0].portalStatus).toBe('failed');
+      expect(state.customerTracking?.portalStatus).toBe('failed');
+      expect(state.customerTracking?.portalError).toContain('unrelated portal account');
     } finally {
       await harness.env.teardown();
     }

@@ -54,6 +54,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if ([
       'ee/temporal-workflows/src/__tests__/marketing-worker-registration.test.ts',
       'ee/temporal-workflows/src/__tests__/worker-registration.test.ts',
+      'ee/temporal-workflows/src/__tests__/quote-terms-formatting-source-mapping.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/kb-article-import-wiring.contract.test.ts',
@@ -65,9 +66,13 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-external-links.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/activities/__tests__/maintenance-fanout-activities.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/scripts/__tests__/upgrade-tenant-product.test.ts') return true;
+    if (/^ee\/temporal-workflows\/src\/activities\/__tests__\/threecx-call-control-(events|host|session)\.test\.ts$/.test(file)) return true;
+    if (file === 'ee/temporal-workflows/src/workflows/__tests__/threecx-call-control-workflow.test.ts') return true;
     return /^ee\/temporal-workflows\/src\/config\/__tests__\/.*\.test\.ts$/.test(file)
       || file === 'ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.temporal.test.ts'
       || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/workflow-runtime-v2-(interpreter|run-workflow|simulator-contract)\.test\.ts$/.test(file)

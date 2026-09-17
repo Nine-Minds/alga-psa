@@ -16,7 +16,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - name: Install Temporal engine dependencies with bounded download recovery
+        env:
+          FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       - name: Collect and execute isolated Temporal engine workflows
         run: node scripts/run-additional-workspace-tests.mjs temporal-engine
       - name: Preserve Temporal engine execution evidence

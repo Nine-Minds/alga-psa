@@ -36,6 +36,7 @@ const getActiveLocationsMock = vi.hoisted(() => vi.fn());
 const getContactsMock = vi.hoisted(() => vi.fn());
 const getDefaultBillingSettingsMock = vi.hoisted(() => vi.fn());
 const lineItemsEditorMock = vi.hoisted(() => ({ current: null as null | { items?: unknown[] } }));
+const termsEditorMock = vi.hoisted(() => ({ current: null as null | { onContentChange?: (blocks: unknown[]) => void } }));
 
 vi.mock('../../src/actions/quoteActions', () => actions);
 vi.mock('../../src/actions/quoteDocumentTemplates', () => ({
@@ -142,6 +143,30 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogTitle: ({ children }: any) => React.createElement('div', null, children),
 }));
 
+// The Terms & Conditions field renders the rich-text TextEditor from
+// @alga-psa/ui/editor. That component pulls in useFeatureFlag -> useSession,
+// which throws outside a <SessionProvider /> in non-production builds. These
+// tests exercise QuoteForm's template/persistence behaviour rather than the
+// editor internals, so stub the editor module the same way every other UI
+// dependency is stubbed above. The stub still forwards typed content through
+// onContentChange so the editor -> form wiring stays under test.
+vi.mock('@alga-psa/ui/editor', () => ({
+  TextEditor: (props: any) => {
+    termsEditorMock.current = props;
+    return React.createElement('textarea', {
+      id: props.id,
+      'data-testid': 'quote-terms-editor-input',
+      placeholder: props.placeholder,
+      onChange: (event: any) =>
+        props.onContentChange?.([
+          { type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] },
+        ]),
+    });
+  },
+  QuoteTermsContent: ({ text }: any) => React.createElement('div', null, text ?? ''),
+  hasQuoteTermsContent: (block: unknown, text?: string | null) => Boolean(block) || Boolean(text),
+}));
+
 vi.mock('../../src/components/billing-dashboard/quotes/QuoteLineItemsEditor', () => ({
   default: (props: any) => {
     lineItemsEditorMock.current = props;
@@ -232,6 +257,7 @@ describe('QuoteForm template instantiation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     lineItemsEditorMock.current = null;
+    termsEditorMock.current = null;
     actions.listQuotes.mockResolvedValue({
       data: [{ quote_id: 'tmpl-1', title: 'Template Title', currency_code: 'EUR' }],
     });
@@ -396,5 +422,25 @@ describe('QuoteForm template instantiation', () => {
     const [templateId, payload] = actions.createQuoteFromTemplate.mock.calls[0];
     expect(templateId).toBe('tmpl-1');
     expect(payload.terms_and_conditions).toBe('Terms line one\n\nTerms line two');
+  });
+
+  it('T008: editing the rich-text terms editor flows the plain-text projection into the saved quote', async () => {
+    actions.getQuote.mockResolvedValue(null);
+    renderForm({ initialContext: { clientId: 'client-1', title: 'Draft quote' } });
+
+    // The rich-text editor must render without a SessionProvider crash and be
+    // wired to the form: typing content updates the persisted plain-text terms.
+    const editor = (await screen.findByTestId('quote-terms-editor-input')) as HTMLTextAreaElement;
+    expect(termsEditorMock.current).not.toBeNull();
+    fireEvent.change(editor, { target: { value: 'Net 30. See https://example.com/terms' } });
+
+    fireEvent.click(document.getElementById('quote-form-save') as HTMLButtonElement);
+    await waitFor(() => expect(actions.createQuote).toHaveBeenCalledTimes(1));
+
+    const [payload] = actions.createQuote.mock.calls[0];
+    expect(payload.terms_and_conditions).toBe('Net 30. See https://example.com/terms');
+    expect(payload.terms_and_conditions_block).toEqual([
+      { type: 'paragraph', content: [{ type: 'text', text: 'Net 30. See https://example.com/terms', styles: {} }] },
+    ]);
   });
 });

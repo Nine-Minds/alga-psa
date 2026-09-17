@@ -12,7 +12,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 const getServicesMock = vi.hoisted(() => vi.fn());
@@ -299,10 +299,31 @@ async function openEditDialog() {
   return document.getElementById('edit-price-rate-0') as HTMLInputElement;
 }
 
+// Keep the preview pending until the test explicitly releases it. The dialog
+// title appears before this request finishes, while Apply is still disabled.
+function deferPricePreview() {
+  let resolvePreview!: (value: typeof preview) => void;
+  previewServicePriceChangeMock.mockReturnValue(new Promise<typeof preview>((resolve) => {
+    resolvePreview = resolve;
+  }));
+  return async () => {
+    const applyButton = screen.getByRole('button', { name: /apply to inherited lines/i });
+    expect(applyButton).toBeDisabled();
+    fireEvent.click(applyButton);
+    expect(applyServicePriceChangeMock).not.toHaveBeenCalled();
+    expect(updateServicePricingMock).not.toHaveBeenCalled();
+
+    await act(async () => resolvePreview(preview));
+    await waitFor(() => expect(applyButton).toBeEnabled());
+    return applyButton;
+  };
+}
+
 describe('ServiceCatalogManager price-change rollout reachability', () => {
   beforeEach(configureMocks);
 
   it('opens the rollout dialog when the rate changes, and does not write until Apply', async () => {
+    const finishPreview = deferPricePreview();
     const input = await openEditDialog();
 
     fireEvent.change(input, { target: { value: '150.00' } });
@@ -315,7 +336,7 @@ describe('ServiceCatalogManager price-change rollout reachability', () => {
     expect(applyServicePriceChangeMock).not.toHaveBeenCalled();
     expect(updateServicePricingMock).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: /apply to inherited lines/i }));
+    fireEvent.click(await finishPreview());
 
     await waitFor(() => expect(applyServicePriceChangeMock).toHaveBeenCalledTimes(1));
     expect(applyServicePriceChangeMock).toHaveBeenCalledWith(
@@ -327,6 +348,7 @@ describe('ServiceCatalogManager price-change rollout reachability', () => {
   });
 
   it('proposes the typed rate even when the field never blurred (no silent discard)', async () => {
+    const finishPreview = deferPricePreview();
     const input = await openEditDialog();
 
     fireEvent.change(input, { target: { value: '175.50' } });
@@ -337,7 +359,7 @@ describe('ServiceCatalogManager price-change rollout reachability', () => {
     await screen.findByText('Price change rollout');
     expect(updateServicePricingMock).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: /apply to inherited lines/i }));
+    fireEvent.click(await finishPreview());
 
     await waitFor(() => expect(applyServicePriceChangeMock).toHaveBeenCalledTimes(1));
     expect(applyServicePriceChangeMock).toHaveBeenCalledWith(

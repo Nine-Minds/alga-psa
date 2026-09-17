@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Gérer les régions fiscales",
+      "title": "Régions et taux de taxe",
       "loading": "Chargement des régions...",
       "fields": {
         "code": {
           "label": "Code de région",
-          "placeholder": "Par exemple, CA, NY, TVA-Royaume-Uni"
+          "placeholder": "Par exemple, CA, NY, TVA-Royaume-Uni",
+          "immutableHint": "Le code de région identifie cette région pour les taux de taxe, les clients et les sites ; il ne peut donc pas être modifié."
         },
         "name": {
           "label": "Nom de la région",
@@ -268,6 +269,57 @@
         "update": "Échec de la mise à jour de la région fiscale.",
         "activate": "Échec de l'activation de la région fiscale.",
         "deactivate": "Échec de la désactivation de la région fiscale."
+      },
+      "search": {
+        "placeholder": "Rechercher des régions"
+      },
+      "columns": {
+        "region": "Région",
+        "currentRate": "Taux actuel",
+        "rates": "Taux"
+      },
+      "rateSummary": {
+        "noRates": "Aucun taux",
+        "noCurrentRate": "Aucun taux en vigueur",
+        "combined": "{{count}} combinés",
+        "combinedHint": "{{count}} taux actifs s'appliquent aujourd'hui et sont additionnés sur les factures."
+      },
+      "empty": {
+        "title": "Aucune région de taxe pour le moment",
+        "description": "Ajoutez une région pour chaque lieu où vous facturez des taxes, puis attribuez-lui un taux.",
+        "noMatch": "Aucune région ne correspond à \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Afficher les taux",
+        "collapse": "Masquer les taux"
+      },
+      "rates": {
+        "empty": "Cette région n'a aucun taux. Les factures taxées ici échoueront tant qu'un taux n'est pas ajouté.",
+        "composite": "Composite",
+        "effectiveRange": "Du {{start}} au {{end}}",
+        "effectiveFrom": "À partir du {{start}}",
+        "deleteEntity": "le taux de {{rate}} pour {{region}}",
+        "columns": {
+          "rate": "Taux",
+          "description": "Description",
+          "effective": "Validité"
+        },
+        "status": {
+          "current": "En vigueur",
+          "scheduled": "Planifié",
+          "expired": "Expiré",
+          "inactive": "Inactif"
+        },
+        "actions": {
+          "add": "Ajouter un taux",
+          "edit": "Modifier",
+          "advanced": "Paramètres avancés",
+          "delete": "Supprimer"
+        },
+        "errors": {
+          "validateDeletion": "Impossible de valider la suppression. Veuillez réessayer.",
+          "delete": "Impossible de supprimer le taux de taxe."
+        }
       }
     },
     "thresholds": {
@@ -721,6 +773,33 @@
       "cancel": "Annuler",
       "saveChanges": "Enregistrer les modifications"
     },
+    "bulk": {
+      "selectedCount": "{{count}} sélectionnés",
+      "selectAll": "Sélectionner tous les services",
+      "clear": "Effacer la sélection",
+      "actions": {
+        "activate": "Activer",
+        "deactivate": "Désactiver",
+        "delete": "Supprimer"
+      },
+      "deleteDialog": {
+        "title": "Supprimer les services",
+        "message": "Supprimer définitivement {{count}} service(s) sélectionné(s) ? Les services encore référencés par des contrats ou des factures sont ignorés. Cette action ne peut pas être annulée."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} service(s) activé(s)",
+        "activatePartial": "{{count}} service(s) activé(s) ; {{failed}} n'ont pas pu être activés",
+        "activateError": "Échec de l'activation de {{count}} service(s)",
+        "deactivateSuccess": "{{count}} service(s) désactivé(s)",
+        "deactivatePartial": "{{count}} service(s) désactivé(s) ; {{failed}} n'ont pas pu être désactivés",
+        "deactivateError": "Échec de la désactivation de {{count}} service(s)",
+        "deleteSuccess": "{{count}} service(s) supprimé(s)",
+        "deletePartial": "{{count}} service(s) supprimé(s) ; {{failed}} n'ont pas pu être supprimés",
+        "deletePartialBlocked": "{{count}} service(s) supprimé(s) ; {{failed}} n'ont pas pu être supprimés : {{names}}",
+        "deleteBlocked": "Impossible de supprimer {{count}} service(s) — encore utilisés : {{names}}",
+        "deleteError": "Échec de la suppression de {{count}} service(s)"
+      }
+    },
     "table": {
       "serviceName": "Nom du service",
       "serviceType": "Type de service",
@@ -760,6 +839,33 @@
       "restore": "Restaurer",
       "archive": "Archiver",
       "delete": "Supprimer"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} sélectionnés",
+      "selectAll": "Sélectionner tous les produits",
+      "clear": "Effacer la sélection",
+      "actions": {
+        "archive": "Archiver",
+        "restore": "Restaurer",
+        "delete": "Supprimer"
+      },
+      "deleteDialog": {
+        "title": "Supprimer définitivement les produits",
+        "message": "Supprimer définitivement {{count}} produit(s) sélectionné(s) ? Les produits associés à des données existantes sont ignorés. Cette action ne peut pas être annulée."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} produit(s) archivé(s)",
+        "archivePartial": "{{count}} produit(s) archivé(s) ; {{failed}} n'ont pas pu être archivés",
+        "archiveError": "Échec de l'archivage de {{count}} produit(s)",
+        "restoreSuccess": "{{count}} produit(s) restauré(s)",
+        "restorePartial": "{{count}} produit(s) restauré(s) ; {{failed}} n'ont pas pu être restaurés",
+        "restoreError": "Échec de la restauration de {{count}} produit(s)",
+        "deleteSuccess": "{{count}} produit(s) supprimé(s) définitivement",
+        "deletePartial": "{{count}} produit(s) supprimé(s) ; {{failed}} n'ont pas pu être supprimés",
+        "deletePartialBlocked": "{{count}} produit(s) supprimé(s) ; {{failed}} n'ont pas pu être supprimés : {{names}}",
+        "deleteBlocked": "Impossible de supprimer {{count}} produit(s) — encore utilisés : {{names}}",
+        "deleteError": "Échec de la suppression de {{count}} produit(s)"
+      }
     },
     "filters": {
       "searchPlaceholder": "Rechercher par nom, SKU, description...",

@@ -51,12 +51,30 @@ describe('expoPushService', () => {
         data: {
           ticketId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
           url: 'alga://ticket/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-          // Payload metadata only (task 29.8.46): defaults to 'normal' when the
-          // caller does not supply the configured priority.
+          // Defaults to 'normal' when the caller does not supply the configured priority.
           priority: 'normal',
         },
         priority: 'high',
+        interruptionLevel: 'active',
+        channelId: 'alga-priority-normal',
       });
+    });
+
+    it('maps the configured priority to OS delivery (task 35.9.2)', () => {
+      const base = {
+        expoPushToken: 'ExponentPushToken[abc]',
+        title: 'T',
+        body: 'B',
+        ticketId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        tenant: 'tenant-1',
+      };
+      const high = buildTicketPushMessage({ ...base, priority: 'high' });
+      expect(high).toMatchObject({ priority: 'high', interruptionLevel: 'time-sensitive', channelId: 'alga-priority-high', sound: 'default' });
+      expect(high.data.priority).toBe('high');
+
+      const low = buildTicketPushMessage({ ...base, priority: 'low' });
+      expect(low).toMatchObject({ priority: 'normal', interruptionLevel: 'passive', channelId: 'alga-priority-low', sound: null });
+      expect(low.data.priority).toBe('low');
     });
 
     it('carries the configured priority as payload metadata (task 29.8.46)', () => {
@@ -69,8 +87,6 @@ describe('expoPushService', () => {
         priority: 'high',
       });
 
-      // The in-app priority rides in data as metadata; Expo/OS delivery priority
-      // stays 'high' regardless.
       expect(msg.data.priority).toBe('high');
       expect(msg.priority).toBe('high');
 
@@ -83,7 +99,6 @@ describe('expoPushService', () => {
         priority: 'low',
       });
       expect(low.data.priority).toBe('low');
-      expect(low.priority).toBe('high');
     });
   });
 

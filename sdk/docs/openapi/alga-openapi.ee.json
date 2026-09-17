@@ -80,6 +80,9 @@
       "name": "Email"
     },
     {
+      "name": "Email Templates"
+    },
+    {
       "name": "Extension Gateway"
     },
     {
@@ -120,6 +123,9 @@
     },
     {
       "name": "Mobile v1"
+    },
+    {
+      "name": "Notifications"
     },
     {
       "name": "Opportunities v1"
@@ -10651,6 +10657,365 @@
           "tenant"
         ]
       },
+      "EmailTemplateNameParams": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Kebab-case template name, such as ticket-created or invoice-email."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "EmailTemplateListQuery": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Filter to a single template name."
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es",
+              "de",
+              "nl",
+              "it",
+              "pl",
+              "pt",
+              "xx",
+              "yy"
+            ],
+            "description": "Filter to one language code."
+          },
+          "category": {
+            "type": "string",
+            "description": "Filter by notification category name."
+          },
+          "customized": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Filter to templates the tenant has customized (true) or not (false)."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "EmailTemplateDetailQuery": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es",
+              "de",
+              "nl",
+              "it",
+              "pl",
+              "pt",
+              "xx",
+              "yy"
+            ],
+            "description": "Language code to read. Defaults to the first language the template exists in."
+          }
+        }
+      },
+      "EmailTemplateDeleteQuery": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es",
+              "de",
+              "nl",
+              "it",
+              "pl",
+              "pt",
+              "xx",
+              "yy"
+            ],
+            "description": "Language code whose tenant override is removed."
+          }
+        },
+        "required": [
+          "language"
+        ]
+      },
+      "EmailTemplateSummary": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Template name, shared by the system default and the tenant override."
+          },
+          "language_code": {
+            "type": "string",
+            "description": "Language code of this row."
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Notification category the template belongs to."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject line that would be sent today."
+          },
+          "is_customized": {
+            "type": "boolean",
+            "description": "Whether the tenant has an override for this name and language."
+          },
+          "system_template_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tenant_template_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the tenant override was last written."
+          }
+        },
+        "required": [
+          "name",
+          "language_code",
+          "category",
+          "subject",
+          "is_customized",
+          "system_template_id",
+          "tenant_template_id",
+          "updated_at"
+        ],
+        "description": "One email template, system default and tenant override merged."
+      },
+      "EmailTemplateDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EmailTemplateSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "html_content": {
+                    "type": "string"
+                  },
+                  "text_content": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "subject",
+                  "html_content",
+                  "text_content"
+                ],
+                "description": "The read-only system default."
+              },
+              "tenant": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "html_content": {
+                    "type": "string"
+                  },
+                  "text_content": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "subject",
+                  "html_content",
+                  "text_content"
+                ],
+                "description": "The tenant override, when one exists."
+              },
+              "effective": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string"
+                  },
+                  "html_content": {
+                    "type": "string"
+                  },
+                  "text_content": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "subject",
+                  "html_content",
+                  "text_content"
+                ],
+                "description": "What actually ships: the override when present, otherwise the system default."
+              }
+            },
+            "required": [
+              "system",
+              "tenant",
+              "effective"
+            ]
+          }
+        ],
+        "description": "One email template, system default and tenant override merged."
+      },
+      "EmailTemplateEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EmailTemplateDetail"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PaginatedEmailTemplateEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailTemplateSummary"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
+        ]
+      },
+      "EmailTemplateUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "language_code": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es",
+              "de",
+              "nl",
+              "it",
+              "pl",
+              "pt",
+              "xx",
+              "yy"
+            ],
+            "description": "Language of the template being edited."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 998,
+            "description": "New subject line. Supports {{variable}} placeholders."
+          },
+          "html_content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New HTML body. Supports {{variable}} placeholders."
+          },
+          "text_content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New plain-text body."
+          }
+        },
+        "required": [
+          "language_code"
+        ],
+        "description": "Fields to write onto the tenant override. At least one of subject, html_content or text_content is required."
+      },
       "ExtensionGatewayParams": {
         "type": "object",
         "properties": {
@@ -15514,6 +15879,12 @@
               "null"
             ]
           },
+          "portal_selectable": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "tenant": {
             "type": "string",
             "format": "uuid"
@@ -15529,6 +15900,7 @@
           "item_type",
           "standard_status_id",
           "is_custom",
+          "portal_selectable",
           "tenant"
         ]
       },
@@ -15595,6 +15967,9 @@
           "icon": {
             "type": "string",
             "maxLength": 50
+          },
+          "portal_selectable": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -15628,6 +16003,9 @@
           "icon": {
             "type": "string",
             "maxLength": 50
+          },
+          "portal_selectable": {
+            "type": "boolean"
           }
         },
         "description": "Payload for updating a status. All fields are optional."
@@ -21214,6 +21592,71 @@
           "status_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "external_links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "system": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Built-in system key or custom:<slug>."
+                },
+                "external_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Identifier of the record in the external system."
+                },
+                "external_parent_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "realm": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Repo, server, or workspace the record lives in."
+                },
+                "url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri",
+                  "description": "Explicit link-out; must be http(s)."
+                },
+                "relationship": {
+                  "type": "string",
+                  "enum": [
+                    "origin",
+                    "mirror",
+                    "reference"
+                  ]
+                },
+                "actor": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {}
+                },
+                "external_status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "system",
+                "external_id"
+              ]
+            },
+            "description": "Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create."
           }
         }
       },
@@ -21735,6 +22178,237 @@
         },
         "required": [
           "completed"
+        ]
+      },
+      "WorkV1TicketExternalLinkParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ticket UUID."
+          },
+          "linkId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "External link UUID."
+          }
+        },
+        "required": [
+          "id",
+          "linkId"
+        ]
+      },
+      "WorkV1TicketExternalLinkCreateBody": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "ticket",
+              "comment"
+            ],
+            "description": "Defaults to 'ticket'."
+          },
+          "comment_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required when entity_type is 'comment'."
+          },
+          "system": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Built-in system key or custom:<slug>."
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "external_parent_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "realm": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "Optional explicit link-out; must be http(s)."
+          },
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "origin",
+              "mirror",
+              "reference"
+            ]
+          },
+          "actor": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "handle": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "display_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri"
+              }
+            }
+          },
+          "external_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "external_updated_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "system",
+          "external_id"
+        ]
+      },
+      "WorkV1TicketExternalLinkUpdateBody": {
+        "type": "object",
+        "properties": {
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "origin",
+              "mirror",
+              "reference"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "actor": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "handle": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "display_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri"
+              }
+            }
+          },
+          "external_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "external_updated_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_synced_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {}
+          }
+        }
+      },
+      "WorkV1TicketExternalLinkLookupQuery": {
+        "type": "object",
+        "properties": {
+          "system": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registry key of the external system."
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External record identifier."
+          },
+          "external_parent_id": {
+            "type": "string",
+            "description": "Ticket-level external id, for comment-level records."
+          }
+        },
+        "required": [
+          "system",
+          "external_id"
         ]
       },
       "WorkV1TicketAgentParams": {
@@ -24487,6 +25161,88 @@
           "error"
         ]
       },
+      "MobileThemeSeedTokensV1": {
+        "type": "object",
+        "properties": {
+          "background": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "card": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "surface": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "textPrimary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "textSecondary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "textMuted": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "border": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "borderStrong": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "primary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "secondary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "accent": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "sidebarBg": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "sidebarText": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "sidebarHover": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "headerBg": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          }
+        },
+        "required": [
+          "background",
+          "card",
+          "surface",
+          "textPrimary",
+          "textSecondary",
+          "textMuted",
+          "border",
+          "borderStrong",
+          "primary",
+          "secondary",
+          "accent",
+          "sidebarBg",
+          "sidebarText",
+          "sidebarHover",
+          "headerBg"
+        ]
+      },
       "MobileCapabilitiesSuccessV1": {
         "type": "object",
         "properties": {
@@ -24553,11 +25309,43 @@
                   "datePattern",
                   "dateTimePattern"
                 ]
+              },
+              "theme": {
+                "type": "object",
+                "properties": {
+                  "pairId": {
+                    "type": "string",
+                    "description": "Tenant theme pair id, e.g. 'forest' or 'custom'."
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "English pair name; 'Custom' for a tenant-authored pair."
+                  },
+                  "light": {
+                    "$ref": "#/components/schemas/MobileThemeSeedTokensV1"
+                  },
+                  "dark": {
+                    "$ref": "#/components/schemas/MobileThemeSeedTokensV1"
+                  },
+                  "version": {
+                    "type": "string",
+                    "description": "Stable hash of pairId plus both token sets."
+                  }
+                },
+                "required": [
+                  "pairId",
+                  "label",
+                  "light",
+                  "dark",
+                  "version"
+                ],
+                "description": "Tenant theme pair the mobile app renders; always present, defaults to Alga."
               }
             },
             "required": [
               "features",
-              "formatting"
+              "formatting",
+              "theme"
             ]
           }
         },
@@ -45733,7 +46521,7 @@
       },
       "post": {
         "summary": "Receive Microsoft Graph email webhook",
-        "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, validates clientState against the stored webhook_verification_token when configured, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
+        "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, requires a timing-safe clientState match against the stored webhook_verification_token, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
         "tags": [
           "Email"
         ],
@@ -45878,6 +46666,436 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/email/templates": {
+      "get": {
+        "summary": "List email templates",
+        "description": "Returns every notification email template available to the tenant, with the system default and the tenant override merged into one row per name and language. Use is_customized to tell which templates the tenant has edited.",
+        "tags": [
+          "Email Templates",
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "settings",
+          "x-chat-callable": true,
+          "x-chat-display-name": "List Email Templates",
+          "x-chat-rbac-resource": "settings",
+          "x-chat-approval-required": false
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter to a single template name."
+            },
+            "required": false,
+            "description": "Filter to a single template name.",
+            "name": "name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "de",
+                "nl",
+                "it",
+                "pl",
+                "pt",
+                "xx",
+                "yy"
+              ],
+              "description": "Filter to one language code."
+            },
+            "required": false,
+            "description": "Filter to one language code.",
+            "name": "language",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by notification category name."
+            },
+            "required": false,
+            "description": "Filter by notification category name.",
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter to templates the tenant has customized (true) or not (false)."
+            },
+            "required": false,
+            "description": "Filter to templates the tenant has customized (true) or not (false).",
+            "name": "customized",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email templates returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedEmailTemplateEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the settings read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/email/templates/{name}": {
+      "get": {
+        "summary": "Get email template",
+        "description": "Returns one email template: the read-only system default, the tenant override when there is one, and the effective content that would be sent.",
+        "tags": [
+          "Email Templates",
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "settings",
+          "x-chat-callable": true,
+          "x-chat-display-name": "Get Email Template",
+          "x-chat-rbac-resource": "settings",
+          "x-chat-approval-required": false
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Kebab-case template name, such as ticket-created or invoice-email."
+            },
+            "required": true,
+            "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "de",
+                "nl",
+                "it",
+                "pl",
+                "pt",
+                "xx",
+                "yy"
+              ],
+              "description": "Language code to read. Defaults to the first language the template exists in."
+            },
+            "required": false,
+            "description": "Language code to read. Defaults to the first language the template exists in.",
+            "name": "language",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email template returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplateEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the settings read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No template with that name and language.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update email template",
+        "description": "Writes the tenant override for one template and language. The first write clones the system default, then applies the fields provided, so unspecified fields keep the standard content. System templates themselves are never modified.",
+        "tags": [
+          "Email Templates",
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "settings",
+          "x-chat-callable": true,
+          "x-chat-display-name": "Update Email Template",
+          "x-chat-rbac-resource": "settings",
+          "x-chat-approval-required": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Kebab-case template name, such as ticket-created or invoice-email."
+            },
+            "required": true,
+            "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "Template fields to write.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailTemplateUpdateRequest"
+              },
+              "description": "Template fields to write."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email template updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplateEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the settings update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No template with that name and language.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Reset email template",
+        "description": "Removes the tenant override for one template and language, so the standard template is used again. Other languages of the same template are untouched.",
+        "tags": [
+          "Email Templates",
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "settings",
+          "x-chat-callable": true,
+          "x-chat-display-name": "Reset Email Template",
+          "x-chat-rbac-resource": "settings",
+          "x-chat-approval-required": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Kebab-case template name, such as ticket-created or invoice-email."
+            },
+            "required": true,
+            "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "de",
+                "nl",
+                "it",
+                "pl",
+                "pt",
+                "xx",
+                "yy"
+              ],
+              "description": "Language code whose tenant override is removed."
+            },
+            "required": true,
+            "description": "Language code whose tenant override is removed.",
+            "name": "language",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tenant override removed successfully."
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the settings update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The template is not customized for that language.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -56632,7 +57850,7 @@
     "/api/v1/accounting-exports/xero-csv/client-export": {
       "get": {
         "summary": "Export clients as Xero Contacts CSV",
-        "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires billing:manage.",
+        "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires accounting_integrations:exports_execute.",
         "tags": [
           "Accounting Exports"
         ],
@@ -56643,8 +57861,8 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-rbac-resource": "billing",
-          "x-rbac-action": "manage",
+          "x-rbac-resource": "accounting_integrations",
+          "x-rbac-action": "exports_execute",
           "x-response-content-type": "text/csv"
         },
         "x-alga-products": [
@@ -56719,7 +57937,7 @@
     "/api/v1/accounting-exports/xero-csv/client-import": {
       "post": {
         "summary": "Import Xero Contacts CSV",
-        "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires billing:manage.",
+        "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires accounting_integrations:exports_execute.",
         "tags": [
           "Accounting Exports"
         ],
@@ -56730,8 +57948,8 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-rbac-resource": "billing",
-          "x-rbac-action": "manage",
+          "x-rbac-resource": "accounting_integrations",
+          "x-rbac-action": "exports_execute",
           "x-request-content-type": "multipart/form-data or application/json or text/csv"
         },
         "x-alga-products": [
@@ -56840,7 +58058,7 @@
     "/api/v1/accounting-exports/xero-csv/tax-import": {
       "post": {
         "summary": "Import Xero invoice tax CSV",
-        "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires billing:manage.",
+        "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires accounting_integrations:exports_execute.",
         "tags": [
           "Accounting Exports"
         ],
@@ -56851,8 +58069,8 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-rbac-resource": "billing",
-          "x-rbac-action": "manage",
+          "x-rbac-resource": "accounting_integrations",
+          "x-rbac-action": "exports_execute",
           "x-request-content-type": "multipart/form-data or application/json or text/csv"
         },
         "x-alga-products": [
@@ -56929,7 +58147,7 @@
     "/api/v1/accounting-exports/{batchId}/download": {
       "get": {
         "summary": "Download an accounting export batch",
-        "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires billing_settings:update.",
+        "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires accounting_integrations:exports_execute.",
         "tags": [
           "Accounting Exports"
         ],
@@ -56940,8 +58158,8 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-rbac-resource": "billing_settings",
-          "x-rbac-action": "update"
+          "x-rbac-resource": "accounting_integrations",
+          "x-rbac-action": "exports_execute"
         },
         "x-alga-products": [
           "psa"
@@ -96092,6 +97310,555 @@
         "responses": {
           "200": {
             "description": "Checklist item completion updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/external-links": {
+      "get": {
+        "summary": "List ticket external links",
+        "description": "Returns structured external-system references for the ticket, each with a resolved display label, icon, and link-out href.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket external links.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a ticket external link",
+        "description": "Adds a ticket-level external-system reference. Only one origin link is allowed per ticket. URL must be http(s).",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TicketExternalLinkCreateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "External link created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/external-links/{linkId}": {
+      "patch": {
+        "summary": "Update a ticket external link",
+        "description": "Updates mutable fields (relationship, url, actor, external status/timestamps, metadata) on a link belonging to the ticket.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "External link UUID."
+            },
+            "required": true,
+            "description": "External link UUID.",
+            "name": "linkId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TicketExternalLinkUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "External link updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a ticket external link",
+        "description": "Removes a link belonging to the ticket and writes a ticket activity entry.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "External link UUID."
+            },
+            "required": true,
+            "description": "External link UUID.",
+            "name": "linkId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "External link removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/by-external-link": {
+      "get": {
+        "summary": "Find a ticket by external link",
+        "description": "Returns the ticket and matching external link for a given system/external_id (and optional external_parent_id); 404 when no ticket carries it.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Registry key of the external system."
+            },
+            "required": true,
+            "description": "Registry key of the external system.",
+            "name": "system",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "External record identifier."
+            },
+            "required": true,
+            "description": "External record identifier.",
+            "name": "external_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Ticket-level external id, for comment-level records."
+            },
+            "required": false,
+            "description": "Ticket-level external id, for comment-level records.",
+            "name": "external_parent_id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching ticket and link.",
             "content": {
               "application/json": {
                 "schema": {

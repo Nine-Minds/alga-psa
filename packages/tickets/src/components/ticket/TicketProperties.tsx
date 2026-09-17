@@ -1399,6 +1399,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               size="sm"
               placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
               onUserClick={disableAgentSchedule ? undefined : onAgentClick}
+              userClickLabel={t('bento.hero.viewSchedule', 'View schedule')}
             />
           </div>
         </div>

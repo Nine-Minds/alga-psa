@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { TenantScopedQuery } from '@alga-psa/db';
 import type {
   AuthorizationEvaluationInput,
+  ContactVisibilityScope,
   AuthorizationSubject,
   RelationshipRule,
   RelationshipTemplateKey,
@@ -48,6 +49,7 @@ export interface RelationshipSqlAdapter {
   ownerColumn: string;
   clientColumn: string;
   boardColumn: string;
+  contactColumn?: string;
   teamColumn: string;
   /**
    * Column holding a boolean client-visibility flag. When omitted, the
@@ -65,6 +67,7 @@ export interface RelationshipSqlAdapter {
 }
 
 export interface RelationshipSqlContext {
+  contactVisibility?: ContactVisibilityScope | null;
   subject: AuthorizationSubject;
   selectedClientIds?: string[];
   selectedBoardIds?: string[];
@@ -176,6 +179,32 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) => hasIntersection(input.record?.teamIds, input.subject.teamIds),
     compileSql: (builder, ctx) => {
       whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds);
+    },
+  },
+  // One rule intersects client, board, and contact restrictions. Built-in rules
+  // otherwise compose with OR, which would leak sibling tickets if split up.
+  contact_visibility: {
+    matches: ({ record, contactVisibility: scope }) => Boolean(
+      scope && record?.clientId === scope.clientId &&
+      (scope.visibleBoardIds === null || (record?.boardId && scope.visibleBoardIds.includes(record.boardId))) &&
+      (scope.effectiveTicketScope === 'client' ||
+        (scope.effectiveTicketScope === 'contact' && scope.contactId && record?.contactId === scope.contactId))
+    ),
+    compileSql: (builder, ctx) => {
+      const scope = ctx.contactVisibility;
+      if (!scope || !scope.clientId) {
+        deny(builder);
+        return;
+      }
+      builder.where(ctx.adapter.clientColumn, scope.clientId);
+      if (scope.visibleBoardIds !== null) {
+        whereInOrDeny(builder, ctx.adapter.boardColumn, scope.visibleBoardIds);
+      }
+      if (scope.effectiveTicketScope === 'contact' && scope.contactId && ctx.adapter.contactColumn) {
+        builder.where(ctx.adapter.contactColumn, scope.contactId);
+      } else if (scope.effectiveTicketScope !== 'client') {
+        deny(builder);
+      }
     },
   },
   selected_boards: {

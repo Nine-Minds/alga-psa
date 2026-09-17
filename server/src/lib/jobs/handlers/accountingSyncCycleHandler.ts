@@ -63,35 +63,33 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
     return;
   }
 
-  const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
-  if (!integration) {
-    return; // cycle guard: no connection, nothing to do
-  }
-
   const registry = await AccountingAdapterRegistry.createDefault();
-  const adapter = registry.get(integration.adapterType);
-  if (!adapter) {
-    logger.warn('[accountingSync] No adapter registered for scheduled cycle', {
-      tenantId,
-      adapterType: integration.adapterType
-    });
-    return;
-  }
 
-  const targets =
-    integration.adapterType === 'quickbooks_online'
-      ? Object.entries(await getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, any>))).map(
-          ([targetRealm, credentials]) => ({
-            targetRealm,
-            refreshTokenExpiresAt: (credentials as any)?.refreshTokenExpiresAt ?? null
-          })
-        )
-      : [{
-          targetRealm: integration.targetRealm,
-          refreshTokenExpiresAt:
-            (await getStoredXeroConnections(tenantId).catch(() => ({} as Record<string, any>)))[integration.targetRealm]
-              ?.refreshTokenExpiresAt ?? null
-        }];
+  // Scheduled cycles converge EVERY connected target across BOTH providers:
+  // all QBO realms AND all Xero connections. The default resolver's single
+  // selected provider is only a preference for interactive actions — a tenant
+  // connected to both must not have one provider silently skipped.
+  const [qboCredentials, xeroConnections] = await Promise.all([
+    getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, any>)),
+    getStoredXeroConnections(tenantId).catch(() => ({} as Record<string, any>)),
+  ]);
+
+  const targets: Array<{
+    adapterType: string;
+    targetRealm: string;
+    refreshTokenExpiresAt: string | null;
+  }> = [
+    ...Object.entries(qboCredentials).map(([targetRealm, credentials]) => ({
+      adapterType: 'quickbooks_online',
+      targetRealm,
+      refreshTokenExpiresAt: (credentials as any)?.refreshTokenExpiresAt ?? null,
+    })),
+    ...Object.entries(xeroConnections).map(([targetRealm, connection]) => ({
+      adapterType: 'xero',
+      targetRealm,
+      refreshTokenExpiresAt: (connection as any)?.refreshTokenExpiresAt ?? null,
+    })),
+  ];
 
   if (targets.length === 0) {
     return;
@@ -99,11 +97,20 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
 
   await runWithTenant(tenantId, async () => {
     for (const target of targets) {
+      const adapter = registry.get(target.adapterType);
+      if (!adapter) {
+        logger.warn('[accountingSync] No adapter registered for scheduled target', {
+          tenantId,
+          adapterType: target.adapterType,
+          realm: target.targetRealm
+        });
+        continue;
+      }
       try {
         const result = await runAccountingSyncCycle({
           knex,
           tenantId,
-          adapterType: integration.adapterType,
+          adapterType: target.adapterType,
           targetRealm: target.targetRealm,
           adapter,
           refreshTokenExpiresAt: target.refreshTokenExpiresAt

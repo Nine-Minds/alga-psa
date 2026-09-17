@@ -1509,7 +1509,15 @@
       "allContacts": "Tutti i contatti",
       "allStatuses": "Tutti gli stati",
       "allUsers": "Tutti gli utenti",
-      "columns": { "type": "Tipo", "title": "Titolo", "client": "Cliente", "contact": "Contatto", "user": "Utente", "date": "Data", "status": "Stato" },
+      "columns": {
+        "type": "Tipo",
+        "title": "Titolo",
+        "client": "Cliente",
+        "contact": "Contatto",
+        "user": "Utente",
+        "date": "Data",
+        "status": "Stato"
+      },
       "empty": "Nessuna interazione corrisponde a questi filtri.",
       "loading": "Caricamento delle interazioni…",
       "openClient": "Apri cliente {{name}}",
@@ -1529,6 +1537,14 @@
       "statusPlaceholder": "Stato",
       "title": "Interazioni recenti",
       "statusesLoadFailed": "Impossibile caricare gli stati delle interazioni. Riprova."
+    },
+    "callArtifacts": {
+      "sectionTitle": "Registrazione e trascrizione della chiamata",
+      "viewTranscript": "Vedi trascrizione",
+      "downloadRecording": "Scarica registrazione",
+      "transcriptTitle": "Trascrizione della chiamata",
+      "loading": "Caricamento della trascrizione…",
+      "loadFailed": "Impossibile caricare la trascrizione."
     }
   },
   "clientDrawer": {

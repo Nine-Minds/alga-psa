@@ -38,6 +38,10 @@ import { ActionChip } from "../features/ticketDetail/components/ActionChip";
 import { KeyValue } from "../features/ticketDetail/components/KeyValue";
 import { TicketMetaBar } from "../features/ticketDetail/components/TicketMetaBar";
 import { MoreActionsSheet } from "../features/ticketDetail/components/MoreActionsSheet";
+import { CallsEmailsSection } from "../features/ticketDetail/components/CallsEmailsSection";
+import { CallPromptHost } from "../features/interactions/components/CallPromptHost";
+import { usePlaceCall } from "../features/interactions/hooks/usePlaceCall";
+import { resyncScheduleReminders } from "../notifications/reminderSync";
 import { DueDateModal } from "../features/ticketDetail/components/DueDateModal";
 import { TimeEntryModal } from "../features/ticketDetail/components/TimeEntryModal";
 import { PriorityPickerModal } from "../features/ticketDetail/components/PriorityPickerModal";
@@ -50,6 +54,7 @@ import {
   TicketUpdateFooter,
 } from "../features/ticketDetail/components/TicketUpdateFooter";
 import { TagsSection } from "../features/ticketDetail/components/TagsSection";
+import { ClientNotesSection } from "../features/clients/components/ClientNotesSection";
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
 import { ChecklistSection } from "../features/ticketDetail/components/ChecklistSection";
 import { TicketTimerChip } from "../features/timer/components/TicketTimerChip";
@@ -120,6 +125,8 @@ export function TicketDetailBody({
   const { colors, spacing, typography } = theme;
   const { showToast } = useToast();
   const { t } = useTranslation("tickets");
+  const placeCall = usePlaceCall();
+  const [callsReloadKey, setCallsReloadKey] = useState(0);
   const network = useNetworkStatus();
   const isOffline = isOfflineStatus(network);
   const scrollRef = useRef<ScrollView>(null);
@@ -276,6 +283,11 @@ export function TicketDetailBody({
     return <ErrorState title={t("detail.ticketNotFound")} description={t("detail.ticketUnavailable")} />;
   }
 
+  const ticketClientId = (ticket as Record<string, unknown>).client_id as string | null | undefined;
+  const ticketContactId = (ticket as Record<string, unknown>).contact_name_id as string | null | undefined;
+  const contactPhone = ticket.contact_phone?.trim() || null;
+  const clientPhone = ticket.client_phone?.trim() || null;
+
   // --- Derived values ---
   const statusLabel = statusHook.pendingStatusId
     ? (statusHook.statusOptions.find((s) => s.status_id === statusHook.pendingStatusId)?.name ??
@@ -350,6 +362,16 @@ export function TicketDetailBody({
           </View>
         ) : null}
 
+        <CallPromptHost
+          origin={{ kind: "ticket", id: ticketId }}
+          client={client}
+          apiKey={session.accessToken}
+          userId={meUserId ?? null}
+          onLogged={() => {
+            setCallsReloadKey((key) => key + 1);
+            void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id, refreshSession });
+          }}
+        />
         <Text style={{ ...typography.caption, color: colors.textSecondary }}>
           {ticket.ticket_number}
           {ticket.client_name ? ` • ${ticket.client_name}` : ""}
@@ -531,6 +553,8 @@ export function TicketDetailBody({
             }}
             closedStatuses={statusHook.statusOptions.filter((s) => s.is_closed)}
             closeStatusId={commentDraftHook.commentCloseStatusId}
+            scheduleAt={commentDraftHook.commentScheduleAt}
+            onChangeScheduleAt={commentDraftHook.setCommentScheduleAt}
             onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
             onSend={(notificationSuppression) => void commentDraftHook.sendComment(notificationSuppression)}
             sending={commentDraftHook.commentSending}
@@ -559,9 +583,17 @@ export function TicketDetailBody({
               t("detail.contact"),
             )}
           >
-            {ticket.contact_phone ? (
+            {contactPhone ? (
               <Pressable
-                onPress={() => void Linking.openURL(`tel:${ticket.contact_phone}`)}
+                testID="ticket-detail-call-contact"
+                onPress={() => placeCall({
+                  origin: { kind: "ticket", id: ticketId },
+                  phone: contactPhone,
+                  name: ticket.contact_name ?? null,
+                  contactId: ticketContactId ?? null,
+                  clientId: ticketClientId ?? null,
+                  ticketId,
+                })}
                 accessibilityRole="button"
                 accessibilityLabel={t("detail.callContact", { name: ticket.contact_name ?? "" })}
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
@@ -605,9 +637,17 @@ export function TicketDetailBody({
               t("detail.client"),
             )}
           >
-            {ticket.client_phone ? (
+            {clientPhone ? (
               <Pressable
-                onPress={() => void Linking.openURL(`tel:${ticket.client_phone}`)}
+                testID="ticket-detail-call-client"
+                onPress={() => placeCall({
+                  origin: { kind: "ticket", id: ticketId },
+                  phone: clientPhone,
+                  name: ticket.client_name ?? null,
+                  contactId: null,
+                  clientId: ticketClientId ?? null,
+                  ticketId,
+                })}
                 accessibilityRole="button"
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
@@ -644,6 +684,15 @@ export function TicketDetailBody({
                 <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_name}</Text>
               </Pressable>
             ) : null}
+            {ticketClientId ? (
+              <ClientNotesSection
+                variant="inline"
+                client={client}
+                apiKey={session.accessToken}
+                clientId={ticketClientId}
+                titleKey="notes.ticketTitle"
+              />
+            ) : null}
           </KeyValue>
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
@@ -663,6 +712,22 @@ export function TicketDetailBody({
             actionError={tagsHook.tagPickerOpen ? null : tagsHook.tagActionError}
             updating={tagsHook.tagUpdating}
             onAddPress={tagsHook.openTagPicker}
+            initiallyCollapsed
+          />
+          <View style={{ height: spacing.sm }} />
+          <CallsEmailsSection
+            client={client}
+            apiKey={session.accessToken}
+            userId={meUserId ?? session.user?.id ?? null}
+            ticketId={ticketId}
+            clientId={ticketClientId}
+            contactNameId={ticketContactId}
+            reloadKey={callsReloadKey}
+            onLogged={() => {
+              // A logged interaction may have booked a calendar entry: arm its
+              // local reminder now instead of waiting for the next launch/resume.
+              void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id, refreshSession });
+            }}
             initiallyCollapsed
           />
           <View style={{ height: spacing.sm }} />
@@ -800,7 +865,7 @@ export function TicketDetailBody({
         updateError={contactHook.contactError}
         currentContactId={(ticket as Record<string, unknown>).contact_name_id as string | null | undefined}
         currentContactName={ticket.contact_name}
-        clientId={(ticket as Record<string, unknown>).client_id as string | null | undefined}
+        clientId={ticketClientId}
         onApply={(contactNameId, notificationSuppression) => {
           if (contactNameId) void contactHook.selectContact(contactNameId, notificationSuppression);
           else void contactHook.removeContact(notificationSuppression);

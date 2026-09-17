@@ -468,7 +468,7 @@ jobs:
           docker-compose -p alga-e2e-test up --no-build --wait --wait-timeout 90 -d algasim test-ingress
           docker-compose -p alga-e2e-test exec -T algasim node --input-type=module -e 'const r = await fetch("https://calendar-callback:3443/probe", { signal: AbortSignal.timeout(5000) }); if (r.status !== 404) throw new Error("Calendar callback TLS routing failed")'
           curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
-          jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
+          jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "threecx", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
           docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"
 
       - name: Initialize isolated shared worker state
@@ -940,6 +940,20 @@ jobs:
           E2E_DB_PASSWORD: placeholder-password
         timeout-minutes: 25
         run: xvfb-run --auto-servernum npm test
+        shell: bash
+
+      # The server is force-recreated for the upgrade and Teams stages below, so
+      # the end-of-job container-logs artifact only holds the last incarnation.
+      # Keep the browser-stage server and worker output next to the Playwright
+      # report while it still exists.
+      - name: Preserve browser-stage service logs
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 3
+        run: |
+          mkdir -p e2e-tests/test-results/browser-stage-logs
+          for service in server workflow-worker temporal-worker email-service; do
+            timeout --kill-after=5s 30s docker-compose -p alga-e2e-test logs --no-color "$service" > "e2e-tests/test-results/browser-stage-logs/${service}.log" 2>&1 || echo "Log capture for $service exited with $?" >> "e2e-tests/test-results/browser-stage-logs/${service}.log"
+          done
         shell: bash
 
       # Publish completed browser evidence before the independent API lane.

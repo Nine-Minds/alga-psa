@@ -59,7 +59,7 @@ const {
 import { addContractLine, fetchDetailedContractLines } from '@alga-psa/billing/repositories/contractLineRepository';
 import { getDetailedContractLines } from '@alga-psa/billing/actions/contractLineMappingActions';
 import { createClientContractFromWizard } from '@alga-psa/billing/actions/contractWizardActions';
-import { createPricingSchedule } from '@alga-psa/billing/actions/contractPricingScheduleActions';
+import { createPricingSchedule, updatePricingSchedule } from '@alga-psa/billing/actions/contractPricingScheduleActions';
 import { previewServicePriceChange } from '@alga-psa/billing/actions/servicePriceRolloutActions';
 import { updateCatalogPrice, setLineProvenance } from '../../../../test-utils/billingTestHelpers';
 
@@ -445,7 +445,7 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
     expect(inheritedLine?.rate_provenance).toBe('inherited');
   });
 
-  it('T18: overlapping schedules are rejected by the action and by the DB constraint', async () => {
+  it('T18: overlapping schedules are rejected on create and on update', async () => {
     const contractId = await context.createEntity('contracts', {
       contract_name: 'T18 Contract',
       billing_frequency: 'monthly',
@@ -473,22 +473,6 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
     });
     expect('actionError' in overlapping).toBe(true);
 
-    // The DB EXCLUDE constraint is the backstop: a direct insert that bypasses
-    // the action is rejected too.
-    await context.db.raw('SAVEPOINT t18_db_overlap');
-    await expect(
-      context.db('contract_pricing_schedules').insert({
-        schedule_id: uuidv4(),
-        tenant: context.tenantId,
-        contract_id: contractId,
-        contract_line_id: null,
-        effective_date: '2023-01-15',
-        end_date: null,
-        custom_rate: 13000,
-      }),
-    ).rejects.toThrow(/exclusion|conflict|overlap|no_overlap/i);
-    await context.db.raw('ROLLBACK TO SAVEPOINT t18_db_overlap');
-
     // A non-overlapping schedule still lands.
     const adjacent = await createPricingSchedule({
       contract_id: contractId,
@@ -497,5 +481,12 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
       custom_rate: 14000,
     });
     expect('actionError' in adjacent).toBe(false);
+
+    // The write path is the only overlap guard (no DB constraint under Citus),
+    // so an update that slides a schedule into its neighbour is rejected too.
+    const moved = await updatePricingSchedule((adjacent as { schedule_id: string }).schedule_id, {
+      effective_date: '2023-02-15',
+    });
+    expect('actionError' in moved).toBe(true);
   });
 });

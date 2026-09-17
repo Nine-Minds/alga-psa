@@ -339,12 +339,12 @@
     "pastedImageDeleteFailed_few": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "pastedImageDeleteFailed_many": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "closeFailed": "Nie udało się zamknąć zgłoszenia",
-    "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu",
     "loadCommentsFailed": "Nie udało się wczytać komentarzy",
     "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia",
     "errorWithMessage": "Błąd: {{message}}",
     "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
-    "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego"
+    "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego",
+    "scheduleOpenFailed": "Nie udało się otworzyć planera"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -1744,7 +1744,8 @@
       "additionalAgentsTooltip": "Dodatkowi agenci:",
       "unknownAgent": "Nieznany agent",
       "category": "Kategoria",
-      "selectDestinationStatus": "Wybierz status dla nowej tablicy przed zapisaniem."
+      "selectDestinationStatus": "Wybierz status dla nowej tablicy przed zapisaniem.",
+      "viewSchedule": "Zobacz harmonogram"
     },
     "layout": {
       "grid": "Siatka",
@@ -1772,7 +1773,6 @@
       "showLess": "Pokaż mniej",
       "contact": "Kontakt",
       "client": "Klient",
-      "nextVisit": "Następna wizyta",
       "callsAndEmails": "Połączenia i e-maile",
       "call": "Zadzwoń",
       "viewAll": "Zobacz wszystkie",
@@ -1798,7 +1798,6 @@
       "billing": "Rozliczenia",
       "couldNotLoad": "Nie udało się wczytać tego kafelka",
       "nothingScheduled": "Nic nie zaplanowano",
-      "scheduleVisit": "Zaplanuj wizytę",
       "scheduledWork": "Zaplanowane prace",
       "scheduleDone": "ukończono",
       "noCallsOrEmails": "Nie zarejestrowano połączeń ani e-maili",
@@ -1846,7 +1845,9 @@
         "approved": "Zatwierdzona",
         "declined": "Odrzucona",
         "cancelled": "Anulowana"
-      }
+      },
+      "scheduleTime": "Zaplanuj czas",
+      "openScheduleEntry": "Otwórz wpis harmonogramu"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",
@@ -1944,6 +1945,80 @@
       "contactHelper": "Pomija e-mail do klienta, zaproszenie do ankiety i powiadomienie w portalu klienta",
       "internalLabel": "Nie powiadamiaj też agentów i obserwatorów",
       "internalHelper": "Pomija także ich e-maile i powiadomienia w aplikacji"
+    }
+  },
+  "externalLinks": {
+    "title": "Łącza zewnętrzne",
+    "empty": "Brak łączy zewnętrznych",
+    "loading": "Ładowanie łączy zewnętrznych...",
+    "noUrl": "Brak adresu URL dla tego odwołania",
+    "customSystemOption": "{{label}} (niestandardowy)",
+    "actions": {
+      "add": "Dodaj łącze",
+      "edit": "Edytuj",
+      "remove": "Usuń",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "menu": "Działania łącza"
+    },
+    "relationship": {
+      "origin": "Źródło",
+      "mirror": "Kopia",
+      "reference": "Odwołanie"
+    },
+    "relationshipDescription": {
+      "origin": "Skąd pochodzi to zgłoszenie. Każde zgłoszenie może mieć jedno łącze źródłowe, które określa jego oznaczenie pochodzenia.",
+      "mirror": "Inny rekord śledzący tę samą pracę co to zgłoszenie.",
+      "reference": "Informacje pomocnicze dotyczące tego zgłoszenia."
+    },
+    "dialog": {
+      "addTitle": "Dodaj łącze zewnętrzne",
+      "editTitle": "Edytuj łącze zewnętrzne",
+      "intro": "Dodanie łącza nie synchronizuje danych między systemami."
+    },
+    "removeDialog": {
+      "title": "Usuń łącze zewnętrzne",
+      "message": "Usunąć to łącze zewnętrzne ze zgłoszenia?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Ładowanie systemów...",
+      "selectSystem": "Wybierz system",
+      "externalId": "Identyfikator zewnętrzny",
+      "externalIdPlaceholder": "np. 42 lub 1234567890",
+      "realm": "Obszar",
+      "url": "URL",
+      "urlOptional": "Opcjonalne zastąpienie",
+      "urlRequired": "https://...",
+      "relationship": "Relacja",
+      "originExistsHint": "To zgłoszenie ma już łącze źródłowe.",
+      "actorGroup": "Osoba lub konto (opcjonalnie)",
+      "actorHint": "Osoba lub konto powiązane z połączonym rekordem w systemie zewnętrznym.",
+      "actorHandle": "Nazwa użytkownika lub identyfikator",
+      "actorDisplay": "Wyświetlana nazwa",
+      "builtInGroup": "Systemy wbudowane",
+      "customGroup": "Systemy niestandardowe",
+      "urlPreview": "Otwiera:",
+      "urlPreviewIncomplete": "Wypełnij powyższe pola, aby wyświetlić podgląd łącza."
+    },
+    "errors": {
+      "ticketNotFound": "Nie znaleziono zgłoszenia",
+      "commentNotFound": "Nie znaleziono komentarza w tym zgłoszeniu",
+      "linkNotFound": "Nie znaleziono łącza zewnętrznego",
+      "systemNotFound": "Nieznany system zewnętrzny",
+      "externalIdRequired": "Identyfikator zewnętrzny jest wymagany",
+      "invalidUrl": "Adres URL musi być prawidłowym adresem http(s)",
+      "invalidRelationship": "Nieprawidłowa relacja",
+      "invalidEntityType": "Nieprawidłowy typ encji",
+      "originExists": "Ta encja ma już łącze źródłowe",
+      "duplicateExternalLink": "Ten rekord zewnętrzny jest już połączony",
+      "systemInUse": "Ten system zewnętrzny jest używany przez istniejące łącza",
+      "systemInUseCount": "Ten system zewnętrzny jest używany przez {{count}} łącze/łączy",
+      "invalidSystemKey": "Klucze systemów niestandardowych muszą być zgodne z custom:<slug> przy użyciu małych liter, cyfr lub podkreśleń",
+      "systemLabelRequired": "Etykieta systemu jest wymagana",
+      "permissionDenied": "Odmowa dostępu: nie można zarządzać systemami zewnętrznymi",
+      "systemRequired": "Wybierz system zewnętrzny.",
+      "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL."
     }
   }
 }

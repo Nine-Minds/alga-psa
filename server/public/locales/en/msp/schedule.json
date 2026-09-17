@@ -26,7 +26,17 @@
     "loading": "Loading...",
     "errors": {
       "loadPermissions": "Failed to load user permissions",
-      "forbidden": "You do not have permission to view this schedule."
+      "forbidden": "You do not have permission to view this schedule.",
+      "moveFailed": "Failed to move schedule entry"
+    },
+    "schedulingFor": "Scheduling",
+    "selectSlotHint": "Drag to create, move or resize entries. Click an entry to edit.",
+    "readOnlyHint": "You can view this schedule, but need the schedule update permission to add or change entries.",
+    "workItemLegend": "This work item",
+    "schedulingForAgent": "Scheduling for {{name}}",
+    "otherWorkLegend": "Other work",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -553,7 +563,8 @@
       "appointmentRequest": "Appointment Request",
       "view": "View Entry",
       "edit": "Edit Entry",
-      "new": "New Entry"
+      "new": "New Entry",
+      "newForWorkItem": "Schedule {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "This is a private entry. Only the creator can view or edit details."
@@ -578,7 +589,9 @@
       "privateEntry": "Private entry (not visible to other users)",
       "start": "Start *",
       "end": "End *",
-      "notes": "Notes"
+      "notes": "Notes",
+      "technician": "Technician",
+      "notesPlaceholder": "Anything the technician should know before starting"
     },
     "actions": {
       "cancel": "Cancel",
@@ -588,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Ad-hoc entry (no work item)",
-      "openDetails": "Details"
+      "openDetails": "Details",
+      "loading": "Loading work item…",
+      "openTicket": "Open ticket",
+      "openTask": "Open task",
+      "openInteraction": "Open interaction"
     },
     "appointmentRequest": {
       "approved": {
@@ -691,6 +708,11 @@
       "created": "Microsoft Teams meeting created",
       "createFailed": "Failed to create Teams meeting",
       "recurringUnsupported": "Teams meetings can only be added to standalone entries, not recurring series."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {
@@ -744,5 +766,15 @@
       "graphThrottled": "Microsoft Graph is rate limiting recording downloads. Please try again shortly.",
       "graphHttpStatus": "Microsoft Graph returned HTTP {{status}} while downloading the Teams recording."
     }
+  },
+  "workItemEditor": {
+    "created": "Scheduled {{title}}",
+    "updated": "Schedule entry updated",
+    "deleted": "Schedule entry deleted",
+    "createFailed": "Failed to schedule this work",
+    "updateFailed": "Failed to update schedule entry",
+    "deleteFailed": "Failed to delete schedule entry",
+    "loadFailed": "Failed to load schedule entry",
+    "noPermission": "You need the schedule update permission to schedule work."
   }
 }

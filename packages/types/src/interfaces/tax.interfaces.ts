@@ -32,6 +32,13 @@ export interface ITaxRate extends TenantEntity {
   description: string | null; // Added description field from tax_rates table
   region_code: string; // Added region_code field from tax_rates table
   name?: string; // Made optional for backward compatibility with tests
+  /**
+   * Maximum tax this rate may charge for a single calculation, in the
+   * smallest currency unit (same unit as the net amount). `null`/`undefined`
+   * means uncapped; `0` is a supplied cap that charges no tax. Only applied to
+   * the single-rate simple and progressive-threshold paths.
+   */
+  cap_amount?: number | null;
 }
 
 // Removed ITaxRateWithDetails as fields are now in ITaxRate
@@ -77,6 +84,30 @@ export interface ITaxCalculationResult {
   taxComponents?: ITaxComponent[];
   appliedThresholds?: ITaxRateThreshold[];
   appliedHolidays?: ITaxHoliday[];
+}
+
+/**
+ * One constant-rate slice of a period calculation. `start_date` is inclusive
+ * and `end_date` exclusive, so `days` is the number of chargeable days.
+ * `netAmount` is this slice's pro-rated share of the requested net amount and
+ * may be fractional (cents are only rounded when tax is computed).
+ */
+export interface ITaxPeriodSegment {
+  start_date: ISO8601String;
+  end_date: ISO8601String;
+  days: number;
+  netAmount: number;
+  taxAmount: number;
+  taxRate: number;
+}
+
+/**
+ * Result of a period-spanning tax calculation. `taxAmount`/`taxRate` are the
+ * aggregate of every segment; `segments` exposes the per-rate split so callers
+ * and reviewers can inspect how the period was divided.
+ */
+export interface ITaxPeriodCalculationResult extends ITaxCalculationResult {
+  segments: ITaxPeriodSegment[];
 }
 
 export interface ITaxRegion extends TenantEntity {

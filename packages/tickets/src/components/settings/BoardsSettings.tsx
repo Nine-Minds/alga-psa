@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid } from "lucide-react";
+import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid, EyeOff } from "lucide-react";
 import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency } from '@alga-psa/types';
 import {
   getAllBoards,
@@ -429,6 +429,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     inbound_reply_reopen_status_id: '',
     inbound_reply_ai_ack_suppression_enabled: false,
     enable_live_ticket_timer: true,
+    client_portal_visible: true,
     is_pinned: true,
     status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
     copy_ticket_statuses_from_board_id: '',
@@ -732,6 +733,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       inbound_reply_reopen_status_id: board.inbound_reply_reopen_status_id || '',
       inbound_reply_ai_ack_suppression_enabled: board.inbound_reply_ai_ack_suppression_enabled ?? false,
       enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
+      client_portal_visible: board.client_portal_visible ?? true,
       is_pinned: board.is_pinned ?? false,
       ticket_statuses: [],
     });
@@ -999,6 +1001,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           inbound_reply_reopen_status_id: formData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
+          client_portal_visible: formData.client_portal_visible,
           is_pinned: formData.is_pinned,
           ticket_statuses: normalizedTicketStatuses,
         });
@@ -1077,6 +1080,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           inbound_reply_reopen_status_id: null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
+          client_portal_visible: formData.client_portal_visible,
           // The pin toggle renders during creation too, so it has to be sent:
           // createBoard defaults is_pinned to true, which would silently ignore
           // an admin turning it off on the way in.
@@ -1235,6 +1239,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     }),
     display: JSON.stringify({
       enable_live_ticket_timer: formData.enable_live_ticket_timer,
+      client_portal_visible: formData.client_portal_visible,
       is_itil_compliant: formData.is_itil_compliant,
     }),
     appearance: JSON.stringify({
@@ -1303,6 +1308,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 {board.is_default && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />}
                 {isItil && <ListPill tone="violet">ITIL</ListPill>}
                 {board.is_inactive && <ListPill tone="gray">{t('ticketing.boards.statusLabels.inactive')}</ListPill>}
+                {board.client_portal_visible === false && <ListPill tone="gray"><EyeOff className="h-3 w-3" />{t('ticketing.boards.statusLabels.hiddenFromPortal')}</ListPill>}
               </div>
               {board.description && <p className="truncate text-xs text-gray-500 max-w-[260px]">{board.description}</p>}
             </div>
@@ -2500,6 +2506,20 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                   id="enable_live_ticket_timer"
                   checked={formData.enable_live_ticket_timer}
                   onCheckedChange={(checked) => setFormData({ ...formData, enable_live_ticket_timer: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="client_portal_visible">{t('ticketing.boards.fields.clientPortalVisible.label')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('ticketing.boards.fields.clientPortalVisible.help')}
+                  </p>
+                </div>
+                <Switch
+                  id="client_portal_visible"
+                  checked={formData.client_portal_visible}
+                  onCheckedChange={(checked) => setFormData({ ...formData, client_portal_visible: checked })}
                 />
               </div>
 
