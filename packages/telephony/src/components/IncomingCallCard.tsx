@@ -53,7 +53,7 @@ export function IncomingCallCard({
       className="fixed bottom-4 right-4 z-[1000000] w-[calc(100vw-2rem)] max-w-sm p-4 shadow-xl"
     >
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-600))]">
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-primary-500))] text-white">
           <Phone className="h-4 w-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { isEnterprise } from '@alga-psa/core/features';
 import { useInternalNotifications } from '@alga-psa/notifications/hooks/useInternalNotifications';
 import { IncomingCallCard } from '@alga-psa/telephony/components';
@@ -65,10 +64,15 @@ function IncomingCallSurface({ tenant, userId }: { tenant: string; userId: strin
  * Mounts the 3CX incoming-call card for the signed-in agent. Enterprise-only:
  * CE never opens the notification socket for it.
  */
-export function IncomingCallProvider({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession();
-  const tenant = session?.user?.tenant;
-  const userId = session?.user?.id;
+export function IncomingCallProvider({
+  tenant,
+  userId,
+  children,
+}: {
+  tenant: string | null | undefined;
+  userId: string | null | undefined;
+  children: React.ReactNode;
+}) {
 
   return (
     <>

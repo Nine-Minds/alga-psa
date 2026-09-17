@@ -169,7 +169,7 @@ export function MspLayoutClient({
       <ProductProvider>
         <TierProvider selfHostLicensing={selfHostLicensing}>
           <MspCallLinkProvider>
-          <IncomingCallProvider>
+          <IncomingCallProvider tenant={session?.user?.tenant} userId={session?.user?.id}>
           {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
