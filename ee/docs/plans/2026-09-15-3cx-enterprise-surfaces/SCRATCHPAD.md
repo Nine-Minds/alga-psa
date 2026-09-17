@@ -192,3 +192,7 @@ changes because the jobs dist imports the telephony dist.
   (`registerAllHandlers` from instrumentation). Editing a handler under
   `packages/jobs/src` does not reach the running server through HMR: rebuild
   the jobs dist AND restart the dev server.
+- `packages/formatting/src/blocknoteUtils.ts` is bundled into the mobile
+  comment editor (`ee/mobile/src/features/ticketRichText/generatedEditorHtml.ts`).
+  After touching it run `npm --prefix ee/mobile run generate:ticket-editor`
+  and commit the result, or the mobile CI lane reports a dirty tree.
