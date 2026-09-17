@@ -11,6 +11,7 @@ export default defineConfig({
       },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../../shared')}/$1` },
       { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../../../packages/event-bus/src/index.ts') },
+      { find: /^@alga-psa\/event-bus\/(.*)$/, replacement: `${path.resolve(__dirname, '../../../packages/event-bus/src')}/$1` },
     ],
   },
   test: {
