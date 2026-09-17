@@ -147,17 +147,68 @@ describe('token_claims', () => {
   });
 });
 
+describe('send_as_probe', () => {
+  it('skips as not applicable for a confirmed self-send', async () => {
+    const ctx = makeContext({
+      adapter: baseAdapter(),
+      configuredMailbox: 'sender@example.com',
+      authenticatedUserEmail: 'sender@example.com',
+    });
+    const outcome = await stepById('send_as_probe', buildMicrosoftOutboundSteps()).run(ctx);
+    expect(outcome.status).toBe('skip');
+    expect(outcome.data).toMatchObject({ mailboxRelation: 'self', requiresSendAs: false });
+  });
+
+  it('warns and names Exchange Send As for a confirmed shared mailbox without an authoritative probe', async () => {
+    const ctx = makeContext({
+      adapter: baseAdapter(),
+      configuredMailbox: 'shared@example.com',
+      authenticatedUserEmail: 'auth@example.com',
+    });
+    const outcome = await stepById('send_as_probe', buildMicrosoftOutboundSteps()).run(ctx);
+    expect(outcome.status).toBe('warn');
+    expect(outcome.data).toMatchObject({
+      isSharedMailbox: true,
+      mailboxRelation: 'shared',
+      requiresSendAs: true,
+      authoritative: false,
+      draftProbePerformed: false,
+    });
+    expect(outcome.detail).toMatch(/Exchange Send As has not been confirmed/i);
+    expect(outcome.recommendations?.join(' ')).toMatch(/Exchange Send As/);
+    expect(outcome.recommendations?.join(' ')).toMatch(/not verified/i);
+  });
+
+  it('warns without classifying an unknown identity as a confirmed shared mailbox', async () => {
+    const ctx = makeContext({
+      adapter: baseAdapter(),
+      configuredMailbox: 'shared@example.com',
+      authenticatedUserEmail: undefined,
+    });
+    const outcome = await stepById('send_as_probe', buildMicrosoftOutboundSteps()).run(ctx);
+    expect(outcome.status).toBe('warn');
+    expect(outcome.data).toMatchObject({
+      isSharedMailbox: false,
+      mailboxRelation: 'unknown',
+      requiresSendAs: null,
+      authoritative: false,
+    });
+  });
+});
+
 describe('sent_items_writable', () => {
-  it('passes the accessibility check when the folder is readable without claiming writability', async () => {
+  it('warns when the folder is readable but writability cannot be verified', async () => {
     const ctx = makeContext({
       adapter: baseAdapter(),
       configuredMailbox: 'sender@example.com',
       authenticatedUserEmail: 'sender@example.com',
     });
     const outcome = await stepById('sent_items_writable', buildMicrosoftOutboundSteps()).run(ctx);
-    expect(outcome.status).toBe('pass');
+    expect(outcome.status).toBe('warn');
     expect(outcome.data).toMatchObject({ writabilityVerified: false, saveToSentItems: true });
+    expect(outcome.detail).toMatch(/does not verify the ability to write or save sent messages/i);
     expect(outcome.http).toMatchObject({ status: 200 });
+    expect(outcome.recommendations?.join(' ')).toMatch(/does not prove sent messages can be saved/i);
   });
 
   it('treats a 403 lookup as an access-check failure, not proof sendMail cannot save', async () => {
@@ -179,13 +230,59 @@ describe('sent_items_writable', () => {
     const outcome = await stepById('sent_items_writable', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('warn');
     expect(outcome.error).toMatchObject({ status: 403, code: 'ErrorAccessDenied', requestId: 'req-403' });
-    expect(outcome.detail).toMatch(/After sending a test email, check the mailbox’s Sent Items folder/);
-    expect(outcome.recommendations).toBeUndefined();
+    expect(outcome.detail).toMatch(/saving sent messages remains unverified/);
+    expect(outcome.recommendations?.join(' ')).toMatch(/saving sent messages remains unverified/);
+  });
+
+  it('retains body-only innerError correlation ids with a sanitized message', async () => {
+    const adapter = baseAdapter();
+    adapter.fetchSentItemsFolder = vi.fn(async () => {
+      throw {
+        response: {
+          status: 403,
+          headers: {},
+          data: {
+            error: {
+              code: 'ErrorAccessDenied',
+              message: 'PRIVATE-SENTITEMS-MESSAGE',
+              innerError: {
+                'request-id': 'body-req-403',
+                'client-request-id': 'body-client-403',
+                secret: 'seeded-secret',
+              },
+            },
+          },
+        },
+      };
+    });
+    const ctx = makeContext({
+      adapter,
+      configuredMailbox: 'shared@example.com',
+      authenticatedUserEmail: 'auth@example.com',
+    });
+    const outcome = await stepById('sent_items_writable', buildMicrosoftOutboundSteps()).run(ctx);
+    expect(outcome.status).toBe('warn');
+    expect(outcome.error).toMatchObject({
+      status: 403,
+      code: 'ErrorAccessDenied',
+      requestId: 'body-req-403',
+      clientRequestId: 'body-client-403',
+    });
+    expect(outcome.http).toMatchObject({
+      method: 'GET',
+      status: 403,
+      requestId: 'body-req-403',
+      clientRequestId: 'body-client-403',
+    });
+    const serialized = JSON.stringify(outcome);
+    expect(serialized).not.toContain('PRIVATE-SENTITEMS-MESSAGE');
+    expect(serialized).not.toContain('seeded-secret');
+    expect(outcome.error?.message).not.toContain('Access denied');
   });
 });
 
 describe('mailbox_base_path', () => {
-  it('reports shared/delegated routing without an untested permission recommendation', async () => {
+  it('explains Exchange Send As for shared/delegated routing', async () => {
     const adapter = baseAdapter();
     adapter.getMailboxRoute = vi.fn(() => ({
       basePath: '/users/shared@example.com',
@@ -202,7 +299,18 @@ describe('mailbox_base_path', () => {
     const outcome = await stepById('mailbox_base_path', buildMicrosoftOutboundSteps()).run(ctx);
     expect(outcome.status).toBe('pass');
     expect(outcome.data).toMatchObject({ mailboxBasePath: '/users/shared@example.com', isSharedOrDelegated: true });
-    expect(outcome.recommendations).toBeUndefined();
+    expect(outcome.recommendations?.join(' ')).toMatch(/Exchange Send As/);
     expect(ctx.mailboxBasePath).toBe('/users/shared@example.com');
+  });
+
+  it('does not claim Exchange Send As is required for a confirmed self-send', async () => {
+    const ctx = makeContext({
+      adapter: baseAdapter(),
+      configuredMailbox: 'sender@example.com',
+      authenticatedUserEmail: 'sender@example.com',
+    });
+    const outcome = await stepById('mailbox_base_path', buildMicrosoftOutboundSteps()).run(ctx);
+    expect(outcome.status).toBe('pass');
+    expect(outcome.recommendations).toBeUndefined();
   });
 });

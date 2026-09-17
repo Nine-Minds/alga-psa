@@ -8,10 +8,9 @@
 
 import type { DiagnosticsStepOutcome } from '@alga-psa/shared/services/diagnostics/diagnosticsRunner';
 import {
-  classifyGraphFailure,
   classifySendPermissionDenial,
+  normalizeOutboundGraphFailure,
   type OutboundGraphRecommendationInput,
-  toDiagnosticsErrorMeta,
 } from '@alga-psa/shared/services/email/microsoftGraphDiagnostics';
 import type {
   OutboundDiagnosticsContext,
@@ -48,6 +47,19 @@ function requiredSendScopes(ctx: OutboundDiagnosticsContext): string[] {
     scopes.push('Mail.Send.Shared');
   }
   return scopes;
+}
+
+/**
+ * Administrator-facing message for a failed Sent Items lookup. Raw Graph
+ * messages can carry mailbox content, so only a status-derived, sanitized
+ * message is exposed; status/code/correlation ids remain as evidence.
+ */
+function sanitizedSentItemsMessage(status?: number): string {
+  if (status === 401) return 'Microsoft Graph rejected the saved credentials for the Sent Items lookup.';
+  if (status === 403) return 'Microsoft Graph denied the Sent Items folder lookup.';
+  if (status === 404) return 'Microsoft Graph could not find the Sent Items folder.';
+  if (status !== undefined && status >= 500) return 'Microsoft Graph could not complete the Sent Items lookup.';
+  return 'The Sent Items folder could not be inspected.';
 }
 
 /** Administrator-facing advice for outbound failures; raw provider evidence stays in the report. */
@@ -274,6 +286,60 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
         return {
           status: 'pass',
           data,
+          recommendations: route.isSharedOrDelegated
+            ? [
+                'Sending as a mailbox other than the authenticated user additionally requires Exchange Send As (or Send on Behalf) on the target mailbox; Microsoft Graph Mail.Send consent alone is not sufficient. Send on Behalf appears as "<sender> on behalf of <mailbox>", which is not the same as Send As.',
+              ]
+            : undefined,
+        };
+      },
+    },
+    {
+      id: 'send_as_probe',
+      title: 'Exchange Send As verification',
+      run: async (ctx): Promise<DiagnosticsStepOutcome<OutboundStepData>> => {
+        const relation = mailboxRelation(ctx);
+        if (relation === 'self') {
+          return {
+            status: 'skip',
+            detail: 'Not applicable: sending as the authenticated user (/me).',
+            data: { isSharedMailbox: false, mailboxRelation: 'self', requiresSendAs: false },
+          };
+        }
+        if (relation === 'unknown') {
+          return {
+            status: 'warn',
+            detail: 'Authenticated identity is unknown, so whether Exchange Send As is required cannot be determined.',
+            data: {
+              isSharedMailbox: false,
+              mailboxRelation: 'unknown',
+              requiresSendAs: null,
+              authoritative: false,
+              draftProbePerformed: false,
+              limitation:
+                'The configured mailbox could not be compared to the authenticated user, so self-send is not confirmed and neither is a shared/delegated send. A draft-create probe requires Mail.ReadWrite, which this delegated scope set does not request.',
+            },
+            recommendations: [
+              'Confirm the authenticated Microsoft identity before concluding whether Exchange Send As (or Send on Behalf) is required, then re-run diagnostics.',
+            ],
+          };
+        }
+        return {
+          status: 'warn',
+          detail: 'Sending as this mailbox has not been verified. Exchange Send As has not been confirmed.',
+          data: {
+            isSharedMailbox: true,
+            mailboxRelation: 'shared',
+            requiresSendAs: true,
+            authoritative: false,
+            draftProbePerformed: false,
+            requiredExchangePermission: 'Exchange Send As (or Send on Behalf)',
+            limitation:
+              'A draft-create probe requires Mail.ReadWrite, which this delegated scope set does not request; a draft denial would not isolate Exchange Send As from a Graph write-scope denial. No authoritative verdict is available without real-tenant validation.',
+          },
+          recommendations: [
+            'Sending as a mailbox other than the authenticated user additionally requires Exchange Send As (or Send on Behalf) on the target mailbox. Diagnostics have not verified this permission. Grant it in Exchange admin center, then confirm with an explicit test email. Send on Behalf appears as "<sender> on behalf of <mailbox>", which is not the same as Send As.',
+          ],
         };
       },
     },
@@ -293,8 +359,8 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
         try {
           const folder = await adapter.fetchSentItemsFolder();
           return {
-            status: 'pass',
-            detail: 'The Sent Items folder is accessible.',
+            status: 'warn',
+            detail: 'The Sent Items folder is readable, but this check does not verify the ability to write or save sent messages.',
             http: folder.http,
             data: {
               mailboxBasePath: route.basePath,
@@ -303,19 +369,41 @@ export function buildMicrosoftOutboundSteps(): OutboundStepDefinition[] {
               writabilityVerified: false,
               saveToSentItems: true,
             },
+            recommendations: [
+              'The Sent Items folder was readable, but that does not prove sent messages can be saved. Confirm with a test email that a copy appears in the sending mailbox’s Sent Items folder.',
+            ],
           };
         } catch (error) {
-          const failure = classifyGraphFailure(error);
-            return {
+          const failure = normalizeOutboundGraphFailure(error);
+          return {
             status: 'warn',
-            detail: 'Sent Items could not be checked. After sending a test email, check the mailbox’s Sent Items folder for a copy.',
+            detail: 'Sent Items could not be checked, so saving sent messages remains unverified. After sending a test email, check the mailbox’s Sent Items folder for a copy.',
+            http: {
+              method: 'GET',
+              path: `${route.basePath}/mailFolders/sentitems`,
+              ...(failure.status !== undefined ? { status: failure.status } : {}),
+              ...(failure.requestId ? { requestId: failure.requestId } : {}),
+              ...(failure.clientRequestId ? { clientRequestId: failure.clientRequestId } : {}),
+            },
             data: {
               writabilityVerified: false,
               saveToSentItems: true,
+              mailboxBasePath: route.basePath,
               accessCheckStatus: failure.status ?? null,
+              accessCheckCode: failure.code ?? null,
             },
-            error: toDiagnosticsErrorMeta(failure),
-
+            // Sanitized administrator-facing message only: status/code/correlation
+            // ids are the evidence, never the raw Graph message or response body.
+            error: {
+              message: sanitizedSentItemsMessage(failure.status),
+              status: failure.status,
+              code: failure.code,
+              requestId: failure.requestId,
+              clientRequestId: failure.clientRequestId,
+            },
+            recommendations: [
+              'Sent Items could not be read, so saving sent messages remains unverified. After sending a test email, check the mailbox’s Sent Items folder for a copy.',
+            ],
           };
         }
       },

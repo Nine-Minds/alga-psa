@@ -108,17 +108,6 @@ export type OutboundStepDefinition = DiagnosticsStepDefinition<
 
 export type OutboundStep = DiagnosticsStep<OutboundStepData>;
 
-/** Checks that provide context but cannot establish a sending failure. */
-export function isAdvisoryOutboundStep(step: Pick<OutboundStep, 'id' | 'status' | 'data'>): boolean {
-  if (step.id === 'sent_items_writable') return true;
-  if (step.status !== 'warn') return false;
-  if (step.id === 'token_claims') {
-    return step.data?.decoded === false || step.data?.scopesAvailable === false;
-  }
-  return step.id === 'resend_domains_check' && step.data?.denied === true;
-}
-
-
 export interface OutboundDiagnosticsSummary {
   providerId: string;
   providerType: OutboundProviderType;

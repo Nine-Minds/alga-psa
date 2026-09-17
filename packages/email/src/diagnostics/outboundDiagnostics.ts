@@ -39,7 +39,6 @@ import {
   buildSanitizedSupportBundle,
   sanitizeDiagnosticsReport,
 } from './redaction';
-import { isAdvisoryOutboundStep } from './outboundTypes';
 import type {
   NormalizedOutboundOptions,
   OutboundDiagnosticsContext,
@@ -656,8 +655,10 @@ export async function runOutboundEmailDiagnosticsWithSettings(
       checkedCapabilities: Array.from(new Set(ctx.checkedCapabilities)),
       liveSendRequested: options.liveSendTest,
       liveSendPerformed,
-      // Keep inspection limits as evidence without presenting them as sending faults.
-      overallStatus: computeOverallStatus(outcome.steps.filter((step) => !isAdvisoryOutboundStep(step))),
+      // Unresolved checks (unverified Send As/Sent Items, undecodable scopes,
+      // restricted Resend keys) stay visible and drive a warning headline rather
+      // than being hidden as a false pass.
+      overallStatus: computeOverallStatus(outcome.steps),
     }),
     buildSupportBundle: () => ({}),
   });

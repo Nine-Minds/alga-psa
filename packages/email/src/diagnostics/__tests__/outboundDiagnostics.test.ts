@@ -175,6 +175,7 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
       'token_claims',
       'graph_me',
       'mailbox_base_path',
+      'send_as_probe',
       'sent_items_writable',
       'live_send_test',
     ]);
@@ -185,16 +186,24 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
     expect(report.summary.defaultFromEmail).toBe('sender@example.com');
     expect(report.summary.authenticatedUserEmail).toBe('auth@example.com');
     expect(report.summary.mailboxBasePath).toBe('/users/sender@example.com');
-    expect(report.summary.overallStatus).toBe('pass');
-    expect(report.recommendations).toEqual([]);
+    // A shared mailbox leaves Exchange Send As unverified and Sent Items
+    // writability unverified, so the headline is a warning, not a pass.
+    expect(report.summary.overallStatus).toBe('warn');
     expect(report.steps.find(step => step.id === 'live_send_test')?.status).toBe('skip');
-    expect(JSON.stringify(report.supportBundle)).not.toContain('send_as_probe');
+    // The Exchange Send As advisory is present in the report and the export.
+    expect(report.steps.find((s) => s.id === 'send_as_probe')).toMatchObject({
+      status: 'warn',
+      data: { requiresSendAs: true, mailboxRelation: 'shared', authoritative: false },
+    });
+    expect(report.supportBundle).toBeDefined();
+    expect(JSON.stringify(report.supportBundle)).toContain('send_as_probe');
+    expect(report.recommendations.join(' ')).toMatch(/Exchange Send As/);
   });
 
-  it.each([false, true])('keeps an optional Sent Items failure as evidence without warning about sending (live send: %s)', async (liveSendTest) => {
+  it.each([false, true])('surfaces a Sent Items lookup failure as a visible warning (live send: %s)', async (liveSendTest) => {
     const adapter = makeAdapter({
       fetchSentItemsFolder: vi.fn(async () => {
-        throw { response: { status: 403, data: { error: { code: 'ErrorAccessDenied', message: 'Access denied' } } } };
+        throw { response: { status: 403, data: { error: { code: 'ErrorAccessDenied', message: 'PRIVATE-SENTITEMS-MESSAGE' } } } };
       }),
     });
     const sendLive = vi.fn(async () => ({ success: true }));
@@ -204,30 +213,32 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
       sendLive,
     );
 
-    expect(report.summary.overallStatus).toBe('pass');
-    expect(report.recommendations).toEqual([]);
+    expect(report.summary.overallStatus).toBe('warn');
     expect(report.steps.find(step => step.id === 'sent_items_writable')).toMatchObject({
       status: 'warn', error: { status: 403, code: 'ErrorAccessDenied' },
     });
     expect(JSON.stringify(report.supportBundle)).toContain('ErrorAccessDenied');
+    expect(report.recommendations.join(' ')).toMatch(/Sent Items/);
+    // The raw Graph message must not reach the report or the export.
+    expect(JSON.stringify(report)).not.toContain('PRIVATE-SENTITEMS-MESSAGE');
+    expect(JSON.stringify(report.supportBundle)).not.toContain('PRIVATE-SENTITEMS-MESSAGE');
     expect(sendLive).toHaveBeenCalledTimes(liveSendTest ? 1 : 0);
   });
 
   it.each([
     { decoded: false, scopesAvailable: false },
     { decoded: true, scopesAvailable: false },
-  ])('keeps an unavailable permission inspection neutral (%j)', async (claims) => {
+  ])('drives an overall warning when permission inspection is unavailable (%j)', async (claims) => {
     const adapter = makeAdapter({
       decodeCurrentAccessTokenClaims: vi.fn(async () => ({ ...claims, scopes: [], claims: null })),
     });
     const report = await runWith({ providerId: 'p1', providerType: 'microsoft', configuredMailbox: 'sender@example.com', rawConfig: {}, adapter: adapter as any });
-    expect(report.summary.overallStatus).toBe('pass');
-    expect(report.recommendations).toEqual([]);
+    expect(report.summary.overallStatus).toBe('warn');
     expect(report.steps.find(step => step.id === 'token_claims')).toMatchObject({ status: 'warn', data: claims });
   });
 
   it.each([
-    { status: 403, overall: 'pass', denied: true },
+    { status: 403, overall: 'warn', denied: true },
     { status: 401, overall: 'fail', denied: false },
     { status: 503, overall: 'fail', denied: false },
   ])('distinguishes a Resend inspection limit from a real connection failure (%j)', async ({ status, overall, denied }) => {
@@ -240,8 +251,14 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
       expect(report.steps.find(step => step.id === 'resend_domains_check')).toMatchObject({
         status: denied ? 'warn' : 'fail', data: { denied }, error: { status },
       });
-      if (denied) expect(report.recommendations).toEqual([]);
-      else expect(report.recommendations.length).toBeGreaterThan(0);
+      // A domains-check denial is an inspection limit, not proof sending is forbidden.
+      if (denied) {
+        expect(report.recommendations).toEqual([]);
+        expect(report.steps.find(step => step.id === 'resend_domains_check')?.detail)
+          .toMatch(/Some API keys allow sending email without access to domain settings/);
+      } else {
+        expect(report.recommendations.length).toBeGreaterThan(0);
+      }
     } finally {
       create.mockRestore();
     }
@@ -383,9 +400,9 @@ describe('runOutboundEmailDiagnosticsWithSettings', () => {
       data: { requiresReconciliation: true, definitelyNotSent: false },
       error: { code: 'ETIMEDOUT', message: 'Request timed out after submission' },
     });
-    expect(report.recommendations).toEqual([
+    expect(report.recommendations).toContain(
       'The email service did not confirm the result. Check the recipient’s inbox and spam folder before sending another test email.',
-    ]);
+    );
   });
 
   it.each(['microsoft', 'smtp', 'resend'] as const)('does not claim a %s message was rejected when a plain timeout has no delivery evidence', async (providerType) => {

@@ -111,7 +111,7 @@ const HEADER_RESPONSE = {
   },
 };
 
-async function runAgainstGraph(response: unknown) {
+async function runAgainstGraph(response: unknown, sentItemsResponse?: unknown) {
   const adapter = makeAdapter();
   const post = vi.fn(async () => {
     throw {
@@ -129,7 +129,7 @@ async function runAgainstGraph(response: unknown) {
     }
     if (String(url).includes('/mailFolders/sentitems')) {
       throw {
-        response: {
+        response: sentItemsResponse ?? {
           status: 404,
           headers: {},
           data: { error: { code: 'ErrorItemNotFound', message: 'Mailbox folder not found' } },
@@ -256,5 +256,82 @@ describe('outbound Graph body-only correlation ids (adapter -> provider -> repor
     expect(bundleJson).toContain('header-client-403');
     expect(bundleJson).not.toContain('body-request-403');
     expect(bundleJson).not.toContain('body-client-403');
+  });
+
+  it('retains body-only Sent Items GET 403 correlation ids in the step and export, with a sanitized message', async () => {
+    const report = await runAgainstGraph(
+      BODY_ONLY_RESPONSE,
+      {
+        status: 403,
+        headers: {},
+        data: {
+          error: {
+            code: 'ErrorAccessDenied',
+            message: 'PRIVATE-SENTITEMS-MESSAGE',
+            innerError: {
+              'request-id': 'sentitems-body-req',
+              'client-request-id': 'sentitems-body-cli',
+              secret: 'sentitems-seeded-secret',
+            },
+          },
+        },
+      },
+    );
+
+    const step = report.steps.find((s) => s.id === 'sent_items_writable');
+    expect(step?.status).toBe('warn');
+    expect(step?.error).toMatchObject({
+      status: 403,
+      code: 'ErrorAccessDenied',
+      requestId: 'sentitems-body-req',
+      clientRequestId: 'sentitems-body-cli',
+    });
+    expect(step?.error?.message).toBe('Microsoft Graph denied the Sent Items folder lookup.');
+    expect(step?.http).toMatchObject({
+      method: 'GET',
+      status: 403,
+      requestId: 'sentitems-body-req',
+      clientRequestId: 'sentitems-body-cli',
+    });
+    expect(step?.data).toMatchObject({
+      writabilityVerified: false,
+      saveToSentItems: true,
+      accessCheckStatus: 403,
+      accessCheckCode: 'ErrorAccessDenied',
+    });
+
+    const bundleJson = JSON.stringify(report.supportBundle);
+    expect(bundleJson).toContain('sentitems-body-req');
+    expect(bundleJson).toContain('sentitems-body-cli');
+    expect(bundleJson).toContain('ErrorAccessDenied');
+    expect(bundleJson).not.toContain('PRIVATE-SENTITEMS-MESSAGE');
+    expect(bundleJson).not.toContain('sentitems-seeded-secret');
+
+    const reportJson = JSON.stringify(report);
+    expect(reportJson).not.toContain('PRIVATE-SENTITEMS-MESSAGE');
+    expect(reportJson).not.toContain('sentitems-seeded-secret');
+  });
+
+  it('prefers header correlation ids over a conflicting body-only Sent Items 403', async () => {
+    const report = await runAgainstGraph(BODY_ONLY_RESPONSE, {
+      status: 403,
+      headers: { 'request-id': 'sentitems-header-req', 'client-request-id': 'sentitems-header-cli' },
+      data: {
+        error: {
+          code: 'ErrorAccessDenied',
+          message: 'Denied',
+          innerError: { 'request-id': 'sentitems-body-req', 'client-request-id': 'sentitems-body-cli' },
+        },
+      },
+    });
+
+    const step = report.steps.find((s) => s.id === 'sent_items_writable');
+    expect(step?.error).toMatchObject({
+      requestId: 'sentitems-header-req',
+      clientRequestId: 'sentitems-header-cli',
+    });
+    const bundleJson = JSON.stringify(report.supportBundle);
+    expect(bundleJson).toContain('sentitems-header-req');
+    expect(bundleJson).not.toContain('sentitems-body-req');
   });
 });

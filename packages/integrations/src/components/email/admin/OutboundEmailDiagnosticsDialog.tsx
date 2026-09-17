@@ -23,7 +23,6 @@ import type {
   OutboundEmailDiagnosticsReport,
   OutboundStep,
 } from '@alga-psa/email';
-import { isAdvisoryOutboundStep } from '@alga-psa/email/diagnostics/outboundTypes';
 import { runOutboundEmailDiagnostics } from '../../../actions/email-actions/emailSettingsActions';
 
 function statusIcon(status: OutboundStep['status']) {
@@ -296,8 +295,7 @@ export function OutboundEmailDiagnosticsDialog({
 
             <div className="border rounded-md divide-y">
               {report.steps.filter(step =>
-                !isAdvisoryOutboundStep(step)
-                && !(step.id === 'live_send_test' && step.status === 'skip')
+                !(step.id === 'live_send_test' && step.status === 'skip')
                 && !(['outbound_provider_selected', 'mailbox_base_path', 'tokens_present'].includes(step.id) && step.status === 'pass')
               ).map(step => (
                 <div key={step.id} className="p-3 space-y-2">
@@ -329,12 +327,12 @@ export function OutboundEmailDiagnosticsDialog({
                   })}
                 </p>
               )}
-              {report.steps.some(step => step.id !== 'sent_items_writable' && isAdvisoryOutboundStep(step)) && (
+              {report.steps.some(step => step.id === 'token_claims' && step.status === 'warn') && (
                 <p className="text-sm text-muted-foreground">{t('outboundDiagnostics.limitedChecksHelp', {
                   defaultValue: 'Some account information was unavailable for these checks. Send a test email to check whether sending works.',
                 })}</p>
               )}
-              {report.steps.some(step => step.id === 'sent_items_writable' && step.status === 'warn') && (
+              {report.steps.some(step => step.id === 'sent_items_writable' && step.status === 'warn' && step.error) && (
                 <p className="text-sm text-muted-foreground">{t('outboundDiagnostics.sentItemsHelp', {
                   defaultValue: 'The Sent Items folder could not be checked. After sending a test email, check that a copy appears in the sending mailbox’s Sent Items folder.',
                 })}</p>

@@ -70,7 +70,7 @@ function makeReport(overrides: Record<string, any> = {}) {
       checkedCapabilities: ['oauth_tokens'],
       liveSendRequested: false,
       liveSendPerformed: false,
-      overallStatus: 'pass',
+      overallStatus: 'warn',
     },
     steps: [
       {
@@ -82,12 +82,27 @@ function makeReport(overrides: Record<string, any> = {}) {
         data: { userPrincipalName: 'auth@example.com' },
       },
       {
+        id: 'mailbox_base_path',
+        title: 'Sending mailbox',
+        status: 'pass',
+        durationMs: 1,
+        data: { relation: 'shared', isSharedOrDelegated: true },
+      },
+      {
+        id: 'send_as_probe',
+        title: 'Exchange Send As verification',
+        status: 'warn',
+        durationMs: 1,
+        detail: 'Sending as this mailbox has not been verified. Exchange Send As has not been confirmed.',
+        data: { mailboxRelation: 'shared', requiresSendAs: true, authoritative: false },
+      },
+      {
         id: 'sent_items_writable',
-        title: 'Sent Items accessibility',
+        title: 'Sent Items folder',
         status: 'warn',
         durationMs: 3,
-        detail: 'Sent Items folder could not be inspected.',
-        error: { message: 'Not verified', status: 403, code: 'ErrorAccessDenied', requestId: 'req-403' },
+        detail: 'The Sent Items folder is readable, but this check does not verify the ability to write or save sent messages.',
+        error: { message: 'Microsoft Graph denied the Sent Items folder lookup.', status: 403, code: 'ErrorAccessDenied', requestId: 'req-403' },
       },
     ],
     recommendations: [],
@@ -129,9 +144,12 @@ describe('OutboundEmailDiagnosticsDialog', () => {
     expect(technical).not.toHaveAttribute('open');
     expect(technical).not.toHaveTextContent('sender@example.com');
     expect(technical).toHaveTextContent('req-1');
-    expect(screen.getByText('Setup checks passed')).toBeInTheDocument();
+    // The headline reflects unresolved warnings instead of claiming a pass.
+    expect(screen.getByText('Some checks could not be completed')).toBeInTheDocument();
     expect(screen.getByText('These checks did not send an email.')).toBeInTheDocument();
-    expect(screen.queryByText('Sent Items accessibility')).not.toBeInTheDocument();
+    // Unresolved warning rows are visible, not hidden.
+    expect(screen.getByText('Sent Items folder')).toBeInTheDocument();
+    expect(screen.getByText(/does not verify the ability to write or save sent messages/)).toBeInTheDocument();
     expect(screen.getByText(/The Sent Items folder could not be checked/)).toBeInTheDocument();
     expect(screen.getByText(/Share this report with support/)).toBeInTheDocument();
   });
@@ -216,12 +234,50 @@ describe('OutboundEmailDiagnosticsDialog', () => {
     expect(document.querySelector('textarea')).toBeNull();
   });
 
-  it('offers send verification as guidance beside the live-send action', async () => {
+  it('shows the Exchange Send As advisory and the live-send guidance outside technical details', async () => {
     render(<OutboundEmailDiagnosticsDialog isOpen onClose={() => {}} />);
-    const guidance = await screen.findByText('Send a test email to confirm this account can send from the selected mailbox.');
+    const advisory = await screen.findByText('Exchange Send As verification');
+    expect(advisory.closest('details')).toBeNull();
+    expect(await screen.findByText('Sending as this mailbox has not been verified. Exchange Send As has not been confirmed.')).toBeInTheDocument();
+    const guidance = screen.getByText('Send a test email to confirm this account can send from the selected mailbox.');
     expect(guidance.closest('details')).toBeNull();
-    expect(screen.queryByText('Exchange Send As verification')).not.toBeInTheDocument();
     expect(runOutboundEmailDiagnosticsMock).toHaveBeenCalledWith({ liveSendTest: false, recipient: undefined });
+  });
+
+  it('renders opaque-token and Resend inspection warnings as visible rows with a warning headline', async () => {
+    runOutboundEmailDiagnosticsMock.mockResolvedValue({
+      success: true,
+      report: makeReport({
+        summary: { ...makeReport().summary, providerType: 'resend', overallStatus: 'warn' },
+        steps: [
+          {
+            id: 'token_claims',
+            title: 'Microsoft 365 app permissions',
+            status: 'warn',
+            durationMs: 1,
+            detail: 'Email permissions could not be checked. Send a test email to check whether this account can send.',
+            data: { decoded: false, scopesAvailable: false },
+          },
+          {
+            id: 'resend_domains_check',
+            title: 'Resend connection',
+            status: 'warn',
+            durationMs: 1,
+            detail: 'Resend did not allow this check. Some API keys allow sending email without access to domain settings. Send a test email to check sending.',
+            error: { message: 'Request denied', status: 403 },
+            data: { denied: true },
+          },
+        ],
+      }),
+    });
+    render(<OutboundEmailDiagnosticsDialog isOpen onClose={() => {}} />);
+
+    expect(await screen.findByText('Some checks could not be completed')).toBeInTheDocument();
+    expect(await screen.findByText('Microsoft 365 app permissions')).toBeInTheDocument();
+    expect(screen.getByText(/Some account information was unavailable for these checks/)).toBeInTheDocument();
+    expect(screen.getByText('Resend connection')).toBeInTheDocument();
+    // A domains denial is an inspection limit, never a confirmed send failure.
+    expect(screen.getByText(/Some API keys allow sending email without access to domain settings/)).toBeInTheDocument();
   });
 
   it('removes the invitation to verify sending after a live send has run', async () => {
@@ -235,11 +291,11 @@ describe('OutboundEmailDiagnosticsDialog', () => {
 
   it('removes the previous report when a rerun fails', async () => {
     render(<OutboundEmailDiagnosticsDialog isOpen onClose={() => {}} />);
-    await screen.findByText('Setup checks passed');
+    await screen.findByText('Some checks could not be completed');
     runOutboundEmailDiagnosticsMock.mockResolvedValue({ success: false, error: 'Permission denied' });
     fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
     await screen.findByText('Permission denied');
-    expect(screen.queryByText('Setup checks passed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Some checks could not be completed')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Copy report' })).not.toBeInTheDocument();
   });
 
