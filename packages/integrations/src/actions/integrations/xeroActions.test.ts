@@ -455,7 +455,12 @@ describe('Xero integration actions', () => {
     expect(xeroCreateMock).not.toHaveBeenCalled();
   });
 
-  it('T016e: an ambiguous persisted organisation fails closed in status and catalogs', async () => {
+  it.each([
+    ['Xero accounts', getXeroAccounts],
+    ['Xero items', getXeroItems],
+    ['Xero tax rates', getXeroTaxRates],
+    ['Xero tracking categories', getXeroTrackingCategories],
+  ] as const)('T016e: an ambiguous persisted organisation fails closed in status and %s', async (catalogName, getCatalog) => {
     tenantSecrets.set('tenant-1:xero_client_id', 'client-id');
     tenantSecrets.set('tenant-1:xero_client_secret', 'client-secret');
     getXeroConnectionSummariesMock.mockResolvedValue([
@@ -472,11 +477,13 @@ describe('Xero integration actions', () => {
     // Never silently falls back to the unrelated first connection.
     expect(status.defaultConnectionId).toBeUndefined();
 
-    const result = await getXeroAccounts();
-    expect(result).toMatchObject({
-      actionError: expect.stringContaining('more than one connection'),
-      messageKey: 'msp/integrations:errors.xero.organisationAmbiguous'
-    });
+    for (const connectionId of [undefined, null]) {
+      const result = await getCatalog(connectionId);
+      expect(result).toEqual({
+        actionError: `The saved default Xero organisation is owned by more than one connection, so ${catalogName} cannot be loaded. Choose which connection is the default in the accounting settings.`,
+        messageKey: 'msp/integrations:errors.xero.organisationAmbiguous'
+      });
+    }
     expect(xeroCreateMock).not.toHaveBeenCalled();
   });
 

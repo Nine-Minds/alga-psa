@@ -622,7 +622,7 @@ export const getXeroAccounts = withAuth(async (
   if (accessError) return accessError;
 
   const target = await resolveXeroCatalogTarget(tenant, connectionId, 'accounts');
-  if (!target.ok) return target.error;
+  if (target.ok === false) return target.error;
   const targetConnectionId = target.connectionId;
   const connectionError = await getXeroCatalogConnectionError(tenant, targetConnectionId, 'accounts');
   if (connectionError) return connectionError;
@@ -651,7 +651,7 @@ export const getXeroItems = withAuth(async (
   if (accessError) return accessError;
 
   const target = await resolveXeroCatalogTarget(tenant, connectionId, 'items');
-  if (!target.ok) return target.error;
+  if (target.ok === false) return target.error;
   const targetConnectionId = target.connectionId;
   const connectionError = await getXeroCatalogConnectionError(tenant, targetConnectionId, 'items');
   if (connectionError) return connectionError;
@@ -680,7 +680,7 @@ export const getXeroTaxRates = withAuth(async (
   if (accessError) return accessError;
 
   const target = await resolveXeroCatalogTarget(tenant, connectionId, 'taxRates');
-  if (!target.ok) return target.error;
+  if (target.ok === false) return target.error;
   const targetConnectionId = target.connectionId;
   const connectionError = await getXeroCatalogConnectionError(tenant, targetConnectionId, 'taxRates');
   if (connectionError) return connectionError;
@@ -711,7 +711,7 @@ export const getXeroTrackingCategories = withAuth(async (
   if (accessError) return accessError;
 
   const target = await resolveXeroCatalogTarget(tenant, connectionId, 'trackingCategories');
-  if (!target.ok) return target.error;
+  if (target.ok === false) return target.error;
   const targetConnectionId = target.connectionId;
   const connectionError = await getXeroCatalogConnectionError(tenant, targetConnectionId, 'trackingCategories');
   if (connectionError) return connectionError;
