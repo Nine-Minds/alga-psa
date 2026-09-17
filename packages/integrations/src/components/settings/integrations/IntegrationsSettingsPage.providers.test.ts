@@ -34,7 +34,7 @@ describe('IntegrationsSettingsPage providers tab', () => {
     expect(source).toContain("id: 'communication'");
     expect(source).toContain("id: 'teams'");
     expect(source).toContain('...(isEEAvailable ? [{');
-    expect(source).toContain('component: TeamsEnterpriseIntegrationSettings');
+    expect(source).toContain('content: <TeamsEnterpriseIntegrationSettings />');
     expect(source).toContain("t('integrations.categories.communication.description')");
     expect(source).toContain("t('integrations.categories.providers.description.ee')");
     expect(source).toContain("t('integrations.categories.providers.description.oss')");
