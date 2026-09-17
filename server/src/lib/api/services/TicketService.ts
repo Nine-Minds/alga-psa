@@ -1778,16 +1778,29 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
       
+      const statusChanged =
+        !!cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id;
+
+      // Resolve the old/new status rows once, up front. The statuses table is
+      // not mutated by this method, so hoisting these reads above the write is
+      // safe; it lets the denormalized close fields be folded into the same
+      // UPDATE that produces the returned row. Mirrors the "keep is_closed in
+      // sync" handling in updateTicketWithCache / ticketBundleUtils.
+      const nextStatus = statusChanged
+        ? await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: cleanedData.status_id })
+          .first()
+        : null;
+      const previousStatus = statusChanged
+        ? await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: currentTicket.status_id })
+          .first()
+        : null;
+
       // Pre-close validation gates: when this update flips the ticket from an
       // open to a closed status, enforce the board's close rules before any
       // writes. Surfaces as a 422 with structured failure details.
-      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
-        const nextStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: cleanedData.status_id })
-          .first();
-        const previousStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: currentTicket.status_id })
-          .first();
+      if (statusChanged) {
         if (nextStatus?.is_closed && !previousStatus?.is_closed) {
           const merged = { ...currentTicket, ...cleanedData };
           try {
@@ -1827,11 +1840,33 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      const updateData = {
+      const updateData: Record<string, unknown> = {
         ...cleanedData,
         updated_by: context.userId,
         updated_at: knex.raw('now()')
       };
+
+      // Fold the denormalized close fields into the same write whose result is
+      // returned, so the response cannot report a stale is_closed / closed_at.
+      // Derived values are applied after the spread so they win when the status
+      // crosses the closed boundary; a caller-supplied closed_by / closed_at
+      // still applies on a status change that does not cross it.
+      // LEVERAGE: pattern close-denormalization — the same set-or-clear
+      // is_closed/closed_at/closed_by shape is duplicated in
+      // optimizedTicketActions.updateTicketWithCache and
+      // ticketBundleUtils.maybeReopenBundleMasterFromChildReply.
+      let closedAt: Date | null = null;
+      if (statusChanged) {
+        updateData.is_closed = !!nextStatus?.is_closed;
+        if (nextStatus?.is_closed && !previousStatus?.is_closed) {
+          closedAt = new Date();
+          updateData.closed_at = closedAt;
+          updateData.closed_by = context.userId;
+        } else if (!nextStatus?.is_closed && previousStatus?.is_closed) {
+          updateData.closed_at = null;
+          updateData.closed_by = null;
+        }
+      }
 
       // Changing the primary assignee requires clearing the ticket_resources
       // rows that reference the old one, then re-keying them afterwards.
@@ -1865,36 +1900,12 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       // Publish appropriate events
-      if (data.status_id && data.status_id !== currentTicket.status_id) {
-        // Check if ticket is being closed or reopened
-        const newStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: data.status_id })
-          .first();
-        const oldStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: currentTicket.status_id })
-          .first();
-
-        // Keep the ticket row's denormalized close flag aligned with the selected status.
-        await tenantScopedTable(trx, 'tickets', context.tenant)
-          .where({ ticket_id: id })
-          .update({ is_closed: !!newStatus?.is_closed });
-
-        // Record closed_at / closed_by when transitioning to/from closed status
-        if (newStatus?.is_closed && !oldStatus?.is_closed) {
-          await tenantScopedTable(trx, 'tickets', context.tenant)
-            .where({ ticket_id: id })
-            .update({ closed_at: new Date(), closed_by: context.userId });
-        } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
-          await tenantScopedTable(trx, 'tickets', context.tenant)
-            .where({ ticket_id: id })
-            .update({ closed_at: null, closed_by: null });
-        }
-
-        if (newStatus?.is_closed) {
+      if (statusChanged) {
+        if (nextStatus?.is_closed) {
           await this.safePublishEvent('TICKET_CLOSED', context, {
             ticketId: ticket.ticket_id,
             closedByUserId: context.userId,
-            closedAt: new Date().toISOString(),
+            closedAt: (closedAt ?? new Date()).toISOString(),
             suppressContactNotifications,
             suppressInternalNotifications,
           });
