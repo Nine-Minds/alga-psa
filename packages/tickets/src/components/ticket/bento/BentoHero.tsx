@@ -15,6 +15,7 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
 import { TagManager } from '@alga-psa/tags/components';
 import type { ITag, ITicket, ITeam, ITicketResource, IUser, IUserWithRoles } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -208,6 +209,7 @@ export function BentoHero({
   resolveTicketAttachmentViewUrl,
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
+  const [additionalAgentsOpen, setAdditionalAgentsOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -1092,29 +1094,41 @@ export function BentoHero({
                   </Badge>
                 </Tooltip>
               ) : null}
-              {additionalAgentEntries.map((agent) => {
-                const label = onAgentClick
-                  ? `${t('bento.hero.viewSchedule', 'View schedule')}: ${agent.name}`
-                  : agent.name;
-                const avatar = <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />;
-                return (
-                  <Tooltip key={agent.userId} content={label}>
-                    {onAgentClick ? (
+              {additionalAgentEntries.length > 0 && (
+                <Popover open={additionalAgentsOpen} onOpenChange={setAdditionalAgentsOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      id={`${id}-additional-agents`}
+                      type="button"
+                      aria-label={t('bento.hero.additionalAgentsTooltip')}
+                      className="rounded-full px-2 py-1 text-xs font-medium bg-[rgb(var(--color-border-100))] hover:bg-[rgb(var(--color-border-200))] focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]"
+                    >
+                      +{additionalAgentEntries.length}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-64 p-2">
+                    <p className="px-2 py-1 text-xs text-[rgb(var(--color-text-500))]">
+                      {t('bento.hero.additionalAgentsTooltip')}
+                    </p>
+                    {additionalAgentEntries.map((agent, index) => (
                       <button
-                        id={`${id}-additional-agent-${agent.userId}`}
+                        key={agent.userId}
+                        id={`${id}-additional-agent-${index}`}
                         type="button"
-                        aria-label={label}
-                        className="rounded-full hover:ring-2 hover:ring-[rgb(var(--color-primary-300))]"
-                        onClick={() => onAgentClick(agent.userId)}
+                        disabled={!onAgentClick}
+                        className="flex w-full items-center gap-2 rounded px-2 py-2 text-left hover:bg-[rgb(var(--color-border-100))] focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]"
+                        onClick={() => {
+                          setAdditionalAgentsOpen(false);
+                          onAgentClick?.(agent.userId);
+                        }}
                       >
-                        {avatar}
+                        <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />
+                        <span className="truncate">{agent.name}</span>
                       </button>
-                    ) : (
-                      <span id={`${id}-additional-agent-${agent.userId}`} className="cursor-help">{avatar}</span>
-                    )}
-                  </Tooltip>
-                );
-              })}
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              )}
               </>
             ))}
           </HeroField>
