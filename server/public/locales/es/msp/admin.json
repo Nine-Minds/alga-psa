@@ -659,6 +659,79 @@
       "skip": "Omitido"
     }
   },
+  "outboundDiagnostics": {
+    "title": "Diagnóstico de correo saliente",
+    "description": "Ejecuta la configuración saliente guardada mediante una lista de comprobación del proveedor. No se envía ningún mensaje a menos que active explícitamente la opción de envío real a continuación.",
+    "unsavedNotice": "Los cambios sin guardar en esta pantalla no se incluyen. Guarde la configuración antes de ejecutar el diagnóstico.",
+    "states": {
+      "running": "Ejecutando diagnóstico...",
+      "failed": "El diagnóstico falló",
+      "copyFailed": "No se pudo copiar el paquete de soporte. Use Descargar para guardarlo como archivo.",
+      "checking": "Comprobando la configuración de correo electrónico…"
+    },
+    "actions": {
+      "retry": "Reintentar",
+      "rerun": "Ejecutar de nuevo",
+      "copyBundle": "Copiar paquete de soporte",
+      "copied": "Copiado",
+      "downloadBundle": "Descargar"
+    },
+    "labels": {
+      "overall": "General:",
+      "provider": "Proveedor:",
+      "effectiveSender": "Remitente efectivo:",
+      "authorizedUser": "Usuario autorizado:",
+      "mailboxRoute": "Ruta del buzón:",
+      "recommendations": "Recomendaciones",
+      "error": "Error",
+      "redacted": "La exportación de soporte oculta los identificadores de buzón de forma predeterminada."
+    },
+    "statuses": {
+      "pass": "Correcto",
+      "warn": "Advertencia",
+      "fail": "Error",
+      "skip": "Omitido"
+    },
+    "liveSend": {
+      "label": "Enviar un mensaje de prueba (real)",
+      "recipient": "Destinatario",
+      "run": "Ejecutar con envío real",
+      "invalidRecipient": "Introduzca una dirección de correo del destinatario válida.",
+      "permissionHelp": "Envíe un correo electrónico de prueba para confirmar que esta cuenta puede enviar desde el buzón seleccionado.",
+      "enableTest": "Enviar un correo electrónico de prueba",
+      "sendTo": "Enviar a",
+      "sendTest": "Enviar correo electrónico de prueba",
+      "sending": "Enviando correo electrónico de prueba…",
+      "unconfirmed": "No se pudo confirmar si se envió el correo electrónico de prueba. Revise la bandeja de entrada del destinatario antes de volver a intentarlo."
+    },
+    "introduction": "Compruebe la configuración de correo electrónico guardada. Enviar un correo electrónico de prueba es opcional.",
+    "checkStatus": {
+      "pass": "Correcto",
+      "warn": "Requiere atención",
+      "fail": "Falló",
+      "skip": "Sin comprobar"
+    },
+    "result": {
+      "pass": "Las comprobaciones de configuración fueron satisfactorias",
+      "warn": "No se pudieron completar algunas comprobaciones",
+      "fail": "Falló una comprobación de correo electrónico",
+      "skip": "No se pudieron completar algunas comprobaciones"
+    },
+    "noTestSent": "Estas comprobaciones no enviaron ningún correo electrónico.",
+    "emailService": "Servicio de correo electrónico",
+    "sender": "De",
+    "connectedAccount": "Cuenta conectada",
+    "checkAgain": "Volver a comprobar",
+    "nextSteps": "Próximos pasos",
+    "limitedChecksHelp": "Parte de la información de la cuenta no estuvo disponible para estas comprobaciones. Envíe un correo electrónico de prueba para comprobar si el envío funciona.",
+    "sentItemsHelp": "No se pudo comprobar la carpeta Elementos enviados. Después de enviar un correo electrónico de prueba, compruebe que aparezca una copia en la carpeta Elementos enviados del buzón remitente.",
+    "copyReport": "Copiar informe",
+    "downloadReport": "Descargar informe",
+    "copyConfirmed": "Informe copiado al portapapeles.",
+    "copyReportFailed": "No se pudo copiar el informe. Use Descargar informe para guardarlo como archivo.",
+    "shareHelp": "Comparta este informe con soporte. Las direcciones de correo electrónico y los identificadores de cuenta están ocultos.",
+    "technicalDetails": "Detalles técnicos para soporte"
+  },
   "integrations": {
     "entra": {
       "diagnostics": {

@@ -180,6 +180,29 @@ describe('SMTPEmailProvider mail options construction', () => {
     const permanent = await provider.sendEmail(baseMessage(), 'tenant-1');
     expect(permanent.metadata).toMatchObject({ retryable: false });
   });
+
+  it('preserves native responseCode/response/command metadata on rejection (no AUTH payload)', async () => {
+    const { provider, transporter } = await initializedProvider();
+    transporter.sendMail.mockRejectedValueOnce(
+      Object.assign(new Error('auth failed'), {
+        code: 'EAUTH',
+        responseCode: 535,
+        command: 'AUTH',
+        response: '535 5.7.8 Authentication credentials invalid',
+      })
+    );
+
+    const result = await provider.sendEmail(baseMessage(), 'tenant-1');
+
+    expect(result.success).toBe(false);
+    expect(result.metadata).toMatchObject({
+      errorCode: 'EAUTH',
+      command: 'AUTH',
+      responseCode: 535,
+      status: 535,
+      response: '535 5.7.8 Authentication credentials invalid',
+    });
+  });
 });
 
 describe('SMTPEmailProvider config validation', () => {

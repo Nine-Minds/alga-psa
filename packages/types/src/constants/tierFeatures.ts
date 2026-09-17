@@ -43,7 +43,7 @@ export type TierFeature = TIER_FEATURES;
  * Reverse mapping: minimum tier required for each feature.
  */
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
-  [TIER_FEATURES.INTEGRATIONS]: 'solo',
+  [TIER_FEATURES.INTEGRATIONS]: 'pro',
   [TIER_FEATURES.EXTENSIONS]: 'solo',
   [TIER_FEATURES.SSO]: 'solo',
   [TIER_FEATURES.ADVANCED_ASSETS]: 'solo',

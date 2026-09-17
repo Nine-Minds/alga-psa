@@ -17,6 +17,7 @@ export default defineConfig({
     'utils/encryption': 'utils/encryption.ts',
     'utils/retryUtils': 'utils/retryUtils.ts',
     'services/email/microsoftEmailProviderConfig': 'services/email/microsoftEmailProviderConfig.ts',
+    'services/email/microsoftGraphDiagnostics': 'services/email/microsoftGraphDiagnostics.ts',
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',
     'services/diagnostics/index': 'services/diagnostics/index.ts',
     'services/entra/entraCallbackUrl': 'services/entra/entraCallbackUrl.ts',

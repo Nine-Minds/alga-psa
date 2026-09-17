@@ -803,7 +803,8 @@
           "recipientPlaceholder": "ty@przyklad.com",
           "testingButton": "Testowanie...",
           "runButton": "Testuj połączenie"
-        }
+        },
+        "ticketIdentityRequired": "Wybierz poniżej tożsamość e-mail zgłoszeń, aby ustawić domenę wysyłania."
       },
       "ticketingFrom": {
         "title": "Adres nadawcy zgłoszeń",
@@ -856,7 +857,8 @@
           "microsoftAddressHelp": "Microsoft 365 wymaga, aby wiadomości e-mail dotyczące zgłoszeń korzystały z wybranej skrzynki nadawczej ({{mailbox}}).",
           "nameLabel": "Wyświetlana nazwa nadawcy",
           "namePlaceholder": "Pomoc techniczna",
-          "nameHelp": "Pozostaw puste, aby użyć nazwy podłączonej skrzynki pocztowej lub tablicy zgłoszeń."
+          "nameHelp": "Pozostaw puste, aby użyć nazwy podłączonej skrzynki pocztowej lub tablicy zgłoszeń.",
+          "smtpAddressHelp": "Ten adres ustawia domenę nadawcy SMTP powyżej. Odpowiedzi muszą dotrzeć do połączonej skrzynki odbiorczej, aby pojawić się w zgłoszeniach."
         },
         "notification": {
           "title": "Tożsamość nadawcy pozostałej poczty",
@@ -875,7 +877,18 @@
         "clearButton": "Wyczyść tożsamość nadawcy zgłoszeń",
         "savingButton": "Zapisywanie...",
         "saveButton": "Zapisz tożsamości nadawców"
-      }
+      },
+      "diagnosticsButton": "Uruchom diagnostykę poczty wychodzącej",
+      "saveSettings": "Zapisz ustawienia poczty wychodzącej",
+      "discardChanges": "Odrzuć zmiany",
+      "unsaved": "Niezapisane zmiany",
+      "noPendingChanges": "Brak niezapisanych zmian",
+      "saving": "Zapisywanie ustawień poczty wychodzącej…",
+      "saved": "Ustawienia poczty wychodzącej zapisane.",
+      "saveFailed": "Nie udało się zapisać ustawień poczty wychodzącej. Twoje zmiany nadal są dostępne. Spróbuj ponownie.",
+      "diagnosticsSaveHelp": "Zapisz lub odrzuć zmiany przed sprawdzeniem ustawień poczty wychodzącej.",
+      "saveBeforeDomainRemoval": "Zapisz lub odrzuć zmiany poczty wychodzącej przed usunięciem domeny.",
+      "senderAddressAfterSave": "Wyświetlane po zapisaniu."
     },
     "inbound": {
       "intro": "Skonfiguruj routing poczty przychodzącej i automatyzację specyficzną dla dostawcy."

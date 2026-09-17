@@ -74,7 +74,7 @@ test('Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph 
     await page.getByRole('option', { name: `${name} — ${mailbox}`, exact: true }).click();
     await page.locator('#ticket-from-inbox').click();
     await page.getByRole('option', { name: mailbox, exact: true }).click();
-    await page.locator(enterprise ? '#save-sender-identities' : '#save-email-settings').click();
+    await page.locator(enterprise ? '#save-outbound-settings' : '#save-email-settings').click();
     await expect.poll(async () => database('tenant_email_settings').where(scope).first())
       .toMatchObject({ email_provider: 'microsoft', ticketing_from_email: mailbox });
 

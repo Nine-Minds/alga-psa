@@ -7,6 +7,12 @@ import {
 } from './tierFeatures';
 
 describe('tierFeatures', () => {
+  it('requires Pro for paid integrations', () => {
+    expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.INTEGRATIONS]).toBe('pro');
+    expect(tierHasFeature('essentials', TIER_FEATURES.INTEGRATIONS)).toBe(false);
+    expect(tierHasFeature('solo', TIER_FEATURES.INTEGRATIONS)).toBe(false);
+    expect(tierHasFeature('pro', TIER_FEATURES.INTEGRATIONS)).toBe(true);
+  });
   describe('TIER_FEATURES enum', () => {
     it('contains all tier-gated feature keys', () => {
       expect(TIER_FEATURES.INTEGRATIONS).toBe('INTEGRATIONS');
@@ -27,7 +33,6 @@ describe('tierFeatures', () => {
   describe('TIER_FEATURE_MAP', () => {
     it('solo tier has access to all solo-minimum features', () => {
       expect(TIER_FEATURE_MAP.solo).toEqual([
-        TIER_FEATURES.INTEGRATIONS,
         TIER_FEATURES.EXTENSIONS,
         TIER_FEATURES.SSO,
         TIER_FEATURES.ADVANCED_ASSETS,
@@ -59,7 +64,7 @@ describe('tierFeatures', () => {
 
   describe('tierHasFeature', () => {
     it('solo has access to the newly unlocked features', () => {
-      expect(tierHasFeature('solo', TIER_FEATURES.INTEGRATIONS)).toBe(true);
+      expect(tierHasFeature('solo', TIER_FEATURES.INTEGRATIONS)).toBe(false);
       expect(tierHasFeature('solo', TIER_FEATURES.EXTENSIONS)).toBe(true);
       expect(tierHasFeature('solo', TIER_FEATURES.SSO)).toBe(true);
       expect(tierHasFeature('solo', TIER_FEATURES.ADVANCED_ASSETS)).toBe(true);
@@ -99,7 +104,7 @@ describe('tierFeatures', () => {
 
   describe('FEATURE_MINIMUM_TIER', () => {
     it('maps previously-Pro-only features to solo', () => {
-      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.INTEGRATIONS]).toBe('solo');
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.INTEGRATIONS]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.EXTENSIONS]).toBe('solo');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.SSO]).toBe('solo');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_ASSETS]).toBe('solo');

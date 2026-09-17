@@ -659,6 +659,79 @@
       "skip": "Overgeslagen"
     }
   },
+  "outboundDiagnostics": {
+    "title": "Diagnose voor uitgaande e-mail",
+    "description": "Voert de opgeslagen uitgaande configuratie uit via een providerchecklist. Er wordt geen bericht verzonden tenzij u hieronder de optie voor live verzenden expliciet inschakelt.",
+    "unsavedNotice": "Niet-opgeslagen wijzigingen op dit scherm worden niet meegenomen. Sla de instellingen op voordat u de diagnose uitvoert.",
+    "states": {
+      "running": "Diagnose wordt uitgevoerd...",
+      "failed": "Diagnose mislukt",
+      "copyFailed": "Het ondersteuningspakket kon niet worden gekopieerd. Gebruik Downloaden om het als bestand op te slaan.",
+      "checking": "E-mailinstellingen controleren…"
+    },
+    "actions": {
+      "retry": "Opnieuw proberen",
+      "rerun": "Opnieuw uitvoeren",
+      "copyBundle": "Ondersteuningsbundel kopiëren",
+      "copied": "Gekopieerd",
+      "downloadBundle": "Downloaden"
+    },
+    "labels": {
+      "overall": "Algemeen:",
+      "provider": "Aanbieder:",
+      "effectiveSender": "Effectieve afzender:",
+      "authorizedUser": "Gemachtigde gebruiker:",
+      "mailboxRoute": "Mailboxroute:",
+      "recommendations": "Aanbevelingen",
+      "error": "Fout",
+      "redacted": "De ondersteuningsexport redigeert mailbox-ID's standaard."
+    },
+    "statuses": {
+      "pass": "Geslaagd",
+      "warn": "Waarschuwing",
+      "fail": "Mislukt",
+      "skip": "Overgeslagen"
+    },
+    "liveSend": {
+      "label": "Eén testbericht verzenden (live)",
+      "recipient": "Ontvanger",
+      "run": "Uitvoeren met live verzenden",
+      "invalidRecipient": "Voer een geldig e-mailadres van de ontvanger in.",
+      "permissionHelp": "Verzend een test-e-mail om te bevestigen dat dit account vanuit de geselecteerde mailbox kan verzenden.",
+      "enableTest": "Een test-e-mail verzenden",
+      "sendTo": "Verzenden naar",
+      "sendTest": "Test-e-mail verzenden",
+      "sending": "Test-e-mail verzenden…",
+      "unconfirmed": "We konden niet bevestigen of de test-e-mail is verzonden. Controleer het postvak IN van de ontvanger voordat u het opnieuw probeert."
+    },
+    "introduction": "Controleer uw opgeslagen e-mailinstellingen. Het verzenden van een test-e-mail is optioneel.",
+    "checkStatus": {
+      "pass": "Geslaagd",
+      "warn": "Aandacht nodig",
+      "fail": "Mislukt",
+      "skip": "Niet gecontroleerd"
+    },
+    "result": {
+      "pass": "Configuratiecontroles geslaagd",
+      "warn": "Sommige controles konden niet worden voltooid",
+      "fail": "Een e-mailcontrole is mislukt",
+      "skip": "Sommige controles konden niet worden voltooid"
+    },
+    "noTestSent": "Deze controles hebben geen e-mail verzonden.",
+    "emailService": "E-mailservice",
+    "sender": "Van",
+    "connectedAccount": "Verbonden account",
+    "checkAgain": "Opnieuw controleren",
+    "nextSteps": "Volgende stappen",
+    "limitedChecksHelp": "Sommige accountgegevens waren niet beschikbaar voor deze controles. Verzend een test-e-mail om te controleren of verzenden werkt.",
+    "sentItemsHelp": "De map Verzonden items kon niet worden gecontroleerd. Controleer na het verzenden van een test-e-mail of er een kopie in de map Verzonden items van de verzendende mailbox verschijnt.",
+    "copyReport": "Rapport kopiëren",
+    "downloadReport": "Rapport downloaden",
+    "copyConfirmed": "Rapport naar het klembord gekopieerd.",
+    "copyReportFailed": "Het rapport kon niet worden gekopieerd. Gebruik Rapport downloaden om het als bestand op te slaan.",
+    "shareHelp": "Deel dit rapport met ondersteuning. E-mailadressen en account-ID’s zijn verborgen.",
+    "technicalDetails": "Technische details voor ondersteuning"
+  },
   "integrations": {
     "entra": {
       "diagnostics": {

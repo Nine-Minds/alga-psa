@@ -803,7 +803,8 @@
           "recipientPlaceholder": "tu@ejemplo.com",
           "testingButton": "Probando...",
           "runButton": "Probar conexión"
-        }
+        },
+        "ticketIdentityRequired": "Seleccione una identidad de correo electrónico de tickets a continuación para establecer el dominio de envío."
       },
       "ticketingFrom": {
         "title": "Dirección de remitente de tickets",
@@ -856,7 +857,8 @@
           "microsoftAddressHelp": "Microsoft 365 requiere que el correo electrónico de tickets use el buzón de envío seleccionado ({{mailbox}}).",
           "nameLabel": "Nombre visible del remitente",
           "namePlaceholder": "Soporte",
-          "nameHelp": "Déjelo en blanco para usar el nombre del buzón conectado o del tablero de tickets."
+          "nameHelp": "Déjelo en blanco para usar el nombre del buzón conectado o del tablero de tickets.",
+          "smtpAddressHelp": "Esta dirección establece el dominio del remitente SMTP de arriba. Las respuestas deben llegar a una bandeja de entrada conectada para aparecer en los tickets."
         },
         "notification": {
           "title": "Identidad para todos los demás correos electrónicos",
@@ -875,7 +877,18 @@
         "clearButton": "Borrar identidad de tickets",
         "savingButton": "Guardando...",
         "saveButton": "Guardar identidades de remitente"
-      }
+      },
+      "diagnosticsButton": "Ejecutar diagnóstico de correo saliente",
+      "saveSettings": "Guardar configuración de salida",
+      "discardChanges": "Descartar cambios",
+      "unsaved": "Cambios sin guardar",
+      "noPendingChanges": "No hay cambios sin guardar",
+      "saving": "Guardando la configuración de salida…",
+      "saved": "Configuración de salida guardada.",
+      "saveFailed": "No se pudo guardar la configuración de salida. Sus cambios siguen aquí. Vuelva a intentarlo.",
+      "diagnosticsSaveHelp": "Guarde o descarte los cambios antes de comprobar la configuración de salida.",
+      "saveBeforeDomainRemoval": "Guarde o descarte los cambios de salida antes de eliminar un dominio.",
+      "senderAddressAfterSave": "Se muestra después de guardar."
     },
     "inbound": {
       "intro": "Configure el enrutamiento de correo entrante y la automatización específica del proveedor."

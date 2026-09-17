@@ -803,7 +803,8 @@
           "recipientPlaceholder": "voce@exemplo.com",
           "testingButton": "Testando...",
           "runButton": "Testar conexão"
-        }
+        },
+        "ticketIdentityRequired": "Escolha uma identidade de email de tickets abaixo para definir o domínio de envio."
       },
       "ticketingFrom": {
         "title": "Emissão de tickets no endereço",
@@ -856,7 +857,8 @@
           "microsoftAddressHelp": "O Microsoft 365 exige que o email dos tickets use a caixa de correio de envio selecionada ({{mailbox}}).",
           "nameLabel": "Nome de exibição do remetente",
           "namePlaceholder": "Suporte",
-          "nameHelp": "Deixe em branco para usar o nome da caixa de entrada conectada ou do quadro de tickets."
+          "nameHelp": "Deixe em branco para usar o nome da caixa de entrada conectada ou do quadro de tickets.",
+          "smtpAddressHelp": "Este endereço define o domínio do remetente SMTP acima. As respostas precisam chegar a uma caixa de entrada conectada para aparecer nos tickets."
         },
         "notification": {
           "title": "Identidade de todos os outros emails",
@@ -875,7 +877,18 @@
         "clearButton": "Limpar identidade dos tickets",
         "savingButton": "Salvando...",
         "saveButton": "Salvar identidades dos remetentes"
-      }
+      },
+      "diagnosticsButton": "Executar diagnóstico de e-mail de saída",
+      "saveSettings": "Salvar configurações de saída",
+      "discardChanges": "Descartar alterações",
+      "unsaved": "Alterações não salvas",
+      "noPendingChanges": "Nenhuma alteração não salva",
+      "saving": "Salvando as configurações de saída…",
+      "saved": "Configurações de saída salvas.",
+      "saveFailed": "Não foi possível salvar as configurações de saída. Suas alterações ainda estão aqui. Tente novamente.",
+      "diagnosticsSaveHelp": "Salve ou descarte suas alterações antes de verificar as configurações de saída.",
+      "saveBeforeDomainRemoval": "Salve ou descarte suas alterações de saída antes de remover um domínio.",
+      "senderAddressAfterSave": "Exibido após salvar."
     },
     "inbound": {
       "intro": "Configure o roteamento de e-mail de entrada e a automação específica do provedor."
