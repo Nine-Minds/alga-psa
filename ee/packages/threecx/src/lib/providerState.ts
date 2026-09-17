@@ -301,7 +301,7 @@ export async function getThreecxProviderConfig(
  */
 export async function updateThreecxConfig(
   tenantId: string,
-  mutate: (config: ThreecxProviderConfig) => ThreecxProviderConfig | void,
+  mutate: (config: ThreecxProviderConfig) => ThreecxProviderConfig,
   knex?: any,
 ): Promise<ThreecxProviderConfig> {
   const conn = knex ?? (await createTenantKnex(tenantId)).knex;
@@ -310,7 +310,7 @@ export async function updateThreecxConfig(
     throw new Error('The 3CX provider is not configured for this tenant.');
   }
   const current = parseThreecxConfig(existing.config);
-  const next = mutate(current) ?? current;
+  const next = mutate(current);
   await tenantDb(conn, tenantId)
     .table('telephony_providers')
     .where({ provider_id: existing.provider_id })

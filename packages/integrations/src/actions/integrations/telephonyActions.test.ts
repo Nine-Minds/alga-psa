@@ -259,6 +259,9 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib', () => ({
 
 vi.mock('@alga-psa/ee-threecx/lib', () => ({
   getThreecxProviderState: hoisted.threecxStateMock,
+  // No PBX configured in these scenarios: the 3CX call affordance stays off.
+  getThreecxProviderConfig: async () => null,
+  extensionForUser: () => null,
   activateThreecxProvider: hoisted.activateThreecxMock,
   deactivateThreecxProvider: hoisted.deactivateThreecxMock,
   setThreecxAutoCreateTickets: hoisted.setThreecxAutoMock,

@@ -44,7 +44,7 @@ export async function saveThreecxPbxCredentials(
   input: SaveThreecxPbxCredentialsInput,
 ): Promise<ThreecxProviderState> {
   const validated = validateThreecxPbxBaseUrl(input.baseUrl);
-  if (!validated.ok) {
+  if (validated.ok === false) {
     throw new Error(validated.error);
   }
   const clientId = (input.clientId ?? '').trim();
