@@ -25,6 +25,11 @@ export interface IContractLineServiceFixedConfig extends TenantEntity {
   config_id: string;
   base_rate?: number | null; // Added base_rate field
   /**
+   * Who owns this base_rate. `inherited` (base_rate NULL) follows the catalog;
+   * `custom`/`unreviewed` take the stored number. See the rate-provenance plan.
+   */
+  rate_provenance?: 'custom' | 'inherited' | 'unreviewed' | null;
+  /**
    * Explicit pricing basis for the fixed service configuration.
    *
    * - 'bundle' (legacy, also represented by NULL) — the fixed line carries a

@@ -441,7 +441,8 @@
       "boards": "Borden",
       "priorities": "Prioriteiten",
       "categories": "Categorieën",
-      "checklistTemplates": "Checklistsjablonen"
+      "checklistTemplates": "Checklistsjablonen",
+      "externalSystems": "Externe systemen"
     },
     "numbering": {
       "title": "Nummerformaat",
@@ -549,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Actief",
-        "inactive": "Inactief"
+        "inactive": "Inactief",
+        "hiddenFromPortal": "Verborgen in portaal"
       },
       "actions": {
         "addBoard": "Bord toevoegen",
@@ -646,6 +648,10 @@
         "liveTimer": {
           "label": "Live tickettimer inschakelen",
           "help": "Toont de live timer en bijgehouden intervallen op tickets in dit bord. Handmatige tijdinvoer blijft beschikbaar."
+        },
+        "clientPortalVisible": {
+          "label": "Zichtbaar in klantportaal",
+          "help": "Indien uitgeschakeld zijn dit bord en de bijbehorende tickets verborgen voor alle gebruikers van het klantportaal, ongeacht zichtbaarheidsgroepen."
         },
         "defaultBoard": {
           "label": "Standaardbord voor tickets uit klantportaal",
@@ -986,6 +992,47 @@
           "updateStatusFailed": "Kan sjabloonstatus niet bijwerken",
           "itemSaveFailed": "Kan checklistitem niet opslaan",
           "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Externe systemen",
+      "subtitle": "Voeg aangepaste externe systemen toe zodat tickets kunnen verwijzen naar records buiten de ingebouwde catalogus.",
+      "addButton": "Systeem toevoegen",
+      "builtInTitle": "Ingebouwde systemen",
+      "builtInSubtitle": "Beschikbaar voor elke tenant; URL's worden uit de systeemsjabloon opgebouwd.",
+      "table": {
+        "label": "Label",
+        "key": "Sleutel",
+        "urlTemplate": "URL-sjabloon",
+        "actions": "Acties"
+      },
+      "actions": {
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "save": "Opslaan"
+      },
+      "fields": {
+        "key": "Sleutel",
+        "keyHint": "Moet overeenkomen met custom:<slug> (kleine letters, cijfers of underscores).",
+        "label": "Label",
+        "urlTemplate": "URL-sjabloon",
+        "urlTemplateHint": "Optioneel. Gebruik de plaatsaanduidingen {realm} en {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Extern systeem toevoegen",
+        "editTitle": "Extern systeem bewerken"
+      },
+      "deleteDialog": {
+        "title": "Extern systeem verwijderen",
+        "message": "\"{{label}}\" verwijderen? Systemen die nog door koppelingen worden gebruikt, kunnen niet worden verwijderd."
+      },
+      "messages": {
+        "success": {
+          "created": "Extern systeem aangemaakt.",
+          "updated": "Extern systeem bijgewerkt.",
+          "deleted": "Extern systeem verwijderd."
         }
       }
     }
@@ -1561,7 +1608,8 @@
       "preview": {
         "subjectLabel": "Voorbeeld onderwerp",
         "iframeTitle": "Voorbeeld e-mailsjabloon",
-        "sampleDataNote": "Het voorbeeld gebruikt voorbeeldgegevens. Echte e-mails bevatten echte waarden."
+        "sampleDataNote": "Het voorbeeld gebruikt voorbeeldgegevens. Echte e-mails bevatten echte waarden.",
+        "sourceSyncNote": "Klik in het voorbeeld op een element om de bijbehorende code te selecteren; als u de cursor in de code verplaatst, wordt het element hier omlijnd."
       },
       "errors": {
         "loadFailed": "Sjablonen laden mislukt"
@@ -1610,7 +1658,8 @@
       },
       "tabs": {
         "source": "Broncode",
-        "preview": "Voorbeeld"
+        "preview": "Voorbeeld",
+        "variables": "Variabelen"
       },
       "common": {
         "notAvailable": "n.v.t."
@@ -1680,6 +1729,20 @@
           "colors": "kleuren",
           "text": "tekst",
           "subject": "onderwerp"
+        },
+        "overwrite": "Overschrijven",
+        "overwriteHint": "Overschrijven bouwt een sjabloon opnieuw op vanuit het standaardsjabloon met uw palet en verwijdert uw bewerkingen.",
+        "preview": {
+          "open": "Resultaat bekijken",
+          "title": "Voorbeeld: {{name}}",
+          "loading": "Voorbeeld wordt opgebouwd...",
+          "captions": {
+            "create": "Er wordt een kopie met uw huisstijl gemaakt van het standaardsjabloon.",
+            "update": "Uw kopie met huisstijl wordt opnieuw opgebouwd uit het standaardsjabloon met het opgeslagen palet.",
+            "customized": "Uw bewerkingen blijven woord voor woord behouden. Alleen de standaardkleuren die nog in dit sjabloon staan, worden vervangen.",
+            "overwrite": "Uw bewerkingen aan dit sjabloon worden verwijderd. Het wordt opnieuw opgebouwd vanuit het standaardsjabloon met uw palet.",
+            "skipped": "Er wordt niets weggeschreven — {{reason}}. Dit is het sjabloon zoals het er nu uitziet."
+          }
         },
         "summary": "{{written}} van huisstijl voorzien, {{skipped}} overgeslagen, {{failed}} mislukt",
         "groups": {

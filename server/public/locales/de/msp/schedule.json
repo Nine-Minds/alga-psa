@@ -26,7 +26,17 @@
     "loading": "Laden...",
     "errors": {
       "loadPermissions": "Benutzerberechtigungen konnten nicht geladen werden",
-      "forbidden": "Sie sind nicht berechtigt, diesen Zeitplan anzuzeigen."
+      "forbidden": "Sie sind nicht berechtigt, diesen Zeitplan anzuzeigen.",
+      "moveFailed": "Zeitplaneintrag konnte nicht verschoben werden"
+    },
+    "schedulingFor": "Planung für",
+    "selectSlotHint": "Ziehen, um Einträge zu erstellen, zu verschieben oder ihre Dauer zu ändern. Klicken Sie auf einen Eintrag, um ihn zu bearbeiten.",
+    "readOnlyHint": "Sie können diesen Zeitplan ansehen, benötigen aber die Berechtigung zum Aktualisieren von Zeitplänen, um Einträge hinzuzufügen oder zu ändern.",
+    "workItemLegend": "Dieses Arbeitselement",
+    "schedulingForAgent": "Planung für {{name}}",
+    "otherWorkLegend": "Andere Arbeit",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -553,7 +563,8 @@
       "appointmentRequest": "Terminanfrage",
       "view": "Eintrag anzeigen",
       "edit": "Eintrag bearbeiten",
-      "new": "Neuer Eintrag"
+      "new": "Neuer Eintrag",
+      "newForWorkItem": "{{name}} planen"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Dies ist ein privater Eintrag. Nur der Ersteller kann Details anzeigen oder bearbeiten."
@@ -578,7 +589,9 @@
       "privateEntry": "Privater Eintrag (für andere Benutzer nicht sichtbar)",
       "start": "Start *",
       "end": "Ende *",
-      "notes": "Notizen"
+      "notes": "Notizen",
+      "technician": "Techniker",
+      "notesPlaceholder": "Alles, was der Techniker vor dem Start wissen sollte"
     },
     "actions": {
       "cancel": "Abbrechen",
@@ -588,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Ad-hoc-Eintrag (kein Workitem)",
-      "openDetails": "Details"
+      "openDetails": "Details",
+      "loading": "Arbeitselement wird geladen…",
+      "openTicket": "Ticket öffnen",
+      "openTask": "Aufgabe öffnen",
+      "openInteraction": "Interaktion öffnen"
     },
     "appointmentRequest": {
       "approved": {
@@ -691,6 +708,11 @@
       "created": "Microsoft Teams-Besprechung erstellt",
       "createFailed": "Teams-Besprechung konnte nicht erstellt werden",
       "recurringUnsupported": "Teams-Besprechungen können nur zu eigenständigen Einträgen hinzugefügt werden, nicht zu wiederkehrenden Serien."
+    },
+    "duration": {
+      "minutes": "{{count}} Min.",
+      "hours": "{{count}} Std.",
+      "hoursMinutes": "{{hours}} Std. {{minutes}} Min."
     }
   },
   "actions": {
@@ -744,5 +766,15 @@
       "graphThrottled": "Microsoft Graph drosselt derzeit Aufzeichnungs-Downloads. Bitte versuchen Sie es in Kürze erneut.",
       "graphHttpStatus": "Microsoft Graph hat beim Herunterladen der Teams-Aufzeichnung HTTP {{status}} zurückgegeben."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} geplant",
+    "updated": "Zeitplaneintrag aktualisiert",
+    "deleted": "Zeitplaneintrag gelöscht",
+    "createFailed": "Diese Arbeit konnte nicht geplant werden",
+    "updateFailed": "Zeitplaneintrag konnte nicht aktualisiert werden",
+    "deleteFailed": "Zeitplaneintrag konnte nicht gelöscht werden",
+    "loadFailed": "Zeitplaneintrag konnte nicht geladen werden",
+    "noPermission": "Sie benötigen die Berechtigung zum Aktualisieren von Zeitplänen, um Arbeit zu planen."
   }
 }

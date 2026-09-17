@@ -157,6 +157,27 @@ export interface IJobRunner {
   ): Promise<ScheduleJobResult>;
 
   /**
+   * Schedule a recurring job that is not scoped to a tenant (for example a
+   * global sweep that enumerates tenants itself). Unlike scheduleRecurringJob,
+   * this does not create a tenant-attributed tracker row; the schedule is
+   * persisted durably by the backend and survives restarts. Backends that do
+   * not support global schedules may omit this method.
+   *
+   * @param jobName The name of the job type (must have a registered handler)
+   * @param interval Cron expression (e.g., "0 4 * * *")
+   * @param options Optional schedule id, timezone, and payload
+   */
+  scheduleGlobalRecurringJob?(
+    jobName: string,
+    interval: string,
+    options?: {
+      scheduleId?: string;
+      timezone?: string;
+      data?: Record<string, unknown>;
+    }
+  ): Promise<{ scheduleId: string }>;
+
+  /**
    * Cancel a scheduled or running job
    *
    * @param jobId The job ID (from our database)

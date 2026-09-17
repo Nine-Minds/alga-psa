@@ -129,12 +129,24 @@ async function isKnownClientPortalHandoffRedirect(url: string, baseUrl: string):
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
 
-async function rejectRevokedOrUnverifiableSession(
+/**
+ * What the sessions table had to say about a token.
+ *
+ * `unverified` is deliberately separate from `revoked`: returning null from the
+ * jwt callback does not merely deny a request, it deletes the session cookie,
+ * and a connection-pool timeout on this one lookup would then sign a working
+ * tenant out of the product. Authorization is unaffected by keeping the token —
+ * requireLiveSession and the express session gate each repeat this lookup and
+ * deny the request when it fails, so an unverified session reaches nothing.
+ */
+type TrackedSessionVerdict = 'live' | 'revoked' | 'unverified';
+
+async function checkTrackedSession(
     tenant: unknown,
     sessionId: unknown,
     userId: unknown,
     userType: unknown,
-): Promise<boolean> {
+): Promise<TrackedSessionVerdict> {
     if (
         typeof tenant !== 'string'
         || tenant.length === 0
@@ -145,17 +157,18 @@ async function rejectRevokedOrUnverifiableSession(
         || (userType !== 'internal' && userType !== 'client')
     ) {
         console.error('[auth] Tracked session is missing required identity claims.');
-        return true;
+        return 'revoked';
     }
 
     try {
-        return await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
+        const revoked = await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
             userId,
             userType,
         });
+        return revoked ? 'revoked' : 'live';
     } catch (error) {
-        console.error('[auth] Session revocation check failed closed:', error);
-        return true;
+        console.error('[auth] Session revocation check could not be completed:', error);
+        return 'unverified';
     }
 }
 
@@ -2010,14 +2023,20 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
             // Check durable revocation and canonical identity state on every
             // authenticated request. Missing, untracked, or mismatched sessions
-            // fail closed.
-            if (await rejectRevokedOrUnverifiableSession(
+            // fail closed. A lookup that could not be completed leaves the
+            // cookie alone and skips the writes below; the request itself is
+            // still denied downstream, where the same check is repeated.
+            const trackedSession = await checkTrackedSession(
                 token.tenant,
                 token.session_id,
                 token.id || token.sub,
                 token.user_type,
-            )) {
+            );
+            if (trackedSession === 'revoked') {
                 return null;
+            }
+            if (trackedSession === 'unverified') {
+                return token;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session
@@ -2777,14 +2796,20 @@ export const options: NextAuthConfig = {
 
             // Check durable revocation and canonical identity state on every
             // authenticated request. Missing, untracked, or mismatched sessions
-            // fail closed.
-            if (await rejectRevokedOrUnverifiableSession(
+            // fail closed. A lookup that could not be completed leaves the
+            // cookie alone and skips the writes below; the request itself is
+            // still denied downstream, where the same check is repeated.
+            const trackedSession = await checkTrackedSession(
                 token.tenant,
                 token.session_id,
                 token.id || token.sub,
                 token.user_type,
-            )) {
+            );
+            if (trackedSession === 'revoked') {
                 return null;
+            }
+            if (trackedSession === 'unverified') {
+                return token;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session

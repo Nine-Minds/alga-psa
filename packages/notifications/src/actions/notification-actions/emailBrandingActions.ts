@@ -11,6 +11,7 @@ import {
   decorateBrandedHtml,
   planEmailBrandingApply,
   planEmailBrandingRemoval,
+  previewEmailBrandingApply,
   resolveEmailPalette,
   suggestEmailPalette,
   type EmailBrandingApplyScope,
@@ -24,6 +25,8 @@ import {
   resolveTenantLanguages,
   type EmailBrandingApplyResult,
   type EmailBrandingPaletteInput,
+  type EmailBrandingPreviewRequest,
+  type EmailBrandingPreviewResult,
   type EmailBrandingRemoveResult,
   type EmailBrandingStatus,
   type EmailBrandingTemplateStatus,
@@ -102,6 +105,18 @@ async function loadTemplateRows(trx: Knex.Transaction, tenant: string): Promise<
 
   const systemTemplates = await systemQuery.orderBy(["c.name", "t.name"]);
   const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant).orderBy("name");
+
+  return { systemTemplates, tenantTemplates };
+}
+
+/** The same two reads as loadTemplateRows, narrowed to a single template. */
+async function loadTemplateRowsForName(
+  trx: Knex.Transaction,
+  tenant: string,
+  name: string,
+): Promise<{ systemTemplates: TemplateRowShape[]; tenantTemplates: TemplateRowShape[] }> {
+  const systemTemplates = await tenantScopedTable(trx, "system_email_templates", tenant).where({ name });
+  const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant).where({ name });
 
   return { systemTemplates, tenantTemplates };
 }
@@ -224,6 +239,47 @@ function buildBrandDecorator(
 }
 
 /**
+ * What "Apply to templates" would do to one template, without writing anything.
+ *
+ * Reads only, so it is not gated on settings:update: the dialog that shows it
+ * is already behind that permission, and seeing one's own template is harmless.
+ * The name is previewed as if it were ticked, which is the whole point for a
+ * customized template — it answers "what happens to my edits?" before the
+ * tenant commits to the apply.
+ */
+export const previewEmailBrandingApplyAction = withAuth(async (
+  user,
+  { tenant },
+  { name, language, overwrite }: EmailBrandingPreviewRequest,
+): Promise<EmailBrandingPreviewResult> => {
+  const { knex } = await createTenantKnex();
+
+  const context = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const settings = await readTenantSettings(trx, tenant);
+    const palette = readEmailBrandingPalette(settings.emailBranding);
+    if (!palette) throw new Error('No email branding palette has been saved');
+
+    const rows = await loadTemplateRowsForName(trx, tenant, name);
+    return { settings, palette, ...rows };
+  });
+
+  const preview = previewEmailBrandingApply({
+    systemRows: context.systemTemplates,
+    tenantRows: context.tenantTemplates,
+    target: resolveEmailPalette(context.palette),
+    appliedPalette: context.palette.appliedPalette ?? null,
+    name,
+    language,
+    overwrite,
+    decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise),
+  });
+
+  if (!preview) throw new Error(`No ${language} email template named ${name}`);
+
+  return preview;
+});
+
+/**
  * Materializes the saved palette into tenant_email_templates for the selected
  * templates and languages.
  *
@@ -288,7 +344,13 @@ export const applyEmailBrandingAction = withAuth(async (
         for (const update of updates) {
           await tenantScopedTable(trx, "tenant_email_templates", tenant)
             .where({ id: update.id })
-            .update({ html_content: update.html, updated_at: now });
+            .update({
+              html_content: update.html,
+              // Only an overwrite restores these; a palette pass never touches them.
+              ...(update.subject !== undefined ? { subject: update.subject } : {}),
+              ...(update.text !== undefined ? { text_content: update.text } : {}),
+              updated_at: now,
+            });
         }
       });
 

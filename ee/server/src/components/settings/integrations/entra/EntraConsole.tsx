@@ -13,6 +13,7 @@ import {
   Plug,
   RefreshCw,
   SkipForward,
+  Stethoscope,
 } from 'lucide-react';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -57,6 +58,7 @@ import { MicrosoftAppRegistrationPicker } from './MicrosoftAppRegistrationPicker
 import { EntraClientsTab } from './EntraClientsTab';
 import { EntraHistoryTab } from './EntraHistoryTab';
 import { EntraScheduleTab } from './EntraScheduleTab';
+import { EntraDiagnosticsDialog } from './EntraDiagnosticsDialog';
 import { FieldSyncRules } from './FieldSyncRules';
 import { ENTRA_OVERWRITE_RULES, normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 import { EntraSection, type EntraSectionTone } from './EntraSection';
@@ -202,6 +204,7 @@ export function EntraConsole({
   onStatusChanged,
 }: EntraConsoleProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
+  const { t: tAdmin } = useTranslation('msp/admin');
 
   const [tab, setTab] = React.useState<EntraConsoleTab>('overview');
   const [mappings, setMappings] = React.useState<EntraConfirmedMapping[]>([]);
@@ -233,6 +236,7 @@ export function EntraConsole({
   const [disconnectOpen, setDisconnectOpen] = React.useState(false);
   const [disconnectBusy, setDisconnectBusy] = React.useState(false);
   const [validateBusy, setValidateBusy] = React.useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = React.useState(false);
   const [rotateDirectOpen, setRotateDirectOpen] = React.useState(false);
   const [rotateCippOpen, setRotateCippOpen] = React.useState(false);
   const [rotateBusy, setRotateBusy] = React.useState(false);
@@ -799,6 +803,19 @@ export function EntraConsole({
         title={t('integrations.entra.console.attention.title')}
         tone={attentionTone}
         bodyClassName="mt-3"
+        action={
+          <Button
+            id="entra-console-attention-diagnostics"
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setDiagnosticsOpen(true)}
+            className="gap-1"
+          >
+            <Stethoscope className="h-3.5 w-3.5" />
+            {tAdmin('integrations.entra.diagnostics.run', { defaultValue: 'Run diagnostics' })}
+          </Button>
+        }
       >
         {initialLoad ? (
           <div className="mt-2 space-y-2" id="entra-console-attention-loading" aria-busy="true">
@@ -1175,6 +1192,17 @@ export function EntraConsole({
                 : t('integrations.entra.console.connection.validate')}
             </Button>
             <Button
+              id="entra-console-run-diagnostics"
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setDiagnosticsOpen(true)}
+              className="gap-1"
+            >
+              <Stethoscope className="h-3.5 w-3.5" />
+              {tAdmin('integrations.entra.diagnostics.run', { defaultValue: 'Run diagnostics' })}
+            </Button>
+            <Button
               id="entra-console-rotate"
               type="button"
               size="sm"
@@ -1444,6 +1472,15 @@ export function EntraConsole({
         value={tab}
         onTabChange={(next) => selectTab(parseEntraConsoleTab(next))}
         idPrefix="entra-console-tab"
+      />
+
+      <EntraDiagnosticsDialog
+        isOpen={diagnosticsOpen}
+        onClose={() => setDiagnosticsOpen(false)}
+        onNavigate={(target) => {
+          setDiagnosticsOpen(false);
+          selectTab(parseEntraConsoleTab(target));
+        }}
       />
 
       <EntraDirectConsentDialog

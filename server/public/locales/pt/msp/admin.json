@@ -696,5 +696,173 @@
       "run": "Executar com envio real",
       "invalidRecipient": "Introduza um endereço de e-mail de destinatário válido."
     }
+  },
+  "integrations": {
+    "entra": {
+      "diagnostics": {
+        "title": "Diagnóstico do Entra",
+        "description": "Verificações somente leitura da conexão do Entra, autenticação do parceiro, descoberta e integridade da sincronização.",
+        "run": "Executar diagnóstico",
+        "labels": {
+          "overall": "Geral",
+          "connectionType": "Conexão",
+          "status": "Status",
+          "mappedClients": "Clientes mapeados",
+          "managedTenants": "Locatários gerenciados",
+          "recommendations": "Recomendações",
+          "blockedBy": "Bloqueado por",
+          "error": "Erro",
+          "readiness": "Prontidão de acesso"
+        },
+        "statuses": {
+          "pass": "Aprovado",
+          "warn": "Aviso",
+          "fail": "Falha",
+          "skip": "Ignorado"
+        },
+        "steps": {
+          "edition_tier_rbac": "Edição, nível e prontidão de acesso",
+          "connection_row": "Conexão ativa do Entra",
+          "app_registration_binding": "Vínculo do registro de aplicativo da Microsoft",
+          "client_secret_present": "Segredo do cliente do registro de aplicativo",
+          "expected_app_registration_values": "Valores esperados do registro de aplicativo",
+          "sync_worker_and_schedule": "Processo de sincronização e agendamento",
+          "token_set_present": "Tokens OAuth diretos armazenados",
+          "token_refresh": "Atualizar o token de acesso do parceiro",
+          "token_claims": "Decodificar declarações e escopos do token de acesso",
+          "graph_me": "Verificação básica do Microsoft Graph /me",
+          "managed_tenants_endpoint": "Acessibilidade do endpoint de locatários gerenciados",
+          "managed_tenants_count": "Descoberta de locatários gerenciados",
+          "mappings_vs_discovery": "Mapeamentos confirmados em comparação com a descoberta em tempo real",
+          "cipp_credentials_present": "Credenciais do CIPP",
+          "cipp_reachable": "Acessibilidade da API do CIPP",
+          "cipp_auth": "Credencial da API do CIPP",
+          "cipp_tenant_list": "Lista de locatários do CIPP",
+          "cipp_mappings_vs_list": "Mapeamentos confirmados em comparação com a lista de locatários do CIPP",
+          "last_runs": "Sincronizações recentes",
+          "per_tenant_last_result": "Resultado por locatário da última sincronização",
+          "reconciliation_queue": "Fila de reconciliação",
+          "tenant_token_mint": "Emitir token do locatário do cliente",
+          "users_read": "Ler usuários do diretório",
+          "groups_read": "Ler grupos do diretório",
+          "entitlement_group_resolves": "Resolver grupo de direitos",
+          "user_yield_preview": "Prévia dos usuários incluídos",
+          "per_tenant_users": "Usuários por locatário do CIPP"
+        },
+        "readiness": {
+          "authenticated": "Conectado",
+          "notClientPortal": "Não é usuário do portal do cliente",
+          "edition": "Edição Enterprise",
+          "integrationsTier": "Nível de integrações",
+          "entraSyncTier": "Nível de sincronização do Entra (Pro)",
+          "systemSettingsRead": "Leitura de system_settings"
+        },
+        "states": {
+          "running": "Executando diagnóstico..."
+        },
+        "errors": {
+          "failed": "Falha no diagnóstico",
+          "clientFailed": "Falha no diagnóstico do cliente"
+        },
+        "actions": {
+          "copySupportBundle": "Copiar pacote de suporte",
+          "copied": "Copiado",
+          "downloadJson": "Baixar JSON",
+          "copy": "Copiar",
+          "open": "Abrir",
+          "open_url": "Abrir",
+          "navigate": "Ir para",
+          "goToStep": "Ir para a etapa",
+          "includeIdentifiers": "Incluir identificadores na exportação"
+        },
+        "clients": {
+          "title": "Diagnóstico dos clientes selecionados",
+          "selectedCount": "{{count}} selecionados",
+          "yieldToggle": "Prévia dos usuários incluídos (maior custo)",
+          "run": "Executar diagnóstico dos clientes",
+          "progress": "{{completed}} de {{total}} concluídos",
+          "confirmTitle": "Executar diagnóstico para muitos clientes?",
+          "confirmMessage": "Você selecionou {{count}} clientes. Um token é emitido para cada cliente e um pequeno número de solicitações ao Graph é realizado.",
+          "confirmRun": "Executar",
+          "unavailableName": "Nome indisponível",
+          "selectAll": "Selecionar tudo",
+          "clear": "Limpar seleção",
+          "categories": {
+            "ok": "Correto",
+            "need_consent": "Consentimento necessário",
+            "conditional_access": "Acesso Condicional",
+            "missing_role": "Função ausente",
+            "other": "Outro"
+          },
+          "details": {
+            "completed": "Concluído",
+            "latestSyncFailure": "Última falha de sincronização"
+          },
+          "columns": {
+            "client": "Cliente",
+            "tenant": "Locatário",
+            "status": "Status",
+            "remedy": "Solução",
+            "complete": "Concluído",
+            "details": "Detalhes"
+          },
+          "complete": "Concluído",
+          "partial": "Parcial"
+        },
+        "remedies": {
+          "connectEntra": "Conecte o Microsoft Entra em Configurações > Integrações > Entra.",
+          "selectAppRegistration": "Selecione um registro de aplicativo da Microsoft para o Entra e reconecte.",
+          "selectExistingApp": "O aplicativo da Microsoft vinculado não existe mais. Selecione um registro de aplicativo existente e reconecte.",
+          "chooseAnotherApp": "O registro de aplicativo da Microsoft vinculado está arquivado. Escolha outro registro e reconecte.",
+          "addEntraCapability": "Edite o registro de aplicativo em Configurações > Integrações > Microsoft e habilite o recurso Entra.",
+          "secretExpiryUnknown": "A expiração do segredo do cliente é desconhecida. Os segredos do cliente da Microsoft expiram em 6 a 24 meses; renove-os conforme o cronograma no Azure.",
+          "clientSecretMissing": "O segredo do cliente do registro de aplicativo está ausente ou vazio. Renove o segredo no Azure e atualize o registro em Configurações > Integrações > Microsoft.",
+          "entraAccessDenied": "O acesso ao diagnóstico do Entra foi negado para este usuário ou espaço de trabalho.",
+          "temporalUnreachable": "Não foi possível acessar o frontend do Temporal. A sincronização automática não pode ser executada até que ele esteja disponível.",
+          "temporalNoWorkers": "O Temporal está acessível, mas nenhum processo consulta a fila de tarefas do Entra. As sincronizações agendadas não serão processadas.",
+          "syncDisabled": "A sincronização automática do Entra está desativada para este espaço de trabalho.",
+          "scheduleLookupFailed": "Não foi possível inspecionar o agendamento do Temporal. Verifique as permissões e a conectividade do Temporal.",
+          "scheduleMissing": "A sincronização automática está habilitada, mas nenhum agendamento do Temporal foi encontrado. Salve o agendamento para aplicá-lo.",
+          "scheduleIntervalMismatch": "O intervalo do Temporal ({{interval}} min) não corresponde à configuração salva ({{configured}} min). Salve o agendamento para conciliá-los.",
+          "reconnectEntra": "Nenhum token de atualização está armazenado. Reconecte o Microsoft Entra.",
+          "noManagedTenants": "Nenhum locatário gerenciado foi retornado. O parceiro deve estar integrado ao Microsoft 365 Lighthouse com relações GDAP ativas.",
+          "mappedTenantMissing": "O locatário mapeado “{{client}}” não foi retornado pela descoberta. A relação GDAP pode ter expirado ou sido encerrada.",
+          "mappingsLookupFailed": "Não foi possível ler os mapeamentos de locatários confirmados. Execute o diagnóstico novamente; se o problema persistir, revise os mapeamentos.",
+          "cippCredentialsMissing": "A URL base do CIPP e um token de API são necessários. Configure-os na aba Conexão.",
+          "cippAuthRejected": "O CIPP rejeitou a credencial da API. Renove a chave de API do CIPP em Configurações > CIPP > Acesso à API; não se trata de um segredo do cliente do Azure.",
+          "cippEmptyTenantList": "O CIPP não retornou locatários. Verifique a visibilidade dos clientes e a configuração do CIPP.",
+          "cippUnreachable": "Não foi possível acessar o CIPP. Verifique a URL base, DNS/TLS e a conectividade de saída.",
+          "cippPerTenantFailed": "O CIPP não conseguiu ler o diretório deste locatário.",
+          "consecutiveSyncFailures": "As duas últimas sincronizações não foram concluídas com sucesso. Revise o histórico e os erros por locatário.",
+          "reconciliationOpenItems": "A fila de revisão tem {{count}} itens aguardando; correspondências ambíguas nunca são vinculadas automaticamente.",
+          "customerConsentRequired": "O aplicativo precisa do consentimento de administrador no locatário deste cliente. Reconectar o parceiro não ajudará; abra o link de consentimento e conceda-o como administrador do cliente.",
+          "entitlementGroupNotSecurity": "O grupo de direitos configurado não é um grupo de segurança; pode não ser possível exigir a associação.",
+          "entitlementGroupMissing": "O grupo de direitos configurado não existe mais no locatário deste cliente.",
+          "allUsersExcluded": "As regras de filtro atuais excluíram todos os usuários deste diretório; a sincronização não criaria contatos.",
+          "yieldTruncated": "A prévia foi interrompida antecipadamente porque o diretório é grande. As contagens são valores mínimos e não abrangem o diretório inteiro.",
+          "yieldFailed": "Não foi possível calcular a prévia dos usuários incluídos.",
+          "missingScope": "O token não possui {{scope}}. Conceda consentimento de administrador e reconecte o Microsoft Entra.",
+          "appClientIdMismatch": "O token foi emitido para um aplicativo diferente do registro vinculado. Reconecte o Microsoft Entra com o aplicativo correto.",
+          "client_secret_invalid": "A Microsoft rejeitou a credencial do aplicativo (invalid_client / AADSTS7000222). Renove o segredo do cliente no Azure, atualize o registro da Microsoft em Configurações > Integrações > Microsoft e reconecte.",
+          "app_not_found": "A Microsoft não encontrou o aplicativo (AADSTS700016). Verifique o ID do cliente vinculado e se o aplicativo aceita vários locatários.",
+          "partner_consent_required": "O consentimento de administrador do locatário do parceiro está ausente (AADSTS65001 / consent_required). Conceda-o ao aplicativo no locatário do parceiro e reconecte.",
+          "conditional_access": "O Acesso Condicional bloqueou a solicitação (AADSTS50076/AADSTS50079). A conta de conexão deve cumprir a política de MFA e de dispositivos em conformidade.",
+          "refresh_token_invalid": "A autorização de atualização expirou ou foi revogada. Reconecte o Microsoft Entra para emitir um novo token de atualização.",
+          "tenant_not_found": "A Microsoft não conseguiu resolver o locatário (AADSTS90002). Verifique o ID do locatário na conexão ou no mapeamento.",
+          "account_not_allowed": "A conta de conexão não é permitida no locatário (AADSTS50020). Verifique se a conta tem acesso ou é convidada.",
+          "network_unreachable": "Não foi possível acessar o Microsoft Graph. Verifique a conectividade de saída, DNS e a confiança TLS.",
+          "token_rejected": "A Microsoft rejeitou o token (401). Reconecte o Microsoft Entra ou verifique o consentimento do cliente.",
+          "forbidden": "O Microsoft Graph retornou 403 (Proibido). Verifique as permissões delegadas, o consentimento e as atribuições de funções.",
+          "request_failed": "A solicitação à Microsoft falhou. Expanda a etapa para ver o código de erro e o ID de correlação.",
+          "customer_directory_role_missing": "O Microsoft Graph negou a leitura do diretório de um cliente (403). A conta delegada precisa de uma função de leitura de diretório neste locatário, normalmente atribuída por GDAP (por exemplo, Leitores de Diretório).",
+          "managedTenantsEndpointFault": "O Graph rejeitou a solicitação managedTenants; trata-se de uma falha de endpoint do lado da Alga. Entre em contato com o suporte informando o ID da solicitação.",
+          "cippHttpError": "O CIPP respondeu com HTTP {{status}} para todos os endpoints de listas de locatários. Trata-se de uma falha na obtenção da lista no CIPP, não de uma lista vazia.",
+          "cippInvalidPayload": "O CIPP retornou uma resposta que não é uma lista de locatários. Verifique a versão da API do CIPP e o endpoint.",
+          "schedulePaused": "A sincronização automática está habilitada, mas o agendamento do Temporal está pausado; nenhuma execução será iniciada.",
+          "temporalWorkerUnknown": "O Temporal está acessível, mas não há dados sobre os processos que consultam a fila; não foi possível confirmar sua disponibilidade.",
+          "managedTenantConsentMissing": "A Microsoft aceitou a entrada, mas recusou a lista de locatários gerenciados. Um administrador global deve conceder consentimento para as permissões solicitadas."
+        }
+      }
+    }
   }
 }

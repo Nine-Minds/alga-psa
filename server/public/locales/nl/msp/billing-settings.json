@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Belastingregio's beheren",
+      "title": "Belastingregio's en tarieven",
       "loading": "Regio's laden...",
       "fields": {
         "code": {
           "label": "Regiocode",
-          "placeholder": "bijv. CA, NY, BTW-VK"
+          "placeholder": "bijv. CA, NY, BTW-VK",
+          "immutableHint": "De regiocode identificeert deze regio voor btw-tarieven, klanten en locaties en kan daarom niet worden gewijzigd."
         },
         "name": {
           "label": "Regionaam",
@@ -268,6 +269,57 @@
         "update": "Kan de belastingregio niet updaten.",
         "activate": "Kan belastingregio niet activeren.",
         "deactivate": "Kan de belastingregio niet deactiveren."
+      },
+      "search": {
+        "placeholder": "Regio's zoeken"
+      },
+      "columns": {
+        "region": "Regio",
+        "currentRate": "Huidig tarief",
+        "rates": "Tarieven"
+      },
+      "rateSummary": {
+        "noRates": "Geen tarief",
+        "noCurrentRate": "Geen geldend tarief",
+        "combined": "{{count}} gecombineerd",
+        "combinedHint": "{{count}} actieve tarieven gelden vandaag en worden op facturen bij elkaar opgeteld."
+      },
+      "empty": {
+        "title": "Nog geen belastingregio's",
+        "description": "Voeg een regio toe voor elke plaats waar u belasting rekent en geef die een tarief.",
+        "noMatch": "Geen regio's komen overeen met \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Tarieven tonen",
+        "collapse": "Tarieven verbergen"
+      },
+      "rates": {
+        "empty": "Deze regio heeft geen tarieven. Facturen die hier belast worden, mislukken totdat er een tarief is toegevoegd.",
+        "composite": "Samengesteld",
+        "effectiveRange": "{{start}} tot {{end}}",
+        "effectiveFrom": "Vanaf {{start}}",
+        "deleteEntity": "het tarief van {{rate}} voor {{region}}",
+        "columns": {
+          "rate": "Tarief",
+          "description": "Omschrijving",
+          "effective": "Geldig"
+        },
+        "status": {
+          "current": "Geldend",
+          "scheduled": "Gepland",
+          "expired": "Verlopen",
+          "inactive": "Inactief"
+        },
+        "actions": {
+          "add": "Tarief toevoegen",
+          "edit": "Bewerken",
+          "advanced": "Geavanceerde instellingen",
+          "delete": "Verwijderen"
+        },
+        "errors": {
+          "validateDeletion": "Verwijderen kon niet worden gecontroleerd. Probeer het opnieuw.",
+          "delete": "Het belastingtarief kon niet worden verwijderd."
+        }
       }
     },
     "thresholds": {
@@ -641,6 +693,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Volgende wijziging {{date}}",
+    "scheduledPriceNotice": "Er is een prijswijziging gepland voor {{date}}. Opslaan hier werkt de huidige prijs bij en annuleert de geplande wijziging niet.",
     "title": "Servicecatalogusbeheer",
     "loading": "Laaddiensten",
     "dialog": {
@@ -719,6 +773,33 @@
       "cancel": "Annuleren",
       "saveChanges": "Wijzigingen opslaan"
     },
+    "bulk": {
+      "selectedCount": "{{count}} geselecteerd",
+      "selectAll": "Alle services selecteren",
+      "clear": "Selectie wissen",
+      "actions": {
+        "activate": "Activeren",
+        "deactivate": "Deactiveren",
+        "delete": "Verwijderen"
+      },
+      "deleteDialog": {
+        "title": "Services verwijderen",
+        "message": "{{count}} geselecteerde service(s) definitief verwijderen? Services waarnaar nog wordt verwezen door contracten of facturen worden overgeslagen. Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} service(s) geactiveerd",
+        "activatePartial": "{{count}} service(s) geactiveerd; {{failed}} konden niet worden geactiveerd",
+        "activateError": "Kan {{count}} service(s) niet activeren",
+        "deactivateSuccess": "{{count}} service(s) gedeactiveerd",
+        "deactivatePartial": "{{count}} service(s) gedeactiveerd; {{failed}} konden niet worden gedeactiveerd",
+        "deactivateError": "Kan {{count}} service(s) niet deactiveren",
+        "deleteSuccess": "{{count}} service(s) verwijderd",
+        "deletePartial": "{{count}} service(s) verwijderd; {{failed}} konden niet worden verwijderd",
+        "deletePartialBlocked": "{{count}} service(s) verwijderd; {{failed}} konden niet worden verwijderd: {{names}}",
+        "deleteBlocked": "Kan {{count}} service(s) niet verwijderen — nog in gebruik: {{names}}",
+        "deleteError": "Kan {{count}} service(s) niet verwijderen"
+      }
+    },
     "table": {
       "serviceName": "Dienstnaam",
       "serviceType": "Servicetype",
@@ -727,7 +808,11 @@
       "unit": "Eenheid",
       "taxRate": "Belastingtarief",
       "nonTaxable": "Niet-belastbaar",
-      "thisService": "deze dienst"
+      "thisService": "deze dienst",
+      "contractUsage": "Contracten",
+      "contractUsageNone": "Niet gebruikt",
+      "contractUsageOne": "Gebruikt op {{contracts}} contract",
+      "contractUsageMany": "Gebruikt op {{contracts}} contracten"
     },
     "errors": {
       "fetchServices": "Kan services niet ophalen",
@@ -754,6 +839,33 @@
       "restore": "Herstellen",
       "archive": "Archief",
       "delete": "Verwijderen"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} geselecteerd",
+      "selectAll": "Alle producten selecteren",
+      "clear": "Selectie wissen",
+      "actions": {
+        "archive": "Archiveren",
+        "restore": "Herstellen",
+        "delete": "Verwijderen"
+      },
+      "deleteDialog": {
+        "title": "Producten definitief verwijderen",
+        "message": "{{count}} geselecteerde product(en) definitief verwijderen? Producten die aan bestaande gegevens zijn gekoppeld, worden overgeslagen. Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} product(en) gearchiveerd",
+        "archivePartial": "{{count}} product(en) gearchiveerd; {{failed}} konden niet worden gearchiveerd",
+        "archiveError": "Kan {{count}} product(en) niet archiveren",
+        "restoreSuccess": "{{count}} product(en) hersteld",
+        "restorePartial": "{{count}} product(en) hersteld; {{failed}} konden niet worden hersteld",
+        "restoreError": "Kan {{count}} product(en) niet herstellen",
+        "deleteSuccess": "{{count}} product(en) definitief verwijderd",
+        "deletePartial": "{{count}} product(en) verwijderd; {{failed}} konden niet worden verwijderd",
+        "deletePartialBlocked": "{{count}} product(en) verwijderd; {{failed}} konden niet worden verwijderd: {{names}}",
+        "deleteBlocked": "Kan {{count}} product(en) niet verwijderen — nog in gebruik: {{names}}",
+        "deleteError": "Kan {{count}} product(en) niet verwijderen"
+      }
     },
     "filters": {
       "searchPlaceholder": "Zoek op naam, SKU, beschrijving...",
@@ -1438,6 +1550,70 @@
     },
     "sections": {
       "userRates": "Gebruikerstarieven"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Prijs wijziging uitrollen",
+    "previewFailed": "Kan de voorvertoning van de prijswijziging niet laden.",
+    "skip": "Alleen de prijs opslaan",
+    "apply": "Toepassen op overgenomen regels",
+    "applying": "Opslaan…",
+    "effectiveDate": "Ingangsdatum",
+    "effectiveDateHint": "Standaard de volgende grens van de factuurperiode.",
+    "willChange": "Verandert",
+    "noInheritedLines": "Geen overgenomen regel verandert op deze datum.",
+    "custom": "Verandert niet — aangepast",
+    "unreviewed": "Verandert niet — nog niet geclassificeerd",
+    "unreviewedAlert": "Deze regels worden ongewijzigd gefactureerd totdat u ze beoordeelt.",
+    "reviewRates": "Tarieven beoordelen",
+    "excluded": "Uitgesloten — al gefactureerd",
+    "none": "Geen.",
+    "totalMonthlyDelta": "Totale maandelijkse omzetverschil",
+    "acrossAllInherited": "Over alle {{lines}} overgenomen regel(s).",
+    "applyFailed": "Kan de uitrol niet toepassen. Er zijn geen wijzigingen aangebracht.",
+    "skipFailed": "Kan de prijswijziging niet opslaan.",
+    "columns": {
+      "client": "Klant",
+      "contract": "Contract",
+      "line": "Regel",
+      "current": "Huidig",
+      "new": "Nieuw",
+      "delta": "Verschil",
+      "rateAtDate": "Tarief op datum"
+    },
+    "followsCatalog": "Volgt de catalogus",
+    "close": "Sluiten",
+    "usageTitle": "Servicegebruik"
+  },
+  "rateReview": {
+    "title": "Tarieven beoordelen",
+    "close": "Sluiten",
+    "applySelected": "Selectie toepassen",
+    "applying": "Toepassen…",
+    "previewFailed": "Kan de tarieven voor beoordeling niet laden.",
+    "applyFailed": "Kan de tariefbeoordeling niet toepassen. Er zijn geen wijzigingen aangebracht.",
+    "intro": "Regels die precies op de catalogusprijs zijn geprijsd, veranderen niet op uw volgende factuur. Regels die afwijken behouden hun huidige tarief als onderhandelde prijs.",
+    "applied": "{{applied}} wijziging(en) toegepast.",
+    "refused": "{{refused}} rij(en) zijn geweigerd omdat ze sinds de voorvertoning zijn gewijzigd.",
+    "summary": "{{total}} niet-beoordeelde regel(s): {{inherited}} exacte overeenkomst(en), {{custom}} onderhandeld, {{skipped}} overgeslagen.",
+    "allClassified": "Alle regels zijn geclassificeerd. Niets te beoordelen.",
+    "noService": "Geen service",
+    "columns": {
+      "contract": "Contract",
+      "currentRate": "Huidig tarief",
+      "catalogRate": "Catalogustarief",
+      "proposed": "Voorgesteld",
+      "confidence": "Betrouwbaarheid"
+    },
+    "proposal": {
+      "inherited": "Catalogus volgen",
+      "custom": "Behouden als aangepast",
+      "unreviewed": "Onbeoordeeld laten"
+    },
+    "confidence": {
+      "exact": "Exacte overeenkomst",
+      "differs": "Wijkt af van catalogus",
+      "needsDecision": "Vereist een beslissing"
     }
   }
 }

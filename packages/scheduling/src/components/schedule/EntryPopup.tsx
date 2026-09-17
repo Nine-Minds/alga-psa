@@ -9,7 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ExternalLink, Check, X, Download, FileText, Video } from 'lucide-react';
+import { ExternalLink, Check, X, Download, FileText, Video, Trash2 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
@@ -102,6 +102,16 @@ interface EntryPopupProps {
    * existing `event`.
    */
   initialWorkItem?: Omit<IWorkItem, 'tenant'> | null;
+  /**
+   * The entry is being edited from its work item's own page, so the work
+   * item is shown as a fixed label rather than something to change.
+   */
+  lockWorkItem?: boolean;
+  /**
+   * The host already shows the work item (e.g. the agent calendar drawer's
+   * header), so the dialog's own work item line would only repeat it.
+   */
+  hideWorkItemRow?: boolean;
 }
 
 // All-day recurrence dates share the entry's UTC calendar-date representation.
@@ -134,6 +144,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   focusedTechnicianId,
   canAssignOthers,
   viewOnly = false,
+  lockWorkItem = false,
+  hideWorkItemRow = false,
   initialWorkItem = null
 }) => {
   const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>(() => {
@@ -179,6 +191,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
   });
   const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(initialWorkItem ?? null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [recurrencePattern, setRecurrencePattern] = useState<IRecurrencePattern | null>(null);
   const [isEditingWorkItem, setIsEditingWorkItem] = useState(false);
   const [availableWorkItems, setAvailableWorkItems] = useState<IWorkItem[]>([]);
@@ -373,6 +386,19 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
   }, [isEditingWorkItem, selectedWorkItem, entryData.work_item_id, entryData.work_item_type]);
 
+  // The editor must initialize against the logical target, not a slot object
+  // rebuilt by the host on every render. Keyed on the slot's semantic values,
+  // so a draft survives rerenders triggered by async users/viewer data while a
+  // genuine target change still re-initializes.
+  const slotInitializationKey = slot
+    ? [
+        new Date(slot.start).getTime(),
+        new Date(slot.end).getTime(),
+        (slot.assigned_user_ids ?? []).join(','),
+        slot.defaultAssigneeId ?? '',
+      ].join('|')
+    : null;
+
   useEffect(() => {
     const initializeData = () => {
       if (event) {
@@ -431,7 +457,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     };
 
     initializeData();
-  }, [event, slot]);
+  }, [event, slotInitializationKey]);
 
   const recurrenceOptions = [
     { value: 'none', label: t('entryPopup.recurrence.options.none', { defaultValue: 'None' }) },
@@ -928,53 +954,94 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
   };
 
+  // A new entry for a known work item is titled after it, so the dialog says
+  // what is being scheduled rather than the generic "New Entry".
+  const popupTitle =
+    isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending'
+      ? t('entryPopup.title.appointmentRequest', { defaultValue: 'Appointment Request' })
+      : viewOnly
+        ? t('entryPopup.title.view', { defaultValue: 'View Entry' })
+        : event
+          ? t('entryPopup.title.edit', { defaultValue: 'Edit Entry' })
+          : selectedWorkItem?.name
+            ? t('entryPopup.title.newForWorkItem', { defaultValue: 'Schedule {{name}}', name: selectedWorkItem.name })
+            : t('entryPopup.title.new', { defaultValue: 'New Entry' });
+
+  // The host dialog and drawer both move focus on open (to their container or
+  // first control); the field a user came to edit is the title, so take focus
+  // after they have finished.
+  useEffect(() => {
+    // A new entry wants the title. An existing one is opened to read or
+    // adjust, so focus rests on the dialog itself rather than ringing the
+    // first control the host happened to focus.
+    const timer = setTimeout(() => {
+      if (!viewOnly && !event) {
+        titleInputRef.current?.focus({ preventScroll: true });
+        return;
+      }
+      const dialog = titleInputRef.current?.closest<HTMLElement>('[role="dialog"]');
+      dialog?.focus({ preventScroll: true });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [viewOnly, event]);
+
+  // With assignment locked (the agent calendar drawer), the picker is hidden,
+  // so the caption says who the entry is for.
+  const lockedAssigneeNames = !canAssignMultipleAgents && !canAssignOthers
+    ? (entryData.assigned_user_ids ?? [])
+        .map((id) => users.find((user) => user.user_id === id))
+        .filter((user): user is IUser => Boolean(user))
+        .map((user) => `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim())
+        .filter(Boolean)
+        .join(', ') || null
+    : null;
+
+  const durationLabel = (() => {
+    if (!entryData.scheduled_start || !entryData.scheduled_end || endsBeforeStart) return '';
+    const minutes = Math.round(durationBetween(entryData.scheduled_start, entryData.scheduled_end) / 60000);
+    if (minutes <= 0) return '';
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    if (hours === 0) return t('entryPopup.duration.minutes', { defaultValue: '{{count}} min', count: rest });
+    if (rest === 0) return t('entryPopup.duration.hours', { defaultValue: '{{count}} h', count: hours });
+    return t('entryPopup.duration.hoursMinutes', { defaultValue: '{{hours}} h {{minutes}} min', hours, minutes: rest });
+  })();
+
+  const showDetailsButton = Boolean(
+    event && event.work_item_type &&
+    (event.work_item_type === 'ticket' || event.work_item_type === 'project_task' || event.work_item_type === 'interaction') &&
+    event.work_item_id
+  );
+  const showDeleteButton = Boolean(
+    event && onDelete && !viewOnly && (!event.is_private || isCurrentUserSoleAssignee)
+  );
+  const startDelete = () => {
+    if (!event) return;
+    setDeleteValidation(null);
+    setPendingDeleteScope(undefined);
+    if (event.is_recurring && !materializedEntryId) {
+      setShowDeleteDialog(true);
+      return;
+    }
+    setIsDeleteDialogOpen(true);
+  };
+
   // Create the content of the form
   const content = (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className={`bg-white p-4 rounded-lg h-auto flex flex-col transition-all duration-300 z-10
+    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className={`bg-white ${isInDrawer ? 'p-4' : 'px-0 pt-1 pb-2'} rounded-lg h-auto flex flex-col transition-all duration-300 z-10
     ${isInDrawer ? 
       'w-fit max-w-[90vw] shadow-none' : 
       'max-w-[95vw] w-auto min-w-[300px] max-h-[90vh] shadow-none'
       }`} noValidate
     >
-      <div className="shrink-0 pb-4 border-b flex justify-between items-center">
-        {isInDrawer && (
+      {isInDrawer && (
+        <div className="shrink-0 pb-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold">
-            {isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending'
-              ? t('entryPopup.title.appointmentRequest', { defaultValue: 'Appointment Request' })
-              : viewOnly
-                ? t('entryPopup.title.view', { defaultValue: 'View Entry' })
-                : event
-                  ? t('entryPopup.title.edit', { defaultValue: 'Edit Entry' })
-                  : t('entryPopup.title.new', { defaultValue: 'New Entry' })}
+            {popupTitle}
           </h2>
-        )}
-        <div className={`flex gap-2 ${!isInDrawer ? 'ml-auto' : ''}`}>
-          {event && event.work_item_type && (event.work_item_type === 'ticket' || event.work_item_type === 'project_task' || event.work_item_type === 'interaction') && event.work_item_id && (
-            <OpenDrawerButton event={event} />
-          )}
-          {/* Only show delete button if not a private event or user is creator */}
-          {event && onDelete && !viewOnly && (!event.is_private || isCurrentUserSoleAssignee) && (
-            <Button
-              id="delete-entry-btn"
-              onClick={() => {
-                setDeleteValidation(null);
-                setPendingDeleteScope(undefined);
-                if (event.is_recurring && !materializedEntryId) {
-                  setShowDeleteDialog(true);
-                  return;
-                }
-                setIsDeleteDialogOpen(true);
-              }}
-              type="button"
-              variant="destructive"
-              size="sm"
-            >
-              {t('entryPopup.actions.delete', { defaultValue: 'Delete Entry' })}
-            </Button>
-          )}
         </div>
-      </div>
-      <div className="flex-1 overflow-y-auto space-y-4 p-1">
+      )}
+      <div className={`flex-1 overflow-y-auto space-y-4 ${isInDrawer ? 'p-1' : ''}`}>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>
@@ -1301,12 +1368,27 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         {(!isAppointmentRequest || (appointmentRequestData && appointmentRequestData.status === 'approved')) && (
         <div className="min-w-0">
           <div className="relative">
-            {viewOnly || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
-              <div className="flex justify-between items-center p-2">
+            {viewOnly || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
+              <div className="flex justify-between items-start gap-3 pt-1 pb-4">
                 {selectedWorkItem ? (
-                  <div>
-                    <div className="font-medium">{selectedWorkItem.name}</div>
-                    <div className="text-sm text-gray-500 capitalize">{selectedWorkItem.type.replace('_', ' ')}</div>
+                  <div className="min-w-0 flex-1 text-sm text-gray-500 space-y-0.5">
+                    {!hideWorkItemRow && (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 truncate">
+                        <span className="capitalize">{selectedWorkItem.type.replace('_', ' ')}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span className="text-[rgb(var(--color-text-800))]">{selectedWorkItem.name}</span>
+                      </div>
+                      {showDetailsButton && event && <OpenDrawerButton event={event} />}
+                    </div>
+                    )}
+                    {lockedAssigneeNames && (
+                      <div id="entry-popup-technician" className="truncate">
+                        {t('entryPopup.fields.technician', { defaultValue: 'Technician' })}
+                        <span aria-hidden="true"> · </span>
+                        <span className="text-[rgb(var(--color-text-800))]">{lockedAssigneeNames}</span>
+                      </div>
+                    )}
                   </div>
                 ) : isSourceOwnedWorkItemType(entryData.work_item_type) ? (
                   // A deal step's entry is written from the opportunity's plan;
@@ -1320,6 +1402,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                       })}
                     </div>
                   </div>
+                ) : entryData.work_item_id && !ENTRY_OWNED_WORK_ITEM_TYPES.has(entryData.work_item_type) ? (
+                  // The linked work item is still loading; showing the ad-hoc
+                  // label here flashed a wrong answer before the right one.
+                  <span
+                    id="entry-popup-work-item-loading"
+                    className="text-sm text-[rgb(var(--color-text-500))] animate-pulse"
+                  >
+                    {t('entryPopup.workItem.loading', { defaultValue: 'Loading work item…' })}
+                  </span>
                 ) : (
                   <span className="font-bold text-[rgb(var(--color-text-900))]">
                     {t('entryPopup.workItem.adHocFallback', {
@@ -1327,18 +1418,35 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     })}
                   </span>
                 )}
+                {showDetailsButton && event && !selectedWorkItem && <OpenDrawerButton event={event} />}
+              </div>
+            ) : !selectedWorkItem && entryData.work_item_id && !ENTRY_OWNED_WORK_ITEM_TYPES.has(entryData.work_item_type) ? (
+              // Same as the read-only branch: the linked work item is still
+              // loading, so don't flash the ad-hoc label in its place.
+              <div className="flex items-center p-2">
+                <span
+                  id="entry-popup-work-item-loading"
+                  className="text-sm text-[rgb(var(--color-text-500))] animate-pulse"
+                >
+                  {t('entryPopup.workItem.loading', { defaultValue: 'Loading work item…' })}
+                </span>
               </div>
             ) : (
-              <SelectedWorkItem
-                workItem={selectedWorkItem}
-                onEdit={(e?: React.MouseEvent) => {
-                  if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                  setIsEditingWorkItem(true);
-                }}
-              />
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <SelectedWorkItem
+                    workItem={selectedWorkItem}
+                    onEdit={(e?: React.MouseEvent) => {
+                      if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                      setIsEditingWorkItem(true);
+                    }}
+                  />
+                </div>
+                {showDetailsButton && event && <OpenDrawerButton event={event} />}
+              </div>
             )}
             {isEditingWorkItem && (
               <AddWorkItemDialog
@@ -1365,10 +1473,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               name="title"
               value={entryData.title}
               onChange={handleInputChange}
+              ref={titleInputRef}
               className=""
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
+          {(canAssignMultipleAgents || (entryData.assigned_user_ids?.length === 1 && entryData.assigned_user_ids[0] === currentUserId)) && (
           <div className="flex gap-4 items-start">
             {canAssignMultipleAgents && (
               <div className="flex-1">
@@ -1405,6 +1515,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               </div>
             )}
           </div>
+          )}
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700">
@@ -1432,6 +1543,18 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700">
                 {t('entryPopup.fields.end', { defaultValue: 'End *' })}
+                {/* Always rendered: letting this appear and disappear resized the
+                    dialog under an open time popover, moving the rows mid-click. */}
+                <span
+                  id="schedule-time-hint"
+                  className={`ml-2 text-xs font-normal ${endsBeforeStart ? 'text-red-500' : 'text-gray-500'}`}
+                >
+                  {endsBeforeStart
+                    ? t('entryPopup.validation.endAfterStart', {
+                        defaultValue: 'End date must be after start date',
+                      })
+                    : durationLabel}
+                </span>
               </label>
               <DateTimePicker
                 id="scheduled_end"
@@ -1454,18 +1577,6 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               />
             </div>
           </div>
-          {/* Always rendered: letting this line appear and disappear resized the
-              dialog under an open time popover, moving the rows mid-click. */}
-          <p
-            id="schedule-time-hint"
-            className={`min-h-[1.25rem] text-sm ${endsBeforeStart ? 'text-red-500' : 'text-gray-500'}`}
-          >
-            {endsBeforeStart
-              ? t('entryPopup.validation.endAfterStart', {
-                  defaultValue: 'End date must be after start date',
-                })
-              : ''}
-          </p>
           <div>
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
               {t('entryPopup.fields.notes', { defaultValue: 'Notes' })}
@@ -1475,6 +1586,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               name="notes"
               value={entryData.notes}
               onChange={handleInputChange}
+              placeholder={t('entryPopup.fields.notesPlaceholder', { defaultValue: 'Anything the technician should know before starting' })}
               rows={3}
               className=""
               disabled={!canEditFields} // Disable based on permissions
@@ -1651,7 +1763,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         </div>
         )}
 
-      <div className="mt-6 flex justify-end space-x-3">
+      <div className="mt-4 flex items-center justify-end space-x-3">
+        {/* Destructive action sits apart from the primary pair, styled as a quiet action. */}
+        {showDeleteButton && (
+          <Button
+            id="delete-entry-btn"
+            type="button"
+            variant="ghost"
+            className="mr-auto gap-1 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+            onClick={startDelete}
+          >
+            <Trash2 className="w-4 h-4" />
+            {t('entryPopup.actions.delete', { defaultValue: 'Delete Entry' })}
+          </Button>
+        )}
         {/* Only show Cancel/Close button if not in a drawer, since the drawer will have its own close button */}
         {!isInDrawer && (
           <Button id="cancel-entry-btn" onClick={onClose} variant="outline">
@@ -1724,13 +1849,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       isOpen={true}
       onClose={onClose}
       hideCloseButton={false}
-      title={isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending'
-        ? t('entryPopup.title.appointmentRequest', { defaultValue: 'Appointment Request' })
-        : viewOnly
-          ? t('entryPopup.title.view', { defaultValue: 'View Entry' })
-          : event
-            ? t('entryPopup.title.edit', { defaultValue: 'Edit Entry' })
-            : t('entryPopup.title.new', { defaultValue: 'New Entry' })}
+      className="max-w-[640px]"
+      title={popupTitle}
     >
       <EntryPopupContext value={contextValue}>
         {content}
@@ -1830,12 +1950,20 @@ const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
     <Button
       id="open-drawer-btn"
       onClick={handleOpenDrawer}
-      variant="outline"
+      variant="ghost"
       size="sm"
-      className="flex items-center gap-1"
+      className="flex items-center gap-1 -my-1 text-[rgb(var(--color-primary-600))]"
     >
       <ExternalLink className="w-4 h-4" />
-      <span>{t('entryPopup.workItem.openDetails', { defaultValue: 'Details' })}</span>
+      <span>
+        {event.work_item_type === 'ticket'
+          ? t('entryPopup.workItem.openTicket', { defaultValue: 'Open ticket' })
+          : event.work_item_type === 'project_task'
+            ? t('entryPopup.workItem.openTask', { defaultValue: 'Open task' })
+            : event.work_item_type === 'interaction'
+              ? t('entryPopup.workItem.openInteraction', { defaultValue: 'Open interaction' })
+              : t('entryPopup.workItem.openDetails', { defaultValue: 'Details' })}
+      </span>
     </Button>
   );
 };

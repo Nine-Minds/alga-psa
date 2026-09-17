@@ -16,10 +16,18 @@ export interface RefreshDirectTokenResult {
   scope: string | null;
 }
 
+export interface RefreshDirectTokenOptions {
+  /** Cancellation/deadline signal, used by diagnostics; sync callers omit it. */
+  signal?: AbortSignal;
+  /** Request timeout in milliseconds; sync callers omit it. */
+  timeoutMs?: number;
+}
+
 async function refreshEntraDirectTokenForAuthority(
   tenant: string,
   authorityTenant = 'common',
-  persistAccessToken = true
+  persistAccessToken = true,
+  options: RefreshDirectTokenOptions = {}
 ): Promise<RefreshDirectTokenResult> {
   const credentials = await resolveMicrosoftCredentialsForTenant(tenant);
 
@@ -48,6 +56,8 @@ async function refreshEntraDirectTokenForAuthority(
       tokenParams.toString(),
       {
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        signal: options.signal,
+        timeout: options.timeoutMs,
       }
     );
   } catch (error: unknown) {
@@ -79,7 +89,7 @@ async function refreshEntraDirectTokenForAuthority(
         // the operator: as a plain Error the preflight/API routes collapse it
         // to their generic fallback, and only the worker's run history keeps
         // the real reason.
-        throw new EntraOperatorError(
+        const credentialError = new EntraOperatorError(
           'credential-rejected',
           'Microsoft rejected the stored credentials for this connection'
           + (detail ? ` (${detail})` : '')
@@ -87,13 +97,28 @@ async function refreshEntraDirectTokenForAuthority(
             ? '. The app has not been granted admin consent in the managed tenant — grant consent there, then retry; reconnecting will not help.'
             : '. Reconnect Microsoft Entra to resume syncing.')
         );
+        // Preserve structured Microsoft metadata for diagnostics without
+        // changing the operator-facing message or existing callers.
+        Object.assign(credentialError, {
+          status,
+          oauthError: oauthError ?? null,
+          suberror: data.suberror ?? null,
+          aadstsCode: aadsts ?? null,
+          requestId: error.response?.headers?.['request-id'],
+        });
+        throw credentialError;
       }
-      throw new EntraOperatorError(
+      const unreachableError = new EntraOperatorError(
         'unreachable',
         `Microsoft could not refresh the connection's access token${
           status ? ` (HTTP ${status})` : ''
         }. The sync will retry on its next run.`
       );
+      Object.assign(unreachableError, {
+        status,
+        requestId: error.response?.headers?.['request-id'],
+      });
+      throw unreachableError;
     }
     throw error;
   }
@@ -130,14 +155,16 @@ async function refreshEntraDirectTokenForAuthority(
 }
 
 export async function refreshEntraDirectToken(
-  tenant: string
+  tenant: string,
+  options: RefreshDirectTokenOptions = {}
 ): Promise<RefreshDirectTokenResult> {
-  return refreshEntraDirectTokenForAuthority(tenant);
+  return refreshEntraDirectTokenForAuthority(tenant, 'common', true, options);
 }
 
 export async function refreshEntraDirectAccessTokenForTenant(
   tenant: string,
-  authorityTenant: string
+  authorityTenant: string,
+  options: RefreshDirectTokenOptions = {}
 ): Promise<RefreshDirectTokenResult> {
-  return refreshEntraDirectTokenForAuthority(tenant, authorityTenant, false);
+  return refreshEntraDirectTokenForAuthority(tenant, authorityTenant, false, options);
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
   handleError,
@@ -31,6 +31,14 @@ interface LocalTaxSettings {
 
 interface TaxSourceSettingsProps {
   isReadOnly?: boolean;
+  /**
+   * Revision bumped by the shared parent when tenant tax settings change
+   * elsewhere (e.g. the delegation banner enabling external tax). When it
+   * changes, this component refetches so its saved-state baseline stays fresh.
+   */
+  settingsRevision?: number;
+  /** Notifies the shared parent that this component changed tenant tax settings. */
+  onSettingsChanged?: () => void;
 }
 
 type ReturnedActionError = ActionMessageError | ActionPermissionError;
@@ -38,7 +46,11 @@ type ReturnedActionError = ActionMessageError | ActionPermissionError;
 const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
-export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps) {
+export function TaxSourceSettings({
+  isReadOnly = false,
+  settingsRevision = 0,
+  onSettingsChanged,
+}: TaxSourceSettingsProps) {
   const { t } = useTranslation('msp/billing-settings');
   const [settings, setSettings] = useState<LocalTaxSettings>({
     default_tax_source: 'internal',
@@ -47,9 +59,12 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
   const [originalSettings, setOriginalSettings] = useState<LocalTaxSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const lastSettingsRevisionRef = useRef(settingsRevision);
 
-  const fetchSettings = useCallback(async () => {
-    setIsLoading(true);
+  const fetchSettings = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
     try {
       const fetchedSettings = await getTenantTaxSettings();
       if (isReturnedActionError(fetchedSettings)) {
@@ -67,13 +82,26 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
     } catch (error) {
       handleError(error, t('tax.source.errors.load', { defaultValue: 'Failed to load tax source settings.' }));
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   }, [t]);
 
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
+
+  // Refetch when a sibling mutates the shared tenant tax settings. This keeps
+  // both the displayed value and the saved-state baseline in sync, so the form
+  // does not show a phantom dirty/disabled state against stale data.
+  useEffect(() => {
+    if (lastSettingsRevisionRef.current === settingsRevision) {
+      return;
+    }
+    lastSettingsRevisionRef.current = settingsRevision;
+    void fetchSettings(false);
+  }, [settingsRevision, fetchSettings]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -89,6 +117,7 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
       }
       setOriginalSettings({ ...settings, allow_external_tax_override: true });
       toast.success(t('tax.source.toast.saved', { defaultValue: 'Tax source settings saved successfully.' }));
+      onSettingsChanged?.();
     } catch (error: any) {
       handleError(error, t('tax.source.errors.save', { defaultValue: 'Failed to save settings.' }));
     } finally {

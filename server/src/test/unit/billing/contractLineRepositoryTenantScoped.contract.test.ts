@@ -27,9 +27,10 @@ function sectionFrom(source: string, startMarker: string): string {
 }
 
 describe('contract line repositories tenant-scoped query contract', () => {
+  // The server-side fork is now a thin re-export of the package copy (plan
+  // §0.5), so the tenant-scoping contract is asserted once, at the source.
   const repositoryPaths = [
     'packages/billing/src/repositories/contractLineRepository.ts',
-    'server/src/lib/repositories/contractLineRepository.ts',
   ];
 
   it.each(repositoryPaths)('uses structural tenant scoping for top read and attachment roots in %s', (relativePath) => {

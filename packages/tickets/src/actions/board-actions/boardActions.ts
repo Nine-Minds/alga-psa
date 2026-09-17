@@ -408,6 +408,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           inbound_reply_reopen_status_id: boardData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: boardData.inbound_reply_ai_ack_suppression_enabled ?? false,
           enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
+          client_portal_visible: boardData.client_portal_visible ?? true,
           // A new board is pinned by default: it was just created deliberately,
           // so it earns a tab until an admin decides otherwise. list_view_settings
           // starts NULL — a new board inherits the tenant view rather than
@@ -911,6 +912,9 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       }
       if ('enable_live_ticket_timer' in sanitizedData) {
         sanitizedData.enable_live_ticket_timer = sanitizedData.enable_live_ticket_timer ?? true;
+      }
+      if ('client_portal_visible' in sanitizedData) {
+        sanitizedData.client_portal_visible = sanitizedData.client_portal_visible ?? true;
       }
       if ('is_pinned' in sanitizedData) {
         sanitizedData.is_pinned = Boolean(sanitizedData.is_pinned);

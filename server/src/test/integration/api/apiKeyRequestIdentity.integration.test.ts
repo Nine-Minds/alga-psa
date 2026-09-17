@@ -15,9 +15,10 @@ vi.mock('@alga-psa/db', async (original) => ({
   getConnection: async () => connection.db!,
   createTenantKnex: async (tenant?: string) => ({ knex: connection.db!, tenant: tenant ?? null }),
 }));
-vi.mock('@alga-psa/auth', async () => ({
-  ApiKeyService: (await import('../../../../../packages/auth/src/services/apiKeyService')).ApiKeyService,
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { ApiKeyService, shouldTouchApiKeyLastUsed } = await import('../../../../../packages/auth/src/services/apiKeyService');
+  return { ApiKeyService, shouldTouchApiKeyLastUsed };
+});
 vi.mock('@alga-psa/users/actions', async () => ({
   findUserByIdForApi: (await import('../../../../../packages/users/src/actions/user-actions/findUserByIdForApi')).findUserByIdForApi,
 }));

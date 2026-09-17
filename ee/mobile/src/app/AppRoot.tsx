@@ -1,16 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import { NavigationContainer, useNavigationContainerRef } from "@react-navigation/native";
 import type { InitialState } from "@react-navigation/native";
 import { getAppConfig, hydrateAppConfig, setActiveBaseUrl } from "../config/appConfig";
 import { clearStoredHost, loadStoredHost, saveStoredHost } from "../config/hostStore";
 import { linking } from "../navigation/linking";
+import { stripTransientRouteParams } from "../navigation/navStatePersistence";
 import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
 import { LoadingState } from "../ui/states";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { OfflineBanner } from "../ui/components/OfflineBanner";
 import { AuthContext, type MobileSession } from "../auth/AuthContext";
+import { createSessionHandle, sessionIdentityKey } from "../auth/sessionHandle";
 import { clearStoredSession, getStoredSession, storeSession } from "../auth/sessionStorage";
 import { useAppResume } from "../hooks/useAppResume";
 import { createApiClient } from "../api";
@@ -28,10 +30,12 @@ import { setUser as setSentryUser, reactNavigationIntegration } from "../errors/
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
 import { ThemeProvider } from "../ui/ThemeContext";
+import { clearCachedTheme, readCachedTheme } from "../ui/themeCache";
+import type { MobileTheme } from "../ui/themeTokens";
 import { I18nProvider } from "../i18n/I18nProvider";
 import { TimerProvider } from "../features/timer/TimerContext";
 import { CapabilitiesProvider } from "../capabilities/CapabilitiesContext";
-import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume, shouldRunRevocationCheck } from "./bootstrapUtils";
+import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume } from "./bootstrapUtils";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { getActiveRouteName } from "../navigation/activeRoute";
 import { t } from "../i18n/i18n";
@@ -44,12 +48,12 @@ export function AppRoot() {
   const [isBiometricLocked, setIsBiometricLocked] = useState(false);
   const [navInitialState, setNavInitialState] = useState<InitialState | undefined>(undefined);
   const [navStateLoaded, setNavStateLoaded] = useState(false);
+  const [cachedTenantTheme, setCachedTenantTheme] = useState<MobileTheme | null>(null);
   const network = useNetworkStatus();
   const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
   const navPersistHandle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startupStartedAt = useRef(Date.now());
   const startupReported = useRef(false);
-  const lastRevocationCheckAtMs = useRef(0);
   const lastBiometricUnlockAtMs = useRef(0);
 
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
@@ -93,6 +97,13 @@ export function AppRoot() {
         if (biometricEnabled && !canceled) setIsBiometricLocked(true);
       }
 
+      // Read the tenant pair before the first themed frame, so a warm launch on
+      // a Forest tenant never flashes Alga purple.
+      if (stored && isSessionUsable(stored) && config.ok) {
+        const cached = await readCachedTheme(config.baseUrl, stored.tenantId);
+        if (!canceled) setCachedTenantTheme(cached);
+      }
+
       if (!canceled) setBootStatus("ready");
     };
 
@@ -121,7 +132,7 @@ export function AppRoot() {
       setNavStateLoaded(false);
       const stored = await getSecureJson<InitialState>(`alga.mobile.navState.${userId}`);
       if (canceled) return;
-      setNavInitialState(stored ?? undefined);
+      setNavInitialState(stripTransientRouteParams(stored ?? undefined));
       setNavStateLoaded(true);
     };
 
@@ -253,12 +264,11 @@ export function AppRoot() {
 
   useAppResume(() => {
     if (!session) return;
-    const now = Date.now();
-    // Refresh if token is near expiry, or periodically to detect revocation
-    if (shouldRefreshOnResume(session.expiresAtMs, now)) {
-      void refreshSession();
-    } else if (shouldRunRevocationCheck(lastRevocationCheckAtMs.current, now)) {
-      lastRevocationCheckAtMs.current = now;
+    // Only a near-expiry token is refreshed here. A revoked session surfaces
+    // as a 401 on the first resume fetch, which already routes through
+    // refreshSession and signs out when that fails; a periodic refresh only
+    // rotated the key underneath the fetches every screen fires on resume.
+    if (shouldRefreshOnResume(session.expiresAtMs, Date.now())) {
       void refreshSession();
     }
   });
@@ -275,7 +285,7 @@ export function AppRoot() {
   });
 
   const logout = useCallback(async () => {
-    const currentSession = session;
+    const currentSession = sessionRef.current;
     analytics.trackEvent(MobileAnalyticsEvents.authLogout, { hadSession: Boolean(currentSession) });
     try {
       if (baseUrl && currentSession) {
@@ -296,31 +306,50 @@ export function AppRoot() {
     } catch (e) {
       logger.warn("Logout revoke failed", { error: e });
     } finally {
-      await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt(), clearPushRegistration()]);
+      await Promise.allSettled([
+        clearPendingMobileAuth(),
+        clearReceivedOtt(),
+        clearPushRegistration(),
+        // A different tenant must not inherit this one's colours.
+        clearCachedTheme(baseUrl, currentSession?.tenantId),
+      ]);
+      setCachedTenantTheme(null);
       setSession(null);
     }
-  }, [baseUrl, session, setSession]);
+  }, [baseUrl, setSession]);
 
   const setHost = useCallback(
     async (url: string) => {
       const normalized = await saveStoredHost(url);
       await clearPushRegistration();
+      await clearCachedTheme(baseUrl, sessionRef.current?.tenantId);
+      setCachedTenantTheme(null);
       setActiveBaseUrl(normalized);
       const config = getAppConfig();
       setBaseUrl(config.ok ? config.baseUrl : null);
       setSession(null);
     },
-    [setSession],
+    [baseUrl, setSession],
   );
 
   const clearHost = useCallback(async () => {
     await clearStoredHost();
     await clearPushRegistration();
+    await clearCachedTheme(baseUrl, sessionRef.current?.tenantId);
+    setCachedTenantTheme(null);
     setActiveBaseUrl(null);
     const config = getAppConfig();
     setBaseUrl(config.ok ? config.baseUrl : null);
     setSession(null);
-  }, [setSession]);
+  }, [baseUrl, setSession]);
+
+  // Consumers get one object per signed-in account; a token refresh updates
+  // its fields in place instead of handing every screen a new session.
+  const sessionKey = sessionIdentityKey(session);
+  const sessionHandle = useMemo(
+    () => (sessionKey === null ? null : createSessionHandle(sessionRef)),
+    [sessionKey],
+  );
 
   if (bootStatus === "booting") {
     return <LoadingState message={t("common:loadingEllipsis")} />;
@@ -331,12 +360,12 @@ export function AppRoot() {
   }
 
   return (
-    <ThemeProvider>
+    <ThemeProvider initialTenantTheme={cachedTenantTheme}>
     <I18nProvider>
     <ToastProvider>
       <AuthContext.Provider
         value={{
-          session,
+          session: sessionHandle,
           setSession,
           refreshSession,
           logout,
@@ -371,7 +400,7 @@ export function AppRoot() {
                   if (active === "SignIn" || active === "AuthCallback") return;
                   if (navPersistHandle.current) clearTimeout(navPersistHandle.current);
                   navPersistHandle.current = setTimeout(() => {
-                    void setSecureJson(`alga.mobile.navState.${userId}`, state);
+                    void setSecureJson(`alga.mobile.navState.${userId}`, stripTransientRouteParams(state));
                   }, 500);
                 }}
               >

@@ -355,10 +355,10 @@ describe('TaxService', () => {
     // packages/billing/src/services/taxService.rateSelection.db.test.ts.
     // Three placeholders were removed here rather than left to read as coverage.
     // International rates are region codes, already exercised by
-    // taxService.rateSelection.db.test.ts. Tax caps and period-spanning tax are
-    // not implemented at all -- calculateTax resolves a single date and no cap
-    // concept exists -- so they are product gaps tracked on the board, not
-    // missing tests for existing behavior.
+    // taxService.rateSelection.db.test.ts. Tax caps (tax_rates.cap_amount) and
+    // period-spanning tax (TaxService.calculateTaxForPeriod) are now implemented;
+    // their boundary/rounding/cap coverage lives in packages/billing/tests/tax
+    // and the PostgreSQL cases in taxService.rateSelection.db.test.ts.
     it('does not tax an exempt client even when a default rate is available', async () => {
         db.rows['clients'] = { is_tax_exempt: true };
         expect(await taxService.calculateTax('client1', 10000, '2023-06-01')).toEqual({ taxAmount: 0, taxRate: 0 });
@@ -397,5 +397,48 @@ describe('TaxService', () => {
         expect(taxable).toEqual({ taxAmount: 1000, taxRate: 10 });
         expect(exempt).toEqual({ taxAmount: 0, taxRate: 0 });
         expect(taxable.taxAmount + exempt.taxAmount).toBe(1000);
+    });
+    it('clamps simple default-rate tax at the configured cap and treats zero as a cap', async () => {
+        db.rows['tax_rates'] = { tax_rate_id: 'rate1', tax_percentage: 10, is_composite: false, cap_amount: 5 };
+        expect(await taxService.calculateTax('client1', 100, '2023-06-01')).toEqual({ taxAmount: 5, taxRate: 10 });
+
+        db.rows['tax_rates'] = { tax_rate_id: 'rate1', tax_percentage: 10, is_composite: false, cap_amount: 0 };
+        expect(await taxService.calculateTax('client1', 100, '2023-06-01')).toEqual({ taxAmount: 0, taxRate: 10 });
+    });
+    it('clamps summed progressive tax at the configured cap', async () => {
+        db.rows['tax_rates'] = { tax_rate_id: 'rate1', tax_percentage: 0, is_composite: false, cap_amount: 4 };
+        mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue([
+            { tenant: 'test_tenant', tax_rate_threshold_id: 't1', tax_rate_id: 'rate1', min_amount: 0, max_amount: null, rate: 10 },
+        ]);
+        const result = await taxService.calculateTax('client1', 100, '2023-06-01');
+        // Uncapped 10, clamped to 4.
+        expect(result.taxAmount).toBe(4);
+        expect(result.taxRate).toBe(4);
+    });
+    it('applies the cap once when the default rate covers the whole period', async () => {
+        db.rows['tax_rates'] = {
+            tax_rate_id: 'rate1', tax_percentage: 10, is_composite: false, cap_amount: 6,
+            start_date: '2023-06-01', end_date: '2023-06-21',
+        };
+        const result = await taxService.calculateTaxForPeriod('client1', 200, '2023-06-01', '2023-06-21');
+        expect(result.segments).toEqual([
+            { start_date: '2023-06-01', end_date: '2023-06-21', days: 20, netAmount: 200, taxAmount: 6, taxRate: 10 },
+        ]);
+        expect(result.taxAmount).toBe(6);
+    });
+    it('throws a coverage gap when the default rate does not cover the period', async () => {
+        db.rows['tax_rates'] = {
+            tax_rate_id: 'rate1', tax_percentage: 10, is_composite: false,
+            start_date: '2023-06-01', end_date: '2023-06-11',
+        };
+        // 2023-06-11 -> 2023-06-21 has no default rate coverage.
+        await expect(taxService.calculateTaxForPeriod('client1', 200, '2023-06-01', '2023-06-21'))
+            .rejects.toMatchObject({ code: 'TAX_RATE_COVERAGE_GAP' });
+    });
+    it('rejects an empty or reversed period range', async () => {
+        await expect(taxService.calculateTaxForPeriod('client1', 100, '2023-06-01', '2023-06-01'))
+            .rejects.toThrow('Tax period end date must be after start date');
+        await expect(taxService.calculateTaxForPeriod('client1', 100, '2023-06-10', '2023-06-01'))
+            .rejects.toThrow('Tax period end date must be after start date');
     });
 });

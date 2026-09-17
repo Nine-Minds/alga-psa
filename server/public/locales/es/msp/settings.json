@@ -441,7 +441,8 @@
       "boards": "Tableros",
       "priorities": "Prioridades",
       "categories": "Categorías",
-      "checklistTemplates": "Plantillas de lista de verificación"
+      "checklistTemplates": "Plantillas de lista de verificación",
+      "externalSystems": "Sistemas externos"
     },
     "numbering": {
       "title": "Formato de numeración",
@@ -549,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Activo",
-        "inactive": "Inactivo"
+        "inactive": "Inactivo",
+        "hiddenFromPortal": "Oculto en el portal"
       },
       "actions": {
         "addBoard": "Agregar tablero",
@@ -646,6 +648,10 @@
         "liveTimer": {
           "label": "Activar temporizador de tickets en vivo",
           "help": "Muestra el temporizador en vivo y los intervalos registrados en los tickets de este tablero. La entrada manual de tiempo sigue disponible."
+        },
+        "clientPortalVisible": {
+          "label": "Visible en el portal de clientes",
+          "help": "Si está desactivado, este tablero y sus tickets se ocultan a todos los usuarios del portal de clientes, independientemente de los grupos de visibilidad."
         },
         "defaultBoard": {
           "label": "Tablero predeterminado para tickets del portal del cliente",
@@ -986,6 +992,47 @@
           "updateStatusFailed": "Error al actualizar el estado de la plantilla",
           "itemSaveFailed": "Error al guardar el elemento de la lista de verificación",
           "ruleSaveFailed": "Error al guardar la regla de aplicación automática"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Sistemas externos",
+      "subtitle": "Agregue sistemas externos personalizados para que los tickets puedan vincularse a registros fuera del catálogo integrado.",
+      "addButton": "Agregar sistema",
+      "builtInTitle": "Sistemas integrados",
+      "builtInSubtitle": "Disponibles para todos los inquilinos; sus URL se generan a partir de la plantilla del sistema.",
+      "table": {
+        "label": "Etiqueta",
+        "key": "Clave",
+        "urlTemplate": "Plantilla de URL",
+        "actions": "Acciones"
+      },
+      "actions": {
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "cancel": "Cancelar",
+        "save": "Guardar"
+      },
+      "fields": {
+        "key": "Clave",
+        "keyHint": "Debe coincidir con custom:<slug> usando letras minúsculas, dígitos o guiones bajos.",
+        "label": "Etiqueta",
+        "urlTemplate": "Plantilla de URL",
+        "urlTemplateHint": "Opcional. Use los marcadores {realm} y {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Agregar sistema externo",
+        "editTitle": "Editar sistema externo"
+      },
+      "deleteDialog": {
+        "title": "Eliminar sistema externo",
+        "message": "¿Eliminar \"{{label}}\"? Los sistemas que aún usan los vínculos no se pueden eliminar."
+      },
+      "messages": {
+        "success": {
+          "created": "Sistema externo creado.",
+          "updated": "Sistema externo actualizado.",
+          "deleted": "Sistema externo eliminado."
         }
       }
     }
@@ -1561,7 +1608,8 @@
       "preview": {
         "subjectLabel": "Vista previa del asunto",
         "iframeTitle": "Vista previa de la plantilla de correo electrónico",
-        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales."
+        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales.",
+        "sourceSyncNote": "Haga clic en cualquier elemento de la vista previa para seleccionar su código; al mover el cursor en el código, el elemento se resalta aquí."
       },
       "errors": {
         "loadFailed": "Error al cargar las plantillas"
@@ -1610,7 +1658,8 @@
       },
       "tabs": {
         "source": "Código fuente",
-        "preview": "Vista previa"
+        "preview": "Vista previa",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1680,6 +1729,20 @@
           "colors": "colores",
           "text": "texto",
           "subject": "asunto"
+        },
+        "overwrite": "Sobrescribir",
+        "overwriteHint": "Sobrescribir reconstruye una plantilla a partir de la estándar con su paleta y descarta sus ediciones.",
+        "preview": {
+          "open": "Ver el resultado",
+          "title": "Vista previa: {{name}}",
+          "loading": "Generando la vista previa...",
+          "captions": {
+            "create": "Se creará una copia con su marca a partir de la plantilla estándar.",
+            "update": "Su copia con la marca se volverá a crear desde la plantilla estándar con la paleta guardada.",
+            "customized": "Sus cambios se conservan palabra por palabra. Solo se reemplazan los colores originales que quedan en esta plantilla.",
+            "overwrite": "Se descartarán sus ediciones de esta plantilla. Se reconstruirá a partir de la plantilla estándar con su paleta.",
+            "skipped": "No se escribirá nada: {{reason}}. Esta es la plantilla tal como está hoy."
+          }
         },
         "summary": "{{written}} con su marca, {{skipped}} omitidas, {{failed}} con errores",
         "groups": {

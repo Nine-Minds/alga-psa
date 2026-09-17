@@ -72,6 +72,7 @@ describe('opportunities v1 OpenAPI registration', () => {
       '/api/v1/interactions',
       '/api/v1/interactions/{id}',
       '/api/v1/interaction-types',
+      '/api/v1/interaction-statuses',
       '/api/v1/inventory/lookup',
       '/api/v1/inventory/stock',
       '/api/v1/inventory/stock-locations',
@@ -95,6 +96,8 @@ describe('opportunities v1 OpenAPI registration', () => {
     }
     expect(baseDocument.paths?.['/api/v1/interactions']?.get).toBeDefined();
     expect(baseDocument.paths?.['/api/v1/interactions']?.post).toBeDefined();
+    expect(baseDocument.paths?.['/api/v1/interactions/{id}']?.put).toBeDefined();
+    expect(baseDocument.paths?.['/api/v1/interaction-statuses']?.get).toBeDefined();
     expect(baseDocument.paths?.['/api/v1/inventory/counts']?.get).toBeDefined();
     expect(baseDocument.paths?.['/api/v1/inventory/counts']?.post).toBeDefined();
   });

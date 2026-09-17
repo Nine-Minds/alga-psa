@@ -21,6 +21,8 @@ export default defineConfig({
     'services/email/microsoftEmailProviderConfig': 'services/email/microsoftEmailProviderConfig.ts',
     'services/email/microsoftGraphDiagnostics': 'services/email/microsoftGraphDiagnostics.ts',
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',
+    'services/diagnostics/index': 'services/diagnostics/index.ts',
+    'services/entra/entraCallbackUrl': 'services/entra/entraCallbackUrl.ts',
     'workflow/index': 'workflow/index.ts',
     'workflow/runtime/index': 'workflow/runtime/index.ts',
     'workflow/persistence/index': 'workflow/persistence/index.ts',
@@ -71,6 +73,7 @@ export default defineConfig({
     'extensions/domain': 'extensions/domain.ts',
     'extensions/installs': 'extensions/installs.ts',
     'extensions/types': 'extensions/types.ts',
+    'billingClients/resolveFixedLineRate': 'billingClients/resolveFixedLineRate.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the
     // exports map into dist/ rather than being transpiled from source the way

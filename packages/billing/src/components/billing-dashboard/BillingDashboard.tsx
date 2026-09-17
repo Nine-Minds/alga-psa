@@ -1,6 +1,6 @@
 // BillingDashboard.tsx
 'use client'
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { IClient, IService } from '@alga-psa/types';
@@ -13,7 +13,6 @@ import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';
 import RecurringServicePeriodsTab from './RecurringServicePeriodsTab';
-import TaxRates from './TaxRates';
 import UsageTracking from './UsageTracking';
 import TemplatesTab from './contracts/TemplatesTab';
 import ClientContractsTab from './contracts/ClientContractsTab';
@@ -27,6 +26,9 @@ import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
 import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
 import ServiceCategoriesSettings from '../settings/billing/ServiceCategoriesSettings';
+import { TaxSourceSettings } from '../settings/tax/TaxSourceSettings';
+import { TaxRegionsAndRates } from '../settings/tax/TaxRegionsAndRates';
+import TaxDelegationBanner from '../tax/TaxDelegationBanner';
 import AccountingExportsTab, { AccountingExportsAccessDenied } from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
 import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
@@ -59,6 +61,15 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
   const accountingCapabilities = useAccountingCapabilities();
+
+  // The tax hub's sibling components each fetch their own copy of tax state.
+  // This revision counter is the shared invalidation channel: a component that
+  // mutates the tax source settings bumps it, and the siblings that read those
+  // settings refetch when their prop changes.
+  const [taxSettingsRevision, setTaxSettingsRevision] = useState(0);
+  const invalidateTaxSettings = useCallback(() => {
+    setTaxSettingsRevision((revision) => revision + 1);
+  }, []);
 
   const tabDefinitions = useMemo(() => {
     return billingTabDefinitions
@@ -213,7 +224,17 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="tax-rates">
-          <TaxRates />
+          <div className="space-y-6">
+            <TaxDelegationBanner
+              settingsRevision={taxSettingsRevision}
+              onSettingsChanged={invalidateTaxSettings}
+            />
+            <TaxSourceSettings
+              settingsRevision={taxSettingsRevision}
+              onSettingsChanged={invalidateTaxSettings}
+            />
+            <TaxRegionsAndRates />
+          </div>
         </Tabs.Content>
 
         <Tabs.Content value="contract-lines">

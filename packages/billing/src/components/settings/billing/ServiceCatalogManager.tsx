@@ -1,14 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
+import toast from 'react-hot-toast';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '../../../actions/serviceActions';
+import { getServices, updateService, updateServicePricing, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '../../../actions/serviceActions';
+import { getServiceContractUsage, applyServicePriceChange, type ServiceContractUsage } from '../../../actions/servicePriceRolloutActions';
+import PriceChangeRolloutDialog from './PriceChangeRolloutDialog';
+import RateReviewDialog from './RateReviewDialog';
 import { getDefaultBillingSettings } from '../../../actions/billingSettingsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -25,10 +33,12 @@ import {
 import { ITaxRate } from '@alga-psa/types'; // Corrected import path if needed
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
 import { QuickAddService } from './QuickAddService';
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect';
-import { MoreVertical } from 'lucide-react';
+import { Ban, CheckCircle, MoreVertical, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -36,7 +46,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 // Removed old SERVICE_TYPE_OPTIONS
@@ -47,9 +57,14 @@ const BILLING_METHOD_OPTION_VALUES = ['fixed', 'hourly', 'usage'] as const;
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 
+// Bulk activate/deactivate composes the single-item action, so the selection is
+// issued in small batches instead of one request per row all at once.
+const BULK_CHUNK_SIZE = 10;
+
 const ServiceCatalogManager: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const { money } = useCurrencyFormat();
+  const { formatDate } = useFormatters();
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [services, setServices] = useState<IService[]>([]);
   // Note: Categories are currently hidden in favor of using Service Types for organization
@@ -81,6 +96,26 @@ const ServiceCatalogManager: React.FC = () => {
   const [rateInput, setRateInput] = useState<string>('');
   // State for editing prices (multi-currency support)
   const [editingPrices, setEditingPrices] = useState<Array<{ currency_code: string; rate: number }>>([]);
+  // Baseline primary price (cents) captured from the DB-effective price when
+  // the edit dialog opens. `editingService.default_rate` is mutated by the
+  // primary input's onBlur, so comparing the new rate against it can never
+  // detect a change; the snapshot is what the rollout guard must use.
+  const originalPriceCentsRef = useRef<number | null>(null);
+  // Price-change rollout: when the effective rate changed and the service is on
+  // a contract, saving opens the rollout dialog instead of writing immediately.
+  const [pendingPriceChange, setPendingPriceChange] = useState<{
+    serviceId: string;
+    serviceName: string;
+    newRateCents: number;
+    currency: string;
+    service: IService;
+    prices: Array<{ currency_code: string; rate: number }>;
+  } | null>(null);
+  const [isRateReviewOpen, setIsRateReviewOpen] = useState(false);
+  // Entry point B (plan §3.2): "used on N contracts" per catalog service, and
+  // the read-only dialog it opens with no pending price change.
+  const [usageByService, setUsageByService] = useState<Record<string, ServiceContractUsage>>({});
+  const [reviewingService, setReviewingService] = useState<IService | null>(null);
   const filteredServices = services.filter(service => {
     // Filter by Service Type
     const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
@@ -88,6 +123,29 @@ const ServiceCatalogManager: React.FC = () => {
     return serviceTypeMatch && billingMethodMatch;
   });
   const memoizedFilteredServices = useMemo(() => filteredServices, [JSON.stringify(filteredServices)]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const rangeSelect = useRangeSelection<IService>({
+    items: memoizedFilteredServices,
+    getId: (service) => service.service_id,
+    selectedIds: selectedServiceIds,
+    onSelectedIdsChange: setSelectedServiceIds,
+  });
+  const visibleServiceIds = useMemo(
+    () =>
+      memoizedFilteredServices
+        .map((service) => service.service_id)
+        .filter((serviceId): serviceId is string => Boolean(serviceId)),
+    [memoizedFilteredServices]
+  );
+  const selectedVisibleCount = useMemo(
+    () => visibleServiceIds.filter((serviceId) => selectedServiceIds.has(serviceId)).length,
+    [visibleServiceIds, selectedServiceIds]
+  );
+  const allVisibleSelected =
+    visibleServiceIds.length > 0 && selectedVisibleCount === visibleServiceIds.length;
+  const clearSelection = useCallback(() => setSelectedServiceIds(new Set()), []);
   const billingMethodOptions = useMemo(
     () =>
       BILLING_METHOD_OPTION_VALUES.map((value) => ({
@@ -144,6 +202,9 @@ const ServiceCatalogManager: React.FC = () => {
     if (services.length > 0) {
       console.log("Filters changed, resetting to page 1 and fetching data");
       setCurrentPage(1); // Reset to page 1 when filters change
+      // The rows behind the selection are about to change, so the selection is
+      // no longer something the operator can see or verify.
+      clearSelection();
       fetchServices(false);
     }
   }, [selectedServiceType, selectedBillingMethod]);
@@ -207,6 +268,38 @@ const ServiceCatalogManager: React.FC = () => {
   // Keep track of whether we're in the middle of an update operation
   const [isUpdatingService, setIsUpdatingService] = useState(false);
   
+  /**
+   * One indexed aggregate per visible service (plan §3.2). Counts are fetched
+   * for the current page only; a failed count degrades to no badge, never to a
+   * broken table.
+   */
+  const loadUsageCounts = useCallback(async (pageServices: IService[]) => {
+    const ids = pageServices
+      .map((service) => service.service_id)
+      .filter((id): id is string => Boolean(id));
+    if (ids.length === 0) return;
+
+    const results = await Promise.all(
+      ids.map(async (serviceId) => {
+        try {
+          const usage = await getServiceContractUsage(serviceId);
+          return [serviceId, 'contractCount' in usage ? usage : null] as const;
+        } catch (usageError) {
+          console.error(`Error loading contract usage for service ${serviceId}:`, usageError);
+          return [serviceId, null] as const;
+        }
+      }),
+    );
+
+    setUsageByService((prev) => {
+      const next = { ...prev };
+      for (const [serviceId, usage] of results) {
+        if (usage) next[serviceId] = usage;
+      }
+      return next;
+    });
+  }, []);
+
   const fetchServices = async (preservePage = false) => {
     setIsLoading(true);
     try {
@@ -267,6 +360,20 @@ const ServiceCatalogManager: React.FC = () => {
     }
   };
 
+  // Load the "used on N contracts" count for the services actually on screen.
+  // Server-side pagination already hands us the page; client-side filtering
+  // paginates `filteredServices` locally, so slice the visible page there.
+  useEffect(() => {
+    const isFiltering = selectedServiceType !== 'all' || selectedBillingMethod !== 'all';
+    const pageServices = isFiltering
+      ? filteredServices.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+      : services;
+    void loadUsageCounts(pageServices);
+    // `filteredServices` is derived from the listed inputs;
+    // `loadUsageCounts` is stable (useCallback with no deps).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [services, currentPage, pageSize, selectedServiceType, selectedBillingMethod, loadUsageCounts]);
+
   const fetchCategories = async () => {
     try {
       const fetchedCategories = await getServiceCategories();
@@ -308,35 +415,98 @@ const ServiceCatalogManager: React.FC = () => {
       return;
     }
 
+    // Ensure editingService is not null and has an ID
+    if (!editingService?.service_id) {
+      setError(t('serviceCatalog.errors.missingId', {
+        defaultValue: 'Cannot update service without an ID.'
+      }));
+      return;
+    }
+
+    const service = editingService;
+    const prices = editingPrices;
+    // Derive the submitted primary rate from the live text input first. A save
+    // can run before the field ever blurs (clicking Save does not guarantee the
+    // blur has flushed), so `editingPrices[0]` may still hold the old value;
+    // trusting it silently discards what the operator typed.
+    const fallbackRateCents = Math.round(Number(prices[0]?.rate ?? 0));
+    const parsedRateCents =
+      rateInput.trim() === '' ? Number.NaN : Math.round(parseFloat(rateInput) * 100);
+    const newRateCents = Number.isFinite(parsedRateCents) ? parsedRateCents : fallbackRateCents;
+    // The baseline is the price that was effective when the dialog opened, held
+    // outside mutable editing state (see `originalPriceCentsRef`).
+    const oldRateCents = originalPriceCentsRef.current;
+    // Keep the persisted prices in step with the typed rate so the rollout's
+    // Apply/Skip paths (and a direct save) write what the operator actually saw.
+    const effectivePrices = prices.map((price, index) =>
+      index === 0 ? { ...price, rate: newRateCents } : price,
+    );
+
+    // A changed rate on a service that is on at least one contract opens the
+    // rollout dialog so the operator can choose when it takes effect.
+    if (prices.length > 0 && newRateCents !== oldRateCents) {
+      try {
+        const usage = await getServiceContractUsage(service.service_id);
+        if (!('contractCount' in usage)) {
+          setError(t('serviceCatalog.errors.update', { defaultValue: 'Failed to update service' }));
+          return;
+        }
+        if (usage.contractCount > 0) {
+          setPendingPriceChange({
+            serviceId: service.service_id,
+            serviceName: service.service_name,
+            newRateCents,
+            currency: prices[0].currency_code,
+            service,
+            prices: effectivePrices,
+          });
+          return;
+        }
+      } catch (usageError) {
+        console.error('Error checking service usage for rollout:', usageError);
+      }
+    }
+
+    await saveService(service, effectivePrices);
+  };
+
+  const saveService = async (
+    service: IService & { inventory_count?: number; seat_limit?: number },
+    prices: Array<{ currency_code: string; rate: number }>,
+    effectiveDate?: string,
+  ) => {
     // Store the current page before updating service and fetching new data
     const pageBeforeUpdate = currentPage;
-    console.log(`Saving service changes from page: ${pageBeforeUpdate}`);
 
     try {
-      // Ensure editingService is not null and has an ID
-      if (!editingService?.service_id) {
-        setError(t('serviceCatalog.errors.missingId', {
-          defaultValue: 'Cannot update service without an ID.'
-        }));
-        return;
-      }
-
       // First close the dialog to avoid UI jumps
       setIsEditDialogOpen(false);
       setEditingService(null);
       setEditingPrices([]);
+      setPendingPriceChange(null);
 
-      // Then update the service
-      await updateService(editingService.service_id, editingService);
-
-      // Update the service prices
-      await setServicePrices(editingService.service_id, editingPrices);
+      if (effectiveDate) {
+        // Effective-dated catalog write: history is preserved, inherited lines
+        // follow the new price on its date.
+        const { service_id: _serviceId, tenant: _tenant, ...patch } = service as IService & {
+          tenant?: string;
+        };
+        await applyServicePriceChange({
+          serviceId: service.service_id,
+          servicePatch: patch,
+          prices,
+          effectiveDate,
+        });
+      } else {
+        // Update the service fields and its price rows atomically, deriving
+        // default_rate from the primary row at save time.
+        await updateServicePricing(service.service_id, service, prices);
+      }
 
       // Fetch updated services with flag to preserve page
       await fetchServices(true);
 
       // Force the page to stay at the previous value
-      console.log(`Forcing page back to: ${pageBeforeUpdate}`);
       setTimeout(() => {
         setCurrentPage(pageBeforeUpdate);
       }, 50);
@@ -345,6 +515,7 @@ const ServiceCatalogManager: React.FC = () => {
     } catch (error) {
       console.error('Error updating service:', error);
       setError(t('serviceCatalog.errors.update', { defaultValue: 'Failed to update service' }));
+      throw error;
     }
   };
 
@@ -460,8 +631,9 @@ const ServiceCatalogManager: React.FC = () => {
       // Mark that this page change was from user interaction
       setUserChangedPage(true);
       setCurrentPage(newPage);
+      clearSelection();
     }
-  }, [currentPage]); // Include currentPage in dependencies
+  }, [currentPage, clearSelection]); // Include currentPage in dependencies
 
   // Handle page size change - reset to page 1
   const handlePageSizeChange = useCallback((newPageSize: number) => {
@@ -469,9 +641,206 @@ const ServiceCatalogManager: React.FC = () => {
     setUserChangedPage(true);
     setPageSize(newPageSize);
     setCurrentPage(1);
-  }, []);
+    clearSelection();
+  }, [clearSelection]);
+
+  const handleSelectAllVisible = (checked: boolean) => {
+    setSelectedServiceIds(checked ? new Set(visibleServiceIds) : new Set());
+    rangeSelect.resetAnchor();
+  };
+
+  const runBulkActiveUpdate = async (isActive: boolean) => {
+    const ids = Array.from(selectedServiceIds);
+    if (ids.length === 0) return;
+
+    setIsBulkProcessing(true);
+    let updated = 0;
+    let failed = 0;
+    try {
+      for (let index = 0; index < ids.length; index += BULK_CHUNK_SIZE) {
+        const chunk = ids.slice(index, index + BULK_CHUNK_SIZE);
+        // Each id is its own request, so one refusal must not hide the rest of
+        // the chunk's outcomes.
+        const results = await Promise.all(
+          chunk.map(async (serviceId) => {
+            try {
+              const result = await updateService(serviceId, { is_active: isActive });
+              return !(isActionMessageError(result) || isActionPermissionError(result));
+            } catch (updateError) {
+              console.error(`Error updating service ${serviceId}:`, updateError);
+              return false;
+            }
+          })
+        );
+        for (const ok of results) {
+          if (ok) updated += 1;
+          else failed += 1;
+        }
+      }
+
+      const feedback = isActive
+        ? {
+            success: t('serviceCatalog.bulk.feedback.activateSuccess', {
+              defaultValue: '{{count}} service(s) activated',
+              count: updated,
+            }),
+            partial: t('serviceCatalog.bulk.feedback.activatePartial', {
+              defaultValue: 'Activated {{count}} service(s); {{failed}} could not be activated',
+              count: updated,
+              failed,
+            }),
+            error: t('serviceCatalog.bulk.feedback.activateError', {
+              defaultValue: 'Failed to activate {{count}} service(s)',
+              count: failed,
+            }),
+          }
+        : {
+            success: t('serviceCatalog.bulk.feedback.deactivateSuccess', {
+              defaultValue: '{{count}} service(s) deactivated',
+              count: updated,
+            }),
+            partial: t('serviceCatalog.bulk.feedback.deactivatePartial', {
+              defaultValue: 'Deactivated {{count}} service(s); {{failed}} could not be deactivated',
+              count: updated,
+              failed,
+            }),
+            error: t('serviceCatalog.bulk.feedback.deactivateError', {
+              defaultValue: 'Failed to deactivate {{count}} service(s)',
+              count: failed,
+            }),
+          };
+
+      if (failed === 0) {
+        toast.success(feedback.success);
+      } else if (updated > 0) {
+        toast.error(feedback.partial);
+      } else {
+        toast.error(feedback.error);
+      }
+    } finally {
+      clearSelection();
+      setIsBulkProcessing(false);
+      await fetchServices(true);
+    }
+  };
+
+  const runBulkDelete = async () => {
+    const ids = Array.from(selectedServiceIds);
+    if (ids.length === 0) return;
+
+    setIsBulkProcessing(true);
+    let deleted = 0;
+    let failed = 0;
+    // Dependency validation refuses individual services; naming them is the
+    // only way the operator learns which of the batch survived and why.
+    const blockedNames: string[] = [];
+    try {
+      for (const serviceId of ids) {
+        const serviceName =
+          services.find((service) => service.service_id === serviceId)?.service_name ?? serviceId;
+        try {
+          const result = await deleteService(serviceId);
+          if (isActionPermissionError(result)) {
+            failed += 1;
+          } else if (result.success) {
+            deleted += 1;
+          } else {
+            blockedNames.push(serviceName);
+          }
+        } catch (deleteError) {
+          console.error(`Error deleting service ${serviceId}:`, deleteError);
+          failed += 1;
+        }
+      }
+
+      const names = blockedNames.join(', ');
+      const unresolved = blockedNames.length + failed;
+      if (unresolved === 0) {
+        toast.success(t('serviceCatalog.bulk.feedback.deleteSuccess', {
+          defaultValue: '{{count}} service(s) deleted',
+          count: deleted,
+        }));
+      } else if (deleted > 0) {
+        toast.error(names
+          ? t('serviceCatalog.bulk.feedback.deletePartialBlocked', {
+              defaultValue: 'Deleted {{count}} service(s); {{failed}} could not be deleted: {{names}}',
+              count: deleted,
+              failed: unresolved,
+              names,
+            })
+          : t('serviceCatalog.bulk.feedback.deletePartial', {
+              defaultValue: 'Deleted {{count}} service(s); {{failed}} could not be deleted',
+              count: deleted,
+              failed: unresolved,
+            }));
+      } else {
+        toast.error(names
+          ? t('serviceCatalog.bulk.feedback.deleteBlocked', {
+              defaultValue: 'Could not delete {{count}} service(s) — still in use: {{names}}',
+              count: unresolved,
+              names,
+            })
+          : t('serviceCatalog.bulk.feedback.deleteError', {
+              defaultValue: 'Failed to delete {{count}} service(s)',
+              count: unresolved,
+            }));
+      }
+    } finally {
+      clearSelection();
+      setIsBulkProcessing(false);
+      setIsBulkDeleteOpen(false);
+      await fetchServices(true);
+    }
+  };
 
   const getColumns = (): ColumnDefinition<IService>[] => {
+    // The selection cell must swallow its own clicks: the row click opens the
+    // edit dialog, which is not what ticking a checkbox asks for.
+    const selectionColumn: ColumnDefinition<IService> = {
+      title: (
+        <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
+          <Checkbox
+            id="service-catalog-select-all"
+            checked={allVisibleSelected}
+            indeterminate={selectedVisibleCount > 0 && !allVisibleSelected}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              event.stopPropagation();
+              handleSelectAllVisible(event.target.checked);
+            }}
+            aria-label={t('serviceCatalog.bulk.selectAll', { defaultValue: 'Select all services' })}
+            className="m-0"
+            skipRegistration
+          />
+        </div>
+      ),
+      dataIndex: 'selection',
+      width: '4%',
+      sortable: false,
+      render: (_value, record) => {
+        const serviceId = record.service_id;
+        if (!serviceId) return null;
+        const isChecked = rangeSelect.isSelected(serviceId);
+        return (
+          <div className="flex items-center" onClick={(event) => event.stopPropagation()}>
+            <Checkbox
+              id={`service-catalog-select-${serviceId}`}
+              checked={isChecked}
+              onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+                event.stopPropagation();
+                rangeSelect.handleSelect(serviceId, {
+                  shiftKey: event.shiftKey,
+                  selected: !isChecked,
+                });
+              }}
+              onChange={() => { /* controlled via onClick for shift-range support */ }}
+              className="m-0"
+              skipRegistration
+            />
+          </div>
+        );
+      },
+    };
+
     const baseColumns: ColumnDefinition<IService>[] = [
       {
         title: t('serviceCatalog.table.serviceName', { defaultValue: 'Service Name' }),
@@ -505,22 +874,45 @@ const ServiceCatalogManager: React.FC = () => {
         title: t('serviceCatalog.table.pricing', { defaultValue: 'Pricing' }),
         dataIndex: 'prices',
         render: (prices: IServicePrice[] | undefined, record) => {
+          const scheduled = record.scheduled_prices ?? [];
+          let primaryDisplay: React.ReactNode;
           if (!prices || prices.length === 0) {
             // Fall back to default_rate if no prices exist
-            return money(Number(record.default_rate));
+            primaryDisplay = money(Number(record.default_rate));
+          } else {
+            // Show primary price (first one, typically USD)
+            const primaryPrice = prices[0];
+            const primaryRate = `${getCurrencySymbol(primaryPrice.currency_code)}${(primaryPrice.rate / 100).toFixed(2)}`;
+            // Show indicator if there are additional currencies
+            primaryDisplay = prices.length > 1
+              ? (
+                <span title={prices.map(p => `${p.currency_code}: ${getCurrencySymbol(p.currency_code)}${(p.rate / 100).toFixed(2)}`).join('\n')}>
+                  {primaryRate} <span className="text-xs text-muted-foreground">+{prices.length - 1}</span>
+                </span>
+              )
+              : primaryRate;
           }
-          // Show primary price (first one, typically USD)
-          const primaryPrice = prices[0];
-          const primaryDisplay = `${getCurrencySymbol(primaryPrice.currency_code)}${(primaryPrice.rate / 100).toFixed(2)}`;
-          // Show indicator if there are additional currencies
-          if (prices.length > 1) {
-            return (
-              <span title={prices.map(p => `${p.currency_code}: ${getCurrencySymbol(p.currency_code)}${(p.rate / 100).toFixed(2)}`).join('\n')}>
-                {primaryDisplay} <span className="text-xs text-muted-foreground">+{prices.length - 1}</span>
-              </span>
-            );
+
+          if (scheduled.length === 0) {
+            return primaryDisplay;
           }
-          return primaryDisplay;
+
+          // Item 1/3: surface a scheduled future price so an ordinary save is
+          // not mistaken for cancelling (or applying) it. The list shows the
+          // current price; the badge names the next change's date.
+          return (
+            <span className="inline-flex items-center gap-2">
+              {primaryDisplay}
+              <Badge variant="info">
+                {t('serviceCatalog.scheduledPriceBadge', {
+                  date: scheduled[0].effective_date
+                    ? formatDate(scheduled[0].effective_date)
+                    : '',
+                  defaultValue: 'Next change {{date}}',
+                })}
+              </Badge>
+            </span>
+          );
         },
       },
       // Category column hidden - using Service Types for organization
@@ -552,6 +944,56 @@ const ServiceCatalogManager: React.FC = () => {
               : Number(rate?.tax_percentage);
           const percentagePart = !isNaN(percentageValue) ? percentageValue.toFixed(2) : '0.00';
           return rate ? `${descriptionPart} - ${percentagePart}%` : tax_rate_id; // Fallback to ID
+        },
+      },
+      // Entry point B (plan §3.2): reopen the rollout/usage flow later. The id
+      // is entity-free (rule 4); the service id rides in data-service-id. The
+      // dataIndex must be unique — DataTable derives column identity from it,
+      // so reusing 'service_id' would collide with the Actions column and knock
+      // the row menu (Edit/Delete) out of the table.
+      {
+        title: t('serviceCatalog.table.contractUsage', { defaultValue: 'Contracts' }),
+        dataIndex: 'contract_usage',
+        render: (_value, record, index) => {
+          const serviceId = record.service_id;
+          const count = serviceId ? usageByService[serviceId]?.contractCount : undefined;
+          if (!serviceId || count === undefined) {
+            return (
+              <span className="text-muted-foreground">
+                {t('common.notAvailable', { defaultValue: 'N/A' })}
+              </span>
+            );
+          }
+          if (count === 0) {
+            return (
+              <span className="text-muted-foreground">
+                {t('serviceCatalog.table.contractUsageNone', { defaultValue: 'Not used' })}
+              </span>
+            );
+          }
+          return (
+            <Button
+              id={`service-contract-usage-${index}`}
+              data-service-id={serviceId}
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={(event) => {
+                event.stopPropagation();
+                setReviewingService(record);
+              }}
+            >
+              {count === 1
+                ? t('serviceCatalog.table.contractUsageOne', {
+                    contracts: count,
+                    defaultValue: 'Used on {{contracts}} contract',
+                  })
+                : t('serviceCatalog.table.contractUsageMany', {
+                    contracts: count,
+                    defaultValue: 'Used on {{contracts}} contracts',
+                  })}
+            </Button>
+          );
         },
       },
     ];
@@ -617,6 +1059,9 @@ const ServiceCatalogManager: React.FC = () => {
               id={`edit-service-${record.service_id}`}
               onClick={() => {
                 setEditingService(record);
+                originalPriceCentsRef.current = Math.round(
+                  Number(record.prices?.[0]?.rate ?? record.default_rate ?? 0),
+                );
                 // Initialize editingPrices from service prices or create default entry with tenant currency
                 const prices = record.prices && record.prices.length > 0
                   ? record.prices.map(p => ({ currency_code: p.currency_code, rate: p.rate }))
@@ -645,7 +1090,7 @@ const ServiceCatalogManager: React.FC = () => {
       ),
     });
 
-    return baseColumns;
+    return [selectionColumn, ...baseColumns];
   };
 
   const columns = getColumns();
@@ -654,9 +1099,23 @@ const ServiceCatalogManager: React.FC = () => {
     <>
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">
-            {t('serviceCatalog.title', { defaultValue: 'Service Catalog Management' })}
-          </h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-lg font-semibold">
+              {t('serviceCatalog.title', { defaultValue: 'Service Catalog Management' })}
+            </h3>
+            {/* First-class entry point into rate review (plan §3.3). Legacy
+                `unreviewed` lines need a route to reclassification that does
+                not depend on making a price change first. */}
+            <Button
+              id="open-rate-review"
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsRateReviewOpen(true)}
+            >
+              {t('priceChangeRollout.reviewRates', { defaultValue: 'Review rates' })}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -717,6 +1176,11 @@ const ServiceCatalogManager: React.FC = () => {
                 totalItems={totalCount} // Pass total count for server-side pagination
                 onPageChange={handlePageChange}
                 onItemsPerPageChange={handlePageSizeChange}
+                rowClassName={(record: IService) =>
+                  record.service_id && selectedServiceIds.has(record.service_id)
+                    ? 'bg-table-selected'
+                    : ''
+                }
                 onRowClick={(record: IService) => { // Use updated IService
                   // Store the current page before opening the dialog
                   const currentPageBeforeDialog = currentPage;
@@ -726,6 +1190,9 @@ const ServiceCatalogManager: React.FC = () => {
                     ...record,
                     // sku: record.sku || '', // Example if sku was fetched
                   });
+                  originalPriceCentsRef.current = Math.round(
+                    Number(record.prices?.[0]?.rate ?? record.default_rate ?? 0),
+                  );
                   // Initialize editingPrices from service prices or create default entry with tenant currency
                   const prices = record.prices && record.prices.length > 0
                     ? record.prices.map(p => ({ currency_code: p.currency_code, rate: p.rate }))
@@ -745,6 +1212,55 @@ const ServiceCatalogManager: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      <BulkActionBar
+        idPrefix="service-catalog-bulk-action-bar"
+        count={selectedServiceIds.size}
+        selectedLabel={t('serviceCatalog.bulk.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedServiceIds.size,
+        })}
+        actions={[
+          {
+            id: 'deactivate',
+            label: t('serviceCatalog.bulk.actions.deactivate', { defaultValue: 'Deactivate' }),
+            icon: <Ban className="h-4 w-4" />,
+            disabled: isBulkProcessing,
+            onClick: () => { void runBulkActiveUpdate(false); },
+          },
+          {
+            id: 'activate',
+            label: t('serviceCatalog.bulk.actions.activate', { defaultValue: 'Activate' }),
+            icon: <CheckCircle className="h-4 w-4" />,
+            disabled: isBulkProcessing,
+            onClick: () => { void runBulkActiveUpdate(true); },
+          },
+          {
+            id: 'delete',
+            label: t('serviceCatalog.bulk.actions.delete', { defaultValue: 'Delete' }),
+            icon: <Trash2 className="h-4 w-4" />,
+            destructive: true,
+            disabled: isBulkProcessing,
+            onClick: () => setIsBulkDeleteOpen(true),
+          },
+        ]}
+        onClear={clearSelection}
+        clearLabel={t('serviceCatalog.bulk.clear', { defaultValue: 'Clear' })}
+      />
+      <ConfirmationDialog
+        id="service-catalog-bulk-delete-dialog"
+        isOpen={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        onConfirm={runBulkDelete}
+        title={t('serviceCatalog.bulk.deleteDialog.title', { defaultValue: 'Delete Services' })}
+        message={t('serviceCatalog.bulk.deleteDialog.message', {
+          defaultValue:
+            'Permanently delete {{count}} selected service(s)? Services still referenced by contracts or invoices are skipped. This cannot be undone.',
+          count: selectedServiceIds.size,
+        })}
+        confirmLabel={t('serviceCatalog.bulk.actions.delete', { defaultValue: 'Delete' })}
+        cancelLabel={t('serviceCatalog.actions.cancel', { defaultValue: 'Cancel' })}
+        isConfirming={isBulkProcessing}
+      />
         <Dialog
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
@@ -881,6 +1397,20 @@ const ServiceCatalogManager: React.FC = () => {
                   {t('serviceCatalog.actions.addCurrency', { defaultValue: '+ Add Currency' })}
                 </Button>
               </div>
+
+              {editingService?.scheduled_prices && editingService.scheduled_prices.length > 0 && (
+                <Alert variant="info" id="scheduled-price-notice" className="mb-3">
+                  <AlertDescription>
+                    {t('serviceCatalog.scheduledPriceNotice', {
+                      date: editingService.scheduled_prices[0].effective_date
+                        ? formatDate(editingService.scheduled_prices[0].effective_date)
+                        : '',
+                      defaultValue:
+                        'A price change is scheduled for {{date}}. Saving here updates the current price and does not cancel the scheduled change.',
+                    })}
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="space-y-3">
                 {editingPrices.map((price, index) => (
@@ -1143,6 +1673,45 @@ const ServiceCatalogManager: React.FC = () => {
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
+      />
+      {pendingPriceChange && (
+        <PriceChangeRolloutDialog
+          isOpen={Boolean(pendingPriceChange)}
+          onClose={() => setPendingPriceChange(null)}
+          serviceId={pendingPriceChange.serviceId}
+          serviceName={pendingPriceChange.serviceName}
+          newRateCents={pendingPriceChange.newRateCents}
+          currency={pendingPriceChange.currency}
+          onSkip={() => saveService(pendingPriceChange.service, pendingPriceChange.prices)}
+          onApply={(effectiveDate) =>
+            saveService(pendingPriceChange.service, pendingPriceChange.prices, effectiveDate)
+          }
+          onReviewRates={() => {
+            setPendingPriceChange(null);
+            setIsRateReviewOpen(true);
+          }}
+        />
+      )}
+      {reviewingService && (
+        <PriceChangeRolloutDialog
+          isOpen
+          mode="review"
+          onClose={() => setReviewingService(null)}
+          serviceId={reviewingService.service_id ?? ''}
+          serviceName={reviewingService.service_name}
+          newRateCents={Math.round(
+            Number(reviewingService.prices?.[0]?.rate ?? reviewingService.default_rate ?? 0),
+          )}
+          currency={reviewingService.prices?.[0]?.currency_code ?? defaultCurrency}
+          onReviewRates={() => {
+            setReviewingService(null);
+            setIsRateReviewOpen(true);
+          }}
+        />
+      )}
+      <RateReviewDialog
+        isOpen={isRateReviewOpen}
+        onClose={() => setIsRateReviewOpen(false)}
       />
     </>
   );

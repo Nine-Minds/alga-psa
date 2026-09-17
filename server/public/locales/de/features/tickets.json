@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Zeiteintrag konnte nicht gelöscht werden",
     "timeEntryDeleted": "Zeiteintrag gelöscht",
     "closeFailed": "Ticket konnte nicht geschlossen werden",
-    "scheduleVisitFailed": "Der Terminplaner konnte nicht geöffnet werden",
     "loadCommentsFailed": "Kommentare konnten nicht geladen werden",
     "updateTicketFailed": "Das Ticket konnte nicht aktualisiert werden",
     "errorWithMessage": "Fehler: {{message}}",
     "billingProfileUpdated": "Abrechnungsprofil aktualisiert",
-    "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
+    "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden",
+    "scheduleOpenFailed": "Der Planer konnte nicht geöffnet werden"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -1603,7 +1603,8 @@
       "additionalAgentsTooltip": "Weitere Bearbeiter:",
       "unknownAgent": "Unbekannter Bearbeiter",
       "category": "Kategorie",
-      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus."
+      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus.",
+      "viewSchedule": "Zeitplan anzeigen"
     },
     "layout": {
       "grid": "Raster",
@@ -1631,7 +1632,6 @@
       "showLess": "Weniger anzeigen",
       "contact": "Kontakt",
       "client": "Kunde",
-      "nextVisit": "Nächster Besuch",
       "callsAndEmails": "Anrufe und E-Mails",
       "call": "Anrufen",
       "viewAll": "Alle anzeigen",
@@ -1657,7 +1657,6 @@
       "billing": "Abrechnung",
       "couldNotLoad": "Diese Kachel konnte nicht geladen werden",
       "nothingScheduled": "Nichts geplant",
-      "scheduleVisit": "Besuch planen",
       "scheduledWork": "Geplante Arbeit",
       "scheduleDone": "erledigt",
       "noCallsOrEmails": "Keine Anrufe oder E-Mails erfasst",
@@ -1703,7 +1702,9 @@
         "approved": "Genehmigt",
         "declined": "Abgelehnt",
         "cancelled": "Storniert"
-      }
+      },
+      "scheduleTime": "Zeit planen",
+      "openScheduleEntry": "Zeitplaneintrag öffnen"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",
@@ -1801,6 +1802,80 @@
       "contactHelper": "Überspringt die E-Mail an den Kunden, die Umfrage-Einladung und die Kundenportal-Benachrichtigung",
       "internalLabel": "Auch Agenten und Beobachter nicht benachrichtigen",
       "internalHelper": "Überspringt auch deren E-Mails und In-App-Benachrichtigungen"
+    }
+  },
+  "externalLinks": {
+    "title": "Externe Links",
+    "empty": "Keine externen Links",
+    "loading": "Externe Links werden geladen...",
+    "noUrl": "Für diese Referenz ist keine URL verfügbar",
+    "customSystemOption": "{{label}} (benutzerdefiniert)",
+    "actions": {
+      "add": "Link hinzufügen",
+      "edit": "Bearbeiten",
+      "remove": "Entfernen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "menu": "Link-Aktionen"
+    },
+    "relationship": {
+      "origin": "Ursprung",
+      "mirror": "Spiegel",
+      "reference": "Referenz"
+    },
+    "relationshipDescription": {
+      "origin": "Wo dieses Ticket seinen Ursprung hat. Jedes Ticket kann einen Ursprungs-Link haben, der sein Ursprungs-Badge bestimmt.",
+      "mirror": "Ein weiterer Eintrag, der dieselbe Aufgabe wie dieses Ticket verfolgt.",
+      "reference": "Ergänzende Informationen zu diesem Ticket."
+    },
+    "dialog": {
+      "addTitle": "Externen Link hinzufügen",
+      "editTitle": "Externen Link bearbeiten",
+      "intro": "Das Hinzufügen eines Links synchronisiert keine Daten zwischen den Systemen."
+    },
+    "removeDialog": {
+      "title": "Externen Link entfernen",
+      "message": "Diesen externen Link vom Ticket entfernen?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Systeme werden geladen...",
+      "selectSystem": "System auswählen",
+      "externalId": "Externe ID",
+      "externalIdPlaceholder": "z. B. 42 oder 1234567890",
+      "realm": "Bereich",
+      "url": "URL",
+      "urlOptional": "Optionale Überschreibung",
+      "urlRequired": "https://...",
+      "relationship": "Beziehung",
+      "originExistsHint": "Dieses Ticket hat bereits einen Ursprungs-Link.",
+      "actorGroup": "Person oder Konto (optional)",
+      "actorHint": "Die Person oder das Konto, die bzw. das mit dem verlinkten Eintrag im externen System verbunden ist.",
+      "actorHandle": "Benutzername oder Handle",
+      "actorDisplay": "Anzeigename",
+      "builtInGroup": "Integrierte Systeme",
+      "customGroup": "Benutzerdefinierte Systeme",
+      "urlPreview": "Öffnet:",
+      "urlPreviewIncomplete": "Füllen Sie die Felder oben aus, um den Link in der Vorschau zu sehen."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket nicht gefunden",
+      "commentNotFound": "Kommentar auf diesem Ticket nicht gefunden",
+      "linkNotFound": "Externer Link nicht gefunden",
+      "systemNotFound": "Unbekanntes externes System",
+      "externalIdRequired": "Externe ID ist erforderlich",
+      "invalidUrl": "URL muss eine gültige http(s)-URL sein",
+      "invalidRelationship": "Ungültige Beziehung",
+      "invalidEntityType": "Ungültiger Entitätstyp",
+      "originExists": "Diese Entität hat bereits einen Ursprungs-Link",
+      "duplicateExternalLink": "Dieser externe Datensatz ist bereits verlinkt",
+      "systemInUse": "Dieses externe System wird von bestehenden Links verwendet",
+      "systemInUseCount": "Dieses externe System wird von {{count}} Link(s) verwendet",
+      "invalidSystemKey": "Benutzerdefinierte Systemschlüssel müssen custom:<slug> entsprechen",
+      "systemLabelRequired": "Systembezeichnung ist erforderlich",
+      "permissionDenied": "Zugriff verweigert",
+      "systemRequired": "Wählen Sie ein externes System.",
+      "urlRequired": "Für Systeme ohne URL-Vorlage ist eine URL erforderlich."
     }
   }
 }

@@ -24,7 +24,16 @@ export interface ContractCadenceServicePeriodGenerationInput {
   sourceObligation: IRecurringObligationRef;
   duePosition: DuePosition;
   anchorDate: ISO8601String;
+  /**
+   * Upper bound on how many periods a single generation call may emit. Guards a
+   * very old assignment with no billed floor from generating unbounded history
+   * in one pass. Callers detect truncation by comparing the last emitted period
+   * end against `rangeEnd`.
+   */
+  maxPeriods?: number;
 }
+
+export const DEFAULT_CONTRACT_CADENCE_GENERATION_MAX_PERIODS = 100;
 
 export interface ResolveContractCadenceAnchorDateInput {
   assignmentStartDate: ISO8601String;
@@ -174,9 +183,12 @@ function buildContractCadenceServicePeriods(
   const rangeStartDate = toPlainDate(rangeStart);
   const rangeEndDate = toPlainDate(rangeEnd);
   const startIndex = resolveBoundaryIndexAtOrBefore(anchor, rangeStartDate, input.monthsPerPeriod);
+  const maxPeriods = input.maxPeriods && input.maxPeriods > 0
+    ? input.maxPeriods
+    : DEFAULT_CONTRACT_CADENCE_GENERATION_MAX_PERIODS;
   const periods: IRecurringServicePeriod[] = [];
 
-  for (let index = startIndex; index < startIndex + 100; index += 1) {
+  for (let index = startIndex; index < startIndex + maxPeriods; index += 1) {
     const offsetMonths = index * input.monthsPerPeriod;
     const periodStartDate = anchor.add({ months: offsetMonths });
     if (Temporal.PlainDate.compare(periodStartDate, rangeEndDate) >= 0) {

@@ -211,8 +211,8 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
   const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
   const invoice = await Invoice.getFullInvoiceById(db, ids.tenant, result.invoice_id);
   const vm = mapDbInvoiceToWasmViewModel(invoice)!;
-  const charges = await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
-  const links = await db('invoice_time_entries').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
+  const charges = await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id }).orderBy('item_id');
+  const links = await db('invoice_time_entries').where({ tenant: ids.tenant, invoice_id: result.invoice_id }).orderBy('invoice_time_entry_id');
   fs.writeFileSync(`${dir}/generated.json`, JSON.stringify({ ids, invoiceId: result.invoice_id, invoiceNumber: invoice!.invoice_number, charges, links, vm }, null, 2));
   for (const charge of charges) {
     const contributions = vm.ticketPresentationRows!.flatMap((r) => r.contributions).filter((c) => c.itemId === charge.item_id);
@@ -246,7 +246,7 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     for (const description of ['Cap acceptance line discount', 'Cap acceptance negative credit', 'Cap acceptance information']) {
       expect(adjustedVm.ticketPresentationRows!.filter((row) => row.description === description)).toHaveLength(1);
     }
-    expect(await db('invoice_time_entries').where({ tenant: ids.tenant, invoice_id: result.invoice_id })).toEqual(links);
+    expect(await db('invoice_time_entries').where({ tenant: ids.tenant, invoice_id: result.invoice_id }).orderBy('invoice_time_entry_id')).toEqual(links);
     expect(adjustedVm.ticketPresentationRows!.reduce((sum, row) => sum + row.amount, 0)).toBe(adjustedVm.subtotal);
     fs.writeFileSync(`${dir}/inline-adjustments.json`, JSON.stringify(adjustedVm, null, 2));
 
@@ -264,9 +264,9 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     expect(periods.length).toBeGreaterThan(0);
     expect(periods.every((period) => period.lifecycle_state === 'billed' && period.invoice_charge_detail_id)).toBe(true);
     fs.writeFileSync(`${dir}/recurring-periods.json`, JSON.stringify(periods, null, 2));
-    const before = await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
+    const before = await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id }).orderBy('item_id');
     expect((await generateInvoice(ids.cycleId) as any)?.invoice_id).toBeUndefined();
-    expect(await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id })).toEqual(before);
+    expect(await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id }).orderBy('item_id')).toEqual(before);
   }
   if (variant === 'task-identities') {
     expect(links).toHaveLength(8);
@@ -572,8 +572,21 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
       const invoice = await Invoice.getFullInvoiceById(db, state.tenant, fixture.invoiceId);
       const vm = mapDbInvoiceToWasmViewModel(invoice)!;
       const frozen = JSON.stringify(vm);
-      const links = await db('invoice_time_entries').where({ tenant: state.tenant, invoice_id: fixture.invoiceId });
-      const charges = await db('invoice_charges').where({ tenant: state.tenant, invoice_id: fixture.invoiceId });
+      // Compare every persisted column in primary-key order: SQL scan order is
+      // unspecified and can change between the baseline and post-render reads.
+      const links = await db('invoice_time_entries').where({ tenant: state.tenant, invoice_id: fixture.invoiceId }).orderBy('invoice_time_entry_id');
+      const charges = await db('invoice_charges').where({ tenant: state.tenant, invoice_id: fixture.invoiceId }).orderBy('item_id');
+      if (fixture.variant === 'historical-fallbacks') {
+        // Rewrite the historical rows in reverse order without changing any
+        // values. PostgreSQL may change their physical scan order after updates;
+        // persisted snapshots and rendered invoice data must remain unchanged.
+        for (const link of [...links].reverse()) {
+          await db('invoice_time_entries')
+            .where({ tenant: state.tenant, invoice_time_entry_id: link.invoice_time_entry_id })
+            .update({ work_item_snapshot: db.ref('work_item_snapshot') });
+        }
+        expect(mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, state.tenant, fixture.invoiceId))).toEqual(vm);
+      }
       for (const charge of charges) {
         const contributions = vm.ticketPresentationRows!.flatMap((row) => row.contributions).filter((c) => c.itemId === charge.item_id);
         expect(contributions.reduce((sum, c) => sum + c.amount, 0)).toBe(Number(charge.net_amount));
@@ -629,7 +642,7 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
         expect(text).not.toMatch(/PRIVATE|EDITED/);
         expect(flowText).not.toMatch(/PRIVATE|EDITED/);
         expect(JSON.stringify(vm)).toBe(frozen);
-        expect(await db('invoice_time_entries').where({ tenant: state.tenant, invoice_id: fixture.invoiceId })).toEqual(links);
+        expect(await db('invoice_time_entries').where({ tenant: state.tenant, invoice_id: fixture.invoiceId }).orderBy('invoice_time_entry_id')).toEqual(links);
         if (fixture.variant === 'multi-tax-long') {
           const pages = text.split('\f').filter((page) => page.trim());
           expect(pages.length).toBeGreaterThan(2);
@@ -638,7 +651,7 @@ it('verifies saved detail and historical locale matrix through persisted reads, 
         fs.writeFileSync(`${prefix}-canvas.json`, JSON.stringify({ flat: canvasFlat, nested: canvasNested, display, money, dates, expected, authoritative }, null, 2));
         manifest.push({ variant: fixture.variant, origin: fixture.origin, invoiceId: fixture.invoiceId, invoiceNumber: invoice!.invoice_number, templateId, locale, effectiveLocale, expected, money, dates: [...new Set(dates)], artifacts: prefix });
       }
-      expect(await db('invoice_charges').where({ tenant: state.tenant, invoice_id: fixture.invoiceId })).toEqual(charges);
+      expect(await db('invoice_charges').where({ tenant: state.tenant, invoice_id: fixture.invoiceId }).orderBy('item_id')).toEqual(charges);
     }
     fs.writeFileSync(`${dir}/manifest.json`, JSON.stringify(manifest, null, 2));
   } finally { await db.destroy(); }
