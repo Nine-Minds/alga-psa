@@ -740,7 +740,8 @@
       "driftReexport": "Re-export to QuickBooks",
       "syncNow": "Sync to QuickBooks",
       "viewInQbo": "View in QuickBooks",
-      "voidInvoice": "Void Invoice"
+      "voidInvoice": "Void Invoice",
+      "viewInXero": "View in Xero"
     },
     "loading": "Loading Preview...",
     "empty": "Select an invoice to preview",
@@ -1095,7 +1096,9 @@
     "tooltip": {
       "qboNumberPrefix": "QBO #",
       "lastSynced": "Last synced:",
-      "viewInQuickBooks": "View in QuickBooks"
+      "viewInQuickBooks": "View in QuickBooks",
+      "viewInXero": "View in Xero",
+      "xeroNumberPrefix": "Xero #"
     }
   },
   "templateManager": {

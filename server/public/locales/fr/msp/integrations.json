@@ -78,7 +78,12 @@
         "noPermission": {
           "title": "Aucun accès aux intégrations comptables",
           "description": "Vous n'avez pas l'autorisation d'afficher ou de configurer les intégrations comptables. Demandez l'accès à un administrateur."
-        }
+        },
+        "changeIntegration": "Choisir une autre",
+        "currentIntegration": "Intégration comptable",
+        "selectedAction": "Sélectionnée",
+        "reconnectRequired": "Reconnexion requise",
+        "settingsTitle": "Paramètres de {{title}}"
       },
       "modules": {
         "tabs": {
@@ -1995,7 +2000,15 @@
         "healthCardDescriptionProvider": "État et contrôles de la synchronisation comptable {{provider}}. S'exécute toutes les 15 minutes.",
         "refreshTokenExpiredProvider": "Jeton {{provider}} expiré — reconnectez-vous pour reprendre la synchronisation.",
         "refreshTokenExpiryProvider": "Le jeton {{provider}} expire le {{date}}",
-        "autoProvisionCustomersLabelProvider": "Créer automatiquement les clients {{provider}}"
+        "autoProvisionCustomersLabelProvider": "Créer automatiquement les clients {{provider}}",
+        "connectedOrganisations": "Organisations Xero",
+        "defaultOrganisationDescription": "L’organisation par défaut est utilisée pour la synchronisation, les exports et les correspondances.",
+        "outstandingItems": "Éléments en attente",
+        "outstandingItemsDescription": "Éléments nécessitant encore une vérification ou une nouvelle tentative de synchronisation.",
+        "outstandingItemsReconnect": "Pour toutes les organisations liées. Ces éléments sont conservés jusqu’à la reconnexion de Xero.",
+        "refreshTokenValidUntilProvider": "Autorisation {{provider}} valide jusqu’au {{date}}. Les jetons sont renouvelés automatiquement.",
+        "syncSucceeded": "Synchronisation terminée",
+        "syncStopped": "Synchronisation arrêtée"
       },
       "itemImport": {
         "description": "Importez vos produits et services QuickBooks dans le catalogue de services Alga pour l’entreprise QuickBooks connectée. QuickBooks reste la source de référence pour les noms, tarifs, SKU, descriptions et coûts ; le mode de facturation, l’unité de mesure et le type de service sont définis ici, puis gérés par Alga. Cette étape est facultative : cliquez sur Suivant pour l’ignorer.",
@@ -3509,7 +3522,9 @@
           "saveCredentials": "Enregistrer les identifiants Xero",
           "saving": "Enregistrement…",
           "retryDisconnect": "Réessayer la déconnexion",
-          "forceFinalizeDisconnect": "Finaliser de force"
+          "forceFinalizeDisconnect": "Finaliser de force",
+          "disconnectAll": "Déconnecter toutes les organisations Xero",
+          "replaceCredentials": "Remplacer les identifiants"
         },
         "badges": {
           "connectionExpired": "Connexion expirée",
@@ -3538,14 +3553,22 @@
         "clientIdPlaceholder": "Collez votre Xero Client ID propre au tenant",
         "clientSecretLabel": "Secret client Xero",
         "clientSecretPlaceholder": "Collez votre Xero Client Secret propre au tenant",
-        "connectSuccess": "Xero connecté avec succès. L'organisation connectée est disponible comme contexte Xero live ; sélectionnez-la comme organisation par défaut dans le panneau de synchronisation ci-dessous.",
+        "connectSuccess": "Xero connecté. {{count}} organisations liées ; {{organisation}} est l’organisation par défaut pour la synchronisation.",
         "connection": {
           "connectionId": "ID de connexion : {{id}}",
           "defaultOrganisation": "Organisation par défaut",
           "description": "Ne démarrez OAuth qu'après avoir configuré l'application Xero propre au tenant. La déconnexion supprime les jetons d'accès Xero enregistrés mais conserve les identifiants de l'application propre au tenant.",
           "notConnected": "Aucune organisation Xero live n'est encore connectée. Enregistrez les identifiants, puis cliquez sur Connecter Xero.",
           "title": "Connexion Xero live",
-          "unknown": "inconnu"
+          "unknown": "inconnu",
+          "defaultBadge": "Par défaut pour la synchronisation",
+          "linkedOrganisations": "Organisations liées ({{count}})",
+          "multipleOrganisationScope": "Cette autorisation inclut {{count}} organisations Xero. La reconnexion et la déconnexion s’appliquent à toutes.",
+          "reconnectRequiredBadge": "Reconnexion requise",
+          "organisationScope": "La reconnexion et la déconnexion s’appliquent à chaque organisation de cette liste.",
+          "reconnectRequiredDescription": "La synchronisation et les exports sont suspendus. Reconnectez-vous une fois pour les reprendre pour les {{count}} organisations liées.",
+          "reconnectRequiredTitle": "Connexion expirée",
+          "singleOrganisationScope": "La reconnexion et la déconnexion s’appliquent à cette organisation Xero."
         },
         "credentialsSaved": "Identifiants Xero enregistrés. Vous pouvez maintenant lancer le flux OAuth Xero live.",
         "csvAvailableMiddle": "dans cette même section Comptabilité et gérez les exports depuis",
@@ -3594,8 +3617,14 @@
           "targetRevoked": "révoquée",
           "targetFailed": "nécessite une attention",
           "targetPending": "en attente",
-          "failedPermanentDescription": "Le nettoyage côté fournisseur a rencontré une erreur permanente. Vous pouvez réessayer ou finaliser de force pour supprimer les identifiants enregistrés avec un enregistrement d'audit."
-        }
+          "failedPermanentDescription": "Le nettoyage côté fournisseur a rencontré une erreur permanente. Vous pouvez réessayer ou finaliser de force pour supprimer les identifiants enregistrés avec un enregistrement d'audit.",
+          "confirmDescription": "Cette action déconnecte {{organisations}} et suspend la synchronisation et les exports. Les identifiants de votre application Xero restent enregistrés.",
+          "confirmTitle": "Déconnecter Xero d’Alga PSA ?",
+          "dangerDescription": "Arrête la synchronisation et les exports et supprime les {{count}} organisations liées. Les identifiants de l’application restent enregistrés.",
+          "dangerTitle": "Déconnecter Xero"
+        },
+        "connectNeedsAttention": "L’autorisation Xero est terminée, mais la connexion nécessite encore une intervention. La synchronisation reste suspendue.",
+        "credentialsStoredDescription": "L’identifiant et le secret client sont stockés de manière sécurisée."
       }
     },
     "stripe": {

@@ -2029,7 +2029,9 @@
         "refreshTokenExpiredProvider": "{{provider}} token expired — reconnect to resume syncing.",
         "refreshTokenExpiryProvider": "{{provider}} token expires {{date}}",
         "refreshTokenValidUntilProvider": "{{provider}} authorization valid until {{date}}. Tokens refresh automatically.",
-        "autoProvisionCustomersLabelProvider": "Create {{provider}} customers automatically"
+        "autoProvisionCustomersLabelProvider": "Create {{provider}} customers automatically",
+        "syncSucceeded": "Sync completed",
+        "syncStopped": "Sync stopped"
       },
       "itemImport": {
         "description": "Import your QuickBooks products and services into the Alga service catalog for the connected QuickBooks company. QuickBooks stays the source of truth for names, rates, SKUs, descriptions, and costs; billing method, unit of measure, and service type are set here and owned by Alga afterwards. This step is optional — skip it with Next.",
@@ -3544,7 +3546,8 @@
           "saveCredentials": "Save Xero Credentials",
           "saving": "Saving…",
           "retryDisconnect": "Retry Disconnect",
-          "forceFinalizeDisconnect": "Force Finalize"
+          "forceFinalizeDisconnect": "Force Finalize",
+          "replaceCredentials": "Replace credentials"
         },
         "badges": {
           "connectionExpired": "Action required",
@@ -3643,7 +3646,8 @@
           "targetFailed": "needs attention",
           "targetPending": "pending",
           "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
-        }
+        },
+        "credentialsStoredDescription": "The Client ID and Client Secret are stored securely."
       }
     },
     "stripe": {

@@ -78,7 +78,12 @@
         "noPermission": {
           "title": "Brak dostępu do integracji księgowych",
           "description": "Nie masz uprawnień do wyświetlania ani konfigurowania integracji księgowych. Poproś administratora o dostęp."
-        }
+        },
+        "changeIntegration": "Wybierz inną",
+        "currentIntegration": "Integracja księgowa",
+        "selectedAction": "Wybrana",
+        "reconnectRequired": "Wymagane ponowne połączenie",
+        "settingsTitle": "Ustawienia {{title}}"
       },
       "modules": {
         "tabs": {
@@ -1995,7 +2000,15 @@
         "healthCardDescriptionProvider": "Stan i sterowanie synchronizacją księgową {{provider}}. Uruchamiane co 15 minut.",
         "refreshTokenExpiredProvider": "Token {{provider}} wygasł — połącz ponownie, aby wznowić synchronizację.",
         "refreshTokenExpiryProvider": "Token {{provider}} wygasa {{date}}",
-        "autoProvisionCustomersLabelProvider": "Automatycznie twórz klientów {{provider}}"
+        "autoProvisionCustomersLabelProvider": "Automatycznie twórz klientów {{provider}}",
+        "connectedOrganisations": "Organizacje Xero",
+        "defaultOrganisationDescription": "Domyślna organizacja jest używana do synchronizacji, eksportu i mapowania.",
+        "outstandingItems": "Elementy oczekujące",
+        "outstandingItemsDescription": "Elementy wymagające jeszcze sprawdzenia lub kolejnej próby synchronizacji.",
+        "outstandingItemsReconnect": "We wszystkich połączonych organizacjach. Te elementy są zachowywane do czasu ponownego połączenia z Xero.",
+        "refreshTokenValidUntilProvider": "Autoryzacja {{provider}} ważna do {{date}}. Tokeny są odnawiane automatycznie.",
+        "syncSucceeded": "Synchronizacja zakończona",
+        "syncStopped": "Synchronizacja zatrzymana"
       },
       "itemImport": {
         "description": "Zaimportuj produkty i usługi z QuickBooks do katalogu usług Alga dla połączonej firmy QuickBooks. QuickBooks pozostanie źródłem danych referencyjnych dla nazw, stawek, kodów SKU, opisów i kosztów; metoda rozliczania, jednostka miary i typ usługi są ustawiane tutaj i od tej pory zarządzane przez Alga. Ten krok jest opcjonalny — można go pominąć przyciskiem Dalej.",
@@ -3509,7 +3522,9 @@
           "saveCredentials": "Zapisz poświadczenia Xero",
           "saving": "Zapisywanie…",
           "retryDisconnect": "Ponów rozłączanie",
-          "forceFinalizeDisconnect": "Wymuś finalizację"
+          "forceFinalizeDisconnect": "Wymuś finalizację",
+          "disconnectAll": "Odłącz wszystkie organizacje Xero",
+          "replaceCredentials": "Zastąp dane uwierzytelniające"
         },
         "badges": {
           "connectionExpired": "Połączenie wygasło",
@@ -3538,14 +3553,22 @@
         "clientIdPlaceholder": "Wklej swój Xero Client ID należący do tenanta",
         "clientSecretLabel": "Klucz tajny klienta Xero",
         "clientSecretPlaceholder": "Wklej swój Xero Client Secret należący do tenanta",
-        "connectSuccess": "Xero połączone pomyślnie. Połączona organizacja jest dostępna jako kontekst Xero na żywo; wybierz ją jako domyślną w panelu synchronizacji poniżej.",
+        "connectSuccess": "Połączono z Xero. Liczba połączonych organizacji: {{count}}; {{organisation}} jest domyślną organizacją do synchronizacji.",
         "connection": {
           "connectionId": "ID połączenia: {{id}}",
           "defaultOrganisation": "Domyślna organizacja",
           "description": "Uruchom OAuth dopiero po skonfigurowaniu aplikacji Xero należącej do tenanta. Rozłączenie usuwa zapisane tokeny dostępu Xero, ale zachowuje poświadczenia aplikacji należącej do tenanta.",
           "notConnected": "Nie połączono jeszcze żadnej organizacji Xero na żywo. Zapisz poświadczenia, a następnie kliknij Połącz Xero.",
           "title": "Połączenie Xero na żywo",
-          "unknown": "nieznany"
+          "unknown": "nieznany",
+          "defaultBadge": "Domyślna do synchronizacji",
+          "linkedOrganisations": "Połączone organizacje ({{count}})",
+          "multipleOrganisationScope": "Ta autoryzacja obejmuje {{count}} organizacji Xero. Ponowne połączenie i odłączenie dotyczą ich wszystkich.",
+          "reconnectRequiredBadge": "Wymagane ponowne połączenie",
+          "organisationScope": "Ponowne połączenie i odłączenie dotyczą każdej organizacji na tej liście.",
+          "reconnectRequiredDescription": "Synchronizacja i eksport są wstrzymane. Połącz ponownie jeden raz, aby wznowić je dla wszystkich połączonych organizacji ({{count}}).",
+          "reconnectRequiredTitle": "Połączenie wygasło",
+          "singleOrganisationScope": "Ponowne połączenie i odłączenie dotyczą tej organizacji Xero."
         },
         "credentialsSaved": "Zapisano poświadczenia Xero. Można teraz rozpocząć przepływ OAuth Xero na żywo.",
         "csvAvailableMiddle": "w tej samej sekcji Księgowość i zarządzaj eksportami z",
@@ -3594,8 +3617,14 @@
           "targetRevoked": "unieważnione",
           "targetFailed": "wymaga uwagi",
           "targetPending": "oczekuje",
-          "failedPermanentDescription": "Czyszczenie po stronie dostawcy napotkało trwały błąd. Możesz ponowić próbę lub wymusić finalizację, aby usunąć zapisane poświadczenia wraz z wpisem audytowym."
-        }
+          "failedPermanentDescription": "Czyszczenie po stronie dostawcy napotkało trwały błąd. Możesz ponowić próbę lub wymusić finalizację, aby usunąć zapisane poświadczenia wraz z wpisem audytowym.",
+          "confirmDescription": "Spowoduje to odłączenie {{organisations}} oraz wstrzymanie synchronizacji i eksportu. Dane uwierzytelniające aplikacji Xero pozostaną zapisane.",
+          "confirmTitle": "Odłączyć Xero od Alga PSA?",
+          "dangerDescription": "Zatrzymuje synchronizację i eksport oraz usuwa wszystkie połączone organizacje ({{count}}). Dane uwierzytelniające aplikacji pozostają zapisane.",
+          "dangerTitle": "Odłącz Xero"
+        },
+        "connectNeedsAttention": "Autoryzacja Xero została zakończona, ale połączenie nadal wymaga uwagi. Synchronizacja pozostaje wstrzymana.",
+        "credentialsStoredDescription": "Identyfikator i sekret klienta są bezpiecznie przechowywane."
       }
     },
     "stripe": {

@@ -5,11 +5,11 @@ const resolveSyncTargetMock = vi.hoisted(() => vi.fn());
 const tenantDbMock = vi.hoisted(() => vi.fn());
 const countOperationsByStatusMock = vi.hoisted(() => vi.fn(async () => ({})));
 const countLedgerByStatusMock = vi.hoisted(() => vi.fn(async () => ({})));
-const getLatestCycleMock = vi.hoisted(() => vi.fn(async () => null));
+const getLatestCycleMock = vi.hoisted(() => vi.fn<() => Promise<{ error: string } | null>>(async () => null));
 const countOpenMock = vi.hoisted(() => vi.fn(async () => 0));
 const readAutoApplyMock = vi.hoisted(() => vi.fn(async () => null));
 const qboCredentialsMock = vi.hoisted(() => vi.fn(async () => ({})));
-const xeroConnectionsMock = vi.hoisted(() => vi.fn(async () => ({
+const xeroConnectionsMock = vi.hoisted(() => vi.fn<() => Promise<Record<string, { tenantName: string; accessTokenExpiresAt?: string }>>>(async () => ({
   'conn-1': { tenantName: 'Acme Org' }
 })));
 

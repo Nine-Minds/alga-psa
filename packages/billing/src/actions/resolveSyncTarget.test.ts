@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+const { getStoredQboCredentialsMap, getStoredXeroConnections } = vi.hoisted(() => ({
+  getStoredQboCredentialsMap: vi.fn(),
+  getStoredXeroConnections: vi.fn()
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn
 }));
@@ -17,11 +22,11 @@ vi.mock('../adapters/accounting/registry', () => ({
   AccountingAdapterRegistry: { createDefault: vi.fn() }
 }));
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
-  getStoredQboCredentialsMap: vi.fn(),
+  getStoredQboCredentialsMap,
   QboClientService: {}
 }));
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
-  getStoredXeroConnections: vi.fn()
+  getStoredXeroConnections
 }));
 vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
   isProviderDisconnectActive: vi.fn(async () => false),
@@ -32,8 +37,6 @@ vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
 import { resolveSyncTarget } from '../services/accountingSync/syncTarget';
 import { resolveConnectedAccountingIntegration } from '../services/accountingSync/connectedAccountingIntegration';
 import { AccountingAdapterRegistry } from '../adapters/accounting/registry';
-import { getStoredQboCredentialsMap } from '@alga-psa/integrations/lib/qbo/qboClientService';
-import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroClientService';
 
 const xeroAdapter = { type: 'xero', capabilities: () => ({}) };
 const qboAdapter = { type: 'quickbooks_online', capabilities: () => ({}) };

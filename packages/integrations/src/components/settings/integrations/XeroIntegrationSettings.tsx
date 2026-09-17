@@ -618,7 +618,7 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
             ? t('integrations.xero.settings.actions.disconnectAll', { defaultValue: 'Disconnect all Xero organisations' })
             : t('integrations.xero.settings.actions.disconnect', { defaultValue: 'Disconnect Xero' })
         }
-        cancelLabel={t('common.cancel', { defaultValue: 'Cancel' })}
+        cancelLabel={t('integrations.accounting.dialog.cancel', { defaultValue: 'Cancel' })}
       />
 
       {defaultConnection ? syncHealthSlot : null}
@@ -724,7 +724,7 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
                           setEditingCredentials(false);
                         }}
                       >
-                        {t('common.cancel', { defaultValue: 'Cancel' })}
+                        {t('integrations.accounting.dialog.cancel', { defaultValue: 'Cancel' })}
                       </Button>
                     ) : null}
                     <Button id="xero-settings-save" type="button" onClick={() => void handleSave()} disabled={!readyToSave || saving || !canManageConnections}>

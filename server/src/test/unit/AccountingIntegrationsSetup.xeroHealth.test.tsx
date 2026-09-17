@@ -15,7 +15,7 @@ const catalogsMock = vi.hoisted(() => vi.fn(async () => []));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   const { createInstance } = await import('i18next');
-  const { default: en } = await import('../../../../../../server/public/locales/en/msp/integrations.json');
+  const { default: en } = await import('../../../public/locales/en/msp/integrations.json');
   const i18n = createInstance();
   await i18n.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
   const t = i18n.t.bind(i18n);
@@ -32,15 +32,15 @@ vi.mock('@alga-psa/integrations/actions/qboActions', () => ({
 }));
 
 vi.mock('next/navigation', () => ({ useSearchParams: useSearchParamsMock }));
-vi.mock('./CSVIntegrationSettings', () => ({ __esModule: true, default: () => null }));
-vi.mock('./XeroCsvIntegrationSettings', () => ({ __esModule: true, default: () => null }));
-vi.mock('./QboIntegrationSettings', () => ({ __esModule: true, default: () => null }));
-vi.mock('./useAccountingCapabilities', () => ({
+vi.mock('@alga-psa/integrations/components/settings/integrations/CSVIntegrationSettings', () => ({ __esModule: true, default: () => null }));
+vi.mock('@alga-psa/integrations/components/settings/integrations/XeroCsvIntegrationSettings', () => ({ __esModule: true, default: () => null }));
+vi.mock('@alga-psa/integrations/components/settings/integrations/QboIntegrationSettings', () => ({ __esModule: true, default: () => null }));
+vi.mock('@alga-psa/integrations/components/settings/integrations/useAccountingCapabilities', () => ({
   useAccountingCapabilities: useAccountingCapabilitiesMock
 }));
 
-vi.mock('../../xero/XeroLiveMappingManager', () => ({ XeroLiveMappingManager: () => null }));
-vi.mock('../../../actions/integrations/xeroActions', () => ({
+vi.mock('@alga-psa/integrations/components/xero/XeroLiveMappingManager', () => ({ XeroLiveMappingManager: () => null }));
+vi.mock('@alga-psa/integrations/actions/integrations/xeroActions', () => ({
   getXeroConnectionStatus: vi.fn(async () => ({
     connected: true,
     connections: [{ connectionId: 'conn-1', xeroTenantId: 'xero-1', status: 'connected' }],
@@ -81,7 +81,7 @@ describe('AccountingIntegrationsSetup mounts provider-aware health in the Xero f
   });
 
   it('runs the selected Xero organisation even when the global default is QBO, using real English resources', async () => {
-    const { default: AccountingIntegrationsSetup } = await import('./AccountingIntegrationsSetup');
+    const { default: AccountingIntegrationsSetup } = await import('@alga-psa/integrations/components/settings/integrations/AccountingIntegrationsSetup');
     const { default: Panel } = await import('@alga-psa/billing/components/accounting/QboSyncHealthPanel');
     let selected = 'conn-1';
     healthMock.mockImplementation(async (selection) => {

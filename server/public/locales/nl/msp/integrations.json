@@ -78,7 +78,12 @@
         "noPermission": {
           "title": "Geen toegang tot boekhoudintegraties",
           "description": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren. Vraag een beheerder om toegang."
-        }
+        },
+        "changeIntegration": "Andere kiezen",
+        "currentIntegration": "Boekhoudintegratie",
+        "selectedAction": "Geselecteerd",
+        "reconnectRequired": "Opnieuw verbinden vereist",
+        "settingsTitle": "Instellingen voor {{title}}"
       },
       "modules": {
         "tabs": {
@@ -1995,7 +2000,15 @@
         "healthCardDescriptionProvider": "Status en bediening van de {{provider}}-boekhoudsynchronisatie. Draait elke 15 minuten.",
         "refreshTokenExpiredProvider": "{{provider}}-token verlopen — maak opnieuw verbinding om te synchroniseren.",
         "refreshTokenExpiryProvider": "{{provider}}-token verloopt op {{date}}",
-        "autoProvisionCustomersLabelProvider": "{{provider}}-klanten automatisch aanmaken"
+        "autoProvisionCustomersLabelProvider": "{{provider}}-klanten automatisch aanmaken",
+        "connectedOrganisations": "Xero-organisaties",
+        "defaultOrganisationDescription": "De standaardorganisatie wordt gebruikt voor synchronisatie, exports en koppelingen.",
+        "outstandingItems": "Openstaande items",
+        "outstandingItemsDescription": "Items die nog moeten worden gecontroleerd of opnieuw gesynchroniseerd.",
+        "outstandingItemsReconnect": "Voor alle gekoppelde organisaties. Deze items blijven bewaard totdat u Xero opnieuw verbindt.",
+        "refreshTokenValidUntilProvider": "{{provider}}-autorisatie geldig tot {{date}}. Tokens worden automatisch vernieuwd.",
+        "syncSucceeded": "Synchronisatie voltooid",
+        "syncStopped": "Synchronisatie gestopt"
       },
       "itemImport": {
         "description": "Importeer uw QuickBooks-producten en -services in de Alga-servicecatalogus voor het verbonden QuickBooks-bedrijf. QuickBooks blijft de gezaghebbende bron voor namen, tarieven, SKU’s, beschrijvingen en kosten; de facturatiemethode, maateenheid en het servicetype worden hier ingesteld en daarna door Alga beheerd. Deze stap is optioneel — sla deze over met Volgende.",
@@ -3509,7 +3522,9 @@
           "saveCredentials": "Xero-inloggegevens opslaan",
           "saving": "Opslaan…",
           "retryDisconnect": "Ontkoppeling opnieuw proberen",
-          "forceFinalizeDisconnect": "Geforceerd afronden"
+          "forceFinalizeDisconnect": "Geforceerd afronden",
+          "disconnectAll": "Alle Xero-organisaties ontkoppelen",
+          "replaceCredentials": "Inloggegevens vervangen"
         },
         "badges": {
           "connectionExpired": "Verbinding verlopen",
@@ -3538,14 +3553,22 @@
         "clientIdPlaceholder": "Plak uw tenant-eigen Xero Client ID",
         "clientSecretLabel": "Xero Client Secret",
         "clientSecretPlaceholder": "Plak uw tenant-eigen Xero Client Secret",
-        "connectSuccess": "Xero succesvol verbonden. De verbonden organisatie is beschikbaar als live Xero-context; selecteer deze hieronder in het synchronisatiepaneel als standaard.",
+        "connectSuccess": "Xero verbonden. {{count}} organisaties gekoppeld; {{organisation}} is de standaardorganisatie voor synchronisatie.",
         "connection": {
           "connectionId": "Verbindings-ID: {{id}}",
           "defaultOrganisation": "Standaardorganisatie",
           "description": "Start OAuth pas nadat de tenant-eigen Xero-app is geconfigureerd. Ontkoppelen verwijdert opgeslagen Xero-toegangstokens maar behoudt de tenant-eigen app-inloggegevens.",
           "notConnected": "Er is nog geen live Xero-organisatie verbonden. Sla de inloggegevens op en klik vervolgens op Xero verbinden.",
           "title": "Live Xero-verbinding",
-          "unknown": "onbekend"
+          "unknown": "onbekend",
+          "defaultBadge": "Standaard voor synchronisatie",
+          "linkedOrganisations": "Gekoppelde organisaties ({{count}})",
+          "multipleOrganisationScope": "Deze autorisatie omvat {{count}} Xero-organisaties. Opnieuw verbinden en ontkoppelen gelden voor alle organisaties.",
+          "reconnectRequiredBadge": "Opnieuw verbinden vereist",
+          "organisationScope": "Opnieuw verbinden en ontkoppelen gelden voor elke organisatie in deze lijst.",
+          "reconnectRequiredDescription": "Synchronisatie en exports zijn gepauzeerd. Verbind eenmaal opnieuw om ze voor alle {{count}} gekoppelde organisaties te hervatten.",
+          "reconnectRequiredTitle": "Verbinding verlopen",
+          "singleOrganisationScope": "Opnieuw verbinden en ontkoppelen gelden voor deze Xero-organisatie."
         },
         "credentialsSaved": "Xero-inloggegevens opgeslagen. U kunt nu de live Xero OAuth-flow starten.",
         "csvAvailableMiddle": "in deze zelfde sectie Boekhouding en beheer exports vanuit",
@@ -3594,8 +3617,14 @@
           "targetRevoked": "ingetrokken",
           "targetFailed": "vereist aandacht",
           "targetPending": "in behandeling",
-          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
-        }
+          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie.",
+          "confirmDescription": "Dit ontkoppelt {{organisations}} en pauzeert synchronisatie en exports. Uw Xero-appgegevens blijven opgeslagen.",
+          "confirmTitle": "Xero ontkoppelen van Alga PSA?",
+          "dangerDescription": "Stopt synchronisatie en exports en verwijdert alle {{count}} gekoppelde organisaties. Appgegevens blijven opgeslagen.",
+          "dangerTitle": "Xero ontkoppelen"
+        },
+        "connectNeedsAttention": "De Xero-autorisatie is voltooid, maar de verbinding vereist nog aandacht. Synchronisatie blijft gepauzeerd.",
+        "credentialsStoredDescription": "De client-ID en het clientgeheim worden veilig opgeslagen."
       }
     },
     "stripe": {

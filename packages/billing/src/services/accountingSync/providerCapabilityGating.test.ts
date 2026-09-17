@@ -10,7 +10,6 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
 import { drainRecordPaymentOps } from './paymentPushApplier';
 import { drainApplyCreditOps } from './creditApplicationApplier';
 import { drainVoidInvoiceOps } from './invoiceVoidApplier';
-import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 
 const TENANT = 'tenant-gate';
 const REALM = 'conn-1';
@@ -100,7 +99,7 @@ describe('outbound capability gating for adapters without write support', () => 
     const { deps, markFailedTerminal, exceptions } = makeHarness('record_payment');
     await drainRecordPaymentOps(deps);
 
-    expect(QboClientService.create).not.toHaveBeenCalled();
+    expect(qboCreate).not.toHaveBeenCalled();
     expect(markFailedTerminal).toHaveBeenCalledWith(TENANT, 'op-record_payment', expect.any(String));
     expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -115,7 +114,7 @@ describe('outbound capability gating for adapters without write support', () => 
     const { deps, markFailedTerminal, exceptions } = makeHarness('apply_credit');
     await drainApplyCreditOps(deps);
 
-    expect(QboClientService.create).not.toHaveBeenCalled();
+    expect(qboCreate).not.toHaveBeenCalled();
     expect(markFailedTerminal).toHaveBeenCalledWith(TENANT, 'op-apply_credit', expect.any(String));
     expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -128,7 +127,7 @@ describe('outbound capability gating for adapters without write support', () => 
     const { deps, markFailedTerminal, exceptions } = makeHarness('void_invoice');
     await drainVoidInvoiceOps(deps);
 
-    expect(QboClientService.create).not.toHaveBeenCalled();
+    expect(qboCreate).not.toHaveBeenCalled();
     expect(markFailedTerminal).toHaveBeenCalledWith(TENANT, 'op-void_invoice', expect.any(String));
     expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -152,7 +151,7 @@ describe('outbound capability gating for adapters without write support', () => 
     const { deps, markFailedTerminal, exceptions } = makeHarness('record_payment');
     await drainRecordPaymentOps({ ...deps, adapter: misconfiguredAdapter });
 
-    expect(QboClientService.create).not.toHaveBeenCalled();
+    expect(qboCreate).not.toHaveBeenCalled();
     expect(markFailedTerminal).toHaveBeenCalled();
     expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -740,7 +740,8 @@
       "driftReexport": "⟦Řḗ-ḗẋƥȯřŧ ŧȯ ɊŭīƈķƁȯȯķş⟧",
       "syncNow": "⟦Şẏƞƈ ŧȯ ɊŭīƈķƁȯȯķş⟧",
       "viewInQbo": "⟦Ṽīḗẇ īƞ ɊŭīƈķƁȯȯķş⟧",
-      "voidInvoice": "⟦Ṽȯīḓ Īƞṽȯīƈḗ⟧"
+      "voidInvoice": "⟦Ṽȯīḓ Īƞṽȯīƈḗ⟧",
+      "viewInXero": "⟦Ṽīḗẇ īƞ Ẋḗřȯ⟧"
     },
     "loading": "⟦Ŀȯȧḓīƞɠ Ƥřḗṽīḗẇ...⟧",
     "empty": "⟦Şḗŀḗƈŧ ȧƞ īƞṽȯīƈḗ ŧȯ ƥřḗṽīḗẇ⟧",
@@ -1095,7 +1096,9 @@
     "tooltip": {
       "qboNumberPrefix": "⟦ɊƁȮ #⟧",
       "lastSynced": "⟦Ŀȧşŧ şẏƞƈḗḓ:⟧",
-      "viewInQuickBooks": "⟦Ṽīḗẇ īƞ ɊŭīƈķƁȯȯķş⟧"
+      "viewInQuickBooks": "⟦Ṽīḗẇ īƞ ɊŭīƈķƁȯȯķş⟧",
+      "viewInXero": "⟦Ṽīḗẇ īƞ Ẋḗřȯ⟧",
+      "xeroNumberPrefix": "⟦Ẋḗřȯ #⟧"
     }
   },
   "templateManager": {

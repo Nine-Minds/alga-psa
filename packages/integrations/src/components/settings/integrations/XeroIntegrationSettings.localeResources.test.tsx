@@ -9,7 +9,7 @@ import React from 'react';
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 function findLocaleFile(): string {
@@ -24,7 +24,9 @@ function findLocaleFile(): string {
   throw new Error('English msp/integrations locale resource not found');
 }
 
+const localeRoot = path.dirname(path.dirname(path.dirname(findLocaleFile())));
 const enResource = JSON.parse(fs.readFileSync(findLocaleFile(), 'utf8'));
+let activeResource = enResource;
 
 function resolveKey(resource: unknown, key: string): string | undefined {
   const value = key.split('.').reduce<unknown>((acc, part) => {
@@ -39,7 +41,7 @@ function resolveKey(resource: unknown, key: string): string | undefined {
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) =>
-      resolveKey(enResource, key) ?? options?.defaultValue ?? key
+      resolveKey(activeResource, key) ?? options?.defaultValue ?? key
   })
 }));
 
@@ -76,6 +78,7 @@ const settings = enResource.integrations.xero.settings;
 
 describe('XeroIntegrationSettings loaded-locale copy', () => {
   beforeEach(() => {
+    activeResource = enResource;
     vi.clearAllMocks();
     useSearchParamsMock.mockReset();
     getXeroConnectionStatusMock.mockReset();
@@ -102,6 +105,25 @@ describe('XeroIntegrationSettings loaded-locale copy', () => {
   afterEach(() => {
     cleanup();
   });
+
+  it.each(['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'])(
+    'renders saved credentials and replacement controls from the %s locale',
+    async (locale) => {
+      activeResource = JSON.parse(fs.readFileSync(path.join(localeRoot, locale, 'msp/integrations.json'), 'utf8'));
+      const copy = activeResource.integrations.xero.settings;
+      const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
+      render(<XeroIntegrationSettings />);
+
+      // These controls must resolve through the locale, not English defaultValue fallbacks.
+      expect(copy.credentialsStoredDescription).toBeTypeOf('string');
+      expect(copy.actions.replaceCredentials).toBeTypeOf('string');
+      expect(await screen.findByText(copy.credentialsStoredDescription)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: copy.actions.replaceCredentials }));
+      const cancel = await screen.findByRole('button', { name: activeResource.integrations.accounting.dialog.cancel });
+      fireEvent.click(cancel);
+      expect(await screen.findByText(copy.credentialsStoredDescription)).toBeInTheDocument();
+    }
+  );
 
   it('renders the updated English mapping and reauthorization copy', async () => {
     const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
