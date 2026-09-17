@@ -38,11 +38,6 @@
       "import": "./src/lib/contactActionErrorCodes.ts",
       "types": "./src/lib/contactActionErrorCodes.ts"
     },
-    "./lib/tenantDefaultCountry": {
-      "types": "./src/lib/tenantDefaultCountry.ts",
-      "import": "./dist/lib/tenantDefaultCountry.js",
-      "require": "./dist/lib/tenantDefaultCountry.js"
-    },
     "./context/ClientCrossFeatureContext": {
       "types": "./src/context/ClientCrossFeatureContext.tsx",
       "import": "./dist/context/ClientCrossFeatureContext.js",
@@ -72,6 +67,7 @@
     "@alga-psa/inventory": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/user-composition": "*",

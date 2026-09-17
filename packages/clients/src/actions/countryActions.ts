@@ -7,7 +7,7 @@ import {
   SYSTEM_DATE_FORMAT,
   type CountryDateFormat,
 } from '@alga-psa/core/i18n/countryDateFormat';
-import { resolveDateFormatCountry, resolveTenantDefaultCountry } from '../lib/tenantDefaultCountry';
+import { resolveDateFormatCountry, resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 
 export interface ICountry {
   code: string;

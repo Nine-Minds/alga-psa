@@ -32,7 +32,7 @@ import {
 } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
-import { resolveTenantDefaultCountry } from '@alga-psa/clients/lib/tenantDefaultCountry';
+import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import {
   countryDateFormat,
   SYSTEM_DATE_FORMAT,

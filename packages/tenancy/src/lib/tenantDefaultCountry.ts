@@ -34,11 +34,12 @@ async function resolveLocationCountry(
 
 /**
  * The MSP's own default client location, used as the tenant-wide country default
- * for new records and for the date pattern every surface renders. Mirrors
- * resolveTenantPhoneCountryCode (telephony) rather than importing it. A
- * placeholder code ('XX') or one the reference table does not carry yields null,
- * so callers keep their own fallback instead of preselecting a country the
- * tenant never entered.
+ * for new records and for the date pattern every surface renders. It lives in
+ * tenancy beside the tenant locale actions so every consumer — clients,
+ * billing's document renderer, telephony — shares one query instead of
+ * mirroring the SQL. A placeholder code ('XX') or one the reference table does
+ * not carry yields null, so callers keep their own fallback instead of
+ * preselecting a country the tenant never entered.
  */
 export async function resolveTenantDefaultCountry(
   conn: Knex | Knex.Transaction,

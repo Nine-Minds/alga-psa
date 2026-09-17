@@ -30,6 +30,10 @@
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
+    },
+    "./lib/tenantDefaultCountry": {
+      "types": "./src/lib/tenantDefaultCountry.ts",
+      "import": "./src/lib/tenantDefaultCountry.ts"
     }
   },
   "scripts": {

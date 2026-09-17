@@ -14,7 +14,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: mocks.hasPermission,
 }));
 
-vi.mock('@alga-psa/clients/lib/tenantDefaultCountry', () => ({
+vi.mock('@alga-psa/tenancy/lib/tenantDefaultCountry', () => ({
   resolveDateFormatCountry: mocks.resolveDateFormatCountry,
 }));
 

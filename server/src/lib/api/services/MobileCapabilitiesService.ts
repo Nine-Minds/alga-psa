@@ -3,7 +3,7 @@ import {
   type ServiceContext,
 } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { resolveDateFormatCountry } from '@alga-psa/clients/lib/tenantDefaultCountry';
+import { resolveDateFormatCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import {
   countryDateFormat,
   SYSTEM_DATE_FORMAT,
