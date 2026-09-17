@@ -188,3 +188,7 @@ Local prerequisites that are easy to miss: a Hocuspocus process on :1234
 or the incoming-call card never renders; no sibling dev server on the shared
 Redis; a fresh `npm --prefix packages/telephony run build` after telephony
 changes because the jobs dist imports the telephony dist.
+- Job handlers are registered once when the dev server boots
+  (`registerAllHandlers` from instrumentation). Editing a handler under
+  `packages/jobs/src` does not reach the running server through HMR: rebuild
+  the jobs dist AND restart the dev server.
