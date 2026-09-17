@@ -23,6 +23,7 @@ import { getSalesOrderForQuote, type SalesOrderQuoteLink } from '@alga-psa/inven
 import { getProductAvailability, type ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteStatusBadge from './QuoteStatusBadge';
+import { QuoteTermsContent } from '@alga-psa/ui/editor';
 import { ArrowLeft } from 'lucide-react';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 
@@ -1257,7 +1258,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
         <section className="space-y-2 rounded-lg border border-border p-4">
           <h3 className="text-base font-semibold">{t('quoteDetail.sections.termsAndConditions', { defaultValue: 'Terms & Conditions' })}</h3>
-          <p className="whitespace-pre-wrap text-sm text-foreground">{quote.terms_and_conditions || '—'}</p>
+          <QuoteTermsContent
+            id="quote-detail-terms-content"
+            block={quote.terms_and_conditions_block}
+            text={quote.terms_and_conditions}
+            textClassName="text-sm text-foreground"
+            richClassName="text-sm text-foreground"
+            emptyFallback="—"
+          />
         </section>
 
         <section className="space-y-3 rounded-lg border border-border p-4">

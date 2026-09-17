@@ -71,6 +71,7 @@ const resolveNode = (node: TemplateNode, t: TemplateLabelTranslator): TemplateNo
         children: node.children.map((child) => resolveNode(child, t)),
       };
     case 'text':
+    case 'richText':
       return node.content.type === 'i18n'
         ? { ...node, content: resolveExpression(node.content, t) }
         : node;
