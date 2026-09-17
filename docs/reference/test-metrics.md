@@ -161,6 +161,22 @@ a JSON artifact and step summary, including missing exports, pending work,
 cancellations, stale attempts and conflicting identities. It does not write
 to the workbook. A recorder step succeeding without configured credentials
 can still leave a missing export; the report does not assume a network error.
+
+Collection writes `browser-metric-collection.json` alongside the reconciliation
+report. A failed collection remains a failed workflow, but retains its phase and
+error code in the artifact, job summary and log. HTTP failures include the status;
+a `sheet-row-limit-exceeded` failure includes the allocated grid row count and
+configured limit (currently 10,000). Empty allocated rows count toward that limit.
+Diagnostics omit credentials, response bodies and upstream exception messages.
+The collection status `collected` means evidence was fetched; only the subsequent
+reconciliation decides whether the browser exports are complete.
+
+To investigate a collection failure, inspect this diagnostic first. After landing
+a diagnostic fix on the default branch, rerun the failed automatic reconciliation
+while its source artifacts are retained. The existing one-argument collector
+command also prints the new diagnostics, so historical workflow attempts can be
+replayed; their older upload step may still expect only the reconciliation report.
+
 In manual mode the revision is supplied by the operator. For PRs, the collector checks
 that it is a two-parent merge containing the run's recorded head commit.
 Historical run responses can contain the PR's current head/base metadata, so
