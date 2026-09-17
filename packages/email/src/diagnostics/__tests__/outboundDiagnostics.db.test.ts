@@ -2,8 +2,8 @@
  * DB-backed outbound diagnostics resolution tests (T005/T006).
  *
  * These exercise the REAL tenant settings read + provider selection against a
- * migrated database. They are skipped unless an explicit opt-in points at a
- * database, so CI stays green:
+ * migrated database. The workspace DB runner enables them in CI and supplies
+ * its isolated migrated database. For standalone local runs, opt in with:
  *
  *   OUTBOUND_DIAG_DB_TESTS=1
  *   OUTBOUND_DIAG_DB_HOST=127.0.0.1
