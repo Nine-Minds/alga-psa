@@ -9,6 +9,7 @@ import { tenantDb } from '@alga-psa/db';
 
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerCrmActions } from '../businessOperations/crm';
+import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 import { registerWorkflowEmailProvider, resetWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 
 dotenv.config();
@@ -366,6 +367,8 @@ async function createQuote(
     title?: string;
     status?: string;
     isTemplate?: boolean;
+    termsBlock?: unknown[];
+    termsText?: string | null;
   }
 ): Promise<string> {
   const quoteId = uuidv4();
@@ -379,6 +382,8 @@ async function createQuote(
     description: 'Quote description',
     quote_date: new Date().toISOString(),
     status: params.status ?? 'draft',
+    terms_and_conditions: params.termsText ?? null,
+    terms_and_conditions_block: params.termsBlock ? JSON.stringify(params.termsBlock) : null,
     version: 1,
     subtotal: 10000,
     discount_total: 0,
@@ -763,6 +768,45 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.create_quote' })
       .first();
     expect(quoteAudit).toBeTruthy();
+  });
+
+  it('T010: crm.create_quote_from_template carries authored rich terms onto the new quote', async () => {
+    const RICH_TERMS_BLOCK = [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Template terms ' },
+          { type: 'link', href: 'https://example.com/terms', content: [{ type: 'text', text: 'link' }] },
+        ],
+      },
+    ];
+
+    const clientId = await createClient(db, runtimeState.tenantId, 'Rich Terms Client');
+    const templateId = await createQuote(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      title: 'Rich Terms Template',
+      status: null as any,
+      isTemplate: true,
+      termsBlock: RICH_TERMS_BLOCK,
+      termsText: 'stale projection',
+    });
+
+    const fromTemplate = await invokeAction('crm.create_quote_from_template', {
+      template_id: templateId,
+      client_id: clientId,
+      title: 'Rich Templated Quote',
+      quote_date: new Date('2026-03-01').toISOString(),
+      valid_until: new Date('2026-03-30').toISOString(),
+    });
+
+    const row = await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .where({ quote_id: fromTemplate.quote.quote_id })
+      .first();
+
+    expect(row.terms_and_conditions_block).toEqual(RICH_TERMS_BLOCK);
+    expect(row.terms_and_conditions).toBe(flattenBlockContentToPlainText(RICH_TERMS_BLOCK));
   });
 
   it('T016b: crm.create_quote_from_template preserves the authoritative catalog_description snapshot (incl. deleted catalog FK) and rejects caller-supplied snapshots', async () => {

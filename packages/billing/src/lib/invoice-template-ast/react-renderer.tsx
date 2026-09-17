@@ -24,6 +24,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
+import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -50,6 +51,16 @@ type RenderContext = {
 
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * True when a resolved value is authored structured content (a non-empty
+ * BlockNote block array or a ProseMirror doc). A plain string — the legacy
+ * terms projection — is not structured and renders as pre-line text.
+ */
+const isStructuredBlockContent = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.length > 0;
+  return isRecord(value) && value.type === 'doc';
+};
 
 /**
  * A display string as it should appear. Key references are normally resolved
@@ -569,12 +580,46 @@ const renderNode = (
     }
     case 'text': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+      // Preserve authored line breaks for legacy multiline terms. The layout
+      // author's own style still wins via the spread.
       return (
         <p
           key={node.id}
           id={node.id}
           className={elementClassName || undefined}
-          style={{ whiteSpace: 'pre-line', ...style }}
+          style={{ whiteSpace: 'pre-line', ...(style ?? {}) }}
+        >
+          {String(content ?? '')}
+        </p>
+      );
+    }
+    case 'richText': {
+      const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+
+      if (isStructuredBlockContent(content)) {
+        const html = convertBlockContentToHTML(content);
+        return (
+          <div
+            key={node.id}
+            id={node.id}
+            className={elementClassName || undefined}
+            style={style}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      }
+
+      // Plain string — including an empty one — falls back to exactly what the
+      // legacy `text` node emits (pre-line whitespace, empty paragraph
+      // preserved). A migrated stock layout therefore reproduces the pre-change
+      // PDF byte-for-byte; the converter's "[No content]" placeholder is never
+      // reached.
+      return (
+        <p
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={{ whiteSpace: 'pre-line', ...(style ?? {}) }}
         >
           {String(content ?? '')}
         </p>

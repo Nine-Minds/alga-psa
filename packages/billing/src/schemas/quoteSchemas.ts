@@ -30,6 +30,9 @@ const createQuoteBaseSchema = z.object({
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
   terms_and_conditions: z.string().optional().nullable(),
+  // Authored BlockNote block array. When present and non-empty the write path
+  // projects it to terms_and_conditions and it wins for display (FR7/FR8).
+  terms_and_conditions_block: z.array(z.any()).optional().nullable(),
   // DD-2/F-2: no static 'USD' default. When omitted, the create action
   // (quoteActions.ts createQuote) resolves the currency from the quote's client
   // (clients.default_currency_code), then the tenant default

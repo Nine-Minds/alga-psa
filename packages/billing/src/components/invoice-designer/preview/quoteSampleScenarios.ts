@@ -43,6 +43,7 @@ const createBaseQuote = (): QuoteViewModel => ({
   tax: 0,
   total_amount: 0,
   terms_and_conditions: 'Net 30. This quote is valid for 30 days from the date of issue.',
+  terms_and_conditions_rich: 'Net 30. This quote is valid for 30 days from the date of issue.',
   client_notes: null,
   client: {
     name: 'Hawthorne Clinic',

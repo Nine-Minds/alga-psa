@@ -18,7 +18,9 @@
         "@alga-psa/db:build",
         "@alga-psa/types:build",
         "@alga-psa/event-schemas:build",
-        "@alga-psa/event-bus:build"
+        "@alga-psa/event-bus:build",
+        "@alga-psa/authorization:build",
+        "@alga-psa/formatting:build"
       ],
       "inputs": ["production", "^production"]
     },
