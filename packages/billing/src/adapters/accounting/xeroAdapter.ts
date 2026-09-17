@@ -910,6 +910,22 @@ export class XeroAdapter implements AccountingExportAdapter {
 
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
 
+    const targetRealm = context.batch.target_realm;
+    // A Xero target realm is the connection id. Accept the organisation id it
+    // uniquely owns as a historical alias so a contact mapping created before
+    // the connection-id/organisation-id identity was unified still resolves —
+    // never a different organisation or tenant (resolveXeroRealmAliases fails
+    // closed on ambiguous or foreign ownership). This mirrors the resolver's
+    // catalog lookup so export reuses the mapped Xero contact instead of
+    // creating a duplicate. It stays realm-scoped: a legacy realm-less row is
+    // still excluded when the batch targets a realm.
+    const acceptedRealms = targetRealm
+      ? await (async () => {
+          const aliases = await resolveXeroRealmAliases(tenantId, targetRealm);
+          return aliases.length > 0 ? aliases : [targetRealm];
+        })()
+      : [];
+
     const mappingRows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
       .where('integration_type', this.type)
@@ -917,11 +933,11 @@ export class XeroAdapter implements AccountingExportAdapter {
       .whereIn('alga_entity_id', Array.from(clientIds))
       .whereNull('deleted_at')
       .modify((qb) => {
-        // Realm-exact: a contact mapping from another Xero organisation (or a
-        // legacy realm-less row) must not select the contact this batch
-        // exports against.
-        if (context.batch.target_realm) {
-          qb.andWhere('external_realm_id', context.batch.target_realm);
+        if (targetRealm) {
+          qb.whereIn('external_realm_id', acceptedRealms);
+          // Prefer the exact connection id over the historical organisation
+          // alias so a canonical mapping always wins when both exist.
+          qb.orderByRaw('CASE WHEN external_realm_id = ? THEN 0 ELSE 1 END', [targetRealm]);
         } else {
           qb.andWhere((builder) => builder.whereNull('external_realm_id'));
         }
@@ -930,7 +946,11 @@ export class XeroAdapter implements AccountingExportAdapter {
     const mappingMap = new Map<string, MappingRow>();
     mappingRows.forEach((row: MappingRowRaw) => {
       const normalized = normalizeMapping(row);
-      mappingMap.set(normalized.alga_entity_id, normalized);
+      // First row per client wins: rows are ordered connection-id-first, so the
+      // canonical mapping is never overwritten by a historical alias row.
+      if (!mappingMap.has(normalized.alga_entity_id)) {
+        mappingMap.set(normalized.alga_entity_id, normalized);
+      }
     });
 
     return { clients: clientMap, mappings: mappingMap };
