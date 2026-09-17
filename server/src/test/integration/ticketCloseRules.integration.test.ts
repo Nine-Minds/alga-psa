@@ -14,7 +14,9 @@ const userRef = vi.hoisted(() => ({
 
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
 const publishEventMock = vi.hoisted(() => vi.fn(async () => undefined));
-const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
+const publishWorkflowEventMock = vi.hoisted(() =>
+  vi.fn<typeof import('server/src/lib/eventBus/publishers').publishWorkflowEvent>(async () => undefined)
+);
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
@@ -49,6 +51,12 @@ vi.mock('@alga-psa/auth/actions', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
+  publishWorkflowEvent: publishWorkflowEventMock,
+}));
+
+// TicketService uses the server-local publisher. Capture delivery at that
+// boundary so the service still exercises its workflow-event behavior.
+vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishWorkflowEvent: publishWorkflowEventMock,
 }));
 
@@ -146,9 +154,6 @@ const userActor = () => ({ actorType: 'user' as const, userId: fixture.userId })
 
 describe('ticket close rules', () => {
   beforeAll(async () => {
-    // TicketService.safePublishEvent publishes through the server event bus;
-    // short-circuit it so these DB-backed tests don't touch external delivery.
-    process.env.E2E_SKIP_APP_INIT = 'true';
     db = await createTestDbConnection();
     dbRef.knex = db;
 
@@ -792,6 +797,22 @@ describe('ticket close rules', () => {
       new Date(persisted.closed_at).toISOString()
     );
     expect(returned.closed_by).toBe(persisted.closed_by);
+
+    const closedEvents = publishWorkflowEventMock.mock.calls.filter(
+      ([params]: any[]) => params.eventType === 'TICKET_CLOSED'
+    );
+    expect(closedEvents).toHaveLength(1);
+    expect(closedEvents[0][0]).toMatchObject({
+      payload: {
+        ticketId,
+        closedByUserId: fixture.userId,
+        closedAt: new Date(persisted.closed_at).toISOString(),
+      },
+      ctx: {
+        tenantId: fixture.tenantId,
+        actor: { actorType: 'USER', actorUserId: fixture.userId },
+      },
+    });
   });
 
   it('T049: TicketService.update returns cleared closure state on reopen', async () => {
