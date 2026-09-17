@@ -475,7 +475,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                       ? t('interactions.onlineMeeting.viewTranscript', { defaultValue: 'View transcript' })
                       : t('interactions.onlineMeeting.downloadRecording', { defaultValue: 'Download recording' });
                     const artifactUrl = artifact.artifact_type === 'transcript' && artifact.document_id
-                      ? `/api/documents/${encodeURIComponent(artifact.document_id)}/download`
+                      ? `/msp/documents?doc=${encodeURIComponent(artifact.document_id)}`
                       : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`;
 
                     return (
@@ -534,8 +534,9 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                 ? new Date(artifact.createdDateTime).toLocaleString()
                 : null;
               const isTranscript = artifact.artifactType === 'transcript';
+              // Transcripts are block documents: open them in the viewer, not as a download.
               const artifactUrl = isTranscript && artifact.documentId
-                ? `/api/documents/${encodeURIComponent(artifact.documentId)}/download`
+                ? `/msp/documents?doc=${encodeURIComponent(artifact.documentId)}`
                 : artifact.fileId
                   ? `/api/telephony/call-recordings/${encodeURIComponent(artifact.artifactId)}`
                   : null;
