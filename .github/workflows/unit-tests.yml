@@ -208,6 +208,7 @@ jobs:
               ../packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx \
               ../packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts \
               ../packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts \
+              ../packages/billing/src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx \
               --poolOptions.forks.singleFork=false --maxWorkers=2 \
               --reporter=default --reporter=json --outputFile.json="../test-results/calendar-timezones/$report.json"
           done

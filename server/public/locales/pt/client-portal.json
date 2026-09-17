@@ -742,7 +742,14 @@
       "fullAccess": "Acesso total",
       "cancel": "Cancelar",
       "assignSuccess": "Atribuição de visibilidade de contato atualizada",
-      "assignError": "Não foi possível atribuir o grupo de visibilidade"
+      "assignError": "Não foi possível atribuir o grupo de visibilidade",
+      "scopeLabel": "Visibilidade dos tickets",
+      "scopeClient": "Todos os tickets deste cliente",
+      "scopeContact": "Apenas os seus próprios tickets",
+      "scopeClientDescription": "Os membros veem todos os tickets deste cliente nos quadros selecionados.",
+      "scopeContactDescription": "Os membros veem apenas os tickets em que estão indicados como contato. Os administradores do cliente veem todos os tickets nos quadros selecionados, incluindo os que não têm contato.",
+      "assignmentHelp": "Atribua um grupo para limitar quadros e tickets, ou mantenha o acesso completo ao cliente.",
+      "boardHiddenFromPortal": "Oculto no portal do cliente"
     },
     "domain": {
       "title": "Domínio personalizado",
@@ -976,7 +983,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Ticket não encontrado ou acesso negado",
-      "invalidData": "Dados do ticket inválidos"
+      "invalidData": "Dados do ticket inválidos",
+      "statusNotPortalSelectable": "Este status não pode ser selecionado no portal do cliente"
     },
     "visibilityGroups": {
       "checkDetails": "Verifique os dados do grupo de visibilidade e tente novamente.",

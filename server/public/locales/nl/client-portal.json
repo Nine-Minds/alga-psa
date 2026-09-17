@@ -681,7 +681,14 @@
       "fullAccess": "Volledige toegang",
       "cancel": "Annuleren",
       "assignSuccess": "Contactzichtbaarheidstoewijzing bijgewerkt",
-      "assignError": "Kan zichtbaarheidsgroep niet toewijzen"
+      "assignError": "Kan zichtbaarheidsgroep niet toewijzen",
+      "scopeLabel": "Ticketzichtbaarheid",
+      "scopeClient": "Alle tickets van deze klant",
+      "scopeContact": "Alleen hun eigen tickets",
+      "scopeClientDescription": "Leden zien alle tickets van deze klant op de geselecteerde borden.",
+      "scopeContactDescription": "Leden zien alleen tickets waarop zij als contactpersoon staan. Klantbeheerders zien alle tickets op de geselecteerde borden, ook tickets zonder contactpersoon.",
+      "assignmentHelp": "Wijs een groep toe om borden en tickets te beperken, of behoud volledige toegang tot de klant.",
+      "boardHiddenFromPortal": "Verborgen in klantportaal"
     },
     "messages": {
       "saveChanges": "Wijzigingen opslaan",
@@ -976,7 +983,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Ticket niet gevonden of toegang geweigerd",
-      "invalidData": "Ongeldige ticketgegevens"
+      "invalidData": "Ongeldige ticketgegevens",
+      "statusNotPortalSelectable": "Deze status kan niet worden geselecteerd in het klantenportaal"
     },
     "visibilityGroups": {
       "checkDetails": "Controleer de gegevens van de zichtbaarheidsgroep en probeer het opnieuw.",

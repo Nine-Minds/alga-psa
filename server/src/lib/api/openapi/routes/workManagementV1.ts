@@ -75,6 +75,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       board_id: zOpenApi.string().uuid().optional(),
       priority_id: zOpenApi.string().uuid().optional(),
       status_id: zOpenApi.string().uuid().optional(),
+      external_links: zOpenApi.array(zOpenApi.object({
+        system: zOpenApi.string().min(1).describe('Built-in system key or custom:<slug>.'),
+        external_id: zOpenApi.string().min(1).describe('Identifier of the record in the external system.'),
+        external_parent_id: zOpenApi.string().nullable().optional(),
+        realm: zOpenApi.string().nullable().optional().describe('Repo, server, or workspace the record lives in.'),
+        url: zOpenApi.string().url().nullable().optional().describe('Explicit link-out; must be http(s).'),
+        relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
+        actor: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+        external_status: zOpenApi.string().nullable().optional(),
+      })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
     }),
   );
 
@@ -138,8 +148,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       time_spent: zOpenApi.number().min(0).optional(),
       metadata: zOpenApi.record(zOpenApi.unknown()).optional(),
       parent_comment_id: zOpenApi.string().uuid().optional(),
+      scheduled_publish_at: zOpenApi.string().datetime({ offset: true }).optional().describe('Withhold this client-visible comment until this future instant (ISO 8601). Requires scheduled_publish_tz; not allowed with is_internal or when replying into an internal thread.'),
+      scheduled_publish_tz: zOpenApi.string().max(64).optional().describe('IANA time zone the author scheduled in, e.g. America/New_York.'),
       ...ticketNotificationSuppressionProperties,
-    }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history.'),
+    }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job.'),
   );
 
   const CreateTagBody = registry.registerSchema(
@@ -526,6 +538,57 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const ExternalLinkParams = registry.registerSchema(
+    'WorkV1TicketExternalLinkParams',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Ticket UUID.'),
+      linkId: zOpenApi.string().uuid().describe('External link UUID.'),
+    }),
+  );
+  const ExternalLinkActor = zOpenApi.object({
+    id: zOpenApi.string().nullable().optional(),
+    handle: zOpenApi.string().nullable().optional(),
+    display_name: zOpenApi.string().nullable().optional(),
+    url: zOpenApi.string().url().nullable().optional(),
+  });
+  const ExternalLinkCreateBody = registry.registerSchema(
+    'WorkV1TicketExternalLinkCreateBody',
+    zOpenApi.object({
+      entity_type: zOpenApi.enum(['ticket', 'comment']).optional().describe("Defaults to 'ticket'."),
+      comment_id: zOpenApi.string().uuid().optional().describe("Required when entity_type is 'comment'."),
+      system: zOpenApi.string().min(1).describe('Built-in system key or custom:<slug>.'),
+      external_id: zOpenApi.string().min(1),
+      external_parent_id: zOpenApi.string().nullable().optional(),
+      realm: zOpenApi.string().nullable().optional(),
+      url: zOpenApi.string().url().nullable().optional().describe('Optional explicit link-out; must be http(s).'),
+      relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
+      actor: ExternalLinkActor.nullable().optional(),
+      external_status: zOpenApi.string().nullable().optional(),
+      external_updated_at: zOpenApi.string().nullable().optional(),
+      metadata: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+    }),
+  );
+  const ExternalLinkUpdateBody = registry.registerSchema(
+    'WorkV1TicketExternalLinkUpdateBody',
+    zOpenApi.object({
+      relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
+      url: zOpenApi.string().url().nullable().optional(),
+      actor: ExternalLinkActor.nullable().optional(),
+      external_status: zOpenApi.string().nullable().optional(),
+      external_updated_at: zOpenApi.string().nullable().optional(),
+      last_synced_at: zOpenApi.string().nullable().optional(),
+      metadata: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+    }),
+  );
+  const ExternalLinkLookupQuery = registry.registerSchema(
+    'WorkV1TicketExternalLinkLookupQuery',
+    zOpenApi.object({
+      system: zOpenApi.string().min(1).describe('Registry key of the external system.'),
+      external_id: zOpenApi.string().min(1).describe('External record identifier.'),
+      external_parent_id: zOpenApi.string().optional().describe('Ticket-level external id, for comment-level records.'),
+    }),
+  );
+
   const ticketStdResponses = (success: { code: number; description: string }, withNotFound = true) => ({
     [success.code]: { description: success.description, schema: ApiSuccess },
     400: { description: 'Validation or request parsing failure.', schema: ApiError },
@@ -589,6 +652,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   });
 
   registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/{id}/comments/{commentId}/schedule',
+    summary: 'Cancel a scheduled comment',
+    description: 'Cancels a comment that was created with scheduled_publish_at and has not published yet. The row is retained with publish_state=canceled (soft-deleted) and its publication job is removed. Returns 400 for comments that are not scheduled.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketCommentParams },
+    responses: ticketStdResponses({ code: 200, description: 'Scheduled comment canceled.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
     method: 'get', path: '/api/v1/tickets/{id}/documents',
     summary: 'List ticket documents',
     description: 'Returns the documents (file attachments) associated with a ticket.',
@@ -629,6 +702,56 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   });
 
   registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/{id}/external-links',
+    summary: 'List ticket external links',
+    description: 'Returns structured external-system references for the ticket, each with a resolved display label, icon, and link-out href.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: ticketStdResponses({ code: 200, description: 'Ticket external links.' }),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/{id}/external-links',
+    summary: 'Add a ticket external link',
+    description: 'Adds a ticket-level external-system reference. Only one origin link is allowed per ticket. URL must be http(s).',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: ExternalLinkCreateBody } },
+    responses: ticketStdResponses({ code: 201, description: 'External link created.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'patch', path: '/api/v1/tickets/{id}/external-links/{linkId}',
+    summary: 'Update a ticket external link',
+    description: 'Updates mutable fields (relationship, url, actor, external status/timestamps, metadata) on a link belonging to the ticket.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: ExternalLinkParams, body: { schema: ExternalLinkUpdateBody } },
+    responses: ticketStdResponses({ code: 200, description: 'External link updated.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/{id}/external-links/{linkId}',
+    summary: 'Remove a ticket external link',
+    description: 'Removes a link belonging to the ticket and writes a ticket activity entry.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: ExternalLinkParams },
+    responses: ticketStdResponses({ code: 200, description: 'External link removed.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/by-external-link',
+    summary: 'Find a ticket by external link',
+    description: 'Returns the ticket and matching external link for a given system/external_id (and optional external_parent_id); 404 when no ticket carries it.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: ExternalLinkLookupQuery },
+    responses: ticketStdResponses({ code: 200, description: 'Matching ticket and link.' }),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/documents',
     summary: 'Upload a ticket document',
     description: 'Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document.',
@@ -654,6 +777,28 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     },
     extensions: ticketExt('read'), edition: 'both',
   });
+
+  for (const variant of [
+    { name: 'thumbnail', size: '200x200 cover-cropped' },
+    { name: 'preview', size: '800x600 fit-inside' },
+  ] as const) {
+    registry.registerRoute({
+      method: 'get', path: `/api/v1/tickets/{id}/documents/{documentId}/${variant.name}`,
+      summary: `Get a ticket document ${variant.name} image`,
+      description: `Serves the cached ${variant.size} JPEG ${variant.name} for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no ${variant.name}.`,
+      tags: [tag], security: [{ ApiKeyAuth: [] }],
+      request: { params: TicketDocumentParams },
+      responses: {
+        200: { description: `Binary ${variant.name} image (image/jpeg).`, schema: ApiSuccess },
+        304: { description: 'Not modified (ETag matched If-None-Match).', schema: ApiSuccess },
+        401: { description: 'API key missing/invalid.', schema: ApiError },
+        403: { description: 'RBAC denied for ticket resource action.', schema: ApiError },
+        404: { description: `Document not found or has no ${variant.name}.`, schema: ApiError },
+        500: { description: 'Unexpected failure.', schema: ApiError },
+      },
+      extensions: ticketExt('read'), edition: 'both',
+    });
+  }
 
   registry.registerRoute({
     method: 'delete', path: '/api/v1/tickets/{id}/documents/{documentId}',

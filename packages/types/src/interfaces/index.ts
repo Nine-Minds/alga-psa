@@ -42,6 +42,7 @@ export * from './document.interface';
 export * from './documentBlockContent.interface';
 export * from './drag.interfaces';
 export * from './event.interfaces';
+export * from './externalSystem.interfaces';
 export * from './interaction.interfaces';
 export * from './invoice.interfaces';
 export * from './job';

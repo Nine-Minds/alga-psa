@@ -694,7 +694,10 @@
       "allServicesAssociated": "Alle verfügbaren Leistungen sind bereits mit dieser Vertragszeile verknüpft.",
       "badges": {
         "billingMismatch": "Abrechnungskonflikt",
-        "defaultConfigType": "Standard"
+        "defaultConfigType": "Standard",
+        "standard": "Standard",
+        "custom": "Individuell",
+        "unreviewed": "Nicht geprüft"
       },
       "billingMethod": {
         "fixed": "Festpreis",

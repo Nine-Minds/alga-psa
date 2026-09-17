@@ -2,7 +2,7 @@ import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
-import { TIER_FEATURES, tierHasFeature } from '@alga-psa/types';
+import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME, TIER_FEATURES, tierHasFeature } from '@alga-psa/types';
 import { resolveTenantTier } from '@alga-psa/licensing';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
@@ -492,6 +492,11 @@ export async function setupSchedules() {
       { jobName: 'cleanup-ai-session-keys', cron: '*/10 * * * *' },
       { jobName: 'workflow-quota-resume-scan', cron: '*/5 * * * *' },
       { jobName: 'inbound-email-recovery', cron: '*/1 * * * *' },
+      // Nightly contract-cadence service-period replenishment. Runs on the
+      // durable Temporal schedule for Essentials/Solo/Pro; the handler is
+      // executed server-side via the maintenance subscriber because the worker
+      // cannot load the billing domain graph.
+      { jobName: CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME, cron: '0 4 * * *' },
     ];
 
     for (const { jobName, cron } of MAINTENANCE_FANOUT_SCHEDULES) {

@@ -13,7 +13,9 @@ export default defineConfig({
       'tests/**/*.test.tsx',
       'src/actions/projectBillingActions.contract.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
+      'src/lib/taxRateApplicability.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
+      'src/lib/billing/pricing/**/*.test.ts',
       'src/schemas/**/*.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs
@@ -24,6 +26,16 @@ export default defineConfig({
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
       'src/components/billing-dashboard/LineItem.test.tsx',
+      // Catalog-price rollout reachability and the effective-date serialisation
+      // regression — listed explicitly so this package's own `npm test` target
+      // (the `nx affected -t test` lane) selects them, not only the server
+      // coverage run that globs ../packages/**.
+      'src/components/settings/billing/ServiceCatalogManager.rollout.contract.test.tsx',
+      'src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx',
+      // Multi-select bulk actions on the catalog and product lists — listed for
+      // the same reason as the suites above.
+      'src/components/settings/billing/ServiceCatalogManager.bulkActions.contract.test.tsx',
+      'src/components/settings/billing/ProductsManager.bulkActions.contract.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',

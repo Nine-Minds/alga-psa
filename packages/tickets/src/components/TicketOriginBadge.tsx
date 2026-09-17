@@ -23,6 +23,8 @@ interface TicketOriginBadgeProps {
   labels?: Partial<TicketOriginLabels>;
   size?: 'sm' | 'md';
   className?: string;
+  /** Readable external system name to append to the badge tooltip. */
+  systemLabel?: string | null;
 }
 
 function normalizeOrigin(origin: TicketOriginBadgeProps['origin']): ResolvedTicketOrigin {
@@ -118,6 +120,7 @@ export default function TicketOriginBadge({
   labels = {},
   size = 'sm',
   className,
+  systemLabel,
 }: TicketOriginBadgeProps) {
   const { t } = useTranslation('features/tickets');
   const normalizedOrigin = normalizeOrigin(origin);
@@ -128,6 +131,7 @@ export default function TicketOriginBadge({
     api: labels.api ?? t('origin.api', 'Created via API'),
     other: labels.other ?? t('origin.other', 'Created via Other'),
   };
+  const label = getLabel(normalizedOrigin, resolvedLabels);
 
   return (
     <Badge
@@ -138,7 +142,9 @@ export default function TicketOriginBadge({
       data-ticket-origin={normalizedOrigin}
     >
       <TicketOriginIcon origin={normalizedOrigin} />
-      <span className="ml-1">{getLabel(normalizedOrigin, resolvedLabels)}</span>
+      <span className="ml-1" title={systemLabel ? `${label} · ${systemLabel}` : label}>
+        {label}
+      </span>
     </Badge>
   );
 }

@@ -119,6 +119,10 @@ function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
         };
       }
 
+      if (table === 'boards') {
+        return { select: vi.fn().mockResolvedValue([]) };
+      }
+
       if (table === 'contacts') {
         return {
           where: vi.fn().mockReturnValue({

@@ -504,7 +504,8 @@
       "addFromPresets": "Toevoegen uit presets",
       "collapseLine": "Contractregel samenvouwen",
       "createCustom": "Aangepast aanmaken",
-      "expandLine": "Contractregel uitvouwen"
+      "expandLine": "Contractregel uitvouwen",
+      "resetToStandard": "Terugzetten naar standaard"
     },
     "billingProfile": {
       "hint": "Kosten van deze regel worden aan dit profiel gefactureerd en overschrijven het contract.",
@@ -550,7 +551,8 @@
       "readOnly": "Dit door het systeem beheerde standaardcontract is alleen voor toewijzing. Het maken van contractregels is uitgeschakeld."
     },
     "dialogs": {
-      "confirmRemove": "Contractregel \"{{name}}\" verwijderen?"
+      "confirmRemove": "Contractregel \"{{name}}\" verwijderen?",
+      "confirmResetRate": "Deze regel terugzetten naar de standaard catalogusprijs? Het opgeslagen aangepaste tarief wordt verwijderd."
     },
     "empty": {
       "noneAdded": "Nog geen contractregels toegevoegd.",
@@ -562,7 +564,8 @@
       "failedToLoad": "Contractregels laden is mislukt",
       "failedToRefresh": "Contractregels vernieuwen is mislukt",
       "failedToRemove": "Contractregel verwijderen is mislukt",
-      "failedToUpdate": "Contractregel bijwerken is mislukt"
+      "failedToUpdate": "Contractregel bijwerken is mislukt",
+      "failedToResetRate": "Kan het regeltarief niet opnieuw instellen"
     },
     "loading": {
       "contractLines": "Contractregels laden",
@@ -601,7 +604,12 @@
       "semanticsEffectiveFrom": "Wijzigingen in prijzen en meting van de service gelden vanaf",
       "prospectiveSemanticsHelp": "Wijzigingen gelden vanaf deze serviceperiodegrens; eerdere aantallen, meting en prijzen blijven behouden. Als u de datum wijzigt, worden de geldende instellingen opnieuw geladen ter controle."
     },
-    "title": "Contractregels"
+    "title": "Contractregels",
+    "rateProvenance": {
+      "standard": "Standaard",
+      "custom": "Aangepast",
+      "unreviewed": "Niet beoordeeld"
+    }
   },
   "contractLineEdit": {
     "actions": {

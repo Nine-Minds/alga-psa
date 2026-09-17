@@ -441,7 +441,8 @@
       "boards": "Boards",
       "priorities": "Priorities",
       "categories": "Categories",
-      "checklistTemplates": "Checklist Templates"
+      "checklistTemplates": "Checklist Templates",
+      "externalSystems": "External systems"
     },
     "numbering": {
       "title": "Number Format",
@@ -549,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Active",
-        "inactive": "Inactive"
+        "inactive": "Inactive",
+        "hiddenFromPortal": "Hidden from portal"
       },
       "actions": {
         "addBoard": "Add Board",
@@ -629,7 +631,8 @@
           "loading": "Loading board ticket statuses…",
           "statusName": "Status name",
           "closed": "Closed",
-          "default": "Default"
+          "default": "Default",
+          "portalSelectable": "Client portal users can select this status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reopen closed tickets on inbound replies",
@@ -645,6 +648,10 @@
         "liveTimer": {
           "label": "Enable live ticket timer",
           "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+        },
+        "clientPortalVisible": {
+          "label": "Visible in client portal",
+          "help": "When off, this board and its tickets are hidden from every client portal user, regardless of visibility groups."
         },
         "defaultBoard": {
           "label": "Default board for client portal tickets",
@@ -985,6 +992,47 @@
           "updateStatusFailed": "Failed to update template status",
           "itemSaveFailed": "Failed to save checklist item",
           "ruleSaveFailed": "Failed to save auto-apply rule"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "External systems",
+      "subtitle": "Add custom external systems so tickets can link to records outside the built-in catalog.",
+      "addButton": "Add system",
+      "builtInTitle": "Built-in systems",
+      "builtInSubtitle": "Available to every tenant; their URLs are rendered from the system template.",
+      "table": {
+        "label": "Label",
+        "key": "Key",
+        "urlTemplate": "URL template",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "fields": {
+        "key": "Key",
+        "keyHint": "Must match custom:<slug> using lowercase letters, digits, or underscores.",
+        "label": "Label",
+        "urlTemplate": "URL template",
+        "urlTemplateHint": "Optional. Use {realm} and {external_id} placeholders."
+      },
+      "dialog": {
+        "addTitle": "Add external system",
+        "editTitle": "Edit external system"
+      },
+      "deleteDialog": {
+        "title": "Delete external system",
+        "message": "Delete \"{{label}}\"? Systems still used by links cannot be deleted."
+      },
+      "messages": {
+        "success": {
+          "created": "External system created.",
+          "updated": "External system updated.",
+          "deleted": "External system deleted."
         }
       }
     }
@@ -1560,7 +1608,8 @@
       "preview": {
         "subjectLabel": "Subject Preview",
         "iframeTitle": "Email template preview",
-        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values."
+        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values.",
+        "sourceSyncNote": "Click anything in the preview to select the markup behind it; moving the cursor in the source outlines it here."
       },
       "errors": {
         "loadFailed": "Failed to load templates"
@@ -1609,7 +1658,8 @@
       },
       "tabs": {
         "source": "Source",
-        "preview": "Preview"
+        "preview": "Preview",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/A"
@@ -1679,6 +1729,20 @@
           "colors": "colors",
           "text": "text",
           "subject": "subject"
+        },
+        "overwrite": "Overwrite",
+        "overwriteHint": "Overwrite rebuilds a template from the standard one in your palette and discards your edits.",
+        "preview": {
+          "open": "Preview the result",
+          "title": "Preview: {{name}}",
+          "loading": "Building the preview...",
+          "captions": {
+            "create": "A branded copy of the standard template will be created for you.",
+            "update": "Your branded copy will be rebuilt from the standard template with the saved palette.",
+            "customized": "Your edits are kept word for word. Only the stock colors still left in this template are replaced.",
+            "overwrite": "Your edits to this template will be discarded. It will be rebuilt from the standard template in your palette.",
+            "skipped": "Nothing will be written — {{reason}}. This is the template as it stands today."
+          }
         },
         "summary": "{{written}} branded, {{skipped}} skipped, {{failed}} failed",
         "groups": {

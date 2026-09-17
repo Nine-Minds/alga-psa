@@ -5266,7 +5266,12 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
     usageDate: '2025-02-15',
     quantity: 3,
   });
-  const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Same-Run Reconciliation Client' });
+  // Replenishment now reaches today's rolling horizon. Select the historical
+  // fixture window explicitly rather than assuming it remains on the first page.
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1, pageSize: 20, searchTerm: 'Same-Run Reconciliation Client',
+    dateRange: { from: '2025-02-01', to: '2025-03-01' },
+  });
   const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
   const dueRow = dueRows
     .find((row) => row.contractLineId === line.contractLineId
@@ -5333,7 +5338,12 @@ it('T157: preview and PO-overage calculation reconcile for pricing but roll back
     startTime: '2025-02-15T10:00:00.000Z',
     endTime: '2025-02-15T11:00:00.000Z',
   });
-  const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Rollback Reconciliation Client' });
+  // Replenishment now reaches today's rolling horizon. Select the historical
+  // fixture window explicitly rather than assuming it remains on the first page.
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1, pageSize: 20, searchTerm: 'Rollback Reconciliation Client',
+    dateRange: { from: '2025-02-01', to: '2025-03-01' },
+  });
   const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
     .find((row) => row.contractLineId === line.contractLineId
       && row.invoiceWindowStart === '2025-02-01'
@@ -5377,7 +5387,12 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
     startTime: '2025-02-15T10:00:00.000Z',
     endTime: '2025-02-15T11:00:00.000Z',
   });
-  const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Failed Generation Retry Client' });
+  // Replenishment now reaches today's rolling horizon. Select the historical
+  // fixture window explicitly rather than assuming it remains on the first page.
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1, pageSize: 20, searchTerm: 'Failed Generation Retry Client',
+    dateRange: { from: '2025-02-01', to: '2025-03-01' },
+  });
   const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
     .find((row) => row.contractLineId === line.contractLineId
       && row.invoiceWindowStart === '2025-02-01'
@@ -5842,10 +5857,11 @@ async function createRecurringCatalogLine(
       service_id: serviceId,
       currency_code: 'USD',
       rate: options.baseRateCents,
+      effective_date: '1970-01-01',
       created_at: contextLike.db.fn.now(),
       updated_at: contextLike.db.fn.now()
     })
-    .onConflict(['tenant', 'service_id', 'currency_code'])
+    .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
     .merge({
       rate: options.baseRateCents,
       updated_at: contextLike.db.fn.now()
@@ -5888,10 +5904,11 @@ async function ensureUsdServicePrice(serviceId: string, rateCents: number): Prom
       service_id: serviceId,
       currency_code: 'USD',
       rate: rateCents,
+      effective_date: '1970-01-01',
       created_at: db.fn.now(),
       updated_at: db.fn.now()
     })
-    .onConflict(['tenant', 'service_id', 'currency_code'])
+    .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
     .merge({
       rate: rateCents,
       updated_at: db.fn.now()

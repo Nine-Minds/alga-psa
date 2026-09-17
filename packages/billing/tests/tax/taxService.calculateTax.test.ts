@@ -170,6 +170,89 @@ describe('TaxService.calculateTax', () => {
       expect(result).toEqual({ taxAmount: 750, taxRate: 7.5 });
     });
 
+    it('caps a single regional rate at its configured cap', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 8.875, cap_amount: 500 }]],
+      });
+
+      // 10000 * 8.875% = 887.5, capped at 500.
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE, 'US-NY');
+
+      expect(result).toEqual({ taxAmount: 500, taxRate: 8.875 });
+    });
+
+    it('caps each regional rate independently and leaves uncapped rates whole', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 5, cap_amount: 200 }, { tax_percentage: 2.5, cap_amount: null }]],
+      });
+
+      // 500 capped to 200 + 250 uncapped = 450; the reported rate stays 7.5%.
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE, 'CA-QC');
+
+      expect(result).toEqual({ taxAmount: 450, taxRate: 7.5 });
+    });
+
+    it('preserves the uncapped combined-rate rounding when no cap is set', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 5 }, { tax_percentage: 2.5 }]],
+      });
+
+      // 333 * 7.5% = 24.975 -> a single ceil -> 25.
+      const result = await new TaxService().calculateTax('client-1', 333, DATE, 'CA-QC');
+
+      expect(result).toEqual({ taxAmount: 25, taxRate: 7.5 });
+    });
+
+    it('preserves combined-rate rounding when no cap binds (325 at 1.1% + 2.9%)', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 1.1 }, { tax_percentage: 2.9 }]],
+      });
+
+      // Summing per-rate contributions floats to 13.000000000000002; the
+      // combined-rate expression must still charge 13.
+      const result = await new TaxService().calculateTax('client-1', 325, DATE, 'US-NY');
+
+      expect(result).toEqual({ taxAmount: 13, taxRate: 4 });
+    });
+
+    it('keeps combined-rate rounding when configured caps do not bind', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 1.1, cap_amount: 1000 }, { tax_percentage: 2.9, cap_amount: 1000 }]],
+      });
+
+      const result = await new TaxService().calculateTax('client-1', 325, DATE, 'US-NY');
+
+      expect(result).toEqual({ taxAmount: 13, taxRate: 4 });
+    });
+
+    it('uses exact arithmetic when a regional cap binds (325 at 1.1% cap 3 + 2.9%)', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 1.1, cap_amount: 3 }, { tax_percentage: 2.9 }]],
+      });
+
+      // 3.575 -> 3, plus 9.425 = 12.425 -> 13.
+      const result = await new TaxService().calculateTax('client-1', 325, DATE, 'US-NY');
+
+      expect(result).toEqual({ taxAmount: 13, taxRate: 4 });
+    });
+
+    it('parses a regional cap hydrated as a bigint string', async () => {
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        tax_rates: [[{ tax_percentage: 5, cap_amount: '150' }]],
+      });
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE, 'US-NY');
+
+      expect(result).toEqual({ taxAmount: 150, taxRate: 5 });
+    });
+
     it('parses string percentages from numeric columns and ignores unparseable rates', async () => {
       setupKnex({
         clients: [[{ is_tax_exempt: false }]],
@@ -282,6 +365,111 @@ describe('TaxService.calculateTax', () => {
       const result = await new TaxService().calculateTax('client-1', 0, DATE);
 
       expect(result).toEqual({ taxAmount: 0, taxRate: 7.25 });
+    });
+  });
+
+  describe('rate caps (default-rate simple path)', () => {
+    function setupCappedRate(cap: number | null) {
+      vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([]);
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        client_tax_rates: [[{ tax_rate_id: 'rate-1' }]],
+        tax_rates: [
+          [{ tax_rate_id: 'rate-1', tax_percentage: 10, is_composite: false, cap_amount: cap }],
+        ],
+      });
+    }
+
+    it('charges no tax when the cap is zero (a zero cap is a supplied value)', async () => {
+      setupCappedRate(0);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 0, taxRate: 10 });
+    });
+
+    it('leaves tax unchanged when it is below the cap', async () => {
+      // 10000 * 10% = 1000, below a 2500 cap.
+      setupCappedRate(2500);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 1000, taxRate: 10 });
+    });
+
+    it('leaves tax unchanged when it exactly equals the cap', async () => {
+      setupCappedRate(1000);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 1000, taxRate: 10 });
+    });
+
+    it('clamps tax that exceeds the cap', async () => {
+      // 10000 * 10% = 1000, clamped to 400.
+      setupCappedRate(400);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 400, taxRate: 10 });
+    });
+
+    it('preserves uncapped behavior when cap_amount is null', async () => {
+      setupCappedRate(null);
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 1000, taxRate: 10 });
+    });
+
+    it('parses a bigint cap hydrated as a string', async () => {
+      vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([]);
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        client_tax_rates: [[{ tax_rate_id: 'rate-1' }]],
+        tax_rates: [
+          [{ tax_rate_id: 'rate-1', tax_percentage: 10, is_composite: false, cap_amount: '350' }],
+        ],
+      });
+
+      const result = await new TaxService().calculateTax('client-1', 10000, DATE);
+
+      expect(result).toEqual({ taxAmount: 350, taxRate: 10 });
+    });
+
+    it('rejects a negative cap instead of producing negative tax', async () => {
+      setupCappedRate(-1);
+
+      await expect(new TaxService().calculateTax('client-1', 10000, DATE))
+        .rejects.toThrow('Tax rate cap amount must be a non-negative whole number.');
+    });
+
+    it('rejects a fractional cap', async () => {
+      setupCappedRate(10.5);
+
+      await expect(new TaxService().calculateTax('client-1', 10000, DATE))
+        .rejects.toThrow('Tax rate cap amount must be a non-negative whole number.');
+    });
+
+    it('rejects a non-numeric cap hydrated from the database', async () => {
+      vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([]);
+      setupKnex({
+        clients: [[{ is_tax_exempt: false }]],
+        client_tax_rates: [[{ tax_rate_id: 'rate-1' }]],
+        tax_rates: [
+          [{ tax_rate_id: 'rate-1', tax_percentage: 10, is_composite: false, cap_amount: 'not-a-number' }],
+        ],
+      });
+
+      await expect(new TaxService().calculateTax('client-1', 10000, DATE))
+        .rejects.toThrow('Tax rate cap amount must be a non-negative whole number.');
+    });
+
+    it('rejects an unsafe integer cap', async () => {
+      setupCappedRate(Number.MAX_SAFE_INTEGER + 1);
+
+      await expect(new TaxService().calculateTax('client-1', 10000, DATE))
+        .rejects.toThrow('Tax rate cap amount must be a non-negative whole number.');
     });
   });
 });

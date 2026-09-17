@@ -39,12 +39,15 @@ function allocatePort(): Promise<number> {
   });
 }
 
-async function waitForServer(url: string, timeoutMs: number): Promise<void> {
+async function waitForServer(url: string, timeoutMs: number): Promise<Response> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(url, { redirect: 'manual' });
-      if (res.status !== 404) return;
+      const res = await fetch(url, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())),
+      });
+      if (res.status !== 404) return res;
     } catch {
       // Not listening yet.
     }
@@ -100,7 +103,17 @@ describe('Xero callback access-log redaction (real Next server)', () => {
       throw error;
     });
 
-    await waitForServer(baseUrl + '/api/integrations/xero/connect', 180_000);
+    const connectResponse = await waitForServer(baseUrl + '/api/integrations/xero/connect', 180_000);
+    expect(connectResponse.status).toBe(401);
+
+    // Next compiles each route on its first request. Warming connect alone
+    // leaves callback compilation inside the 20-second behavioral test budget
+    // (cold compilation can take longer on CI). Compile both in setup, without
+    // credentials or a CSRF cookie, and require the real callback response.
+    const callbackResponse = await waitForServer(baseUrl + CALLBACK_PATH, 60_000);
+    expect(callbackResponse.status).toBe(307);
+    expect(new URL(callbackResponse.headers.get('location')!).searchParams.get('xero_error'))
+      .toBe('missing_params');
   }, 240_000);
 
   afterAll(async () => {

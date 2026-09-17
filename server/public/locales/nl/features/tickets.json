@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Kan tijdregistratie niet verwijderen",
     "timeEntryDeleted": "Tijdregistratie verwijderd",
     "closeFailed": "Ticket sluiten is mislukt",
-    "scheduleVisitFailed": "Kan de planner niet openen",
     "loadCommentsFailed": "Opmerkingen laden mislukt",
     "updateTicketFailed": "Ticket bijwerken mislukt",
     "errorWithMessage": "Fout: {{message}}",
     "billingProfileUpdated": "Facturatieprofiel bijgewerkt",
-    "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt"
+    "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt",
+    "scheduleOpenFailed": "De planner kon niet worden geopend"
   },
   "conversation": {
     "comments": "Reacties",
@@ -1603,7 +1603,8 @@
       "additionalAgentsTooltip": "Extra medewerkers:",
       "unknownAgent": "Onbekende medewerker",
       "category": "Categorie",
-      "selectDestinationStatus": "Selecteer een status voor het nieuwe bord voordat u opslaat."
+      "selectDestinationStatus": "Selecteer een status voor het nieuwe bord voordat u opslaat.",
+      "viewSchedule": "Agenda bekijken"
     },
     "layout": {
       "grid": "Raster",
@@ -1631,7 +1632,6 @@
       "showLess": "Minder weergeven",
       "contact": "Contact",
       "client": "Klant",
-      "nextVisit": "Volgend bezoek",
       "callsAndEmails": "Gesprekken en e-mails",
       "call": "Bellen",
       "viewAll": "Alles weergeven",
@@ -1657,7 +1657,6 @@
       "billing": "Facturatie",
       "couldNotLoad": "Kan deze tegel niet laden",
       "nothingScheduled": "Niets gepland",
-      "scheduleVisit": "Een bezoek plannen",
       "scheduledWork": "Gepland werk",
       "scheduleDone": "voltooid",
       "noCallsOrEmails": "Geen gesprekken of e-mails geregistreerd",
@@ -1703,7 +1702,9 @@
         "approved": "Goedgekeurd",
         "declined": "Afgewezen",
         "cancelled": "Geannuleerd"
-      }
+      },
+      "scheduleTime": "Tijd inplannen",
+      "openScheduleEntry": "Agenda-item openen"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",
@@ -1801,6 +1802,80 @@
       "contactHelper": "Slaat de e-mail aan de klant, de enquête-uitnodiging en de klantportaalmelding over",
       "internalLabel": "Ook agenten en volgers niet informeren",
       "internalHelper": "Slaat ook hun e-mails en in-app-meldingen over"
+    }
+  },
+  "externalLinks": {
+    "title": "Externe koppelingen",
+    "empty": "Geen externe koppelingen",
+    "loading": "Externe koppelingen laden...",
+    "noUrl": "Geen URL beschikbaar voor deze referentie",
+    "customSystemOption": "{{label}} (aangepast)",
+    "actions": {
+      "add": "Koppeling toevoegen",
+      "edit": "Bewerken",
+      "remove": "Verwijderen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "menu": "Koppelingsacties"
+    },
+    "relationship": {
+      "origin": "Oorsprong",
+      "mirror": "Spiegel",
+      "reference": "Referentie"
+    },
+    "relationshipDescription": {
+      "origin": "Waar dit ticket begon. Elk ticket kan één oorsprongskoppeling hebben, die de oorsprongsbadge bepaalt.",
+      "mirror": "Een ander record dat hetzelfde werk als dit ticket bijhoudt.",
+      "reference": "Aanvullende informatie voor dit ticket."
+    },
+    "dialog": {
+      "addTitle": "Externe koppeling toevoegen",
+      "editTitle": "Externe koppeling bewerken",
+      "intro": "Een koppeling toevoegen synchroniseert geen gegevens tussen systemen."
+    },
+    "removeDialog": {
+      "title": "Externe koppeling verwijderen",
+      "message": "Deze externe koppeling van het ticket verwijderen?"
+    },
+    "fields": {
+      "system": "Systeem",
+      "loadingSystems": "Systemen laden...",
+      "selectSystem": "Kies een systeem",
+      "externalId": "Externe ID",
+      "externalIdPlaceholder": "bv. 42 of 1234567890",
+      "realm": "Domein",
+      "url": "URL",
+      "urlOptional": "Optionele overschrijving",
+      "urlRequired": "https://...",
+      "relationship": "Relatie",
+      "originExistsHint": "Dit ticket heeft al een oorsprongskoppeling.",
+      "actorGroup": "Persoon of account (optioneel)",
+      "actorHint": "De persoon of het account dat bij het gekoppelde record in het externe systeem hoort.",
+      "actorHandle": "Gebruikersnaam of handle",
+      "actorDisplay": "Weergavenaam",
+      "builtInGroup": "Ingebouwde systemen",
+      "customGroup": "Aangepaste systemen",
+      "urlPreview": "Opent:",
+      "urlPreviewIncomplete": "Vul de velden hierboven in om de link te bekijken."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket niet gevonden",
+      "commentNotFound": "Opmerking niet gevonden op dit ticket",
+      "linkNotFound": "Externe koppeling niet gevonden",
+      "systemNotFound": "Onbekend extern systeem",
+      "externalIdRequired": "Externe ID is vereist",
+      "invalidUrl": "URL moet een geldige http(s)-URL zijn",
+      "invalidRelationship": "Ongeldige relatie",
+      "invalidEntityType": "Ongeldig entiteitstype",
+      "originExists": "Deze entiteit heeft al een oorsprongskoppeling",
+      "duplicateExternalLink": "Dat externe record is al gekoppeld",
+      "systemInUse": "Dit externe systeem wordt gebruikt door bestaande koppelingen",
+      "systemInUseCount": "Dit externe systeem wordt gebruikt door {{count}} koppeling(en)",
+      "invalidSystemKey": "Aangepaste systeemsleutels moeten overeenkomen met custom:<slug>",
+      "systemLabelRequired": "Systeemlabel is vereist",
+      "permissionDenied": "Toegang geweigerd",
+      "systemRequired": "Kies een extern systeem.",
+      "urlRequired": "Voor systemen zonder URL-sjabloon is een URL vereist."
     }
   }
 }
