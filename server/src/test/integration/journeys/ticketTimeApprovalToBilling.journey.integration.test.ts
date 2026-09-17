@@ -328,7 +328,15 @@ describe('journey: ticket → time → approval → billing', () => {
 
     // --- the approval gate: the engine refuses the whole invoice while any
     // entry in the window is unapproved ---
-    await expect(generateInvoice(januaryCycleId)).rejects.toThrow(/Blocked until approval/);
+    const invoicesBeforeApproval = await tenantTable(db, tenantId, 'invoices')
+      .select('invoice_id').orderBy('invoice_id');
+    await expect(generateInvoice(januaryCycleId)).resolves.toEqual({
+      actionError: 'Blocked until approval: 1 unapproved entry.',
+      messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+      messageParams: { count: '1' },
+    });
+    expect(await tenantTable(db, tenantId, 'invoices')
+      .select('invoice_id').orderBy('invoice_id')).toEqual(invoicesBeforeApproval);
     const entryBeforeApproval = await tenantTable(db, tenantId, 'time_entries')
       .where({ tenant: tenantId, entry_id: entry.entry_id })
       .first();

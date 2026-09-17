@@ -39,7 +39,11 @@ publish-appliance-release=true
 appliance-release-channel=stable
 ```
 
+On every stable promotion the pipeline does three things after traffic is switched: it reads the `temporal-worker`, `workflow-worker` and `email-service` deployments in the production namespace (`appliance-production-namespace`, default `msp`) and pins whichever of those images differ from the channel, so the appliance mirrors what hosted runs rather than the newest build; it republishes the Helm charts and Flux config from the promoted alga-core commit, so charts can never lag the server; and it moves the channel with the new alga-core pin. Any production image that is not on `ghcr.io` fails the promotion rather than publishing a manifest appliances cannot pull.
+
 Use `appliance-release-source-ref` / `appliance-release-version` only when intentionally overriding the source commit or release version. The appliance setup and update engines resolve the selected channel from OCI at runtime.
+
+The `nightly` channel is published automatically. The `alga-appliance-nightly-release` CronWorkflow (`~/nm-kube-config/alga-psa/workflows/appliance/alga-appliance-nightly-cronworkflow.yaml`) runs the coordinated release against `main` at 06:00 UTC every day and moves `nightly` without an approval gate. Nights where `main` has not moved publish nothing: the release checks the channel's current `sourceRevision` first and exits early when it already matches.
 
 ## Setup and updates
 

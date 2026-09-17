@@ -2,7 +2,7 @@
 
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { ITaxRate, DeletionValidationResult } from '@alga-psa/types';
-import { TaxService } from '../services/taxService';
+import { TaxService, normalizeTaxCapAmount } from '../services/taxService';
 import { v4 as uuid4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -43,6 +43,8 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
         return actionError('Tax rate ID is required for updates.', 'msp/billing-settings:errors.taxRate.idRequired');
       case 'Tax rate not found':
         return actionError('Tax rate not found.', 'msp/billing-settings:errors.taxRate.notFound');
+      case 'Tax rate cap amount must be a non-negative whole number.':
+        return actionError('Tax rate cap amount must be a non-negative whole number.');
       // Thrown by deleteTaxRate's in-transaction guards; intentionally
       // user-visible, so keep the wording rather than degrading to the
       // generic delete fallback.
@@ -112,7 +114,7 @@ export const addTaxRate = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
 
       if (!taxRateData.region_code) {
@@ -128,9 +130,12 @@ export const addTaxRate = withAuth(async (
 
       // Generate a UUID for the tax_rate_id
       const tax_rate_id = uuid4();
+      // Validate the cap before it reaches the database; throws the mapped
+      // "cap amount" action error for negative/fractional/non-numeric values.
+      const cap_amount = normalizeTaxCapAmount(taxRateData.cap_amount);
 
       const [newTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-        .insert({ ...taxRateData, tax_rate_id, tenant: tenant! })
+        .insert({ ...taxRateData, cap_amount, tax_rate_id, tenant: tenant! })
         .returning('*');
       return newTaxRate;
     });
@@ -156,7 +161,7 @@ export const updateTaxRate = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
 
       if (!taxRateData.tax_rate_id) {
@@ -192,6 +197,11 @@ export const updateTaxRate = withAuth(async (
       const { tenant: _, ...updateData } = { ...taxRateData };
       if (updateData.end_date === '') {
         updateData.end_date = null;
+      }
+      // Validate only when the caller supplied a cap; an update that omits it
+      // must not silently clear an existing cap.
+      if (Object.prototype.hasOwnProperty.call(taxRateData, 'cap_amount')) {
+        updateData.cap_amount = normalizeTaxCapAmount(taxRateData.cap_amount);
       }
 
       const [updatedTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')

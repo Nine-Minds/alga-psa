@@ -1,9 +1,12 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getAdminConnection: vi.fn(),
   findInvocationByIdempotency: vi.fn(),
   createInvocation: vi.fn(),
+  claimFailed: vi.fn(),
   updateInvocation: vi.fn(),
   initializeWorkflowRuntimeV2: vi.fn(),
   resolveInputMapping: vi.fn(),
@@ -19,50 +22,41 @@ const mocks = vi.hoisted(() => ({
   reserveStepStart: vi.fn(),
 }));
 
+vi.mock('../workflow-action-replay-keys', async importOriginal => {
+  const actual = await importOriginal<typeof import('../workflow-action-replay-keys')>();
+  return { ...actual, loadWorkflowReplayKeys: async () => ({ activeKeyId: 'test', keys: { test: 'synthetic-worker-replay-key' } }) };
+});
+
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: mocks.getAdminConnection,
   retryOnAdminReadOnly: async (fn: () => Promise<unknown>) => fn(),
 }));
 
-vi.mock('@alga-psa/workflows/runtime/core', () => ({
-  WorkflowRuntimeV2: class WorkflowRuntimeV2 {},
-  workflowDefinitionSchema: {
-    parse: (value: unknown) => value,
-  },
-  resolveInputMapping: mocks.resolveInputMapping,
-  resolveExpressionsWithSecrets: mocks.resolveExpressionsWithSecrets,
-  getActionRegistryV2: () => ({
-    get: mocks.actionRegistryGet,
-  }),
-  getNodeTypeRegistry: () => ({
-    get: vi.fn(),
-  }),
-  generateIdempotencyKey: () => 'generated-idempotency-key',
-  initializeWorkflowRuntimeV2: mocks.initializeWorkflowRuntimeV2,
-  createSecretResolverFromProvider: (provider: unknown) => provider,
-  applyRedactions: (value: unknown) => {
-    if (Array.isArray(value)) {
-      return value.map((entry) => (entry && typeof entry === 'object' && 'secretRef' in entry ? { ...entry, secretRef: '[REDACTED]' } : entry));
-    }
-    if (value && typeof value === 'object') {
-      const redact = (input: unknown): unknown => {
-        if (Array.isArray(input)) return input.map(redact);
-        if (!input || typeof input !== 'object') return input;
-        const result: Record<string, unknown> = {};
-        for (const [key, val] of Object.entries(input as Record<string, unknown>)) {
-          result[key] = key === 'secretRef' ? '[REDACTED]' : redact(val);
-        }
-        return result;
-      };
-      return redact(value);
-    }
-    return value;
-  },
-  safeSerialize: (value: unknown) => JSON.parse(JSON.stringify(value)),
-  workflowStepQuotaService: {
-    reserveStepStart: mocks.reserveStepStart,
-  },
-}));
+vi.mock('@alga-psa/workflows/runtime/core', async () => {
+  const { applyRedactions, safeSerialize } = await import('@alga-psa/shared/workflow/runtime/utils/redactionUtils');
+  return {
+    WorkflowRuntimeV2: class WorkflowRuntimeV2 {},
+    workflowDefinitionSchema: {
+      parse: (value: unknown) => value,
+    },
+    resolveInputMapping: mocks.resolveInputMapping,
+    resolveExpressionsWithSecrets: mocks.resolveExpressionsWithSecrets,
+    getActionRegistryV2: () => ({
+      get: mocks.actionRegistryGet,
+    }),
+    getNodeTypeRegistry: () => ({
+      get: vi.fn(),
+    }),
+    generateIdempotencyKey: () => 'generated-idempotency-key',
+    initializeWorkflowRuntimeV2: mocks.initializeWorkflowRuntimeV2,
+    createSecretResolverFromProvider: (provider: unknown) => provider,
+    applyRedactions,
+    safeSerialize,
+    workflowStepQuotaService: {
+      reserveStepStart: mocks.reserveStepStart,
+    },
+  };
+});
 
 vi.mock('@alga-psa/shared/workflow/secrets', () => ({
   createTenantSecretProvider: () => ({
@@ -74,6 +68,7 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowActionInvocationModelV2: {
     findByIdempotency: mocks.findInvocationByIdempotency,
     create: mocks.createInvocation,
+    claimFailed: mocks.claimFailed,
     update: mocks.updateInvocation,
   },
   WorkflowDefinitionVersionModelV2: {},
@@ -106,6 +101,7 @@ describe('workflow-runtime-v2 activities', () => {
       if (table === 'workflow_run_waits') return waitsQuery;
       throw new Error(`Unexpected table ${table}`);
     }) as any;
+    knex.schema = { hasColumn: vi.fn().mockResolvedValue(true) };
     mocks.getAdminConnection.mockResolvedValue(knex);
     mocks.resolveInputMapping.mockResolvedValue({});
     mocks.resolveExpressionsWithSecrets.mockResolvedValue(null);
@@ -115,6 +111,7 @@ describe('workflow-runtime-v2 activities', () => {
       attempt: 1,
     });
     mocks.updateInvocation.mockResolvedValue(undefined);
+    mocks.claimFailed.mockResolvedValue(null);
     mocks.actionHandler.mockResolvedValue({
       title_text: 'rendered compose output',
     });
@@ -152,6 +149,87 @@ describe('workflow-runtime-v2 activities', () => {
       },
       usedCountAfter: 1,
     });
+  });
+
+  it.each([
+    ['comment-existing-ticket', 'message-1:ticket-1', { ticketId: 'ticket-1', author_type: 'contact', source: 'email' }],
+    ['create-ticket-with-comment', 'provider-1:message-1', { targetClientId: 'client-1', ticketDefaults: { board_id: 'board-1' } }],
+    ['attachments-new-ticket', 'message-1:new-ticket:attachments', { ticketId: 'new-ticket', emailId: 'message-1', providerId: 'provider-1', tenant: 'tenant-1', attachments: [] }],
+  ] as const)('resolves shipped email %s inputs and replays its tenant-scoped idempotency key', async (stepId, key, expectedArgs) => {
+    const resolvers = await import('@alga-psa/shared/workflow/runtime/utils/mappingResolver');
+    mocks.resolveInputMapping.mockImplementation(resolvers.resolveInputMapping);
+    mocks.resolveExpressionsWithSecrets.mockImplementation(resolvers.resolveExpressionsWithSecrets);
+    const definition = JSON.parse(readFileSync(path.resolve(__dirname,
+      '../../../../../shared/workflow/runtime/workflows/email-processing-workflow.v2.json'), 'utf8'));
+    const findStep = (value: any): any => {
+      if (!value || typeof value !== 'object') return undefined;
+      if (value.id === stepId) return value;
+      for (const child of Object.values(value)) {
+        const found = findStep(child);
+        if (found) return found;
+      }
+    };
+    const step = findStep(definition);
+    expect(step).toBeDefined();
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+    const scopes: any = {
+      payload: { tenantId: 'tenant-1', providerId: 'provider-1', emailData: { id: 'message-1', attachments: [], from: { email: 'sender@example.com' } } },
+      workflow: { parsedEmail: { sanitizedText: 'Please help' }, existingTicketResolution: { ticket: { ticketId: 'ticket-1' } },
+        ticketContext: { targetClientId: 'client-1', targetContactId: null, targetAuthorUserId: null, targetLocationId: null, ticketDefaults: { board_id: 'board-1' } }, createdTicket: { ticket_id: 'new-ticket' } },
+      lexical: [], meta: {}, error: null,
+      system: { runId: 'run-email', workflowId: definition.id, workflowVersion: definition.version, tenantId: 'tenant-1' },
+    };
+    const input = { runId: 'run-email', stepPath: 'root.steps[0]', stepId, tenantId: 'tenant-1', step, scopes };
+    mocks.actionHandler.mockResolvedValue({ result: 'persisted-result' });
+    await executeWorkflowRuntimeV2ActionStep(input);
+    expect(mocks.actionHandler).toHaveBeenCalledWith(expect.objectContaining(expectedArgs), expect.objectContaining({ idempotencyKey: `tenant-1:${key}`, tenantId: 'tenant-1' }));
+    expect(mocks.createInvocation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ idempotency_key: `tenant-1:${key}` }));
+    mocks.findInvocationByIdempotency.mockResolvedValue({ status: 'SUCCEEDED', output_json: { result: 'persisted-result' } });
+    const replay = await executeWorkflowRuntimeV2ActionStep({ ...input, runId: 'retry-run' });
+    expect(replay.output).toEqual({ result: 'persisted-result' });
+    expect(mocks.actionHandler).toHaveBeenCalledOnce();
+    expect(mocks.createInvocation).toHaveBeenCalledOnce();
+    expect(mocks.findInvocationByIdempotency).toHaveBeenLastCalledWith(expect.anything(), step.config.actionId, 1, `tenant-1:${key}`, 'tenant-1');
+  });
+
+  it('redacts resolved nested secrets in stored input while delivering their values to the handler', async () => {
+    const { resolveInputMapping } = await import('@alga-psa/shared/workflow/runtime/utils/mappingResolver');
+    mocks.resolveInputMapping.mockImplementation((mapping, options) => resolveInputMapping(mapping, {
+      ...options, secretResolver: { resolve: async () => 'synthetic-provider-secret' },
+    }));
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+    await executeWorkflowRuntimeV2ActionStep({
+      runId: 'secret-run', stepPath: 'root.steps[0]', stepId: 'step', tenantId: 'tenant-1',
+      step: { type: 'action.call', config: { actionId: 'secret-test', version: 1,
+        inputMapping: { credentials: [{ token: { $secret: 'MAILBOX_TOKEN' }, label: 'Mailbox' }] } } },
+      scopes: { payload: {}, workflow: {}, lexical: [], meta: {}, error: null,
+        system: { runId: 'secret-run', workflowId: 'workflow', workflowVersion: 1, tenantId: 'tenant-1', definitionHash: null, runtimeSemanticsVersion: null } },
+    });
+    expect(mocks.actionHandler).toHaveBeenCalledWith({ credentials: [{ token: 'synthetic-provider-secret', label: 'Mailbox' }] }, expect.anything());
+    expect(mocks.createInvocation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      input_json: { credentials: [{ token: '[REDACTED]', label: 'Mailbox' }] },
+    }));
+  });
+
+  it.each([true, false])('executes a failed retry only when the atomic claim succeeds: %s', async (claimed) => {
+    mocks.findInvocationByIdempotency.mockResolvedValue({ invocation_id: 'failed-invocation', status: 'FAILED', error_json: { message: 'Previous failure' } });
+    mocks.claimFailed.mockResolvedValue(claimed ? { invocation_id: 'failed-invocation', attempt: 2 } : null);
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+    const execution = executeWorkflowRuntimeV2ActionStep({
+      runId: 'retry-run', stepPath: 'root.steps[0]', stepId: 'step', tenantId: 'tenant-1',
+      step: { type: 'action.call', config: { actionId: 'email-test', version: 1 } },
+      scopes: { payload: {}, workflow: {}, lexical: [], meta: {}, error: null,
+        system: { runId: 'retry-run', workflowId: 'workflow', workflowVersion: 1, tenantId: 'tenant-1', definitionHash: null, runtimeSemanticsVersion: null } },
+    });
+    if (claimed) {
+      await execution;
+      expect(mocks.actionHandler).toHaveBeenCalledWith({}, expect.objectContaining({ attempt: 2 }));
+      expect(mocks.updateInvocation).toHaveBeenCalledWith(expect.anything(), 'failed-invocation', expect.objectContaining({ status: 'SUCCEEDED', error_json: null }), 'tenant-1');
+    } else {
+      await expect(execution).rejects.toThrow('already in progress');
+      expect(mocks.actionHandler).not.toHaveBeenCalled();
+    }
+    expect(mocks.createInvocation).not.toHaveBeenCalled();
   });
 
   it('preserves raw action config as stepConfig for transform.compose_text outputs', async () => {

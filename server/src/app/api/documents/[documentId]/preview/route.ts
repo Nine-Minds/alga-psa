@@ -72,7 +72,7 @@ export async function GET(
     headers.set('Content-Length', buffer.length.toString());
 
     // Cache for 1 year - previews are immutable (file_id changes if regenerated)
-    headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    headers.set('Cache-Control', 'private, no-store');
 
     // ETag based on file ID for cache validation
     headers.set('ETag', `"${document.preview_file_id}"`);

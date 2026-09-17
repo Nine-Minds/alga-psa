@@ -283,7 +283,6 @@
     "saveCommentFailed": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƈȯḿḿḗƞŧ ƈħȧƞɠḗş⟧",
     "updateDescriptionFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ḓḗşƈřīƥŧīȯƞ⟧",
     "prepareTimeEntryFailed": "⟦Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ ƥřḗƥȧřīƞɠ ŧħḗ ŧīḿḗ ḗƞŧřẏ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
-    "scheduleVisitFailed": "⟦Ƒȧīŀḗḓ ŧȯ ȯƥḗƞ ŧħḗ şƈħḗḓŭŀḗř⟧",
     "updateContactFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈȯƞŧȧƈŧ⟧",
     "updateClientFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈŀīḗƞŧ⟧",
     "updateLocationFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŀȯƈȧŧīȯƞ⟧",
@@ -310,7 +309,8 @@
     "updateTicketFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧīƈķḗŧ⟧",
     "errorWithMessage": "⟦Ḗřřȯř: {{message}}⟧",
     "billingProfileUpdated": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ ŭƥḓȧŧḗḓ⟧",
-    "updateBillingProfileFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƀīŀŀīƞɠ ƥřȯƒīŀḗ⟧"
+    "updateBillingProfileFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƀīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
+    "scheduleOpenFailed": "⟦Ƒȧīŀḗḓ ŧȯ ȯƥḗƞ ŧħḗ şƈħḗḓŭŀḗř⟧"
   },
   "conversation": {
     "comments": "⟦Ƈȯḿḿḗƞŧş⟧",
@@ -1611,7 +1611,8 @@
       "responseWaitingOnClient": "⟦Ẇȧīŧīƞɠ ȯƞ ƈŀīḗƞŧ⟧",
       "responseNone": "⟦Ƞȯ řḗƥŀẏ ƞḗḗḓḗḓ⟧",
       "category": "⟦Ƈȧŧḗɠȯřẏ⟧",
-      "selectDestinationStatus": "⟦Şḗŀḗƈŧ ȧ şŧȧŧŭş ƒȯř ŧħḗ ƞḗẇ ƀȯȧřḓ ƀḗƒȯřḗ şȧṽīƞɠ.⟧"
+      "selectDestinationStatus": "⟦Şḗŀḗƈŧ ȧ şŧȧŧŭş ƒȯř ŧħḗ ƞḗẇ ƀȯȧřḓ ƀḗƒȯřḗ şȧṽīƞɠ.⟧",
+      "viewSchedule": "⟦Ṽīḗẇ şƈħḗḓŭŀḗ⟧"
     },
     "layout": {
       "grid": "⟦Ɠřīḓ⟧",
@@ -1639,7 +1640,6 @@
       "showLess": "⟦Şħȯẇ ŀḗşş⟧",
       "contact": "⟦Ƈȯƞŧȧƈŧ⟧",
       "client": "⟦Ƈŀīḗƞŧ⟧",
-      "nextVisit": "⟦Ƞḗẋŧ ṽīşīŧ⟧",
       "callsAndEmails": "⟦Ƈȧŀŀş ȧƞḓ ḗḿȧīŀş⟧",
       "call": "⟦Ƈȧŀŀ⟧",
       "viewAll": "⟦Ṽīḗẇ ȧŀŀ⟧",
@@ -1667,7 +1667,6 @@
       "billing": "⟦Ɓīŀŀīƞɠ⟧",
       "couldNotLoad": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ ŧħīş ŧīŀḗ⟧",
       "nothingScheduled": "⟦Ƞȯŧħīƞɠ şƈħḗḓŭŀḗḓ⟧",
-      "scheduleVisit": "⟦Şƈħḗḓŭŀḗ ȧ ṽīşīŧ⟧",
       "scheduledWork": "⟦Şƈħḗḓŭŀḗḓ ẇȯřķ⟧",
       "scheduleDone": "⟦ḓȯƞḗ⟧",
       "noCallsOrEmails": "⟦Ƞȯ ƈȧŀŀş ȯř ḗḿȧīŀş ŀȯɠɠḗḓ⟧",
@@ -1711,7 +1710,9 @@
         "approved": "⟦Ȧƥƥřȯṽḗḓ⟧",
         "declined": "⟦Ḓḗƈŀīƞḗḓ⟧",
         "cancelled": "⟦Ƈȧƞƈḗŀŀḗḓ⟧"
-      }
+      },
+      "scheduleTime": "⟦Şƈħḗḓŭŀḗ ŧīḿḗ⟧",
+      "openScheduleEntry": "⟦Ȯƥḗƞ şƈħḗḓŭŀḗ ḗƞŧřẏ⟧"
     },
     "timeline": {
       "subtitle": "⟦Řḗƥŀīḗş, ŧīḿḗ, ȧƞḓ şẏşŧḗḿ ƈħȧƞɠḗş īƞ ȯƞḗ ƥŀȧƈḗ⟧",
@@ -1801,6 +1802,80 @@
       "showAllActivity": "⟦Şħȯẇ ȧŀŀ ȧƈŧīṽīŧẏ⟧",
       "collapseActivity": "⟦Ƈȯŀŀȧƥşḗ ȯŀḓḗř ȧƈŧīṽīŧẏ⟧",
       "replyingToComment": "⟦Řḗƥŀẏīƞɠ ŧȯ {{name}}⟧"
+    }
+  },
+  "externalLinks": {
+    "title": "⟦Ḗẋŧḗřƞȧŀ ŀīƞķş⟧",
+    "empty": "⟦Ƞȯ ḗẋŧḗřƞȧŀ ŀīƞķş⟧",
+    "loading": "⟦Ŀȯȧḓīƞɠ ḗẋŧḗřƞȧŀ ŀīƞķş...⟧",
+    "noUrl": "⟦Ƞȯ ŬŘĿ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş řḗƒḗřḗƞƈḗ⟧",
+    "customSystemOption": "⟦{{label}} (ƈŭşŧȯḿ)⟧",
+    "actions": {
+      "add": "⟦Ȧḓḓ ŀīƞķ⟧",
+      "edit": "⟦Ḗḓīŧ⟧",
+      "remove": "⟦Řḗḿȯṽḗ⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "save": "⟦Şȧṽḗ⟧",
+      "menu": "⟦Ŀīƞķ ȧƈŧīȯƞş⟧"
+    },
+    "relationship": {
+      "origin": "⟦Ȯřīɠīƞ⟧",
+      "mirror": "⟦Ḿīřřȯř⟧",
+      "reference": "⟦Řḗƒḗřḗƞƈḗ⟧"
+    },
+    "relationshipDescription": {
+      "origin": "⟦Ẇħḗřḗ ŧħīş ŧīƈķḗŧ şŧȧřŧḗḓ. Ḗȧƈħ ŧīƈķḗŧ ƈȧƞ ħȧṽḗ ȯƞḗ ȯřīɠīƞ ŀīƞķ, ẇħīƈħ şḗŧş īŧş ȯřīɠīƞ ƀȧḓɠḗ.⟧",
+      "mirror": "⟦Ȧƞȯŧħḗř řḗƈȯřḓ ŧřȧƈķīƞɠ ŧħḗ şȧḿḗ ẇȯřķ ȧş ŧħīş ŧīƈķḗŧ.⟧",
+      "reference": "⟦Şŭƥƥȯřŧīƞɠ īƞƒȯřḿȧŧīȯƞ ƒȯř ŧħīş ŧīƈķḗŧ.⟧"
+    },
+    "dialog": {
+      "addTitle": "⟦Ȧḓḓ ḗẋŧḗřƞȧŀ ŀīƞķ⟧",
+      "editTitle": "⟦Ḗḓīŧ ḗẋŧḗřƞȧŀ ŀīƞķ⟧",
+      "intro": "⟦Ȧḓḓīƞɠ ȧ ŀīƞķ ḓȯḗş ƞȯŧ şẏƞƈ ḓȧŧȧ ƀḗŧẇḗḗƞ şẏşŧḗḿş.⟧"
+    },
+    "removeDialog": {
+      "title": "⟦Řḗḿȯṽḗ ḗẋŧḗřƞȧŀ ŀīƞķ⟧",
+      "message": "⟦Řḗḿȯṽḗ ŧħīş ḗẋŧḗřƞȧŀ ŀīƞķ ƒřȯḿ ŧħḗ ŧīƈķḗŧ?⟧"
+    },
+    "fields": {
+      "system": "⟦Şẏşŧḗḿ⟧",
+      "loadingSystems": "⟦Ŀȯȧḓīƞɠ şẏşŧḗḿş...⟧",
+      "selectSystem": "⟦Şḗŀḗƈŧ ȧ şẏşŧḗḿ⟧",
+      "externalId": "⟦Ḗẋŧḗřƞȧŀ ĪḒ⟧",
+      "externalIdPlaceholder": "⟦ḗ.ɠ. 42 ȯř 1234567890⟧",
+      "realm": "⟦Řḗȧŀḿ⟧",
+      "url": "⟦ŬŘĿ⟧",
+      "urlOptional": "⟦Ȯƥŧīȯƞȧŀ ȯṽḗřřīḓḗ⟧",
+      "urlRequired": "⟦ħŧŧƥş://...⟧",
+      "relationship": "⟦Řḗŀȧŧīȯƞşħīƥ⟧",
+      "originExistsHint": "⟦Ŧħīş ŧīƈķḗŧ ȧŀřḗȧḓẏ ħȧş ȧƞ ȯřīɠīƞ ŀīƞķ.⟧",
+      "actorGroup": "⟦Ƥḗřşȯƞ ȯř ȧƈƈȯŭƞŧ (ȯƥŧīȯƞȧŀ)⟧",
+      "actorHint": "⟦Ŧħḗ ƥḗřşȯƞ ȯř ȧƈƈȯŭƞŧ ȧşşȯƈīȧŧḗḓ ẇīŧħ ŧħḗ ŀīƞķḗḓ řḗƈȯřḓ īƞ ŧħḗ ḗẋŧḗřƞȧŀ şẏşŧḗḿ.⟧",
+      "actorHandle": "⟦Ŭşḗřƞȧḿḗ ȯř ħȧƞḓŀḗ⟧",
+      "actorDisplay": "⟦Ḓīşƥŀȧẏ ƞȧḿḗ⟧",
+      "builtInGroup": "⟦Ɓŭīŀŧ-īƞ şẏşŧḗḿş⟧",
+      "customGroup": "⟦Ƈŭşŧȯḿ şẏşŧḗḿş⟧",
+      "urlPreview": "⟦Ȯƥḗƞş:⟧",
+      "urlPreviewIncomplete": "⟦Ƒīŀŀ īƞ ŧħḗ ƒīḗŀḓş ȧƀȯṽḗ ŧȯ ƥřḗṽīḗẇ ŧħḗ ŀīƞķ.⟧"
+    },
+    "errors": {
+      "ticketNotFound": "⟦Ŧīƈķḗŧ ƞȯŧ ƒȯŭƞḓ⟧",
+      "commentNotFound": "⟦Ƈȯḿḿḗƞŧ ƞȯŧ ƒȯŭƞḓ ȯƞ ŧħīş ŧīƈķḗŧ⟧",
+      "linkNotFound": "⟦Ḗẋŧḗřƞȧŀ ŀīƞķ ƞȯŧ ƒȯŭƞḓ⟧",
+      "systemNotFound": "⟦Ŭƞķƞȯẇƞ ḗẋŧḗřƞȧŀ şẏşŧḗḿ⟧",
+      "externalIdRequired": "⟦Ḗẋŧḗřƞȧŀ ĪḒ īş řḗʠŭīřḗḓ⟧",
+      "invalidUrl": "⟦ŬŘĿ ḿŭşŧ ƀḗ ȧ ṽȧŀīḓ ħŧŧƥ(ş) ŬŘĿ⟧",
+      "invalidRelationship": "⟦Īƞṽȧŀīḓ řḗŀȧŧīȯƞşħīƥ⟧",
+      "invalidEntityType": "⟦Īƞṽȧŀīḓ ḗƞŧīŧẏ ŧẏƥḗ⟧",
+      "originExists": "⟦Ŧħīş ḗƞŧīŧẏ ȧŀřḗȧḓẏ ħȧş ȧƞ ȯřīɠīƞ ŀīƞķ⟧",
+      "duplicateExternalLink": "⟦Ŧħȧŧ ḗẋŧḗřƞȧŀ řḗƈȯřḓ īş ȧŀřḗȧḓẏ ŀīƞķḗḓ⟧",
+      "systemInUse": "⟦Ŧħīş ḗẋŧḗřƞȧŀ şẏşŧḗḿ īş ŭşḗḓ ƀẏ ḗẋīşŧīƞɠ ŀīƞķş⟧",
+      "systemInUseCount": "⟦Ŧħīş ḗẋŧḗřƞȧŀ şẏşŧḗḿ īş ŭşḗḓ ƀẏ {{count}} ŀīƞķ(ş)⟧",
+      "invalidSystemKey": "⟦Ƈŭşŧȯḿ şẏşŧḗḿ ķḗẏş ḿŭşŧ ḿȧŧƈħ ƈŭşŧȯḿ:<slug> ẇīŧħ ŀȯẇḗřƈȧşḗ ŀḗŧŧḗřş, ḓīɠīŧş, ȯř ŭƞḓḗřşƈȯřḗş⟧",
+      "systemLabelRequired": "⟦Şẏşŧḗḿ ŀȧƀḗŀ īş řḗʠŭīřḗḓ⟧",
+      "permissionDenied": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḿȧƞȧɠḗ ḗẋŧḗřƞȧŀ şẏşŧḗḿş⟧",
+      "systemRequired": "⟦Ƈħȯȯşḗ ȧƞ ḗẋŧḗřƞȧŀ şẏşŧḗḿ.⟧",
+      "urlRequired": "⟦Ȧ ŬŘĿ īş řḗʠŭīřḗḓ ƒȯř şẏşŧḗḿş ẇīŧħȯŭŧ ȧ ŬŘĿ ŧḗḿƥŀȧŧḗ.⟧"
     }
   }
 }

@@ -14,6 +14,11 @@ const translate = (key: string, options?: Record<string, unknown>) => {
   return value;
 };
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: translate }),
 }));
@@ -105,7 +110,8 @@ const open = (model: 'Fixed' | 'Usage') => {
 const save = () => fireEvent.submit(document.getElementById('custom-contract-line-form')!);
 
 describe('custom contract line semantic authoring in the active dialog', () => {
-  beforeEach(() => { vi.clearAllMocks(); actionMocks.createCustomContractLine.mockResolvedValue('line-new'); });
+  beforeEach(() => {
+    releaseFlag.enabled = true; vi.clearAllMocks(); actionMocks.createCustomContractLine.mockResolvedValue('line-new'); });
 
   it('saves period-total measurement, minimum and tier prices from the visible controls', async () => {
     open('Usage');

@@ -4,6 +4,12 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';
 import type { WebhookProcessingResult } from '@alga-psa/types';
+import {
+  extractTenantId,
+  peekTenantId,
+  resolveWebhookSecretCandidates,
+  verifyStripeSignature,
+} from './paymentsSignature';
 
 async function loadEnterprisePayments(): Promise<{
   PaymentService: any;
@@ -34,36 +40,23 @@ async function loadEnterprisePayments(): Promise<{
  * - checkout.session.expired: Checkout session expired
  *
  * Security:
- * - Verifies Stripe webhook signature
+ * - Verifies the Stripe signature against the tenant's own endpoint secret
+ *   (stored when the tenant connected Stripe) and/or the platform secret.
+ *   See paymentsSignature.ts for the resolution order.
  * - Uses payment_webhook_events table for idempotency
  *
- * Configuration required in Stripe Dashboard:
- * 1. Go to Developers → Webhooks
- * 2. Add endpoint: https://your-domain.com/api/webhooks/stripe/payments
- * 3. Select events:
- *    - checkout.session.completed
- *    - payment_intent.succeeded
- *    - payment_intent.payment_failed
- *    - checkout.session.expired
- * 4. Store webhook signing secret in the secret provider
+ * Configuration:
+ * - Tenant-connected accounts: the endpoint and its signing secret are created
+ *   automatically by the payment settings connect flow (payment-actions.ts).
+ * - Platform account: store the endpoint signing secret as the app secret
+ *   `stripe_payment_webhook_secret` (or `stripe_webhook_secret`) in the secret
+ *   provider (Vault in hosted environments).
  */
 
-async function getWebhookSecret(): Promise<string> {
+async function hasPlatformWebhookSecret(): Promise<boolean> {
   const secretProvider = await getSecretProviderInstance();
-
-  // Try payment-specific webhook secret first
-  let webhookSecret = await secretProvider.getAppSecret('stripe_payment_webhook_secret');
-
-  // Fall back to main webhook secret if payment-specific not set
-  if (!webhookSecret) {
-    webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
-  }
-
-  if (!webhookSecret) {
-    throw new Error('Stripe webhook secret not configured');
-  }
-
-  return webhookSecret;
+  const candidates = await resolveWebhookSecretCandidates(secretProvider, null);
+  return candidates.length > 0;
 }
 
 export async function POST(req: NextRequest) {
@@ -93,12 +86,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get webhook secret
-    let webhookSecret: string;
-    try {
-      webhookSecret = await getWebhookSecret();
-    } catch {
-      logger.error('[Stripe Payment Webhook] Failed to get webhook secret');
+    // Decide which signing secret(s) apply. The tenant id is peeked from the
+    // unverified payload purely to select the tenant's endpoint secret; the
+    // payload is not trusted until a signature verifies.
+    const tenantHint = peekTenantId(body);
+    const secretProvider = await getSecretProviderInstance();
+    const candidates = await resolveWebhookSecretCandidates(secretProvider, tenantHint);
+
+    if (candidates.length === 0) {
+      logger.error('[Stripe Payment Webhook] Failed to get webhook secret', {
+        tenantHint,
+      });
       return NextResponse.json(
         { error: 'Webhook configuration error' },
         { status: 503 }
@@ -106,20 +104,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify webhook signature
-    let event: Stripe.Event;
-    try {
-      event = Stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      logger.info('[Stripe Payment Webhook] Signature verified', {
-        eventId: event.id,
-        eventType: event.type,
+    const verified = verifyStripeSignature(body, signature, candidates);
+    if (!verified) {
+      logger.error('[Stripe Payment Webhook] Signature verification failed', {
+        tenantHint,
+        candidateSources: candidates.map((c) => c.source),
       });
-    } catch (error) {
-      logger.error('[Stripe Payment Webhook] Signature verification failed:', error);
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 401 }
       );
     }
+
+    const event: Stripe.Event = verified.event;
+    logger.info('[Stripe Payment Webhook] Signature verified', {
+      eventId: event.id,
+      eventType: event.type,
+      secretSource: verified.source,
+    });
 
     // Check for license-order events FIRST (before tenant_id routing).
     // License orders carry is_license_order: 'true' in session metadata.
@@ -231,36 +233,6 @@ async function processStripePaymentWebhookPayload(tenantId: string, payload: str
     logger.error('[Stripe Payment Webhook] processStripePaymentWebhookPayload failed', { tenantId, error });
     return { success: false, error: 'Payment webhook processing failed' } as WebhookProcessingResult;
   }
-}
-
-/**
- * Extracts tenant_id from Stripe event metadata.
- */
-function extractTenantId(event: Stripe.Event): string | null {
-  const obj = event.data.object as any;
-
-  // Try direct metadata
-  if (obj.metadata?.tenant_id) {
-    return obj.metadata.tenant_id;
-  }
-
-  // For checkout sessions, also check payment_intent
-  if (event.type.startsWith('checkout.session')) {
-    const session = obj as Stripe.Checkout.Session;
-    if (session.metadata?.tenant_id) {
-      return session.metadata.tenant_id;
-    }
-  }
-
-  // For payment intents
-  if (event.type.startsWith('payment_intent')) {
-    const paymentIntent = obj as Stripe.PaymentIntent;
-    if (paymentIntent.metadata?.tenant_id) {
-      return paymentIntent.metadata.tenant_id;
-    }
-  }
-
-  return null;
 }
 
 // ── License-order webhook handling ───────────────────────────────────────────
@@ -384,8 +356,7 @@ export async function GET(req: NextRequest) {
 
   let webhookSecretStatus = 'missing';
   try {
-    await getWebhookSecret();
-    webhookSecretStatus = 'configured';
+    webhookSecretStatus = (await hasPlatformWebhookSecret()) ? 'configured' : 'missing';
   } catch {
     webhookSecretStatus = 'missing';
   }

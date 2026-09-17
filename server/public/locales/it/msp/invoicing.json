@@ -381,7 +381,10 @@
       "salesOrderNotInvoiceable": "Questo ordine di vendita non è più disponibile per la fatturazione.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Questa finestra di fatturazione contiene addebiti fatturabili, ma {{services}} non ha utilizzo registrato per il periodo di servizio dal {{periodStart}} al {{periodEnd}}. Registra prima l'utilizzo oppure conferma esplicitamente la generazione senza di esso: i servizi non registrati resteranno fatturabili in seguito.",
       "USAGE_PERIOD_TOTAL_STALE": "L'anteprima non è aggiornata: {{details}}. Riesegui l'anteprima per vedere i valori attuali, poi genera di nuovo.",
-      "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo."
+      "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo.",
+      "SOURCE_ALREADY_BILLED": "Alcuni elementi selezionati non sono più fatturabili (già fatturati, non approvati o rimossi). Aggiorna e riprova.",
+      "SOURCE_NOT_ELIGIBLE": "Un elemento selezionato non appartiene a questo ticket o non è più idoneo. Aggiorna e riprova.",
+      "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
@@ -392,6 +395,27 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} articoli pronti per la fatturazione da {{lineCount}} righe. Questa bozza verrà collegata all'ordine di vendita."
+    }
+  },
+  "quickInvoice": {
+    "currencyExcluded": "{{count}} prodotto/i esclusi perché la loro valuta è diversa da {{currency}}.",
+    "action": "Fattura rapida",
+    "title": "Fattura rapida per questo ticket",
+    "loading": "Caricamento elementi fatturabili…",
+    "empty": "Non ci sono elementi non fatturati su questo ticket.",
+    "billableTime": "Tempo fatturabile",
+    "products": "Prodotti",
+    "selectedTotal": "Totale selezionato",
+    "create": "Crea fattura",
+    "creating": "Creazione…",
+    "done": "Fatto",
+    "viewInvoice": "Visualizza fattura",
+    "created": "Fattura creata",
+    "createdDetail": "La fattura è stata creata e collegata a questo ticket.",
+    "existingInvoices": "Fatture per questo ticket",
+    "unknownService": "Elemento fatturabile",
+    "errors": {
+      "ticketNotFound": "Questo ticket non esiste più."
     }
   },
   "draftsTab": {
@@ -716,7 +740,8 @@
       "driftReexport": "Riesporta in QuickBooks",
       "syncNow": "Sincronizza con QuickBooks",
       "viewInQbo": "Visualizza in QuickBooks",
-      "voidInvoice": "Annulla fattura"
+      "voidInvoice": "Annulla fattura",
+      "viewInXero": "Visualizza in Xero"
     },
     "loading": "Caricamento anteprima...",
     "empty": "Seleziona una fattura per visualizzarne l'anteprima",
@@ -1004,7 +1029,8 @@
     },
     "messages": {
       "success": "Fattura generata con successo!",
-      "loadFailed": "Impossibile caricare i dati"
+      "loadFailed": "Impossibile caricare i dati",
+      "salesOrderSourcesUnavailable": "Impossibile caricare gli ordini di vendita di origine. È comunque possibile inserire manualmente le voci della fattura."
     }
   },
   "prepayment": {
@@ -1070,7 +1096,9 @@
     "tooltip": {
       "qboNumberPrefix": "QBO #",
       "lastSynced": "Ultima sincronizzazione:",
-      "viewInQuickBooks": "Visualizza in QuickBooks"
+      "viewInQuickBooks": "Visualizza in QuickBooks",
+      "viewInXero": "Visualizza in Xero",
+      "xeroNumberPrefix": "N. Xero "
     }
   },
   "templateManager": {
@@ -1412,6 +1440,14 @@
       "modern-invoice-complete": {
         "label": "Modello fattura moderno",
         "description": "Layout completo con intestazione, info fatturazione, tabella voci e piè di pagina."
+      },
+      "billed-time-entries": {
+        "label": "Dettaglio delle registrazioni di tempo fatturato",
+        "description": "Aggiungere una tabella informativa con date, attività, ore, tariffe e importi."
+      },
+      "billed-time-by-ticket": {
+        "label": "Dettaglio del tempo fatturato per ticket",
+        "description": "Ripetere un’intestazione e la relativa tabella delle registrazioni per ogni ticket o attività."
       }
     },
     "schema": {
@@ -1594,6 +1630,9 @@
               "label": "Contratto.pdf"
             }
           }
+        },
+        "totals-rows": {
+          "title": "Righe totali"
         }
       }
     },
@@ -1867,7 +1906,8 @@
         "transformsSource": "{{binding}} (origine trasformazioni)",
         "transformsOutput": "{{binding}} (output trasformazioni)",
         "ticketGroups": "Tempo fatturato per ticket",
-        "timeEntries": "Inserimenti ore fatturati"
+        "timeEntries": "Inserimenti ore fatturati",
+        "ticketPresentationRows": "Addebiti per ticket"
       },
       "presets": {
         "description": {
@@ -1945,7 +1985,12 @@
         "headerPlaceholder": "Etichetta intestazione",
         "bindingKey": "Chiave di associazione",
         "type": "Tipo",
-        "width": "Larghezza"
+        "width": "Larghezza",
+        "stackedLines": "Righe impilate",
+        "addLine": "+ Riga",
+        "clearLines": "Riga singola",
+        "stackedLinesHint": "Ogni riga non vuota viene visualizzata su una riga propria. Quando tutte le righe sono vuote, viene mostrata la chiave di associazione della colonna indicata sopra.",
+        "removeLine": "Rimuovi la riga {{index}}"
       },
       "columnTypes": {
         "text": "Testo",
@@ -1990,6 +2035,15 @@
       "visibleInPortal": "Visibile nel portale clienti",
       "dialogTitle": "Seleziona immagine",
       "dialogDescription": "Scegli un'immagine dai tuoi documenti da usare in questo modello."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Sfondo riga",
+      "rowTextColor": "Colore del testo",
+      "resetColors": "Ripristina colori",
+      "clearRowBackground": "Cancella colore di sfondo riga",
+      "clearRowTextColor": "Cancella colore del testo riga",
+      "labelColorOverrideNote": "Questa etichetta mantiene il proprio colore salvato e non eredita il colore del testo della riga impostato sopra. L’importo segue comunque il colore del testo della riga.",
+      "noRows": "Questo blocco totali non ha ancora righe salvate. Salva il modello e riaprilo per modificare i colori delle righe."
     }
   },
   "draftInvoiceDetails": {
@@ -2136,7 +2190,8 @@
       "referenceMissing": "Il modello di fattura o il cliente selezionato non esiste più. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già un modello di fattura con queste impostazioni.",
       "missingField": "Manca un campo obbligatorio del modello di fattura.",
-      "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}.",
+      "evaluationFailed": "Associazione dei dati del modello non riuscita: {{details}}"
     }
   },
   "periodTotal": {

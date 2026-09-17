@@ -43,6 +43,11 @@ const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<
 }));
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
+// Exercise the existing feature behavior with the release flag enabled.
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
@@ -121,31 +126,7 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ containerClassName: _containerClassName, ...props }: any) => <input {...props} />,
 }));
-vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  // The component drives selection through onClick (for shift-range support)
-  // and calls event.preventDefault(); on a native jsdom checkbox that cancels
-  // the click activation, so hand it a no-op preventDefault instead.
-  Checkbox: ({ indeterminate: _indeterminate, onClick, ...props }: any) => (
-    <input
-      type="checkbox"
-      data-indeterminate={_indeterminate ? 'true' : 'false'}
-      {...props}
-      onClick={
-        onClick
-          ? (event: any) => {
-            onClick({
-              shiftKey: event.shiftKey,
-              metaKey: event.metaKey,
-              ctrlKey: event.ctrlKey,
-              stopPropagation: () => event.stopPropagation(),
-              preventDefault: () => {},
-            });
-          }
-          : undefined
-      }
-    />
-  ),
-}));
+
 vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
 }));

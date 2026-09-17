@@ -1,5 +1,6 @@
 'use client'
 
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useState, useEffect } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -43,6 +44,7 @@ export function UsageServiceConfigPanel({
   disabled = false
 }: UsageServiceConfigPanelProps) {
   const { t } = useTranslation('msp/service-catalog');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const defaultUnitOfMeasure = t('usageConfig.defaults.unitOfMeasure', {
     defaultValue: 'Unit',
   });
@@ -279,48 +281,50 @@ export function UsageServiceConfigPanel({
               sum, or one replaceable count reported for each period. The
               choice changes what the next period requires, so the options
               spell that out rather than naming the stored value. */}
-          <div data-testid="usage-measurement-mode">
-            <Label>
-              {t('usageConfig.measurementMode.label', {
-                defaultValue: 'How is usage measured?',
-              })}
-            </Label>
-            <RadioGroup
-              id={`${idPrefix}usage-measurement-mode`}
-              name={`${idPrefix}usage-measurement-mode`}
-              value={measurementMode}
-              onChange={handleMeasurementModeChange}
-              disabled={disabled}
-              options={[
-                {
-                  value: 'additive',
-                  label: t('usageConfig.measurementMode.additive.label', {
-                    defaultValue: 'Record consumption as it occurs',
-                  }),
-                  description: t('usageConfig.measurementMode.additive.description', {
-                    defaultValue:
-                      'Dated entries add together: entries of 10 and 12 bill 22. The minimum and any tiers apply to each entry. The next period starts with no entries.',
-                  }),
-                },
-                {
-                  value: 'period_total',
-                  label: t('usageConfig.measurementMode.periodTotal.label', {
-                    defaultValue: 'Report a count for each period',
-                  }),
-                  description: t('usageConfig.measurementMode.periodTotal.description', {
-                    defaultValue:
-                      'One count per service period replaces the previous one: correcting 10 to 12 bills 12, never 22. The minimum and any tiers apply once to that count. The next period starts unreported — no count carries forward.',
-                  }),
-                },
-              ]}
-            />
-            <p className="text-sm text-muted-foreground mt-2">
-              {t('usageConfig.measurementMode.transitionNote', {
-                defaultValue:
-                  'Changing the mode takes effect from the next unbilled service period. Recorded entries or counts already in an open period must be billed or removed first.',
-              })}
-            </p>
-          </div>
+          {(releaseV16Enabled || measurementMode === 'period_total') && (
+            <div data-testid="usage-measurement-mode">
+              <Label>
+                {t('usageConfig.measurementMode.label', {
+                  defaultValue: 'How is usage measured?',
+                })}
+              </Label>
+              <RadioGroup
+                id={`${idPrefix}usage-measurement-mode`}
+                name={`${idPrefix}usage-measurement-mode`}
+                value={measurementMode}
+                onChange={handleMeasurementModeChange}
+                disabled={disabled}
+                options={[
+                  {
+                    value: 'additive',
+                    label: t('usageConfig.measurementMode.additive.label', {
+                      defaultValue: 'Record consumption as it occurs',
+                    }),
+                    description: t('usageConfig.measurementMode.additive.description', {
+                      defaultValue:
+                        'Dated entries add together: entries of 10 and 12 bill 22. The minimum and any tiers apply to each entry. The next period starts with no entries.',
+                    }),
+                  },
+                  {
+                    value: 'period_total',
+                    label: t('usageConfig.measurementMode.periodTotal.label', {
+                      defaultValue: 'Report a count for each period',
+                    }),
+                    description: t('usageConfig.measurementMode.periodTotal.description', {
+                      defaultValue:
+                        'One count per service period replaces the previous one: correcting 10 to 12 bills 12, never 22. The minimum and any tiers apply once to that count. The next period starts unreported — no count carries forward.',
+                    }),
+                  },
+                ]}
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                {t('usageConfig.measurementMode.transitionNote', {
+                  defaultValue:
+                    'Changing the mode takes effect from the next unbilled service period. Recorded entries or counts already in an open period must be billed or removed first.',
+                })}
+              </p>
+            </div>
+          )}
 
           <div>
             <Label htmlFor={`${idPrefix}usage-unit-of-measure`}>

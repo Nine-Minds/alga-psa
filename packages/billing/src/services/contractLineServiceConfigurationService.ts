@@ -162,6 +162,7 @@ export class ContractLineServiceConfigurationService {
           await fixedConfigModel.create({
             config_id: configId,
             base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+            rate_provenance: (typeConfig as IContractLineServiceFixedConfig)?.rate_provenance ?? undefined,
             pricing_basis: (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis ?? 'bundle',
             // enable_proration: (typeConfig as IContractLineServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in contract_line_fixed_config
             // billing_cycle_alignment: (typeConfig as IContractLineServiceFixedConfig)?.billing_cycle_alignment ?? 'start', // Removed: Handled in contract_line_fixed_config

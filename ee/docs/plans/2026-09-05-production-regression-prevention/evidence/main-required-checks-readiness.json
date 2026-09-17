@@ -1,0 +1,70 @@
+{
+  "observedAt": "2026-09-08T01:16:47.124014+00:00",
+  "repository": "Nine-Minds/alga-psa",
+  "branch": "main",
+  "legacy": {
+    "strict": true,
+    "contexts": [],
+    "checks": []
+  },
+  "effectiveRules": [
+    {
+      "type": "deletion",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "non_fast_forward",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Run ext-v2 guard and ESLint",
+            "integration_id": 15368
+          }
+        ]
+      },
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "deletion",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    },
+    {
+      "type": "non_fast_forward",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Check for new circular dependencies",
+            "integration_id": 15368
+          }
+        ]
+      },
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    }
+  ],
+  "interpretation": "Two effective ruleset status checks require extension/ESLint and circular dependency guards. No test suite/readiness context appears. Existing guards are outside the seven converted workflows and remain unchanged.",
+  "mutationPerformed": false
+}

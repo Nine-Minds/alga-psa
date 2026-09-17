@@ -626,6 +626,88 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     expect(updateEmailSettingsMock).not.toHaveBeenCalled();
   });
 
+  it('waits for a provider switch before allowing a sender save with the selected mailbox', async () => {
+    tierContextState.isHosted = false;
+    getEmailSettingsMock.mockResolvedValue({ ...smtpSettings, ticketingFromEmail: null });
+    getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [{
+      providerId: 'ms-provider-1', providerName: 'Support', mailbox: 'support@acme.com', status: 'connected',
+    }] });
+    const saved = { ...smtpSettings, emailProvider: 'microsoft', ticketingFromEmail: null,
+      providerConfigs: [{ providerId: 'ms-provider-1', providerType: 'microsoft', isEnabled: true,
+        config: { inboundProviderId: 'ms-provider-1', mailbox: 'support@acme.com', from: 'support@acme.com' } }] };
+    let finish!: (value: typeof saved) => void;
+    updateEmailSettingsMock.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    render(<ManagedEmailSettings />);
+    const select = document.getElementById('outbound-provider-select')!;
+    await waitFor(() => expect(select).not.toBeDisabled());
+    fireEvent.change(select, { target: { value: 'microsoft' } });
+    const save = document.getElementById('save-sender-identities')!;
+    expect(save).toBeDisabled();
+    expect(select).toBeDisabled();
+    expect(document.getElementById('microsoft-outbound-mailbox')).toBeDisabled();
+    fireEvent.click(save);
+    expect(updateEmailSettingsMock).toHaveBeenCalledTimes(1);
+    finish(saved);
+    await waitFor(() => expect(save).not.toBeDisabled());
+    fireEvent.change(document.getElementById('ticket-from-address')!, { target: { value: 'support@acme.com' } });
+    updateEmailSettingsMock.mockResolvedValueOnce({ ...saved, ticketingFromEmail: 'support@acme.com' });
+    fireEvent.click(save);
+    await waitFor(() => expect(updateEmailSettingsMock).toHaveBeenCalledTimes(2));
+    expect(updateEmailSettingsMock.mock.calls[1][0]).toMatchObject({ ticketingFromEmail: 'support@acme.com',
+      providerConfigs: saved.providerConfigs });
+  });
+
+  it('waits for a changed Microsoft mailbox before saving its sender identity', async () => {
+    const mailboxConfig = (id: string, mailbox: string) => ({ providerId: id, providerType: 'microsoft', isEnabled: true,
+      config: { inboundProviderId: id, mailbox, from: mailbox } });
+    const initial = { ...baseSettings, emailProvider: 'microsoft', ticketingFromEmail: null,
+      providerConfigs: [mailboxConfig('ms-one', 'one@acme.com')] };
+    const saved = { ...initial, providerConfigs: [mailboxConfig('ms-two', 'two@acme.com')] };
+    getEmailSettingsMock.mockResolvedValue(initial);
+    getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [
+      { providerId: 'ms-one', providerName: 'One', mailbox: 'one@acme.com', status: 'connected' },
+      { providerId: 'ms-two', providerName: 'Two', mailbox: 'two@acme.com', status: 'connected' },
+    ] });
+    let finish!: (value: typeof saved) => void;
+    updateEmailSettingsMock.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    render(<ManagedEmailSettings />);
+    await waitFor(() => expect(document.getElementById('microsoft-outbound-mailbox')).not.toBeDisabled());
+    fireEvent.change(document.getElementById('microsoft-outbound-mailbox')!, { target: { value: 'ms-two' } });
+    const save = document.getElementById('save-sender-identities')!;
+    expect(save).toBeDisabled();
+    expect(document.getElementById('outbound-provider-select')).toBeDisabled();
+    fireEvent.click(save);
+    expect(updateEmailSettingsMock).toHaveBeenCalledTimes(1);
+    finish(saved);
+    await waitFor(() => expect(save).not.toBeDisabled());
+    expect(document.getElementById('microsoft-outbound-mailbox')).toHaveValue('ms-two');
+    fireEvent.change(document.getElementById('ticket-from-address')!, { target: { value: 'two@acme.com' } });
+    updateEmailSettingsMock.mockResolvedValueOnce({ ...saved, ticketingFromEmail: 'two@acme.com' });
+    fireEvent.click(save);
+    await waitFor(() => expect(updateEmailSettingsMock).toHaveBeenCalledTimes(2));
+    expect(updateEmailSettingsMock.mock.calls[1][0]).toMatchObject({ ticketingFromEmail: 'two@acme.com',
+      providerConfigs: saved.providerConfigs });
+  });
+
+  it('unlocks the previous provider after a rejected provider switch', async () => {
+    tierContextState.isHosted = false;
+    getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [{
+      providerId: 'ms-provider-1', providerName: 'Support', mailbox: 'support@acme.com', status: 'connected',
+    }] });
+    let reject!: (error: Error) => void;
+    updateEmailSettingsMock.mockImplementationOnce(() => new Promise((_resolve, rejectSave) => { reject = rejectSave; }));
+    render(<ManagedEmailSettings />);
+    const select = document.getElementById('outbound-provider-select')!;
+    await waitFor(() => expect(select).not.toBeDisabled());
+    fireEvent.change(select, { target: { value: 'microsoft' } });
+    expect(select).toBeDisabled();
+    reject(new Error('Connection lost'));
+    await waitFor(() => expect(select).not.toBeDisabled());
+    expect(select).toHaveValue('smtp');
+    expect(document.getElementById('save-sender-identities')).not.toBeDisabled();
+    expect(toastErrorMock).toHaveBeenCalled();
+  });
+
   it('accepts SMTP host input on self-host when provider configs are empty', async () => {
     tierContextState.isHosted = false;
     getEmailSettingsMock.mockResolvedValue(baseSettings);

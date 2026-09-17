@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-teams-denied-reschedule-warning-and-recovery",
+  "baseRevision": "c523418b5d70082ae191689e26cdfa1bc9a5973d",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "packages/scheduling/src/components/schedule/ScheduleCalendar.tsx": "01404a26397e931bc8711d70b722de28e11e11b1978345596b47b73944ec6315",
+    "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx": "48a24167d6c0c081a5111631e947a2b6151b25bdd49fb01942648596e5ba4b39",
+    "e2e-tests/development-tests/teams-profile.spec.ts": "6718ac5086f4b24c90b9ea66b8f17c95f0abdd35198db503131b7d178351659c"
+  },
+  "cause": "Calendar update handlers ignored teamsMeetingWarning after a local save succeeded but Graph rescheduling failed.",
+  "change": "All calendar update calls surface the successful result warning once and return the original result, preserving local save and existing failed-update handling.",
+  "validation": {
+    "red": {
+      "failed": 3,
+      "passed": 3,
+      "cases": [
+        "save warning",
+        "resize warning",
+        "drop warning"
+      ]
+    },
+    "finalComponents": {
+      "passed": 11,
+      "failed": 0,
+      "durationSeconds": 1.36,
+      "scope": "Calendar and EntryPopup; reopened time and rejected-update rollback/no-warning verified"
+    },
+    "typecheck": {
+      "command": "tsc --noEmit --incremental false -p packages/scheduling/tsconfig.json",
+      "exitCode": 0
+    },
+    "browser": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "retries": 0,
+      "durationMs": 121438.661,
+      "report": "/tmp/alga-native-teams-MMqO0X/lifecycle.log",
+      "behavior": [
+        "Graph PATCH403 yields visible warning after local schedule commit",
+        "Provider event and online meeting remain unchanged; reopened join identity retained",
+        "Subsequent reschedule converges existing event without duplicate; deletion and later bot checks pass"
+      ],
+      "productAndSpecUnchangedDuringRun": true,
+      "componentTestStrengthenedAfterBrowser": true
+    }
+  },
+  "cleanup": {
+    "ownedResourcesCleaned": true,
+    "sourceDatabaseMutated": false,
+    "dockerUsed": false
+  },
+  "limits": [
+    "Native prelinked Teams development configuration only; no Microsoft SSO or production image attestation.",
+    "24GiB native development heap with source maps disabled, no observed memory restart; not CI resource proof.",
+    "Full current candidate CI remains live and predates this fix."
+  ]
+}

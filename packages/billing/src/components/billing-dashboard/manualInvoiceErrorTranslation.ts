@@ -13,8 +13,12 @@ const translatedManualInvoiceErrorCodes = new Set<ManualInvoiceErrorCode>([
   'SERVICE_NOT_FOUND',
   'INVALID_QUANTITY',
   'NO_TAX_RATE',
+  'TAX_RATE_COVERAGE_GAP',
   'DISCOUNT_TARGET_NOT_FOUND',
   'INVOICE_NUMBER_CONFLICT',
+  'SOURCE_ALREADY_BILLED',
+  'SOURCE_NOT_ELIGIBLE',
+  'SOURCE_CURRENCY_MISMATCH',
   'PERMISSION_DENIED',
   'UNEXPECTED',
 ]);
@@ -29,6 +33,11 @@ export function translateManualInvoiceFailure(
   result: Partial<ManualInvoiceFailure>,
 ): string {
   const message = result.message ?? result.error ?? 'Error generating invoice';
+  if (result.code === 'TIME_APPROVAL_REQUIRED') {
+    return t('automaticInvoices.executionRows.blockedUntilApproval', {
+      count: Number(result.params?.count), defaultValue: message,
+    });
+  }
   if (!result.code || !translatedManualInvoiceErrorCodes.has(result.code)) {
     return message;
   }

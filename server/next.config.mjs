@@ -226,7 +226,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-        : '../packages/ee/src/components/auth/SsoProviderButtons.tsx',
+        : '../packages/auth/src/components/SsoProviderButtons.tsx',
       // Notifications package
       '@alga-psa/notifications': '../packages/notifications/src',
       '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -261,6 +261,8 @@ const nextConfig = {
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
       '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : '../packages/ee/src/index.ts',
       '@alga-psa/ee-microsoft-teams/': isEE ? '../ee/packages/microsoft-teams/src/' : '../packages/ee/src/',
+      '@alga-psa/ee-threecx': isEE ? '../ee/packages/threecx/src/index.ts' : '../packages/ee/src/index.ts',
+      '@alga-psa/ee-threecx/': isEE ? '../ee/packages/threecx/src/' : '../packages/ee/src/',
       '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@alga-psa/tags': '../packages/tags/src',
@@ -274,6 +276,10 @@ const nextConfig = {
       '@alga-psa/teams/': '../packages/teams/src/',
       '@alga-psa/telephony': '../packages/telephony/src',
       '@alga-psa/telephony/': '../packages/telephony/src/',
+      '@alga-psa/marketing': '../packages/marketing/src',
+      '@alga-psa/marketing/': '../packages/marketing/src/',
+      '@alga-psa/opportunities': '../packages/opportunities/src',
+      '@alga-psa/opportunities/': '../packages/opportunities/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
@@ -533,14 +539,26 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer, dev }) => {
+    if (dev && isServer) {
+      // Named action-entry IDs embed the entire loader query. Repeating those
+      // IDs for every action made the dev manifest exceed V8's string limit
+      // when billing compiled. Compact IDs retain all actions and source maps.
+      config.optimization = { ...config.optimization, moduleIds: 'deterministic' };
+    }
     // Filesystem cache: persists across builds (even after `rm -rf .next`)
     // so the second cold build reuses module compilation work. Stored under
     // node_modules/.cache/webpack so it survives `.next` clears.
+    // Keep Next's cache version and dev memory policy. Replacing this object
+    // discarded maxMemoryGenerations: 0 (Next manages its own memory cache)
+    // and the version metadata that invalidates incompatible cached builds.
+    const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
     config.cache = {
+      ...nextCache,
       type: 'filesystem',
       cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
       buildDependencies: {
-        config: [__filename],
+        ...nextCache.buildDependencies,
+        config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
       },
       // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
       // every file (huge in this monorepo).
@@ -611,6 +629,10 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       '@alga-psa/telephony': prebuiltDirAbs('telephony'),
       '@alga-psa/telephony/': `${prebuiltDirAbs('telephony')}/`,
+      '@alga-psa/marketing': prebuiltDirAbs('marketing'),
+      '@alga-psa/marketing/': `${prebuiltDirAbs('marketing')}/`,
+      '@alga-psa/opportunities': prebuiltDirAbs('opportunities'),
+      '@alga-psa/opportunities/': `${prebuiltDirAbs('opportunities')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       // @alga-psa/jobs + /search: source-transpiled. jobs' export names do NOT
@@ -637,6 +659,9 @@ const nextConfig = {
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
       '@alga-psa/ee-microsoft-teams': isEE
         ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
+        : path.join(__dirname, '../packages/ee/src'),
+      '@alga-psa/ee-threecx': isEE
+        ? path.join(__dirname, '../ee/packages/threecx/src')
         : path.join(__dirname, '../packages/ee/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
@@ -684,7 +709,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, '../packages/ee/src/components/auth/SsoProviderButtons.tsx'),
+        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),

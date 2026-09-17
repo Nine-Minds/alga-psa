@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const resolveChatProviderMock = vi.fn();
-
 vi.mock('../chatProviderResolver', () => ({
   resolveChatProvider: (...args: unknown[]) => resolveChatProviderMock(...args),
 }));

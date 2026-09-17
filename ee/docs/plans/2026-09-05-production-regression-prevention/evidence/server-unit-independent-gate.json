@@ -1,0 +1,33 @@
+{
+  "scope": "Independent server unit execution aggregate",
+  "baseRevision": "7b170294a7",
+  "workingTreeDirty": true,
+  "implementation": [
+    "scripts/verify-server-unit-aggregate.mjs",
+    ".github/workflows/unit-tests.yml"
+  ],
+  "validation": {
+    "behavioralTestsPassed": 4,
+    "workflowLint": "passed",
+    "actualVitestFileCollection": {
+      "candidates": 2700,
+      "reconciliation": "passed"
+    },
+    "artifacts": [
+      {
+        "path": "/tmp/alga-unit-independent-gate.log",
+        "sha256": "70e62e2e2020baa54705f1deb9986e4050289efa5376bb8c17ac3e696a147fea"
+      },
+      {
+        "path": "/tmp/alga-unit-aggregate-collection.json",
+        "sha256": "4fc8c73adbb0c6ccb02cbf22bbeb4af8e1e50deee7ab1acbb4ac3613deaf2329"
+      }
+    ]
+  },
+  "limitations": [
+    "File collection does not establish full unit runtime success.",
+    "Native aggregate execution and effective branch protection are not verified.",
+    "Nx affected execution remains separately enforced; this gate covers the full server coverage job.",
+    "Remaining tax policy TODOs still prevent complete unit execution evidence."
+  ]
+}

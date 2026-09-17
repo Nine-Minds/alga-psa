@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "scope": "background-worker-ci-wiring-native-review",
+  "status": "native-checks-passed-ci-pending",
+  "baseRevision": "890ec575f5a6a0847313b0b5e153cdfb0c477d37",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    ".github/workflows/e2e-fresh-install-tests.yaml": "111c57dded4d4099fbc4474805b8d3ceac49f93465d8d8e80a13c294cb9e2ef6",
+    "docker-compose.e2e-emulators.yaml": "7e1d14c26c3b07d221c5fb37318d01e665873eedd013ba114153ede70fde637b",
+    "docker-compose.e2e-ee.yaml": "cd991c2b357f62fc4f2ab63360547b3ed0555b3e0f743fb01a9d592719afd6bd",
+    "e2e-tests/harness/check-background-workers.mjs": "93f762a8cdd41bed7187980e053ee87af6d80d3bc05b7afb8586ef7f4354aa7c",
+    "e2e-tests/harness/check-background-workers.test.mjs": "08170fd7dbe97ca6a1a3629d255e8c26508de93d0145348f1237d64abcdb9fd9",
+    "ee/temporal-workflows/Dockerfile": "4d8a98988e1249b5b9cbc80cfc9c1d6256f8bc4423d86667aa153f065377f3e2"
+  },
+  "checks": [
+    {
+      "name": "strict authored-worker readiness",
+      "passed": 9,
+      "kind": "native HTTP and CLI behavior"
+    },
+    {
+      "name": "canonical node-tooling",
+      "passed": 689,
+      "files": 73,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "durationMs": 159742.733625,
+      "evidence": "test-results/node-tooling/evidence.json",
+      "limitation": "Working tree dirty; documentation/CI/Docker edits overlapped suite, no exact-artifact certification."
+    },
+    {
+      "name": "CE and EE Compose rendering",
+      "status": "passed",
+      "kind": "configuration only; no Docker daemon or image build"
+    },
+    {
+      "name": "actionlint and plan validators",
+      "status": "passed"
+    }
+  ],
+  "reviewCorrections": [
+    "Server Temporal address and namespace point to isolated frontend.",
+    "Stop consumers before API fixtures and later server-only database switches.",
+    "Use actual image entrypoint rather than source bind mount.",
+    "Synthetic CI app secret files readable by nonroot Temporal process."
+  ],
+  "remaining": [
+    "Current-source CI including clean worker image build/startup.",
+    "Mixed root/nonroot tenant-secret writer compatibility; tracked R035.",
+    "Actual worker-driven provider journeys, beyond container network probes."
+  ],
+  "temporalNamespaceProbeSources": [
+    "https://hub.docker.com/layers/temporalio/auto-setup/1.24.2/images/sha256-1ac8202b1d9143028ef8bf57a93dc9bbc61742ddffc4ea193a77be689a84f8bc",
+    "https://github.com/temporalio/tctl/blob/v1.18.1/cli_curr/namespaceCommands.go"
+  ]
+}

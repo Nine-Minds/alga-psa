@@ -1,0 +1,42 @@
+{
+  "suite": "e2e-tests/tests/invoice-designer-persistence.spec.ts",
+  "releaseValidation": false,
+  "coverage": [
+    "UI adds primary charges table and distinct transformed billed-time table",
+    "Detail columns authored in order: date, ticketNumber, title, hours, rateDisplay, amount",
+    "Database readback verifies two tables and distinct source bindings",
+    "Reopen/reload verifies six inspector columns, transform source and unchanged saved AST"
+  ],
+  "passingRun": {
+    "session": 56613,
+    "log": "/tmp/alga-host-designer-cache-policy.log",
+    "stats": {
+      "startTime": "2026-09-07T22:58:49.522Z",
+      "duration": 146833.244,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "repeatRun": {
+    "session": 48665,
+    "log": "/tmp/alga-host-designer-cache-policy-warm.log",
+    "stats": {
+      "startTime": "2026-09-07T23:02:02.633Z",
+      "duration": 122275.792,
+      "expected": 0,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "serverEvidence": "Memory threshold restart in /tmp/alga-host-ee-server.log line45973, before later comment-only config reload"
+  },
+  "cacheCorrection": "Preserve Next cache version, maxMemoryGenerations and buildDependencies while relocating filesystem cache",
+  "limitations": [
+    "Cache correction does not resolve repeated development memory restarts",
+    "Passing run does not establish stable repeated execution",
+    "No generated-invoice/PDF or nested-group acceptance in this browser case",
+    "Native CI and production packaging remain pending"
+  ]
+}

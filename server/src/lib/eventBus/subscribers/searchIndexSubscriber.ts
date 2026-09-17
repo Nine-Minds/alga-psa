@@ -372,7 +372,7 @@ export async function registerSearchIndexSubscriber(): Promise<void> {
   subscribedEventTypes = [...indexersByEvent.keys()];
 
   for (const eventType of subscribedEventTypes) {
-    await getEventBus().subscribe(eventType, handleSearchIndexEvent);
+    await getEventBus().subscribe(eventType, handleSearchIndexEvent, { subscriberId: 'search-index' });
   }
 
   isRegistered = true;

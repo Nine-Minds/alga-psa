@@ -1,0 +1,19 @@
+{
+  "status": "local_verified_native_pending",
+  "change": "Mandatory isolated diagnostic case creates its own approved source invoice before saving invalid collection bindings; no dependency on generated.json from a prior manual run",
+  "validation": {
+    "passed": 1,
+    "duration_ms": 14896,
+    "targeted_typescript": "passed",
+    "log": "/tmp/alga-invoice-diagnostics-port.log",
+    "boundaries": [
+      "Persisted template save",
+      "Scalar collection binding rejected through production preview and PDF",
+      "Missing collection path rejected through production preview and PDF"
+    ]
+  },
+  "limits": [
+    "Native integration execution pending",
+    "Four remaining manual cases still need conversion"
+  ]
+}

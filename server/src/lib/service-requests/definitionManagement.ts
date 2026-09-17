@@ -98,9 +98,8 @@ interface DuplicateDefinitionInput {
   sourceDefinitionId: string;
   createdBy?: string | null;
   /**
-   * Whether the `service-request-store-only` feature flag allows newly
-   * adopting the store-only execution provider. Callers evaluate the flag
-   * (this layer never does); omitting it leaves duplication ungated.
+   * Optional caller-supplied adoption policy. Omission keeps duplication
+   * unrestricted; release rollout only filters the editor options.
    */
   storeOnlyAuthoringEnabled?: boolean;
 }

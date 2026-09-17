@@ -1,5 +1,6 @@
 'use client'
 
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { UsagePeriodTotalQuickEntry } from './UsagePeriodTotalQuickEntry';
@@ -680,6 +681,7 @@ const matchesAutomaticInvoiceView = (
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, onRefreshNeeded, refreshTrigger = 0 }) => {
   const { t } = useTranslation('msp/invoicing');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const { formatDate } = useFormatters();
   const router = useRouter();
   const translateAssignmentContext = (contextValue: string | null): string | null => {
@@ -755,7 +757,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [errorOperation, setErrorOperation] = useState<AutomaticInvoiceErrorOperation>('finalize');
   const [clientFilter, setClientFilter] = useState<string>(() => readAutomaticInvoicesClientFilterFromLocation());
-  const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>(() => readAutomaticInvoicesClientFilterFromLocation());
 
   // Date range filter state (pending = user selection, applied = active filter)
   const [pendingDateRange, setPendingDateRange] = useState<DateRange>(() => ({
@@ -898,14 +899,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const initialLoadDone = useRef(false);
   const invoicedInitialLoadDone = useRef(false);
-  const lastAppliedClientFilter = useRef(clientFilter);
 
-  // Debounce client filter for local ready/blocked row filtering and persist it in the URL.
+  // Only URL persistence is deferred; visible rows and selection change together.
   useEffect(() => {
     const timer = setTimeout(() => {
-      const filterChanged = lastAppliedClientFilter.current !== clientFilter;
-      lastAppliedClientFilter.current = clientFilter;
-      setDebouncedClientFilter(clientFilter);
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const normalizedFilter = clientFilter.trim();
@@ -922,15 +919,17 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           window.history.replaceState(window.history.state, '', nextUrl);
         }
       }
-
-      if (initialLoadDone.current && filterChanged) {
-        setCurrentReadyPage(1);
-        setSelectedTargets(new Set()); // Clear selection when filter changes
-        setExpandedParentGroups(new Set());
-      }
     }, 300);
     return () => clearTimeout(timer);
   }, [clientFilter]);
+
+  const handleClientFilterChange = (value: string) => {
+    if (value === clientFilter) return;
+    setClientFilter(value);
+    setCurrentReadyPage(1);
+    setSelectedTargets(new Set());
+    setExpandedParentGroups(new Set());
+  };
 
   // Handle page size change - reset to page 1 and clear selection
   const handlePageSizeChange = (newPageSize: number) => {
@@ -1051,7 +1050,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     }
   };
 
-  const normalizedReadyClientFilter = debouncedClientFilter.trim().toLowerCase();
+  const normalizedReadyClientFilter = clientFilter.trim().toLowerCase();
 
   // Client filtering is intentionally scoped to Needs Approval + Ready to Invoice only.
   const filteredPeriods = normalizedReadyClientFilter.length === 0
@@ -2526,7 +2525,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               })}
               containerClassName=""
               value={clientFilter}
-              onChange={(e) => setClientFilter(e.target.value)}
+              onChange={(e) => handleClientFilterChange(e.target.value)}
               className="w-64"
             />
           </div>
@@ -2814,9 +2813,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           parentGroupRangeSelect.handleSelect(group.parentSummary.parentSelectionKey, {
                             shiftKey: event.shiftKey,
                             selected: !isParentSelected,
-                            preventDefault: () => event.preventDefault(),
                           });
-                          event.preventDefault();
+                          // Keep native checkbox activation: cancelling the click
+                          // restores the old checked state after React updates it.
                         }}
                         onChange={() => { /* controlled via onClick for shift-range support */ }}
                       />
@@ -2994,7 +2993,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   }
                   const summary = record.group.parentSummary;
                   const monthEndCloseEligible =
-                    record.group.candidate.monthEndCloseEligible === true;
+                    releaseV16Enabled && record.group.candidate.monthEndCloseEligible === true;
                   return (
                     <div className="space-y-0.5">
                       {renderStatusPill(summary, countSeparateInvoices(record.group.childExecutionRows))}
@@ -3922,7 +3921,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
       <ConfirmationDialog
         id="calendar-month-end-close-confirmation"
-        isOpen={monthEndCloseGroup !== null}
+        isOpen={releaseV16Enabled && monthEndCloseGroup !== null}
         onClose={() => {
           if (!isMonthEndClosing) {
             setMonthEndCloseGroup(null);

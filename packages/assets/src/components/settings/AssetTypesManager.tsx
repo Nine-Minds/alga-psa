@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { MoreVertical, Plus } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { MoreVertical, Plus, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -93,6 +93,10 @@ const AssetTypesManager: React.FC = () => {
   const [types, setTypes] = useState<AssetTypeRegistryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<AssetTypeRegistryEntry | null>(null);
@@ -319,11 +323,14 @@ const AssetTypesManager: React.FC = () => {
       render: (value: string) => <span className="text-gray-600 font-mono text-sm">{value}</span>,
     },
     {
+      // The array dataIndex gives this column a unique id and resolves the derived
+      // value (fields_schema.length) through DataTable's nested accessor, so the
+      // sort indicator tracks the displayed count instead of the raw array reference.
       title: t('settings.assetTypes.table.fieldCount', { defaultValue: 'Fields' }),
-      dataIndex: 'fields_schema',
+      dataIndex: ['fields_schema', 'length'],
       width: '10%',
-      render: (value: AssetTypeRegistryEntry['fields_schema']) => (
-        <span className="text-gray-600">{value?.length ?? 0}</span>
+      render: (_value: number, record: AssetTypeRegistryEntry) => (
+        <span className="text-gray-600">{record.fields_schema?.length ?? 0}</span>
       ),
     },
     {
@@ -333,9 +340,14 @@ const AssetTypesManager: React.FC = () => {
       render: (value: number) => <span className="text-gray-600">{value || 0}</span>,
     },
     {
+      // LEVERAGE: DataTable derives a column's id from its dataIndex, so two
+      // columns sharing one dataIndex silently render the first one's cell (the
+      // Actions column previously reused 'slug' and lost its kebab). Actions
+      // needs an id of its own.
       title: t('settings.assetTypes.table.actions', { defaultValue: 'Actions' }),
-      dataIndex: 'slug',
+      dataIndex: 'actions',
       width: '10%',
+      sortable: false,
       render: (_: string, record: AssetTypeRegistryEntry) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -380,6 +392,25 @@ const AssetTypesManager: React.FC = () => {
     },
   ];
 
+  const filteredTypes = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return types;
+    return types.filter(
+      (type) =>
+        type.name.toLowerCase().includes(query) || type.slug.toLowerCase().includes(query)
+    );
+  }, [types, searchQuery]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
+
   if (loading) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -414,9 +445,19 @@ const AssetTypesManager: React.FC = () => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
-      <h3 className="text-lg font-semibold mb-1 text-gray-800">
-        {t('settings.assetTypes.title', { defaultValue: 'Asset Types' })}
-      </h3>
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-lg font-semibold text-gray-800">
+          {t('settings.assetTypes.title', { defaultValue: 'Asset Types' })}
+        </h3>
+        <Button
+          id="assets-types-add-button"
+          onClick={openCreateDialog}
+          className="bg-primary-500 text-white hover:bg-primary-600"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {t('settings.assetTypes.actions.addType', { defaultValue: 'Add Asset Type' })}
+        </Button>
+      </div>
       <p className="text-sm text-muted-foreground mb-4">
         {t('settings.assetTypes.description', {
           defaultValue:
@@ -428,22 +469,33 @@ const AssetTypesManager: React.FC = () => {
           <AlertDescription>{listError}</AlertDescription>
         </Alert>
       )}
+      <div className="mb-3 flex items-center gap-3">
+        <div className="relative p-0.5">
+          <Input
+            id="assets-types-search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder={t('settings.assetTypes.table.searchPlaceholder', {
+              defaultValue: 'Search asset types…',
+            })}
+            className="border-2 border-gray-200 focus:border-[rgb(var(--color-primary-500))] rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+          />
+          <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        </div>
+      </div>
       <DataTable
         id="assets-types-table"
-        data={types}
+        data={filteredTypes}
         columns={columns}
-        pagination={false}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
+        onRowClick={(record) => openEditDialog(record)}
+        initialSorting={[{ id: 'display_order', desc: false }]}
       />
-      <div className="mt-4">
-        <Button
-          id="assets-types-add-button"
-          onClick={openCreateDialog}
-          className="bg-primary-500 text-white hover:bg-primary-600"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {t('settings.assetTypes.actions.addType', { defaultValue: 'Add Asset Type' })}
-        </Button>
-      </div>
 
       <Dialog
         isOpen={isDialogOpen}

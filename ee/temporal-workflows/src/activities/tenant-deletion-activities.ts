@@ -144,6 +144,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Ticket bundle mirrors (must be before comments due to FK on comments)
   'ticket_bundle_mirrors',
 
+  // Ticket comment attachment lifecycle (no FKs; rows reference comments,
+  // documents and tickets by id, so delete them before those tables)
+  'ticket_comment_attachment_challenges', 'ticket_comment_attachments',
+  'ticket_comment_email_deliveries',
+
   // Messages and comments
   // vectors and email_reply_tokens reference comments with NO ACTION, so they
   // must be deleted before comments to avoid FK violations.
@@ -163,7 +168,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'teams_integrations', 'microsoft_profiles',
 
   // Telephony (artifacts hang off call records; providers hold the subscription)
-  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_providers',
+  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_chat_records', 'telephony_providers',
 
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and
@@ -272,6 +277,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Appointment
   'appointment_requests',
+
+  // External references depend on tickets and their creating users. Purge them
+  // explicitly before either parent, along with the tenant's custom systems.
+  'external_entity_links', 'tenant_external_systems',
 
   // SLA leaf tables (must be before tickets, statuses, priorities, boards)
   // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,
@@ -1876,7 +1885,7 @@ export async function cancelTenantStripeSubscription(
     log.info('Found active subscription, canceling', { subscriptionExternalId });
 
     // Dynamically import Stripe to avoid issues in environments where it's not available
-    const { default: Stripe } = await import('stripe');
+    const { createWorkerStripeClient } = await import('../config/stripeClient.js');
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
 
     const secretProvider = await getSecretProviderInstance();
@@ -1890,10 +1899,7 @@ export async function cancelTenantStripeSubscription(
       return { canceled: false, error: 'Stripe secret key not configured' };
     }
 
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    });
+    const stripe = createWorkerStripeClient(secretKey);
 
     // Cancel the subscription immediately
     const canceledSubscription = await stripe.subscriptions.cancel(subscriptionExternalId);

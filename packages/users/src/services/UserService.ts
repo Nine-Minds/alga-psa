@@ -39,16 +39,22 @@ import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAM
 
 // Stubs for missing imports that are still in server
 const generateResourceLinks = (...args: any[]) => ({}) as any;
-const NotFoundError = Error;
-const ForbiddenError = Error;
-const ValidationError = Error;
 
-function createValidationError(message: string): Error & { statusCode: number; code: string } {
-  const error = new Error(message) as Error & { statusCode: number; code: string };
-  error.name = 'ValidationError';
-  error.statusCode = 400;
-  error.code = 'VALIDATION_ERROR';
-  return error;
+// Carry the API error contract without importing server middleware into a package.
+class NotFoundError extends Error {
+  readonly name = 'NotFoundError';
+  readonly statusCode = 404;
+  readonly code = 'NOT_FOUND';
+}
+class ForbiddenError extends Error {
+  readonly name = 'ForbiddenError';
+  readonly statusCode = 403;
+  readonly code = 'FORBIDDEN';
+}
+class ValidationError extends Error {
+  readonly name = 'ValidationError';
+  readonly statusCode = 400;
+  readonly code = 'VALIDATION_ERROR';
 }
 
 function toSafeBulkErrorData(userData: Partial<CreateUserData>): Pick<CreateUserData, 'email'> & {
@@ -557,7 +563,7 @@ export class UserService extends BaseService<IUser> {
       }
 
       if (!verifyAuthenticator(token, secret)) {
-        throw createValidationError('Invalid two-factor authentication token');
+        throw new ValidationError('Invalid two-factor authentication token');
       }
 
       // Update user 2FA settings
@@ -1507,7 +1513,7 @@ export class UserService extends BaseService<IUser> {
     const hasPermissionResult = await hasPermission(context.user || { user_id: context.userId }, resource, action, db);
     
     if (!hasPermissionResult) {
-      throw new Error(`Permission denied: Cannot ${action} ${resource}`);
+      throw new ForbiddenError(`Permission denied: Cannot ${action} ${resource}`);
     }
   }
 

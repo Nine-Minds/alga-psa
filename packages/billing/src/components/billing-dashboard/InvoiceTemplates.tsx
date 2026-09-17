@@ -1,5 +1,6 @@
 'use client'
 
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@alga-psa/ui/components/Card';
@@ -32,6 +33,7 @@ const isReturnedActionError = (value: unknown) =>
 
 const InvoiceTemplates: React.FC = () => {
   const { t } = useTranslation('msp/invoicing');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [templateToDeleteId, setTemplateToDeleteId] = useState<string | null>(null);
@@ -388,7 +390,11 @@ const InvoiceTemplates: React.FC = () => {
             </div>
             <DataTable
               id="invoice-templates-table"
-              data={invoiceTemplates}
+              data={invoiceTemplates.filter(template =>
+                releaseV16Enabled ||
+                template.standard_invoice_template_code !== 'standard-invoice-by-ticket' ||
+                template.isTenantDefault || template.is_default || !template.isStandard
+              )}
               columns={templateColumns}
               onRowClick={(record) => {
                 if (record.isStandard) {

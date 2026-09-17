@@ -69,9 +69,10 @@
       "servicePeriods": "Okresy świadczenia usług",
       "credits": "Kredyty",
       "serviceTypes": "Typy usług",
+      "serviceCategories": "Kategorie usług",
       "serviceCatalog": "Usługi",
       "products": "Produkty",
-      "taxRates": "Stawki podatkowe",
+      "taxRates": "Podatki",
       "usageTracking": "Śledzenie użycia",
       "reports": "Raporty",
       "accountingExports": "Eksporty księgowe"
@@ -114,7 +115,8 @@
     "collapseSidebar": "Zwiń pasek boczny",
     "collapseSection": "Zwiń {{section}}",
     "expandSection": "Rozwiń {{section}}",
-    "appLogoAlt": "Logo {{appName}}"
+    "appLogoAlt": "Logo {{appName}}",
+    "poweredBy": "Obsługiwane przez"
   },
   "settings": {
     "sections": {

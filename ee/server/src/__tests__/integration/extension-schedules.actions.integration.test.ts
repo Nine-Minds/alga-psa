@@ -17,17 +17,9 @@ const runner = {
   scheduleJob: vi.fn(async () => ({ jobId: uuidv4() })),
 };
 
-vi.mock('@alga-psa/users/actions', () => ({
-  // Some EE code imports `getCurrentUser` via `server/src/...`.
-  // This mock is kept for any EE-local imports that still use `@/lib/...`.
-  getCurrentUser: vi.fn(async () => ({ id: 'user-1', user_type: 'internal' })),
-}));
-
-vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn(async () => ({ id: 'user-1', user_type: 'internal' })),
-}));
-
 vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: any) => async (...args: any[]) => action({ user_id: 'user-1', user_type: 'internal' }, { tenant: tenantId }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) => action({ user_id: 'user-1', user_type: 'internal' }, { tenant: tenantId }, ...args),
   hasPermission: vi.fn(async () => true),
 }));
 
@@ -267,7 +259,7 @@ describe('Extension schedules (actions) – DB integration', () => {
 
     const out = await createExtensionSchedule(registryId, { endpointId, cron: '0 1 * * *', timezone: 'UTC' });
     expect(out.success).toBe(false);
-    expect(String(out.message)).toMatch(/runner down/i);
+    expect(out.message).toBe('Failed to create schedule');
 
     const rows = await db('tenant_extension_schedule').where({ tenant_id: tenantId });
     expect(rows).toHaveLength(0);
@@ -659,7 +651,7 @@ describe('Extension schedules (actions) – DB integration', () => {
 
     const out = await updateExtensionSchedule(registryId, scheduleId, { cron: '0 3 * * *', timezone: 'America/Los_Angeles' });
     expect(out.success).toBe(false);
-    expect(String(out.message)).toMatch(/reschedule failed/i);
+    expect(out.message).toBe('Failed to reschedule extension schedule');
 
     const after = await db('tenant_extension_schedule').where({ id: scheduleId, tenant_id: tenantId }).first(['cron', 'timezone', 'enabled']);
     expect(String(after?.cron)).toBe(String(before?.cron));
@@ -833,10 +825,18 @@ describe('Extension schedules (actions) – DB integration', () => {
     ee.mockResolvedValue(false);
 
     await expect(listExtensionSchedules(uuidv4())).rejects.toThrow(/insufficient permissions/i);
-    await expect(createExtensionSchedule(uuidv4(), { endpointId: uuidv4(), cron: '0 1 * * *' })).rejects.toThrow(/insufficient permissions/i);
-    await expect(updateExtensionSchedule(uuidv4(), uuidv4(), { cron: '0 2 * * *' })).rejects.toThrow(/insufficient permissions/i);
-    await expect(deleteExtensionSchedule(uuidv4(), uuidv4())).rejects.toThrow(/insufficient permissions/i);
-    await expect(runExtensionScheduleNow(uuidv4(), uuidv4())).rejects.toThrow(/insufficient permissions/i);
+    const before = await db('tenant_extension_schedule').where({ tenant_id: tenantId });
+    for (const operation of [
+      () => createExtensionSchedule(uuidv4(), { endpointId: uuidv4(), cron: '0 1 * * *' }),
+      () => updateExtensionSchedule(uuidv4(), uuidv4(), { cron: '0 2 * * *' }),
+      () => deleteExtensionSchedule(uuidv4(), uuidv4()),
+      () => runExtensionScheduleNow(uuidv4(), uuidv4()),
+    ]) {
+      await expect(operation()).resolves.toMatchObject({
+        success: false, message: 'Permission denied: Cannot manage extension schedules',
+      });
+    }
+    expect(await db('tenant_extension_schedule').where({ tenant_id: tenantId })).toEqual(before);
 
     core.mockResolvedValue(true);
     ee.mockResolvedValue(true);

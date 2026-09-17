@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "tests": 1,
+  "durationSeconds": 6.1,
+  "database": "upgrade_runner_82cc_20260908",
+  "appBuildRevision": "c5938cdad5",
+  "migrationCandidateRevision": "8bc3d1a6142d691401abae0245b6367a83d3a23f",
+  "checks": [
+    "Both upgraded users authenticate through real sign-in",
+    "Session user and tenant match retained identities",
+    "Own retained ticket title visible",
+    "Own billing client opens",
+    "Other tenant billing client returns visible 404"
+  ],
+  "initialFailure": "Locator selected hidden sticky ticket header; corrected to visible title",
+  "logSha256": "d399f825be6290c04842c93bbbeb5c8a4614d51c7da9137898277b5be358d4f4",
+  "limitations": [
+    "Existing host build differs from migration candidate; not current-source CI proof",
+    "Ticket writes, cross-tenant ticket access, Add Usage and invoice behavior pending",
+    "Live updates lack HOCUSPOCUS_JWT_SECRET in host configuration"
+  ]
+}

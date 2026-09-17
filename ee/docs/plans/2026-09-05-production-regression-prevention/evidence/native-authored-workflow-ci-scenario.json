@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-validation-of-candidate-authored-workflow-scenario",
+  "status": "passed",
+  "revision": "1c1aa57ee2f63774c76b6440ba6963082b620922",
+  "databaseName": "authored_worker_test_4e2358de2f8f44e39c75146dcb889751",
+  "nodeVersion": "v25.5.0",
+  "harnessSha256": "56d783a7253aa57b85f4d5684900e92b8b66c7ab96d05a413b72fe46399fc8fc",
+  "shutdown": {
+    "worker": {
+      "code": 0,
+      "signal": null
+    },
+    "redis": {
+      "code": 0,
+      "signal": null
+    }
+  },
+  "limitations": [
+    "Reuses installed dependencies and existing compiled artifacts; no Docker or clean build proof.",
+    "Runs one authored state node with real persistence; no provider actions or Redis event dispatch are exercised."
+  ],
+  "readiness": {
+    "ready": true,
+    "startedAt": "2026-09-08T20:06:02.594Z",
+    "workers": {
+      "temporal": true,
+      "eventStream": true,
+      "dataStoreSweep": true
+    }
+  },
+  "dispatch": {
+    "workflowId": "workflow-runtime-v2:run:85e74e18-2e6a-4560-b8f3-cf3b85b00f22",
+    "firstExecutionRunId": "01a082a0-adbb-7d9c-8131-dd191d284561"
+  },
+  "execution": {
+    "temporalStatus": "COMPLETED",
+    "runStatus": "SUCCEEDED",
+    "persistedSteps": [
+      {
+        "definitionStepId": "mark_ready",
+        "status": "SUCCEEDED"
+      },
+      {
+        "definitionStepId": "finish",
+        "status": "SUCCEEDED"
+      }
+    ],
+    "state": "native-ready"
+  },
+  "candidateScenario": {
+    "status": "passed",
+    "unrelatedFixturePreserved": true,
+    "noAdditionalTenantRemains": true
+  },
+  "databaseDropped": true,
+  "feature": "F031",
+  "candidateInvocation": {
+    "service": "workflow-worker",
+    "command": "node scripts/check-authored-workflow.mjs",
+    "requiredAuthorizationEnvironment": {
+      "AUTHORED_WORKFLOW_CI_OWNED": "true",
+      "AUTHORED_WORKFLOW_EXPECTED_DB_HOST": "<actual isolated DB host>",
+      "AUTHORED_WORKFLOW_EXPECTED_DB_NAME": "<actual isolated DB name>"
+    },
+    "infrastructure": "Uses already running worker, database and Temporal; starts no services and never drops database."
+  },
+  "nativeValidationCommand": "NATIVE_WORKFLOW_ENV_FILE=<private-env-file> NATIVE_WORKFLOW_DB_HOST=127.0.0.1 NATIVE_WORKFLOW_DB_PORT=55432 NATIVE_TEMPORAL_CLI=<installed-temporal-cli> node services/workflow-worker/scripts/native-authored-workflow-proof.mjs",
+  "candidateScenarioResult": {
+    "scope": "candidate-authored-workflow-execution",
+    "status": "passed",
+    "tenant": "d4ea5ae7-22e2-4a12-81e4-752131eb35eb",
+    "workflowId": "74e80235-105e-4ebc-b2d8-e31512bb823f",
+    "runId": "609e6793-5f26-4466-a4d2-ed734da8c8ce",
+    "execution": {
+      "temporalStatus": "COMPLETED",
+      "runStatus": "SUCCEEDED",
+      "steps": [
+        {
+          "id": "mark_ready",
+          "status": "SUCCEEDED"
+        },
+        {
+          "id": "finish",
+          "status": "SUCCEEDED"
+        }
+      ],
+      "state": "native-ready"
+    },
+    "fixtureCleanup": "passed"
+  },
+  "scriptSha256": {
+    "services/workflow-worker/scripts/native-authored-workflow-proof.mjs": "56d783a7253aa57b85f4d5684900e92b8b66c7ab96d05a413b72fe46399fc8fc",
+    "services/workflow-worker/scripts/check-authored-workflow.mjs": "e5cd03974f320c844ad32b6e26ce0b599c9967e33fffb9da6aad3d8e029212fd"
+  },
+  "revisionObservedAfterRun": "1c1aa57ee2f63774c76b6440ba6963082b620922",
+  "sourceIdentityNote": "Candidate helper had uncommitted changes at validation; script hashes identify tested source. Installed dependencies and compiled runtime artifacts were reused; this is not clean source-to-image provenance.",
+  "failureCleanupPolicy": "Only COMPLETED executions have immediate tenant-scoped fixture cleanup. Non-completed executions are terminated when running and fixtures retained for isolated whole-job teardown, since activity JavaScript may outlive workflow termination. Failure retention behavior not yet exercised by this positive run."
+}

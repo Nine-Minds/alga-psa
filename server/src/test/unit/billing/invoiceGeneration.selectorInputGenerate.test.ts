@@ -717,9 +717,10 @@ describe('selector-input recurring generation', () => {
       new Map([[selectorInput.executionWindow.identityKey, 1]]),
     );
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message: 'Blocked until approval: 1 unapproved entry.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toMatchObject({
+      actionError: 'Blocked until approval: 1 unapproved entry.',
+      messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+      messageParams: { count: '1' },
     });
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });

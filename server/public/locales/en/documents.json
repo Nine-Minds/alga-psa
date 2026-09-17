@@ -73,7 +73,7 @@
       "noPhasesDefined": "No phases defined"
     },
     "note": {
-      "billedTimePortalDetail": "A detailed breakdown of the time entries behind each ticket is available in the client portal.",
+      "billedTimePortalDetail": "Contact your service provider for a billed-time breakdown.",
       "pickedBy": "Picked by: ____________________     Date: ____________",
       "preTaxTotals": "Totals shown are pre-tax. Applicable tax is calculated on your invoice.",
       "thankYouForOrder": "Thank you for your order."
@@ -118,5 +118,20 @@
       "typeNotAllowed": "This file type is not allowed.",
       "sessionRequired": "Your session is required to upload documents. Please sign in again."
     }
+  },
+  "time": {
+    "mixed": "Mixed rates",
+    "unknown": "Rate unavailable",
+    "other": "Other billed time",
+    "ticket": "Ticket",
+    "task": "Project task",
+    "partial": "Some billed time is shown as service charges because ticket detail is unavailable.",
+    "unavailable": "Ticket detail is unavailable. All charges are shown below.",
+    "quantityHours": "Qty / Hours",
+    "breakdown": "Contact your service provider for a billed-time breakdown.",
+    "detail": "Billed-time detail — included in the charges above",
+    "incompleteDetail": "Billed-time detail may be incomplete.",
+    "detailPartial": "Only available billed-time entries are included in this detail.",
+    "detailUnavailable": "Billed-time entry detail is unavailable for this invoice."
   }
 }

@@ -78,7 +78,12 @@
         "noPermission": {
           "title": "Brak dostępu do integracji księgowych",
           "description": "Nie masz uprawnień do wyświetlania ani konfigurowania integracji księgowych. Poproś administratora o dostęp."
-        }
+        },
+        "changeIntegration": "Wybierz inną",
+        "currentIntegration": "Integracja księgowa",
+        "selectedAction": "Wybrana",
+        "reconnectRequired": "Wymagane ponowne połączenie",
+        "settingsTitle": "Ustawienia {{title}}"
       },
       "modules": {
         "tabs": {
@@ -1698,7 +1703,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Zarządzaj profilami Microsoft należącymi do tenanta dla MSP SSO, logowania Microsoft i wykrywania domen logowania.",
+        "descriptionCe": "Zarządzaj rejestracjami aplikacji Microsoft swojej firmy na potrzeby poczty Outlook.",
         "descriptionEe": "Zarządzaj profilami Microsoft należącymi do tenanta dla MSP SSO, poczty Outlook, synchronizacji kalendarza i Microsoft Teams.",
         "dialog": {
           "cancel": "Anuluj",
@@ -1724,7 +1729,7 @@
         },
         "empty": {
           "createButton": "Utwórz profil Microsoft",
-          "descriptionCe": "Najpierw utwórz nazwany profil, a następnie jawnie powiąż go z procesami logowania MSP SSO i domen logowania.",
+          "descriptionCe": "Utwórz rejestrację aplikacji Microsoft na potrzeby poczty Outlook.",
           "descriptionEe": "Najpierw utwórz nazwany profil, a następnie jawnie powiąż go z MSP SSO, pocztą Outlook, synchronizacją kalendarza i Teams.",
           "title": "Brak profili Microsoft"
         },
@@ -1990,6 +1995,10 @@
         "syncNowSuccess": "Synchronizacja zakończona pomyślnie.",
         "syncNowSkipped": "Pominięto synchronizację: {{reason}}",
         "syncNowError": "Synchronizacja nie powiodła się: {{error}}",
+        "connectionUnavailableProvider": "Połączenie {{provider}} jest niedostępne. Połącz ponownie, aby wznowić synchronizację.",
+        "defaultRealmError": "Nie udało się wybrać tej organizacji. Połącz ponownie i spróbuj jeszcze raz.",
+        "syncIncomplete": "Synchronizacja jest niekompletna. Kursor został zachowany, ponieważ dostawca zwrócił częściowy zestaw zmian.",
+        "syncOperationsFailed": "Niektóre operacje księgowe nie powiodły się. Przejrzyj błędy synchronizacji przed ponowną próbą.",
         "viewExceptionsLink": "Zobacz wyjątki",
         "autoApplyCreditsWarning": "QuickBooks jest ustawiony na automatyczne stosowanie kredytów, co koliduje z aplikowaniem kredytów sterowanym z Alga: QuickBooks może zastosować wyeksportowane noty kredytowe do innej faktury przed synchronizacją. W QuickBooks przejdź do „Account and Settings → Advanced → Automation” i wyłącz opcję „Automatically apply credits”.",
         "configTitle": "Konfiguracja synchronizacji",
@@ -2002,7 +2011,20 @@
         "noDefault": "Brak domyślnego",
         "saving": "Zapisywanie…",
         "undepositedFunds": "Środki niezdeponowane (domyślnie)",
-        "catalogLoadError": "Nie udało się wczytać opcji konfiguracji synchronizacji QuickBooks."
+        "catalogLoadError": "Nie udało się wczytać opcji konfiguracji synchronizacji QuickBooks.",
+        "healthCardTitleProvider": "Stan synchronizacji {{provider}}",
+        "healthCardDescriptionProvider": "Stan i sterowanie synchronizacją księgową {{provider}}. Uruchamiane co 15 minut.",
+        "refreshTokenExpiredProvider": "Token {{provider}} wygasł — połącz ponownie, aby wznowić synchronizację.",
+        "refreshTokenExpiryProvider": "Token {{provider}} wygasa {{date}}",
+        "autoProvisionCustomersLabelProvider": "Automatycznie twórz klientów {{provider}}",
+        "connectedOrganisations": "Organizacje Xero",
+        "defaultOrganisationDescription": "Domyślna organizacja jest używana do synchronizacji, eksportu i mapowania.",
+        "outstandingItems": "Elementy oczekujące",
+        "outstandingItemsDescription": "Elementy wymagające jeszcze sprawdzenia lub kolejnej próby synchronizacji.",
+        "outstandingItemsReconnect": "We wszystkich połączonych organizacjach. Te elementy są zachowywane do czasu ponownego połączenia z Xero.",
+        "refreshTokenValidUntilProvider": "Autoryzacja {{provider}} ważna do {{date}}. Tokeny są odnawiane automatycznie.",
+        "syncSucceeded": "Synchronizacja zakończona",
+        "syncStopped": "Synchronizacja zatrzymana"
       },
       "itemImport": {
         "description": "Zaimportuj produkty i usługi z QuickBooks do katalogu usług Alga dla połączonej firmy QuickBooks. QuickBooks pozostanie źródłem danych referencyjnych dla nazw, stawek, kodów SKU, opisów i kosztów; metoda rozliczania, jednostka miary i typ usługi są ustawiane tutaj i od tej pory zarządzane przez Alga. Ten krok jest opcjonalny — można go pominąć przyciskiem Dalej.",
@@ -2790,6 +2812,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Pozwól pracownikom logować się przez własny realm Keycloak. Użytkownicy są dopasowywani po adresie e-mail do istniejących kont AlgaPSA; Keycloak nigdy nie tworzy tu użytkowników.",
+        "status": {
+          "configured": "Skonfigurowano",
+          "notConfigured": "Nie skonfigurowano"
+        },
+        "actions": {
+          "refresh": "Odśwież",
+          "save": "Zweryfikuj i zapisz",
+          "saving": "Weryfikowanie i zapisywanie…",
+          "remove": "Usuń"
+        },
+        "setup": {
+          "redirectUri": "Utwórz w swoim realmie poufnego klienta OpenID Connect i zezwól na ten adres URI przekierowania:",
+          "domainsEe": "Następnie zgłoś i zweryfikuj domenę logowania pracowników w sekcji „Zaawansowane”, aby e-maile z tej domeny były kierowane do tego realmu.",
+          "domainsCe": "Następnie dodaj domenę logowania pracowników w sekcji „Zaawansowane”, aby e-maile z tej domeny były kierowane do tego realmu.",
+          "issuer": "Wystawca: {{issuer}}"
+        },
+        "fields": {
+          "url": "Adres URL serwera Keycloak",
+          "realm": "Realm",
+          "clientId": "Identyfikator klienta",
+          "clientSecret": "Sekret klienta",
+          "clientSecretKeep": "Pozostaw puste, aby zachować {{masked}}"
+        },
+        "errors": {
+          "loadFailed": "Nie udało się wczytać ustawień Keycloak",
+          "saveFailed": "Nie udało się zapisać ustawień Keycloak",
+          "removeFailed": "Nie udało się usunąć ustawień Keycloak"
+        },
+        "toasts": {
+          "savedTitle": "Zapisano ustawienia Keycloak",
+          "savedDescription": "Realm odpowiedział na wykrywanie OpenID; pracownicy mogą teraz logować się przez Keycloak.",
+          "saveFailedTitle": "Nie można zapisać ustawień Keycloak",
+          "removedTitle": "Usunięto ustawienia Keycloak",
+          "removedDescription": "Logowanie przez Keycloak nie jest już dostępne dla tej organizacji.",
+          "removeFailedTitle": "Nie można usunąć ustawień Keycloak"
+        },
+        "removeDialog": {
+          "title": "Usunąć logowanie przez Keycloak?",
+          "message": "Pracownicy nie zobaczą już przycisku Keycloak. Logowanie hasłem pozostaje bez zmian.",
+          "confirm": "Usuń",
+          "cancel": "Anuluj"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Dodaj",
@@ -3470,7 +3538,9 @@
           "saveCredentials": "Zapisz poświadczenia Xero",
           "saving": "Zapisywanie…",
           "retryDisconnect": "Ponów rozłączanie",
-          "forceFinalizeDisconnect": "Wymuś finalizację"
+          "forceFinalizeDisconnect": "Wymuś finalizację",
+          "disconnectAll": "Odłącz wszystkie organizacje Xero",
+          "replaceCredentials": "Zastąp dane uwierzytelniające"
         },
         "badges": {
           "connectionExpired": "Połączenie wygasło",
@@ -3499,14 +3569,22 @@
         "clientIdPlaceholder": "Wklej swój Xero Client ID należący do tenanta",
         "clientSecretLabel": "Klucz tajny klienta Xero",
         "clientSecretPlaceholder": "Wklej swój Xero Client Secret należący do tenanta",
-        "connectSuccess": "Xero połączone pomyślnie. Pierwsza połączona organizacja jest teraz domyślnym kontekstem Xero na żywo.",
+        "connectSuccess": "Połączono z Xero. Liczba połączonych organizacji: {{count}}; {{organisation}} jest domyślną organizacją do synchronizacji.",
         "connection": {
           "connectionId": "ID połączenia: {{id}}",
           "defaultOrganisation": "Domyślna organizacja",
           "description": "Uruchom OAuth dopiero po skonfigurowaniu aplikacji Xero należącej do tenanta. Rozłączenie usuwa zapisane tokeny dostępu Xero, ale zachowuje poświadczenia aplikacji należącej do tenanta.",
           "notConnected": "Nie połączono jeszcze żadnej organizacji Xero na żywo. Zapisz poświadczenia, a następnie kliknij Połącz Xero.",
           "title": "Połączenie Xero na żywo",
-          "unknown": "nieznany"
+          "unknown": "nieznany",
+          "defaultBadge": "Domyślna do synchronizacji",
+          "linkedOrganisations": "Połączone organizacje ({{count}})",
+          "multipleOrganisationScope": "Ta autoryzacja obejmuje {{count}} organizacji Xero. Ponowne połączenie i odłączenie dotyczą ich wszystkich.",
+          "reconnectRequiredBadge": "Wymagane ponowne połączenie",
+          "organisationScope": "Ponowne połączenie i odłączenie dotyczą każdej organizacji na tej liście.",
+          "reconnectRequiredDescription": "Synchronizacja i eksport są wstrzymane. Połącz ponownie jeden raz, aby wznowić je dla wszystkich połączonych organizacji ({{count}}).",
+          "reconnectRequiredTitle": "Połączenie wygasło",
+          "singleOrganisationScope": "Ponowne połączenie i odłączenie dotyczą tej organizacji Xero."
         },
         "credentialsSaved": "Zapisano poświadczenia Xero. Można teraz rozpocząć przepływ OAuth Xero na żywo.",
         "csvAvailableMiddle": "w tej samej sekcji Księgowość i zarządzaj eksportami z",
@@ -3519,11 +3597,11 @@
           "load": "Nie udało się załadować ustawień Xero.",
           "saveCredentials": "Nie udało się zapisać poświadczeń Xero."
         },
-        "howItWorksDescription": "Zapisz tutaj Xero Client ID i Client Secret należące do tenanta, ukończ przepływ OAuth Xero, a AlgaPSA użyje pierwszej połączonej organizacji Xero jako domyślnego kontekstu na żywo.",
+        "howItWorksDescription": "Zapisz tutaj Xero Client ID i Client Secret należące do tenanta, ukończ przepływ OAuth Xero, a AlgaPSA użyje wybranej organizacji Xero jako domyślnej dla eksportów na żywo i synchronizacji.",
         "howItWorksTitle": "Jak działa Xero na żywo w tej wersji",
         "loading": "Ładowanie ustawień Xero…",
         "mapping": {
-          "alert": "Pozycje Xero, konta przychodów, stawki podatkowe i kategorie śledzenia są ładowane z domyślnej połączonej organizacji, aby eksporty na żywo mogły nadal używać pierwszego zapisanego połączenia Xero w v1.",
+          "alert": "Pozycje Xero, konta przychodów, stawki podatkowe i kategorie śledzenia są ładowane z wybranej organizacji domyślnej, a mapowania są zapisywane dla tego połączenia, dzięki czemu eksporty na żywo i uzgadnianie używają tej samej organizacji.",
           "descriptionPrefix": "Skonfiguruj mapowania Xero na żywo dla domyślnej połączonej organizacji. Te mapowania są ograniczone do",
           "placeholderAlert": "Menedżer mapowań staje się dostępny po połączeniu pierwszej organizacji Xero i ustawieniu jej jako domyślnego kontekstu Xero na żywo.",
           "placeholderDescription": "Połącz organizację Xero na żywo przed skonfigurowaniem mapowań pozycji i podatków Xero na żywo.",
@@ -3536,7 +3614,7 @@
         "requiredScopes": "Wymagane zakresy",
         "scopeOverride": "Nadpisanie wdrożenia (XERO_OAUTH_SCOPES)",
         "scopeOverrideInvalid": "Nadpisanie XERO_OAUTH_SCOPES zostało zignorowane, ponieważ zawiera nieprawidłowe wpisy ({{scopes}}). Zamiast niego używane są domyślne zakresy.",
-        "scopeReconnectNote": "Te zakresy dotyczą nowych autoryzacji. Istniejące połączenie zachowuje zakresy przyznane mu pierwotnie. Aby zastosować bieżący zestaw, rozłącz i ponownie połącz Xero. Możesz także usunąć tę aplikację z sekcji Connected apps w Xero, aby cofnąć wcześniejsze uprawnienia.",
+        "scopeReconnectNote": "Te zakresy dotyczą nowych autoryzacji. Istniejące połączenie zachowuje zakresy przyznane mu pierwotnie. Aby zastosować bieżący zestaw, rozłącz i ponownie połącz Xero. Odświeżenie tokena zachowuje istniejące uprawnienia — nowe uprawnienia przyznaje wyłącznie nowa autoryzacja. Możesz także usunąć tę aplikację z sekcji Connected apps w Xero, aby cofnąć wcześniejsze uprawnienia.",
         "storedClientId": "Zapisany Client ID: {{value}}",
         "storedClientSecret": "Zapisany Client Secret: {{value}}",
         "tenantOauthDescription": "Wklej poświadczenia aplikacji Xero zarejestrowane dla tego tenanta. Wartości secret nigdy nie są zwracane do przeglądarki po zapisaniu.",
@@ -3555,8 +3633,14 @@
           "targetRevoked": "unieważnione",
           "targetFailed": "wymaga uwagi",
           "targetPending": "oczekuje",
-          "failedPermanentDescription": "Czyszczenie po stronie dostawcy napotkało trwały błąd. Możesz ponowić próbę lub wymusić finalizację, aby usunąć zapisane poświadczenia wraz z wpisem audytowym."
-        }
+          "failedPermanentDescription": "Czyszczenie po stronie dostawcy napotkało trwały błąd. Możesz ponowić próbę lub wymusić finalizację, aby usunąć zapisane poświadczenia wraz z wpisem audytowym.",
+          "confirmDescription": "Spowoduje to odłączenie {{organisations}} oraz wstrzymanie synchronizacji i eksportu. Dane uwierzytelniające aplikacji Xero pozostaną zapisane.",
+          "confirmTitle": "Odłączyć Xero od Alga PSA?",
+          "dangerDescription": "Zatrzymuje synchronizację i eksport oraz usuwa wszystkie połączone organizacje ({{count}}). Dane uwierzytelniające aplikacji pozostają zapisane.",
+          "dangerTitle": "Odłącz Xero"
+        },
+        "connectNeedsAttention": "Autoryzacja Xero została zakończona, ale połączenie nadal wymaga uwagi. Synchronizacja pozostaje wstrzymana.",
+        "credentialsStoredDescription": "Identyfikator i sekret klienta są bezpiecznie przechowywane."
       }
     },
     "stripe": {
@@ -3633,7 +3717,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "Poczta przychodząca Outlook dla rejestracji aplikacji Microsoft Twojej firmy.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },
@@ -3650,7 +3734,88 @@
       "providers": {
         "teamsPhone": {
           "description": "Zapisuje rozmowy Teams Phone jako interakcje po zakończeniu każdego połączenia. Historia rozmów, a nie podgląd na żywo.",
-          "prerequisite": "Najpierw skonfiguruj integrację z Microsoft Teams — Teams Phone korzysta z jej profilu Microsoft."
+          "prerequisite": "Najpierw skonfiguruj integrację z Microsoft Teams — Teams Phone korzysta z jej profilu Microsoft.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Zapisuje połączenia 3CX jako interakcje i rozpoznaje dzwoniących w kliencie 3CX za pomocą szablonu CRM.",
+          "permission": "Do zarządzania integracją 3CX potrzebujesz uprawnienia ustawień systemowych.",
+          "endpoint": "Bazowy adres URL punktu końcowego",
+          "copy": "Kopiuj",
+          "apiKey": "Klucz API",
+          "rotate": "Rotuj",
+          "fullKeyWarning": "Skopiuj ten klucz teraz — nie zostanie pokazany ponownie.",
+          "download": "Pobierz szablon",
+          "tierRequired": "Telefonia 3CX wymaga planu Pro.",
+          "templateStale": "Dostępny jest nowszy szablon. Pobierz go i prześlij ponownie w konsoli 3CX.",
+          "pbx": {
+            "title": "API centrali (3CX Enterprise/AI)",
+            "help": "Wyskakujące okno połączenia, dzwonienie jednym kliknięciem, import historii połączeń i synchronizacja książki telefonicznej korzystają z API Call Control i Configuration 3CX, które wymagają licencji 3CX Enterprise lub AI (8SC+). Utwórz aplikację API w konsoli administracyjnej 3CX w sekcji Integracje → API, zaznacz oba dostępy i dodaj każdy numer wewnętrzny, który chcesz monitorować.",
+            "baseUrl": "Adres centrali",
+            "clientId": "Identyfikator klienta (numer aplikacji API)",
+            "clientSecret": "Sekret klienta",
+            "replaceSecret": "Zastąp",
+            "save": "Zapisz dane dostępowe",
+            "test": "Testuj połączenie",
+            "clear": "Usuń",
+            "connected": "Połączono",
+            "granted": "przyznano",
+            "notGranted": "nie przyznano",
+            "callControl": "Sterowanie połączeniami",
+            "xapi": "API konfiguracji",
+            "lastChecked": "Ostatnie sprawdzenie",
+            "notConnectedHint": "Połącz API centrali powyżej, aby użyć tej funkcji."
+          },
+          "extensions": {
+            "title": "Numery wewnętrzne",
+            "sync": "Synchronizuj z centrali",
+            "lastSync": "Ostatnia synchronizacja",
+            "empty": "Nie zsynchronizowano jeszcze numerów wewnętrznych.",
+            "dn": "Numer wewnętrzny",
+            "pbxUser": "Użytkownik centrali",
+            "algaUser": "Użytkownik AlgaPSA",
+            "unmapped": "Nieprzypisany",
+            "auto": "dopasowano po e-mailu"
+          },
+          "cdr": {
+            "title": "Import historii połączeń",
+            "help": "Co godzinę odczytuje rejestr połączeń centrali i zapisuje połączenia zewnętrzne, których nie ma jeszcze w dzienniku.",
+            "lookback": "Dni historii przy pierwszym uruchomieniu",
+            "lastRun": "Ostatnie uruchomienie",
+            "added": "Dodane rekordy"
+          },
+          "phonebook": {
+            "title": "Synchronizacja książki telefonicznej",
+            "help": "Wysyła kontakty z numerami telefonów do firmowej książki telefonicznej 3CX i dodaje do pasujących kontaktów numery znalezione tylko w centrali.",
+            "schedule": "Harmonogram uzgadniania",
+            "daily": "Codziennie",
+            "hourly": "Co godzinę",
+            "pushNow": "Wyślij teraz",
+            "importNow": "Importuj teraz",
+            "lastPush": "Ostatnie wysłanie",
+            "lastImport": "Ostatni import",
+            "countsLegend": "Liczby: utworzone/zaktualizowane/usunięte/zaimportowane/pominięte"
+          },
+          "queue": {
+            "title": "Kontakty utworzone z 3CX",
+            "empty": "Brak oczekujących. Tutaj pojawiają się kontakty utworzone z klienta 3CX bez pasującego klienta.",
+            "pendingBadge": "wymaga e-maila",
+            "unmappedBadge": "brak klienta",
+            "company": "Firma",
+            "chooseClient": "Wybierz klienta…",
+            "apply": "Zastosuj",
+            "leaveWithoutClient": "Zostaw bez klienta",
+            "complete": "Uzupełnij",
+            "dismiss": "Odrzuć",
+            "completeTitle": "Uzupełnij kontakt z 3CX",
+            "firstName": "Imię",
+            "lastName": "Nazwisko",
+            "email": "E-mail",
+            "number": "Numer telefonu",
+            "cancel": "Anuluj",
+            "save": "Utwórz kontakt"
+          }
         }
       },
       "subscriptionExpires": "Subskrypcja odnowi się przed",
@@ -3687,7 +3852,8 @@
         "assignTo": "Przypisz do",
         "searchPlaceholder": "Szukaj kontaktów i klientów…",
         "noTargets": "Brak pasujących kontaktów lub klientów.",
-        "chooseTarget": "Przypisz do klienta…"
+        "chooseTarget": "Przypisz do klienta…",
+        "chatBadge": "Czat"
       },
       "forbidden": "Nie masz uprawnień do wyświetlania ustawień telefonii tej organizacji.",
       "paywall": {
@@ -3786,6 +3952,7 @@
       "enterpriseOnly": "Integracja z Xero jest dostępna tylko w wersji Enterprise Edition.",
       "viewPermission": "Zabronione: brak uprawnień do wyświetlania ustawień integracji z Xero.",
       "organisationDisconnected": "Wybrana organizacja Xero nie jest już połączona. Połącz ponownie Xero i spróbuj ponownie.",
+      "organisationAmbiguous": "Zapisana domyślna organizacja Xero należy do więcej niż jednego połączenia. Wybierz, które połączenie ma być domyślne w ustawieniach księgowości.",
       "accounts": {
         "notConnected": "Połącz Xero przed wczytaniem kont Xero.",
         "reconnect": "Połącz ponownie Xero przed wczytaniem kont Xero.",
@@ -3821,6 +3988,23 @@
       "contactWithoutClient": "W systemie istnieje już kontakt z tym adresem e-mail bez przypisania do klienta",
       "emailOnAnotherClient": "Ten adres e-mail jest już powiązany z innym klientem",
       "emailOnAnotherClientNamed": "Ten adres e-mail jest już powiązany z: {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Połączenie przychodzące",
+      "unknownCaller": "Nieznany dzwoniący",
+      "noNumber": "Brak identyfikatora dzwoniącego",
+      "extension": "Dzwoni numer wewnętrzny {{dn}}",
+      "openTickets": "Otwarte zgłoszenia",
+      "recentInteractions": "Ostatnie interakcje",
+      "openContact": "Otwórz kontakt",
+      "openClient": "Otwórz klienta",
+      "newTicket": "Nowe zgłoszenie",
+      "createContact": "Utwórz kontakt",
+      "dismiss": "Zamknij",
+      "answer": "Odbierz",
+      "answerFailed": "Centrala nie mogła odebrać połączenia"
     }
   }
 }

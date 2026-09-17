@@ -153,7 +153,7 @@ interface MemberRow {
  * if some other line (or assignment) of the same client pools it.
  */
 async function loadLineConfiguredServiceIds(
-    trx: Knex.Transaction,
+    trx: Knex | Knex.Transaction,
     tenant: string,
     contractLineId: string,
 ): Promise<Set<string>> {
@@ -169,8 +169,8 @@ async function loadLineConfiguredServiceIds(
  * scope-resolution rule: explicit membership first, then the line catch-all.
  * Returns null when the service draws from no bucket on the given line.
  */
-async function resolveBucketForLine(
-    trx: Knex.Transaction,
+export async function resolveBucketForLine(
+    trx: Knex | Knex.Transaction,
     tenant: string,
     contractLineId: string,
     serviceCatalogId: string

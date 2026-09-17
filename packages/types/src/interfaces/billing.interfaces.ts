@@ -118,8 +118,13 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
  * Customer-visibility rule: only the ticket's own title and description are
  * captured. Internal comments and time-entry notes are never included.
  */
-export interface InvoiceTimeEntrySnapshot {
-  version: 1;
+export type InvoiceTimeRateKind = 'uniform' | 'mixed' | 'unknown';
+export type InvoiceTimeEntrySnapshot = InvoiceTimeEntrySnapshotData & (
+  | { version: 1 }
+  | { version: 2; rateKind: InvoiceTimeRateKind; uniformRate: number | null }
+);
+
+export interface InvoiceTimeEntrySnapshotData {
   /** 'ticket' | 'project_task' | 'ad_hoc' provenance of the billed time. */
   workItemType: 'ticket' | 'project_task' | 'ad_hoc' | null;
   /** Ticket id or project-task id, preserved for traceability. */
@@ -133,7 +138,7 @@ export interface InvoiceTimeEntrySnapshot {
   entryDate: string | null;
   /** Billed duration in whole minutes, after minimum/rounding rules. */
   billedMinutes: number;
-  /** Effective hourly rate in minor currency units. */
+  /** Historical base rate; never proof of a uniform effective rate. */
   rate: number;
   /** Net (pre-tax) amount in minor currency units. */
   netAmount: number;
@@ -415,6 +420,8 @@ export interface IServicePrice extends TenantEntity {
   service_id: string;
   currency_code: string; // ISO 4217 code (e.g., 'USD', 'EUR', 'GBP')
   rate: number; // Amount in minor units (cents)
+  /** Calendar date (`YYYY-MM-DD`) the price takes effect; the epoch when untagged. */
+  effective_date?: string | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
@@ -443,7 +450,9 @@ export interface IService extends TenantEntity {
   description?: string | null; // Added: Description field from the database
   service_type_name?: string; // Added: Name of the service type (from custom)
   // Multi-currency pricing
-  prices?: IServicePrice[]; // All currency/rate pairs for this service
+  prices?: IServicePrice[]; // Current price per currency (latest effective on/before today)
+  /** Future-dated prices scheduled to take effect later; not yet the billed price. */
+  scheduled_prices?: IServicePrice[];
 }
 
 // New interface for standard service types (cross-tenant)
@@ -771,6 +780,8 @@ export interface ITaxRate extends TenantEntity {
   is_active?: boolean;
   conditions?: Record<string, any>;
   name?: string;
+  /** Maximum tax per calculation, in the smallest currency unit. Null means uncapped. */
+  cap_amount?: number | null;
 }
 
 export interface IClientTaxRate extends TenantEntity {

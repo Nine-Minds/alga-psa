@@ -1,6 +1,7 @@
+import { reconcileCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type { Knex } from 'knex';
 import type { IComment } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
@@ -38,7 +39,8 @@ const Comment = {
     }
   },
 
-  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>): Promise<string> => {
+  /** Owns a transaction when given a plain connection: attachment claims take row locks with the insert. */
+  insert: (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>): Promise<string> => withTransaction(knexOrTrx, async (trx) => {
     try {
       logger.info('Inserting comment:', comment);
 
@@ -54,7 +56,7 @@ const Comment = {
 
       // First verify user exists and get their type
       if (comment.user_id) {
-        const user = await tenantScopedTable(knexOrTrx, 'users', tenant)
+        const user = await tenantScopedTable(trx, 'users', tenant)
           .select('user_type')
           .where('user_id', comment.user_id)
           .first();
@@ -76,9 +78,9 @@ const Comment = {
       let threadId = comment.thread_id;
 
       if (isReply) {
-        const parent = await tenantDb(knexOrTrx, tenant)
+        const parent = await tenantDb(trx, tenant)
           .tenantJoin(
-            tenantScopedTable(knexOrTrx, 'comments as parent', tenant),
+            tenantScopedTable(trx, 'comments as parent', tenant),
             'comment_threads as thread',
             'parent.thread_id',
             'thread.thread_id'
@@ -112,16 +114,16 @@ const Comment = {
           throw new Error('Reply visibility must match the thread root visibility');
         }
 
-        const idsResult = await knexOrTrx.raw('SELECT gen_random_uuid() AS comment_id');
+        const idsResult = await trx.raw('SELECT gen_random_uuid() AS comment_id');
         commentId = commentId || idsResult.rows?.[0]?.comment_id;
         threadId = parent.thread_id;
       } else {
-        const idsResult = await knexOrTrx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id');
+        const idsResult = await trx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id');
         const generatedIds = idsResult.rows?.[0];
         commentId = commentId || generatedIds?.comment_id;
         threadId = threadId || generatedIds?.thread_id;
 
-        await tenantScopedTable(knexOrTrx, 'comment_threads', tenant).insert({
+        await tenantScopedTable(trx, 'comment_threads', tenant).insert({
           tenant,
           thread_id: threadId,
           ticket_id: comment.ticket_id,
@@ -140,7 +142,7 @@ const Comment = {
       }
 
       // Explicitly include markdown_content in the insert operation
-      const result = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+      const result = await tenantScopedTable<IComment>(trx, 'comments', tenant)
         .insert({
           ...comment,
           comment_id: commentId,
@@ -160,25 +162,26 @@ const Comment = {
       }
 
       if (isReply) {
-        await tenantScopedTable(knexOrTrx, 'comment_threads', tenant)
+        await tenantScopedTable(trx, 'comment_threads', tenant)
           .where({ thread_id: threadId })
           .update({
-            reply_count: knexOrTrx.raw('reply_count + 1'),
+            reply_count: trx.raw('reply_count + 1'),
             last_activity_at: now,
           });
       }
 
+      await reconcileCommentAttachments(trx, tenant, inserted.comment_id, comment.user_id!);
       return inserted.comment_id as string;
     } catch (error) {
       logger.error('Error inserting comment:', error);
       throw error;
     }
-  },
+  }),
 
-  update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>): Promise<void> => {
+  update: (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>, actorId?: string): Promise<void> => withTransaction(knexOrTrx, async (trx) => {
     try {
       // Get existing comment first
-      const existingComment = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+      const existingComment = await tenantScopedTable<IComment>(trx, 'comments', tenant)
         .select('*')
         .where('comment_id', id)
         .first();
@@ -189,7 +192,7 @@ const Comment = {
 
       // If user_id is being updated, verify user exists and get their type
       if (comment.user_id) {
-        const user = await tenantScopedTable(knexOrTrx, 'users', tenant)
+        const user = await tenantScopedTable(trx, 'users', tenant)
           .select('user_type')
           .where('user_id', comment.user_id)
           .first();
@@ -226,18 +229,19 @@ const Comment = {
         markdown_content_length: updateData.markdown_content ? updateData.markdown_content.length : 0,
       });
 
-      await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+      await tenantScopedTable<IComment>(trx, 'comments', tenant)
         .where('comment_id', id)
         .update(updateData);
+      if (comment.note !== undefined) await reconcileCommentAttachments(trx, tenant, id, actorId || existingComment.user_id!);
     } catch (error) {
       console.error(`Error updating comment with id ${id}:`, error);
       throw error;
     }
-  },
+  }),
 
-  delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<void> => {
+  delete: (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<void> => withTransaction(knexOrTrx, async (trx) => {
     try {
-      const existingComment = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+      const existingComment = await tenantScopedTable<IComment>(trx, 'comments', tenant)
         .select('comment_id', 'parent_comment_id', 'thread_id')
         .where('comment_id', id)
         .first();
@@ -246,14 +250,16 @@ const Comment = {
         return;
       }
 
-      const child = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+      await withdrawCommentAttachments(trx, tenant, id);
+
+      const child = await tenantScopedTable<IComment>(trx, 'comments', tenant)
         .select('comment_id')
         .where('parent_comment_id', id)
         .first();
 
       if (child) {
         const now = new Date().toISOString();
-        await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+        await tenantScopedTable<IComment>(trx, 'comments', tenant)
           .where('comment_id', id)
           .update({
             note: '[deleted]',
@@ -264,18 +270,18 @@ const Comment = {
         return;
       }
 
-      await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+      await tenantScopedTable<IComment>(trx, 'comments', tenant)
         .where('comment_id', id)
         .del();
 
       if (existingComment.parent_comment_id) {
-        await tenantScopedTable(knexOrTrx, 'comment_threads', tenant)
+        await tenantScopedTable(trx, 'comment_threads', tenant)
           .where({ thread_id: existingComment.thread_id })
           .update({
-            reply_count: knexOrTrx.raw('GREATEST(reply_count - 1, 0)'),
+            reply_count: trx.raw('GREATEST(reply_count - 1, 0)'),
           });
       } else {
-        await tenantScopedTable(knexOrTrx, 'comment_threads', tenant)
+        await tenantScopedTable(trx, 'comment_threads', tenant)
           .where({ thread_id: existingComment.thread_id })
           .del();
       }
@@ -283,7 +289,7 @@ const Comment = {
       console.error(`Error deleting comment with id ${id}:`, error);
       throw error;
     }
-  },
+  }),
 };
 
 export default Comment;

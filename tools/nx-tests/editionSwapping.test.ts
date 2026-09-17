@@ -78,7 +78,7 @@ describe('CE/EE build swapping', () => {
       expect(alias.eeServerSrc).toBe(path.resolve(process.cwd(), 'packages/ee/src'));
       expect(alias.empty).toBe(path.resolve(process.cwd(), 'packages/ee/src'));
       expect(alias.ssoEntry).toBe(
-        path.resolve(process.cwd(), 'packages/ee/src/components/auth/SsoProviderButtons.tsx')
+        path.resolve(process.cwd(), 'packages/auth/src/components/SsoProviderButtons.tsx')
       );
 
       expect(alias.emailProvidersEntry).toBe(

@@ -52,7 +52,7 @@ Key architecture artifacts come from:
   - Automatic enrichment of display names. The label of the selected option is also persisted as `metadata.externalDisplayName` and used as the fallback when a later catalog load no longer carries that external id (deactivated entity, different realm, pseudo codes).
   - Adapter/realm-aware CRUD.
   - Playwright overrides through `window.__ALGA_PLAYWRIGHT_ACCOUNTING__`.
-- `AccountingMappingDialog` provides add/edit UI, optional JSON metadata editing, manual entry fallback when catalog data is unavailable, and realm context readout.
+- `AccountingMappingDialog` provides add/edit UI with searchable, filterable pickers for both the Alga entity and the external target. Both pickers use `SearchableSelect` with `dropdownMode="overlay"`, so the dropdown portals into the dialog instead of being clipped by it — especially useful when a connected Xero organisation or QuickBooks realm carries hundreds of items or accounts. Optional JSON metadata editing, manual entry fallback when catalog data is unavailable, and realm context readout are also available.
 - `types.ts` defines configuration contracts: `AccountingMappingModule`, `AccountingMappingContext`, `AccountingMappingOverrides`, and metadata toggles.
 
 ### Module Configuration Pattern
@@ -130,8 +130,8 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
 2. Select the adapter. The mapping tabs are rendered by `AccountingMappingManager`.
 3. For each tab:
    - Click **Add … Mapping**.
-   - Choose an Alga entity (client/service/tax code/payment term). Locked when editing an existing mapping.
-   - Choose the external entity from the catalog (OAuth adapters) or type the external identifier (CSV adapters).
+   - Choose an Alga entity (client/service/tax code/payment term). The picker is searchable — type to filter the list. Locked when editing an existing mapping.
+   - Choose the external entity. For OAuth adapters, the picker is catalog-backed and searchable — type to narrow a long list (particularly helpful when a Xero organisation or QuickBooks realm contains hundreds of items or accounts). For CSV adapters, type the external identifier directly.
    - Save; dialog displays validation errors from server actions.
 4. To edit or delete:
    - Use the row action menu.

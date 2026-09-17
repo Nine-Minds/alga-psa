@@ -1,3 +1,5 @@
+import { isValidInvoiceTimeSnapshot, snapshotRate, combineTimeRates } from '../billing/invoiceTimeSnapshot';
+import type { InvoiceTicketPresentationRow } from '@alga-psa/types';
 // Import the source and target types with aliases for clarity
 import type {
   InvoiceViewModel as DbInvoiceViewModel, // Source type from DB/interfaces
@@ -262,16 +264,7 @@ export type InvoiceTimeCollectionSource = IInvoiceChargeTimeEntrySnapshot & {
   itemId?: string | null;
 };
 
-const AD_HOC_GROUP_LABEL = 'Other billed time';
-
-/**
- * Rate-column text for a group billing at more than one hourly rate. A data
- * value, deliberately not localized here: the view model carries no locale
- * (one locale per render, applied by the renderer), so money and labels are
- * formatted downstream. Renderers pass non-numeric strings through currency
- * formatting untouched.
- */
-const MIXED_RATE_DISPLAY = 'Mixed rates';
+const AD_HOC_GROUP_LABEL = '';
 
 /**
  * Build the renderer collections for ticket-level billed-time detail from
@@ -291,7 +284,9 @@ export function buildInvoiceTimeCollections(
   sources: InvoiceTimeCollectionSource[],
 ): { timeEntries: WasmInvoiceTimeEntry[]; ticketGroups: WasmInvoiceTicketGroup[] } {
   const timeEntries: WasmInvoiceTimeEntry[] = sources
+    .filter(isValidInvoiceTimeSnapshot)
     .map((source): WasmInvoiceTimeEntry => ({
+      timePresentation: true,
       id: source.entryId,
       itemId: source.itemId ?? null,
       workItemType: source.workItemType ?? null,
@@ -302,7 +297,10 @@ export function buildInvoiceTimeCollections(
       date: source.entryDate ?? null,
       billedMinutes: Math.round(toFiniteNumber(source.billedMinutes)),
       hours: minutesToHours(Math.round(toFiniteNumber(source.billedMinutes))),
-      rate: Math.round(toFiniteNumber(source.rate)),
+      ...snapshotRate(source),
+      rateDisplay: snapshotRate(source).rate,
+      label: [source.ticketNumber, source.title].filter(Boolean).join(' — '),
+      labelKey: !source.ticketNumber && !source.title ? `time.${source.workItemType === 'ticket' ? 'ticket' : source.workItemType === 'project_task' ? 'task' : 'other'}` : undefined,
       amount: Math.round(toFiniteNumber(source.netAmount)),
       serviceId: source.serviceId ?? null,
       serviceName: source.serviceName ?? null,
@@ -339,9 +337,8 @@ export function buildInvoiceTimeCollections(
       const isTask = key.startsWith('task:');
       const totalMinutes = entries.reduce((sum, entry) => sum + entry.billedMinutes, 0);
       const totalAmount = entries.reduce((sum, entry) => sum + entry.amount, 0);
-      const distinctRates = [...new Set(entries.map((entry) => entry.rate))];
-      const hasMixedRates = distinctRates.length > 1;
-      const rate = hasMixedRates ? null : (distinctRates[0] ?? null);
+      const { rateKind, rate } = combineTimeRates(entries);
+      const hasMixedRates = rateKind === 'mixed';
       const dates = entries
         .map((entry) => entry.date)
         .filter((value): value is string => typeof value === 'string' && value.length > 0)
@@ -354,6 +351,7 @@ export function buildInvoiceTimeCollections(
           : AD_HOC_GROUP_LABEL;
 
       return {
+        timePresentation: true,
         key,
         workItemType: isTicket ? 'ticket' : isTask ? 'project_task' : 'ad_hoc',
         workItemId: isTicket || isTask ? first.workItemId : null,
@@ -361,6 +359,8 @@ export function buildInvoiceTimeCollections(
         title: isTicket || isTask ? first.title : null,
         description: isTicket ? first.description : null,
         label,
+        labelKey: !label ? `time.${isTicket ? 'ticket' : isTask ? 'task' : 'other'}` : undefined,
+        rateKind,
         dateStart: dates[0] ?? null,
         dateEnd: dates[dates.length - 1] ?? null,
         totalMinutes,
@@ -368,7 +368,7 @@ export function buildInvoiceTimeCollections(
         totalAmount,
         hasMixedRates,
         rate,
-        rateDisplay: rate !== null ? rate : MIXED_RATE_DISPLAY,
+        rateDisplay: rate,
         entryCount: entries.length,
         entries,
       };
@@ -400,7 +400,7 @@ export function buildInvoiceTimeCollections(
  */
 export function attachInvoiceTimeCollections(
   viewModel: WasmInvoiceViewModel,
-  charges: Array<Pick<IInvoiceCharge, 'item_id' | 'time_entry_snapshots'>>,
+  charges: Array<Pick<IInvoiceCharge, 'item_id' | 'time_entry_snapshots'> & Partial<IInvoiceCharge>>,
 ): WasmInvoiceViewModel {
   const sources: InvoiceTimeCollectionSource[] = charges.flatMap((charge) =>
     (charge.time_entry_snapshots ?? []).map((snapshot) => ({
@@ -409,14 +409,83 @@ export function attachInvoiceTimeCollections(
     })),
   );
 
-  if (sources.length === 0) {
-    return viewModel;
-  }
-
   const { timeEntries, ticketGroups } = buildInvoiceTimeCollections(sources);
-  viewModel.timeEntries = timeEntries;
-  viewModel.ticketGroups = ticketGroups;
+  if (sources.length) {
+    viewModel.timeEntries = timeEntries;
+    viewModel.ticketGroups = ticketGroups;
+  }
+  attachTicketPresentation(viewModel, charges);
   return viewModel;
+}
+
+/**
+ * Atomic replacement: frozen time-only origin + every unique owned link valid +
+ * exact integer net coverage. A failed charge contributes no primary detail.
+ * Conflicting entry ownership invalidates every involved charge. Canonical
+ * rows (including signed and zero rows) retain their original relative order.
+ */
+function attachTicketPresentation(
+  vm: WasmInvoiceViewModel,
+  charges: Array<Pick<IInvoiceCharge, 'item_id' | 'time_entry_snapshots'> & Partial<IInvoiceCharge>>,
+): void {
+  const byId = new Map(charges.map((charge) => [charge.item_id, charge]));
+  const conflicts = new Set<string>();
+  const owners = new Map<string, string[]>();
+  for (const charge of charges) {
+    for (const link of charge.time_entry_links ?? []) {
+      const prior = owners.get(link.entryId) ?? [];
+      prior.push(charge.item_id);
+      owners.set(link.entryId, prior);
+    }
+  }
+  for (const ids of owners.values()) if (ids.length > 1) ids.forEach((id) => conflicts.add(id));
+  const eligible = new Set<string>();
+  const sources: InvoiceTimeCollectionSource[] = [];
+  const isTime = (id: string): boolean => {
+    const charge = byId.get(id);
+    return charge?.billing_charge_type != null
+      ? charge.billing_charge_type === 'time'
+      : Boolean(charge?.time_entry_links?.length);
+  };
+  const canonicalRow = (item: WasmInvoiceViewModel['items'][number]): InvoiceTicketPresentationRow => ({
+    ...item, timePresentation: true, label: '', rate: isTime(item.id) ? null : item.unitPrice,
+    ...(isTime(item.id) ? { rateKind: 'unknown' as const } : {}),
+    rateDisplay: isTime(item.id) ? null : item.unitPrice, amount: item.total,
+    contributions: [{ itemId: item.id, entryId: null, amount: item.total }],
+  });
+  for (const item of vm.items) {
+    const charge = byId.get(item.id);
+    const links = charge?.time_entry_links ?? [];
+    if (!charge || charge.billing_charge_type !== 'time' || charge.is_discount || conflicts.has(item.id) || links.length === 0) continue;
+    if (!links.every((link) => link.itemId === item.id && link.invoiceId === charge.invoice_id && link.tenant === charge.tenant && Boolean(link.entryId) && isValidInvoiceTimeSnapshot(link.snapshot))) continue;
+    const snapshots = links.map((link) => ({ ...link.snapshot as import('@alga-psa/types').InvoiceTimeEntrySnapshot, entryId: link.entryId, itemId: item.id }));
+    const amount = snapshots.reduce((sum, snapshot) => sum + snapshot.netAmount, 0);
+    if (!Number.isSafeInteger(amount) || !Number.isSafeInteger(item.total) || amount !== item.total || amount !== Number(charge.net_amount)) continue;
+    eligible.add(item.id);
+    sources.push(...snapshots);
+  }
+  const groups = buildInvoiceTimeCollections(sources).ticketGroups;
+  let rows: InvoiceTicketPresentationRow[] = [
+    ...groups.map((group) => ({
+      timePresentation: true as const, id: group.key, label: group.label, labelKey: group.labelKey,
+      description: group.description ?? '', quantity: group.totalHours,
+      rate: group.rate, rateKind: group.rateKind, rateDisplay: group.rate,
+      amount: group.totalAmount,
+      contributions: group.entries.map((entry) => ({ itemId: entry.itemId!, entryId: entry.id, amount: entry.amount })),
+    })),
+    ...vm.items.filter((item) => !eligible.has(item.id)).map(canonicalRow),
+  ];
+  // A projection-wide ambiguity fails closed, without deduplicating money.
+  if (new Set(vm.items.map((item) => item.id)).size !== vm.items.length ||
+      rows.reduce((sum, row) => sum + row.amount, 0) !== vm.items.reduce((sum, item) => sum + item.total, 0)) {
+    eligible.clear();
+    rows = vm.items.map(canonicalRow);
+  }
+  const hasTime = vm.items.some((item) => isTime(item.id));
+  const hasFallback = vm.items.some((item) => isTime(item.id) && !eligible.has(item.id));
+  vm.ticketPresentationRows = rows;
+  vm.ticketCoverageStatus = !hasTime ? 'none' : !hasFallback ? 'complete' : eligible.size ? 'partial' : 'unavailable';
+  vm.ticketDetailNote = '';
 }
 
 /**
@@ -425,6 +494,7 @@ export function attachInvoiceTimeCollections(
  * Derives grouping from existing timing fields — no database migration needed.
  */
 export function enrichWithGroupedItems(vm: WasmInvoiceViewModel): WasmInvoiceViewModel {
+  if (!vm.ticketPresentationRows) attachTicketPresentation(vm, []);
   const recurringItems = vm.items.filter(isRecurringItem);
   const onetimeItems = vm.items.filter((item) => !isRecurringItem(item));
 

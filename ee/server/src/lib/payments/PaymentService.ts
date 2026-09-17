@@ -1170,7 +1170,7 @@ export class PaymentService {
    * Finds the newest active, unexpired payment link for an invoice on the
    * configured provider. Tenant-scoped: it never reads another tenant's rows.
    */
-  private async findActivePaymentLink(invoiceId: string): Promise<IInvoicePaymentLink | null> {
+  private async findActivePaymentLink(invoiceId: string): Promise<IInvoicePaymentLink | undefined> {
     return this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
       .where({
         invoice_id: invoiceId,

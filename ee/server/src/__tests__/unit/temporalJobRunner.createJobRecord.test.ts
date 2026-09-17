@@ -22,7 +22,8 @@ vi.mock('@temporalio/client', () => {
   return { Client, Connection };
 });
 
-vi.mock('server/src/lib/db', () => {
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('@alga-psa/db');
   const runWithTenant = vi.fn(async (_tenantId: string, cb: () => Promise<unknown>) => cb());
 
   const createTenantKnex = vi.fn(async () => {
@@ -39,17 +40,15 @@ vi.mock('server/src/lib/db', () => {
       }
 
       if (table === 'jobs') {
-        return {
+        const query = {
+          where: () => query,
           insert: (row: Record<string, unknown>) => {
             dbMocks.insertedJobRow = row;
-            return {
-              returning: async () => [{ job_id: 'job-created-from-test' }],
-            };
+            return { returning: async () => [{ job_id: 'job-created-from-test' }] };
           },
-          where: () => ({
-            update: async () => 1,
-          }),
+          update: async () => 1,
         };
+        return query;
       }
 
       throw new Error(`Unexpected table requested in test: ${table}`);
@@ -58,7 +57,7 @@ vi.mock('server/src/lib/db', () => {
     return { knex };
   });
 
-  return { createTenantKnex, runWithTenant };
+  return { ...actual, createTenantKnex, runWithTenant };
 });
 
 describe('TemporalJobRunner createJobRecord user attribution', () => {

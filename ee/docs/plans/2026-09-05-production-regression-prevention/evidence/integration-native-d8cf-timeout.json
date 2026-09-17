@@ -1,0 +1,42 @@
+{
+  "scope": "Native full integration timeout; incomplete execution, not a passing baseline",
+  "runId": 34118118987,
+  "jobId": 101729712868,
+  "publishedRevision": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+  "conclusion": "cancelled",
+  "jobTimeoutMinutes": 120,
+  "collectedFiles": 287,
+  "collectedCases": 2080,
+  "finishedFiles": 118,
+  "finishedFileStates": {
+    "passed": 117,
+    "skipped": 1
+  },
+  "finishedCases": 794,
+  "lastEvents": [
+    {
+      "schemaVersion": 1,
+      "runId": "e06d96e1-496c-44d6-8d4d-fbf83495c28e",
+      "sequence": 2061,
+      "timestamp": "2026-09-07T13:44:36.749Z",
+      "event": "module-finished",
+      "file": "src/test/integration/clientTypeEnumMigration.integration.test.ts",
+      "state": "passed"
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "e06d96e1-496c-44d6-8d4d-fbf83495c28e",
+      "sequence": 2062,
+      "timestamp": "2026-09-07T13:44:36.768Z",
+      "event": "module-queued",
+      "file": "src/test/integration/accounting/batchLifecycle.integration.test.ts"
+    }
+  ],
+  "completeReportAvailable": false,
+  "sha256": {
+    "test-results/integration/collected.json": "5a08061d35ac313f38d0276269ef681aeec0c03e1eff24cd44c526de2c8df32d",
+    "test-results/integration/collected-tests.json": "59e40005fd0aba6cde5742c45407b73106bdb7d1bb647c222629438b1fd1592d",
+    "server/test-progress-integration.jsonl": "b3dba8a16e0c98a7b6b4203376f523e3b9ce96fa692a3e5967dfa7e995996853"
+  },
+  "nextAction": "Partition full integration into isolated CI shards and require combined complete execution; do not weaken assertions."
+}

@@ -1,0 +1,42 @@
+{
+  "scope": "Repair native Citus tenant workflow collection without jobs dist",
+  "baseRevision": "1753b87375",
+  "workingTreeDirty": true,
+  "nativeFailure": {
+    "publishedHead": "7b170294a755dfebba34cb8bbfc1069b6d8ba8bc",
+    "runId": 34151013464,
+    "jobId": 101833124798,
+    "error": "Cannot find package @alga-psa/jobs/handlers/workflowScheduledRunHandlers"
+  },
+  "change": "Mirror existing Temporal tsconfig jobs source mappings in Vitest, including handler and runner subpaths.",
+  "validation": {
+    "fullCitusTenantFiles": 6,
+    "fullCitusTenantTestsPassed": 27,
+    "durationSeconds": 17.41,
+    "withoutJobsDistCollection": 27,
+    "localBuildDirectoryRestored": true
+  },
+  "artifacts": [
+    {
+      "path": "/tmp/alga-citus-native-7b170-failure.log",
+      "sha256": "dc9917e9475636597beb6981b66615e40418eb0e5d32bcb011775a5d6a5c6313"
+    },
+    {
+      "path": "/tmp/alga-temporal-jobs-source.log",
+      "sha256": "16d7e22bd091dda193e6342f865e7b71ce38c619ef7aedb4b7dde8415666013f"
+    },
+    {
+      "path": "/tmp/alga-temporal-jobs-no-dist.log",
+      "sha256": "e8bb8ef0212e2488f98aa08ea6f5027260967ab8b63cb54e6b1de70408db2532"
+    },
+    {
+      "path": "/tmp/alga-temporal-jobs-no-dist-collection.json",
+      "sha256": "a0172b80009f786ca15b012a133fb0dcca9768dc52f13d04e26a50dd854c764d"
+    }
+  ],
+  "limits": [
+    "Native execution of this fix remains pending publication.",
+    "Temporal engine production-index bundling separately fails to resolve workflows source imports in native CI.",
+    "Integration shard failure remains to be inspected."
+  ]
+}

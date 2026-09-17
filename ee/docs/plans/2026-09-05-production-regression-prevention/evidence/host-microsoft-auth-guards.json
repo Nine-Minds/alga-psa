@@ -1,0 +1,42 @@
+{
+  "scope": "T028 partial host validation; no production artifact or Teams SSO claim",
+  "releaseValidation": false,
+  "oauthRejection": {
+    "suite": "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+    "host": "existing enterprise development server",
+    "passed": 4,
+    "failed": 0,
+    "retries": 0,
+    "durationSeconds": 9.7,
+    "log": "/tmp/alga-host-oauth-rejection-warm.log",
+    "assertions": [
+      "missing code rejected",
+      "missing state rejected",
+      "malformed state rejected",
+      "unsigned state rejected",
+      "popup sends failure result and closes",
+      "no authenticated user session established"
+    ],
+    "priorRun": "3 passed, 1 failed: opener execution context destroyed during navigation; warm run needed, cold-start stability remains open"
+  },
+  "teamsOverrideGuards": {
+    "suites": [
+      "ee/packages/microsoft-teams/src/lib/teams/bot/__tests__/teamsBotOpenIdOverride.test.ts",
+      "ee/packages/microsoft-teams/src/lib/teams/__tests__/microsoftEndpoints.test.ts"
+    ],
+    "passed": 18,
+    "failed": 0,
+    "log": "/tmp/alga-host-teams-claim-guards.log",
+    "newCases": [
+      "correctly signed wrong-issuer token rejected after valid-token control",
+      "correctly signed expired token rejected after valid-token control"
+    ],
+    "boundary": "real RSA signing and JWT verification with task-local OpenID/JWKS server; production discovery guard uses controlled fetch failure and verifies selected URL"
+  },
+  "limitations": [
+    "T028 remains incomplete: no current production/native proof",
+    "Task-owned designer database lacks full EE schema; Teams integrations table missing",
+    "Not Teams SSO coverage",
+    "Cold host browser refresh interruptions remain unresolved"
+  ]
+}

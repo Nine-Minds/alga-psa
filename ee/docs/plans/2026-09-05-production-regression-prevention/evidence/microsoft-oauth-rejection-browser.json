@@ -1,0 +1,33 @@
+{
+  "scope": "Production browser Microsoft email callback rejection",
+  "baseRevision": "b1c3ecf124",
+  "workingTreeDirty": true,
+  "execution": {
+    "edition": "enterprise",
+    "headed": true,
+    "passed": 4,
+    "failed": 0,
+    "retries": 0,
+    "durationSeconds": 9.0
+  },
+  "coverage": [
+    "Missing code/state error message delivered to same-origin opener",
+    "Malformed and unsigned state rejected",
+    "Popup closes and session remains anonymous"
+  ],
+  "limitations": [
+    "Cached local production build; native candidate CI unverified.",
+    "Community collection only.",
+    "Does not prove token refresh, provider authorization, or DB non-mutation; broader legacy OAuth suite remains unresolved."
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-microsoft-oauth-rejection.log",
+      "sha256": "718f9308f2c966215a6f74921ef65c3d7e3f62275cad31815b670797c6333f61"
+    },
+    {
+      "path": "/tmp/alga-microsoft-oauth-rejection-ce-list.log",
+      "sha256": "cf5a151c15b398867629b770d8238b12008c9e329ef26933d983f4ea56d05b9f"
+    }
+  ]
+}

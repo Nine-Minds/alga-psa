@@ -21,6 +21,8 @@ export interface IStatus extends TenantEntity {
   updated_at?: Date;
   color?: string | null; // Hex color code (e.g., '#3B82F6')
   icon?: string | null; // Lucide icon name (e.g., 'Clipboard', 'PlayCircle')
+  /** When false, client portal users cannot select this status. Defaults to true. */
+  portal_selectable?: boolean;
 }
 
 export interface IStandardStatus {

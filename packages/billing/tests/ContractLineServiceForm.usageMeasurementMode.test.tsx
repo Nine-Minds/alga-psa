@@ -26,6 +26,11 @@ const actionMocks = vi.hoisted(() => ({
   deleteBucketOverlay: vi.fn(),
 }));
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
   getContractLineById: actionMocks.getContractLineById,
   updateContractLineFixedConfig: actionMocks.updateContractLineFixedConfig,
@@ -168,6 +173,7 @@ const radio = (value: string): HTMLInputElement =>
 
 describe('usage service configuration measurement mode', () => {
   beforeEach(() => {
+    releaseFlag.enabled = true;
     vi.clearAllMocks();
     actionMocks.getContractLineById.mockResolvedValue({
       contract_line_id: 'line-1',
@@ -250,4 +256,21 @@ describe('usage service configuration measurement mode', () => {
     await screen.findByText(/still has unbilled additive entries/i);
     expect(actionMocks.updateContractLineService).toHaveBeenCalledTimes(1);
   });
+// New options are hidden without changing the loaded legacy configuration.
+it('hides new billing modes when the release flag is off', async () => {
+  releaseFlag.enabled = false;
+  await renderUsageEditor();
+  expect(screen.queryByTestId('usage-measurement-mode')).toBeNull();
+});
+
+  it('keeps an existing period_total configuration visible with the flag off', async () => {
+    releaseFlag.enabled = false;
+    const details = await actionMocks.getConfigurationWithDetails();
+    details.typeConfig.measurement_mode = 'period_total';
+    actionMocks.getConfigurationWithDetails.mockResolvedValue(details);
+    await renderUsageEditor();
+    expect(screen.getByTestId('usage-measurement-mode')).toBeTruthy();
+    expect((document.querySelector('input[value="period_total"]') as HTMLInputElement).checked).toBe(true);
+  });
+
 });

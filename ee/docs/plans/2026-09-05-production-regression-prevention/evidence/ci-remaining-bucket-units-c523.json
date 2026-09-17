@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "scope": "actual-single-node-citus-remaining-bucket-units-regression",
+  "runId": "34320694357",
+  "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+  "artifacts": {
+    "runtime": "10092017844",
+    "aggregate": "10092027435"
+  },
+  "jobs": [
+    {
+      "id": 102366533636,
+      "name": "citus / Combined migrations on single-node Citus",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 102368932465,
+      "name": "citus / Citus execution complete",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "source": {
+    "before": {
+      "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "status": "passed",
+  "runtimeCounts": {
+    "passed": 12,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "discovery": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "candidates": [
+      "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+      "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+      "server/src/test/integration/remainingBucketUnits.integration.test.ts"
+    ],
+    "unmatched": [],
+    "tests": [
+      {
+        "file": "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "runners": [
+          "citus-runtime"
+        ],
+        "exclusion": null
+      },
+      {
+        "file": "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+        "runners": [
+          "citus-runtime"
+        ],
+        "exclusion": null
+      },
+      {
+        "file": "server/src/test/integration/remainingBucketUnits.integration.test.ts",
+        "runners": [
+          "citus-runtime"
+        ],
+        "exclusion": null
+      }
+    ],
+    "failures": []
+  },
+  "expectedCases": [
+    {
+      "identity": [
+        "server/src/test/integration/remainingBucketUnits.integration.test.ts",
+        "returns tenant-isolated weighted usage, rollover and deterministic first-member labels from real SQL"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "server/src/test/integration/remainingBucketUnits.integration.test.ts",
+        "retains unused pools and catch-all labels, excluding usage at the exclusive period end"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "server/src/test/integration/remainingBucketUnits.integration.test.ts",
+        "uses the template contract when assigned and excludes inactive or future assignments"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "server/src/test/integration/remainingBucketUnits.integration.test.ts",
+        "isolates colliding contract, line, bucket and service IDs across tenants"
+      ],
+      "count": 1
+    }
+  ],
+  "executedCases": [
+    {
+      "identity": [
+        "server/src/test/integration/remainingBucketUnits.integration.test.ts",
+        "returns tenant-isolated weighted usage, rollover and deterministic first-member labels from real SQL"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "server/src/test/integration/remainingBucketUnits.integration.test.ts",
+        "retains unused pools and catch-all labels, excluding usage at the exclusive period end"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "server/src/test/integration/remainingBucketUnits.integration.test.ts",
+        "uses the template contract when assigned and excludes inactive or future assignments"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "server/src/test/integration/remainingBucketUnits.integration.test.ts",
+        "isolates colliding contract, line, bucket and service IDs across tenants"
+      ],
+      "count": 1
+    }
+  ],
+  "rawAssertions": [
+    {
+      "ancestorTitles": [],
+      "fullName": "returns tenant-isolated weighted usage, rollover and deterministic first-member labels from real SQL",
+      "status": "passed",
+      "title": "returns tenant-isolated weighted usage, rollover and deterministic first-member labels from real SQL",
+      "duration": 28.90445999999065,
+      "failureMessages": [],
+      "meta": {}
+    },
+    {
+      "ancestorTitles": [],
+      "fullName": "retains unused pools and catch-all labels, excluding usage at the exclusive period end",
+      "status": "passed",
+      "title": "retains unused pools and catch-all labels, excluding usage at the exclusive period end",
+      "duration": 39.31535500002792,
+      "failureMessages": [],
+      "meta": {}
+    },
+    {
+      "ancestorTitles": [],
+      "fullName": "uses the template contract when assigned and excludes inactive or future assignments",
+      "status": "passed",
+      "title": "uses the template contract when assigned and excludes inactive or future assignments",
+      "duration": 22.78200200002175,
+      "failureMessages": [],
+      "meta": {}
+    },
+    {
+      "ancestorTitles": [],
+      "fullName": "isolates colliding contract, line, bucket and service IDs across tenants",
+      "status": "passed",
+      "title": "isolates colliding contract, line, bucket and service IDs across tenants",
+      "duration": 34.91022999997949,
+      "failureMessages": [],
+      "meta": {}
+    }
+  ],
+  "artifactSha256": {
+    "evidence": "744b95738614407b5a396d1fb4194e92f2da66c77e39a8faf449b3deee605bc8",
+    "discovery": "ab581d7f74a6a1bdb47904600dc106e2375a98a2d4ed1290244651e7bfe11454",
+    "collected-tests": "01f2cdda45be7457cd049d4066feff0db9f9d89030a35e389c512a1f4ed16b70",
+    "results": "4ad06e720a1fec9ad958d977d26c3b0b2c2e50190b97db19ed67d3e051d21df9"
+  },
+  "aggregate": {
+    "schemaVersion": 1,
+    "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+    "scope": "citus-execution",
+    "status": "passed",
+    "results": [
+      {
+        "id": "citus-runtime",
+        "status": "passed",
+        "counts": {
+          "passed": 12,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "pending": 0
+        },
+        "failures": []
+      },
+      {
+        "id": "temporal-database",
+        "status": "passed",
+        "counts": {
+          "passed": 27,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "pending": 0
+        },
+        "failures": []
+      }
+    ],
+    "failures": []
+  },
+  "interpretation": "The real remaining-bucket-units action query split executed successfully against the single-node Citus runtime schema, including tenant-colliding identifiers, deterministic member labels, rollover/usage math and assignment/date eligibility.",
+  "limitations": [
+    "Not the full supported-upgrade browser gate; visible bucket panel assertions are separate.",
+    "Single-node Citus12.1 with combined migrations; no multi-worker production-topology claim.",
+    "Authentication/createTenantKnex are fixture seams; query builders and database behavior are real.",
+    "CI clean tested merge is recorded; no inference that other live jobs or whole candidate passed."
+  ]
+}

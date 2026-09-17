@@ -61,6 +61,7 @@ export interface EmailProviderCapabilities {
   supportsTracking: boolean;
   supportsCustomDomains: boolean;
   maxAttachmentSize?: number;
+  blockedAttachmentExtensions?: string[];
   maxRecipientsPerMessage?: number;
 }
 

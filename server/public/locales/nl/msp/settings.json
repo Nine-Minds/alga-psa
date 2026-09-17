@@ -441,7 +441,8 @@
       "boards": "Borden",
       "priorities": "Prioriteiten",
       "categories": "Categorieën",
-      "checklistTemplates": "Checklistsjablonen"
+      "checklistTemplates": "Checklistsjablonen",
+      "externalSystems": "Externe systemen"
     },
     "numbering": {
       "title": "Nummerformaat",
@@ -549,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Actief",
-        "inactive": "Inactief"
+        "inactive": "Inactief",
+        "hiddenFromPortal": "Verborgen in portaal"
       },
       "actions": {
         "addBoard": "Bord toevoegen",
@@ -629,7 +631,8 @@
           "loading": "Ticketstatussen van bord laden…",
           "statusName": "Statusnaam",
           "closed": "Gesloten",
-          "default": "Standaard"
+          "default": "Standaard",
+          "portalSelectable": "Gebruikers van het klantenportaal kunnen deze status selecteren"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Gesloten tickets heropenen bij inkomende antwoorden",
@@ -645,6 +648,10 @@
         "liveTimer": {
           "label": "Live tickettimer inschakelen",
           "help": "Toont de live timer en bijgehouden intervallen op tickets in dit bord. Handmatige tijdinvoer blijft beschikbaar."
+        },
+        "clientPortalVisible": {
+          "label": "Zichtbaar in klantportaal",
+          "help": "Indien uitgeschakeld zijn dit bord en de bijbehorende tickets verborgen voor alle gebruikers van het klantportaal, ongeacht zichtbaarheidsgroepen."
         },
         "defaultBoard": {
           "label": "Standaardbord voor tickets uit klantportaal",
@@ -987,6 +994,47 @@
           "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan"
         }
       }
+    },
+    "externalSystems": {
+      "title": "Externe systemen",
+      "subtitle": "Voeg aangepaste externe systemen toe zodat tickets kunnen verwijzen naar records buiten de ingebouwde catalogus.",
+      "addButton": "Systeem toevoegen",
+      "builtInTitle": "Ingebouwde systemen",
+      "builtInSubtitle": "Beschikbaar voor elke tenant; URL's worden uit de systeemsjabloon opgebouwd.",
+      "table": {
+        "label": "Label",
+        "key": "Sleutel",
+        "urlTemplate": "URL-sjabloon",
+        "actions": "Acties"
+      },
+      "actions": {
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "save": "Opslaan"
+      },
+      "fields": {
+        "key": "Sleutel",
+        "keyHint": "Moet overeenkomen met custom:<slug> (kleine letters, cijfers of underscores).",
+        "label": "Label",
+        "urlTemplate": "URL-sjabloon",
+        "urlTemplateHint": "Optioneel. Gebruik de plaatsaanduidingen {realm} en {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Extern systeem toevoegen",
+        "editTitle": "Extern systeem bewerken"
+      },
+      "deleteDialog": {
+        "title": "Extern systeem verwijderen",
+        "message": "\"{{label}}\" verwijderen? Systemen die nog door koppelingen worden gebruikt, kunnen niet worden verwijderd."
+      },
+      "messages": {
+        "success": {
+          "created": "Extern systeem aangemaakt.",
+          "updated": "Extern systeem bijgewerkt.",
+          "deleted": "Extern systeem verwijderd."
+        }
+      }
     }
   },
   "interactions": {
@@ -1051,7 +1099,8 @@
         "name": "Naam",
         "status": "Status",
         "order": "Volgorde",
-        "actions": "Acties"
+        "actions": "Acties",
+        "default": "Standaard"
       },
       "statusLabels": {
         "closedHelp": "Interacties met deze status worden als gesloten gemarkeerd",
@@ -1067,14 +1116,21 @@
         "success": {
           "updated": "Status succesvol bijgewerkt",
           "deleted": "Status succesvol verwijderd",
-          "imported": "{{count}} statussen succesvol geïmporteerd"
+          "imported": "{{count}} statussen succesvol geïmporteerd",
+          "defaultUpdated": "Standaardstatus voor interacties bijgewerkt"
         },
         "error": {
           "lastClosed": "Ten minste één status moet als gesloten gemarkeerd blijven",
           "deleteLastClosed": "Kan de laatste gesloten status voor dit type niet verwijderen.",
           "skipped": "{{count}} statussen overgeslagen ({{reason}})",
-          "importFailed": "Kan statussen niet importeren"
+          "importFailed": "Kan statussen niet importeren",
+          "defaultRequired": "Eén status moet de standaard blijven — stel in plaats daarvan een andere status als standaard in.",
+          "closedCannotBeDefault": "Een afgesloten status kan niet de standaard voor nieuwe interacties zijn."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Standaard voor nieuwe interacties",
+        "setDefault": "Als standaard gebruiken"
       }
     },
     "quickAdd": {
@@ -1132,6 +1188,8 @@
         "companyName": "Bedrijfsnaam",
         "companyLogo": "Bedrijfslogo",
         "companyLogoDark": "Logo voor donkere achtergronden",
+        "companyLogoWide": "Breed logo (optioneel)",
+        "companyLogoWideDark": "Breed logo voor donkere achtergronden (optioneel)",
         "colorPalette": "Kleurenpalet",
         "primaryColor": "Primaire kleur",
         "secondaryColor": "Secundaire kleur",
@@ -1148,6 +1206,8 @@
         "companyLogo": "Aanbevolen: PNG of SVG, maximaal 2 MB, transparante achtergrond",
         "companyLogoMsp": "Dit logo vervangt ook het Alga-merk in het MSP-zijmenu.",
         "companyLogoDark": "Optioneel. Wordt gebruikt in het zijpaneel van het portaal en in de donkere modus. Zonder logo wordt het bedrijfslogo gebruikt.",
+        "companyLogoWide": "Wordt bovenaan het uitgeklapte zijpaneel van het portaal getoond, 32 px hoog. Zet uw bedrijfsnaam in de afbeelding — het paneel schrijft die dan niet meer apart.",
+        "companyLogoWideDark": "Optioneel. Wordt gebruikt zolang de achtergrond van het zijpaneel donker is. Valt terug op het brede logo.",
         "primaryColor": "Wordt gebruikt voor knoppen, links en accenten",
         "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties",
         "supportEmail": "Wordt aan klanten getoond in afspraakbevestigingen en andere uitgaande e-mails als contactadres voor hulp.",
@@ -1177,7 +1237,11 @@
         "previewSignIn": "Voorbeeld aanmeldpagina",
         "hideSignIn": "Aanmeldpagina verbergen"
       },
-      "customDomainRequired": "Aangepast domein moet zijn ingesteld"
+      "customDomainRequired": "Aangepast domein moet zijn ingesteld",
+      "warnings": {
+        "expectSquare": "Die afbeelding is veel breder dan hoog. Deze plek vult vierkante ruimtes — u bedoelt waarschijnlijk de plek voor het brede logo.",
+        "expectWide": "Die afbeelding is bijna vierkant. De plek voor het brede logo verwacht een liggend logo — een vierkant merkteken hoort in de plek hierboven."
+      }
     },
     "dashboardPreview": {
       "title": "Uw klantenportaal",
@@ -1423,10 +1487,24 @@
     "whiteLabel": {
       "title": "Eigen merk voor de MSP-app",
       "description": "Upload uw logo één keer. Het vervangt het Alga-merk in het MSP-zijmenu en het klantenportaal gebruikt dezelfde afbeeldingen.",
-      "logoHelp": "Het MSP-zijmenu is in beide thema’s donker en gebruikt daarom het logo voor donkere achtergronden als u dat toevoegt, en anders het hoofdlogo.",
+      "logoHelp": "Het vierkante merkteken wordt gebruikt overal waar de ruimte vierkant is: in het ingeklapte zijmenu en in ronde kaders. Het optionele brede logo vervangt het merkteken en de naam in het uitgeklapte zijmenu, dus upload er een waarin uw bedrijfsnaam al staat. Het zijmenu volgt zijn eigen achtergrond: bij een donker menu de varianten voor donkere achtergronden, bij een licht menu de lichte, en anders de variant die u hebt geüpload.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo voor donkere achtergronden"
+        "mark": "Vierkant merkteken",
+        "markDark": "Vierkant merkteken voor donkere achtergronden",
+        "wide": "Breed logo (optioneel)",
+        "wideDark": "Breed logo voor donkere achtergronden (optioneel)",
+        "favicon": "Browserpictogram (favicon)"
+      },
+      "hints": {
+        "mark": "Wordt gebruikt in het ingeklapte zijmenu en in elk rond kader. Vierkant werkt het best.",
+        "markDark": "Optioneel. Valt terug op het vierkante merkteken.",
+        "wide": "Wordt alleen in het uitgeklapte zijmenu getoond, 32 px hoog. Zet uw bedrijfsnaam in de afbeelding.",
+        "wideDark": "Optioneel. Wordt gebruikt zolang de achtergrond van het zijmenu donker is, zoals in alle meegeleverde thema’s.",
+        "favicon": "PNG, SVG of ICO. Rasterafbeeldingen worden verkleind naar 32x32. Geldt voor de MSP-app en het klantenportaal van uw organisatie."
+      },
+      "warnings": {
+        "expectSquare": "Die afbeelding is veel breder dan hoog. De plek voor het vierkante merkteken wordt in vierkante ruimtes gebruikt — u bedoelt waarschijnlijk de plek voor het brede logo.",
+        "expectWide": "Die afbeelding is bijna vierkant. De brede plek verwacht een liggend logo — u bedoelt waarschijnlijk de plek voor het vierkante merkteken."
       },
       "colors": {
         "label": "Uw merkkleuren in de MSP-app gebruiken",
@@ -1443,6 +1521,9 @@
       "notice": "U bekijkt een voorbeeld van een niet-opgeslagen thema. De rest houdt het opgeslagen thema tot u dit toepast.",
       "save": "Voor iedereen toepassen",
       "discard": "Verwerpen"
+    },
+    "upgrade": {
+      "pitch": "Organisatiebrede themaparen, een editor voor een eigen kleurenpalet en white-labeling van de MSP-app maken deel uit van de Enterprise Edition."
     }
   },
   "mspLanguage": {
@@ -1470,6 +1551,7 @@
     "emailTabs": {
       "settings": "Instellingen",
       "emailTemplates": "E-mailsjablonen",
+      "emailBranding": "E-mailhuisstijl",
       "categories": "Categorieën",
       "telemetry": "Telemetrie"
     },
@@ -1526,7 +1608,8 @@
       "preview": {
         "subjectLabel": "Voorbeeld onderwerp",
         "iframeTitle": "Voorbeeld e-mailsjabloon",
-        "sampleDataNote": "Het voorbeeld gebruikt voorbeeldgegevens. Echte e-mails bevatten echte waarden."
+        "sampleDataNote": "Het voorbeeld gebruikt voorbeeldgegevens. Echte e-mails bevatten echte waarden.",
+        "sourceSyncNote": "Klik in het voorbeeld op een element om de bijbehorende code te selecteren; als u de cursor in de code verplaatst, wordt het element hier omlijnd."
       },
       "errors": {
         "loadFailed": "Sjablonen laden mislukt"
@@ -1575,7 +1658,8 @@
       },
       "tabs": {
         "source": "Broncode",
-        "preview": "Voorbeeld"
+        "preview": "Voorbeeld",
+        "variables": "Variabelen"
       },
       "common": {
         "notAvailable": "n.v.t."
@@ -1592,6 +1676,110 @@
         "it": "Italiaans",
         "pl": "Pools",
         "pt": "Portugees"
+      }
+    },
+    "emailBranding": {
+      "title": "E-mailhuisstijl",
+      "description": "Geef elke uitgaande e-mail uw eigen kleuren. Bekijk hier een voorbeeld en kies daarna op welke sjablonen u ze toepast.",
+      "unsavedHint": "Sla het palet op voordat u het toepast.",
+      "source": {
+        "saved": "Opgeslagen",
+        "custom-theme": "Uit uw aangepaste thema",
+        "theme-pair": "Uit uw thema",
+        "portal-branding": "Uit de huisstijl van uw klantenportaal",
+        "default": "AlgaPSA-standaard"
+      },
+      "fields": {
+        "primary": "Primaire kleur",
+        "secondary": "Secundaire kleur",
+        "singleColor": "Eén kleur (verloop afgeleid van de primaire kleur)"
+      },
+      "tokens": {
+        "dark": "Donker accent",
+        "outerBg": "Buitenste achtergrond",
+        "footerBg": "Achtergrond van de voettekst",
+        "cardBorder": "Kaartrand",
+        "infoBoxBg": "Achtergrond van het informatievak",
+        "infoBoxBorder": "Rand van het informatievak"
+      },
+      "preview": {
+        "title": "Voorbeeld"
+      },
+      "actions": {
+        "save": "Palet opslaan",
+        "saving": "Opslaan...",
+        "useSuggested": "Voorgestelde kleuren gebruiken",
+        "adjust": "Afgeleide kleuren aanpassen",
+        "apply": "Toepassen op sjablonen",
+        "applying": "Bezig met toepassen...",
+        "applyCount": "Toepassen op {{count}} sjablonen",
+        "applyToTemplate": "Mijn palet toepassen",
+        "remove": "Huisstijl uit alle sjablonen verwijderen",
+        "removing": "Bezig met verwijderen...",
+        "cancel": "Annuleren",
+        "done": "Klaar"
+      },
+      "apply": {
+        "title": "Huisstijl op sjablonen toepassen",
+        "languages": "Talen",
+        "selectAll": "Alles selecteren",
+        "selectNone": "Niets selecteren",
+        "differs": "Verschilt in {{parts}}",
+        "differsParts": {
+          "colors": "kleuren",
+          "text": "tekst",
+          "subject": "onderwerp"
+        },
+        "overwrite": "Overschrijven",
+        "overwriteHint": "Overschrijven bouwt een sjabloon opnieuw op vanuit het standaardsjabloon met uw palet en verwijdert uw bewerkingen.",
+        "preview": {
+          "open": "Resultaat bekijken",
+          "title": "Voorbeeld: {{name}}",
+          "loading": "Voorbeeld wordt opgebouwd...",
+          "captions": {
+            "create": "Er wordt een kopie met uw huisstijl gemaakt van het standaardsjabloon.",
+            "update": "Uw kopie met huisstijl wordt opnieuw opgebouwd uit het standaardsjabloon met het opgeslagen palet.",
+            "customized": "Uw bewerkingen blijven woord voor woord behouden. Alleen de standaardkleuren die nog in dit sjabloon staan, worden vervangen.",
+            "overwrite": "Uw bewerkingen aan dit sjabloon worden verwijderd. Het wordt opnieuw opgebouwd vanuit het standaardsjabloon met uw palet.",
+            "skipped": "Er wordt niets weggeschreven — {{reason}}. Dit is het sjabloon zoals het er nu uitziet."
+          }
+        },
+        "summary": "{{written}} van huisstijl voorzien, {{skipped}} overgeslagen, {{failed}} mislukt",
+        "groups": {
+          "system": {
+            "title": "Niet aangepast",
+            "action": "Kopie met huisstijl maken"
+          },
+          "branded": {
+            "title": "Door u van huisstijl voorzien",
+            "action": "Kleuren bijwerken"
+          },
+          "customized": {
+            "title": "Aangepast",
+            "action": "Alleen resterende standaardkleuren vervangen"
+          },
+          "no-stock-colors": {
+            "title": "Geen standaardkleuren",
+            "action": "Niets te vervangen"
+          }
+        },
+        "skipReasons": {
+          "customized": "Aangepast — niet geselecteerd",
+          "nothing-to-replace": "Niets te vervangen",
+          "unchanged": "Al bijgewerkt"
+        }
+      },
+      "newTemplates": {
+        "message": "Er zijn {{count}} sjablonen toegevoegd sinds u uw palet voor het laatst hebt toegepast.",
+        "action": "Palet op nieuwe sjablonen toepassen",
+        "dismiss": "Sluiten"
+      },
+      "enterprise": {
+        "useLogo": "Mijn logo in de e-mailkop gebruiken",
+        "logoWide": "Breed logo",
+        "logoDefault": "Vierkant logo",
+        "noLogo": "Upload een logo via Instellingen → Klantenportaal → Huisstijl om het hier te gebruiken.",
+        "showAttribution": "'Powered by AlgaPSA' in de voettekst tonen"
       }
     },
     "categoriesUi": {
@@ -1989,7 +2177,17 @@
         "upload": "Pakket uploaden"
       },
       "errors": {
-        "noImportableRecords": "Dit pakket bevatte geen importeerbare records."
+        "noImportableRecords": "Dit pakket bevatte geen importeerbare records.",
+        "permissionDenied": "U hebt geen toestemming om gegevens te importeren of exporteren.",
+        "invalidSpreadsheet": "Dat spreadsheet kon niet worden gelezen. Controleer of het een geldig CSV- of XLSX-bestand is en probeer het opnieuw.",
+        "notAmpPackage": "Dat bestand is geen AMP-pakket. Upload een .amp- of .sqlite-bestand.",
+        "tooLarge": "Deze upload is groter dan de maximaal toegestane grootte.",
+        "sizeMismatch": "De upload is niet voltooid. Probeer het opnieuw.",
+        "noRecognizedHeaders": "Geen van de kolommen in dat spreadsheet werd herkend. Controleer de kopregel en probeer het opnieuw.",
+        "storageRejected": "De server heeft deze upload geweigerd. Vraag uw beheerder de bestandstypeconfiguratie van de opslag te controleren.",
+        "spreadsheetFailed": "Het spreadsheet kon niet worden geïmporteerd. Probeer het opnieuw.",
+        "uploadFailed": "Het pakket kon niet worden geüpload. Probeer het opnieuw.",
+        "unknown": "De upload is mislukt. Probeer het opnieuw."
       },
       "preflight": {
         "title": "Voorcontrole"
@@ -1997,6 +2195,19 @@
       "run": {
         "queued": "Migratie in wachtrij",
         "applying": "Migratie wordt uitgevoerd"
+      },
+      "badges": {
+        "nothingImported": "Niets geïmporteerd"
+      },
+      "results": {
+        "skippedSamePackage": "Overgeslagen records zijn al gemigreerd door een eerdere uitvoering van hetzelfde pakket.",
+        "skippedOtherPackage": "Overgeslagen records zijn gekoppeld aan entiteiten die door een eerdere migratie van een ander pakket zijn gemaakt: {{packages}}.",
+        "skippedExistingEntity": "Overgeslagen records zijn gekoppeld aan bestaande entiteiten.",
+        "nothingImportedTitle": "Niets geïmporteerd",
+        "nothingImportedBody": "Deze uitvoering heeft geen nieuwe records gemaakt. Elke rij kwam overeen met iets dat al bestond, dus er is niets gewijzigd.",
+        "claimedBySamePackage": "Al gemigreerd door dit pakket",
+        "claimedByOtherPackage": "Al gemigreerd door {{file}}",
+        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit"
       }
     },
     "jobDetails": {
@@ -2846,7 +3057,8 @@
         "fieldCount": "Velden",
         "order": "Volgorde",
         "actions": "Acties",
-        "openMenu": "Menu openen"
+        "openMenu": "Menu openen",
+        "searchPlaceholder": "Assettypen zoeken…"
       },
       "actions": {
         "addType": "Assettype toevoegen",
@@ -3141,7 +3353,9 @@
       "nameRequired": "Statusnaam is verplicht",
       "nameEmpty": "De statusnaam mag niet leeg zijn",
       "idRequired": "Status-ID is verplicht",
-      "manageFromBoard": "Ticketstatussen moeten worden beheerd via de bordinstellingen"
+      "manageFromBoard": "Ticketstatussen moeten worden beheerd via de bordinstellingen",
+      "closedCannotBeDefault": "Een afgesloten status kan niet de standaardstatus zijn",
+      "defaultMustStayOpen": "Stel een andere status als standaard in voordat u deze afsluit"
     },
     "priority": {
       "notFound": "Prioriteit niet gevonden.",

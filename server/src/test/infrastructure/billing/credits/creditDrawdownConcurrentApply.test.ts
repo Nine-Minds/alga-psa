@@ -398,6 +398,39 @@ describe('applyCreditToInvoiceInternal under concurrent applications', () => {
     expect(await creditsSpent(creditIds)).toBe(eligibleCap);
   }, 60000);
 
+  it('waits for an in-flight cash payment before calculating remaining credit headroom', async () => {
+    const clientId = await seedClient('Cash payment before credit');
+    const invoiceId = await seedInvoice(clientId, 10000, 10000);
+    const creditId = await seedCredit(clientId, 10000);
+    const payment = await db.transaction();
+    let applying: Promise<{ result?: { appliedAmount: number }; error?: unknown }> | undefined;
+    try {
+      // Represent a payment writer holding the shared invoice lock with its
+      // cash row not yet committed. The state-model suite separately exercises
+      // the real payment ingestion path that writes these rows.
+      await payment('invoices').where({ tenant: tenantId, invoice_id: invoiceId }).forUpdate().first();
+      await payment('invoice_payments').insert({
+        tenant: tenantId, invoice_id: invoiceId, amount: 6000,
+        payment_method: 'model', reference_number: 'in-flight-cash', payment_date: new Date(),
+      });
+      applying = applyCreditToInvoiceInternal(
+        tenantId, { ...currentUserRef.user, user_id: userId }, clientId, invoiceId, 10000,
+      ).then(result => ({ result }), error => ({ error }));
+      await waitForLockWaiters(1);
+      expect(await creditsSpent([creditId])).toBe(0);
+      await payment.commit();
+      const outcome = await applying;
+      if (outcome.error) throw outcome.error;
+      expect(outcome.result).toEqual({ appliedAmount: 4000 });
+      expect(await invoiceState(invoiceId)).toEqual({ creditApplied: 4000, allocationTotal: 4000 });
+      expect(await creditsSpent([creditId])).toBe(4000);
+    } finally {
+      if (!payment.isCompleted()) await payment.rollback();
+      // Drain the application after releasing the lock even when a probe fails.
+      if (applying) await applying;
+    }
+  }, 60000);
+
   it('two overlapping partial applications aggregate to exactly the eligible subtotal', async () => {
     const eligibleCap = 6000;
     const clientId = await seedClient('Concurrent Partial Client');

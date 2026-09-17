@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
 
+// Exercise the existing feature behavior with the release flag enabled.
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 import React, { useMemo } from 'react';
 import { DndContext } from '@dnd-kit/core';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DesignerSchemaInspector } from './DesignerSchemaInspector';
 import { exportWorkspaceToTemplateAst } from '../ast/workspaceAst';

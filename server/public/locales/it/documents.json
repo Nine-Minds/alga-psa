@@ -73,7 +73,7 @@
       "noPhasesDefined": "Nessuna fase definita"
     },
     "note": {
-      "billedTimePortalDetail": "Il dettaglio degli inserimenti ore di ogni ticket è disponibile nel portale clienti.",
+      "billedTimePortalDetail": "Contatta il tuo fornitore per un dettaglio del tempo fatturato.",
       "pickedBy": "Prelevato da: ____________________     Data: ____________",
       "preTaxTotals": "I totali indicati sono al netto delle imposte. L'imposta applicabile viene calcolata sulla fattura.",
       "thankYouForOrder": "Grazie per il vostro ordine."
@@ -118,5 +118,20 @@
       "typeNotAllowed": "Questo tipo di file non è consentito.",
       "sessionRequired": "Per caricare documenti è necessaria la sessione. Effettuare di nuovo l’accesso."
     }
+  },
+  "time": {
+    "mixed": "Tariffe miste",
+    "unknown": "Tariffa non disponibile",
+    "other": "Altro tempo fatturato",
+    "ticket": "Ticket",
+    "task": "Attività di progetto",
+    "partial": "Parte del tempo fatturato è indicata come servizi perché i dettagli dei ticket non sono disponibili.",
+    "unavailable": "I dettagli dei ticket non sono disponibili. Tutti gli addebiti sono riportati di seguito.",
+    "quantityHours": "Qtà / Ore",
+    "breakdown": "Contatta il tuo fornitore per un dettaglio del tempo fatturato.",
+    "detail": "Dettaglio del tempo fatturato — incluso negli addebiti sopra",
+    "incompleteDetail": "Il dettaglio del tempo fatturato potrebbe essere incompleto.",
+    "detailPartial": "Questo dettaglio include solo le registrazioni di tempo fatturato disponibili.",
+    "detailUnavailable": "Il dettaglio delle registrazioni di tempo fatturato non è disponibile per questa fattura."
   }
 }

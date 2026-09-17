@@ -5,9 +5,13 @@ import { EMPTY_FEATURE_CAPABILITIES, getMyCapabilities, type FeatureCapabilities
 import { useAuth } from "../auth/AuthContext";
 import { useAppResume } from "../hooks/useAppResume";
 import { logger } from "../logging/logger";
+import { TenantThemeBridge } from "../ui/TenantThemeBridge";
+import { parseMobileTheme, type MobileTheme } from "../ui/themeTokens";
 
 export type CapabilitiesContextValue = {
   features: FeatureCapabilities;
+  /** Tenant theme pair from the server; null on older servers and after sign-out. */
+  theme: MobileTheme | null;
   loaded: boolean;
   refresh: () => Promise<void>;
 };
@@ -23,19 +27,21 @@ export function useCapabilities(): CapabilitiesContextValue {
 export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   const { session, refreshSession, baseUrl } = useAuth();
   const [features, setFeatures] = useState<FeatureCapabilities>(EMPTY_FEATURE_CAPABILITIES);
+  const [theme, setTheme] = useState<MobileTheme | null>(null);
   const [loaded, setLoaded] = useState(false);
   const inFlight = useRef(false);
-  const accessToken = session?.accessToken ?? null;
-  const tenantId = session?.tenantId;
+  const signedIn = Boolean(session?.accessToken);
 
+  // Keyed on the session handle, not the token: a rotation must not refetch.
   const refresh = useCallback(async () => {
+    const accessToken = session?.accessToken;
     if (!accessToken || !baseUrl || inFlight.current) return;
     inFlight.current = true;
     try {
       const client = createApiClient({
         baseUrl,
-        getAccessToken: () => accessToken ?? undefined,
-        getTenantId: () => tenantId,
+        getAccessToken: () => session?.accessToken,
+        getTenantId: () => session?.tenantId,
         getUserAgentTag: () => `mobile/${Platform.OS}/capabilities`,
         onAuthError: refreshSession,
       });
@@ -46,8 +52,18 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
           opportunities: result.data.data?.features?.opportunities === true,
           opportunitiesCreate: result.data.data?.features?.opportunitiesCreate === true,
         });
+        // Older servers send no theme block; the app keeps the Alga pair.
+        const themeBlock = result.data.data?.theme;
+        const parsedTheme = parseMobileTheme(themeBlock);
+        if (themeBlock && !parsedTheme) {
+          logger.warn("capabilities.theme_rejected", { pairId: (themeBlock as { pairId?: unknown }).pairId });
+        } else {
+          logger.info("capabilities.theme", { pairId: parsedTheme?.pairId ?? null, version: parsedTheme?.version ?? null });
+        }
+        setTheme(parsedTheme);
       } else {
         // Older servers have no endpoint (404) — every feature stays off.
+        // The theme is left alone: a flaky network should not repaint the app.
         setFeatures(EMPTY_FEATURE_CAPABILITIES);
         if (result.error.kind !== "http" && result.error.kind !== "network") {
           logger.warn("capabilities.fetch_failed", { kind: result.error.kind });
@@ -57,24 +73,33 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
       inFlight.current = false;
       setLoaded(true);
     }
-  }, [accessToken, baseUrl, tenantId, refreshSession]);
+  }, [session, baseUrl, refreshSession]);
 
   useEffect(() => {
-    if (!accessToken) {
+    if (!signedIn) {
       setFeatures(EMPTY_FEATURE_CAPABILITIES);
+      setTheme(null);
       setLoaded(false);
       return;
     }
     void refresh();
-  }, [accessToken, refresh]);
+  }, [signedIn, refresh]);
 
   useAppResume(
     useCallback(() => {
-      if (accessToken) void refresh();
-    }, [accessToken, refresh]),
+      if (signedIn) void refresh();
+    }, [signedIn, refresh]),
   );
 
-  const value = useMemo(() => ({ features, loaded, refresh }), [features, loaded, refresh]);
+  const value = useMemo(
+    () => ({ features, theme, loaded, refresh }),
+    [features, theme, loaded, refresh],
+  );
 
-  return <CapabilitiesContext.Provider value={value}>{children}</CapabilitiesContext.Provider>;
+  return (
+    <CapabilitiesContext.Provider value={value}>
+      <TenantThemeBridge theme={theme} baseUrl={baseUrl} tenantId={session?.tenantId} />
+      {children}
+    </CapabilitiesContext.Provider>
+  );
 }

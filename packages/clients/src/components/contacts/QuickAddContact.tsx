@@ -16,7 +16,7 @@ import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useToast } from '@alga-psa/ui';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
+import { getAllCountries, getTenantDefaultCountry, ICountry } from '@alga-psa/clients/actions/countryActions';
 import {
   validateContactNameField,
   validateEmailAddressField,
@@ -52,6 +52,8 @@ interface QuickAddContactProps {
   onContactAdded: (newContact: IContact) => void;
   clients: IClient[];
   selectedClientId?: string | null;
+  /** Seeds the first phone row (e.g. the caller ID of an unmatched incoming call). */
+  initialPhoneNumber?: string | null;
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
@@ -86,7 +88,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   onClose,
   onContactAdded,
   clients,
-  selectedClientId = null
+  selectedClientId = null,
+  initialPhoneNumber = null,
 }) => {
   const { toast } = useToast();
   const { t } = useTranslation('msp/contacts');
@@ -117,6 +120,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   // Plausibility warnings. Rendered beneath the field; never gate the save.
   const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [localClients, setLocalClients] = useState<IClient[]>([]);
@@ -131,12 +135,14 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       const fetchFormMetadata = async () => {
         try {
-          const [countriesData, suggestionLabels] = await Promise.all([
+          const [countriesData, suggestionLabels, tenantCountry] = await Promise.all([
             countries.length > 0 ? Promise.resolve(countries) : getAllCountries(),
             listContactPhoneTypeSuggestions(),
+            getTenantDefaultCountry(),
           ]);
           setCountries(countriesData);
           setCustomPhoneTypeSuggestions(suggestionLabels);
+          setTenantDefaultCountry(tenantCountry);
         } catch (fetchError: any) {
           console.error('Error fetching contact form metadata:', fetchError);
         }
@@ -149,6 +155,9 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       if (selectedClientId) {
         setClientId(selectedClientId);
+      }
+      if (initialPhoneNumber) {
+        setPhoneNumbers([{ phone_number: initialPhoneNumber, canonical_type: 'work', is_default: true }]);
       }
       setError(null);
     } else {
@@ -174,7 +183,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setFieldErrors({});
       setPendingTags([]);
     }
-  }, [isOpen, selectedClientId]);
+  }, [isOpen, selectedClientId, initialPhoneNumber]);
 
   const mergedClients = React.useMemo(() => {
     const clientIds = new Set(clients.map(c => c.client_id));
@@ -601,6 +610,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                   }
                 }}
                 countries={countries}
+                defaultCountryCode={tenantDefaultCountry?.code}
                 customTypeSuggestions={customPhoneTypeSuggestions}
                 allowEmpty={false}
                 errorMessages={hasAttemptedSubmit ? phoneValidationErrors : undefined}

@@ -1,0 +1,20 @@
+{
+  "status": "route_fix_locally_verified_native_install_pending",
+  "native_job": 101624201410,
+  "finding": "Session-only forwarding guard returned 401 before EE API key middleware",
+  "change": "EE API-key requests delegate to existing API authentication/product gate; CE and session gate retained",
+  "verification": {
+    "before": "2 failures and 2 passes; valid key incorrectly returned 401",
+    "after": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/tmp/alga-extension-key-final.log"
+    },
+    "scope": "Real forwarding route, API auth middleware and product registry; mocked key lookup, context construction, and downstream installation"
+  },
+  "remaining": [
+    "Native extension installation API execution including tier and permission checks",
+    "Other plan requirements and browser failures"
+  ]
+}

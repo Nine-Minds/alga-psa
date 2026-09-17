@@ -55,6 +55,19 @@ describe('getSsoProviderOptions', () => {
 
     expect(optionFor(options, 'azure-ad').configured).toBe(true);
     expect(optionFor(options, 'google').configured).toBe(true);
+    expect(optionFor(options, 'keycloak').configured).toBe(true);
+  });
+
+  it('reports keycloak from app-level secrets only', async () => {
+    hasTenantProviderCredentials.mockResolvedValue(false);
+    hasAppFallbackProviderCredentials.mockImplementation(async (provider: string) => provider === 'keycloak');
+
+    const options = await getSsoProviderOptions(TENANT_ID);
+
+    expect(optionFor(options, 'keycloak').configured).toBe(true);
+    expect(optionFor(options, 'google').configured).toBe(false);
+    expect(optionFor(options, 'azure-ad').configured).toBe(false);
+    expect(hasAppFallbackProviderCredentials).toHaveBeenCalledWith('keycloak');
   });
 
   it('checks only app-level credentials when no tenant is supplied', async () => {

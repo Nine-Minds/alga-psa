@@ -6,23 +6,23 @@ exports.seed = async function (knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const managerId = (username) => db.table('users')
+    const managerId = async (username) => (await db.table('users')
         .where({ username })
         .select('user_id')
-        .first();
+        .first())?.user_id ?? null;
 
     return db.table('teams').insert([
         {
             tenant: tenantId,
             team_id: knex.raw('gen_random_uuid()'),
             team_name: 'Wonderland Team',
-            manager_id: managerId('glinda')
+            manager_id: await managerId('glinda')
         },
         {
             tenant: tenantId,
             team_id: knex.raw('gen_random_uuid()'),
             team_name: 'Oz Team',
-            manager_id: managerId('dorothy')
+            manager_id: await managerId('dorothy')
         }
     ]);
 };

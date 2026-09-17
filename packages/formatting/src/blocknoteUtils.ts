@@ -111,6 +111,14 @@ export function convertBlockNoteToMarkdown(blocks: any): string {
     blockData = blocks;
   }
 
+  // Documents saved by the collaborative editor are stored as a ProseMirror
+  // root ({ type: 'doc', content: [...] }); its paragraphs use the same
+  // inline shape as BlockNote blocks, so unwrap to the block list.
+  const maybeDoc = blockData as any;
+  if (maybeDoc && !Array.isArray(maybeDoc) && maybeDoc.type === 'doc' && Array.isArray(maybeDoc.content)) {
+    blockData = maybeDoc.content;
+  }
+
   // Try conversion methods in sequence and use the first one that works
   let markdown: string = "";
 
@@ -175,12 +183,7 @@ function extractRawText(blocks: Block[] | PartialBlock[]): string {
           textParts.push(obj.text);
         }
 
-        // Look for content property
-        if (obj.content) {
-          extractTextFromObject(obj.content);
-        }
-
-        // Recursively check all properties
+        // Recursively check all properties (content included, exactly once).
         Object.values(obj).forEach(value => {
           if (typeof value === 'object' || Array.isArray(value)) {
             extractTextFromObject(value);

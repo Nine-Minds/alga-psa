@@ -43,8 +43,6 @@ import {
   type ServiceRequestDefinitionErrorCode,
   SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG,
   applyStoreOnlyAuthoringGateToEditorData,
-  isBlockedStoreOnlyAdoption,
-  storeOnlyAuthoringDisabledMessage,
 } from '../../../lib/service-requests';
 import { featureFlags } from '../../../lib/feature-flags/featureFlags';
 import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
@@ -260,7 +258,6 @@ export const duplicateServiceRequestDefinitionAction = withAuth(async (
       tenant,
       sourceDefinitionId: definitionId,
       createdBy: getActorId(user),
-      storeOnlyAuthoringEnabled: await isStoreOnlyAuthoringEnabled(user, tenant),
     });
     return serviceRequestSuccess(created);
   } catch (error) {
@@ -292,11 +289,6 @@ export const updateServiceRequestExecutionProviderAction = withAuth(async (
 ): Promise<ServiceRequestDefinitionManagementRow> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'update', knex);
-
-  const storeOnlyEnabled = await isStoreOnlyAuthoringEnabled(user, tenant);
-  if (isBlockedStoreOnlyAdoption(executionProvider, storeOnlyEnabled)) {
-    throwHttpError(403, storeOnlyAuthoringDisabledMessage('Selecting the store-only execution provider'));
-  }
 
   return saveServiceRequestDefinitionDraft({
     knex,
@@ -521,9 +513,7 @@ export const validateServiceRequestDefinitionForPublishAction = withAuth(async (
 ): Promise<ServiceRequestPublishValidationResult> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'update', knex);
-  return validateServiceRequestDefinitionForPublish(knex, tenant, definitionId, {
-    storeOnlyAuthoringEnabled: await isStoreOnlyAuthoringEnabled(user, tenant),
-  });
+  return validateServiceRequestDefinitionForPublish(knex, tenant, definitionId);
 });
 
 export const publishServiceRequestDefinitionAction = withAuth(async (
@@ -538,7 +528,6 @@ export const publishServiceRequestDefinitionAction = withAuth(async (
     tenant,
     definitionId,
     publishedBy: getActorId(user),
-    storeOnlyAuthoringEnabled: await isStoreOnlyAuthoringEnabled(user, tenant),
   });
 });
 

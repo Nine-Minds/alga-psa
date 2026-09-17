@@ -73,7 +73,7 @@
       "noPhasesDefined": "Geen fasen gedefinieerd"
     },
     "note": {
-      "billedTimePortalDetail": "Een gedetailleerd overzicht van de tijdregistraties per ticket is beschikbaar in het klantenportaal.",
+      "billedTimePortalDetail": "Neem contact op met uw dienstverlener voor een specificatie van de gefactureerde tijd.",
       "pickedBy": "Gepickt door: ____________________     Datum: ____________",
       "preTaxTotals": "De getoonde totalen zijn exclusief belasting. De verschuldigde belasting wordt op uw factuur berekend.",
       "thankYouForOrder": "Bedankt voor uw order."
@@ -118,5 +118,20 @@
       "typeNotAllowed": "Dit bestandstype is niet toegestaan.",
       "sessionRequired": "Uw sessie is vereist om documenten te uploaden. Meld u opnieuw aan."
     }
+  },
+  "time": {
+    "mixed": "Verschillende tarieven",
+    "unknown": "Tarief niet beschikbaar",
+    "other": "Overige gefactureerde tijd",
+    "ticket": "Ticket",
+    "task": "Projecttaak",
+    "partial": "Een deel van de gefactureerde tijd wordt als diensten weergegeven omdat ticketdetails ontbreken.",
+    "unavailable": "Ticketdetails zijn niet beschikbaar. Alle kosten staan hieronder.",
+    "quantityHours": "Aantal / Uren",
+    "breakdown": "Neem contact op met uw dienstverlener voor een specificatie van de gefactureerde tijd.",
+    "detail": "Tijdspecificatie — inbegrepen in bovenstaande kosten",
+    "incompleteDetail": "De tijdspecificatie is mogelijk onvolledig.",
+    "detailPartial": "Deze specificatie bevat alleen beschikbare gefactureerde tijdregistraties.",
+    "detailUnavailable": "De specificatie van gefactureerde tijdregistraties is niet beschikbaar voor deze factuur."
   }
 }

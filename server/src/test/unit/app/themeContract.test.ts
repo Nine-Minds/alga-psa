@@ -21,6 +21,7 @@ import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { THEME_PAIRS } from '@alga-psa/tenancy/lib/themePairs';
+import { CUSTOM_THEME_PRESETS, generateCustomThemeStyles } from '@alga-psa/tenancy/lib/customTheme';
 
 const REPO = path.resolve(__dirname, '../../../../..');
 const GLOBALS = path.resolve(__dirname, '../../../app/globals.css');
@@ -500,6 +501,19 @@ describe('picker surface contract', () => {
 
     expect(offenders, `receding/hardcoded surface(s):\n${offenders.join('\n')}`).toEqual([]);
   });
+
+  /**
+   * The country-code badges shipped filled with border-200 and no ink of their
+   * own — 1.09:1 in high-contrast dark, where that rung is a near-white
+   * hairline and the inherited ink is white. Layer 6 cannot see it: the element
+   * names no foreground token at all, so only the fill is measurable.
+   */
+  it('CountryPicker.tsx tints its country-code badges with a chip utility', () => {
+    const badges = read('CountryPicker.tsx').split('\n').filter((line) => line.includes('font-mono'));
+
+    expect(badges).toHaveLength(2);
+    badges.forEach((line) => expect(line.trim()).toContain('chip-neutral'));
+  });
 });
 
 /* ------------------------------------------------------------------------- *
@@ -525,12 +539,43 @@ function contrast(a: number[], b: number[]): number {
 const triple = (v: string | undefined) =>
   v ? v.trim().split(/[\s,]+/).map(Number).filter((n) => !Number.isNaN(n)).slice(0, 3) : null;
 
+/** Token map for a selector's block inside an arbitrary stylesheet. */
+function tokensIn(source: string, selector: string): Record<string, string> {
+  const start = source.indexOf(`${selector} {`);
+  expect(start, `missing block: ${selector}`).toBeGreaterThan(-1);
+  const body = source.slice(start, start + source.slice(start).indexOf('\n    }'));
+  const tokens: Record<string, string> = {};
+  for (const line of body.split('\n')) {
+    const match = /^\s*(--[a-z0-9-]+):\s*([^;]+);/.exec(line);
+    if (match) tokens[match[1]] = match[2].trim();
+  }
+  return tokens;
+}
+
+/**
+ * The custom pair has no block in globals.css — its CSS is derived at render
+ * time from the tenant's ~15 tokens — so every layer here used to skip it. That
+ * is how a mid-grey light shell ground shipped: the High-contrast seed derived
+ * `--color-border-100: #888888` and nothing in this suite could see it. Each
+ * preset is measured as the pair a tenant gets by opening the editor on it.
+ */
+const CUSTOM_PAIRS = Object.keys(CUSTOM_THEME_PRESETS).map((id) => `custom:${id}`);
+
 function themeTokens(mode: 'light' | 'dark', pair: string): Record<string, string> {
   const base = tokensOf(`html.${mode}`);
-  return pair === 'alga' ? base : { ...base, ...tokensOf(`html.${mode}[data-theme-pair="${pair}"]`) };
+  if (pair === 'alga') return base;
+  if (pair.startsWith('custom:')) {
+    const preset = CUSTOM_THEME_PRESETS[pair.slice('custom:'.length) as keyof typeof CUSTOM_THEME_PRESETS];
+    const generated = generateCustomThemeStyles(preset);
+    return { ...base, ...tokensIn(generated, `html.${mode}[data-theme-pair="custom"]`) };
+  }
+  return { ...base, ...tokensOf(`html.${mode}[data-theme-pair="${pair}"]`) };
 }
 
 const ALL_PAIRS = ['alga', ...THEME_PAIRS.map((p) => p.id).filter((id) => id !== 'alga' && id !== 'custom')];
+
+/** Everything a tenant can actually be looking at: the shipped pairs and the derived ones. */
+const MEASURED_PAIRS = [...ALL_PAIRS, ...CUSTOM_PAIRS];
 
 /**
  * Status fills are the SAME colour in both modes (#f59e0b amber, #ef4444 red),
@@ -758,6 +803,11 @@ describe('element colour contrast', () => {
         if (!fgUse || !bgUse) continue;
         if (mode === 'light') sites += 1;
 
+        // Shipped pairs only. Widening this sweep to the derived pairs surfaces
+        // 15 pre-existing `text-500 on border-100` sites at 4.44:1, because the
+        // generated light ramp lands its shade-100 a hair under the hand-tuned
+        // one in globals.css — its own fix, not this one's. The derived pairs
+        // are measured by the tab chrome layer below.
         for (const pair of ALL_PAIRS) {
           const tokens = themeTokens(mode, pair);
           const card = resolveTriple(tokens, '--color-card') ?? [255, 255, 255];
@@ -801,5 +851,66 @@ describe('element colour contrast', () => {
   it('keeps the element baseline honest — a fixed pair must be struck from the list', () => {
     const stale = [...ELEMENT_CONTRAST_BASELINE].filter((key) => !failures.has(key));
     expect(stale, `now passing — remove from ELEMENT_CONTRAST_BASELINE:\n${stale.join('\n')}`).toEqual([]);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Layer 7 — tab chrome ink.
+ *
+ * Tab names shipped as `text-gray-500`, which only inverts through the `.dark
+ * .text-gray-*` shims: in LIGHT mode they stayed #6B7280 whatever the pair did,
+ * 4.43:1 on the high-contrast ground. No layer above could see it — a gray
+ * utility names no token, and the custom pair (whose light ground the generator
+ * derived as a mid-grey) was never measured at all.
+ *
+ * So this one measures both halves: the rungs the tab chrome actually names,
+ * against the ground the strip rests on and the card behind it, in every
+ * shipped pair AND every pair the generator derives from a preset seed.
+ * ------------------------------------------------------------------------- */
+
+const TAB_CHROME_FILES = [
+  'packages/ui/src/components/CustomTabs.tsx',
+  'packages/ui/src/components/Tabs.tsx',
+];
+
+describe('tab chrome ink', () => {
+  const INK = /(?:([a-z-]+):)?text-\[rgb\(var\((--color-[a-z0-9-]+)\)\)\]/g;
+  const sources = TAB_CHROME_FILES.map((file) => fs.readFileSync(path.join(REPO, file), 'utf8'));
+
+  /** Rungs the chrome rests on: hover/focus states are not what the eye reads. */
+  const rungs = [...new Set(sources.flatMap((src) => [...src.matchAll(INK)]
+    .filter((match) => !match[1] || match[1] === 'dark')
+    .map((match) => match[2])))];
+
+  it('paints its resting ink from token rungs, never a gray utility', () => {
+    // Guard the guard: a className shape change that stopped matching would make
+    // the contrast assertion below pass over an empty set.
+    expect(rungs).toContain('--color-text-600');
+    expect(rungs.length).toBeGreaterThanOrEqual(2);
+    sources.forEach((src, index) => {
+      expect(src, TAB_CHROME_FILES[index]).not.toMatch(/\b(?:text|bg|border)-(?:gray|slate)-\d{2,3}\b/);
+    });
+  });
+
+  it('keeps every resting rung legible on the shell ground and the card', () => {
+    const failures: string[] = [];
+    (['light', 'dark'] as const).forEach((mode) => {
+      MEASURED_PAIRS.forEach((pair) => {
+        const tokens = themeTokens(mode, pair);
+        rungs.forEach((rung) => {
+          const fg = resolveTriple(tokens, rung);
+          ['--color-app-ground', '--color-card'].forEach((surface) => {
+            const bg = resolveTriple(tokens, surface);
+            if (!fg || !bg) return;
+            const ratio = contrast(fg, bg);
+            if (ratio < 4.5) {
+              failures.push(`${pair}/${mode}: ${rung} on ${surface} = ${ratio.toFixed(2)}:1`);
+            }
+          });
+        });
+      });
+    });
+
+    expect(failures, `tab chrome ink below WCAG AA:\n${failures.join('\n')}`).toEqual([]);
   });
 });

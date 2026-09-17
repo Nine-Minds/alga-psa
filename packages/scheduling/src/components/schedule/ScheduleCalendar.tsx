@@ -1,7 +1,9 @@
 'use client'
 
+import toast from 'react-hot-toast';
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
+import { calendarDisplayDates } from '../../lib/calendarDateDisplay';
 import dynamic from 'next/dynamic';
 import { momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
@@ -28,7 +30,8 @@ import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
-import { getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest } from '@alga-psa/scheduling/actions';
+import { ScheduleCalendarEventContext, ScheduleCalendarEventRenderer } from './ScheduleCalendarEventRenderer';
+import { getScheduleEntries, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest } from '@alga-psa/scheduling/actions';
 import { IEditScope, IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { produce } from 'immer';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -46,6 +49,18 @@ import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Label } from '@alga-psa/ui/components/Label';
 import { isSourceOwnedWorkItemType } from '../../lib/entryOwnedWorkItems';
+import { slotFromCalendarSelection } from '../../lib/workItemScheduling';
+import { droppedEntryDates, movedEntryUpdate, resizedEntryDates } from '../../lib/entryMoves';
+
+// A local save can succeed while its Teams reschedule fails. Every calendar
+// update gesture must surface the server warning without reverting that save.
+async function updateScheduleEntry(...args: Parameters<typeof updateScheduleEntryAction>) {
+  const result = await updateScheduleEntryAction(...args);
+  if (result.success && result.teamsMeetingWarning) {
+    toast(result.teamsMeetingWarning, { icon: '⚠️' });
+  }
+  return result;
+}
 
 const localizer = momentLocalizer(moment);
 
@@ -415,23 +430,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   }, [fetchEvents]);
 
   const handleSelectSlot = (slotInfo: any) => {
-    // For month view, adjust the start time to 8am and end time to be 15 minutes after
-    let adjustedSlotInfo = { ...slotInfo };
-    if (view === 'month') {
-      const startDate = new Date(slotInfo.start);
-      // Set the start time to 8am
-      startDate.setHours(8, 0, 0, 0);
-      
-      const endDate = new Date(startDate);
-      endDate.setMinutes(startDate.getMinutes() + 15);
-      
-      adjustedSlotInfo = {
-        ...slotInfo,
-        start: startDate,
-        end: endDate
-      };
-    }
-    
+    // A date-only (month) selection is pinned to 8am for one grid step.
+    const adjustedSlotInfo = {
+      ...slotInfo,
+      ...slotFromCalendarSelection(slotInfo, view, { durationMs: 15 * 60 * 1000 }),
+    };
+
     setSelectedSlot({
       ...adjustedSlotInfo,
       defaultAssigneeId: focusedTechnicianId,
@@ -651,13 +655,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     const originalStart = new Date(event.scheduled_start);
     const originalEnd = new Date(event.scheduled_end);
 
-    const updatedEvent = {
-      ...event,
-      scheduled_start: start,
-      scheduled_end: end,
-      assigned_user_ids: event.assigned_user_ids,
-      ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
-    };
+    const updatedEvent = movedEntryUpdate(event, resizedEntryDates(event, { start, end }));
 
     // Update local state immediately for responsive UI
     updateEventLocally(updatedEvent);
@@ -677,131 +675,34 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
 
   const handleEventDrop = async ({ event, start, end, isAllDay }: any) => {
     if (isSourceOwnedWorkItemType(event?.work_item_type)) return;
-    // Get original event details - these are the source of truth
-    const originalStart = new Date(event.scheduled_start);
-    const originalEnd = new Date(event.scheduled_end);
-    const originalDuration = originalEnd.getTime() - originalStart.getTime();
-    const isOriginallyMultiDay = originalStart.toDateString() !== originalEnd.toDateString();
+    const updatedEvent = movedEntryUpdate(event, droppedEntryDates(event, { start, end, isAllDay }));
+    const finalStart = updatedEvent.scheduled_start;
 
-    // CRITICAL: Always preserve exact original times for multi-day events
-    let finalStart: Date;
-    let finalEnd: Date;
-
-    // Calculate the day offset - use only the date part, ignore times from drop
-    const dropDate = new Date(start);
-    const originalDateOnly = new Date(originalStart.getFullYear(), originalStart.getMonth(), originalStart.getDate());
-    const dropDateOnly = new Date(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate());
-    const dayDifference = Math.round((dropDateOnly.getTime() - originalDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (isOriginallyMultiDay || isAllDay) {
-      // Multi-day event or event in all-day section: IGNORE drop times completely
-      // Only use the day difference to shift the original times
-      finalStart = new Date(
-        originalStart.getFullYear(),
-        originalStart.getMonth(),
-        originalStart.getDate() + dayDifference,
-        originalStart.getHours(),
-        originalStart.getMinutes(),
-        originalStart.getSeconds(),
-        originalStart.getMilliseconds()
-      );
-      finalEnd = new Date(finalStart.getTime() + originalDuration);
-    } else {
-      // For single-day events, check if we're dropping in the same day
-      if (dayDifference === 0 && !isAllDay) {
-        // Same day - use the actual drop time
-        const newDuration = end.getTime() - start.getTime();
-
-        // Only use the new times if duration is preserved (within 1 minute tolerance)
-        if (Math.abs(newDuration - originalDuration) < 60000) {
-          finalStart = new Date(start);
-          finalEnd = new Date(end);
-        } else {
-          // Duration changed - preserve original duration
-          finalStart = new Date(start);
-          finalEnd = new Date(finalStart.getTime() + originalDuration);
-        }
-      } else {
-        // Different day or marked as all-day - preserve original time of day
-        finalStart = new Date(
-          dropDate.getFullYear(),
-          dropDate.getMonth(),
-          dropDate.getDate(),
-          originalStart.getHours(),
-          originalStart.getMinutes(),
-          originalStart.getSeconds()
-        );
-        finalEnd = new Date(finalStart.getTime() + originalDuration);
-      }
-    }
-
-    // Check if we need to navigate to a different week
-    if (view === 'week' && finalStart) {
+    // A drop outside the visible week navigates there first, then saves once
+    // the grid has re-rendered.
+    if (view === 'week') {
       const currentWeekStart = moment(date).startOf('week').toDate();
       const currentWeekEnd = moment(date).endOf('week').toDate();
+      const weekOffset =
+        finalStart < currentWeekStart
+          ? -Math.ceil((currentWeekStart.getTime() - finalStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
+          : finalStart > currentWeekEnd
+            ? Math.ceil((finalStart.getTime() - currentWeekEnd.getTime()) / (7 * 24 * 60 * 60 * 1000))
+            : 0;
 
-      if (finalStart < currentWeekStart) {
-        // Calculate weeks to go back
-        const weeksBack = Math.ceil((currentWeekStart.getTime() - finalStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
-        const newDate = moment(date).subtract(weeksBack, 'weeks').toDate();
-
-        // Navigate to the new week
-        setDate(newDate);
-
-        // Delay the update slightly to allow navigation to complete
+      if (weekOffset !== 0) {
+        setDate(moment(date).add(weekOffset, 'weeks').toDate());
         setTimeout(async () => {
-          const updatedEvent = {
-            ...event,
-            scheduled_start: finalStart,
-            scheduled_end: finalEnd,
-            assigned_user_ids: event.assigned_user_ids,
-            ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
-          };
-
           const result = await updateScheduleEntry(event.entry_id, updatedEvent);
-          if (result.success) {
-            await fetchEvents();
-          } else {
+          if (!result.success) {
             console.error("Drop failed:", result.error);
-            await fetchEvents();
           }
-        }, 150);
-        return; // Exit early since we're handling the update asynchronously
-      } else if (finalStart > currentWeekEnd) {
-        // Calculate weeks to go forward
-        const weeksForward = Math.ceil((finalStart.getTime() - currentWeekEnd.getTime()) / (7 * 24 * 60 * 60 * 1000));
-        const newDate = moment(date).add(weeksForward, 'weeks').toDate();
-
-        setDate(newDate);
-
-        setTimeout(async () => {
-          const updatedEvent = {
-            ...event,
-            scheduled_start: finalStart,
-            scheduled_end: finalEnd,
-            assigned_user_ids: event.assigned_user_ids,
-            ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
-          };
-
-          const result = await updateScheduleEntry(event.entry_id, updatedEvent);
-          if (result.success) {
-            await fetchEvents();
-          } else {
-            console.error("Drop failed:", result.error);
-            await fetchEvents();
-          }
+          await fetchEvents();
         }, 150);
         return;
       }
     }
 
-    const updatedEvent = {
-      ...event,
-      scheduled_start: finalStart,
-      scheduled_end: finalEnd,
-      assigned_user_ids: event.assigned_user_ids,
-      ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
-    };
     updateEventLocally(updatedEvent);
     const result = await updateScheduleEntry(event.entry_id, updatedEvent);
     if (result.success && result.entry && (result.entry.recurrence_pattern || event.recurrence_pattern)) {
@@ -1026,7 +927,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       const updatedEvent: IScheduleEntry = {
         ...event,
         scheduled_start: lastValidStart,
-        scheduled_end: lastValidEnd
+        scheduled_end: lastValidEnd,
+        is_all_day: false,
       };
 
       // Update the event locally for immediate feedback
@@ -1051,6 +953,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         ...event,
         scheduled_start: lastValidStart,
         scheduled_end: lastValidEnd,
+        is_all_day: false,
         assigned_user_ids: event.assigned_user_ids,
         ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
       };
@@ -1075,8 +978,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     document.addEventListener('mouseup', handleResizeEnd);
   }, [focusedTechnicianId, events, updateEventLocally, updateScheduleEntry]);
 
-  // Event component for the calendar
-  const EventComponent = useCallback(({ event }: { event: any }) => {
+  // State changes refresh event content through context without replacing the
+  // component react-big-calendar uses for an in-progress click or drag.
+  const renderEvent = useCallback(({ event }: { event: IScheduleEntry }) => {
     const scheduleEvent = event as IScheduleEntry;
     const isPrimary = focusedTechnicianId !== null &&
                      scheduleEvent.assigned_user_ids?.includes(focusedTechnicianId);
@@ -1292,71 +1196,73 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
             scrollToTime.setHours(8, 0, 0, 0);
             return (
               <Suspense fallback={<CalendarSkeleton height="100%" view={view === 'agenda' ? 'week' : view as 'month' | 'week' | 'day'} showSidebar={false} />}>
-                <DynamicBigCalendar
-                  localizer={localizer}
-                  events={events}
-                  startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
-                  endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
-                  allDayAccessor={(event: object) => {
-                    const scheduleEvent = event as IScheduleEntry;
-                    const start = new Date(scheduleEvent.scheduled_start);
-                    const end = new Date(scheduleEvent.scheduled_end);
+                <ScheduleCalendarEventContext.Provider value={renderEvent}>
+                  <DynamicBigCalendar
+                    localizer={localizer}
+                    events={events}
+                    startAccessor={(event: object) => calendarDisplayDates(event as IScheduleEntry).scheduled_start}
+                    endAccessor={(event: object) => calendarDisplayDates(event as IScheduleEntry).scheduled_end}
+                    allDayAccessor={(event: object) => {
+                      const scheduleEvent = event as IScheduleEntry;
+                      const start = new Date(scheduleEvent.scheduled_start);
+                      const end = new Date(scheduleEvent.scheduled_end);
 
-                    // Check if event spans multiple days
-                    const isMultiDay = start.toDateString() !== end.toDateString();
+                      // Check if event spans multiple days
+                      const isMultiDay = start.toDateString() !== end.toDateString();
 
-                    // Place multi-day events in the all-day section
-                    // They will maintain their visual height of 30px via CSS
-                    return isMultiDay;
-                  }}
-                  eventPropGetter={() => ({
-                    style: {
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      borderRadius: '0px',
-                      padding: '0px',
-                      boxShadow: 'none',
-                      color: 'inherit',
-                    }
-                  })}
-                  style={{ height: '100%' }}
-                  view={view}
-                  date={date}
-                  scrollToTime={scrollToTime}
-                  onView={(newView) => {
-                    setView(newView);
-                  }}
-                  onNavigate={handleNavigate}
-                  selectable
-                  onSelectSlot={handleSelectSlot}
-                  onSelectEvent={handleSelectEvent}
-                  resizableAccessor={(event: object) => {
-                    const scheduleEvent = event as IScheduleEntry;
-                    // Source-owned entries (deal steps) mirror another record;
-                    // resizing here would diverge from it until the next sync.
-                    return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
-                          focusedTechnicianId !== null &&
-                          scheduleEvent?.assigned_user_ids &&
-                          scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                  }}
-                  draggableAccessor={(event: object) => {
-                    const scheduleEvent = event as IScheduleEntry;
-                    return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
-                          focusedTechnicianId !== null &&
-                          scheduleEvent?.assigned_user_ids &&
-                          scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                  }}
-                  onEventResize={handleEventResize}
-                  onEventDrop={handleEventDrop}
-                  step={15}
-                  timeslots={4}
-                  components={{
-                    toolbar: CustomToolbar,
-                    event: EventComponent
-                  }}
-                  defaultView="week"
-                  views={['month', 'week', 'day']}
-                />
+                      // Place multi-day events in the all-day section
+                      // They will maintain their visual height of 30px via CSS
+                      return isMultiDay;
+                    }}
+                    eventPropGetter={() => ({
+                      style: {
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: '0px',
+                        padding: '0px',
+                        boxShadow: 'none',
+                        color: 'inherit',
+                      }
+                    })}
+                    style={{ height: '100%' }}
+                    view={view}
+                    date={date}
+                    scrollToTime={scrollToTime}
+                    onView={(newView) => {
+                      setView(newView);
+                    }}
+                    onNavigate={handleNavigate}
+                    selectable
+                    onSelectSlot={handleSelectSlot}
+                    onSelectEvent={handleSelectEvent}
+                    resizableAccessor={(event: object) => {
+                      const scheduleEvent = event as IScheduleEntry;
+                      // Source-owned entries (deal steps) mirror another record;
+                      // resizing here would diverge from it until the next sync.
+                      return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
+                            focusedTechnicianId !== null &&
+                            scheduleEvent?.assigned_user_ids &&
+                            scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                    }}
+                    draggableAccessor={(event: object) => {
+                      const scheduleEvent = event as IScheduleEntry;
+                      return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
+                            focusedTechnicianId !== null &&
+                            scheduleEvent?.assigned_user_ids &&
+                            scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                    }}
+                    onEventResize={handleEventResize}
+                    onEventDrop={handleEventDrop}
+                    step={15}
+                    timeslots={4}
+                    components={{
+                      toolbar: CustomToolbar,
+                      event: ScheduleCalendarEventRenderer
+                    }}
+                    defaultView="week"
+                    views={['month', 'week', 'day']}
+                  />
+                </ScheduleCalendarEventContext.Provider>
               </Suspense>
             );
           })()}

@@ -478,7 +478,33 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
       ]
     });
     expect(result.ok).toBe(false);
-    expect(result.errors?.some((err: any) => err.code === 'INVALID_EXPR')).toBe(true);
+    expect(result.errors?.some((err: any) => err.code === 'INVALID_EXPRESSION')).toBe(true);
+  });
+
+  it('Publish reports an empty action input expression once, with no type warning. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    const result = await publishWorkflow(workflowId, 1, {
+      id: workflowId,
+      version: 1,
+      name: 'Action inputMapping empty',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'action-1',
+          type: 'action.call',
+          config: {
+            actionId: 'test.echo',
+            version: 1,
+            inputMapping: { value: { $expr: '' } }
+          }
+        }
+      ]
+    });
+    expect(result.ok).toBe(false);
+    const stepErrors = (result.errors ?? []).filter((err: any) => err.stepId === 'action-1');
+    expect(stepErrors.map((err: any) => err.code)).toEqual(['EMPTY_EXPRESSION']);
+    expect(stepErrors[0].message).toContain('remove the mapping');
+    expect((result.warnings ?? []).some((warn: any) => warn.code === 'MAPPING_TYPE_UNKNOWN')).toBe(false);
   });
 
   it('Publish fails when required action inputs are not mapped. Mocks: non-target dependencies.', async () => {
@@ -994,4 +1020,40 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(runDetail.status).toBe('RUNNING');
     expect(runDetail.engine).toBe('temporal');
   });
+});
+
+
+it('starts the shipped email workflow through the application action and rejects invalid email payloads before launch', async () => {
+  const { readFileSync } = await import('node:fs');
+  const path = await import('node:path');
+  const definition = JSON.parse(readFileSync(path.resolve(__dirname, '../../../../shared/workflow/runtime/workflows/email-processing-workflow.v2.json'), 'utf8'));
+  const workflowId = await createDraftWorkflow(definition);
+  const publication = await publishWorkflow(workflowId, definition.version, { ...definition, id: workflowId });
+  expect(publication, JSON.stringify(publication)).toMatchObject({ ok: true, publishedVersion: definition.version });
+  const payload = { tenantId, providerId: 'provider-email-start', emailData: { id: 'message-email-start', subject: 'Please help',
+    from: { email: 'sender@example.invalid' }, body: { text: 'Help with the printer' }, attachments: [] } };
+  const result = await startWorkflowRunAction({ workflowId, workflowVersion: definition.version, payload });
+  const run = await WorkflowRunModelV2.getById(db, result.runId, tenantId);
+  expect(run).toMatchObject({ tenant: tenantId, workflow_id: workflowId, workflow_version: definition.version, status: 'RUNNING', engine: 'temporal', input_json: payload });
+  expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledOnce();
+  expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(expect.objectContaining({
+    runId: result.runId, tenantId, workflowId, workflowVersion: definition.version,
+  }));
+  await expect(startWorkflowRunAction({ workflowId, workflowVersion: definition.version, payload: {
+    ...payload, emailData: { ...payload.emailData, from: { email: 'invalid-address' } },
+  } })).rejects.toMatchObject({ status: 400 });
+  expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledOnce();
+  const attempts = await db('workflow_runs').where({ tenant: tenantId, workflow_id: workflowId });
+  expect(attempts).toHaveLength(2);
+  expect(attempts.find(row => row.status === 'FAILED')).toMatchObject({ temporal_workflow_id: null,
+    input_json: { emailData: { from: { email: 'invalid-address' } } },
+  });
+  const eventRun = await startWorkflowRunAction({ workflowId, workflowVersion: definition.version,
+    eventType: 'INBOUND_EMAIL_RECEIVED', sourcePayloadSchemaRef: 'payload.InboundEmailReceived.v1',
+    payload: { ...payload, occurredAt: '2026-09-07T12:00:00.000Z', actorType: 'SYSTEM' },
+  });
+  expect(await WorkflowRunModelV2.getById(db, eventRun.runId, tenantId)).toMatchObject({
+    input_json: payload, trigger_mapping_applied: true, source_payload_schema_ref: 'payload.InboundEmailReceived.v1',
+  });
+  expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledTimes(2);
 });

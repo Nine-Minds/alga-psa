@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntraConsole } from '@ee/components/settings/integrations/entra/EntraConsole';
 import type { EntraStatusResponse } from '@alga-psa/integrations/actions';
 
@@ -239,6 +239,8 @@ describe('EntraConsole overview', () => {
   });
 
   it('says what the run did in words, not by printing its database status', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-25T12:00:00Z'));
     renderConsole();
 
     await waitFor(() =>
@@ -586,3 +588,5 @@ describe('EntraConsole overview', () => {
     );
   });
 });
+
+afterEach(() => vi.useRealTimers());

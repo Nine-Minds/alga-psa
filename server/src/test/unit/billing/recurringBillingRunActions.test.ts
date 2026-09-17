@@ -28,12 +28,6 @@ vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => (
   generateInvoiceForSelectionInputs: mocks.generateInvoiceForSelectionInputs,
 }));
 
-vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration.constants', () => ({
-  DUPLICATE_RECURRING_INVOICE_CODE: 'DUPLICATE_RECURRING_INVOICE',
-  DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY: 'msp/billing:errors.duplicateRecurringInvoice',
-  NO_BILLING_EMAIL_MESSAGE_KEY: 'msp/invoicing:manualInvoices.errors.NO_BILLING_EMAIL',
-}));
-
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: mocks.publishWorkflowEvent,
 }));
@@ -443,6 +437,22 @@ describe('recurring billing run actions', () => {
     // Approval blockers are not a structured, known failure: they stay generic
     // (no code), so the UI cannot translate them as client remediation.
     expect((result.failures[0] as { code?: string })?.code).toBeUndefined();
+  });
+
+  it('preserves a localized approval blocker count through a grouped run', async () => {
+    const target = buildContractCadenceTarget();
+    mocks.generateInvoiceForSelectionInputs.mockResolvedValueOnce({
+      actionError: 'Localized approval message',
+      messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+      messageParams: { count: '2' },
+    });
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [{ groupKey: 'blocked-approval', selectorInputs: [target.selectorInput] }],
+    });
+    expect(result).toMatchObject({ invoicesCreated: 0, failedCount: 1, failures: [{
+      executionIdentityKey: target.executionWindow.identityKey,
+      errorMessage: 'Localized approval message', code: 'TIME_APPROVAL_REQUIRED', params: { count: '2' },
+    }] });
   });
 
   it('carries NO_BILLING_EMAIL code and client/window attribution through a grouped recurring run', async () => {

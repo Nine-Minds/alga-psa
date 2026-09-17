@@ -33,6 +33,8 @@ export interface IInvoice extends TenantEntity {
   po_number?: string | null;
   /** Client contract assignment that generated this invoice (nullable). */
   client_contract_id?: string | null;
+  /** Support ticket this manual invoice was raised from (nullable; quick-invoice-a-ticket). */
+  ticket_id?: string | null;
   invoice_date: DateValue;
   due_date: DateValue;
   subtotal: number;
@@ -68,6 +70,21 @@ export interface NetAmountItem {
   applies_to_service_id?: string; // Reference a service instead of an item
 }
 
+/**
+ * Identifies the source record a manual invoice line claims, so the line and
+ * that record's billed state move together inside the invoice transaction.
+ *
+ * Used by quick-invoice-a-ticket: a time-entry line marks `time_entries.invoiced`
+ * and writes the `invoice_time_entries` link; a ticket-material line marks the
+ * `ticket_materials` row billed. The claim is validated and snapshotted from the
+ * source rows inside the transaction — callers never supply the work-item
+ * snapshot — so a stale, foreign, or ineligible selection fails the whole
+ * transaction rather than double-bill or bill a source it does not own.
+ */
+export type ManualInvoiceSourceLink =
+  | { kind: 'time_entry'; entryId: string }
+  | { kind: 'ticket_material'; materialId: string };
+
 export interface IInvoiceChargeRecurringDetailPeriod {
   service_period_start?: ISO8601String | null;
   service_period_end?: ISO8601String | null;
@@ -75,8 +92,14 @@ export interface IInvoiceChargeRecurringDetailPeriod {
 }
 
 /** Snapshot row attached to a rendered invoice charge, keyed by source entry. */
-export interface IInvoiceChargeTimeEntrySnapshot extends InvoiceTimeEntrySnapshot {
+export type IInvoiceChargeTimeEntrySnapshot = InvoiceTimeEntrySnapshot & { entryId: string };
+
+export interface IInvoiceChargeTimeEntryLink {
+  itemId: string;
   entryId: string;
+  invoiceId: string;
+  tenant: string;
+  snapshot: unknown;
 }
 
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
@@ -99,6 +122,10 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
    * renderer-only metadata — accounting exports must keep ignoring it.
    */
   time_entry_snapshots?: IInvoiceChargeTimeEntrySnapshot[];
+  /** All persisted links, including missing/invalid snapshots. Never reconstructed. */
+  time_entry_links?: IInvoiceChargeTimeEntryLink[];
+  /** Frozen calculator charge type; null on historical charges, with no backfill. */
+  billing_charge_type?: string | null;
   service_item_kind?: 'service' | 'product';
   service_sku?: string | null;
   service_name?: string | null;
@@ -342,6 +369,7 @@ export interface IConditionalRule {
  */
 export type RecurringInvoiceFailureCode =
   | 'NO_BILLING_EMAIL'
+  | 'TIME_APPROVAL_REQUIRED'
   | 'USAGE_RECORDS_MISSING'
   | 'USAGE_CALCULATION_ERROR'
   | 'USAGE_PERIOD_TOTAL_STALE';

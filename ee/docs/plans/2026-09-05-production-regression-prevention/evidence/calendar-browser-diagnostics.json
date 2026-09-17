@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-browser-diagnostic",
+  "candidateRevision": "9b12c5fa638a6757b990b3894d8f8c1682cddb19",
+  "imageManifest": "sha256:2d3f0db9b006857afd4b5977a39e39e5c9bf29ec703201cf7d9d12a1abe4e88d",
+  "status": "not-accepted",
+  "verifiedBoundaries": [
+    "Real UI Microsoft app creation and calendar binding",
+    "OAuth popup and persisted provider credentials",
+    "Trusted HTTPS Graph subscription validation and webhook delivery",
+    "Vendor event imported into schedule entry and single mapping, visible in UI"
+  ],
+  "failures": [
+    {
+      "scenario": "Default first click on event container or visible title",
+      "observed": "Edit Entry dialog did not appear in two runs.",
+      "artifacts": [
+        "/tmp/alga-calendar-browser-results-third",
+        "/tmp/alga-calendar-browser-results-fourth"
+      ]
+    },
+    {
+      "scenario": "Explicit hover diagnostic",
+      "observed": {
+        "originalNodeConnected": true,
+        "originalTitleConnected": false
+      },
+      "implication": "Outer event wrapper survives while the inner title is replaced during hover. Product root cause and repair remain outstanding."
+    },
+    {
+      "scenario": "UI edit under persistent503 after explicit hover",
+      "observed": "Schedule entry title persisted but provider remained connected; complete journal contains no outbound PATCH request before60s deadline.",
+      "graphRequests": [
+        {
+          "sequence": 1,
+          "method": "GET",
+          "path": "/common/oauth2/v2.0/authorize",
+          "startedAt": "2026-09-06T23:16:37.456Z",
+          "durationMs": 1.4565560000482947,
+          "status": 302,
+          "aborted": false
+        },
+        {
+          "sequence": 2,
+          "method": "POST",
+          "path": "/common/oauth2/v2.0/token",
+          "startedAt": "2026-09-06T23:16:37.695Z",
+          "durationMs": 0.5759890000335872,
+          "status": 200,
+          "aborted": false
+        },
+        {
+          "sequence": 3,
+          "method": "GET",
+          "path": "/v1.0/me",
+          "startedAt": "2026-09-06T23:16:37.881Z",
+          "durationMs": 0.2877030000090599,
+          "status": 200,
+          "aborted": false
+        },
+        {
+          "sequence": 4,
+          "method": "GET",
+          "path": "/v1.0/me/calendars",
+          "startedAt": "2026-09-06T23:16:37.916Z",
+          "durationMs": 0.3824930000118911,
+          "status": 200,
+          "aborted": false
+        },
+        {
+          "sequence": 5,
+          "method": "POST",
+          "path": "/v1.0/subscriptions",
+          "startedAt": "2026-09-06T23:16:38.161Z",
+          "durationMs": 166.10592900007032,
+          "status": 201,
+          "aborted": false
+        },
+        {
+          "sequence": 6,
+          "method": "GET",
+          "path": "/v1.0/me",
+          "startedAt": "2026-09-06T23:16:42.686Z",
+          "durationMs": 0.270077999914065,
+          "status": 200,
+          "aborted": false
+        },
+        {
+          "sequence": 7,
+          "method": "GET",
+          "path": "/v1.0/me/calendarView/delta",
+          "startedAt": "2026-09-06T23:16:42.702Z",
+          "durationMs": 0.5788230000762269,
+          "status": 200,
+          "aborted": false
+        },
+        {
+          "sequence": 8,
+          "method": "GET",
+          "path": "/v1.0/me",
+          "startedAt": "2026-09-06T23:16:42.741Z",
+          "durationMs": 0.27853599993977696,
+          "status": 200,
+          "aborted": false
+        },
+        {
+          "sequence": 9,
+          "method": "GET",
+          "path": "/v1.0/me/calendar/events/event-u-44f42ffc",
+          "startedAt": "2026-09-06T23:16:42.746Z",
+          "durationMs": 0.2296210000058636,
+          "status": 200,
+          "aborted": false
+        }
+      ],
+      "artifacts": [
+        "/tmp/alga-calendar-browser-results-title-hover"
+      ]
+    }
+  ],
+  "diagnosticPass": {
+    "logSha256": "f6c76d2ef19b0801ad44111c928ecf7cd93babc21855f30484ae9303729561ef",
+    "durationSeconds": 34.0,
+    "scope": "One full journey passed with explicit hover and animation-frame wait before clicking; this workaround is not retained as acceptance."
+  },
+  "limitations": [
+    "Locally executed candidate app and source-built emulator, not native browser CI acceptance.",
+    "CE calendar UI exclusion remains collection-only.",
+    "Mailbox and Teams journeys and global provider/release gates remain outstanding."
+  ]
+}

@@ -73,7 +73,7 @@
       "noPhasesDefined": "Aucune phase définie"
     },
     "note": {
-      "billedTimePortalDetail": "Le détail des entrées de temps de chaque ticket est disponible dans le portail client.",
+      "billedTimePortalDetail": "Contactez votre prestataire pour obtenir le détail du temps facturé.",
       "pickedBy": "Prélevé par : ____________________     Date : ____________",
       "preTaxTotals": "Les totaux indiqués sont hors taxes. Les taxes applicables sont calculées sur votre facture.",
       "thankYouForOrder": "Merci pour votre commande."
@@ -118,5 +118,20 @@
       "typeNotAllowed": "Ce type de fichier n’est pas autorisé.",
       "sessionRequired": "Votre session est requise pour téléverser des documents. Veuillez vous reconnecter."
     }
+  },
+  "time": {
+    "mixed": "Tarifs variables",
+    "unknown": "Tarif indisponible",
+    "other": "Autre temps facturé",
+    "ticket": "Ticket",
+    "task": "Tâche de projet",
+    "partial": "Une partie du temps facturé apparaît sous forme de prestations, car les détails des tickets sont indisponibles.",
+    "unavailable": "Les détails des tickets sont indisponibles. Toutes les prestations figurent ci-dessous.",
+    "quantityHours": "Qté / Heures",
+    "breakdown": "Contactez votre prestataire pour obtenir le détail du temps facturé.",
+    "detail": "Détail du temps facturé — inclus dans les prestations ci-dessus",
+    "incompleteDetail": "Le détail du temps facturé peut être incomplet.",
+    "detailPartial": "Seules les écritures de temps facturé disponibles figurent dans ce détail.",
+    "detailUnavailable": "Le détail des écritures de temps facturé est indisponible pour cette facture."
   }
 }

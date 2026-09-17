@@ -1,6 +1,6 @@
 import { createLogger, format, transports } from 'winston';
 import { isTenantSuspended, tenantDb } from '@alga-psa/db';
-import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
+import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 import {
   workflowOneTimeScheduledRunHandler,
@@ -32,6 +32,7 @@ const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
 const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
 const PUBLISH_SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
+const RECOVER_COMMENT_PUBLICATIONS_JOB = 'recover-comment-publications';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
@@ -125,7 +126,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // plain-Node-ESM worker cannot load, so they run server-side: forward the job to
   // the server (which has them registered via registerAllHandlers) over the event
   // bus and let a subscriber execute the real handler for the tenant.
-  const forwardJobToServer = (jobName: string) =>
+  const forwardJobToServer = (jobName: string, options?: { strict: boolean }) =>
     async (jobId: string, data: Record<string, unknown>) => {
       await publishEvent({
         eventType: 'MAINTENANCE_JOB_REQUESTED',
@@ -136,7 +137,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
           jobId,
           data: data ?? {},
         },
-      });
+      }, options);
     };
   registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
@@ -168,6 +169,29 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     'process-telephony-call-notification',
     forwardJobToServer('process-telephony-call-notification'),
   );
+  // 3CX call journaling, enqueued by the app's /api/telephony/3cx/[tenantSlug]/
+  // report-call route with an already-canonical record. The handler reaches the
+  // telephony core and the EE 3CX/Teams libs (src-consumed), so it executes
+  // server-side via the event bus like the Teams call notification above.
+  registerJobHandlerForActivities(
+    'process-telephony-canonical-call',
+    forwardJobToServer('process-telephony-canonical-call'),
+  );
+  // 3CX chat journaling (report-chat route), incoming-call events from the
+  // Call Control consumer, and single-contact phonebook pushes all run
+  // server-side for the same src-consumed-package reason.
+  registerJobHandlerForActivities(
+    'process-threecx-chat',
+    forwardJobToServer('process-threecx-chat'),
+  );
+  registerJobHandlerForActivities(
+    'process-threecx-call-event',
+    forwardJobToServer('process-threecx-call-event'),
+  );
+  registerJobHandlerForActivities(
+    'sync-threecx-phonebook-contact',
+    forwardJobToServer('sync-threecx-phonebook-contact'),
+  );
   // Invoice bundling/delivery, enqueued from billing UI actions via the shared
   // enqueueImmediateJob seam. The handlers live server-side (StorageService,
   // PDF generation), so the worker forwards them like the jobs above.
@@ -178,6 +202,10 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   registerJobHandlerForActivities(
     PUBLISH_SCHEDULED_COMMENT_JOB,
     forwardJobToServer(PUBLISH_SCHEDULED_COMMENT_JOB),
+  );
+  registerJobHandlerForActivities(
+    RECOVER_COMMENT_PUBLICATIONS_JOB,
+    forwardJobToServer(RECOVER_COMMENT_PUBLICATIONS_JOB, { strict: true }),
   );
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these

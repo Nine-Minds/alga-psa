@@ -406,11 +406,17 @@
       "refreshing": "⟦Řḗƒřḗşħīƞɠ...⟧",
       "refreshData": "⟦Řḗƒřḗşħ Ḓȧŧȧ⟧",
       "rebootDevice": "⟦Řḗƀȯȯŧ Ḓḗṽīƈḗ⟧",
+      "rebooting": "⟦Řḗƀȯȯŧīƞɠ...⟧",
       "editAsset": "⟦Ḗḓīŧ Ȧşşḗŧ⟧",
       "deleteAsset": "⟦Ḓḗŀḗŧḗ Ȧşşḗŧ⟧"
     },
     "values": {
       "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧"
+    },
+    "reboot": {
+      "title": "⟦Řḗƀȯȯŧ ḓḗṽīƈḗ?⟧",
+      "message": "⟦{{name}} ẇīŀŀ řḗşŧȧřŧ īḿḿḗḓīȧŧḗŀẏ ŧħřȯŭɠħ {{provider}}. Ȧƞẏȯƞḗ şīɠƞḗḓ īƞ ẇīŀŀ ŀȯşḗ ŭƞşȧṽḗḓ ẇȯřķ.⟧",
+      "confirm": "⟦Řḗƀȯȯŧ ƞȯẇ⟧"
     }
   },
   "assetDetailTabs": {

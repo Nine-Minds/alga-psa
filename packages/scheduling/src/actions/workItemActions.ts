@@ -385,7 +385,10 @@ export const searchPickerWorkItems = withAuth(async (
           this.on('t.ticket_id', '=', 'tr.ticket_id');
         }
       )
-       .whereILike('t.title', db.raw('?', [`%${searchTerm}%`]))
+       .where(function () {
+         this.whereILike('t.title', `%${searchTerm}%`)
+           .orWhereILike('t.ticket_number', `%${searchTerm}%`);
+       })
        .distinctOn('t.ticket_id')
        .modify((queryBuilder) => {
          if (statusFilter === 'all_open') {

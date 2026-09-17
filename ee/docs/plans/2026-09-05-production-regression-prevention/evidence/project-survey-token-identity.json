@@ -1,0 +1,22 @@
+{
+  "scope": "Project survey token identity and expiry events",
+  "baseRevision": "c261e92de0",
+  "workingTreeDirty": true,
+  "behavior": [
+    "Token lookup selects project_id and returns projectId without inventing ticketId",
+    "Ticket invitation mapping remains compatible",
+    "Expired token publishes the correct subject and uses project identity as recipient fallback when no contact is present",
+    "Public invitation view exposes projectId for subsequent response flow"
+  ],
+  "validation": {
+    "passed": 18,
+    "failed": 0,
+    "artifact": "/tmp/alga-survey-project-token-unit.log",
+    "sha256": "96876e502b35f60d53dce142cd94c0d7be1b3dd06b3be2e29ba7e4197b2cac09"
+  },
+  "limits": [
+    "Token unit cases substitute query results; real project token/persistence journey remains required.",
+    "Project response persistence, legacy notification events, invitation delivery and analytics/UI remain incomplete.",
+    "No project dispatch skip removed and no native pass claimed."
+  ]
+}

@@ -1,3 +1,5 @@
+import { cleanupCommentAttachmentDrafts } from './cleanupCommentAttachmentDrafts';
+import { dispatchCommentPublication } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
@@ -17,14 +19,18 @@ async function dispatchScheduledCommentNotification(knex: any, tenantId: string,
   const db = tenantDb(knex, tenantId);
   const comment = await db.table('comments').where({ comment_id: commentId, publish_state: 'published' })
     .whereNull('scheduled_publish_dispatched_at').first();
-  if (!comment) return;
+  if (!comment || comment.deleted_at) return;
+  if (comment.comment_publication_payload) {
+    await dispatchCommentPublication(knex, tenantId, commentId, publishEvent);
+    return;
+  }
   const eventId = comment.scheduled_publish_event_id;
   if (!eventId) throw new Error(`Scheduled comment ${commentId} is missing its durable event id`);
   const author = comment.user_id ? await db.table('users').select('first_name', 'last_name').where({ user_id: comment.user_id }).first() : null;
   await publishEvent({ eventType: 'TICKET_COMMENT_ADDED', payload: {
     tenantId, occurredAt: new Date().toISOString(), ticketId: comment.ticket_id, commentId: comment.comment_id, userId: comment.user_id,
     thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id),
-    comment: { id: comment.comment_id, content: comment.note, author: author ? `${author.first_name} ${author.last_name}` : 'Unknown User', isInternal: false, authorType: comment.author_type, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id) },
+    comment: { id: comment.comment_id, content: comment.note, author: author ? `${author.first_name} ${author.last_name}` : 'Unknown User', isInternal: comment.is_internal, authorType: comment.author_type, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id) },
   } }, { eventId, strict: true });
   await db.table('comments').where({ comment_id: commentId, scheduled_publish_event_id: eventId }).whereNull('scheduled_publish_dispatched_at')
     .update({ scheduled_publish_dispatched_at: knex.fn.now() });
@@ -103,33 +109,39 @@ export async function publishScheduledCommentHandler(data: PublishScheduledComme
 }
 
 /** Re-arms persisted future schedules and immediately catches up overdue rows. */
-export async function reconcileScheduledCommentPublications(): Promise<void> {
+export async function reconcileScheduledCommentPublications(rearmFutureSchedules = true, tenantId?: string): Promise<void> {
   const root = await getConnection(null);
-  const rows = await root('comments').where({ publish_state: 'scheduled' })
-    .select('tenant', 'comment_id', 'ticket_id', 'scheduled_publish_at');
+  const scope = (query: any) => { if (tenantId) query.where('tenant', tenantId); };
+  const rows = await root('comments').modify(scope).where({ publish_state: 'scheduled' }).whereNull('deleted_at')
+    .select('tenant', 'comment_id', 'ticket_id', 'scheduled_publish_at', 'schedule_job_id');
+  const draftTenants = await root('ticket_comment_attachments').modify(scope).distinct('tenant').whereNull('comment_id').whereNull('cleanup_completed_at').where('expires_at', '<=', new Date()).limit(100);
+  for (const row of draftTenants) await cleanupCommentAttachmentDrafts(root, row.tenant);
   const runner = await getJobRunner();
   for (const row of rows) {
-    if (new Date(row.scheduled_publish_at).getTime() <= Date.now()) {
-      await publishScheduledCommentHandler({ tenantId: row.tenant, ticketId: row.ticket_id, commentId: row.comment_id });
-    } else {
-      const scheduled = await runner.scheduleJobAt(
-        PUBLISH_SCHEDULED_COMMENT_JOB,
-        { tenantId: row.tenant, ticketId: row.ticket_id, commentId: row.comment_id },
-        new Date(row.scheduled_publish_at),
-        { singletonKey: `publish-comment:${row.comment_id}` },
-      );
-      await tenantDb(root, row.tenant).table('comments').where({ comment_id: row.comment_id, publish_state: 'scheduled' })
-        .update({ schedule_job_id: scheduled.jobId });
-    }
-    // A previously published row can be left pending only if a process died
-    // after the transition; re-drive its stable event id safely on every boot.
+    try {
+      if (new Date(row.scheduled_publish_at).getTime() <= Date.now()) {
+        await publishScheduledCommentHandler({ tenantId: row.tenant, ticketId: row.ticket_id, commentId: row.comment_id });
+      } else {
+        if (!rearmFutureSchedules && row.schedule_job_id) continue;
+        const scheduled = await runner.scheduleJobAt(
+          PUBLISH_SCHEDULED_COMMENT_JOB,
+          { tenantId: row.tenant, ticketId: row.ticket_id, commentId: row.comment_id },
+          new Date(row.scheduled_publish_at),
+          { singletonKey: `publish-comment:${row.comment_id}` },
+        );
+        await tenantDb(root, row.tenant).table('comments').where({ comment_id: row.comment_id, publish_state: 'scheduled' })
+          .update({ schedule_job_id: scheduled.jobId });
+      }
+    } catch (error) { console.error('Scheduled comment recovery failed', { tenant: row.tenant, commentId: row.comment_id, error }); }
   }
-  const pending = await root('comments').where({ publish_state: 'published' }).whereNotNull('scheduled_publish_event_id').whereNull('scheduled_publish_dispatched_at').select('tenant', 'comment_id');
+  const pending = await root('comments').modify(scope).where({ publish_state: 'published' }).whereNull('deleted_at').whereNotNull('scheduled_publish_event_id').whereNull('scheduled_publish_dispatched_at').limit(100).select('tenant', 'comment_id');
   for (const row of pending) {
-    await dispatchScheduledResponseStateEvent(root, row.tenant, row.comment_id);
-    await dispatchScheduledCommentNotification(root, row.tenant, row.comment_id);
+    try {
+      await dispatchScheduledResponseStateEvent(root, row.tenant, row.comment_id);
+      await dispatchScheduledCommentNotification(root, row.tenant, row.comment_id);
+    } catch (error) { console.error("Pending comment publication failed", { tenant: row.tenant, commentId: row.comment_id, error }); }
   }
-  const pendingResponses = await root('comments').where({ publish_state: 'published' })
+  const pendingResponses = await root('comments').modify(scope).where({ publish_state: 'published' })
     .whereNotNull('scheduled_response_event_id').whereNull('scheduled_response_dispatched_at')
     .select('tenant', 'comment_id');
   for (const row of pendingResponses) await dispatchScheduledResponseStateEvent(root, row.tenant, row.comment_id);
