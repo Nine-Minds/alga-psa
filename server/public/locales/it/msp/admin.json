@@ -665,7 +665,9 @@
     "unsavedNotice": "Le modifiche non salvate in questa schermata non sono incluse. Salva le impostazioni prima di eseguire la diagnostica.",
     "states": {
       "running": "Esecuzione della diagnostica...",
-      "failed": "Diagnostica non riuscita"
+      "failed": "Diagnostica non riuscita",
+      "copyFailed": "Impossibile copiare il pacchetto di assistenza. Usa Scarica per salvarlo come file.",
+      "checking": "Verifica delle impostazioni email…"
     },
     "actions": {
       "retry": "Riprova",
@@ -694,8 +696,41 @@
       "label": "Invia un messaggio di prova (reale)",
       "recipient": "Destinatario",
       "run": "Esegui con invio reale",
-      "invalidRecipient": "Inserisci un indirizzo email del destinatario valido."
-    }
+      "invalidRecipient": "Inserisci un indirizzo email del destinatario valido.",
+      "permissionHelp": "Invia un’email di prova per confermare che questo account possa inviare dalla casella di posta selezionata.",
+      "enableTest": "Invia un’email di prova",
+      "sendTo": "Invia a",
+      "sendTest": "Invia email di prova",
+      "sending": "Invio dell’email di prova…",
+      "unconfirmed": "Non è stato possibile confermare se l’email di prova è stata inviata. Controlla la posta in arrivo del destinatario prima di riprovare."
+    },
+    "introduction": "Verifica le impostazioni email salvate. L’invio di un’email di prova è facoltativo.",
+    "checkStatus": {
+      "pass": "Superato",
+      "warn": "Richiede attenzione",
+      "fail": "Non riuscito",
+      "skip": "Non verificato"
+    },
+    "result": {
+      "pass": "Controlli della configurazione superati",
+      "warn": "Non è stato possibile completare alcuni controlli",
+      "fail": "Un controllo email non è riuscito",
+      "skip": "Non è stato possibile completare alcuni controlli"
+    },
+    "noTestSent": "Questi controlli non hanno inviato alcuna email.",
+    "emailService": "Servizio email",
+    "sender": "Da",
+    "connectedAccount": "Account collegato",
+    "checkAgain": "Verifica di nuovo",
+    "nextSteps": "Passaggi successivi",
+    "limitedChecksHelp": "Alcune informazioni dell’account non erano disponibili per questi controlli. Invia un’email di prova per verificare se l’invio funziona.",
+    "sentItemsHelp": "Non è stato possibile controllare la cartella Posta inviata. Dopo aver inviato un’email di prova, verifica che una copia compaia nella cartella Posta inviata della casella di posta del mittente.",
+    "copyReport": "Copia rapporto",
+    "downloadReport": "Scarica rapporto",
+    "copyConfirmed": "Rapporto copiato negli appunti.",
+    "copyReportFailed": "Impossibile copiare il rapporto. Usa Scarica rapporto per salvarlo come file.",
+    "shareHelp": "Condividi questo rapporto con l’assistenza. Gli indirizzi email e gli identificativi degli account sono nascosti.",
+    "technicalDetails": "Dettagli tecnici per l’assistenza"
   },
   "integrations": {
     "entra": {

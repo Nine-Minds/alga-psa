@@ -665,7 +665,9 @@
     "unsavedNotice": "As alterações não guardadas nesta tela não são incluídas. Guarde as definições antes de executar o diagnóstico.",
     "states": {
       "running": "A executar o diagnóstico...",
-      "failed": "O diagnóstico falhou"
+      "failed": "O diagnóstico falhou",
+      "copyFailed": "Não foi possível copiar o pacote de suporte. Use Baixar para salvá-lo como arquivo.",
+      "checking": "Verificando as configurações de email…"
     },
     "actions": {
       "retry": "Tentar novamente",
@@ -694,8 +696,41 @@
       "label": "Enviar uma mensagem de teste (real)",
       "recipient": "Destinatário",
       "run": "Executar com envio real",
-      "invalidRecipient": "Introduza um endereço de e-mail de destinatário válido."
-    }
+      "invalidRecipient": "Introduza um endereço de e-mail de destinatário válido.",
+      "permissionHelp": "Envie um email de teste para confirmar que esta conta pode enviar pela caixa de correio selecionada.",
+      "enableTest": "Enviar um email de teste",
+      "sendTo": "Enviar para",
+      "sendTest": "Enviar email de teste",
+      "sending": "Enviando email de teste…",
+      "unconfirmed": "Não foi possível confirmar se o email de teste foi enviado. Verifique a caixa de entrada do destinatário antes de tentar novamente."
+    },
+    "introduction": "Verifique suas configurações de email salvas. O envio de um email de teste é opcional.",
+    "checkStatus": {
+      "pass": "Aprovado",
+      "warn": "Requer atenção",
+      "fail": "Falhou",
+      "skip": "Não verificado"
+    },
+    "result": {
+      "pass": "Verificações de configuração aprovadas",
+      "warn": "Não foi possível concluir algumas verificações",
+      "fail": "Uma verificação de email falhou",
+      "skip": "Não foi possível concluir algumas verificações"
+    },
+    "noTestSent": "Estas verificações não enviaram nenhum email.",
+    "emailService": "Serviço de email",
+    "sender": "De",
+    "connectedAccount": "Conta conectada",
+    "checkAgain": "Verificar novamente",
+    "nextSteps": "Próximos passos",
+    "limitedChecksHelp": "Algumas informações da conta não estavam disponíveis para estas verificações. Envie um email de teste para verificar se o envio funciona.",
+    "sentItemsHelp": "Não foi possível verificar a pasta Itens Enviados. Após enviar um email de teste, verifique se uma cópia aparece na pasta Itens Enviados da caixa de correio do remetente.",
+    "copyReport": "Copiar relatório",
+    "downloadReport": "Baixar relatório",
+    "copyConfirmed": "Relatório copiado para a área de transferência.",
+    "copyReportFailed": "Não foi possível copiar o relatório. Use Baixar relatório para salvá-lo como arquivo.",
+    "shareHelp": "Compartilhe este relatório com o suporte. Os endereços de email e os identificadores de conta estão ocultos.",
+    "technicalDetails": "Detalhes técnicos para o suporte"
   },
   "integrations": {
     "entra": {

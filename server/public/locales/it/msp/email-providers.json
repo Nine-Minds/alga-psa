@@ -803,7 +803,8 @@
           "recipientPlaceholder": "tu@esempio.com",
           "testingButton": "Prova in corso...",
           "runButton": "Prova connessione"
-        }
+        },
+        "ticketIdentityRequired": "Scegli un’identità email per i ticket qui sotto per impostare il dominio di invio."
       },
       "ticketingFrom": {
         "title": "Indirizzo mittente per ticketing",
@@ -856,7 +857,8 @@
           "microsoftAddressHelp": "Microsoft 365 richiede che per le email dei ticket venga usata la casella di posta mittente selezionata ({{mailbox}}).",
           "nameLabel": "Nome visualizzato del mittente",
           "namePlaceholder": "Assistenza",
-          "nameHelp": "Lascia vuoto per usare il nome della casella di posta connessa o della bacheca dei ticket."
+          "nameHelp": "Lascia vuoto per usare il nome della casella di posta connessa o della bacheca dei ticket.",
+          "smtpAddressHelp": "Questo indirizzo imposta il dominio del mittente SMTP indicato sopra. Le risposte devono raggiungere una casella di posta in arrivo collegata per apparire nei ticket."
         },
         "notification": {
           "title": "Identità per tutte le altre email",
@@ -876,7 +878,17 @@
         "savingButton": "Salvataggio...",
         "saveButton": "Salva identità dei mittenti"
       },
-      "diagnosticsButton": "Esegui diagnostica email in uscita"
+      "diagnosticsButton": "Esegui diagnostica email in uscita",
+      "saveSettings": "Salva impostazioni in uscita",
+      "discardChanges": "Scarta modifiche",
+      "unsaved": "Modifiche non salvate",
+      "noPendingChanges": "Nessuna modifica non salvata",
+      "saving": "Salvataggio delle impostazioni in uscita…",
+      "saved": "Impostazioni in uscita salvate.",
+      "saveFailed": "Impossibile salvare le impostazioni in uscita. Le modifiche sono ancora presenti. Riprova.",
+      "diagnosticsSaveHelp": "Salva o scarta le modifiche prima di verificare le impostazioni in uscita.",
+      "saveBeforeDomainRemoval": "Salva o scarta le modifiche in uscita prima di rimuovere un dominio.",
+      "senderAddressAfterSave": "Visualizzato dopo il salvataggio."
     },
     "inbound": {
       "intro": "Configura il routing delle email in entrata e l'automazione specifica del provider."

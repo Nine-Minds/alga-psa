@@ -665,7 +665,9 @@
     "unsavedNotice": "Les modifications non enregistrées sur cet écran ne sont pas incluses. Enregistrez les paramètres avant d'exécuter le diagnostic.",
     "states": {
       "running": "Exécution du diagnostic...",
-      "failed": "Le diagnostic a échoué"
+      "failed": "Le diagnostic a échoué",
+      "copyFailed": "Impossible de copier le dossier d’assistance. Utilisez Télécharger pour l’enregistrer dans un fichier.",
+      "checking": "Vérification des paramètres de messagerie…"
     },
     "actions": {
       "retry": "Réessayer",
@@ -694,8 +696,41 @@
       "label": "Envoyer un message de test (réel)",
       "recipient": "Destinataire",
       "run": "Exécuter avec envoi réel",
-      "invalidRecipient": "Saisissez une adresse e-mail de destinataire valide."
-    }
+      "invalidRecipient": "Saisissez une adresse e-mail de destinataire valide.",
+      "permissionHelp": "Envoyez un e-mail de test pour confirmer que ce compte peut envoyer des messages depuis la boîte aux lettres sélectionnée.",
+      "enableTest": "Envoyer un e-mail de test",
+      "sendTo": "Envoyer à",
+      "sendTest": "Envoyer l’e-mail de test",
+      "sending": "Envoi de l’e-mail de test…",
+      "unconfirmed": "Nous n’avons pas pu confirmer si l’e-mail de test a été envoyé. Vérifiez la boîte de réception du destinataire avant de réessayer."
+    },
+    "introduction": "Vérifiez vos paramètres de messagerie enregistrés. L’envoi d’un e-mail de test est facultatif.",
+    "checkStatus": {
+      "pass": "Réussi",
+      "warn": "Attention requise",
+      "fail": "Échec",
+      "skip": "Non vérifié"
+    },
+    "result": {
+      "pass": "Vérifications de configuration réussies",
+      "warn": "Certaines vérifications n’ont pas pu être terminées",
+      "fail": "Une vérification de messagerie a échoué",
+      "skip": "Certaines vérifications n’ont pas pu être terminées"
+    },
+    "noTestSent": "Ces vérifications n’ont envoyé aucun e-mail.",
+    "emailService": "Service de messagerie",
+    "sender": "De",
+    "connectedAccount": "Compte connecté",
+    "checkAgain": "Vérifier à nouveau",
+    "nextSteps": "Étapes suivantes",
+    "limitedChecksHelp": "Certaines informations du compte n’étaient pas disponibles pour ces vérifications. Envoyez un e-mail de test pour vérifier si l’envoi fonctionne.",
+    "sentItemsHelp": "Le dossier Éléments envoyés n’a pas pu être vérifié. Après l’envoi d’un e-mail de test, vérifiez qu’une copie apparaît dans le dossier Éléments envoyés de la boîte aux lettres d’envoi.",
+    "copyReport": "Copier le rapport",
+    "downloadReport": "Télécharger le rapport",
+    "copyConfirmed": "Rapport copié dans le presse-papiers.",
+    "copyReportFailed": "Impossible de copier le rapport. Utilisez Télécharger le rapport pour l’enregistrer dans un fichier.",
+    "shareHelp": "Partagez ce rapport avec l’assistance. Les adresses e-mail et les identifiants de compte sont masqués.",
+    "technicalDetails": "Détails techniques pour l’assistance"
   },
   "integrations": {
     "entra": {

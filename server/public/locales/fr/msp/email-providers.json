@@ -803,7 +803,8 @@
           "recipientPlaceholder": "vous@exemple.com",
           "testingButton": "Test en cours...",
           "runButton": "Tester la connexion"
-        }
+        },
+        "ticketIdentityRequired": "Choisissez une identité de messagerie des tickets ci-dessous pour définir le domaine d’envoi."
       },
       "ticketingFrom": {
         "title": "Adresse d'expéditeur de ticket",
@@ -856,7 +857,8 @@
           "microsoftAddressHelp": "Microsoft 365 exige que l'adresse e-mail des tickets utilise la boîte aux lettres d'envoi sélectionnée ({{mailbox}}).",
           "nameLabel": "Nom d'affichage de l'expéditeur",
           "namePlaceholder": "Support",
-          "nameHelp": "Laissez ce champ vide pour utiliser le nom de la boîte aux lettres connectée ou celui du tableau de tickets."
+          "nameHelp": "Laissez ce champ vide pour utiliser le nom de la boîte aux lettres connectée ou celui du tableau de tickets.",
+          "smtpAddressHelp": "Cette adresse définit le domaine de l’expéditeur SMTP ci-dessus. Les réponses doivent parvenir à une boîte de réception connectée pour apparaître dans les tickets."
         },
         "notification": {
           "title": "Identité e-mail pour tous les autres messages",
@@ -876,7 +878,17 @@
         "savingButton": "Enregistrement…",
         "saveButton": "Enregistrer les identités d'expéditeur"
       },
-      "diagnosticsButton": "Exécuter le diagnostic des e-mails sortants"
+      "diagnosticsButton": "Exécuter le diagnostic des e-mails sortants",
+      "saveSettings": "Enregistrer les paramètres d’envoi",
+      "discardChanges": "Abandonner les modifications",
+      "unsaved": "Modifications non enregistrées",
+      "noPendingChanges": "Aucune modification non enregistrée",
+      "saving": "Enregistrement des paramètres d’envoi…",
+      "saved": "Paramètres d’envoi enregistrés.",
+      "saveFailed": "Impossible d’enregistrer les paramètres d’envoi. Vos modifications sont toujours présentes. Réessayez.",
+      "diagnosticsSaveHelp": "Enregistrez ou abandonnez vos modifications avant de vérifier les paramètres d’envoi.",
+      "saveBeforeDomainRemoval": "Enregistrez ou abandonnez vos modifications des paramètres d’envoi avant de supprimer un domaine.",
+      "senderAddressAfterSave": "Affiché après l’enregistrement."
     },
     "inbound": {
       "intro": "Configurez le routage des e-mails entrants et l'automatisation spécifique au fournisseur."

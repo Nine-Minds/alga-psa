@@ -803,7 +803,8 @@
           "recipientPlaceholder": "sie@beispiel.com",
           "testingButton": "Wird getestet...",
           "runButton": "Verbindung testen"
-        }
+        },
+        "ticketIdentityRequired": "Wählen Sie unten eine Ticket-E-Mail-Identität aus, um die Absenderdomain festzulegen."
       },
       "ticketingFrom": {
         "title": "Absenderadresse für Ticketing",
@@ -856,7 +857,8 @@
           "microsoftAddressHelp": "Microsoft 365 erfordert, dass Ticket-E-Mails das ausgewählte Sendepostfach ({{mailbox}}) verwenden.",
           "nameLabel": "Anzeigename des Absenders",
           "namePlaceholder": "Support",
-          "nameHelp": "Leer lassen, um den Namen des verbundenen Postfachs oder des Ticket-Boards zu verwenden."
+          "nameHelp": "Leer lassen, um den Namen des verbundenen Postfachs oder des Ticket-Boards zu verwenden.",
+          "smtpAddressHelp": "Diese Adresse legt die Domain für den SMTP-Absender oben fest. Antworten müssen ein verbundenes Postfach erreichen, um in Tickets zu erscheinen."
         },
         "notification": {
           "title": "Absenderidentität für alle anderen E-Mails",
@@ -876,7 +878,17 @@
         "savingButton": "Wird gespeichert...",
         "saveButton": "Absenderidentitäten speichern"
       },
-      "diagnosticsButton": "Ausgehende E-Mail-Diagnose ausführen"
+      "diagnosticsButton": "Ausgehende E-Mail-Diagnose ausführen",
+      "saveSettings": "Einstellungen für ausgehende E-Mails speichern",
+      "discardChanges": "Änderungen verwerfen",
+      "unsaved": "Nicht gespeicherte Änderungen",
+      "noPendingChanges": "Keine nicht gespeicherten Änderungen",
+      "saving": "Einstellungen für ausgehende E-Mails werden gespeichert…",
+      "saved": "Einstellungen für ausgehende E-Mails gespeichert.",
+      "saveFailed": "Die Einstellungen für ausgehende E-Mails konnten nicht gespeichert werden. Ihre Änderungen sind noch vorhanden. Versuchen Sie es erneut.",
+      "diagnosticsSaveHelp": "Speichern oder verwerfen Sie Ihre Änderungen, bevor Sie die Einstellungen für ausgehende E-Mails prüfen.",
+      "saveBeforeDomainRemoval": "Speichern oder verwerfen Sie Ihre Änderungen für ausgehende E-Mails, bevor Sie eine Domain entfernen.",
+      "senderAddressAfterSave": "Wird nach dem Speichern angezeigt."
     },
     "inbound": {
       "intro": "Konfigurieren Sie eingehendes E-Mail-Routing und anbieterspezifische Automatisierung."
