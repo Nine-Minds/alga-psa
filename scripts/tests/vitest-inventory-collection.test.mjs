@@ -6,6 +6,35 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectVitestInventory } from '../lib/vitest-inventory-collection.mjs';
 import { readRunnerCollection } from '../lib/read-runner-collection.mjs';
+import { isAdditionalWorkspaceTest, reconcileDiscovery } from '../lib/test-discovery.mjs';
+
+test('Temporal readiness collects the maintenance fan-out behavioral regression', t => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const output = mkdtempSync(path.join(tmpdir(), 'temporal-maintenance-inventory-'));
+  t.after(() => rmSync(output, { recursive: true, force: true }));
+  const file = 'ee/temporal-workflows/src/activities/__tests__/maintenance-fanout-activities.test.ts';
+  const collection = collectVitestInventory({
+    root,
+    output,
+    runner: {
+      runner: 'temporal-readiness',
+      cwd: 'ee/temporal-workflows',
+      cli: 'server/node_modules/vitest/vitest.mjs',
+      config: 'vitest.readiness.config.ts',
+      filters: ['src/activities/__tests__/maintenance-fanout-activities.test.ts'],
+      owner: 'Temporal workflows',
+      runtime: 'Node with activity doubles',
+      env: { TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP: '1' },
+    },
+  });
+
+  assert.equal(collection.status, 'passed');
+  assert.deepEqual(collection.files, [file]);
+  assert.ok(collection.collectedTests > 0);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  const discovery = reconcileDiscovery({ root, candidates: [file], collections: [collection] });
+  assert.equal(discovery.status, 'passed', discovery.failures.join('\n'));
+});
 
 test('real Vitest inventory loads cases without executing bodies and rejects empty or broken modules', t => {
   const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'vitest-inventory-')));
