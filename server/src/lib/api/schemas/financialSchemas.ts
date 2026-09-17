@@ -13,6 +13,7 @@
  */
 
 import { z } from 'zod';
+import { isSupportedCurrency } from '@alga-psa/core';
 import {
   CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
 } from '@shared/billingClients/cadenceOwnerRollout';
@@ -484,26 +485,48 @@ export const addManualItemsSchema = z.object({
 // TAX MANAGEMENT SCHEMAS
 // ============================================================================
 
+/** API inputs are JSON integers in rate-currency minor units, never decimal strings. */
+export const taxCapAmountSchema = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).nullable()
+  .describe('Tax cap in currency_code minor units; null is uncapped, zero charges zero on supported calculation paths.');
+export const taxRateCurrencySchema = z.string().refine(isSupportedCurrency, 'Unsupported rate currency').nullable()
+  .describe('ISO currency restricting the entire rate; null means all invoice currencies.');
+const taxRateDateSchema = z.union([isoDateSchema, z.string().datetime()]);
+
 export const taxRateBaseSchema = z.object({
   tax_rate_id: uuidSchema.optional(),
   region_code: z.string(),
   tax_percentage: z.number(),
-  description: z.string().optional(),
-  start_date: dateSchema,
-  end_date: dateSchema.optional()
+  description: z.string().nullable().optional(),
+  start_date: taxRateDateSchema.optional(),
+  end_date: taxRateDateSchema.nullable().optional(),
+  cap_amount: taxCapAmountSchema.optional(),
+  currency_code: taxRateCurrencySchema.optional()
 });
 
 export const createTaxRateSchema = taxRateBaseSchema.extend({
   tenant: uuidSchema
+}).superRefine((rate, ctx) => {
+  if (rate.cap_amount != null && rate.currency_code == null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['currency_code'], message: 'A tax cap requires an explicit rate currency.' });
+  }
 });
 
+// Effective-row pair validation belongs in the authenticated mutation action.
+// An update may reuse stored currency or preserve a legacy unresolved cap.
 export const updateTaxRateSchema = taxRateBaseSchema.partial();
 
-export const taxRateResponseSchema = taxRateBaseSchema.merge(baseEntitySchema);
+export const taxRateResponseSchema = taxRateBaseSchema.merge(baseEntitySchema).extend({
+  tax_rate_id: uuidSchema,
+  cap_amount: taxCapAmountSchema,
+  currency_code: z.string().nullable(),
+  is_active: z.boolean().optional(),
+  is_composite: z.boolean().optional()
+});
 
 export const taxRateListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
+  sort: z.enum(['created_at', 'updated_at', 'region_code', 'tax_percentage', 'start_date', 'end_date', 'cap_amount', 'currency_code']).default('created_at'),
   region_code: z.string().optional(),
-  effective_date: dateSchema.optional(),
+  effective_date: taxRateDateSchema.optional(),
   is_active: booleanTransform.optional()
 });
 
@@ -520,7 +543,9 @@ export const taxRateAdvancedSchema = z.object({
   is_active: z.boolean().default(true),
   conditions: z.record(z.any()).optional(),
   description: z.string().nullable().optional(),
-  region_code: z.string()
+  region_code: z.string(),
+  cap_amount: taxCapAmountSchema.optional(),
+  currency_code: taxRateCurrencySchema.optional()
 });
 
 export const taxComponentSchema = z.object({
@@ -992,6 +1017,7 @@ export type ContractLineResponse = z.infer<typeof contractLineResponseSchema>;
 
 export type CreateTaxRateRequest = z.infer<typeof createTaxRateSchema>;
 export type UpdateTaxRateRequest = z.infer<typeof updateTaxRateSchema>;
+export type TaxRateListQuery = z.infer<typeof taxRateListQuerySchema>;
 export type TaxRateResponse = z.infer<typeof taxRateResponseSchema>;
 
 export type AccountBalanceReport = z.infer<typeof accountBalanceReportSchema>;

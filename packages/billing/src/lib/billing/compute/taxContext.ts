@@ -1,3 +1,4 @@
+import { normalizeTaxCapAmount, regionalTaxAmount, toRational } from "../taxCapMath";
 import type { ISO8601String } from "@alga-psa/types";
 import type { ChargeComputeTaxContext, ChargeComputeTaxInfo } from "./types";
 
@@ -9,6 +10,8 @@ export interface LoadedChargeTaxRate {
   startDate: ISO8601String;
   endDate: ISO8601String | null;
   currencyCode: string | null;
+  /** Minor units of the rate currency; PostgreSQL bigint may hydrate as a string. */
+  capAmount?: number | string | null;
 }
 
 /**
@@ -121,7 +124,15 @@ export function buildChargeComputeTaxContext(
 
       return applicableRates.length > 0
         ? {
-            taxAmount: Math.ceil((netAmountInCents * combinedRate) / 100),
+            taxAmount: regionalTaxAmount(
+              netAmountInCents,
+              toRational(netAmountInCents),
+              applicableRates.map((rate) => ({
+                percentage: rate.percentage,
+                cap: normalizeTaxCapAmount(rate.capAmount),
+              })),
+              combinedRate,
+            ),
             taxRate: combinedRate,
           }
         : { taxAmount: 0, taxRate: 0 };

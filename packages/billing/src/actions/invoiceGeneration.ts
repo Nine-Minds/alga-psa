@@ -1971,7 +1971,8 @@ async function calculateChargeDetails(
   clientId: string,
   endDate: ISO8601String,
   taxService: TaxService,
-  defaultTaxRegion: string
+  defaultTaxRegion: string,
+  currencyCode: string
 ): Promise<{ netAmount: number; taxCalculationResult: ITaxCalculationResult }> {
   let netAmount: number;
 
@@ -1998,7 +1999,9 @@ async function calculateChargeDetails(
         clientId,
         netAmount,
         endDate,
-        charge.tax_region || defaultTaxRegion
+        charge.tax_region || defaultTaxRegion,
+        true,
+        currencyCode
       )
       : { taxAmount: 0, taxRate: 0 };
   }

@@ -55,6 +55,34 @@
         "selectRegion": "Selecione a região fiscal",
         "percentage": "Insira a porcentagem"
       }
+    },
+    "cap": {
+      "title": "Limite de imposto",
+      "label": "Limite de imposto ({{currencyCode}})",
+      "currency": "Moeda da taxa",
+      "universal": "Todas as moedas de fatura",
+      "optional": "Opcional",
+      "noCap": "Sem limite",
+      "clear": "Limpar limite de imposto",
+      "hint": "Imposto máximo desta taxa por cálculo. Deixe em branco para não aplicar limite. Introduza 0 para não cobrar imposto nos cálculos que usam este limite.",
+      "scopeTitle": "Como se aplicam os limites de imposto",
+      "scope": "Um cálculo regional limita a contribuição de cada taxa antes de somar o imposto, não o total regional. Os cálculos por período aplicam o limite a cada taxa em cada segmento de datas; vários segmentos podem ultrapassar o limite em conjunto. Uma fatura pode incluir vários cálculos. Não é um limite por fatura, cliente, projeto ou período completo. Os limites de faturação de projetos limitam os valores faturáveis; os limites de imposto limitam o imposto calculado. Os fornecedores fiscais externos usam a sua própria configuração.",
+      "applicability": "Esta taxa aplica-se apenas a faturas em {{currencyCode}}. Deixará de ser selecionada para outras moedas.",
+      "composite": "Este limite aplica-se quando esta taxa contribui para um cálculo regional. Os cálculos baseados em componentes não aplicam este limite.",
+      "legacy": "Moeda não especificada · {{amount}} unidades mínimas",
+      "legacyHelp": "Este limite guardado aplica-se atualmente nas unidades mínimas da moeda de cada fatura. Selecione uma moeda e confirme o valor guardado ou introduza um novo limite. Outras alterações mantêm o valor; também pode limpá-lo sem escolher uma moeda.",
+      "resolve": "Usar o valor guardado em unidades mínimas de {{currencyCode}}",
+      "reenter": "Volte a introduzir o limite na nova moeda antes de guardar.",
+      "example": "Exemplo: {{amount}}; sem separadores de milhares.",
+      "errors": {
+        "negative": "Introduza um limite de imposto igual ou superior a zero.",
+        "precision": "O limite tem mais casas decimais do que esta moeda permite.",
+        "invalid": "Introduza um valor com o separador decimal do exemplo, sem sinais, separadores de milhares ou símbolos de moeda.",
+        "overflow": "O limite ultrapassa o valor máximo suportado.",
+        "currency": "Escolha uma moeda suportada antes de definir um limite de imposto.",
+        "reenter": "Volte a introduzir o limite na nova moeda antes de guardar."
+      },
+      "compositeIndicator": "Apenas cálculos regionais"
     }
   },
   "taxRateDetail": {

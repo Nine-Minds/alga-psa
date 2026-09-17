@@ -55,6 +55,34 @@
     "deleteEntity": {
       "fallback": "ce taux d'imposition",
       "withRegion": "taux de taxe {{regionName}}"
+    },
+    "cap": {
+      "title": "Plafond de taxe",
+      "label": "Plafond de taxe ({{currencyCode}})",
+      "currency": "Devise du taux",
+      "universal": "Toutes les devises de facture",
+      "optional": "Facultatif",
+      "noCap": "Aucun plafond",
+      "clear": "Effacer le plafond de taxe",
+      "hint": "Taxe maximale de ce taux pour chaque calcul. Laissez vide pour ne pas appliquer de plafond. Saisissez 0 pour ne facturer aucune taxe dans les calculs qui utilisent ce plafond.",
+      "scopeTitle": "Application des plafonds de taxe",
+      "scope": "Un calcul régional plafonne la contribution de chaque taux avant addition, et non le total régional. Les calculs par période appliquent le plafond à chaque taux dans chaque segment de dates ; plusieurs segments peuvent dépasser le plafond au total. Une facture peut comporter plusieurs calculs. Ce plafond ne porte pas sur une facture, un client, un projet ou une période entière. Les plafonds de facturation de projet limitent les montants facturables ; les plafonds de taxe limitent la taxe calculée. Les prestataires fiscaux externes utilisent leur propre configuration.",
+      "applicability": "Ce taux s’applique uniquement aux factures en {{currencyCode}}. Il ne sera plus sélectionné pour les autres devises.",
+      "composite": "Ce plafond s’applique à la contribution de ce taux à un calcul régional. Les calculs par composants n’appliquent pas ce plafond.",
+      "legacy": "Devise non précisée · {{amount}} unités minimales",
+      "legacyHelp": "Ce plafond enregistré s’applique actuellement dans les unités minimales de chaque devise de facture. Choisissez une devise et confirmez le montant enregistré ou saisissez un nouveau plafond. Les autres modifications préservent cette valeur ; vous pouvez aussi l’effacer sans choisir de devise.",
+      "resolve": "Utiliser le montant enregistré en unités minimales de {{currencyCode}}",
+      "reenter": "Saisissez à nouveau le plafond dans la nouvelle devise avant d’enregistrer.",
+      "example": "Exemple : {{amount}} ; sans séparateur de milliers.",
+      "errors": {
+        "negative": "Saisissez un plafond de taxe supérieur ou égal à zéro.",
+        "precision": "Le plafond comporte plus de décimales que cette devise ne le permet.",
+        "invalid": "Saisissez un montant avec le séparateur décimal de l’exemple, sans signe, séparateur de milliers ni symbole de devise.",
+        "overflow": "Le plafond dépasse le montant maximal pris en charge.",
+        "currency": "Choisissez une devise prise en charge avant de définir un plafond de taxe.",
+        "reenter": "Saisissez à nouveau le plafond dans la nouvelle devise avant d’enregistrer."
+      },
+      "compositeIndicator": "Calculs régionaux uniquement"
     }
   },
   "taxRateDetail": {

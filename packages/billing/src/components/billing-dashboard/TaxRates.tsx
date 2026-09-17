@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/component
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate, DeleteTaxRateResult } from '@alga-psa/billing/actions/taxRateActions';
+import { getTaxRatePermissions, getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate, DeleteTaxRateResult } from '@alga-psa/billing/actions/taxRateActions';
 import { getActiveTaxRegions } from '@alga-psa/billing/actions/taxSettingsActions';
 import { ITaxRate, DeletionValidationResult } from '@alga-psa/types';
 import { ITaxRegion, ITaxRate as FullTaxRate } from '@alga-psa/types';
@@ -28,6 +28,8 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { TaxRateDetailPanel } from './TaxRateDetailPanel';
+import { TaxCapFields, TaxCapReadout } from './TaxCapFields';
+import { createTaxCapDraft, taxCapPayload } from './taxCapForm';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -38,7 +40,14 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 const TaxRates: React.FC = () => {
-  const { t } = useTranslation('msp/service-catalog');
+  const { t, i18n } = useTranslation('msp/service-catalog');
+  const [capDraft, setCapDraft] = useState(() => createTaxCapDraft({}, i18n.language));
+  const [capError, setCapError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = React.useRef(false);
+  const dialogReturnFocusId = React.useRef<string | null>(null);
+  const [permissions, setPermissions] = useState({ canCreate: false, canUpdate: false, canDelete: false });
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentTaxRate, setCurrentTaxRate] = useState<Partial<ITaxRate>>({});
@@ -55,6 +64,18 @@ const TaxRates: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewingTaxRate, setViewingTaxRate] = useState<ITaxRate | null>(null);
+  useEffect(() => {
+    if (isDialogOpen || isLoading || !dialogReturnFocusId.current) return;
+    // The Edit menu item unmounts when its menu closes. Restore to the stable
+    // row trigger after the dialog closes and any saved rows have reloaded.
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(dialogReturnFocusId.current!)
+        ?? document.getElementById('add-tax-rate-button');
+      target?.focus();
+      dialogReturnFocusId.current = null;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isDialogOpen, isLoading]);
   const taxRateToDeleteName = useMemo(() => {
     if (!taxRateIdToDelete) {
       return t('taxRates.deleteEntity.fallback', {
@@ -131,6 +152,12 @@ const TaxRates: React.FC = () => {
   useEffect(() => {
     void fetchTaxRates();
     void fetchTaxRegions();
+    setIsLoadingPermissions(true);
+    void getTaxRatePermissions().then(result => {
+      if (!isActionMessageError(result) && !isActionPermissionError(result)) setPermissions(result);
+      else setPermissions({ canCreate: false, canUpdate: false, canDelete: false });
+    }).catch(() => setPermissions({ canCreate: false, canUpdate: false, canDelete: false }))
+      .finally(() => setIsLoadingPermissions(false));
   }, [fetchTaxRates, fetchTaxRegions]);
 
   const clearErrorIfSubmitted = () => {
@@ -140,7 +167,20 @@ const TaxRates: React.FC = () => {
   };
 
   const handleAddOrUpdateTaxRate = async () => {
+    if (savingRef.current || !(isEditing ? permissions.canUpdate : permissions.canCreate)) return;
     setHasAttemptedSubmit(true);
+    setCapError(null);
+    let capChanges;
+    try {
+      capChanges = taxCapPayload(capDraft, i18n.language, isEditing);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'invalid';
+      const message = t(`taxRates.cap.errors.${code}`);
+      setCapError(message);
+      setValidationErrors([message]);
+      document.getElementById(code === 'currency' ? 'tax-rate-currency-field' : 'tax-rate-cap-field')?.focus();
+      return;
+    }
     const errors: string[] = [];
     
     // Basic validation - Changed region to region_code
@@ -160,16 +200,20 @@ const TaxRates: React.FC = () => {
     }
 
     try {
+      savingRef.current = true;
+      setSaving(true);
       setValidationErrors([]);
+      const { cap_amount: _cap, currency_code: _currency, ...rateFields } = currentTaxRate;
+      const payload = { ...rateFields, ...capChanges };
       if (isEditing) {
-        const result = await updateTaxRate(currentTaxRate as ITaxRate);
+        const result = await updateTaxRate(payload as ITaxRate);
         if (isActionMessageError(result) || isActionPermissionError(result)) {
           setError(getErrorMessage(result));
           return;
         }
       } else {
         const newTaxRateWithId: ITaxRate = {
-          ...currentTaxRate,
+          ...payload,
           tax_rate_id: uuidv4(),
         } as ITaxRate;
         const result = await addTaxRate(newTaxRateWithId);
@@ -179,7 +223,9 @@ const TaxRates: React.FC = () => {
         }
       }
       setIsDialogOpen(false);
-      setCurrentTaxRate({}); // Reverted: Clear state
+      setCurrentTaxRate({});
+      setCapDraft(createTaxCapDraft({}, i18n.language));
+      setCapError(null);
       setIsEditing(false);
       await fetchTaxRates();
       setError(null);
@@ -192,6 +238,9 @@ const TaxRates: React.FC = () => {
           ? t('taxRates.errors.update', { defaultValue: 'Failed to update tax rate' })
           : t('taxRates.errors.add', { defaultValue: 'Failed to add tax rate' }));
       setError(errorMessage);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
@@ -201,6 +250,10 @@ const TaxRates: React.FC = () => {
   };
 
   const handleEditTaxRate = (taxRate: ITaxRate) => {
+    if (!permissions.canUpdate) { setViewingTaxRate(taxRate); return; }
+    dialogReturnFocusId.current = `tax-rate-actions-menu-${taxRate.tax_rate_id}`;
+    setCapDraft(createTaxCapDraft(taxRate, i18n.language));
+    setCapError(null);
     // Reverted: No need for tax_percentage_str
     setCurrentTaxRate({
       ...taxRate,
@@ -298,6 +351,11 @@ const TaxRates: React.FC = () => {
       render: (value) => `${value}%`
     },
     {
+      title: t('taxRates.cap.title'),
+      dataIndex: 'cap_amount',
+      render: (_, rate) => <TaxCapReadout rate={rate} compact />
+    },
+    {
       title: t('taxRates.table.description', { defaultValue: 'Description' }),
       dataIndex: 'description',
       render: (value, record) => (
@@ -358,6 +416,7 @@ const TaxRates: React.FC = () => {
               })}
             </DropdownMenuItem>
             <DropdownMenuItem
+              disabled={!permissions.canUpdate}
               id={`edit-tax-rate-${record.tax_rate_id}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -367,6 +426,7 @@ const TaxRates: React.FC = () => {
               {t('taxRates.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
+              disabled={!permissions.canDelete}
               id={`delete-tax-rate-${record.tax_rate_id}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -388,6 +448,7 @@ const TaxRates: React.FC = () => {
         <TaxRateDetailPanel
           taxRate={viewingTaxRate as unknown as FullTaxRate}
           onBack={handleBackToList}
+          isReadOnly={!permissions.canUpdate}
         />
       </div>
     );
@@ -410,10 +471,14 @@ const TaxRates: React.FC = () => {
           <div className="flex justify-end mb-4">
             <Button
               id="add-tax-rate-button"
+              disabled={!permissions.canCreate}
               onClick={() => {
+                dialogReturnFocusId.current = 'add-tax-rate-button';
                 setIsDialogOpen(true);
                 setIsEditing(false);
-                setCurrentTaxRate({}); // Reverted: Clear state
+                setCurrentTaxRate({});
+                setCapDraft(createTaxCapDraft({}, i18n.language));
+                setCapError(null);
                 setError(null);
                 setHasAttemptedSubmit(false);
                 setValidationErrors([]);
@@ -422,7 +487,7 @@ const TaxRates: React.FC = () => {
               {t('taxRates.actions.addNew', { defaultValue: 'Add New Tax Rate' })}
             </Button>
           </div>
-          {isLoading ? (
+          {isLoading || isLoadingPermissions ? (
             <LoadingIndicator
               layout="stacked"
               className="py-10 text-muted-foreground"
@@ -448,6 +513,7 @@ const TaxRates: React.FC = () => {
       <Dialog
         isOpen={isDialogOpen}
         onClose={() => {
+          if (saving) return;
           setIsDialogOpen(false);
           setHasAttemptedSubmit(false);
           setValidationErrors([]);
@@ -459,8 +525,11 @@ const TaxRates: React.FC = () => {
         }
         footer={(
           <div className="flex justify-end space-x-2">
+            <Button id="cancel-tax-rate-button" type="button" variant="outline" disabled={saving}
+              onClick={() => setIsDialogOpen(false)}>{t('common:actions.cancel')}</Button>
             <Button
               id="save-tax-rate-button"
+              disabled={saving || !(isEditing ? permissions.canUpdate : permissions.canCreate)}
               type="button"
               onClick={() => (document.getElementById('tax-rate-form') as HTMLFormElement | null)?.requestSubmit()}
               className={!currentTaxRate.region_code || !currentTaxRate.tax_percentage || !currentTaxRate.start_date ? 'opacity-50' : ''}
@@ -478,16 +547,17 @@ const TaxRates: React.FC = () => {
               defaultValue: 'Enter the details for the tax rate.',
             })}
           </DialogDescription>
+          {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
           <form id="tax-rate-form" onSubmit={(e) => { e.preventDefault(); handleAddOrUpdateTaxRate(); }} noValidate>
             <div className="space-y-4">
               {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
-                    <p className="font-medium mb-2">
+                    {!capError && <p className="font-medium mb-2">
                       {t('taxRates.validation.requiredFieldsTitle', {
                         defaultValue: 'Please fill in the required fields:',
                       })}
-                    </p>
+                    </p>}
                     <ul className="list-disc list-inside space-y-1">
                       {validationErrors.map((err, index) => (
                         <li key={index}>{err}</li>
@@ -547,6 +617,7 @@ const TaxRates: React.FC = () => {
                 className={hasAttemptedSubmit && !currentTaxRate.tax_percentage ? 'border-red-500' : ''}
               />
             </div>
+            <TaxCapFields draft={capDraft} onChange={draft => { setCapDraft(draft); setCapError(null); clearErrorIfSubmitted(); }} error={capError} composite={currentTaxRate.is_composite} disabled={saving} />
             <div>
               <Label htmlFor="tax-rate-description-field">
                 {t('taxRates.dialog.fields.description', { defaultValue: 'Description' })}

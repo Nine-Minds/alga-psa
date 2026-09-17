@@ -1181,7 +1181,10 @@
       "regionInvalid": "La regione fiscale selezionata non è più valida. Aggiornare la pagina e scegliere un’altra regione.",
       "duplicate": "Esiste già un’aliquota d’imposta per questa regione e questo intervallo di date.",
       "missingField": "Manca un campo obbligatorio dell’aliquota d’imposta.",
-      "missingFieldNamed": "Manca un campo obbligatorio dell’aliquota d’imposta: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio dell’aliquota d’imposta: {{field}}.",
+      "capInvalid": "Il limite deve essere un intero non negativo rappresentabile esattamente in unità minime.",
+      "capCurrencyRequired": "Scegliere una valuta prima di impostare o modificare un limite d’imposta.",
+      "currencyInvalid": "Scegliere una valuta supportata per l’aliquota."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configurare almeno un’aliquota d’imposta attiva prima di creare le impostazioni fiscali predefinite.",

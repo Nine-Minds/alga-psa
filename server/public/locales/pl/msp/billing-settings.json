@@ -1183,7 +1183,10 @@
       "regionInvalid": "Wybrany region podatkowy nie jest już prawidłowy. Odśwież stronę i wybierz inny region.",
       "duplicate": "Dla tego regionu i zakresu dat istnieje już stawka podatku.",
       "missingField": "Brakuje wymaganego pola stawki podatku.",
-      "missingFieldNamed": "Brakuje wymaganego pola stawki podatku: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola stawki podatku: {{field}}.",
+      "capInvalid": "Limit musi być nieujemną liczbą całkowitą możliwą do dokładnego zapisania w najmniejszych jednostkach waluty.",
+      "capCurrencyRequired": "Wybierz walutę przed ustawieniem lub zmianą limitu podatku.",
+      "currencyInvalid": "Wybierz obsługiwaną walutę stawki."
     },
     "tax": {
       "defaultRequiresActiveRate": "Skonfiguruj co najmniej jedną aktywną stawkę podatku przed utworzeniem domyślnych ustawień podatkowych.",

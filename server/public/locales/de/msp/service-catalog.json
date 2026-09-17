@@ -55,6 +55,34 @@
     "deleteEntity": {
       "fallback": "diesem Steuersatz",
       "withRegion": "{{regionName}} Steuersatz"
+    },
+    "cap": {
+      "title": "Steuerobergrenze",
+      "label": "Steuerobergrenze ({{currencyCode}})",
+      "currency": "Währung des Steuersatzes",
+      "universal": "Alle Rechnungswährungen",
+      "optional": "Optional",
+      "noCap": "Keine Obergrenze",
+      "clear": "Steuerobergrenze löschen",
+      "hint": "Maximale Steuer dieses Steuersatzes je Berechnung. Leer lassen für keine Obergrenze. Mit 0 fällt bei Berechnungen, die diese Obergrenze verwenden, keine Steuer an.",
+      "scopeTitle": "Anwendung von Steuerobergrenzen",
+      "scope": "Bei einer regionalen Berechnung wird der Beitrag jedes Steuersatzes vor dem Addieren begrenzt, nicht die regionale Gesamtsumme. Bei Zeitraumberechnungen gilt die Obergrenze je Steuersatz und Datumsabschnitt; mehrere Abschnitte können sie zusammen überschreiten. Eine Rechnung kann mehrere Berechnungen enthalten. Dies ist keine Obergrenze je Rechnung, Kunde, Projekt oder Gesamtzeitraum. Projektabrechnungsgrenzen begrenzen abrechenbare Beträge, Steuerobergrenzen die berechnete Steuer. Externe Steueranbieter verwenden ihre eigene Konfiguration.",
+      "applicability": "Dieser Steuersatz gilt nur für Rechnungen in {{currencyCode}}. Für andere Währungen wird er nicht mehr ausgewählt.",
+      "composite": "Diese Obergrenze gilt für den Beitrag dieses Steuersatzes zu regionalen Berechnungen. Berechnungen anhand von Steuerkomponenten wenden sie nicht an.",
+      "legacy": "Währung nicht angegeben · {{amount}} kleinste Währungseinheiten",
+      "legacyHelp": "Diese gespeicherte Obergrenze gilt derzeit in den kleinsten Einheiten der jeweiligen Rechnungswährung. Wählen Sie eine Währung und bestätigen Sie den gespeicherten Betrag oder geben Sie eine neue Obergrenze ein. Andere Änderungen erhalten den Wert; Sie können ihn auch ohne Währungsauswahl löschen.",
+      "resolve": "Gespeicherten Betrag in kleinsten Einheiten von {{currencyCode}} verwenden",
+      "reenter": "Geben Sie die Obergrenze vor dem Speichern erneut in der neuen Währung ein.",
+      "example": "Beispiel: {{amount}}; ohne Tausendertrennzeichen.",
+      "errors": {
+        "negative": "Geben Sie eine Steuerobergrenze von null oder mehr ein.",
+        "precision": "Die Steuerobergrenze hat mehr Nachkommastellen, als diese Währung erlaubt.",
+        "invalid": "Geben Sie den Betrag mit dem Dezimaltrennzeichen aus dem Beispiel ein, ohne Vorzeichen, Tausendertrennzeichen oder Währungssymbole.",
+        "overflow": "Die Steuerobergrenze überschreitet den maximal unterstützten Betrag.",
+        "currency": "Wählen Sie eine unterstützte Währung, bevor Sie eine Steuerobergrenze festlegen.",
+        "reenter": "Geben Sie die Obergrenze vor dem Speichern erneut in der neuen Währung ein."
+      },
+      "compositeIndicator": "Nur regionale Berechnungen"
     }
   },
   "taxRateDetail": {

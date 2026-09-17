@@ -1181,7 +1181,10 @@
       "regionInvalid": "De geselecteerde belastingregio is niet meer geldig. Vernieuw de pagina en kies een andere regio.",
       "duplicate": "Er bestaat al een belastingtarief voor deze regio en periode.",
       "missingField": "Er ontbreekt een verplicht veld van het belastingtarief.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van het belastingtarief: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het belastingtarief: {{field}}.",
+      "capInvalid": "Het belastingplafond moet een niet-negatief, exact weer te geven geheel getal in kleinste valuta-eenheden zijn.",
+      "capCurrencyRequired": "Kies een valuta voordat u een belastingplafond instelt of wijzigt.",
+      "currencyInvalid": "Kies een ondersteunde valuta voor het tarief."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configureer minstens één actief belastingtarief voordat u standaardbelastinginstellingen aanmaakt.",
