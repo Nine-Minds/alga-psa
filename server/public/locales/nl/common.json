@@ -1599,7 +1599,10 @@
     "defaultClosedHelp": "Een afgesloten status kan niet de standaard voor nieuwe items zijn."
   },
   "callLink": {
-    "teamsCall": "Bellen in Microsoft Teams"
+    "teamsCall": "Bellen in Microsoft Teams",
+    "threecxCall": "Bellen via 3CX",
+    "threecxDialing": "Bellen vanaf uw 3CX-toestel",
+    "threecxFailed": "De PBX kon de oproep niet plaatsen"
   },
   "editor": {
     "attachFiles": "Bestanden bijvoegen",

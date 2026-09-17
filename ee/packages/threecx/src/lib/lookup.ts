@@ -12,6 +12,8 @@ import {
  * dialled number verbatim on a number lookup, and the contact's primary number
  * in E.164 for the email and search paths.
  */
+export type ThreecxEntityType = 'contact' | 'client' | 'pending';
+
 export interface ThreecxContact {
   contactUrl: string;
   firstName: string;
@@ -19,6 +21,9 @@ export interface ThreecxContact {
   companyName: string;
   email: string;
   phone: string;
+  /** Alga id 3CX hands back on ReportCall/ReportChat as [EntityId]. */
+  entityId: string;
+  entityType: ThreecxEntityType;
 }
 
 export interface ThreecxLookupContext {
@@ -79,6 +84,8 @@ async function buildContactFromContactRow(
     companyName: row.client_name ?? '',
     email: row.email ?? '',
     phone,
+    entityId: contactId,
+    entityType: 'contact',
   };
 }
 
@@ -100,6 +107,8 @@ async function buildContactFromClientRow(
     companyName: row.client_name ?? '',
     email: '',
     phone,
+    entityId: clientId,
+    entityType: 'client',
   };
 }
 
@@ -179,6 +188,8 @@ export async function threecxLookupByEmail(
         companyName: row.client_name ?? '',
         email: row.email ?? '',
         phone,
+        entityId: row.contact_name_id,
+        entityType: 'contact' as const,
       };
     }),
   );
@@ -237,6 +248,8 @@ export async function threecxSearchContacts(
         companyName: row.client_name ?? '',
         email: row.email ?? '',
         phone,
+        entityId: row.contact_name_id,
+        entityType: 'contact' as const,
       };
     }),
   );

@@ -16,6 +16,20 @@ export interface ThreecxReportCallBody {
   startTimeUtc: string;
   establishedTimeUtc?: string;
   endTimeUtc: string;
+  /** Alga id echoed back from the lookup outputs ([EntityId]/[EntityType]). */
+  entityId?: string;
+  entityType?: string;
+  /** PBX-side AI artifacts, present only when the PBX transcribed the call. */
+  transcription?: string;
+  summary?: string;
+  recordingUrl?: string;
+}
+
+const OPTIONAL_STRING_FIELDS = ['entityId', 'entityType', 'transcription', 'summary', 'recordingUrl'] as const;
+
+function optionalString(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  return typeof value === 'string' && value.trim() !== '' ? value : undefined;
 }
 
 export type ThreecxValidationResult =
@@ -55,6 +69,12 @@ export function validateThreecxReportCallBody(body: unknown): ThreecxValidationR
   if (!Number.isFinite(duration) || duration < 0) {
     return { ok: false, error: 'invalid_request' };
   }
+  for (const field of OPTIONAL_STRING_FIELDS) {
+    const value = b[field];
+    if (value !== undefined && value !== null && typeof value !== 'string') {
+      return { ok: false, error: 'invalid_request' };
+    }
+  }
 
   return {
     ok: true,
@@ -68,6 +88,11 @@ export function validateThreecxReportCallBody(body: unknown): ThreecxValidationR
       startTimeUtc: b.startTimeUtc as string,
       establishedTimeUtc: typeof b.establishedTimeUtc === 'string' ? b.establishedTimeUtc : undefined,
       endTimeUtc: b.endTimeUtc as string,
+      entityId: optionalString(b.entityId),
+      entityType: optionalString(b.entityType),
+      transcription: optionalString(b.transcription),
+      summary: optionalString(b.summary),
+      recordingUrl: optionalString(b.recordingUrl),
     },
   };
 }
@@ -79,8 +104,20 @@ export function threecxDirection(callType: ThreecxCallType): CallDirection {
 }
 
 /**
+ * Start time truncated to whole seconds in canonical UTC form, so the template
+ * (which may send milliseconds) and the PBX call log (which does not) hash to
+ * the same key. A value that is not a date is used verbatim.
+ */
+export function threecxHashTime(startTimeUtc: string): string {
+  const ms = new Date(startTimeUtc).getTime();
+  if (Number.isNaN(ms)) return startTimeUtc;
+  return new Date(Math.floor(ms / 1000) * 1000).toISOString().replace(/\.000Z$/, 'Z');
+}
+
+/**
  * Stable idempotency key: same agent + number + callType + start yields the
- * same providerCallId, so a re-delivered ReportCall never journals twice.
+ * same providerCallId, so a re-delivered ReportCall never journals twice and a
+ * later call-log backfill lands on the row the template already created.
  */
 export function threecxProviderCallId(input: {
   agentEmail: string;
@@ -92,7 +129,7 @@ export function threecxProviderCallId(input: {
     input.agentEmail.toLowerCase(),
     input.numberForHash,
     input.callType,
-    input.startTimeUtc,
+    threecxHashTime(input.startTimeUtc),
   ].join('|');
   return crypto.createHash('sha256').update(material).digest('hex');
 }

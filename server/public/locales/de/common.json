@@ -1599,7 +1599,10 @@
     "defaultClosedHelp": "Ein abgeschlossener Status kann nicht der Standard für neue Einträge sein."
   },
   "callLink": {
-    "teamsCall": "In Microsoft Teams anrufen"
+    "teamsCall": "In Microsoft Teams anrufen",
+    "threecxCall": "Über 3CX anrufen",
+    "threecxDialing": "Wählvorgang von Ihrer 3CX-Nebenstelle",
+    "threecxFailed": "Die PBX konnte den Anruf nicht aufbauen"
   },
   "editor": {
     "attachFiles": "Dateien anhängen",

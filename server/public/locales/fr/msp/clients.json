@@ -1509,7 +1509,15 @@
       "allContacts": "Tous les contacts",
       "allStatuses": "Tous les statuts",
       "allUsers": "Tous les utilisateurs",
-      "columns": { "type": "Type", "title": "Titre", "client": "Client", "contact": "Contact", "user": "Utilisateur", "date": "Date", "status": "Statut" },
+      "columns": {
+        "type": "Type",
+        "title": "Titre",
+        "client": "Client",
+        "contact": "Contact",
+        "user": "Utilisateur",
+        "date": "Date",
+        "status": "Statut"
+      },
       "empty": "Aucune interaction ne correspond à ces filtres.",
       "loading": "Chargement des interactions…",
       "openClient": "Ouvrir le client {{name}}",
@@ -1529,6 +1537,11 @@
       "statusPlaceholder": "Statut",
       "title": "Interactions récentes",
       "statusesLoadFailed": "Impossible de charger les statuts d'interaction. Réessayez."
+    },
+    "callArtifacts": {
+      "sectionTitle": "Enregistrement et transcription de l'appel",
+      "viewTranscript": "Voir la transcription",
+      "downloadRecording": "Télécharger l'enregistrement"
     }
   },
   "clientDrawer": {

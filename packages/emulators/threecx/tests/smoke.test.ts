@@ -26,9 +26,12 @@ beforeAll(async () => {
       const chunks: Buffer[] = [];
       for await (const chunk of req) chunks.push(chunk as Buffer);
       received.push({ method: req.method ?? '', url: req.url ?? '', body: Buffer.concat(chunks).toString('utf8') });
-      if ((req.url ?? '').includes('report-call')) {
+      if ((req.url ?? '').includes('report-call') || (req.url ?? '').includes('report-chat')) {
         res.writeHead(202, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ accepted: true, providerCallId: 'hash-1' }));
+      } else if (req.method === 'POST' && (req.url ?? '').endsWith('/contacts')) {
+        res.writeHead(201, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ contacts: [{ contactUrl: 'x', firstName: 'Ada', lastName: 'Lovelace', companyName: '', email: '', phone: '+15551234567' }] }));
       } else {
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ contacts: [{ contactUrl: 'x', firstName: 'A', lastName: 'B', companyName: '', email: '', phone: '+15551234567' }] }));
@@ -83,5 +86,26 @@ describe('threecx emulator suite integration', () => {
     // The stand-in server saw a GET lookup and a POST report-call.
     expect(received.some((r) => r.method === 'GET' && r.url.includes('/lookup'))).toBe(true);
     expect(received.some((r) => r.method === 'POST' && r.url.includes('/report-call'))).toBe(true);
+  });
+
+  it('T197: crm-create-contact and crm-report-chat reach the contacts and report-chat routes and record exchanges', async () => {
+    const contact = await controlPost('/control/threecx/actions/crm-create-contact', {
+      firstName: 'Ada', lastName: 'Lovelace', number: '+15551234567', company: 'Acme',
+    });
+    expect(contact.ok).toBe(true);
+    expect(contact.result.response.status).toBe(201);
+
+    const chat = await controlPost('/control/threecx/actions/crm-report-chat', {
+      agentEmail: 'agent@example.com', messages: 'hi there', number: '+15551234567', durationSeconds: 30,
+    });
+    expect(chat.ok).toBe(true);
+    expect(chat.result.response.status).toBe(202);
+
+    const posted = received.filter((r) => r.method === 'POST');
+    expect(posted.some((r) => r.url.endsWith('/contacts'))).toBe(true);
+    expect(posted.some((r) => r.url.endsWith('/report-chat') && JSON.parse(r.body).messages === 'hi there')).toBe(true);
+
+    const exchanges = (await fetch(`${control}/control/threecx/state/exchanges`).then((r) => r.json())).result;
+    expect(exchanges.map((e: any) => e.action)).toEqual(['crm-inbound-call', 'crm-inbound-call', 'crm-create-contact', 'crm-report-chat']);
   });
 });

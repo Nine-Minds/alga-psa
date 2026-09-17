@@ -71,6 +71,7 @@ function makeDeps(overrides: Partial<ThreecxRouteDeps> = {}): ThreecxRouteDeps {
     checkRateLimit: vi.fn(async () => true),
     getProviderAvailability: vi.fn(async () => ({ enabled: true })),
     enqueueCanonicalCall: vi.fn(async () => undefined),
+    enqueueChat: vi.fn(async () => undefined),
     ...overrides,
   };
 }
@@ -112,9 +113,9 @@ describe('3CX route auth pipeline', () => {
     });
   });
 
-  it('T041: the route constants list four segments and the query params', () => {
-    expect(THREECX_ROUTE_SEGMENT_LIST).toHaveLength(4);
-    expect(THREECX_ROUTE_SEGMENT_LIST).toEqual(['lookup', 'lookup-by-email', 'search', 'report-call']);
+  it('T041: the route constants list six segments and the query params', () => {
+    expect(THREECX_ROUTE_SEGMENT_LIST).toHaveLength(6);
+    expect(THREECX_ROUTE_SEGMENT_LIST).toEqual(['lookup', 'lookup-by-email', 'search', 'report-call', 'contacts', 'report-chat']);
     expect(THREECX_QUERY_PARAMS).toMatchObject({ number: 'number', email: 'email', q: 'q' });
   });
 

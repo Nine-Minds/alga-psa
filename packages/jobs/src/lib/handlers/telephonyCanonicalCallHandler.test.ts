@@ -9,6 +9,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   tenantScopes: [] as string[],
   ingest: vi.fn(),
+  attachTranscript: vi.fn(async () => ({ status: 'attached' })),
   autoTicket: vi.fn(async () => ({ status: 'created', ticketId: 'ticket-1' })),
   threecxState: vi.fn(async () => ({ autoCreateTickets: false })),
   ticketDefaults: vi.fn(async () => ({ boardId: 'board-1', statusId: 'status-open' })),
@@ -28,6 +29,7 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/telephony', () => ({
   ingestCanonicalCall: mocks.ingest,
+  attachProvidedTranscript: mocks.attachTranscript,
   autoCreateTicketForCall: mocks.autoTicket,
 }));
 
@@ -132,6 +134,58 @@ describe('processTelephonyCanonicalCall', () => {
     await processTelephonyCanonicalCall({ tenantId: 'tenant-1', record: inboundRecord });
 
     expect(mocks.autoTicket).not.toHaveBeenCalled();
+  });
+
+  it('T180: raw.entityId is passed as preferredContactId only for entityType contact', async () => {
+    await processTelephonyCanonicalCall({
+      tenantId: 'tenant-1',
+      record: { ...inboundRecord, raw: { entityId: 'contact-1', entityType: 'contact' } },
+    });
+    expect(mocks.ingest).toHaveBeenLastCalledWith(expect.objectContaining({ preferredContactId: 'contact-1' }));
+
+    await processTelephonyCanonicalCall({
+      tenantId: 'tenant-1',
+      record: { ...inboundRecord, raw: { entityId: 'client-1', entityType: 'client' } },
+    });
+    expect(mocks.ingest.mock.calls.at(-1)?.[0]).not.toHaveProperty('preferredContactId');
+
+    await processTelephonyCanonicalCall({ tenantId: 'tenant-1', record: inboundRecord });
+    expect(mocks.ingest.mock.calls.at(-1)?.[0]).not.toHaveProperty('preferredContactId');
+  });
+
+  it('T163/T165: a report with a transcription files it with the summary on the ingested record', async () => {
+    await processTelephonyCanonicalCall({
+      tenantId: 'tenant-1',
+      record: { ...inboundRecord, raw: { transcription: 'Caller: hi.', summary: 'Greeting.' } },
+    });
+
+    expect(mocks.attachTranscript).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      callRecordId: 'call-record-1',
+      transcription: 'Caller: hi.',
+      summary: 'Greeting.',
+    });
+  });
+
+  it('T164: a report without a transcription leaves the artifact sweep to find one', async () => {
+    await processTelephonyCanonicalCall({
+      tenantId: 'tenant-1',
+      record: { ...inboundRecord, raw: { transcription: '   ', summary: 'Nothing said.' } },
+    });
+
+    expect(mocks.attachTranscript).not.toHaveBeenCalled();
+  });
+
+  it('a transcript filing failure never loses the auto-ticket', async () => {
+    mocks.threecxState.mockResolvedValue({ autoCreateTickets: true });
+    mocks.attachTranscript.mockRejectedValueOnce(new Error('documents down'));
+
+    await processTelephonyCanonicalCall({
+      tenantId: 'tenant-1',
+      record: { ...inboundRecord, raw: { transcription: 'Caller: hi.' } },
+    });
+
+    expect(mocks.autoTicket).toHaveBeenCalled();
   });
 
   it('a skipped ingestion never consults the auto-ticket policy', async () => {

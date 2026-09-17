@@ -3693,7 +3693,75 @@
           "rotate": "Rotar",
           "fullKeyWarning": "Copie esta clave ahora — no se volverá a mostrar.",
           "download": "Descargar plantilla",
-          "tierRequired": "La telefonía 3CX requiere el plan Pro."
+          "tierRequired": "La telefonía 3CX requiere el plan Pro.",
+          "templateStale": "Hay una plantilla más reciente. Descárguela y vuelva a subirla en la consola de 3CX.",
+          "pbx": {
+            "title": "API de la centralita (3CX Enterprise/AI)",
+            "help": "La ventana emergente, la llamada con un clic, la importación del historial y la sincronización de la agenda usan las API Call Control y Configuration de 3CX, que requieren una licencia 3CX Enterprise o AI (8SC+). Cree una aplicación de API en la consola de administración de 3CX en Integraciones → API, marque ambos accesos y añada cada extensión que quiera supervisar.",
+            "baseUrl": "Dirección de la centralita",
+            "clientId": "Id. de cliente (extensión de la aplicación de API)",
+            "clientSecret": "Secreto de cliente",
+            "replaceSecret": "Reemplazar",
+            "save": "Guardar credenciales",
+            "test": "Probar conexión",
+            "clear": "Quitar",
+            "connected": "Conectado",
+            "granted": "concedido",
+            "notGranted": "no concedido",
+            "callControl": "Control de llamadas",
+            "xapi": "API de configuración",
+            "lastChecked": "Última comprobación",
+            "notConnectedHint": "Conecte la API de la centralita arriba para usar esta función."
+          },
+          "extensions": {
+            "title": "Extensiones",
+            "sync": "Sincronizar desde la centralita",
+            "lastSync": "Última sincronización",
+            "empty": "Aún no se han sincronizado extensiones.",
+            "dn": "Extensión",
+            "pbxUser": "Usuario de la centralita",
+            "algaUser": "Usuario de AlgaPSA",
+            "unmapped": "Sin asignar",
+            "auto": "asignado por correo"
+          },
+          "cdr": {
+            "title": "Importación del historial de llamadas",
+            "help": "Lee el registro de llamadas de la centralita cada hora y registra las llamadas externas que aún no están en el libro.",
+            "lookback": "Días de historial en la primera ejecución",
+            "lastRun": "Última ejecución",
+            "added": "Registros añadidos"
+          },
+          "phonebook": {
+            "title": "Sincronización de la agenda",
+            "help": "Envía los contactos con número de teléfono a la agenda de empresa de 3CX y añade a los contactos coincidentes los números que solo existen en la centralita.",
+            "schedule": "Programación de la conciliación",
+            "daily": "Diaria",
+            "hourly": "Cada hora",
+            "pushNow": "Enviar ahora",
+            "importNow": "Importar ahora",
+            "lastPush": "Último envío",
+            "lastImport": "Última importación",
+            "countsLegend": "Recuentos: creados/actualizados/eliminados/importados/omitidos"
+          },
+          "queue": {
+            "title": "Contactos creados desde 3CX",
+            "empty": "Nada pendiente. Aquí aparecen los contactos creados desde el cliente 3CX sin un cliente coincidente.",
+            "pendingBadge": "falta el correo",
+            "unmappedBadge": "sin cliente",
+            "company": "Empresa",
+            "chooseClient": "Elija un cliente…",
+            "apply": "Aplicar",
+            "leaveWithoutClient": "Dejar sin cliente",
+            "complete": "Completar",
+            "dismiss": "Descartar",
+            "completeTitle": "Completar el contacto de 3CX",
+            "firstName": "Nombre",
+            "lastName": "Apellidos",
+            "email": "Correo electrónico",
+            "number": "Número de teléfono",
+            "cancel": "Cancelar",
+            "save": "Crear contacto"
+          }
         }
       },
       "subscriptionExpires": "La suscripción se renueva antes de",
@@ -3730,7 +3798,8 @@
         "assignTo": "Asignar a",
         "searchPlaceholder": "Buscar contactos y clientes…",
         "noTargets": "No hay contactos ni clientes coincidentes.",
-        "chooseTarget": "Asignar a un cliente…"
+        "chooseTarget": "Asignar a un cliente…",
+        "chatBadge": "Chat"
       },
       "forbidden": "No tiene permiso para ver la configuración de telefonía de este inquilino.",
       "paywall": {
@@ -3864,6 +3933,21 @@
       "contactWithoutClient": "Ya existe en el sistema un contacto con esta dirección de correo electrónico sin asignación de cliente",
       "emailOnAnotherClient": "Este correo electrónico ya está asociado a otro cliente",
       "emailOnAnotherClientNamed": "Este correo electrónico ya está asociado a {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Llamada entrante",
+      "unknownCaller": "Llamante desconocido",
+      "noNumber": "Sin identificador de llamada",
+      "extension": "Sonando en la extensión {{dn}}",
+      "openTickets": "Tickets abiertos",
+      "recentInteractions": "Interacciones recientes",
+      "openContact": "Abrir contacto",
+      "openClient": "Abrir cliente",
+      "newTicket": "Nuevo ticket",
+      "createContact": "Crear contacto",
+      "dismiss": "Descartar"
     }
   }
 }

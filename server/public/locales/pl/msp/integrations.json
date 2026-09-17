@@ -3693,7 +3693,75 @@
           "rotate": "Rotuj",
           "fullKeyWarning": "Skopiuj ten klucz teraz — nie zostanie pokazany ponownie.",
           "download": "Pobierz szablon",
-          "tierRequired": "Telefonia 3CX wymaga planu Pro."
+          "tierRequired": "Telefonia 3CX wymaga planu Pro.",
+          "templateStale": "Dostępny jest nowszy szablon. Pobierz go i prześlij ponownie w konsoli 3CX.",
+          "pbx": {
+            "title": "API centrali (3CX Enterprise/AI)",
+            "help": "Wyskakujące okno połączenia, dzwonienie jednym kliknięciem, import historii połączeń i synchronizacja książki telefonicznej korzystają z API Call Control i Configuration 3CX, które wymagają licencji 3CX Enterprise lub AI (8SC+). Utwórz aplikację API w konsoli administracyjnej 3CX w sekcji Integracje → API, zaznacz oba dostępy i dodaj każdy numer wewnętrzny, który chcesz monitorować.",
+            "baseUrl": "Adres centrali",
+            "clientId": "Identyfikator klienta (numer aplikacji API)",
+            "clientSecret": "Sekret klienta",
+            "replaceSecret": "Zastąp",
+            "save": "Zapisz dane dostępowe",
+            "test": "Testuj połączenie",
+            "clear": "Usuń",
+            "connected": "Połączono",
+            "granted": "przyznano",
+            "notGranted": "nie przyznano",
+            "callControl": "Sterowanie połączeniami",
+            "xapi": "API konfiguracji",
+            "lastChecked": "Ostatnie sprawdzenie",
+            "notConnectedHint": "Połącz API centrali powyżej, aby użyć tej funkcji."
+          },
+          "extensions": {
+            "title": "Numery wewnętrzne",
+            "sync": "Synchronizuj z centrali",
+            "lastSync": "Ostatnia synchronizacja",
+            "empty": "Nie zsynchronizowano jeszcze numerów wewnętrznych.",
+            "dn": "Numer wewnętrzny",
+            "pbxUser": "Użytkownik centrali",
+            "algaUser": "Użytkownik AlgaPSA",
+            "unmapped": "Nieprzypisany",
+            "auto": "dopasowano po e-mailu"
+          },
+          "cdr": {
+            "title": "Import historii połączeń",
+            "help": "Co godzinę odczytuje rejestr połączeń centrali i zapisuje połączenia zewnętrzne, których nie ma jeszcze w dzienniku.",
+            "lookback": "Dni historii przy pierwszym uruchomieniu",
+            "lastRun": "Ostatnie uruchomienie",
+            "added": "Dodane rekordy"
+          },
+          "phonebook": {
+            "title": "Synchronizacja książki telefonicznej",
+            "help": "Wysyła kontakty z numerami telefonów do firmowej książki telefonicznej 3CX i dodaje do pasujących kontaktów numery znalezione tylko w centrali.",
+            "schedule": "Harmonogram uzgadniania",
+            "daily": "Codziennie",
+            "hourly": "Co godzinę",
+            "pushNow": "Wyślij teraz",
+            "importNow": "Importuj teraz",
+            "lastPush": "Ostatnie wysłanie",
+            "lastImport": "Ostatni import",
+            "countsLegend": "Liczby: utworzone/zaktualizowane/usunięte/zaimportowane/pominięte"
+          },
+          "queue": {
+            "title": "Kontakty utworzone z 3CX",
+            "empty": "Brak oczekujących. Tutaj pojawiają się kontakty utworzone z klienta 3CX bez pasującego klienta.",
+            "pendingBadge": "wymaga e-maila",
+            "unmappedBadge": "brak klienta",
+            "company": "Firma",
+            "chooseClient": "Wybierz klienta…",
+            "apply": "Zastosuj",
+            "leaveWithoutClient": "Zostaw bez klienta",
+            "complete": "Uzupełnij",
+            "dismiss": "Odrzuć",
+            "completeTitle": "Uzupełnij kontakt z 3CX",
+            "firstName": "Imię",
+            "lastName": "Nazwisko",
+            "email": "E-mail",
+            "number": "Numer telefonu",
+            "cancel": "Anuluj",
+            "save": "Utwórz kontakt"
+          }
         }
       },
       "subscriptionExpires": "Subskrypcja odnowi się przed",
@@ -3730,7 +3798,8 @@
         "assignTo": "Przypisz do",
         "searchPlaceholder": "Szukaj kontaktów i klientów…",
         "noTargets": "Brak pasujących kontaktów lub klientów.",
-        "chooseTarget": "Przypisz do klienta…"
+        "chooseTarget": "Przypisz do klienta…",
+        "chatBadge": "Czat"
       },
       "forbidden": "Nie masz uprawnień do wyświetlania ustawień telefonii tej organizacji.",
       "paywall": {
@@ -3864,6 +3933,21 @@
       "contactWithoutClient": "W systemie istnieje już kontakt z tym adresem e-mail bez przypisania do klienta",
       "emailOnAnotherClient": "Ten adres e-mail jest już powiązany z innym klientem",
       "emailOnAnotherClientNamed": "Ten adres e-mail jest już powiązany z: {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Połączenie przychodzące",
+      "unknownCaller": "Nieznany dzwoniący",
+      "noNumber": "Brak identyfikatora dzwoniącego",
+      "extension": "Dzwoni numer wewnętrzny {{dn}}",
+      "openTickets": "Otwarte zgłoszenia",
+      "recentInteractions": "Ostatnie interakcje",
+      "openContact": "Otwórz kontakt",
+      "openClient": "Otwórz klienta",
+      "newTicket": "Nowe zgłoszenie",
+      "createContact": "Utwórz kontakt",
+      "dismiss": "Zamknij"
     }
   }
 }

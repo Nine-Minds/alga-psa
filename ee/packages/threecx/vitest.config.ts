@@ -3,7 +3,14 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   resolve: {
-    alias: [{ find: '@shared', replacement: path.resolve(__dirname, '../../../shared') }],
+    alias: [
+      { find: '@shared', replacement: path.resolve(__dirname, '../../../shared') },
+      {
+        find: /^@alga-psa\/workflow-streams$/,
+        replacement: path.resolve(__dirname, '../../../packages/workflow-streams/src/streams/index.ts'),
+      },
+      { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../../shared')}/$1` },
+    ],
   },
   test: {
     globals: true,

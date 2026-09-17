@@ -89,6 +89,21 @@ import {
   TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
 } from '@alga-psa/jobs/handlers/telephonyCallArtifactHandler';
 import {
+  processThreecxCallEvent,
+  ThreecxCallEventJobData,
+  THREECX_CALL_EVENT_JOB,
+} from '@alga-psa/jobs/handlers/threecxCallEventHandler';
+import {
+  processThreecxChat,
+  ThreecxChatJobData,
+  THREECX_CHAT_JOB,
+} from '@alga-psa/jobs/handlers/threecxChatHandler';
+import {
+  syncThreecxPhonebookContactHandler,
+  ThreecxPhonebookContactJobData,
+  THREECX_PHONEBOOK_CONTACT_JOB,
+} from '@alga-psa/jobs/handlers/threecxPhonebookHandlers';
+import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
   TEAMS_MEETING_CLEANUP_JOB,
@@ -688,6 +703,41 @@ export async function registerAllJobHandlers(
       registerOpts
     );
 
+    // 3CX Call Control events (ring/connect/end) forwarded by the Temporal
+    // worker's socket consumer; the incoming-call card is the only consumer.
+    JobHandlerRegistry.register<ThreecxCallEventJobData & BaseJobData>(
+      {
+        name: THREECX_CALL_EVENT_JOB,
+        handler: async (_jobId, data) => {
+          await processThreecxCallEvent(data);
+        },
+        retry: { maxAttempts: 1 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<ThreecxChatJobData & BaseJobData>(
+      {
+        name: THREECX_CHAT_JOB,
+        handler: async (_jobId, data) => {
+          await processThreecxChat(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<ThreecxPhonebookContactJobData & BaseJobData>(
+      {
+        name: THREECX_PHONEBOOK_CONTACT_JOB,
+        handler: async (_jobId, data) => {
+          await syncThreecxPhonebookContactHandler(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
     JobHandlerRegistry.register<TeamsMeetingCleanupJobData & BaseJobData>(
       {
         name: TEAMS_MEETING_CLEANUP_JOB,
@@ -927,7 +977,7 @@ export function getAvailableJobHandlers(): string[] {
       process.env.EDITION === 'enterprise'
       || process.env.EDITION === 'ee'
       || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
-        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification', 'renew-telephony-call-subscriptions', 'process-telephony-call-notification', 'process-telephony-canonical-call', TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]
+        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification', 'renew-telephony-call-subscriptions', 'process-telephony-call-notification', 'process-telephony-canonical-call', TELEPHONY_CALL_ARTIFACT_SWEEP_JOB, THREECX_CALL_EVENT_JOB, THREECX_CHAT_JOB, THREECX_PHONEBOOK_CONTACT_JOB]
         : []
     ),
     // SLA

@@ -39,6 +39,12 @@ describe('emulator suite', () => {
     }
   });
 
+  it('threecx owns its listener through serve() so the PBX WebSocket shares the port', () => {
+    const threecx = SUITE_EMULATORS.find((emulator) => emulator.id === 'threecx')!;
+    expect(typeof threecx.serve).toBe('function');
+    expect(threecx.wire).toBeUndefined();
+  });
+
   it('runs the bundled scenarios end to end', async () => {
     const scenarios = ((await (await fetch(`${control}/control/scenarios`)).json()) as any).result;
     expect(scenarios.map((s: any) => s.name).sort()).toEqual(['demo-billing-cycle', 'token-trouble']);

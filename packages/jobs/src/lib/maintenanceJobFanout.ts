@@ -29,6 +29,9 @@ import {
   telephonyCallArtifactSweepHandler,
 } from './handlers/telephonyCallArtifactHandler';
 import { teamsMeetingSweepHandler, TEAMS_MEETING_SWEEP_JOB } from './handlers/teamsMeetingSweepHandler';
+import { reconcileThreecxCallControlHandler, THREECX_CALL_CONTROL_RECONCILE_JOB } from './handlers/threecxCallControlReconcileHandler';
+import { backfillThreecxCdrHandler, THREECX_CDR_BACKFILL_JOB } from './handlers/threecxCdrBackfillHandler';
+import { reconcileThreecxPhonebookHandler, THREECX_PHONEBOOK_RECONCILE_JOB } from './handlers/threecxPhonebookHandlers';
 import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeScanHandler';
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
 import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
@@ -68,6 +71,27 @@ const tenantsWithActiveTeamsPhone: TenantSelector = (db) => db
   .where('status', 'active')
   .distinct('tenant');
 
+// '3cx' mirrors THREECX_PROVIDER in @alga-psa/ee-threecx, which this CE package cannot import.
+const tenantsWithActiveThreecx: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows 3CX call-control reconciliation to tenants with an active 3CX provider')
+  .where('provider', '3cx')
+  .where('status', 'active')
+  .distinct('tenant');
+
+const tenantsWithThreecxCdrImport: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows 3CX call-history import to tenants that opted in')
+  .where('provider', '3cx')
+  .where('status', 'active')
+  .whereRaw("config->'cdr'->>'enabled' = 'true'")
+  .distinct('tenant');
+
+const tenantsWithThreecxPhonebookSync: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows 3CX phonebook reconciliation to tenants that opted in')
+  .where('provider', '3cx')
+  .where('status', 'active')
+  .whereRaw("config->'phonebook'->>'enabled' = 'true'")
+  .distinct('tenant');
+
 const tenantsWithPendingCallArtifacts: TenantSelector = (db) => db
   .unscoped<{ tenant: string }>('telephony_call_records', 'maintenance fanout narrows the call artifact sweep to tenants with calls awaiting artifacts')
   .where('artifact_status', 'pending')
@@ -93,6 +117,9 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }), tenants: tenantsWithActiveTeamsPhone },
   [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }), tenants: tenantsWithPendingCallArtifacts },
   [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithActiveTeams },
+  [THREECX_CALL_CONTROL_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxCallControlHandler({ tenantId }), tenants: tenantsWithActiveThreecx },
+  [THREECX_CDR_BACKFILL_JOB]: { scope: 'tenant', run: (tenantId) => backfillThreecxCdrHandler({ tenantId }), tenants: tenantsWithThreecxCdrImport },
+  [THREECX_PHONEBOOK_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxPhonebookHandler({ tenantId }), tenants: tenantsWithThreecxPhonebookSync },
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },

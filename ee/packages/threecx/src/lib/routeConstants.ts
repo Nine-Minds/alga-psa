@@ -12,6 +12,8 @@ export const THREECX_ROUTE_SEGMENTS = {
   lookupByEmail: 'lookup-by-email',
   search: 'search',
   reportCall: 'report-call',
+  contacts: 'contacts',
+  reportChat: 'report-chat',
 } as const;
 
 export type ThreecxRouteKey = keyof typeof THREECX_ROUTE_SEGMENTS;
@@ -22,12 +24,14 @@ export const THREECX_QUERY_PARAMS = {
   q: 'q',
 } as const;
 
-/** Ordered list of the four route segments. */
+/** Ordered list of the route segments the template drives. */
 export const THREECX_ROUTE_SEGMENT_LIST = [
   THREECX_ROUTE_SEGMENTS.lookup,
   THREECX_ROUTE_SEGMENTS.lookupByEmail,
   THREECX_ROUTE_SEGMENTS.search,
   THREECX_ROUTE_SEGMENTS.reportCall,
+  THREECX_ROUTE_SEGMENTS.contacts,
+  THREECX_ROUTE_SEGMENTS.reportChat,
 ] as const;
 
 /** Builds the tenant-scoped path for one route segment (no baseUrl). */

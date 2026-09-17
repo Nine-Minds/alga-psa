@@ -4,3 +4,5 @@
 // services and db code, which must never enter a client bundle.
 export * from './index';
 export * from './routes/handlers';
+export * from './routes/reportChatHandler';
+export * from './routes/contactsHandler';

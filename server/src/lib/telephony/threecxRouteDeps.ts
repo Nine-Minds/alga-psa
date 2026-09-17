@@ -28,5 +28,9 @@ export function buildThreecxRouteDeps(): ThreecxRouteDeps {
       const runner = await getJobRunner();
       await runner.scheduleJob('process-telephony-canonical-call', { tenantId, record });
     },
+    enqueueChat: async ({ tenantId, chat }) => {
+      const runner = await getJobRunner();
+      await runner.scheduleJob('process-threecx-chat', { tenantId, chat });
+    },
   };
 }

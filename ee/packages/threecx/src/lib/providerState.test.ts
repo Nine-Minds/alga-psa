@@ -52,6 +52,7 @@ import {
   parseThreecxConfig,
   rotateThreecxApiKey,
   setThreecxAutoCreateTickets,
+  stampThreecxTemplateVersion,
 } from './providerState';
 
 const TENANT = 'tenant-1';
@@ -78,14 +79,69 @@ describe('threecx provider state', () => {
   });
 
   it('T030: returns not_configured with null key fields when no row exists', async () => {
-    await expect(getThreecxProviderState(TENANT)).resolves.toEqual({
+    await expect(getThreecxProviderState(TENANT)).resolves.toMatchObject({
       provider: '3cx',
       status: 'not_configured',
       autoCreateTickets: false,
       keyLastFour: null,
       keyRotatedAt: null,
       templateVersion: 0,
+      pbx: { status: 'not_configured', hasClientSecret: false, capabilities: { xapi: false, callControl: false } },
+      extensions: [],
+      cdr: { enabled: false, lookbackDays: 30 },
+      phonebook: { enabled: false, schedule: 'daily' },
     });
+  });
+
+  it('F001/F013/F052/F062: parseThreecxConfig defaults every new section for legacy and malformed config', () => {
+    const legacy = parseThreecxConfig({ templateVersion: 1, keyRotatedAt: null });
+    expect(legacy.pbx).toEqual({
+      baseUrl: null,
+      clientId: null,
+      clientSecretRef: null,
+      status: 'not_configured',
+      lastCheckedAt: null,
+      lastError: null,
+      capabilities: { xapi: false, callControl: false },
+    });
+    expect(legacy.extensions).toEqual([]);
+    expect(legacy.cdr).toEqual({ enabled: false, lookbackDays: 30, watermark: null, lastRunAt: null, lastRunAdded: 0 });
+    expect(legacy.phonebook.enabled).toBe(false);
+    expect(legacy.phonebook.schedule).toBe('daily');
+
+    const malformed = parseThreecxConfig({ extensions: 'nope', pbx: 'x', cdr: { lookbackDays: -4 }, phonebook: { schedule: 'weekly' } });
+    expect(malformed.extensions).toEqual([]);
+    expect(malformed.pbx.status).toBe('not_configured');
+    expect(malformed.cdr.lookbackDays).toBe(30);
+    expect(malformed.phonebook.schedule).toBe('daily');
+
+    const partial = parseThreecxConfig({
+      extensions: [{ dn: '101', userId: 'u1', mappedBy: 'manual' }, { dn: '' }, { dn: '102', mappedBy: 'auto' }],
+      pbx: { baseUrl: 'https://pbx', clientId: '900', clientSecretRef: 'ref', status: 'connected', capabilities: { xapi: true } },
+    });
+    expect(partial.extensions).toEqual([
+      { dn: '101', pbxDisplayName: '', pbxEmail: '', userId: 'u1', mappedBy: 'manual' },
+      { dn: '102', pbxDisplayName: '', pbxEmail: '', userId: null, mappedBy: null },
+    ]);
+    expect(partial.pbx.capabilities).toEqual({ xapi: true, callControl: false });
+  });
+
+  it('F001: rotating the key and stamping the template keep the other config sections', async () => {
+    seedRow({
+      webhook_secret: 'old-key',
+      config: JSON.stringify({ templateVersion: 1, pbx: { baseUrl: 'https://pbx', status: 'connected' }, extensions: [{ dn: '101', userId: 'u1', mappedBy: 'manual' }] }),
+    });
+    await rotateThreecxApiKey(TENANT);
+    let config = parseThreecxConfig(hoisted.state.rows[0].config);
+    expect(config.pbx.baseUrl).toBe('https://pbx');
+    expect(config.extensions[0].dn).toBe('101');
+    expect(config.keyRotatedAt).not.toBeNull();
+
+    await stampThreecxTemplateVersion(TENANT, 2);
+    config = parseThreecxConfig(hoisted.state.rows[0].config);
+    expect(config.templateVersion).toBe(2);
+    expect(config.pbx.baseUrl).toBe('https://pbx');
+    expect(config.extensions).toHaveLength(1);
   });
 
   it('T031: keyLastFour is the last four characters of webhook_secret', async () => {

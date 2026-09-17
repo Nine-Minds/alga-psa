@@ -1537,6 +1537,11 @@
       "statusPlaceholder": "Status",
       "title": "Interações recentes",
       "statusesLoadFailed": "Não foi possível carregar os status de interação. Tente novamente."
+    },
+    "callArtifacts": {
+      "sectionTitle": "Gravação e transcrição da chamada",
+      "viewTranscript": "Ver transcrição",
+      "downloadRecording": "Baixar gravação"
     }
   },
   "clientDrawer": {

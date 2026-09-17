@@ -1537,6 +1537,11 @@
       "statusPlaceholder": "⟦Şŧȧŧŭş⟧",
       "title": "⟦Řḗƈḗƞŧ Īƞŧḗřȧƈŧīȯƞş⟧",
       "statusesLoadFailed": "⟦Īƞŧḗřȧƈŧīȯƞ şŧȧŧŭşḗş ƈȯŭŀḓ ƞȯŧ ƀḗ ŀȯȧḓḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
+    },
+    "callArtifacts": {
+      "sectionTitle": "⟦Ƈȧŀŀ řḗƈȯřḓīƞɠ ȧƞḓ ŧřȧƞşƈřīƥŧ⟧",
+      "viewTranscript": "⟦Ṽīḗẇ ŧřȧƞşƈřīƥŧ⟧",
+      "downloadRecording": "⟦Ḓȯẇƞŀȯȧḓ řḗƈȯřḓīƞɠ⟧"
     }
   },
   "clientDrawer": {

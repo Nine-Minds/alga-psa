@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { XMLParser } from 'fast-xml-parser';
-import { renderThreecxTemplate, threecxTemplateFilename } from './template';
+import {
+  renderThreecxTemplate,
+  threecxTemplateFilename,
+  THREECX_CREATE_CONTACT_POST_KEYS,
+  THREECX_REPORT_CALL_POST_KEYS,
+  THREECX_REPORT_CHAT_POST_KEYS,
+} from './template';
 import {
   THREECX_API_BASE,
   THREECX_QUERY_PARAMS,
@@ -39,9 +45,9 @@ describe('renderThreecxTemplate', () => {
     expect(doc.Crm.Number['@_Prefix']).toBe('Plus');
   });
 
-  it('T093: scenarios carry Ids "", LookupByEmail, SearchContacts and ReportCall', () => {
+  it('T093: scenarios carry the six reserved 3CX Ids in order', () => {
     const ids = scenarios().map((s) => String(s['@_Id'] ?? ''));
-    expect(ids).toEqual(['', 'LookupByEmail', 'SearchContacts', 'ReportCall']);
+    expect(ids).toEqual(['', 'LookupByEmail', 'SearchContacts', 'CreateContactRecordFromClient', 'ReportCall', 'ReportChat']);
   });
 
   it('T094: every scenario request sends Authorization: Bearer [ApiKey]', () => {
@@ -60,6 +66,8 @@ describe('renderThreecxTemplate', () => {
     expect(byId['LookupByEmail']).toBe(`${BASE}${THREECX_API_BASE}/${SLUG}/${THREECX_ROUTE_SEGMENTS.lookupByEmail}?${THREECX_QUERY_PARAMS.email}=[Email]`);
     expect(byId['SearchContacts']).toContain(`/${THREECX_ROUTE_SEGMENTS.search}?${THREECX_QUERY_PARAMS.q}=`);
     expect(byId['ReportCall']).toBe(`${BASE}${THREECX_API_BASE}/${SLUG}/${THREECX_ROUTE_SEGMENTS.reportCall}`);
+    expect(byId['CreateContactRecordFromClient']).toBe(`${BASE}${THREECX_API_BASE}/${SLUG}/${THREECX_ROUTE_SEGMENTS.contacts}`);
+    expect(byId['ReportChat']).toBe(`${BASE}${THREECX_API_BASE}/${SLUG}/${THREECX_ROUTE_SEGMENTS.reportChat}`);
   });
 
   it('T096: the rendered URLs derive from the constants, not baked-in literals', () => {
@@ -89,19 +97,42 @@ describe('renderThreecxTemplate', () => {
     const reportCall = scenarios().find((s) => String(s['@_Id'] ?? '') === 'ReportCall');
     const postText = reportCall.Request['@_PostText'];
     const body = JSON.parse(postText);
-    expect(Object.keys(body).sort()).toEqual(
-      [
-        'agentEmail',
-        'agentExtension',
-        'callType',
-        'durationSeconds',
-        'endTimeUtc',
-        'establishedTimeUtc',
-        'number',
-        'queueExtension',
-        'startTimeUtc',
-      ],
-    );
+    expect(Object.keys(body).sort()).toEqual([...THREECX_REPORT_CALL_POST_KEYS].sort());
+    expect(body.transcription).toBe('[Transcription]');
+    expect(body.summary).toBe('[Summary]');
+    expect(body.recordingUrl).toBe('[RecordingUrl]');
+    expect(body.entityId).toBe('[EntityId]');
+    expect(body.entityType).toBe('[EntityType]');
+  });
+
+  it('T211: every lookup scenario outputs EntityId and EntityType from the response', () => {
+    for (const id of ['', 'LookupByEmail', 'SearchContacts', 'CreateContactRecordFromClient']) {
+      const scenario = scenarios().find((s) => String(s['@_Id'] ?? '') === id);
+      const outputs = scenario.Outputs.Output;
+      const types = (Array.isArray(outputs) ? outputs : [outputs]).map((o: any) => o['@_Type']);
+      expect(types).toEqual(expect.arrayContaining(['EntityId', 'EntityType']));
+      const variables = scenario.Variables.Variable;
+      const varList = Array.isArray(variables) ? variables : [variables];
+      expect(varList.find((v: any) => v['@_Name'] === 'EntityId')['@_Path']).toBe('contacts.0.entityId');
+      expect(varList.find((v: any) => v['@_Name'] === 'EntityType')['@_Path']).toBe('contacts.0.entityType');
+    }
+  });
+
+  it('T215: CreateContactRecordFromClient posts the five client-entered variables to the contacts route', () => {
+    const scenario = scenarios().find((s) => String(s['@_Id'] ?? '') === 'CreateContactRecordFromClient');
+    const body = JSON.parse(scenario.Request['@_PostText']);
+    expect(Object.keys(body).sort()).toEqual([...THREECX_CREATE_CONTACT_POST_KEYS].sort());
+    expect(body).toEqual({ firstName: '[FirstName]', lastName: '[LastName]', number: '[Number]', email: '[Email]', company: '[Company]' });
+    expect(scenario.Request['@_RequestType']).toBe('POST');
+  });
+
+  it('T216: ReportChat posts the chat transcript and entity fields to the report-chat route', () => {
+    const scenario = scenarios().find((s) => String(s['@_Id'] ?? '') === 'ReportChat');
+    const body = JSON.parse(scenario.Request['@_PostText']);
+    expect(Object.keys(body).sort()).toEqual([...THREECX_REPORT_CHAT_POST_KEYS].sort());
+    expect(body.messages).toBe('[ChatMessages]');
+    expect(body.startTimeUtc).toBe('[ChatStartTimeUTC]');
+    expect(body.entityId).toBe('[EntityId]');
   });
 
   it('names the download file after the tenant slug', () => {

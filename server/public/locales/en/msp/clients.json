@@ -1509,7 +1509,15 @@
       "allContacts": "All Contacts",
       "allStatuses": "All Statuses",
       "allUsers": "All Users",
-      "columns": { "type": "Type", "title": "Title", "client": "Client", "contact": "Contact", "user": "User", "date": "Date", "status": "Status" },
+      "columns": {
+        "type": "Type",
+        "title": "Title",
+        "client": "Client",
+        "contact": "Contact",
+        "user": "User",
+        "date": "Date",
+        "status": "Status"
+      },
       "empty": "No interactions match these filters.",
       "loading": "Loading interactions…",
       "openClient": "Open client {{name}}",
@@ -1529,6 +1537,11 @@
       "statusPlaceholder": "Status",
       "title": "Recent Interactions",
       "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+    },
+    "callArtifacts": {
+      "sectionTitle": "Call recording and transcript",
+      "viewTranscript": "View transcript",
+      "downloadRecording": "Download recording"
     }
   },
   "clientDrawer": {

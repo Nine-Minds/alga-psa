@@ -13,7 +13,7 @@ export default defineConfig({
   sourcemap: false,
   clean: true,
   target: 'node20',
-  external: ['@alga-psa/emulator-host', 'express', 'zod'],
+  external: ['@alga-psa/emulator-host', 'express', 'ws', 'zod'],
   // tsup auto-externalizes package.json dependencies; force the pure route
   // constants to bundle so the shipped dist has no unbuilt .ts import.
   noExternal: [/@alga-psa\/ee-threecx/],

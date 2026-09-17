@@ -21,11 +21,13 @@
     "@alga-psa/ee-threecx": "*",
     "@alga-psa/emulator-host": "*",
     "express": "^5.1.0",
+    "ws": "^8.21.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.1",
     "tsup": "^8.0.0",
     "typescript": "^5.7.3",
     "vitest": "^4.1.9"

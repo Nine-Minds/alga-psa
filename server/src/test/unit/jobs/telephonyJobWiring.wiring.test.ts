@@ -100,6 +100,31 @@ describe('Telephony job wiring', () => {
     expect(body.indexOf('runWithTenant')).toBeLessThan(body.indexOf('captureTelephonyCallArtifacts({'));
   });
 
+  it('T226: the 3CX server-side jobs are forwarded by the worker and registered on the server', () => {
+    for (const jobName of ['process-threecx-call-event', 'process-threecx-chat', 'sync-threecx-phonebook-contact']) {
+      expect(jobActivitiesSource).toContain(
+        `registerJobHandlerForActivities(\n    '${jobName}',\n    forwardJobToServer('${jobName}'),\n  );`,
+      );
+    }
+    expect(registerHandlersSource).toContain('name: THREECX_CALL_EVENT_JOB,');
+    expect(registerHandlersSource).toContain('await processThreecxCallEvent(data);');
+    expect(registerHandlersSource).toContain('name: THREECX_CHAT_JOB,');
+    expect(registerHandlersSource).toContain('await processThreecxChat(data);');
+    expect(registerHandlersSource).toContain('name: THREECX_PHONEBOOK_CONTACT_JOB,');
+    expect(registerHandlersSource).toContain('await syncThreecxPhonebookContactHandler(data);');
+    // The EE job-name allowlist carries all three.
+    expect(registerHandlersSource).toContain('THREECX_CALL_EVENT_JOB, THREECX_CHAT_JOB, THREECX_PHONEBOOK_CONTACT_JOB]');
+  });
+
+  it('T226: the 3CX maintenance jobs are fanned out and scheduled', () => {
+    expect(maintenanceFanoutSource).toContain('[THREECX_CALL_CONTROL_RECONCILE_JOB]: { scope: \'tenant\', run: (tenantId) => reconcileThreecxCallControlHandler({ tenantId }), tenants: tenantsWithActiveThreecx },');
+    expect(maintenanceFanoutSource).toContain('[THREECX_CDR_BACKFILL_JOB]: { scope: \'tenant\', run: (tenantId) => backfillThreecxCdrHandler({ tenantId }), tenants: tenantsWithThreecxCdrImport },');
+    expect(maintenanceFanoutSource).toContain('[THREECX_PHONEBOOK_RECONCILE_JOB]: { scope: \'tenant\', run: (tenantId) => reconcileThreecxPhonebookHandler({ tenantId }), tenants: tenantsWithThreecxPhonebookSync },');
+    expect(setupSchedulesSource).toContain("{ jobName: 'reconcile-threecx-call-control', cron: '*/5 * * * *' },");
+    expect(setupSchedulesSource).toContain("{ jobName: 'backfill-threecx-cdr', cron: '5 * * * *' },");
+    expect(setupSchedulesSource).toContain("{ jobName: 'reconcile-threecx-phonebook', cron: '10 * * * *' },");
+  });
+
   it('T035: the Graph webhook path is allowlisted while the rest of /api stays guarded', () => {
     expect(middlewareSource).toContain("'/api/telephony/webhooks/'");
     // The allowlist is a prefix list; a sibling telephony API path must not be

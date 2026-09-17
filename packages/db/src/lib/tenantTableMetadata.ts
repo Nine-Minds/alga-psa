@@ -491,6 +491,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   telephony_call_artifacts: { scope: 'tenant' },
   telephony_call_intents: { scope: 'tenant' },
   telephony_call_records: { scope: 'tenant' },
+  telephony_chat_records: { scope: 'tenant' },
   telephony_providers: { scope: 'tenant' },
   tenants: { scope: 'tenant' },
   tenant_addons: { scope: 'tenant' },

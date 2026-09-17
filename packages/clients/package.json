@@ -42,6 +42,10 @@
       "import": "./src/lib/contactActionErrorCodes.ts",
       "types": "./src/lib/contactActionErrorCodes.ts"
     },
+    "./lib/createContactRoute": {
+      "import": "./src/lib/createContactRoute.ts",
+      "types": "./src/lib/createContactRoute.ts"
+    },
     "./context/ClientCrossFeatureContext": {
       "types": "./src/context/ClientCrossFeatureContext.tsx",
       "import": "./dist/context/ClientCrossFeatureContext.js",

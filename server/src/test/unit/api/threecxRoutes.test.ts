@@ -9,6 +9,7 @@ vi.mock('@/lib/telephony/threecxRouteDeps', () => ({
     checkRateLimit: async () => true,
     getProviderAvailability: async () => ({ enabled: true }),
     enqueueCanonicalCall: async () => undefined,
+    enqueueChat: async () => undefined,
   }),
 }));
 

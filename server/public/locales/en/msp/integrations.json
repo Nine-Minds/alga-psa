@@ -3693,7 +3693,75 @@
           "rotate": "Rotate",
           "fullKeyWarning": "Copy this key now — it will not be shown again.",
           "download": "Download template",
-          "tierRequired": "3CX telephony requires the Pro plan."
+          "tierRequired": "3CX telephony requires the Pro plan.",
+          "templateStale": "A newer template is available. Download and re-upload it in the 3CX console.",
+          "pbx": {
+            "title": "PBX API (3CX Enterprise/AI)",
+            "help": "Screen pop, click-to-call, call-history import and phonebook sync use the 3CX Call Control and Configuration APIs, which need a 3CX Enterprise or AI license (8SC+). Create an API app in the 3CX Admin Console under Integrations → API, tick both API accesses, and list every extension you want to monitor.",
+            "baseUrl": "PBX address",
+            "clientId": "Client id (API app extension)",
+            "clientSecret": "Client secret",
+            "replaceSecret": "Replace",
+            "save": "Save credentials",
+            "test": "Test connection",
+            "clear": "Remove",
+            "connected": "Connected",
+            "granted": "granted",
+            "notGranted": "not granted",
+            "callControl": "Call control",
+            "xapi": "Configuration API",
+            "lastChecked": "Last checked",
+            "notConnectedHint": "Connect the PBX API above to use this feature."
+          },
+          "extensions": {
+            "title": "Extensions",
+            "sync": "Sync from PBX",
+            "lastSync": "Last sync",
+            "empty": "No extensions synced yet.",
+            "dn": "Extension",
+            "pbxUser": "PBX user",
+            "algaUser": "AlgaPSA user",
+            "unmapped": "Not mapped",
+            "auto": "matched by email"
+          },
+          "cdr": {
+            "title": "Call history import",
+            "help": "Reads the PBX call log every hour and journals external calls that are not in the ledger yet.",
+            "lookback": "Days of history on the first run",
+            "lastRun": "Last run",
+            "added": "Records added"
+          },
+          "phonebook": {
+            "title": "Phonebook sync",
+            "help": "Pushes contacts with phone numbers to the 3CX company phonebook and adds numbers found only in the PBX to matching contacts.",
+            "schedule": "Reconcile schedule",
+            "daily": "Daily",
+            "hourly": "Hourly",
+            "pushNow": "Push now",
+            "importNow": "Import now",
+            "lastPush": "Last push",
+            "lastImport": "Last import",
+            "countsLegend": "Counts: created/updated/deleted/imported/skipped"
+          },
+          "queue": {
+            "title": "Contacts created from 3CX",
+            "empty": "Nothing waiting. Contacts created from the 3CX client without a matching client show up here.",
+            "pendingBadge": "needs email",
+            "unmappedBadge": "no client",
+            "company": "Company",
+            "chooseClient": "Choose a client…",
+            "apply": "Apply",
+            "leaveWithoutClient": "Leave without client",
+            "complete": "Complete",
+            "dismiss": "Dismiss",
+            "completeTitle": "Complete contact from 3CX",
+            "firstName": "First name",
+            "lastName": "Last name",
+            "email": "Email",
+            "number": "Phone number",
+            "cancel": "Cancel",
+            "save": "Create contact"
+          }
         }
       },
       "subscriptionExpires": "Subscription renews before",
@@ -3730,7 +3798,8 @@
         "assignTo": "Assign to",
         "searchPlaceholder": "Search contacts and clients…",
         "noTargets": "No matching contacts or clients.",
-        "chooseTarget": "Assign to client…"
+        "chooseTarget": "Assign to client…",
+        "chatBadge": "Chat"
       },
       "forbidden": "You do not have permission to view telephony settings for this tenant.",
       "paywall": {
@@ -3864,6 +3933,21 @@
       "contactWithoutClient": "A contact with this email address already exists in the system without a client assignment",
       "emailOnAnotherClient": "This email is already associated with another client",
       "emailOnAnotherClientNamed": "This email is already associated with {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Incoming call",
+      "unknownCaller": "Unknown caller",
+      "noNumber": "No caller ID",
+      "extension": "Ringing extension {{dn}}",
+      "openTickets": "Open tickets",
+      "recentInteractions": "Recent interactions",
+      "openContact": "Open contact",
+      "openClient": "Open client",
+      "newTicket": "New ticket",
+      "createContact": "Create contact",
+      "dismiss": "Dismiss"
     }
   }
 }

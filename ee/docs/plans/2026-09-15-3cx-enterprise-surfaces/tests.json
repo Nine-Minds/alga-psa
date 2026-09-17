@@ -1,0 +1,2054 @@
+[
+  {
+    "id": "T001",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ],
+    "description": "parseThreecxConfig defaults pbx.status to not_configured and capabilities to false for legacy config"
+  },
+  {
+    "id": "T002",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "description": "saveThreecxPbxCredentials rejects http:// base URL when THREECX_EMULATOR_MODE is unset"
+  },
+  {
+    "id": "T003",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F012"
+    ],
+    "description": "saveThreecxPbxCredentials accepts http:// base URL when THREECX_EMULATOR_MODE=true"
+  },
+  {
+    "id": "T004",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "description": "saveThreecxPbxCredentials writes the secret through setTenantSecret and stores only clientSecretRef in config"
+  },
+  {
+    "id": "T005",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "description": "saveThreecxPbxCredentials without clientSecret keeps the existing clientSecretRef"
+  },
+  {
+    "id": "T006",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ],
+    "description": "clearThreecxPbxCredentials removes config.pbx and the tenant secret"
+  },
+  {
+    "id": "T007",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "description": "acquireThreecxToken posts form-encoded client_credentials to /connect/token and parses access_token and expires_in"
+  },
+  {
+    "id": "T008",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "description": "Second token request within the TTL is served from Redis without calling the PBX"
+  },
+  {
+    "id": "T009",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "description": "Two concurrent token requests on a cold cache produce one PBX token call"
+  },
+  {
+    "id": "T010",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "description": "A 401 from an XAPI call evicts the cached token and the retried call succeeds with a fresh token"
+  },
+  {
+    "id": "T011",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "description": "A second consecutive 401 is surfaced as an error without a third attempt"
+  },
+  {
+    "id": "T012",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "description": "testThreecxPbxConnection sets capabilities.xapi true and callControl false when /callcontrol answers 403"
+  },
+  {
+    "id": "T013",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "description": "testThreecxPbxConnection sets status connected and lastCheckedAt when the token succeeds"
+  },
+  {
+    "id": "T014",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ],
+    "description": "testThreecxPbxConnection sets status error with the PBX message when the token endpoint answers 401"
+  },
+  {
+    "id": "T015",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "description": "saveThreecxPbxCredentials action refuses a user without canManageTelephony"
+  },
+  {
+    "id": "T016",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "description": "testThreecxPbxConnection action refuses on CE and below-tier through requireManageableProvider"
+  },
+  {
+    "id": "T017",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "description": "getThreecxProviderState never returns the client secret and reports hasClientSecret"
+  },
+  {
+    "id": "T018",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "description": "syncThreecxExtensions pages Users with $top/$skip until a short page"
+  },
+  {
+    "id": "T019",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "description": "syncThreecxExtensions drops PBX users with Enabled false"
+  },
+  {
+    "id": "T020",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "description": "Sync auto-maps an extension whose EmailAddress equals a tenant user email ignoring case"
+  },
+  {
+    "id": "T021",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "description": "Sync leaves userId null for an extension with no matching user"
+  },
+  {
+    "id": "T022",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "description": "Re-sync preserves a manual mapping even when the PBX email now matches a different user"
+  },
+  {
+    "id": "T023",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "description": "Re-sync removes an extension that disappeared from the PBX"
+  },
+  {
+    "id": "T024",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "description": "setThreecxExtensionUser sets mappedBy manual and clears with null"
+  },
+  {
+    "id": "T025",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "description": "setThreecxExtensionUser refuses an unknown dn"
+  },
+  {
+    "id": "T026",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ],
+    "description": "extensionForUser and userForExtension round-trip and return null for unknown ids"
+  },
+  {
+    "id": "T027",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ],
+    "description": "syncThreecxExtensions action refuses without canManageTelephony"
+  },
+  {
+    "id": "T028",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "description": "threecxCallControlWorkflow continues as new after the activity returns"
+  },
+  {
+    "id": "T029",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "description": "threecxCallControlWorkflow returns after a stop signal without starting another activity"
+  },
+  {
+    "id": "T030",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ],
+    "description": "consumeThreecxCallControl opens the socket with the bearer header and heartbeats"
+  },
+  {
+    "id": "T031",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ],
+    "description": "An Upsert event triggers GET on the entity path"
+  },
+  {
+    "id": "T032",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ],
+    "description": "A stale GET response with a lower sequence than the latest seen is ignored"
+  },
+  {
+    "id": "T033",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ],
+    "description": "A participant entering Ringing on a mapped DN forwards a ringing event with dn, participantId, callId, partyCallerId, partyCallerName, partyDid"
+  },
+  {
+    "id": "T034",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ],
+    "description": "A ringing participant entering Connected forwards a connected event"
+  },
+  {
+    "id": "T035",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ],
+    "description": "A Remove for a connected participant forwards an ended event"
+  },
+  {
+    "id": "T036",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ],
+    "description": "A participant on a DN absent from the extension map forwards nothing"
+  },
+  {
+    "id": "T037",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ],
+    "description": "A participant that goes straight to Dialing forwards nothing"
+  },
+  {
+    "id": "T038",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ],
+    "description": "Reconnect delays are 5, 10, 20, ..., capped at 120 seconds"
+  },
+  {
+    "id": "T039",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ],
+    "description": "A 401 on the handshake refreshes the token before the next attempt"
+  },
+  {
+    "id": "T040",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ],
+    "description": "Ten minutes of failed connects writes pbx.status error and lastError"
+  },
+  {
+    "id": "T041",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ],
+    "description": "reconcile-threecx-call-control starts the workflow for a connected tenant with callControl"
+  },
+  {
+    "id": "T042",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ],
+    "description": "reconcile-threecx-call-control signals stop for a tenant whose provider is disabled"
+  },
+  {
+    "id": "T043",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ],
+    "description": "reconcile-threecx-call-control does not start a workflow when capabilities.callControl is false"
+  },
+  {
+    "id": "T044",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F031"
+    ],
+    "description": "Wiring test finds reconcile-threecx-call-control in MAINTENANCE_FANOUT_SCHEDULES and process-threecx-call-event in both registries"
+  },
+  {
+    "id": "T045",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ],
+    "description": "processThreecxCallEvent drops an event for a DN with no mapped user"
+  },
+  {
+    "id": "T046",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ],
+    "description": "ringing with a known number publishes a matched contact and client"
+  },
+  {
+    "id": "T047",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ],
+    "description": "ringing with an unknown number publishes an unmatched call with the number"
+  },
+  {
+    "id": "T048",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ],
+    "description": "The payload lists at most 5 open tickets ordered by updated_at desc and excludes closed tickets"
+  },
+  {
+    "id": "T049",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ],
+    "description": "A client-only match lists the client tickets"
+  },
+  {
+    "id": "T050",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ],
+    "description": "The payload lists the last 3 interactions of the contact"
+  },
+  {
+    "id": "T051",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ],
+    "description": "The message is published on the mapped user channel only"
+  },
+  {
+    "id": "T052",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ],
+    "description": "connected and ended events publish without contact lookup"
+  },
+  {
+    "id": "T053",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ],
+    "description": "NotificationExtension writes telephony.incoming_call messages into the incomingCall Yjs map"
+  },
+  {
+    "id": "T054",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ],
+    "description": "NotificationExtension leaves the notifications map untouched for incoming_call messages"
+  },
+  {
+    "id": "T055",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ],
+    "description": "useInternalNotifications exposes incomingCall on a ringing entry and clears it on ended"
+  },
+  {
+    "id": "T056",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ],
+    "description": "dismissIncomingCall clears the local state"
+  },
+  {
+    "id": "T057",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ],
+    "description": "IncomingCallCard renders name, number, client, extension, email, ticket links and interactions for a matched call"
+  },
+  {
+    "id": "T058",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ],
+    "description": "IncomingCallCard renders Unknown caller and Create contact for an unmatched call"
+  },
+  {
+    "id": "T059",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ],
+    "description": "New ticket opens the quick-add ticket dialog with client and contact prefilled"
+  },
+  {
+    "id": "T060",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ],
+    "description": "Create contact opens quick-add contact with the number prefilled"
+  },
+  {
+    "id": "T061",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ],
+    "description": "The card closes after 60 seconds with fake timers"
+  },
+  {
+    "id": "T062",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ],
+    "description": "A second ringing event replaces the first card"
+  },
+  {
+    "id": "T063",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "featureIds": [
+      "F039",
+      "F043"
+    ],
+    "description": "IncomingCallProvider is mounted in MspLayoutClient and every card button has a kebab-case id"
+  },
+  {
+    "id": "T064",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ],
+    "description": "getTelephonyCallLinkState returns threecx.connected true and the extension for a mapped user"
+  },
+  {
+    "id": "T065",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ],
+    "description": "getTelephonyCallLinkState returns extension null for an unmapped user even when connected"
+  },
+  {
+    "id": "T066",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ],
+    "description": "CallLink shows Call via 3CX when connected with an extension"
+  },
+  {
+    "id": "T067",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ],
+    "description": "CallLink hides Call via 3CX when the extension is null"
+  },
+  {
+    "id": "T068",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ],
+    "description": "CallLink keeps the tel: link in both states"
+  },
+  {
+    "id": "T069",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ],
+    "description": "createTelephonyCallIntent with provider 3cx stores provider_user_id as the DN"
+  },
+  {
+    "id": "T070",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ],
+    "description": "createTelephonyCallIntent with provider 3cx refuses when the user has no extension"
+  },
+  {
+    "id": "T071",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ],
+    "description": "createTelephonyCallIntent with provider teams-phone behaves as before"
+  },
+  {
+    "id": "T072",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ],
+    "description": "report-call sets providerUserId from the extension map by agent email"
+  },
+  {
+    "id": "T073",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ],
+    "description": "report-call falls back to agentExtension when the email is not in the map"
+  },
+  {
+    "id": "T074",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ],
+    "description": "An outbound report-call binds the pending 3cx intent and journals against its ticket"
+  },
+  {
+    "id": "T075",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ],
+    "description": "placeThreecxCall records an intent then posts dn and destination digits to Users/Pbx.MakeCall"
+  },
+  {
+    "id": "T076",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ],
+    "description": "placeThreecxCall without ticketId records no intent"
+  },
+  {
+    "id": "T077",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ],
+    "description": "placeThreecxCall returns the PBX error message on a 422"
+  },
+  {
+    "id": "T078",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ],
+    "description": "placeThreecxCall refuses a client-portal user and a user without interaction:create"
+  },
+  {
+    "id": "T079",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ],
+    "description": "Failure shows a destructive toast with the message"
+  },
+  {
+    "id": "T080",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ],
+    "description": "parseThreecxConfig defaults cdr.lookbackDays to 30 and enabled to false"
+  },
+  {
+    "id": "T081",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ],
+    "description": "setThreecxCallHistoryImport refuses without canManageTelephony"
+  },
+  {
+    "id": "T082",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ],
+    "description": "backfill-threecx-cdr fanout selects only tenants with cdr.enabled, connected and xapi"
+  },
+  {
+    "id": "T083",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ],
+    "description": "First run queries from now minus lookbackDays; later runs from the watermark"
+  },
+  {
+    "id": "T084",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ],
+    "description": "The query pages with $top=200 and $skip until a short page"
+  },
+  {
+    "id": "T085",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ],
+    "description": "An internal-to-internal segment is skipped"
+  },
+  {
+    "id": "T086",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ],
+    "description": "External source maps to inbound with the external number as caller"
+  },
+  {
+    "id": "T087",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ],
+    "description": "External destination maps to outbound with the external number as callee"
+  },
+  {
+    "id": "T088",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ],
+    "description": "Unanswered inbound maps to missed with duration 0"
+  },
+  {
+    "id": "T089",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ],
+    "description": "The internal DN maps to organizerUserId and agent email through the extension map"
+  },
+  {
+    "id": "T090",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ],
+    "description": "CallTime PT1M35S parses to 95 seconds"
+  },
+  {
+    "id": "T091",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F059"
+    ],
+    "description": "threecxProviderCallId gives the same hash for 12:00:00.000Z and 12:00:00.999Z"
+  },
+  {
+    "id": "T092",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F059"
+    ],
+    "description": "report-call and the backfill produce the same hash for the same call"
+  },
+  {
+    "id": "T093",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ],
+    "description": "A segment whose hash already exists is skipped"
+  },
+  {
+    "id": "T094",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ],
+    "description": "A segment with same organizer, same number and started_at 45 s apart from an existing row is skipped"
+  },
+  {
+    "id": "T095",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ],
+    "description": "A segment 90 s apart from an existing row is kept"
+  },
+  {
+    "id": "T096",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ],
+    "description": "Survivors are enqueued as process-telephony-canonical-call and lastRunAdded counts them"
+  },
+  {
+    "id": "T097",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ],
+    "description": "The watermark advances to the last SegmentStartTime minus 5 minutes"
+  },
+  {
+    "id": "T098",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ],
+    "description": "A second run over the same seeds adds nothing"
+  },
+  {
+    "id": "T099",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ],
+    "description": "parseThreecxConfig defaults phonebook.enabled false and schedule daily"
+  },
+  {
+    "id": "T100",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ],
+    "description": "setThreecxPhonebookSync and the run actions refuse without canManageTelephony"
+  },
+  {
+    "id": "T101",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ],
+    "description": "buildPbxContact splits full_name, sets CompanyName from the client and Tag AlgaPSA"
+  },
+  {
+    "id": "T102",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ],
+    "description": "buildPbxContact puts the default number in PhoneNumber and a mobile in Mobile2, a business in Business"
+  },
+  {
+    "id": "T103",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F066"
+    ],
+    "description": "Push creates an entry for an active contact with a phone and stores the mapping with fingerprint"
+  },
+  {
+    "id": "T104",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F066"
+    ],
+    "description": "Push skips a contact with no phone numbers"
+  },
+  {
+    "id": "T105",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F066"
+    ],
+    "description": "Push skips an inactive contact without a mapping"
+  },
+  {
+    "id": "T106",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F067"
+    ],
+    "description": "Push PATCHes when the fingerprint changed and skips when unchanged"
+  },
+  {
+    "id": "T107",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ],
+    "description": "Push DELETEs the entry and mapping for a deactivated mapped contact"
+  },
+  {
+    "id": "T108",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ],
+    "description": "A 404 on PATCH recreates the entry and updates the mapping"
+  },
+  {
+    "id": "T109",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ],
+    "description": "A 404 on DELETE drops the mapping without error"
+  },
+  {
+    "id": "T110",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F069"
+    ],
+    "description": "Import skips entries with a mapping row and entries tagged AlgaPSA"
+  },
+  {
+    "id": "T111",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ],
+    "description": "Import matches by email ignoring case"
+  },
+  {
+    "id": "T112",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ],
+    "description": "Import matches by first and last name when exactly one contact matches"
+  },
+  {
+    "id": "T113",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ],
+    "description": "Import skips a name match when two contacts share the name"
+  },
+  {
+    "id": "T114",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ],
+    "description": "Import adds a number not present and skips one present with different formatting"
+  },
+  {
+    "id": "T115",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ],
+    "description": "Import never creates a contact for an unmatched entry"
+  },
+  {
+    "id": "T116",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ],
+    "description": "Import records a mapping so the next push updates the adopted entry"
+  },
+  {
+    "id": "T117",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ],
+    "description": "CONTACT_UPDATED enqueues sync-threecx-phonebook-contact for an enabled connected tenant"
+  },
+  {
+    "id": "T118",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ],
+    "description": "CONTACT_UPDATED enqueues nothing when sync is disabled"
+  },
+  {
+    "id": "T119",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F073"
+    ],
+    "description": "sync-threecx-phonebook-contact deletes the entry for an archived contact"
+  },
+  {
+    "id": "T120",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ],
+    "description": "reconcile-threecx-phonebook runs a daily tenant once when lastPushAt is 24 h old and not when it is 2 h old"
+  },
+  {
+    "id": "T121",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ],
+    "description": "reconcile-threecx-phonebook runs an hourly tenant every run and executes push before import"
+  },
+  {
+    "id": "T122",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ],
+    "description": "A PBX error on one contact is recorded in lastError and the remaining contacts are still pushed"
+  },
+  {
+    "id": "T123",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ],
+    "description": "contacts route answers 501 on CE, 404 for an unknown slug, 403 for a bad key"
+  },
+  {
+    "id": "T124",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ],
+    "description": "contacts route answers 403 for an inactive provider and a below-tier tenant"
+  },
+  {
+    "id": "T125",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ],
+    "description": "contacts route answers 400 when name, number and email are all empty"
+  },
+  {
+    "id": "T126",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ],
+    "description": "resolveClientForCompany returns the exact match ignoring case"
+  },
+  {
+    "id": "T127",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ],
+    "description": "resolveClientForCompany returns a suggestion for a partial match and null otherwise"
+  },
+  {
+    "id": "T128",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ],
+    "description": "With email and an exact client match the contact is created with client_id, the number as default business phone, and CONTACT_CREATED is published"
+  },
+  {
+    "id": "T129",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ],
+    "description": "The response carries contactUrl, names, email, phone, entityId and entityType contact"
+  },
+  {
+    "id": "T130",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ],
+    "description": "A duplicate email answers 200 with the existing contact and creates nothing"
+  },
+  {
+    "id": "T131",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F082"
+    ],
+    "description": "Without an exact client match a contact-origin row is written with suggestedClientId"
+  },
+  {
+    "id": "T132",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ],
+    "description": "Without an email a contact-pending row is written and no contact is created"
+  },
+  {
+    "id": "T133",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ],
+    "description": "Without an email the contactUrl carries ?threecxPending=<uuid> and entityType pending"
+  },
+  {
+    "id": "T134",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ],
+    "description": "listThreecxContactQueue returns unmapped and pending rows with suggested client names"
+  },
+  {
+    "id": "T135",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F085"
+    ],
+    "description": "mapThreecxContactToClient sets client_id and removes the row"
+  },
+  {
+    "id": "T136",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F085"
+    ],
+    "description": "mapThreecxContactToClient with null client only removes the row"
+  },
+  {
+    "id": "T137",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F086"
+    ],
+    "description": "completeThreecxPendingContact creates the contact with the entered email and deletes the pending row"
+  },
+  {
+    "id": "T138",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F086"
+    ],
+    "description": "completeThreecxPendingContact refuses an invalid email and keeps the row"
+  },
+  {
+    "id": "T139",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F086"
+    ],
+    "description": "dismissThreecxPendingContact deletes the row without creating a contact"
+  },
+  {
+    "id": "T140",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F087"
+    ],
+    "description": "The queue actions refuse without canManageTelephony"
+  },
+  {
+    "id": "T141",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ],
+    "description": "The template validator sees the contacts route in the CreateContactRecordFromClient scenario"
+  },
+  {
+    "id": "T142",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F088"
+    ],
+    "description": "Migration up adds the Chat system interaction type and down removes it"
+  },
+  {
+    "id": "T143",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F089"
+    ],
+    "description": "Migration creates telephony_chat_records distributed on tenant with the unique provider_chat_id constraint"
+  },
+  {
+    "id": "T144",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F090"
+    ],
+    "description": "report-chat route answers 501 on CE, 404 unknown slug, 403 bad key"
+  },
+  {
+    "id": "T145",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F091"
+    ],
+    "description": "report-chat answers 400 when messages or startTimeUtc is missing"
+  },
+  {
+    "id": "T146",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ],
+    "description": "report-chat answers 202 with providerChatId and enqueues process-threecx-chat without other DB writes"
+  },
+  {
+    "id": "T147",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ],
+    "description": "threecxProviderChatId is stable across millisecond differences in startTimeUtc"
+  },
+  {
+    "id": "T148",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F093"
+    ],
+    "description": "ingestChat inserts once and returns duplicate on a repeat"
+  },
+  {
+    "id": "T149",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ],
+    "description": "ingestChat uses entityId when the contact exists and ignores it when the contact is inactive"
+  },
+  {
+    "id": "T150",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ],
+    "description": "ingestChat matches by email ignoring case when no entityId"
+  },
+  {
+    "id": "T151",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ],
+    "description": "ingestChat matches by number through matchCallParty when no email"
+  },
+  {
+    "id": "T152",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F095"
+    ],
+    "description": "A matched chat creates a Chat interaction with title, notes, start, end, duration, contact and client"
+  },
+  {
+    "id": "T153",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F095"
+    ],
+    "description": "The agent user is resolved by email with the telephony actor fallback"
+  },
+  {
+    "id": "T154",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ],
+    "description": "An unmatched chat stores match_status unmatched and no interaction"
+  },
+  {
+    "id": "T155",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ],
+    "description": "An ambiguous number stores candidates"
+  },
+  {
+    "id": "T156",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F097"
+    ],
+    "description": "Wiring test finds process-threecx-chat in both registries"
+  },
+  {
+    "id": "T157",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ],
+    "description": "TelephonyCallsPanel lists an unmatched chat with a Chat badge"
+  },
+  {
+    "id": "T158",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F099"
+    ],
+    "description": "resolveTelephonyChat creates the interaction and stamps the match"
+  },
+  {
+    "id": "T159",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F099"
+    ],
+    "description": "resolveTelephonyChat returns already_resolved on a second call"
+  },
+  {
+    "id": "T160",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "featureIds": [
+      "F099"
+    ],
+    "description": "resolveTelephonyChat refuses without interaction:create"
+  },
+  {
+    "id": "T161",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ],
+    "description": "report-call accepts transcription, summary and recordingUrl and stores them in raw"
+  },
+  {
+    "id": "T162",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ],
+    "description": "report-call rejects a non-string transcription with 400"
+  },
+  {
+    "id": "T163",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F101",
+      "F102"
+    ],
+    "description": "A report-call with transcription creates a transcript document associated to contact, client and interaction and a ready artifact row"
+  },
+  {
+    "id": "T164",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ],
+    "description": "A report-call without transcription leaves artifact_status pending"
+  },
+  {
+    "id": "T165",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ],
+    "description": "A summary is appended to the interaction notes"
+  },
+  {
+    "id": "T166",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F104"
+    ],
+    "description": "The sweep runs the 3cx fetcher only for tenants with capabilities.xapi"
+  },
+  {
+    "id": "T167",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ],
+    "description": "The fetcher queries Recordings within two minutes of started_at and picks the one matching the external number"
+  },
+  {
+    "id": "T168",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ],
+    "description": "A transcribed recording produces the transcript document and artifact"
+  },
+  {
+    "id": "T169",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ],
+    "description": "An untranscribed recording keeps the record pending and increments artifact_fetch_attempts"
+  },
+  {
+    "id": "T170",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ],
+    "description": "A recording with RecordingUrl is downloaded and stored as a recording artifact with file_id"
+  },
+  {
+    "id": "T171",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F108"
+    ],
+    "description": "A record with no recording after the backoff limit settles to none"
+  },
+  {
+    "id": "T172",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ],
+    "description": "InteractionDetails renders transcript and recording links and the summary for a call interaction"
+  },
+  {
+    "id": "T173",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ],
+    "description": "InteractionDetails renders nothing extra for an interaction without artifacts"
+  },
+  {
+    "id": "T174",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F110"
+    ],
+    "description": "lookup returns entityId and entityType contact for a contact match and client for a client-only match"
+  },
+  {
+    "id": "T175",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F110"
+    ],
+    "description": "search and lookup-by-email return entityId and entityType"
+  },
+  {
+    "id": "T176",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F111",
+      "F112"
+    ],
+    "description": "The template validator sees EntityId and EntityType outputs on the three lookups and in the ReportCall and ReportChat requests"
+  },
+  {
+    "id": "T177",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F112"
+    ],
+    "description": "report-call accepts entityId and entityType as optional strings"
+  },
+  {
+    "id": "T178",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ],
+    "description": "ingestCanonicalCall uses preferredContactId when the contact is active"
+  },
+  {
+    "id": "T179",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ],
+    "description": "ingestCanonicalCall falls back to number matching when preferredContactId is inactive or missing"
+  },
+  {
+    "id": "T180",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F114"
+    ],
+    "description": "The canonical-call handler passes raw.entityId as preferredContactId only for entityType contact"
+  },
+  {
+    "id": "T181",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F115"
+    ],
+    "description": "The validator sees the CreateContactRecordFromClient scenario with the five variables and the contacts URL"
+  },
+  {
+    "id": "T182",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F116"
+    ],
+    "description": "The validator sees the ReportChat scenario with ChatMessages and the report-chat URL"
+  },
+  {
+    "id": "T183",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F117"
+    ],
+    "description": "The validator sees Transcription, Summary and RecordingUrl in the ReportCall request"
+  },
+  {
+    "id": "T184",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "featureIds": [
+      "F118"
+    ],
+    "description": "The card shows the template out-of-date hint when templateVersion is lower than THREECX_TEMPLATE_VERSION"
+  },
+  {
+    "id": "T185",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ],
+    "description": "The emulator serves GET / and the existing crm-inbound-call action still records exchanges"
+  },
+  {
+    "id": "T186",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F120"
+    ],
+    "description": "POST /connect/token answers a token for the seeded app and 401 for wrong credentials"
+  },
+  {
+    "id": "T187",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ],
+    "description": "GET /xapi/v1/Users without a bearer answers 401"
+  },
+  {
+    "id": "T188",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F122"
+    ],
+    "description": "GET /callcontrol answers 403 when the app lacks callControl"
+  },
+  {
+    "id": "T189",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F123"
+    ],
+    "description": "GET /xapi/v1/Users honours $select, $top and $skip"
+  },
+  {
+    "id": "T190",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F124"
+    ],
+    "description": "Contacts POST answers 201 with an Id, PATCH updates, DELETE removes, DeleteContactsById removes several"
+  },
+  {
+    "id": "T191",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F125"
+    ],
+    "description": "CallHistoryView honours $filter on SegmentStartTime ge and pages"
+  },
+  {
+    "id": "T192",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F126"
+    ],
+    "description": "Recordings honours $filter on StartTime and DownloadRecording streams bytes"
+  },
+  {
+    "id": "T193",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F127"
+    ],
+    "description": "Users/Pbx.MakeCall records dn and destination in makecalls"
+  },
+  {
+    "id": "T194",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F128"
+    ],
+    "description": "The WebSocket handshake without a bearer is rejected"
+  },
+  {
+    "id": "T195",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F129"
+    ],
+    "description": "pbx-ring pushes an Upsert whose entity resolves to a Ringing participant with party_caller_id"
+  },
+  {
+    "id": "T196",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F130"
+    ],
+    "description": "pbx-answer pushes an Upsert with Connected and pbx-hangup pushes a Remove"
+  },
+  {
+    "id": "T197",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F131"
+    ],
+    "description": "crm-create-contact and crm-report-chat post with the bearer key and record exchanges"
+  },
+  {
+    "id": "T198",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F133"
+    ],
+    "description": "token-invalid makes the token endpoint answer 401 while armed"
+  },
+  {
+    "id": "T199",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F133"
+    ],
+    "description": "ws-drop closes open sockets once and the next connect succeeds"
+  },
+  {
+    "id": "T200",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F132"
+    ],
+    "description": "State views pbx-contacts, makecalls, participants and tokens are listed in the catalog"
+  },
+  {
+    "id": "T201",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ],
+    "description": "The suite catalog test expects the threecx emulator to declare serve"
+  },
+  {
+    "id": "T202",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F135"
+    ],
+    "description": "The PBX API section renders inputs, Test connection and the status badge and calls saveThreecxPbxCredentials"
+  },
+  {
+    "id": "T203",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F135"
+    ],
+    "description": "The secret input is write-only and shows Replace once a secret is stored"
+  },
+  {
+    "id": "T204",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F135"
+    ],
+    "description": "Capability chips show granted and not granted from state"
+  },
+  {
+    "id": "T205",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F137"
+    ],
+    "description": "The Extensions table highlights unmapped rows and calls setThreecxExtensionUser from the picker"
+  },
+  {
+    "id": "T206",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F137"
+    ],
+    "description": "Sync from PBX calls syncThreecxExtensions and refreshes the table"
+  },
+  {
+    "id": "T207",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F138"
+    ],
+    "description": "Call history import toggle calls setThreecxCallHistoryImport with lookback days"
+  },
+  {
+    "id": "T208",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F139"
+    ],
+    "description": "Phonebook sync controls call setThreecxPhonebookSync, runThreecxPhonebookPush and runThreecxPhonebookImport"
+  },
+  {
+    "id": "T209",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F140"
+    ],
+    "description": "An unmapped queue row preselects the suggested client and Apply calls mapThreecxContactToClient"
+  },
+  {
+    "id": "T210",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F140"
+    ],
+    "description": "Leave without client calls mapThreecxContactToClient with null"
+  },
+  {
+    "id": "T211",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F141"
+    ],
+    "description": "Complete opens the dialog, requires an email and calls completeThreecxPendingContact"
+  },
+  {
+    "id": "T212",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F142"
+    ],
+    "description": "Loading with ?threecxPending=<uuid> opens the dialog for that row"
+  },
+  {
+    "id": "T213",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F143"
+    ],
+    "description": "PBX-dependent sections show the not-connected hint when pbx.status is not connected"
+  },
+  {
+    "id": "T214",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F143"
+    ],
+    "description": "The new sections are absent when the provider is disabled"
+  },
+  {
+    "id": "T215",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F144"
+    ],
+    "description": "Every new button, input and select in the card has a kebab-case id"
+  },
+  {
+    "id": "T216",
+    "commitGroup": "i18n",
+    "implemented": true,
+    "featureIds": [
+      "F145",
+      "F146",
+      "F147"
+    ],
+    "description": "localeQualityGates passes for all ten msp/integrations.json and telephony locale files"
+  },
+  {
+    "id": "T217",
+    "commitGroup": "i18n",
+    "implemented": true,
+    "featureIds": [
+      "F145",
+      "F146",
+      "F147"
+    ],
+    "description": "translationKeyResolution finds every new key used by the card, the incoming-call card, CallLink and the attribution panel"
+  },
+  {
+    "id": "T218",
+    "commitGroup": "regression",
+    "implemented": true,
+    "featureIds": [
+      "F148"
+    ],
+    "description": "primaryNumberE164 does not return another tenant number for the same contact id"
+  },
+  {
+    "id": "T219",
+    "commitGroup": "regression",
+    "implemented": true,
+    "featureIds": [
+      "F149"
+    ],
+    "description": "contacts and report-chat routes answer 501 when isEnterpriseEdition is false"
+  },
+  {
+    "id": "T220",
+    "commitGroup": "regression",
+    "implemented": true,
+    "featureIds": [
+      "F150"
+    ],
+    "description": "telephonyJobWiring test covers process-threecx-call-event, process-threecx-chat and sync-threecx-phonebook-contact"
+  },
+  {
+    "id": "T221",
+    "commitGroup": "regression",
+    "implemented": true,
+    "featureIds": [
+      "F148"
+    ],
+    "description": "Existing threecx lookup, reportCall, template and emulator tests remain green"
+  },
+  {
+    "id": "T222",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ],
+    "description": "ThreecxPbxClient prefixes /xapi/v1 and /callcontrol and sends the bearer header on every call"
+  },
+  {
+    "id": "T223",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "description": "parseThreecxConfig tolerates a missing or malformed extensions array"
+  },
+  {
+    "id": "T224",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ],
+    "description": "MspCallLinkProvider passes threecx state and placeThreecxCall into CallLinkProvider"
+  },
+  {
+    "id": "T225",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ],
+    "description": "A phonebook mapping row is keyed by contact id with the 3CX Contact Id as external_entity_id and the PBX base URL as realm"
+  },
+  {
+    "id": "T226",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "featureIds": [
+      "F134"
+    ],
+    "description": "The emulator README lists the 3CX PBX routes, seeds and actions"
+  },
+  {
+    "id": "T227",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "featureIds": [
+      "F136"
+    ],
+    "description": "The PBX API help text names the 3CX edition requirement and monitored extensions"
+  }
+]

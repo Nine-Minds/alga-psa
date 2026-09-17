@@ -22,6 +22,12 @@ const isEnterpriseEdition =
   (process.env.EDITION ?? '').toLowerCase() === 'enterprise' ||
   (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
 
+/** The contact the PBX lookup already resolved (3CX echoes EntityId/EntityType back). */
+function preferredContactFromRaw(raw: Record<string, unknown>): string | null {
+  if (raw.entityType !== 'contact') return null;
+  return typeof raw.entityId === 'string' && raw.entityId.trim() !== '' ? raw.entityId : null;
+}
+
 /**
  * Provider-agnostic ingestion for adapters that already hand us the canonical
  * record (3CX's server-side ReportCall). Mirrors the Teams notification
@@ -39,8 +45,14 @@ export async function processTelephonyCanonicalCall(
   }
 
   await runWithTenant(data.tenantId, async () => {
-    const { ingestCanonicalCall } = await import('@alga-psa/telephony');
-    const outcome = await ingestCanonicalCall({ tenantId: data.tenantId, call: data.record });
+    const telephony = await import('@alga-psa/telephony');
+    const raw = data.record.raw ?? {};
+    const preferredContactId = preferredContactFromRaw(raw);
+    const outcome = await telephony.ingestCanonicalCall({
+      tenantId: data.tenantId,
+      call: data.record,
+      ...(preferredContactId ? { preferredContactId } : {}),
+    });
     logger.info('[Telephony] Canonical call processed', {
       tenantId: data.tenantId,
       provider: data.record.provider,
@@ -50,6 +62,25 @@ export async function processTelephonyCanonicalCall(
 
     if (outcome.status !== 'ingested') {
       return;
+    }
+
+    const transcription = typeof raw.transcription === 'string' ? raw.transcription.trim() : '';
+    if (transcription) {
+      // Best-effort: a transcript filing failure must not lose the call or its ticket.
+      try {
+        await telephony.attachProvidedTranscript({
+          tenantId: data.tenantId,
+          callRecordId: outcome.callRecordId,
+          transcription,
+          summary: typeof raw.summary === 'string' ? raw.summary : null,
+        });
+      } catch (error) {
+        logger.warn('[Telephony] Failed to attach the provided call transcript', {
+          tenantId: data.tenantId,
+          callRecordId: outcome.callRecordId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     const [threecx, teamsPsa] = await Promise.all([

@@ -177,6 +177,21 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     'process-telephony-canonical-call',
     forwardJobToServer('process-telephony-canonical-call'),
   );
+  // 3CX chat journaling (report-chat route), incoming-call events from the
+  // Call Control consumer, and single-contact phonebook pushes all run
+  // server-side for the same src-consumed-package reason.
+  registerJobHandlerForActivities(
+    'process-threecx-chat',
+    forwardJobToServer('process-threecx-chat'),
+  );
+  registerJobHandlerForActivities(
+    'process-threecx-call-event',
+    forwardJobToServer('process-threecx-call-event'),
+  );
+  registerJobHandlerForActivities(
+    'sync-threecx-phonebook-contact',
+    forwardJobToServer('sync-threecx-phonebook-contact'),
+  );
   // Invoice bundling/delivery, enqueued from billing UI actions via the shared
   // enqueueImmediateJob seam. The handlers live server-side (StorageService,
   // PDF generation), so the worker forwards them like the jobs above.

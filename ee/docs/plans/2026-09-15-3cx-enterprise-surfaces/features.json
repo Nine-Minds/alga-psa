@@ -1,0 +1,1352 @@
+[
+  {
+    "id": "F001",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "`ThreecxProviderConfig` gains `pbx: { baseUrl, clientId, clientSecretRef, status, lastCheckedAt, lastError, capabilities: { xapi, callControl } }` with `parseThreecxConfig` defaulting `status` to `not_configured`"
+  },
+  {
+    "id": "F002",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "`saveThreecxPbxCredentials(tenant, { baseUrl, clientId, clientSecret? })` validates `https://` (or `http://` when `THREECX_EMULATOR_MODE=true`), stores the secret through `getSecretProviderInstance().setTenantSecret` under `threecx-pbx-client-secret` and writes only `clientSecretRef` into config"
+  },
+  {
+    "id": "F003",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "`clearThreecxPbxCredentials(tenant)` removes `config.pbx`, deletes the tenant secret and resets capabilities"
+  },
+  {
+    "id": "F004",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "`ThreecxPbxClient` in `ee/packages/threecx/src/lib/pbx/client.ts` exposes `xapiGet/xapiPost/xapiPatch/xapiDelete` under `/xapi/v1` and `callControlGet/callControlPost` under `/callcontrol`, each sending `Authorization: Bearer`"
+  },
+  {
+    "id": "F005",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "`acquireThreecxToken(tenant)` posts `client_id`, `client_secret`, `grant_type=client_credentials` form-encoded to `/connect/token` and returns `{ accessToken, expiresIn }`"
+  },
+  {
+    "id": "F006",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "Tokens are cached in Redis under `${prefix}threecx:token:<tenant>` with TTL `expires_in - 60`; a cache miss refreshes under a `SET NX` lock so concurrent callers share one token"
+  },
+  {
+    "id": "F007",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "A 401 from any PBX call evicts the cached token and retries once with a fresh token"
+  },
+  {
+    "id": "F008",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "`testThreecxPbxConnection(tenant)` acquires a token, probes `GET /xapi/v1/Defs?$select=Id` for `capabilities.xapi` and `GET /callcontrol` for `capabilities.callControl`, and writes `status`, `lastCheckedAt`, `lastError` and capabilities to config"
+  },
+  {
+    "id": "F009",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "A token failure in `testThreecxPbxConnection` sets `pbx.status = 'error'` with the PBX error text and leaves both capabilities false"
+  },
+  {
+    "id": "F010",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "Server actions `saveThreecxPbxCredentials`, `testThreecxPbxConnection`, `clearThreecxPbxCredentials` in `telephonyActions.ts` require `canManageTelephony` and go through `requireManageableProvider`"
+  },
+  {
+    "id": "F011",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "`getThreecxProviderState` returns `pbx` without the secret and with `hasClientSecret: boolean`"
+  },
+  {
+    "id": "F012",
+    "commitGroup": "pbx-connection",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ],
+    "description": "`isThreecxEmulatorModeEnabled()` reads `THREECX_EMULATOR_MODE` and is the only place that allows an `http://` PBX base URL"
+  },
+  {
+    "id": "F013",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ],
+    "description": "`config.extensions` is `Array<{ dn, pbxDisplayName, pbxEmail, userId, mappedBy }>` plus `extensionsSyncedAt`, parsed tolerantly by `parseThreecxConfig`"
+  },
+  {
+    "id": "F014",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ],
+    "description": "`syncThreecxExtensions(tenant)` pages `GET /xapi/v1/Users?$select=Id,Number,FirstName,LastName,EmailAddress,Enabled&$top=200&$skip=N` until a short page and keeps `Enabled` users only"
+  },
+  {
+    "id": "F015",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ],
+    "description": "Sync auto-maps each extension to the tenant user whose email equals `EmailAddress` case-insensitively with `mappedBy: 'auto'`"
+  },
+  {
+    "id": "F016",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ],
+    "description": "Sync preserves rows with `mappedBy: 'manual'` and drops extensions no longer returned by the PBX"
+  },
+  {
+    "id": "F017",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ],
+    "description": "`setThreecxExtensionUser(tenant, { dn, userId })` sets a manual mapping (or clears it with `null`) and refuses an unknown `dn`"
+  },
+  {
+    "id": "F018",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ],
+    "description": "`extensionForUser(config, userId)` and `userForExtension(config, dn)` helpers are exported from `@alga-psa/ee-threecx/lib`"
+  },
+  {
+    "id": "F019",
+    "commitGroup": "extension-map",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ],
+    "description": "Server actions `syncThreecxExtensions` and `setThreecxExtensionUser` in `telephonyActions.ts` require `canManageTelephony`"
+  },
+  {
+    "id": "F020",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "`threecxCallControlWorkflow` in `ee/temporal-workflows/src/workflows/` runs with workflow id `threecx-callcontrol:<tenant>`, loops the consume activity and `continueAsNew`s after each run"
+  },
+  {
+    "id": "F021",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "The workflow handles a `stop` signal by returning after the current activity attempt completes"
+  },
+  {
+    "id": "F022",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "Activity `consumeThreecxCallControl({ tenantId })` opens `wss://<pbx>/callcontrol/ws` with the bearer token, heartbeats every 15 s and returns after one hour"
+  },
+  {
+    "id": "F023",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "On an `Upsert` event the activity `GET`s the entity path and ignores responses whose `sequence` is older than the latest seen for that participant"
+  },
+  {
+    "id": "F024",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "A participant entering `Ringing` on a DN present in the extension map forwards `process-threecx-call-event` with `{ kind: 'ringing', dn, participantId, callId, partyCallerId, partyCallerName, partyDid, at }`"
+  },
+  {
+    "id": "F025",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "A ringing participant entering `Connected` forwards `{ kind: 'connected', dn, participantId, callId }`; a `Remove` for a ringing or connected participant forwards `{ kind: 'ended', ... }`"
+  },
+  {
+    "id": "F026",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "Participants on DNs absent from the extension map, and status changes that are not the Ringing/Connected/Remove transitions, produce no events"
+  },
+  {
+    "id": "F027",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "The socket reconnects with backoff 5 s doubling to 120 s; a 401 during the handshake refreshes the token before reconnecting"
+  },
+  {
+    "id": "F028",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "After 10 minutes of continuous failure the activity writes `pbx.status = 'error'` and `pbx.lastError` and fails so the workflow retries on its own schedule"
+  },
+  {
+    "id": "F029",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "Maintenance fanout job `reconcile-threecx-call-control` (every 5 min) starts the workflow for tenants with an active `3cx` row, `pbx.status = 'connected'` and `capabilities.callControl`, and signals `stop` for tenants that no longer qualify"
+  },
+  {
+    "id": "F030",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "`reconcile-threecx-call-control` is listed in `MAINTENANCE_FANOUT_SCHEDULES` and `maintenanceJobFanout` with a `tenants` selector of active `3cx` providers"
+  },
+  {
+    "id": "F031",
+    "commitGroup": "call-control-worker",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ],
+    "description": "`process-threecx-call-event` is registered with `forwardJobToServer` in `job-activities.ts` and in `registerAllHandlers.ts` under the EE gate list"
+  },
+  {
+    "id": "F032",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "Handler `processThreecxCallEvent` in `packages/jobs/src/lib/handlers/` resolves the user with `userForExtension` and drops events for unmapped DNs"
+  },
+  {
+    "id": "F033",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "For `ringing` the handler normalizes `partyCallerId`, runs `matchCallParty`, and loads the matched contact (name, email, phone) and client name"
+  },
+  {
+    "id": "F034",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "For a matched contact the payload includes up to 5 open tickets for the contact, else the client, ordered by `updated_at desc` with number, title and status"
+  },
+  {
+    "id": "F035",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "For a matched contact the payload includes the last 3 interactions (type name, title, date)"
+  },
+  {
+    "id": "F036",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "The handler publishes `{ type: 'telephony.incoming_call', event, call }` on `${prefix}internal-notifications:<tenant>:<userId>` for `ringing`, `connected` and `ended`"
+  },
+  {
+    "id": "F037",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "`hocuspocus/NotificationExtension.js` relays `telephony.incoming_call` messages into the room Yjs map `incomingCall` as `{ event, call, receivedAt }`"
+  },
+  {
+    "id": "F038",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "`useInternalNotifications` observes `incomingCall`, exposes `incomingCall` and `dismissIncomingCall()`, and clears it on `connected`/`ended`"
+  },
+  {
+    "id": "F039",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "`IncomingCallProvider` in `server/src/components/layout/` is mounted in `MspLayoutClient` beside `MspCallLinkProvider` and renders `IncomingCallCard`"
+  },
+  {
+    "id": "F040",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "`IncomingCallCard` in `packages/telephony/src/components/` renders caller name or Unknown caller, number, client, ringing extension, email, ticket links and interactions"
+  },
+  {
+    "id": "F041",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "Card actions: Open contact, Open client, New ticket (quick-add ticket prefilled with client and contact), Dismiss; unknown caller shows Create contact (quick-add contact prefilled with the number) and Dismiss"
+  },
+  {
+    "id": "F042",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "The card auto-closes after 60 seconds and a newer `ringing` replaces the current card"
+  },
+  {
+    "id": "F043",
+    "commitGroup": "incoming-call-card",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ],
+    "description": "The card is positioned bottom-right above the toaster, is not modal, and every button carries a kebab-case `id`"
+  },
+  {
+    "id": "F044",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ],
+    "description": "`getTelephonyCallLinkState` returns `threecx: { connected, extension }` for the current user from the `3cx` row and the extension map"
+  },
+  {
+    "id": "F045",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ],
+    "description": "`CallLinkProvider` and `MspCallLinkProvider` carry `threecx` state and a `placeThreecxCall` callback"
+  },
+  {
+    "id": "F046",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ],
+    "description": "`CallLink` renders a \"Call via 3CX\" action beside the `tel:` link when `threecx.connected` and `threecx.extension` are set, and hides it otherwise"
+  },
+  {
+    "id": "F047",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ],
+    "description": "`createTelephonyCallIntent` accepts `{ provider, ticketId, phoneNumber }`; for `3cx` it stores `provider_user_id` as the caller's extension DN and refuses when the user has no mapped extension"
+  },
+  {
+    "id": "F048",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ],
+    "description": "`report-call` keeps `organizerUserId` as the Alga user resolved from the agent email; 3CX intents store that same user id as `provider_user_id`, so `resolvePendingCallIntent` binds them without an extension lookup"
+  },
+  {
+    "id": "F049",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ],
+    "description": "`placeThreecxCall({ phoneNumber, ticketId?, contactId?, clientId? })` (withAuth, non-portal, `interaction:create`) records the intent when `ticketId` is given and posts `{ dn, destination }` to `/xapi/v1/Users/Pbx.MakeCall`"
+  },
+  {
+    "id": "F050",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ],
+    "description": "`placeThreecxCall` returns `{ success: false, message }` with the PBX error text on failure and never places a call from a DN other than the caller's mapped extension"
+  },
+  {
+    "id": "F051",
+    "commitGroup": "click-to-call",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ],
+    "description": "Success shows a toast; failure shows the returned message in a destructive toast"
+  },
+  {
+    "id": "F052",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "`config.cdr` is `{ enabled, lookbackDays, watermark, lastRunAt, lastRunAdded }` with `lookbackDays` defaulting to 30"
+  },
+  {
+    "id": "F053",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "`setThreecxCallHistoryImport(tenant, { enabled, lookbackDays })` server action requires `canManageTelephony`"
+  },
+  {
+    "id": "F054",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "Maintenance fanout job `backfill-threecx-cdr` runs hourly for tenants with `cdr.enabled`, `pbx.status = 'connected'` and `capabilities.xapi`, listed in `MAINTENANCE_FANOUT_SCHEDULES` and the fanout map"
+  },
+  {
+    "id": "F055",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "`backfillThreecxCdr(tenant)` queries `/xapi/v1/CallHistoryView` with `$filter=SegmentStartTime ge <from>`, `$orderby=SegmentStartTime asc`, `$top=200`, `$skip=N` until a short page; the first run uses `now - lookbackDays`"
+  },
+  {
+    "id": "F056",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "Segments where neither side is external are skipped"
+  },
+  {
+    "id": "F057",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "`mapCallHistorySegment` derives `inbound` for an external source, `outbound` for an external destination, `missed` for unanswered inbound, the external number as caller or callee, and `organizerUserId` plus agent email from the internal DN through the extension map"
+  },
+  {
+    "id": "F058",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "`mapCallHistorySegment` sets `startedAt = SegmentStartTime`, `endedAt = SegmentEndTime`, `durationSeconds` parsed from the `CallTime` ISO duration, and `raw` carrying the segment with `SegmentId`"
+  },
+  {
+    "id": "F059",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "`threecxProviderCallId(agentEmail, number, callType, startTimeUtc)` truncates the start time to whole seconds and is shared by `report-call` and the backfill"
+  },
+  {
+    "id": "F060",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "A segment is skipped when a `3cx` record exists with the same `provider_call_id`, or with the same `organizer_user_id`, same E.164 number and `started_at` within 60 seconds"
+  },
+  {
+    "id": "F061",
+    "commitGroup": "cdr-backfill",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ],
+    "description": "Surviving segments are enqueued as `process-telephony-canonical-call`; the run writes `lastRunAt`, `lastRunAdded` and advances `watermark` to the last `SegmentStartTime` minus 5 minutes"
+  },
+  {
+    "id": "F062",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "`config.phonebook` is `{ enabled, schedule, lastPushAt, lastImportAt, lastPushCounts, lastImportCounts, lastError }` with `schedule` in `daily | hourly`"
+  },
+  {
+    "id": "F063",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "`setThreecxPhonebookSync(tenant, { enabled, schedule })`, `runThreecxPhonebookPush(tenant)` and `runThreecxPhonebookImport(tenant)` server actions require `canManageTelephony`"
+  },
+  {
+    "id": "F064",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "Phonebook mappings are rows in `tenant_external_entity_mappings` with `integration_type = '3cx'`, `alga_entity_type = 'contact'`, `external_entity_id = <3CX Contact Id>`, `external_realm_id = pbx.baseUrl`, `metadata.fingerprint`"
+  },
+  {
+    "id": "F065",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "`buildPbxContact(contact, phones, clientName)` maps `full_name` to `FirstName`/`LastName`, the client to `CompanyName`, the default number to `PhoneNumber`, remaining numbers to `Business`, `Business2`, `Mobile2`, `Home`, `Other` by canonical type, and sets `Tag = 'AlgaPSA'`"
+  },
+  {
+    "id": "F066",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "`pushThreecxPhonebook(tenant)` creates entries with `POST /xapi/v1/Contacts` for active contacts with a phone and no mapping, and stores the mapping with the fingerprint"
+  },
+  {
+    "id": "F067",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "Push `PATCH`es `/xapi/v1/Contacts(<id>)` when the fingerprint changed and skips unchanged contacts"
+  },
+  {
+    "id": "F068",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "Push `DELETE`s entries whose contact is inactive or gone and removes the mapping; a 404 on PATCH recreates the entry and a 404 on DELETE just drops the mapping"
+  },
+  {
+    "id": "F069",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "`importThreecxPhonebook(tenant)` pages `GET /xapi/v1/Contacts` with `$top=200` and skips entries that have a mapping row or `Tag = 'AlgaPSA'`"
+  },
+  {
+    "id": "F070",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "Import matches by `Email` case-insensitively, else by `FirstName + ' ' + LastName` against `full_name` case-insensitively when exactly one active contact matches; otherwise the entry is skipped"
+  },
+  {
+    "id": "F071",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "Import adds each phone field not already on the contact (compared by normalized digits) with the canonical type implied by the field, never creates contacts, never removes numbers, and records a mapping row for the adopted entry"
+  },
+  {
+    "id": "F072",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "Event subscriber `threecxPhonebookSubscriber` on `CONTACT_CREATED`, `CONTACT_UPDATED`, `CONTACT_ARCHIVED`, `CONTACT_DELETED` enqueues `sync-threecx-phonebook-contact { tenantId, contactId }` for tenants with sync enabled and the PBX connected"
+  },
+  {
+    "id": "F073",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "Handler `sync-threecx-phonebook-contact` pushes or deletes the single contact's entry using the same create/update/delete rules"
+  },
+  {
+    "id": "F074",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "Maintenance fanout job `reconcile-threecx-phonebook` runs hourly; a tenant runs push then import when `schedule = 'hourly'`, or when `daily` and `lastPushAt` is older than 23 hours"
+  },
+  {
+    "id": "F075",
+    "commitGroup": "phonebook-sync",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ],
+    "description": "Push and import errors are recorded in `phonebook.lastError` without aborting the remaining contacts"
+  },
+  {
+    "id": "F076",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "Route `POST /api/telephony/3cx/[tenantSlug]/contacts` exists with the CE 501 stub, slug resolution, rate limit, bearer verification and the availability gate, delegating to `handleThreecxCreateContact`"
+  },
+  {
+    "id": "F077",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "`THREECX_ROUTE_SEGMENTS.contacts` is added to `routeConstants.ts` and used by the route, the template and the emulator"
+  },
+  {
+    "id": "F078",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "The body `{ firstName, lastName, number, email, company }` is validated; a missing name and number and email together answers 400 `invalid_request`"
+  },
+  {
+    "id": "F079",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "`resolveClientForCompany(tenant, company)` returns an exact case-insensitive `client_name` match, else a `suggestedClientId` from the best `ILIKE '%company%'` match, else null"
+  },
+  {
+    "id": "F080",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "With an email, the contact is created via `ContactModel.createContact` in a transaction with the number as default business phone, `CONTACT_CREATED` is published, and the response is the lookup shape with `entityId`/`entityType = 'contact'`"
+  },
+  {
+    "id": "F081",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "With an email that already exists, the route answers 200 with the existing contact instead of creating one"
+  },
+  {
+    "id": "F082",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "When no client matched exactly, a `contact-origin` row is written to `tenant_external_entity_mappings` with `metadata = { companyName, suggestedClientId, status: 'unmapped' }`"
+  },
+  {
+    "id": "F083",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "Without an email, a `contact-pending` row is written with a new uuid and `metadata = { firstName, lastName, number, company, suggestedClientId, status: 'pending' }`, and the response `contactUrl` is the integrations settings URL with `?threecxPending=<uuid>` and `entityType = 'pending'`"
+  },
+  {
+    "id": "F084",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "`listThreecxContactQueue(tenant)` returns unmapped and pending rows with contact details, company text and the suggested client name"
+  },
+  {
+    "id": "F085",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "`mapThreecxContactToClient(tenant, { contactId, clientId })` updates `contacts.client_id` when a client is given and removes the queue row in both cases"
+  },
+  {
+    "id": "F086",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "`completeThreecxPendingContact(tenant, { pendingId, firstName, lastName, email, number, clientId })` creates the contact as the route does and deletes the pending row; `dismissThreecxPendingContact` deletes it without creating"
+  },
+  {
+    "id": "F087",
+    "commitGroup": "contact-create",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ],
+    "description": "The four queue actions in `telephonyActions.ts` require `canManageTelephony`"
+  },
+  {
+    "id": "F088",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "Migration adds the `Chat` row to `system_interaction_types` following the Online Meeting migration"
+  },
+  {
+    "id": "F089",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "Migration creates `telephony_chat_records` with the PRD columns, primary key `[tenant, chat_record_id]`, unique `[tenant, provider, provider_chat_id]`, distributed on `tenant` and without RLS policies"
+  },
+  {
+    "id": "F090",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "Route `POST /api/telephony/3cx/[tenantSlug]/report-chat` exists with the standard guards and `THREECX_ROUTE_SEGMENTS.reportChat`"
+  },
+  {
+    "id": "F091",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "The body `{ number, email, name, agentEmail, queueExtension, durationSeconds, startTimeUtc, endTimeUtc, messages, entityId, entityType }` is validated; `messages` and `startTimeUtc` are required"
+  },
+  {
+    "id": "F092",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "`threecxProviderChatId` is SHA-256 of `agentEmail|number|email|startTimeUtc` with the time truncated to seconds; the route enqueues `process-threecx-chat` and answers 202 `{ accepted: true, providerChatId }`"
+  },
+  {
+    "id": "F093",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "`ingestChat` in `packages/telephony/src/services/ingestChat.ts` inserts the record idempotently on `(tenant, provider, provider_chat_id)` and returns `duplicate` on a repeat"
+  },
+  {
+    "id": "F094",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "`ingestChat` resolves the contact by `entityId` when `entityType = 'contact'` and the contact is active, else by email case-insensitively, else by number through `matchCallParty`"
+  },
+  {
+    "id": "F095",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "With a contact, `ingestChat` creates a `Chat` interaction through `interactionCreateHelper` with title `Chat with <name>`, `notes = messages`, `start_time`, `end_time`, `duration`, agent user by email with the telephony actor fallback, and stores `interaction_id`"
+  },
+  {
+    "id": "F096",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "Without a contact the record is stored as `unmatched`, or `ambiguous` with candidates, and no interaction is created"
+  },
+  {
+    "id": "F097",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "`process-threecx-chat` is registered in `registerAllHandlers.ts` under the EE gate and forwarded in `job-activities.ts`"
+  },
+  {
+    "id": "F098",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "`listTelephonyCalls` (or a sibling `listTelephonyChats`) returns unmatched and ambiguous chats and `TelephonyCallsPanel` lists them with a Chat badge and the same assign picker"
+  },
+  {
+    "id": "F099",
+    "commitGroup": "chat-journaling",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ],
+    "description": "`resolveTelephonyChat({ chatRecordId, contactId, clientId })` stamps the match, creates the `Chat` interaction and returns `already_resolved` on a second call"
+  },
+  {
+    "id": "F100",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "`report-call` accepts optional `transcription`, `summary` and `recordingUrl` strings and stores them in `raw`"
+  },
+  {
+    "id": "F101",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "`processTelephonyCanonicalCall`, on `ingested` with a non-empty `raw.transcription`, creates a transcript document via `createCallTranscriptDocument` associated to contact, client and interaction"
+  },
+  {
+    "id": "F102",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "The handler writes a `telephony_call_artifacts` row (`artifact_type = 'transcript'`, `provider_artifact_id = 'report-call'`, `document_id`) and sets `artifact_status = 'ready'`"
+  },
+  {
+    "id": "F103",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "A non-empty `raw.summary` is appended to the interaction notes under a Summary heading"
+  },
+  {
+    "id": "F104",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "`sweep-telephony-call-artifacts` dispatches per provider; the `3cx` fetcher runs only for tenants with `capabilities.xapi` and records with `artifact_status = 'pending'`"
+  },
+  {
+    "id": "F105",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "The `3cx` fetcher queries `/xapi/v1/Recordings` filtered to `StartTime` within two minutes of `started_at` and picks the recording whose external number matches the record"
+  },
+  {
+    "id": "F106",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "When the recording `IsTranscribed`, the fetcher creates the transcript document and artifact row and appends the summary; a recording without transcription keeps the record pending under the existing backoff"
+  },
+  {
+    "id": "F107",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "When `RecordingUrl` is set, the fetcher downloads `Pbx.DownloadRecording(recId=<Id>)`, uploads with `StorageService.uploadFile` and writes a `recording` artifact with `file_id`"
+  },
+  {
+    "id": "F108",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "Records with no recording after the backoff limit settle to `artifact_status = 'none'`"
+  },
+  {
+    "id": "F109",
+    "commitGroup": "transcripts",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ],
+    "description": "`InteractionDetails` loads `telephony_call_artifacts` for interactions referenced by a call record and renders transcript and recording links plus the summary"
+  },
+  {
+    "id": "F110",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "prdRefs": [
+      "FR11"
+    ],
+    "description": "`lookup`, `lookup-by-email` and `search` responses include `entityId` and `entityType` (`contact` | `client`)"
+  },
+  {
+    "id": "F111",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "prdRefs": [
+      "FR11"
+    ],
+    "description": "The template maps `entityId`/`entityType` to the `EntityId`/`EntityType` outputs on the three lookup scenarios"
+  },
+  {
+    "id": "F112",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "prdRefs": [
+      "FR11"
+    ],
+    "description": "`ReportCall` and `ReportChat` requests send `[EntityId]` and `[EntityType]` as `entityId`/`entityType`; `report-call` validates them as optional strings"
+  },
+  {
+    "id": "F113",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "prdRefs": [
+      "FR11"
+    ],
+    "description": "`ingestCanonicalCall` accepts `preferredContactId`; when that contact exists and is active it is used as the match, else number matching applies"
+  },
+  {
+    "id": "F114",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "prdRefs": [
+      "FR11"
+    ],
+    "description": "The `report-call` handler passes `raw.entityId` as `preferredContactId` when `raw.entityType = 'contact'`"
+  },
+  {
+    "id": "F115",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "prdRefs": [
+      "FR12"
+    ],
+    "description": "`renderThreecxTemplate` adds the `CreateContactRecordFromClient` scenario posting `[FirstName]`, `[LastName]`, `[Number]`, `[Email]`, `[Company]` to the contacts route with the same outputs as lookup"
+  },
+  {
+    "id": "F116",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "prdRefs": [
+      "FR12"
+    ],
+    "description": "`renderThreecxTemplate` adds the `ReportChat` scenario posting the PRD fields including `[ChatMessages]` to the report-chat route"
+  },
+  {
+    "id": "F117",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "prdRefs": [
+      "FR12"
+    ],
+    "description": "`ReportCall` posts `[Transcription]`, `[Summary]`, `[RecordingUrl]` as `transcription`, `summary`, `recordingUrl`"
+  },
+  {
+    "id": "F118",
+    "commitGroup": "template-v2",
+    "implemented": true,
+    "prdRefs": [
+      "FR12"
+    ],
+    "description": "`THREECX_TEMPLATE_VERSION` increments and the card shows the out-of-date hint when `config.templateVersion` is lower"
+  },
+  {
+    "id": "F119",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "`@alga-psa/emulator-threecx` declares `ws` and switches from `wire()` to `serve()`, owning an HTTP server on its port with the existing `GET /` health route and CRM-engine actions intact"
+  },
+  {
+    "id": "F120",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Seed `pbx-app { clientId, clientSecret, callControl, xapi }` and `POST /connect/token` answers `{ access_token, expires_in, token_type }` for matching credentials and 401 otherwise"
+  },
+  {
+    "id": "F121",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Every route except the token endpoint requires a bearer token issued by the emulator and answers 401 otherwise"
+  },
+  {
+    "id": "F122",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "`GET /xapi/v1/Defs` answers 200 when the app has `xapi`; `GET /callcontrol` answers 200 when it has `callControl`; each answers 403 when the capability is off"
+  },
+  {
+    "id": "F123",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Seed `pbx-user { dn, email, firstName, lastName, enabled }` and `GET /xapi/v1/Users` honours `$select`, `$top`, `$skip`"
+  },
+  {
+    "id": "F124",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Seed `pbx-contact` and the Contacts routes: `GET /xapi/v1/Contacts` (paged), `POST /xapi/v1/Contacts` (201 with `Id`), `GET|PATCH|DELETE /xapi/v1/Contacts(<id>)`, `POST /xapi/v1/Contacts/Pbx.DeleteContactsById`"
+  },
+  {
+    "id": "F125",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Seed `cdr-segment` and `GET /xapi/v1/CallHistoryView` honours `$filter` on `SegmentStartTime ge`, `$orderby`, `$top`, `$skip`"
+  },
+  {
+    "id": "F126",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Seed `recording { ..., transcription, summary, isTranscribed, recordingUrl }` and `GET /xapi/v1/Recordings` honours `$filter` on `StartTime`; `GET /xapi/v1/Recordings/Pbx.DownloadRecording(recId=<n>)` streams bytes"
+  },
+  {
+    "id": "F127",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "`POST /xapi/v1/Users/Pbx.MakeCall` and `POST /callcontrol/:dn/makecall` record `{ dn, destination }` in the `makecalls` state view and answer a participant result"
+  },
+  {
+    "id": "F128",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "WebSocket `/callcontrol/ws` requires the bearer header on the handshake and pushes `{ sequence, event: { event_type, entity, attached_data } }`"
+  },
+  {
+    "id": "F129",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Action `pbx-ring { dn, callerNumber, callerName }` creates a participant in `Ringing`, pushes an Upsert, and `GET /callcontrol/:dn/participants/:id` returns it with `party_caller_id`, `status`, `callid`"
+  },
+  {
+    "id": "F130",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Actions `pbx-answer { participantId }` (status `Connected`, Upsert) and `pbx-hangup { participantId }` (Remove) update the `participants` state view"
+  },
+  {
+    "id": "F131",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Actions `crm-create-contact` and `crm-report-chat` post to the contacts and report-chat routes with the bearer key and record the exchanges"
+  },
+  {
+    "id": "F132",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "State views `pbx-contacts`, `makecalls`, `participants`, `tokens` exist beside `exchanges`"
+  },
+  {
+    "id": "F133",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "Faults `token-invalid` (token endpoint answers 401 while armed) and `ws-drop` (closes every open socket once) are registered"
+  },
+  {
+    "id": "F134",
+    "commitGroup": "emulator-pbx",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ],
+    "description": "The emulator README documents the 3CX PBX surfaces, seeds, actions and the `THREECX_EMULATOR_MODE` switch"
+  },
+  {
+    "id": "F135",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "`ThreecxProviderCard` renders the PBX API section with base URL, client id, write-only secret with Replace, Test connection, status badge and two capability chips"
+  },
+  {
+    "id": "F136",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "The PBX API section shows help text naming the 3CX edition requirement and the need to list monitored extensions in the API app"
+  },
+  {
+    "id": "F137",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "The Extensions section renders Sync from PBX, last sync time and the extension table with highlighted unmapped rows and a user picker per row"
+  },
+  {
+    "id": "F138",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "The Call history import section renders the toggle, lookback days input, last run time and records added"
+  },
+  {
+    "id": "F139",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "The Phonebook sync section renders the toggle, schedule select, Push now, Import now, and last push/import times with counts"
+  },
+  {
+    "id": "F140",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "The Contacts created from 3CX section lists unmapped rows with a client picker preselected to the suggestion, Apply and Leave without client"
+  },
+  {
+    "id": "F141",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "Pending rows show Complete, which opens a dialog with editable name and number, required email and the client picker; saving calls `completeThreecxPendingContact`"
+  },
+  {
+    "id": "F142",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "Loading the integrations page with `?threecxPending=<uuid>` opens the Complete dialog for that row"
+  },
+  {
+    "id": "F143",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "The new sections render only when the provider is active; PBX-dependent sections show a hint when `pbx.status !== 'connected'`"
+  },
+  {
+    "id": "F144",
+    "commitGroup": "settings-card",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "Every new interactive element carries a kebab-case `id`"
+  },
+  {
+    "id": "F145",
+    "commitGroup": "i18n",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "All new card strings live under `integrations.telephony.providers.threecx.*` in all ten `msp/integrations.json` locale files"
+  },
+  {
+    "id": "F146",
+    "commitGroup": "i18n",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "All incoming-call card and Call via 3CX strings live under `telephony.incomingCall.*` and `telephony.callLink.*` in every locale"
+  },
+  {
+    "id": "F147",
+    "commitGroup": "i18n",
+    "implemented": true,
+    "prdRefs": [
+      "UX"
+    ],
+    "description": "Chat badge and resolve strings for the attribution panel live under `integrations.telephony.unmatched.*` in every locale"
+  },
+  {
+    "id": "F148",
+    "commitGroup": "regression",
+    "implemented": true,
+    "prdRefs": [
+      "NFR"
+    ],
+    "description": "Every 3CX lookup query on `contact_phone_numbers` runs through `tenantDb`, which scopes it by tenant (verified: `primaryNumberE164` cannot read another tenant's numbers)"
+  },
+  {
+    "id": "F149",
+    "commitGroup": "regression",
+    "implemented": true,
+    "prdRefs": [
+      "NFR"
+    ],
+    "description": "The CE build compiles with `@alga-psa/ee-threecx` aliased away and the two new routes answer 501 through `eeUnavailable()`"
+  },
+  {
+    "id": "F150",
+    "commitGroup": "regression",
+    "implemented": true,
+    "prdRefs": [
+      "NFR"
+    ],
+    "description": "`telephonyJobWiring.wiring.test.ts` covers the new job names in both the worker forwarders and the server registry"
+  }
+]

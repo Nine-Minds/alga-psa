@@ -3693,7 +3693,75 @@
           "rotate": "Faire tourner",
           "fullKeyWarning": "Copiez cette clé maintenant — elle ne sera plus affichée.",
           "download": "Télécharger le modèle",
-          "tierRequired": "La téléphonie 3CX nécessite le forfait Pro."
+          "tierRequired": "La téléphonie 3CX nécessite le forfait Pro.",
+          "templateStale": "Un modèle plus récent est disponible. Téléchargez-le et réimportez-le dans la console 3CX.",
+          "pbx": {
+            "title": "API du PBX (3CX Enterprise/AI)",
+            "help": "La fenêtre d'appel entrant, l'appel en un clic, l'import de l'historique et la synchronisation de l'annuaire utilisent les API Call Control et Configuration de 3CX, qui nécessitent une licence 3CX Enterprise ou AI (8SC+). Créez une application API dans la console d'administration 3CX sous Intégrations → API, cochez les deux accès et listez chaque extension à surveiller.",
+            "baseUrl": "Adresse du PBX",
+            "clientId": "Identifiant client (extension de l'application API)",
+            "clientSecret": "Secret client",
+            "replaceSecret": "Remplacer",
+            "save": "Enregistrer les identifiants",
+            "test": "Tester la connexion",
+            "clear": "Supprimer",
+            "connected": "Connecté",
+            "granted": "accordé",
+            "notGranted": "non accordé",
+            "callControl": "Contrôle d'appel",
+            "xapi": "API de configuration",
+            "lastChecked": "Dernière vérification",
+            "notConnectedHint": "Connectez l'API du PBX ci-dessus pour utiliser cette fonction."
+          },
+          "extensions": {
+            "title": "Extensions",
+            "sync": "Synchroniser depuis le PBX",
+            "lastSync": "Dernière synchronisation",
+            "empty": "Aucune extension synchronisée pour le moment.",
+            "dn": "Extension",
+            "pbxUser": "Utilisateur PBX",
+            "algaUser": "Utilisateur AlgaPSA",
+            "unmapped": "Non associé",
+            "auto": "associé par e-mail"
+          },
+          "cdr": {
+            "title": "Import de l'historique des appels",
+            "help": "Lit le journal d'appels du PBX chaque heure et consigne les appels externes absents du registre.",
+            "lookback": "Jours d'historique lors de la première exécution",
+            "lastRun": "Dernière exécution",
+            "added": "Enregistrements ajoutés"
+          },
+          "phonebook": {
+            "title": "Synchronisation de l'annuaire",
+            "help": "Envoie les contacts disposant d'un numéro vers l'annuaire d'entreprise 3CX et ajoute aux contacts correspondants les numéros présents uniquement dans le PBX.",
+            "schedule": "Fréquence de rapprochement",
+            "daily": "Quotidienne",
+            "hourly": "Toutes les heures",
+            "pushNow": "Envoyer maintenant",
+            "importNow": "Importer maintenant",
+            "lastPush": "Dernier envoi",
+            "lastImport": "Dernier import",
+            "countsLegend": "Compteurs : créés/mis à jour/supprimés/importés/ignorés"
+          },
+          "queue": {
+            "title": "Contacts créés depuis 3CX",
+            "empty": "Rien en attente. Les contacts créés depuis le client 3CX sans client correspondant apparaissent ici.",
+            "pendingBadge": "e-mail requis",
+            "unmappedBadge": "sans client",
+            "company": "Société",
+            "chooseClient": "Choisir un client…",
+            "apply": "Appliquer",
+            "leaveWithoutClient": "Laisser sans client",
+            "complete": "Compléter",
+            "dismiss": "Ignorer",
+            "completeTitle": "Compléter le contact 3CX",
+            "firstName": "Prénom",
+            "lastName": "Nom",
+            "email": "E-mail",
+            "number": "Numéro de téléphone",
+            "cancel": "Annuler",
+            "save": "Créer le contact"
+          }
         }
       },
       "subscriptionExpires": "L'abonnement se renouvelle avant le",
@@ -3730,7 +3798,8 @@
         "assignTo": "Attribuer à",
         "searchPlaceholder": "Rechercher des contacts et des clients…",
         "noTargets": "Aucun contact ni client correspondant.",
-        "chooseTarget": "Attribuer à un client…"
+        "chooseTarget": "Attribuer à un client…",
+        "chatBadge": "Tchat"
       },
       "forbidden": "Vous n'avez pas l'autorisation de consulter les paramètres de téléphonie de ce locataire.",
       "paywall": {
@@ -3864,6 +3933,21 @@
       "contactWithoutClient": "Un contact avec cette adresse e-mail existe déjà dans le système sans affectation à un client",
       "emailOnAnotherClient": "Cet e-mail est déjà associé à un autre client",
       "emailOnAnotherClientNamed": "Cet e-mail est déjà associé à {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Appel entrant",
+      "unknownCaller": "Appelant inconnu",
+      "noNumber": "Pas d'identifiant d'appelant",
+      "extension": "L'extension {{dn}} sonne",
+      "openTickets": "Tickets ouverts",
+      "recentInteractions": "Interactions récentes",
+      "openContact": "Ouvrir le contact",
+      "openClient": "Ouvrir le client",
+      "newTicket": "Nouveau ticket",
+      "createContact": "Créer un contact",
+      "dismiss": "Ignorer"
     }
   }
 }

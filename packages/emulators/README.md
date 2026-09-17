@@ -26,7 +26,7 @@ This starts every emulator on its default port and the console at
 | `smtp-sink` | `@alga-psa/emulator-smtp-sink` | 4040 | SMTP capture (MailHog stand-in) |
 | `stripe` | `@alga-psa/emulator-stripe` | 4050 | Stripe /v1 API (customers, Checkout sessions) + simulated hosted Checkout with signed webhooks |
 | `xero` | `@alga-psa/emulator-xero` | 4060 | Xero identity OAuth + connections list + api.xro/2.0 accounting API (invoices, contacts, settings) |
-| `threecx` | `@alga-psa/emulator-threecx` | 4070 | 3CX CRM engine client: dials the AlgaPSA 3CX routes (lookup, search, report-call) with the bearer key and records every exchange |
+| `threecx` | `@alga-psa/emulator-threecx` | 4070 | 3CX both ways: the CRM engine client that dials the AlgaPSA 3CX routes (lookup, search, report-call, contacts, report-chat) with the bearer key, and the PBX that AlgaPSA dials back — `/connect/token`, XAPI (users, contacts, call history, recordings), call control with its WebSocket event feed |
 
 The control API and console share port 9500. Override ports with
 `ALGASIM_CONTROL_PORT` and `ALGASIM_PORT_<ID>` (e.g. `ALGASIM_PORT_SMTP_SINK`).
@@ -63,6 +63,7 @@ Emulators implement the vendor protocol subsets listed in this guide and the
 | Xero | `XERO_OAUTH_AUTHORIZE_URL=http://localhost:4060/identity/connect/authorize`, `XERO_OAUTH_TOKEN_URL=http://localhost:4060/connect/token`, `XERO_OAUTH_REVOKE_URL=http://localhost:4060/connect/revocation`, `XERO_REVOCATION_URL=http://localhost:4060/connect/revocation`, `XERO_CONNECTIONS_URL=http://localhost:4060/connections`, `XERO_API_BASE_URL=http://localhost:4060/api.xro/2.0` |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
+| 3CX | `THREECX_EMULATOR_MODE=true`, then enter `http://localhost:4070` as the PBX base URL on the 3CX integration card |
 
 `TEAMS_EMULATOR_MODE` is the single gate for every Teams override, and it is
 deny-by-default: unless it is explicitly `true` (or `1`), the Teams surface
@@ -411,6 +412,71 @@ The transcript is filed as a document on the matched client/contact and, when
 the call is linked to a ticket and the AI Assistant add-on is active, summarized
 onto that ticket. Recording bytes are only stored when the tenant turned on
 recording downloads in the Teams settings.
+
+### 3CX PBX and CRM engine
+
+The `threecx` emulator plays both sides of the integration on port 4070.
+
+**CRM engine (client).** The actions `crm-configure`, `crm-inbound-call`,
+`crm-outbound-call`, `crm-search`, `crm-create-contact` and `crm-report-chat`
+dial the AlgaPSA 3CX routes exactly as the PBX's CRM engine does — bearer key,
+route paths from the shared constants, request bodies matching the template's
+`[Variable]` posts — and record every request/response pair in the
+`exchanges` state view.
+
+**PBX (server).** AlgaPSA's own PBX client talks back to the same port:
+
+| Route | Behaviour |
+| --- | --- |
+| `POST /connect/token` | Form body `client_id` / `client_secret` / `grant_type`; answers `{ access_token, expires_in: 3600, token_type }` for a seeded `pbx-app`, 401 otherwise. Tokens expire on the virtual clock |
+| everything else | Requires `Authorization: Bearer <issued token>` (401 otherwise); `/xapi/*` needs the app's `xapi` capability and `/callcontrol*` its `callControl` one (403 otherwise) |
+| `GET /xapi/v1/Defs` | The capability probe; `{ value: [{ Id: 1 }] }` |
+| `GET /xapi/v1/Users` | Seeded extensions as `{ Id, Number, FirstName, LastName, EmailAddress, Enabled }` with `$select`, `$top`, `$skip` |
+| `GET\|POST /xapi/v1/Contacts`, `GET\|PATCH\|DELETE /xapi/v1/Contacts(<id>)`, `POST /xapi/v1/Contacts/Pbx.DeleteContactsById` | The phonebook; `POST` answers 201 with the entity's `Id`, unknown ids answer 404 |
+| `GET /xapi/v1/CallHistoryView` | Seeded `cdr-segment` rows with `$filter` (`SegmentStartTime ge … and SegmentStartTime le …`), `$orderby=SegmentStartTime asc\|desc`, `$top`, `$skip` |
+| `GET /xapi/v1/Recordings` | Seeded recordings with `$filter` on `StartTime`, `$top`, `$skip` |
+| `GET /xapi/v1/Recordings/Pbx.DownloadRecording(recId=<n>)` | Streams the seeded bytes (a short WAV header by default) as `audio/wav` |
+| `POST /xapi/v1/Users/Pbx.MakeCall { dn, destination }`, `POST /callcontrol/<dn>/makecall { destination }` | Record the request in `makecalls`, create a `Dialing` participant and answer `{ finalstatus: 'Success', result: <participant> }` |
+| `GET /callcontrol` | The extensions the app may observe (`[{ dn, type }]`) |
+| `GET /callcontrol/<dn>/participants/<id>` | A live participant, or 404 |
+| `ws://…/callcontrol/ws` | The call-control event feed. The handshake needs the same bearer header; each push is `{ sequence, event: { event_type, entity, attached_data } }` with `event_type` 0 for Upsert and 1 for Remove and `entity` the participant path above |
+
+Seeds: `pbx-app { clientId, clientSecret, callControl?, xapi? }`,
+`pbx-user { dn, email, firstName, lastName, enabled? }`,
+`pbx-contact { FirstName, LastName, CompanyName, Email, PhoneNumber, Business, Business2, Mobile2, Home, Other, Tag, ContactType }`,
+`cdr-segment { SegmentId?, SegmentStartTime, SegmentEndTime, CallTime, CallAnswered, SrcDn, SrcCallerNumber, SrcDisplayName, SrcExternal, DstDn, DstCallerNumber, DstDisplayName, DstExternal }`
+and `recording { Id?, StartTime, EndTime, FromCallerNumber, ToCallerNumber, FromDn, ToDn, IsTranscribed, Transcription, Summary, RecordingUrl, bytesBase64? }`.
+
+Call-control actions: `pbx-ring { dn, callerNumber, callerName?, did? }`
+creates a `Ringing` participant and pushes an Upsert; `pbx-answer
+{ participantId }` moves it to `Connected` with another Upsert; `pbx-hangup
+{ participantId }` removes it and pushes a Remove.
+
+State views: `exchanges`, `pbx-users`, `pbx-contacts`, `cdr-segments`,
+`recordings`, `makecalls`, `participants`, `tokens` (masked).
+
+Faults: `token-invalid` makes `/connect/token` answer 401 while armed (tokens
+already issued keep working, so you can test refresh separately from use);
+`ws-drop` closes every open WebSocket once at arm time — the next connect
+succeeds, so it exercises the consumer's reconnect path.
+
+Alga's PBX client only accepts an `https://` base URL unless
+`THREECX_EMULATOR_MODE=true` is set on the server and Temporal worker (never in
+production, where the flag is ignored). With it set, the walkthrough is:
+
+```bash
+algasim seed threecx pbx-app  -p '{"clientId":"alga","clientSecret":"alga-secret"}'
+algasim seed threecx pbx-user -p '{"dn":"100","email":"<an Alga user email>","firstName":"Ada","lastName":"Lovelace"}'
+# On the 3CX integration card: PBX base URL http://localhost:4070, client id/secret as seeded,
+# then Test connection (both capabilities granted) and Sync extensions (100 maps to that user).
+algasim action threecx pbx-ring -p '{"dn":"100","callerNumber":"+15550001111","callerName":"Caller"}'
+algasim state  threecx participants
+algasim action threecx pbx-hangup -p '{"participantId":1}'
+```
+
+Click-to-call from a ticket lands in `algasim state threecx makecalls`; call
+history import reads whatever `cdr-segment` rows you seeded; phonebook push
+shows up in `pbx-contacts`.
 
 ### Living with the emulator
 

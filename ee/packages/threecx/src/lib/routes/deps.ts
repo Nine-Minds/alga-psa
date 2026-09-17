@@ -1,4 +1,4 @@
-import type { CanonicalCallRecord } from '@alga-psa/telephony/types';
+import type { CanonicalCallRecord, CanonicalChatRecord } from '@alga-psa/telephony/types';
 
 /**
  * Server-only primitives injected into the EE route handlers. The route files
@@ -11,4 +11,5 @@ export interface ThreecxRouteDeps {
   checkRateLimit(tenantId: string): Promise<boolean>;
   getProviderAvailability(tenantId: string): Promise<{ enabled: boolean; message?: string }>;
   enqueueCanonicalCall(input: { tenantId: string; record: CanonicalCallRecord }): Promise<void>;
+  enqueueChat(input: { tenantId: string; chat: CanonicalChatRecord }): Promise<void>;
 }

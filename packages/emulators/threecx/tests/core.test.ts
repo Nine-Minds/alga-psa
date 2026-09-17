@@ -102,6 +102,28 @@ describe('ThreecxEmulatorCore', () => {
     expect(paths).toContain(`${THREECX_API_BASE}/${SLUG}/${THREECX_ROUTE_SEGMENTS.search}`);
   });
 
+  it('T197: crm-create-contact and crm-report-chat post with the bearer key to the contacts and report-chat routes', async () => {
+    const { core, calls } = makeCore();
+    await core.crmCreateContact({ firstName: 'Ada', lastName: 'Lovelace', number: '+15551234567', email: 'ada@x.com', company: 'Acme' });
+    await core.crmReportChat({ agentEmail: 'a@x.com', messages: 'hello', number: '+15551234567', durationSeconds: 90 });
+
+    expect(calls).toHaveLength(2);
+    for (const call of calls) {
+      expect(call.init.method).toBe('POST');
+      expect(call.init.headers.authorization).toBe(`Bearer ${KEY}`);
+    }
+    expect(JSON.parse(calls[0].init.body)).toEqual({ firstName: 'Ada', lastName: 'Lovelace', number: '+15551234567', email: 'ada@x.com', company: 'Acme' });
+    const chat = JSON.parse(calls[1].init.body);
+    expect(chat).toMatchObject({ agentEmail: 'a@x.com', messages: 'hello', number: '+15551234567', durationSeconds: 90, queueExtension: '' });
+    expect(new Date(chat.endTimeUtc).getTime() - new Date(chat.startTimeUtc).getTime()).toBe(90_000);
+
+    const paths = core.exchanges.map((e) => [e.action, e.request.path]);
+    expect(paths).toEqual([
+      ['crm-create-contact', `${THREECX_API_BASE}/${SLUG}/${THREECX_ROUTE_SEGMENTS.contacts}`],
+      ['crm-report-chat', `${THREECX_API_BASE}/${SLUG}/${THREECX_ROUTE_SEGMENTS.reportChat}`],
+    ]);
+  });
+
   it('T116: build-image.sh, compose.yml and the README register threecx on 4070', () => {
     const dir = path.resolve(__dirname, '..', '..');
     const buildImage = fs.readFileSync(path.join(dir, 'build-image.sh'), 'utf8');
