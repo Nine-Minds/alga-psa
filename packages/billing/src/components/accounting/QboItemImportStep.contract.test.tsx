@@ -13,6 +13,7 @@ const previewQboItemImportMock = vi.hoisted(() => vi.fn());
 const executeQboItemImportMock = vi.hoisted(() => vi.fn());
 const getServiceTypesForSelectionMock = vi.hoisted(() => vi.fn());
 const useFeatureFlagMock = vi.hoisted(() => vi.fn(() => true));
+const getQboCustomersMock = vi.hoisted(() => vi.fn(async () => []));
 
 vi.mock('../../actions/qboItemImportActions', () => ({
   previewQboItemImport: async (...args: unknown[]) => previewQboItemImportMock(...args),
@@ -35,8 +36,8 @@ vi.mock('../../actions/qboOnboardingActions', () => ({
   completeOnboardingWizard: async () => ({ done: true }),
 }));
 
-vi.mock('@alga-psa/integrations/actions', () => ({
-  getQboCustomers: async () => [],
+vi.mock('@alga-psa/integrations/actions/qboActions', () => ({
+  getQboCustomers: getQboCustomersMock,
 }));
 
 vi.mock('@alga-psa/ui/hooks', async (importOriginal) => ({
@@ -215,17 +216,21 @@ describe('QboOnboardingWizard flag gating', () => {
     cleanup();
   });
 
-  it('renders the Products & Services step when qbo-item-import is on', () => {
+  it('renders the Products & Services step when qbo-item-import is on', async () => {
     useFeatureFlagMock.mockReturnValue(true);
     render(<QboOnboardingWizard />);
     expect(useFeatureFlagMock).toHaveBeenCalledWith('qbo-item-import');
     expect(screen.getByText('Products & Services')).toBeInTheDocument();
+    await screen.findByText('No clients found.');
+    expect(getQboCustomersMock).toHaveBeenCalledTimes(1);
   });
 
-  it('omits the step when the flag is off', () => {
+  it('omits the step when the flag is off', async () => {
     useFeatureFlagMock.mockReturnValue(false);
     render(<QboOnboardingWizard />);
     expect(screen.queryByText('Products & Services')).not.toBeInTheDocument();
     expect(screen.getByText('Go-live')).toBeInTheDocument();
+    await screen.findByText('No clients found.');
+    expect(getQboCustomersMock).toHaveBeenCalledTimes(1);
   });
 });
