@@ -130,6 +130,7 @@ async function main() {
       'packages/event-schemas',
       'packages/types',
       'packages/event-bus',
+      'packages/formatting',
       'packages/email',
       'packages/marketing',
     ]) {

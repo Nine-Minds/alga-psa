@@ -315,7 +315,8 @@
       "title": "Texto voltado para o cliente",
       "subtitle": "Aparece no PDF, abaixo dos totais.",
       "notes": "Notas para o cliente (opcional)",
-      "terms": "Termos e condições (opcional)"
+      "terms": "Termos e condições (opcional)",
+      "termsPlaceholder": "Adicionar termos, links e parágrafos…"
     },
     "moreDetails": {
       "title": "Mais detalhes",
