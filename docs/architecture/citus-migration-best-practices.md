@@ -108,6 +108,25 @@ exports.config = { transaction: false };
 
 **The rule**: any migration that runs `create_distributed_table()` on a table that may already contain rows MUST immediately follow with `truncate_local_data_after_distributing_table()` on that table. Skipping it is invisible until the first parent-heap-scanning DDL (like `SET NOT NULL`) runs — possibly many migrations later.
 
+### Issue 5: Upserts Fail With "must be marked IMMUTABLE"
+
+**Symptom**: An `insert(...).onConflict(...).merge(...)` that works locally aborts on a sharded tenant with `functions used in the DO UPDATE SET clause of INSERTs on distributed tables must be marked IMMUTABLE`.
+
+**Cause**: `knex.fn.now()` renders as `CURRENT_TIMESTAMP` and `trx.raw('now()')` as `now()`. Both are only STABLE, and Citus requires every function in the `DO UPDATE SET` target list of an upsert on a distributed table to be IMMUTABLE. The same call is legal in the INSERT values list, in a plain `UPDATE`, and on single-node PostgreSQL — so typecheck, dev and CE stay green and only sharded tenants fail.
+
+**Solution**: Compute the value in Node and bind it as a parameter:
+
+```javascript
+await tenantTable(knex, tenant, 'tenant_external_systems')
+  .insert({ tenant, key, label })          // fn.now() / column default is fine here
+  .onConflict(['tenant', 'key'])
+  // Citus rejects STABLE functions (knex.fn.now() → CURRENT_TIMESTAMP) inside
+  // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
+  .merge({ label, updated_at: new Date().toISOString() });
+```
+
+**The rule**: no `fn.now()`, `raw('now()')`, `CURRENT_TIMESTAMP`, `gen_random_uuid()` or any other non-IMMUTABLE function inside a `.merge()` object whose conflict target includes `tenant`. `server/src/test/unit/db/citusUpsertMerge.contract.test.ts` asserts this on the sources.
+
 ## Best Practices
 
 ### 1. Always Check for Citus (Safely)
