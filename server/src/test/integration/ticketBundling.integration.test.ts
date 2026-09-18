@@ -1166,6 +1166,61 @@ describe('Ticket bundling integration', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].reverted_at).toBeTruthy();
   });
+
+  // Belt A in isolation: a stale active row written outside the ledger (direct
+  // DB child reopen) must be reverted by the propagation engine before the next
+  // propagated master close inserts — independent of any write-path hook.
+  it('reverts a stale active row written outside the ledger before a propagated master close', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const childId = childIds[0];
+
+    await runWithTenant(tenantId, async () => {
+      // Propagated close leaves an active row for the child.
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
+    });
+    const seeded = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ child_ticket_id: childId })
+      .first();
+    expect(seeded?.reverted_at).toBeNull();
+
+    // Flip the child open directly, deliberately leaving the ledger row active.
+    // No belt-B write path runs here, so only the engine can clear it.
+    await tenantDb(db, tenantId).table('tickets')
+      .where({ ticket_id: childId })
+      .update({ status_id: statusOpenId, is_closed: false, closed_at: null, closed_by: null });
+
+    await runWithTenant(tenantId, async () => {
+      // Master reopen: the child is open so it is unaffected; the stale row stays.
+      await updateTicketWithCache(masterId, { status_id: statusOpenId }, { propagateToChildren: true } as any);
+    });
+    const rowBefore = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ child_ticket_id: childId })
+      .first();
+    expect(rowBefore?.reverted_at).toBeNull();
+
+    // Propagated close again: the engine must revert the stale row before the
+    // insert or the whole status change aborts on the per-child unique index.
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
+    });
+
+    const master = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
+    expect(master?.is_closed).toBe(true);
+
+    const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+    expect(child?.status_id).toBe(statusClosedId);
+    expect(child?.is_closed).toBe(true);
+
+    const rows = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ child_ticket_id: childId });
+    const activeRows = rows.filter((row: any) => row.reverted_at === null);
+    expect(activeRows).toHaveLength(1);
+    expect(activeRows[0].child_previous_status_id).toBe(statusOpenId);
+    expect(activeRows[0].propagated_by).toBe(internalUser.user_id);
+    expect(rows).toHaveLength(2);
+    expect(rows.filter((row: any) => row.reverted_at !== null)).toHaveLength(1);
+  });
 });
 
 async function ensureTenant(connection: Knex, name: string): Promise<string> {
