@@ -15,6 +15,7 @@ import {
   BundlePropagationConfirmationRequiredError,
   type BundlePropagationChild,
   type BundlePropagationUnaffectedChild,
+  type BundlePropagationUser,
   type BundleStatusPropagationContext,
   type BundleStatusPropagationPreview,
   type PropagateBundleMasterStatusOptions,
@@ -155,7 +156,7 @@ interface DerivedBundleChildRow {
   propagation_id: string | null;
 }
 
-function propagationDisplayName(user: { first_name?: string | null; last_name?: string | null; username?: string | null }): string {
+function propagationDisplayName(user: BundlePropagationUser): string {
   return `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'Unknown User';
 }
 

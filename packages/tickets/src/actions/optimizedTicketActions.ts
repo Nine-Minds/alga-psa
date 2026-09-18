@@ -3118,9 +3118,9 @@ export async function updateTicketInTransaction(
         tenant,
         user: {
           user_id: user.user_id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          username: user.username,
+          first_name: user.first_name ?? null,
+          last_name: user.last_name ?? null,
+          username: user.username ?? null,
         },
         isSystemActor,
         source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,

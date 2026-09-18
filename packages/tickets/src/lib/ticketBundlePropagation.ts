@@ -34,16 +34,16 @@ export interface BundleStatusPropagationPreview {
 }
 
 /**
- * Thrown by the server write path when a status change on a sync-mode bundle
- * master would close or reopen children and the caller has not chosen whether
- * to propagate. Nothing is written when this is thrown; the caller retries with
- * `propagateToChildren: true | false`.
+ * The acting user for a propagation, including the name fields the audit row
+ * stores. These are required (nullable when the record genuinely has none) so a
+ * caller cannot omit them and silently persist `Unknown User` instead of the
+ * real display name; pass explicit nulls only when the user really has no name.
  */
 export interface BundlePropagationUser {
   user_id: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  username?: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  username: string | null;
 }
 
 export interface BundleStatusPropagationContext {
@@ -67,6 +67,12 @@ export interface PropagateBundleMasterStatusResult {
   affectedChildIds: string[];
 }
 
+/**
+ * Thrown by the server write path when a status change on a sync-mode bundle
+ * master would close or reopen children and the caller has not chosen whether
+ * to propagate. Nothing is written when this is thrown; the caller retries with
+ * `propagateToChildren: true | false`.
+ */
 export class BundlePropagationConfirmationRequiredError extends Error {
   readonly preview: BundleStatusPropagationPreview;
   /** Alias so generic error serializers can read `.details`. */

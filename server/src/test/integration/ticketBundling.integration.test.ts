@@ -1054,6 +1054,39 @@ describe('Ticket bundling integration', () => {
     expect(childAfter?.is_closed).toBe(true);
   });
 
+  // Regression: REST propagation previously passed only `{ user_id }`, so
+  // propagationDisplayName() persisted the literal 'Unknown User' onto the
+  // master's TICKET_BUNDLE_STATUS_PROPAGATED row. It is a stored value, so the
+  // timeline would show it forever. The REST context carries only a userId, so
+  // the service must resolve the acting user's name fields in-transaction.
+  it('REST propagation audit records the acting user display name, not Unknown User', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const service = new TicketService();
+
+    await runWithTenant(tenantId, async () => {
+      await service.update(
+        masterId,
+        { status_id: statusClosedId, propagateToChildren: true },
+        { tenant: tenantId, userId: internalUser.user_id },
+      );
+    });
+
+    const child = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(child?.is_closed).toBe(true);
+
+    const activity = await scopedDb.table('ticket_audit_logs')
+      .where({ ticket_id: masterId, event_type: 'TICKET_BUNDLE_STATUS_PROPAGATED' })
+      .first();
+    expect(activity).toBeTruthy();
+    expect(activity?.details?.propagated).toBe(true);
+    expect(activity?.actor_user_id).toBe(internalUser.user_id);
+    expect(activity?.actor_display_name).toBe(
+      `${internalUser.first_name} ${internalUser.last_name}`,
+    );
+    expect(activity?.actor_display_name).not.toBe('Unknown User');
+  });
+
   it('REST TicketService.update with propagateToChildren:false changes the master only', async () => {
     const scopedDb = tenantDb(db, tenantId);
     const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });

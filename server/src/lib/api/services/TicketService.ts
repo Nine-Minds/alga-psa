@@ -1933,11 +1933,25 @@ export class TicketService extends BaseService<ITicket> {
 
       // Sync-mode bundle propagation (FR5): REST now shares the same engine as
       // the server-action path. Boundary-crossing choices were gated above.
+      // The service context carries only a userId, but the propagation audit
+      // row stores the acting user's display name. Resolve the name fields in
+      // the same transaction (mirrors the comment-author lookup below) so the
+      // persisted actor_display_name is the real name, not "Unknown User".
+      const propagationActor = await tenantScopedTable(trx, 'users', context.tenant)
+        .select('first_name', 'last_name', 'username')
+        .where({ user_id: context.userId })
+        .first();
+
       await propagateBundleMasterStatus(
         trx,
         {
           tenant: context.tenant,
-          user: { user_id: context.userId },
+          user: {
+            user_id: context.userId,
+            first_name: propagationActor?.first_name ?? null,
+            last_name: propagationActor?.last_name ?? null,
+            username: propagationActor?.username ?? null,
+          },
           source: TICKET_ACTIVITY_SOURCE.API,
           previousMasterStatusId: currentTicket.status_id,
         },
