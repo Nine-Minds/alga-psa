@@ -571,7 +571,7 @@
     "bundleMasterLabel": "Seleziona ticket master",
     "bundleMasterPlaceholder": "Seleziona ticket master...",
     "bundleSyncUpdates": "Sincronizza gli aggiornamenti dal master ai figli (risposte pubbliche + modifiche al flusso di lavoro)",
-    "bundleSyncUpdatesHelp": "I ticket figli mantengono il loro stato attuale quando vengono raggruppati. I campi del flusso di lavoro sono bloccati sui figli per impostazione predefinita. Le note interne restano sul master.",
+    "bundleSyncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Successivamente, la chiusura o riapertura del master chiude o riapre tutti i ticket figli, e le modifiche di stato, assegnatario e priorità sul master si applicano ai figli. I campi del flusso di lavoro sono bloccati sui figli. Le note interne restano sul master.",
     "bundleSelectAtLeastTwo": "Seleziona almeno due ticket da raggruppare.",
     "bundleSelectMaster": "Seleziona un ticket master.",
     "bundleSuccess": "Ticket raggruppati",
@@ -634,12 +634,16 @@
       "masterTicket": "Seleziona ticket master",
       "selectMasterTicket": "Seleziona ticket master...",
       "syncUpdates": "Sincronizza gli aggiornamenti dal master ai figli (risposte pubbliche + modifiche al flusso di lavoro)",
-      "syncUpdatesHelp": "I ticket figli mantengono il loro stato attuale quando vengono raggruppati. I campi del flusso di lavoro sono bloccati sui figli per impostazione predefinita. Le note interne restano sul master.",
+      "syncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Successivamente, la chiusura o riapertura del master chiude o riapre tutti i ticket figli, e le modifiche di stato, assegnatario e priorità sul master si applicano ai figli. I campi del flusso di lavoro sono bloccati sui figli. Le note interne restano sul master.",
       "childrenDescription": "I secondari mantengono il loro stato attuale; i campi del workflow sono bloccati sui secondari. Le risposte in entrata dei secondari sono mostrate sotto in sola lettura.",
       "checkingMasters": "Verifica dei raggruppamenti esistenti...",
       "existingMasterSuffix": "(master esistente)",
       "existingMasterLocked": "Un ticket selezionato è già un master di raggruppamento. Verrà usato come master; gli altri saranno aggiunti come figli.",
-      "multipleExistingMasters": "Più ticket selezionati sono già master di raggruppamento ({{count}}). Annulla il raggruppamento di tutti tranne uno prima di raggruppare."
+      "multipleExistingMasters": "Più ticket selezionati sono già master di raggruppamento ({{count}}). Annulla il raggruppamento di tutti tranne uno prima di raggruppare.",
+      "propagationSummary": "{{masters}} ticket selezionati sono master in modalità sincronizzazione; questa modifica chiuderà/riaprirà {{children}} ticket figli.",
+      "masterSummary": "{{children}} ticket figli",
+      "applyToChildren": "Applica ai figli",
+      "mastersOnly": "Solo master"
     },
     "auth": {
       "moveRequired": "Devi aver effettuato l'accesso per spostare i ticket",
@@ -1469,7 +1473,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Ticket figli raggruppati in questo ticket master",
+      "childrenDescription": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Successivamente, la chiusura o riapertura del master chiude o riapre tutti i ticket figli, e le modifiche di stato, assegnatario e priorità sul master si applicano ai figli. I campi del flusso di lavoro sono bloccati sui figli. Le note interne restano sul master.",
       "title": "Gruppo",
       "masterBanner": "Questo ticket è il principale di un gruppo ({{count}} figli). Modalità: {{mode}}.",
       "multipleClients": "Più clienti",
@@ -1481,7 +1485,19 @@
       "remove": "Rimuovi",
       "noChildren": "Nessun figlio in questo gruppo.",
       "addChildMultiClientMessage": "Verrà aggiunto {{ticket}} di un cliente diverso al gruppo. Conferma di voler procedere.",
-      "thisTicket": "questo ticket"
+      "thisTicket": "questo ticket",
+      "propagation": {
+        "closeTitle": "Chiudere anche {{count}} ticket figli?",
+        "reopenTitle": "Riaprire anche {{count}} ticket figli?",
+        "closeBody": "Questo master è in modalità sincronizzazione. Chiuderlo chiuderà anche i {{count}} ticket figli aperti elencati di seguito.",
+        "reopenBody": "Questo master è in modalità sincronizzazione. Riaprirlo riaprirà i {{count}} ticket figli che ha chiuso. I figli chiusi in modo indipendente restano chiusi.",
+        "stayClosedHeading": "Restano chiusi (chiusi in modo indipendente)",
+        "boardRulesNote": "Le regole di chiusura della board non vengono verificate sui figli.",
+        "closeConfirm": "Chiudi master e {{count}} figli",
+        "reopenConfirm": "Riapri master e {{count}} figli",
+        "masterOnlyClose": "Chiudi solo il master",
+        "masterOnlyReopen": "Riapri solo il master"
+      }
     },
     "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
     "autoCloseWarned": "Il cliente è stato avvisato."

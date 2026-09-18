@@ -596,7 +596,7 @@
     "bundleMasterLabel": "Select Master Ticket",
     "bundleMasterPlaceholder": "Select master ticket...",
     "bundleSyncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-    "bundleSyncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
     "bundleSelectAtLeastTwo": "Select at least two tickets to bundle.",
     "bundleSelectMaster": "Select a master ticket.",
     "bundleSuccess": "Tickets bundled",
@@ -659,12 +659,16 @@
       "masterTicket": "Select Master Ticket",
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-      "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+      "syncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
       "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.",
       "checkingMasters": "Checking existing bundles...",
       "existingMasterSuffix": "(existing master)",
       "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
-      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling."
+      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.",
+      "propagationSummary": "{{masters}} selected ticket(s) are sync-mode bundle masters; this change will close/reopen {{children}} child ticket(s).",
+      "masterSummary": "{{children}} child ticket(s)",
+      "applyToChildren": "Apply to children",
+      "mastersOnly": "Masters only"
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",
@@ -1477,7 +1481,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Child tickets bundled in this master ticket",
+      "childrenDescription": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
       "title": "Bundle",
       "masterBanner": "This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.",
       "multipleClients": "Multiple clients",
@@ -1489,7 +1493,19 @@
       "remove": "Remove",
       "noChildren": "No children in this bundle.",
       "addChildMultiClientMessage": "This will add {{ticket}} from a different client into the bundle. Confirm you want to proceed.",
-      "thisTicket": "this ticket"
+      "thisTicket": "this ticket",
+      "propagation": {
+        "closeTitle": "Close {{count}} child tickets too?",
+        "reopenTitle": "Reopen {{count}} child tickets too?",
+        "closeBody": "This master is in sync mode. Closing it will also close the {{count}} open child ticket(s) listed below.",
+        "reopenBody": "This master is in sync mode. Reopening it will reopen the {{count}} child ticket(s) it closed. Children closed independently stay closed.",
+        "stayClosedHeading": "Stay closed (closed independently)",
+        "boardRulesNote": "Board close rules are not checked on children.",
+        "closeConfirm": "Close master and {{count}} children",
+        "reopenConfirm": "Reopen master and {{count}} children",
+        "masterOnlyClose": "Close master only",
+        "masterOnlyReopen": "Reopen master only"
+      }
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
     "autoCloseWarned": "The customer has been warned."

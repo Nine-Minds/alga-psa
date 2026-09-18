@@ -571,7 +571,7 @@
     "bundleMasterLabel": "Hoofdticket selecteren",
     "bundleMasterPlaceholder": "Hoofdticket selecteren...",
     "bundleSyncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-    "bundleSyncUpdatesHelp": "Onderliggende tickets behouden hun huidige status wanneer ze worden gebundeld. Workflowvelden zijn standaard vergrendeld op onderliggende tickets. Interne notities blijven op het hoofdticket.",
+    "bundleSyncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
     "bundleSelectAtLeastTwo": "Selecteer ten minste twee tickets om te bundelen.",
     "bundleSelectMaster": "Selecteer een hoofdticket.",
     "bundleSuccess": "Tickets gebundeld",
@@ -634,12 +634,16 @@
       "masterTicket": "Hoofdticket selecteren",
       "selectMasterTicket": "Hoofdticket selecteren...",
       "syncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-      "syncUpdatesHelp": "Onderliggende tickets behouden hun huidige status wanneer ze worden gebundeld. Workflowvelden zijn standaard vergrendeld op onderliggende tickets. Interne notities blijven op het hoofdticket.",
+      "syncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
       "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven.",
       "checkingMasters": "Bestaande bundels controleren...",
       "existingMasterSuffix": "(bestaand hoofdticket)",
       "existingMasterLocked": "Eén geselecteerd ticket is al een hoofdticket. Dit wordt als hoofdticket gebruikt; de andere worden als onderliggende tickets toegevoegd.",
-      "multipleExistingMasters": "Meerdere geselecteerde tickets zijn al hoofdtickets ({{count}}). Ontkoppel alle op één na voordat u bundelt."
+      "multipleExistingMasters": "Meerdere geselecteerde tickets zijn al hoofdtickets ({{count}}). Ontkoppel alle op één na voordat u bundelt.",
+      "propagationSummary": "{{masters}} geselecteerde ticket(s) zijn masters in synchronisatiemodus; deze wijziging sluit/heropent {{children}} kindticket(s).",
+      "masterSummary": "{{children}} kindticket(s)",
+      "applyToChildren": "Toepassen op kinderen",
+      "mastersOnly": "Alleen masters"
     },
     "auth": {
       "moveRequired": "U moet zijn ingelogd om tickets te verplaatsen",
@@ -1469,7 +1473,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Onderliggende tickets gebundeld in dit hoofdticket",
+      "childrenDescription": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
       "title": "Bundel",
       "masterBanner": "Dit ticket is het hoofdticket van een bundel ({{count}} onderliggende tickets). Modus: {{mode}}.",
       "multipleClients": "Meerdere klanten",
@@ -1481,7 +1485,19 @@
       "remove": "Verwijderen",
       "noChildren": "Geen onderliggende tickets in deze bundel.",
       "addChildMultiClientMessage": "Hiermee wordt {{ticket}} van een andere klant aan de bundel toegevoegd. Bevestig dat u wilt doorgaan.",
-      "thisTicket": "dit ticket"
+      "thisTicket": "dit ticket",
+      "propagation": {
+        "closeTitle": "Ook {{count}} kindtickets sluiten?",
+        "reopenTitle": "Ook {{count}} kindtickets heropenen?",
+        "closeBody": "Deze master staat in synchronisatiemodus. Sluiten sluit ook de {{count}} hieronder vermelde open kindtickets.",
+        "reopenBody": "Deze master staat in synchronisatiemodus. Heropenen heropent de {{count}} kindtickets die hij heeft gesloten. Onafhankelijk gesloten kinderen blijven gesloten.",
+        "stayClosedHeading": "Blijven gesloten (onafhankelijk gesloten)",
+        "boardRulesNote": "Board-sluitregels worden niet gecontroleerd op kinderen.",
+        "closeConfirm": "Master en {{count}} kinderen sluiten",
+        "reopenConfirm": "Master en {{count}} kinderen heropenen",
+        "masterOnlyClose": "Alleen master sluiten",
+        "masterOnlyReopen": "Alleen master heropenen"
+      }
     },
     "autoClose": "Wordt automatisch gesloten op {{date}}, tenzij er nieuwe activiteit is.",
     "autoCloseWarned": "De klant is gewaarschuwd."
