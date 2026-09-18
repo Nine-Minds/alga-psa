@@ -32,11 +32,14 @@ import { useTicketContact } from "../features/ticketDetail/hooks/useTicketContac
 import { useTicketTags } from "../features/ticketDetail/hooks/useTicketTags";
 import { useTicketChecklist } from "../features/ticketDetail/hooks/useTicketChecklist";
 import { useTicketQa } from "../features/ticketDetail/hooks/useTicketQa";
+import { useTicketBundle } from "../features/ticketDetail/hooks/useTicketBundle";
+import { isBundleChild } from "./ticketsBundle";
 
 // Components
 import { ActionChip } from "../features/ticketDetail/components/ActionChip";
 import { KeyValue } from "../features/ticketDetail/components/KeyValue";
 import { TicketMetaBar } from "../features/ticketDetail/components/TicketMetaBar";
+import { BundleBanner } from "../features/ticketDetail/components/BundleBanner";
 import { MoreActionsSheet } from "../features/ticketDetail/components/MoreActionsSheet";
 import { CallsEmailsSection } from "../features/ticketDetail/components/CallsEmailsSection";
 import { CallPromptHost } from "../features/interactions/components/CallPromptHost";
@@ -221,6 +224,14 @@ export function TicketDetailBody({
     if (timerLastStoppedAt !== null) setTimeEntriesRefreshKey((value) => value + 1);
   }, [timerLastStoppedAt]);
   const assignmentHook = useTicketAssignment({ ...deps, fetchTicket });
+  const bundleHook = useTicketBundle({ client, session, ticketId, ticket });
+  const bundleLocked = isBundleChild(ticket);
+  const notifyBundleLocked = useCallback(() => {
+    showToast({ message: t("detail.bundle.locked"), tone: "info" });
+  }, [showToast, t]);
+  const openBundleTicket = useCallback((targetTicketId: string) => {
+    navigation?.push("TicketDetail", { ticketId: targetTicketId });
+  }, [navigation]);
   const contactHook = useTicketContact({ ...deps, fetchTicket });
   const tagsHook = useTicketTags(deps);
   const titleHook = useTicketTitle({ ...deps, ticket, setTicket: ticketData.setTicket });
@@ -307,7 +318,7 @@ export function TicketDetailBody({
         contentContainerStyle={{ padding: spacing.lg }}
         refreshControl={<RefreshControl
           refreshing={refreshing}
-          onRefresh={() => { void Promise.all([refresh(), tagsHook.fetchTags(), checklistHook.fetchChecklist()]); }}
+          onRefresh={() => { void Promise.all([refresh(), tagsHook.fetchTags(), checklistHook.fetchChecklist(), bundleHook.fetchBundle()]); }}
         />}
         keyboardShouldPersistTaps="handled"
       >
@@ -436,6 +447,18 @@ export function TicketDetailBody({
           </Pressable>
         )}
 
+        {bundleHook.bundleRole !== "standalone" ? (
+          <View style={{ marginTop: spacing.sm }}>
+            <BundleBanner
+              role={bundleHook.bundleRole}
+              bundle={bundleHook.bundle}
+              masterTicketNumber={(ticket.bundle_master_ticket_number as string | null | undefined) ?? null}
+              childCount={Number(ticket.bundle_child_count ?? 0)}
+              onOpenTicket={navigation ? openBundleTicket : undefined}
+            />
+          </View>
+        ) : null}
+
         <View style={{ marginTop: spacing.sm }}>
           <TicketMetaBar
             statusLabel={statusLabel}
@@ -443,10 +466,12 @@ export function TicketDetailBody({
             priorityName={ticket.priority_name ?? null}
             assignedToName={ticket.assigned_to_name ?? null}
             dueDateIso={getDueDateIso(ticket)}
-            assigneeDisabled={assignmentHook.assignmentUpdating}
-            onStatusPress={() => { void statusHook.openStatusPicker(); }}
-            onPriorityPress={() => { void priorityHook.openPriorityPicker(); }}
-            onAssigneePress={assignmentHook.openAgentPicker}
+            assigneeDisabled={assignmentHook.assignmentUpdating || bundleLocked}
+            statusDisabled={bundleLocked}
+            priorityDisabled={bundleLocked}
+            onStatusPress={bundleLocked ? notifyBundleLocked : () => { void statusHook.openStatusPicker(); }}
+            onPriorityPress={bundleLocked ? notifyBundleLocked : () => { void priorityHook.openPriorityPicker(); }}
+            onAssigneePress={bundleLocked ? notifyBundleLocked : assignmentHook.openAgentPicker}
             onDuePress={() => {
               dueDateHook.setDueDateDraft(isoToDateInput(getDueDateIso(ticket)) ?? "");
               dueDateHook.setDueDateOpen(true);
@@ -551,7 +576,7 @@ export function TicketDetailBody({
                 statusHook.setStatusPickerOpen(false);
               }
             }}
-            closedStatuses={statusHook.statusOptions.filter((s) => s.is_closed)}
+            closedStatuses={bundleLocked ? [] : statusHook.statusOptions.filter((s) => s.is_closed)}
             closeStatusId={commentDraftHook.commentCloseStatusId}
             scheduleAt={commentDraftHook.commentScheduleAt}
             onChangeScheduleAt={commentDraftHook.setCommentScheduleAt}

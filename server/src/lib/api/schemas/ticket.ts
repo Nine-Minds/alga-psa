@@ -213,6 +213,10 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   board_name: z.string().optional(),
   external_system: z.string().optional(),
   external_id: z.string().optional(),
+  // 'bundled' collapses bundle children under their master (the web list's
+  // default); 'individual' lists every ticket. Omitted = individual, which
+  // keeps existing API consumers' result sets unchanged.
+  bundle_view: z.enum(['bundled', 'individual']).optional(),
   tags: z.union([
     z.array(z.string()),
     arrayTransform(z.string())
