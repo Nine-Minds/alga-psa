@@ -513,6 +513,18 @@ export async function propagateBundleMasterStatus(
 
   const occurredAt = nowIso();
   if (crossesBoundary === 'close') {
+    // Revert any row still active for an affected child before inserting the
+    // new close row. A child can hold a stale active row when it was reopened
+    // through a write path that did not revert the ledger. The per-child
+    // partial unique index (tenant, child_ticket_id) WHERE reverted_at IS NULL
+    // would otherwise abort this whole master status change. Reverting first
+    // lets the new row record the current child_previous_status_id and
+    // propagated_by rather than skipping the child.
+    await tenantScopedTable(trx, 'ticket_bundle_status_propagations', ctx.tenant)
+      .whereIn('child_ticket_id', affectedChildIds)
+      .whereNull('reverted_at')
+      .update({ reverted_at: occurredAt, reverted_by: ctx.user.user_id });
+
     const rows = affected.map((child) => ({
       tenant: ctx.tenant,
       propagation_id: uuidv4(),

@@ -129,6 +129,7 @@ vi.mock('../lib/validateTicketClosure', () => ({
 
 vi.mock('./ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined),
+  revertBundlePropagationForChild: vi.fn(async () => undefined),
   previewBundleStatusPropagation: vi.fn(async () => ({
     mode: 'sync_updates',
     masterTicketId: '',

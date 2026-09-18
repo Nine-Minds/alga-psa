@@ -1068,6 +1068,104 @@ describe('Ticket bundling integration', () => {
     const child = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
     expect(child?.is_closed).toBe(false);
   });
+
+  // Regression (alga-2026-0002508): a child reopened while a stale active
+  // propagation row survives must not abort the next propagated master close on
+  // the (tenant, child_ticket_id) WHERE reverted_at IS NULL unique index.
+  it('master close after an independently reopened child reverts the stale row instead of aborting', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const childId = childIds[0];
+    const service = new TicketService();
+
+    await runWithTenant(tenantId, async () => {
+      // 1. Master close propagates and records an active row for the child.
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
+    });
+    const firstRow = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ child_ticket_id: childId })
+      .first();
+    expect(firstRow?.reverted_at).toBeNull();
+
+    await runWithTenant(tenantId, async () => {
+      // 2. Child reopened through the REST path (the in-app action locks child
+      //    workflow fields, but an integrator/automation can still reopen it).
+      await service.update(childId, { status_id: statusOpenId }, { tenant: tenantId, userId: internalUser.user_id });
+      // 3. Master reopen (propagated). The child is open, so it is unaffected.
+      await updateTicketWithCache(masterId, { status_id: statusOpenId }, { propagateToChildren: true } as any);
+    });
+
+    const childAfterReopen = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+    expect(childAfterReopen?.status_id).toBe(statusOpenId);
+    expect(childAfterReopen?.is_closed).toBe(false);
+
+    // 4. Master close again propagates to the now-open child. The stale active
+    //    row must be reverted before the new insert or the whole status change
+    //    aborts on the unique index.
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
+    });
+
+    const master = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
+    expect(master?.is_closed).toBe(true);
+
+    const childClosed = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+    expect(childClosed?.status_id).toBe(statusClosedId);
+    expect(childClosed?.is_closed).toBe(true);
+    expect(childClosed?.closed_at).toBeTruthy();
+    expect(childClosed?.closed_by).toBe(internalUser.user_id);
+
+    const rows = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ child_ticket_id: childId });
+    const activeRows = rows.filter((row: any) => row.reverted_at === null);
+    expect(activeRows).toHaveLength(1);
+    expect(activeRows[0].child_previous_status_id).toBe(statusOpenId);
+    expect(activeRows[0].propagated_by).toBe(internalUser.user_id);
+    // The superseded row is reverted, not orphaned alongside the new one.
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    expect(rows.filter((row: any) => row.reverted_at !== null)).toHaveLength(rows.length - 1);
+  });
+
+  it('REST child reopen reverts its propagation ledger and a later master reopen leaves it untouched', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const childId = childIds[0];
+    const service = new TicketService();
+
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
+    });
+
+    const activeBefore = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ child_ticket_id: childId })
+      .first();
+    expect(activeBefore?.reverted_at).toBeNull();
+
+    await runWithTenant(tenantId, async () => {
+      await service.update(childId, { status_id: statusOpenId }, { tenant: tenantId, userId: internalUser.user_id });
+    });
+
+    const reverted = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ child_ticket_id: childId })
+      .first();
+    expect(reverted?.reverted_at).toBeTruthy();
+    expect(reverted?.reverted_by).toBe(internalUser.user_id);
+
+    // With no active row, a propagated master reopen must leave the reopened
+    // child alone rather than reversing a close it did not perform.
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { status_id: statusOpenId }, { propagateToChildren: true } as any);
+    });
+
+    const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+    expect(child?.status_id).toBe(statusOpenId);
+    expect(child?.is_closed).toBe(false);
+
+    const rows = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ child_ticket_id: childId });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].reverted_at).toBeTruthy();
+  });
 });
 
 async function ensureTenant(connection: Knex, name: string): Promise<string> {

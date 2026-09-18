@@ -1946,6 +1946,21 @@ export class TicketService extends BaseService<ITicket> {
         { propagateToChildren }
       );
 
+      // A bundled child reopened through this REST path has left the "closed by
+      // master" state. Revert its active propagation row in the same
+      // transaction so the ledger agrees with tickets.is_closed: a later master
+      // reopen leaves it alone, and a later master close cannot collide with a
+      // stale row on the per-child unique index. The revert is idempotent and
+      // a no-op for tickets without an active row.
+      if (
+        statusChanged &&
+        currentTicket.master_ticket_id &&
+        previousStatus?.is_closed &&
+        !nextStatus?.is_closed
+      ) {
+        await revertBundlePropagationForChild(trx, context.tenant, id, context.userId);
+      }
+
       // Publish appropriate events
       if (statusChanged) {
         if (nextStatus?.is_closed) {
