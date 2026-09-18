@@ -141,6 +141,14 @@ export type TicketNotificationSuppressionOptions = Pick<
   'suppressContactNotifications' | 'suppressInternalNotifications'
 >;
 
+export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions & {
+  /**
+   * Sync-mode bundle master boundary changes require an explicit choice:
+   * true propagates to affected children, false changes masters only.
+   */
+  propagateToChildren?: boolean;
+};
+
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
   table: string,
@@ -2051,7 +2059,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   { tenant },
   ticketIds: string[],
   statusId: string,
-  options: TicketNotificationSuppressionOptions = {},
+  options: TicketBulkStatusOptions = {},
 ): Promise<{
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;

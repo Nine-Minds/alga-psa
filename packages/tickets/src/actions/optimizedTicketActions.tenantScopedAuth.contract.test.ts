@@ -198,11 +198,18 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).toContain("tenantScopedTable(trx, 'categories', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'statuses', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'ticket_resources', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
+    // Bundle settings / propagation now live in ticketBundleUtils so the
+    // server-action and REST paths share one engine; assert they stay behind
+    // the facade there.
+    expect(section).toContain('propagateBundleMasterStatus(');
     expect(section).not.toContain(".where({ ticket_id: id, tenant: tenant })");
     expect(section).not.toContain(".where('tenant', tenant)");
     expect(section).not.toContain('tenant: tenant,');
     expect(section).not.toContain('.where({ tenant, master_ticket_id: id })');
+
+    const bundleUtils = fs.readFileSync(path.resolve(__dirname, './ticketBundleUtils.ts'), 'utf8');
+    expect(bundleUtils).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
+    expect(bundleUtils).toContain("tenantScopedTable(trx, 'ticket_bundle_status_propagations', ctx.tenant)");
   });
 
   it('uses structural tenant scoping for optimized comment mirroring and bundle child roots', () => {

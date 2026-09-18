@@ -2,9 +2,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
 import { tenantDb } from '@alga-psa/db';
+import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 
 vi.mock('server/src/lib/utils/getSecret', () => ({
   getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
@@ -117,12 +118,16 @@ let removeChildFromBundleAction: any;
 let unbundleMasterTicketAction: any;
 let promoteBundleMasterAction: any;
 let updateBundleSettingsAction: any;
+let previewBundleStatusPropagationAction: any;
+let previewBulkBundleStatusPropagationAction: any;
 let updateTicketWithCache: any;
 let addTicketCommentWithCache: any;
 let getConsolidatedTicketData: any;
 let updateComment: any;
 let createComment: any;
 let saveTimeEntry: any;
+let bulkUpdateTicketStatus: any;
+let TicketService: any;
 
 type TestUser = {
   user_id: string;
@@ -149,6 +154,9 @@ describe('Ticket bundling integration', () => {
   let priorityId: string;
 
   beforeAll(async () => {
+    // Point the app's DB env at the local test Postgres before bootstrapping;
+    // .env.localtest carries container secret paths that don't exist on host.
+    wireLocalTestDbEnv();
     process.env.DB_HOST = process.env.DB_HOST || 'localhost';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
     process.env.DB_USER_ADMIN = process.env.DB_USER_ADMIN || 'postgres';
@@ -167,6 +175,8 @@ describe('Ticket bundling integration', () => {
       unbundleMasterTicketAction,
       promoteBundleMasterAction,
       updateBundleSettingsAction,
+      previewBundleStatusPropagationAction,
+      previewBulkBundleStatusPropagationAction,
     } = await import('@alga-psa/tickets/actions/ticketBundleActions'));
 
     ({ updateTicketWithCache, addTicketCommentWithCache, getConsolidatedTicketData } = await import(
@@ -175,6 +185,8 @@ describe('Ticket bundling integration', () => {
 
     ({ updateComment, createComment } = await import('@alga-psa/tickets/actions/comment-actions/commentActions'));
     ({ saveTimeEntry } = await import('@alga-psa/scheduling/actions/timeEntryActions'));
+    ({ bulkUpdateTicketStatus } = await import('@alga-psa/tickets/actions/ticketActions'));
+    ({ TicketService } = await import('@/lib/api/services/TicketService'));
 
     tenantId = await ensureTenant(db, 'Ticket bundling test tenant');
     otherTenantId = await createTenant(db, 'Other tenant');
@@ -442,7 +454,11 @@ describe('Ticket bundling integration', () => {
     const nextPriorityId = anotherPriority?.priority_id ?? priorityId;
 
     await runWithTenant(tenantId, async () => {
-      await updateTicketWithCache(masterId, { status_id: statusClosedId, priority_id: nextPriorityId }, internalUser as any);
+      await updateTicketWithCache(
+        masterId,
+        { status_id: statusClosedId, priority_id: nextPriorityId },
+        { propagateToChildren: true } as any,
+      );
     });
 
     const childAfter = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
@@ -519,7 +535,7 @@ describe('Ticket bundling integration', () => {
     await runWithTenant(tenantId, async () => {
       await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'sync_updates' }, internalUser as any);
       await updateBundleSettingsAction({ masterTicketId: masterId, reopenOnChildReply: true }, internalUser as any);
-      await updateTicketWithCache(masterId, { status_id: statusClosedId }, internalUser as any);
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
     });
 
     const scopedDb = tenantDb(db, tenantId);
@@ -665,6 +681,296 @@ describe('Ticket bundling integration', () => {
         .first();
       expect(entry).toBeTruthy();
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sync-mode bundle status propagation (alga-2026-0002508)
+  // ---------------------------------------------------------------------------
+
+  async function setupSyncBundle(params: { childStatusIds?: string[] }) {
+    const clientA = await createClient(db, tenantId, `Prop Client ${uuidv4().slice(0, 6)}`);
+    const contactA = await createContact(db, tenantId, clientA, `prop-${uuidv4().slice(0, 6)}@example.com`);
+
+    const masterId = uuidv4();
+    await insertTicket(db, { tenant: tenantId, ticketId: masterId, ticketNumber: `PRP-${uuidv4().slice(0, 6)}`, title: 'Prop master', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+
+    const childIds: string[] = [];
+    for (const childStatusId of params.childStatusIds ?? [statusOpenId]) {
+      const childId = uuidv4();
+      childIds.push(childId);
+      await insertTicket(db, { tenant: tenantId, ticketId: childId, ticketNumber: `PRP-${uuidv4().slice(0, 6)}`, title: 'Prop child', clientId: clientA, contactId: contactA, statusId: childStatusId, priorityId, boardId });
+      if (childStatusId === statusClosedId) {
+        // Fixture parity: a ticket inserted directly in a closed status needs
+        // the denormalized close fields the app would normally have written.
+        await tenantDb(db, tenantId).table('tickets')
+          .where({ ticket_id: childId })
+          .update({ is_closed: true, closed_at: db.fn.now(), closed_by: null });
+      }
+    }
+
+    await runWithTenant(tenantId, async () => {
+      await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: childIds, mode: 'sync_updates' }, internalUser as any);
+    });
+
+    return { masterId, childIds };
+  }
+
+  it('previews a sync-master close: open children affected, already-closed unaffected', async () => {
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId, statusClosedId] });
+
+    const preview = await runWithTenant(tenantId, async () =>
+      previewBundleStatusPropagationAction({ masterTicketId: masterId, newStatusId: statusClosedId }, internalUser as any));
+
+    expect(preview.crossesBoundary).toBe('close');
+    expect(preview.affectedChildren.map((c: any) => c.ticket_id)).toEqual([childIds[0]]);
+    expect(preview.unaffectedChildren).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ticket_id: childIds[1], reason: 'already_closed' }),
+    ]));
+  });
+
+  it('returns crossesBoundary null for non-boundary changes and link_only masters', async () => {
+    const { masterId } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+
+    const openToOpen = await runWithTenant(tenantId, async () =>
+      previewBundleStatusPropagationAction({ masterTicketId: masterId, newStatusId: statusOpenId }, internalUser as any));
+    expect(openToOpen.crossesBoundary).toBeNull();
+
+    const clientA = await createClient(db, tenantId, `Link Client ${uuidv4().slice(0, 6)}`);
+    const contactA = await createContact(db, tenantId, clientA, `link-${uuidv4().slice(0, 6)}@example.com`);
+    const linkMasterId = uuidv4();
+    const linkChildId = uuidv4();
+    await insertTicket(db, { tenant: tenantId, ticketId: linkMasterId, ticketNumber: `LNK-${uuidv4().slice(0, 6)}`, title: 'Link master', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+    await insertTicket(db, { tenant: tenantId, ticketId: linkChildId, ticketNumber: `LNK-${uuidv4().slice(0, 6)}`, title: 'Link child', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+    await runWithTenant(tenantId, async () => {
+      await bundleTicketsAction({ masterTicketId: linkMasterId, childTicketIds: [linkChildId], mode: 'link_only' }, internalUser as any);
+    });
+
+    const linkPreview = await runWithTenant(tenantId, async () =>
+      previewBundleStatusPropagationAction({ masterTicketId: linkMasterId, newStatusId: statusClosedId }, internalUser as any));
+    expect(linkPreview.crossesBoundary).toBeNull();
+  });
+
+  it('requires an explicit propagation choice and writes nothing when omitted', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+
+    await runWithTenant(tenantId, async () => {
+      await expect(
+        updateTicketWithCache(masterId, { status_id: statusClosedId }, {} as any),
+      ).rejects.toBeInstanceOf(BundlePropagationConfirmationRequiredError);
+    });
+
+    const masterAfter = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
+    const childAfter = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(masterAfter?.status_id).toBe(statusOpenId);
+    expect(masterAfter?.is_closed).toBe(false);
+    expect(childAfter?.status_id).toBe(statusOpenId);
+    expect(childAfter?.is_closed).toBe(false);
+
+    const propagationRows = await scopedDb.table('ticket_bundle_status_propagations').where({ master_ticket_id: masterId });
+    expect(propagationRows.length).toBe(0);
+  });
+
+  it('propagateToChildren:false closes the master only and records propagated:false', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const anotherPriority = await scopedDb.table('priorities').andWhereNot({ priority_id: priorityId }).first();
+    const nextPriorityId = anotherPriority?.priority_id ?? priorityId;
+
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(
+        masterId,
+        { status_id: statusClosedId, priority_id: nextPriorityId },
+        { propagateToChildren: false } as any,
+      );
+    });
+
+    const master = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
+    expect(master?.status_id).toBe(statusClosedId);
+    expect(master?.is_closed).toBe(true);
+    expect(master?.priority_id).toBe(nextPriorityId);
+
+    const child = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(child?.status_id).toBe(statusOpenId);
+    expect(child?.is_closed).toBe(false);
+    expect(child?.priority_id).toBe(priorityId);
+
+    const propagationRows = await scopedDb.table('ticket_bundle_status_propagations').where({ master_ticket_id: masterId });
+    expect(propagationRows.length).toBe(0);
+
+    const activity = await scopedDb.table('ticket_audit_logs')
+      .where({ ticket_id: masterId, event_type: 'TICKET_BUNDLE_STATUS_PROPAGATED' })
+      .first();
+    expect(activity).toBeTruthy();
+    expect(activity?.details?.propagated).toBe(false);
+    expect(activity?.details?.action).toBe('close');
+  });
+
+  it('propagateToChildren:true closes only open children with consistent close fields', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId, statusClosedId] });
+    const closedChildBefore = await scopedDb.table('tickets').where({ ticket_id: childIds[1] }).first();
+
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
+    });
+
+    const master = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
+    expect(master?.is_closed).toBe(true);
+    expect(master?.closed_at).toBeTruthy();
+    expect(master?.closed_by).toBe(internalUser.user_id);
+
+    const openChild = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(openChild?.status_id).toBe(statusClosedId);
+    expect(openChild?.is_closed).toBe(true);
+    expect(openChild?.closed_at).toBeTruthy();
+    expect(openChild?.closed_by).toBe(internalUser.user_id);
+
+    const preClosedChild = await scopedDb.table('tickets').where({ ticket_id: childIds[1] }).first();
+    expect(preClosedChild?.status_id).toBe(statusClosedId);
+    expect(preClosedChild?.is_closed).toBe(true);
+    expect(preClosedChild?.closed_at).toEqual(closedChildBefore?.closed_at);
+    expect(preClosedChild?.closed_by).toEqual(closedChildBefore?.closed_by);
+
+    const propagationRows = await scopedDb.table('ticket_bundle_status_propagations').where({ master_ticket_id: masterId });
+    expect(propagationRows.length).toBe(1);
+    expect(propagationRows[0].child_ticket_id).toBe(childIds[0]);
+    expect(propagationRows[0].action).toBe('close');
+    expect(propagationRows[0].child_previous_status_id).toBe(statusOpenId);
+    expect(propagationRows[0].reverted_at).toBeNull();
+    expect(propagationRows[0].propagated_by).toBe(internalUser.user_id);
+  });
+
+  it('reopen reopens only propagated children; independently closed stays closed', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId, statusClosedId] });
+
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
+      await updateTicketWithCache(masterId, { status_id: statusOpenId }, { propagateToChildren: true } as any);
+    });
+
+    const master = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
+    expect(master?.status_id).toBe(statusOpenId);
+    expect(master?.is_closed).toBe(false);
+
+    const propagatedChild = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(propagatedChild?.status_id).toBe(statusOpenId);
+    expect(propagatedChild?.is_closed).toBe(false);
+    expect(propagatedChild?.closed_at).toBeNull();
+
+    const independentChild = await scopedDb.table('tickets').where({ ticket_id: childIds[1] }).first();
+    expect(independentChild?.status_id).toBe(statusClosedId);
+    expect(independentChild?.is_closed).toBe(true);
+
+    const propagationRows = await scopedDb.table('ticket_bundle_status_propagations').where({ master_ticket_id: masterId });
+    expect(propagationRows.length).toBe(1);
+    expect(propagationRows[0].reverted_at).toBeTruthy();
+    expect(propagationRows[0].reverted_by).toBe(internalUser.user_id);
+  });
+
+  it('syncs priority-only updates without requiring the flag', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const anotherPriority = await scopedDb.table('priorities').andWhereNot({ priority_id: priorityId }).first();
+    const nextPriorityId = anotherPriority?.priority_id ?? priorityId;
+
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { priority_id: nextPriorityId });
+    });
+
+    const child = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(child?.priority_id).toBe(nextPriorityId);
+    expect(child?.status_id).toBe(statusOpenId);
+  });
+
+  it('removing a child reverts its active propagation row', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
+      await removeChildFromBundleAction({ childTicketId: childIds[0] }, internalUser as any);
+    });
+
+    const row = await scopedDb.table('ticket_bundle_status_propagations').where({ child_ticket_id: childIds[0] }).first();
+    expect(row?.reverted_at).toBeTruthy();
+
+    // A later master reopen cannot touch the detached child.
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { status_id: statusOpenId }, { propagateToChildren: true } as any);
+    });
+    const child = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(child?.status_id).toBe(statusClosedId);
+    expect(child?.master_ticket_id).toBeNull();
+  });
+
+  it('bulk preview returns only sync masters whose change crosses the boundary', async () => {
+    const { masterId } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+
+    const clientA = await createClient(db, tenantId, `Bulk Client ${uuidv4().slice(0, 6)}`);
+    const contactA = await createContact(db, tenantId, clientA, `bulk-${uuidv4().slice(0, 6)}@example.com`);
+    const nonMasterId = uuidv4();
+    await insertTicket(db, { tenant: tenantId, ticketId: nonMasterId, ticketNumber: `BLK-${uuidv4().slice(0, 6)}`, title: 'Non master', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+
+    const previews = await runWithTenant(tenantId, async () =>
+      previewBulkBundleStatusPropagationAction({ ticketIds: [masterId, nonMasterId], newStatusId: statusClosedId }, internalUser as any));
+
+    expect(Object.keys(previews)).toEqual([masterId]);
+    expect(previews[masterId].crossesBoundary).toBe('close');
+  });
+
+  it('bulk status update honours propagateToChildren for sync masters', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+
+    const result = await runWithTenant(tenantId, async () =>
+      bulkUpdateTicketStatus([masterId], statusClosedId, { propagateToChildren: false }));
+
+    expect(result.failed).toEqual([]);
+    expect(result.updatedIds).toEqual([masterId]);
+
+    const child = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(child?.status_id).toBe(statusOpenId);
+    expect(child?.is_closed).toBe(false);
+  });
+
+  it('REST TicketService.update shares the propagation contract (409 source)', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const service = new TicketService();
+
+    await runWithTenant(tenantId, async () => {
+      await expect(
+        service.update(masterId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id }),
+      ).rejects.toBeInstanceOf(BundlePropagationConfirmationRequiredError);
+    });
+
+    const masterAfter = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
+    expect(masterAfter?.status_id).toBe(statusOpenId);
+
+    await runWithTenant(tenantId, async () => {
+      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: true }, { tenant: tenantId, userId: internalUser.user_id });
+    });
+
+    const childAfter = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(childAfter?.status_id).toBe(statusClosedId);
+    expect(childAfter?.is_closed).toBe(true);
+  });
+
+  it('REST TicketService.update with propagateToChildren:false changes the master only', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const service = new TicketService();
+
+    await runWithTenant(tenantId, async () => {
+      await service.update(masterId, { status_id: statusClosedId, propagateToChildren: false }, { tenant: tenantId, userId: internalUser.user_id });
+    });
+
+    const master = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
+    expect(master?.is_closed).toBe(true);
+    const child = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(child?.is_closed).toBe(false);
   });
 });
 

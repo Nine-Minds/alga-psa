@@ -11,6 +11,12 @@ import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-ps
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import {
+  previewBundleStatusPropagation,
+  revertBundlePropagationForChild,
+  revertBundlePropagationsForMaster,
+} from './ticketBundleUtils';
+import type { BundleStatusPropagationPreview } from '../lib/ticketBundlePropagation';
 
 function nowIso() {
   return new Date().toISOString();
@@ -530,6 +536,10 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
         updated_at: nowIso(),
       });
 
+    // A detached child is no longer closed "by" this master: revert its active
+    // propagation row so a later master reopen cannot reopen it.
+    await revertBundlePropagationForChild(trx, tenant, data.childTicketId, user.user_id);
+
     // If the master now has no children, remove bundle settings
     const [{ count }] = await tenantScopedTable(trx, 'tickets', tenant)
       .where({ master_ticket_id: masterTicketId })
@@ -704,6 +714,10 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
         updated_at: nowIso(),
       });
 
+    // Unbundling detaches every child: revert their active propagation rows so
+    // a later reopen of this (now standalone) ticket cannot touch them.
+    await revertBundlePropagationsForMaster(trx, tenant, data.masterTicketId, user.user_id);
+
     await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
       .where({ master_ticket_id: data.masterTicketId })
       .delete();
@@ -726,6 +740,76 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
   }
 
   return result;
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+const previewBundleStatusPropagationSchema = z.object({
+  masterTicketId: z.string().uuid(),
+  newStatusId: z.string().uuid(),
+});
+
+/**
+ * FR7 — read-only preview for web surfaces. Lets the UI show the propagation
+ * confirmation without attempting the write.
+ */
+export const previewBundleStatusPropagationAction = withAuth(async (
+  user,
+  { tenant },
+  input: z.input<typeof previewBundleStatusPropagationSchema>
+): Promise<BundleStatusPropagationPreview | TicketActionError> => {
+  try {
+    const data = previewBundleStatusPropagationSchema.parse(input);
+    const { knex: db } = await createTenantKnex();
+
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+      return previewBundleStatusPropagation(trx, tenant, data.masterTicketId, data.newStatusId);
+    });
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+const previewBulkBundleStatusPropagationSchema = z.object({
+  ticketIds: z.array(z.string().uuid()).min(1).max(500),
+  newStatusId: z.string().uuid(),
+});
+
+/**
+ * FR7/FR9 — per-master previews for a bulk status change, keyed by master id.
+ * Skips non-masters and boundary-neutral changes.
+ */
+export const previewBulkBundleStatusPropagationAction = withAuth(async (
+  user,
+  { tenant },
+  input: z.input<typeof previewBulkBundleStatusPropagationSchema>
+): Promise<Record<string, BundleStatusPropagationPreview> | TicketActionError> => {
+  try {
+    const data = previewBulkBundleStatusPropagationSchema.parse(input);
+    const ticketIds = Array.from(new Set(data.ticketIds));
+    const { knex: db } = await createTenantKnex();
+
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+      const previews: Record<string, BundleStatusPropagationPreview> = {};
+      for (const ticketId of ticketIds) {
+        const preview = await previewBundleStatusPropagation(trx, tenant, ticketId, data.newStatusId);
+        if (preview.crossesBoundary !== null && preview.affectedChildren.length > 0) {
+          previews[ticketId] = preview;
+        }
+      }
+      return previews;
+    });
   } catch (error) {
     const expected = ticketBundleActionErrorFrom(error);
     if (expected) return expected;
