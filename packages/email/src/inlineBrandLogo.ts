@@ -99,39 +99,38 @@ async function readLogoAsset(
   tenantId: string,
   variant: EmailBrandingLogoVariant,
 ): Promise<BrandLogoAsset | null> {
+  const missing = (reason: string, details: Record<string, unknown> = {}) => {
+    logger.warn(`[BrandLogo] ${reason}; sending without the logo`, { tenant: tenantId, variant, ...details });
+    return null;
+  };
+
   const association = await findLogoAssociation(knex, tenantId, variant);
-  if (!association?.document_id) return null;
+  if (!association?.document_id) return missing('The tenant has no logo uploaded');
 
   const document = await tenantTable(knex, tenantId, 'documents')
     .select('file_id')
     .where({ document_id: association.document_id })
     .first<{ file_id?: string | null }>();
-  if (!document?.file_id) return null;
+  if (!document?.file_id) return missing('The tenant logo document has no file');
 
   const file = await runWithTenant(tenantId, () => FileStoreModel.findById(knex, document.file_id!));
-  if (!file?.storage_path) return null;
+  if (!file?.storage_path) return missing('The tenant logo file is gone from storage');
 
   if (Number(file.file_size) > MAX_LOGO_BYTES) {
-    logger.warn('[BrandLogo] Tenant logo is too large to embed; sending without it', {
-      tenant: tenantId,
-      variant,
+    return missing('The tenant logo is too large to embed', {
       bytes: Number(file.file_size),
       maxBytes: MAX_LOGO_BYTES,
     });
-    return null;
   }
 
   const provider = await StorageProviderFactory.createProvider();
   const content = await provider.download(file.storage_path);
 
   if (content.length > MAX_LOGO_BYTES) {
-    logger.warn('[BrandLogo] Tenant logo is too large to embed; sending without it', {
-      tenant: tenantId,
-      variant,
+    return missing('The tenant logo is too large to embed', {
       bytes: content.length,
       maxBytes: MAX_LOGO_BYTES,
     });
-    return null;
   }
 
   const contentType = file.mime_type || 'image/png';
@@ -217,13 +216,9 @@ export async function embedBrandLogo(
     result += html.slice(cursor, match.index);
     cursor = match.index + tag.length;
 
-    if (!asset) {
-      logger.warn('[BrandLogo] No tenant logo to embed; removing the placeholder', {
-        tenant: options.tenantId,
-        variant,
-      });
-      continue;
-    }
+    // Nothing to embed: the reason was logged when the miss was cached, and a
+    // fan-out must not repeat it per message.
+    if (!asset) continue;
 
     result += withCidSrc(tag, cid);
     if (!attachments.has(cid)) {
