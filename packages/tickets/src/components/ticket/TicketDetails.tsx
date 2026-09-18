@@ -66,6 +66,9 @@ import {
 import { getTicketChecklistItems, type ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
 import type { ITicketExternalLinkView } from "../../actions/externalLinks/externalLinkActions";
 import type { CloseRuleFailure } from "../../lib/validateTicketClosure";
+import { previewBundleStatusPropagationAction } from "../../actions/ticketBundleActions";
+import { BundleStatusPropagationDialog } from "../BundleStatusPropagationDialog";
+import type { BundleStatusPropagationPreview } from "../../lib/ticketBundlePropagation";
 import TicketChecklistSection, { summarizeChecklist } from "./TicketChecklistSection";
 import { Dialog, DialogContent, DialogFooter } from "@alga-psa/ui/components/Dialog";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
@@ -182,10 +185,14 @@ interface TicketDetailsProps {
     currentUser?: IUser | null;
 
     // Optimized handlers
-    onTicketUpdate?: (field: string, value: any) => Promise<void>;
+    onTicketUpdate?: (
+        field: string,
+        value: any,
+        options?: { propagateToChildren?: boolean }
+    ) => Promise<void>;
     onBatchTicketUpdate?: (
         changes: Record<string, unknown>,
-        options?: TicketNotificationSuppressionValue
+        options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
@@ -396,6 +403,77 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isResolutionCloseDialogOpen, setIsResolutionCloseDialogOpen] = useState(false);
     const [isSubmittingResolutionClose, setIsSubmittingResolutionClose] = useState(false);
 
+    // Bundle status propagation confirmation. The preview is fetched first; when
+    // it crosses the open/closed boundary with affected children we suspend the
+    // caller on a promise until the operator chooses propagate / master-only /
+    // cancel. This keeps the choice in one place for all four status-change sites.
+    const [bundlePropagationPreview, setBundlePropagationPreview] = useState<BundleStatusPropagationPreview | null>(null);
+    const bundleDecisionResolverRef = useRef<
+        ((decision: { proceed: boolean; propagateToChildren?: boolean }) => void) | null
+    >(null);
+
+    const resolveBundlePropagationDecision = useCallback(
+        (decision: { proceed: boolean; propagateToChildren?: boolean }) => {
+            const resolver = bundleDecisionResolverRef.current;
+            bundleDecisionResolverRef.current = null;
+            setBundlePropagationPreview(null);
+            resolver?.(decision);
+        },
+        [],
+    );
+
+    const confirmBundlePropagation = useCallback(
+        async (newStatusId: string): Promise<{ proceed: boolean; propagateToChildren?: boolean }> => {
+            if (!ticket.ticket_id) return { proceed: true };
+            try {
+                const preview = await previewBundleStatusPropagationAction({
+                    masterTicketId: ticket.ticket_id,
+                    newStatusId,
+                });
+                if (isActionMessageError(preview) || isActionPermissionError(preview)) {
+                    return { proceed: true };
+                }
+                if (preview.crossesBoundary && preview.affectedChildren.length > 0) {
+                    return await new Promise<{ proceed: boolean; propagateToChildren?: boolean }>((resolve) => {
+                        bundleDecisionResolverRef.current = resolve;
+                        setBundlePropagationPreview(preview);
+                    });
+                }
+            } catch (previewError) {
+                // Fall through to the write; the server still enforces the choice.
+                console.error('Bundle propagation preview failed:', previewError);
+            }
+            return { proceed: true };
+        },
+        [ticket.ticket_id],
+    );
+
+    const confirmStatusChange = useCallback(
+        async (newStatusId: string): Promise<{ proceed: boolean; propagateToChildren?: boolean }> => {
+            if (ticket.ticket_id) {
+                try {
+                    const check = await checkTicketClosure(ticket.ticket_id, newStatusId);
+                    if (check.wouldClose && !check.allowed) {
+                        setCloseOverrideReason('');
+                        setCloseBlockedDialog({
+                            isOpen: true,
+                            statusId: newStatusId,
+                            failures: check.failures,
+                            canOverride: check.canOverride,
+                            suppression: null,
+                        });
+                        return { proceed: false };
+                    }
+                } catch (checkError) {
+                    // Fall through to the write; the server still enforces.
+                    console.error('Close rules pre-check failed:', checkError);
+                }
+            }
+            return confirmBundlePropagation(newStatusId);
+        },
+        [confirmBundlePropagation, ticket.ticket_id],
+    );
+
     const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(
         bootstrap?.checklistItems ?? undefined,
     );
@@ -430,9 +508,16 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         if (!closeBlockedDialog.statusId || !ticket.ticket_id) return;
         setIsSubmittingCloseOverride(true);
         try {
+            // Close rules were already overridden, so only the propagation
+            // choice remains before we write.
+            const propagationDecision = await confirmBundlePropagation(closeBlockedDialog.statusId);
+            if (!propagationDecision.proceed) {
+                return;
+            }
             const result = await updateTicketWithCache(ticket.ticket_id, { status_id: closeBlockedDialog.statusId }, {
                 overrideCloseRules: true,
                 overrideCloseRulesReason: closeOverrideReason.trim() || null,
+                propagateToChildren: propagationDecision.propagateToChildren,
                 ...(closeBlockedDialog.suppression?.suppressContactNotifications
                     ? {
                         suppressContactNotifications: true,
@@ -1760,27 +1845,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
-        // Pre-close check: when this status change would close the ticket,
-        // surface unmet close rules in a dialog instead of submitting a write
-        // that the server would reject. The dedicated toolbar action owns the
-        // convenience resolution flow; ordinary status edits stay ordinary.
-        if (field === 'status_id' && normalizedValue && ticket.ticket_id) {
-            try {
-                const check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
-                if (check.wouldClose && !check.allowed) {
-                    setCloseOverrideReason('');
-                    setCloseBlockedDialog({
-                        isOpen: true,
-                        statusId: normalizedValue,
-                        failures: check.failures,
-                        canOverride: check.canOverride,
-                        suppression: null,
-                    });
-                    return;
-                }
-            } catch (checkError) {
-                // Fall through to the write; the server still enforces.
-                console.error('Close rules pre-check failed:', checkError);
+        // Status changes run the full gate: close rules first, then the bundle
+        // propagation confirmation. A cancelled confirmation leaves the select
+        // on its current value with no write.
+        let propagationDecision: { proceed: boolean; propagateToChildren?: boolean } = { proceed: true };
+        if (field === 'status_id' && normalizedValue) {
+            propagationDecision = await confirmStatusChange(normalizedValue);
+            if (!propagationDecision.proceed) {
+                return;
             }
         }
 
@@ -1795,7 +1867,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             await runWithPendingLiveFields([field], async () => {
                 // Use the optimized handler if provided
                 if (onTicketUpdate) {
-                    await onTicketUpdate(field, normalizedValue);
+                    if (field === 'status_id') {
+                        await onTicketUpdate(field, normalizedValue, {
+                            propagateToChildren: propagationDecision.propagateToChildren,
+                        });
+                    } else {
+                        await onTicketUpdate(field, normalizedValue);
+                    }
                     updateSucceeded = true;
                     if (field === 'board_id') {
                         setSavedBoardId(normalizedValue);
@@ -2687,7 +2765,18 @@ const handleClose = () => {
 
         // If we have a batch handler from container, use it
         if (onBatchTicketUpdate) {
-            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes, options));
+            let propagateToChildren: boolean | undefined;
+            if (targetStatusId && ticket.ticket_id) {
+                const propagationDecision = await confirmBundlePropagation(targetStatusId);
+                if (!propagationDecision.proceed) {
+                    return false;
+                }
+                propagateToChildren = propagationDecision.propagateToChildren;
+            }
+            const batchOptions = propagateToChildren === undefined
+                ? options
+                : { ...(options ?? {}), propagateToChildren };
+            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes, batchOptions));
             if (success) {
                 // Update local ticket state with the saved changes
                 setTicket(prevTicket => ({
@@ -2742,6 +2831,7 @@ const handleClose = () => {
             return false;
         }
     }, [
+        confirmBundlePropagation,
         handleItilFieldChange,
         handleSelectChange,
         onBatchTicketUpdate,
@@ -2791,12 +2881,23 @@ const handleClose = () => {
                 console.error('Close rules check failed after adding resolution:', checkError);
             }
 
+            // Resolution comment is durable; ask about bundle propagation before
+            // the status write. Cancelling leaves the ticket open (the comment
+            // stays, as before).
+            const propagationDecision = await confirmBundlePropagation(statusId);
+            if (!propagationDecision.proceed) {
+                return resolutionSaved;
+            }
+
             const result = await runWithPendingLiveFields(
                 ['status_id', 'response_state'],
                 () => updateTicketWithCache(
                     ticket.ticket_id!,
                     { status_id: statusId },
-                    suppression.suppressContactNotifications ? suppression : undefined,
+                    {
+                        ...(suppression.suppressContactNotifications ? suppression : {}),
+                        propagateToChildren: propagationDecision.propagateToChildren,
+                    },
                 ),
             );
             if (isReturnedActionError(result)) {
@@ -2818,7 +2919,7 @@ const handleClose = () => {
         } finally {
             setIsSubmittingResolutionClose(false);
         }
-    }, [addResolutionComment, closedStatusOptions, runWithPendingLiveFields, t, ticket.ticket_id]);
+    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, runWithPendingLiveFields, t, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -3563,7 +3664,18 @@ const handleClose = () => {
                     deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                 />
-                
+
+                {/* Sync-mode bundle master: choose whether a boundary-crossing
+                    status change propagates to the affected children. */}
+                <BundleStatusPropagationDialog
+                    isOpen={bundlePropagationPreview !== null}
+                    preview={bundlePropagationPreview}
+                    isSubmitting={isSubmittingCloseOverride || isSubmittingResolutionClose}
+                    onCancel={() => resolveBundlePropagationDecision({ proceed: false })}
+                    onMasterOnly={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: false })}
+                    onPropagate={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: true })}
+                />
+
                 {/* Blocked-close dialog: unmet close rules with quick actions and
                     a permissioned "Close anyway" override. */}
                 <Dialog
