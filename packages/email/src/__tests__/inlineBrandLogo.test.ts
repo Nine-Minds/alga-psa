@@ -182,4 +182,18 @@ describe('embedBrandLogo', () => {
     expect(download).toHaveBeenCalledTimes(1);
     expect(knex.reads).toEqual(['document_associations', 'documents']);
   });
+
+  it('reads the saved variant of a legacy row once, not once per message', async () => {
+    const html = '<body><img data-alga-brand-logo src="/api/documents/view/file-default?t=7"/></body>';
+    const knex = fakeKnex(
+      { ...logoRows('default'), tenant_settings: [{ settings: {} }] },
+      files('default'),
+    );
+
+    for (let index = 0; index < 5; index += 1) {
+      await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+    }
+
+    expect(knex.reads.filter((table) => table === 'tenant_settings')).toHaveLength(1);
+  });
 });

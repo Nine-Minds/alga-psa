@@ -35,7 +35,9 @@ class TestEmailService extends BaseEmailService {
 const BRANDED_HTML = '<img data-alga-brand-logo src="cid:alga-brand-logo"/><p>Ticket updated</p>';
 
 function service() {
-  const sendEmail = vi.fn(async () => ({ success: true, messageId: 'message-1' }));
+  // Explicit arg signature: vitest 4 types mock.calls from the implementation,
+  // and a zero-arg one makes the call tuples unindexable.
+  const sendEmail = vi.fn(async (_message: any, _tenantId?: string) => ({ success: true, messageId: 'message-1' }));
   const provider = { providerId: 'smtp', providerType: 'smtp', sendEmail } as unknown as IEmailProvider;
   const instance = new TestEmailService(provider);
   vi.spyOn(instance as any, 'logEmailSendResult').mockResolvedValue(undefined);

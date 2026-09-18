@@ -62,10 +62,12 @@ export interface EmbedBrandLogoResult {
 }
 
 /** Misses are cached too, so a tenant without a logo is not looked up per mail. */
-const logoCache = new Map<string, { asset: BrandLogoAsset | null; expiresAt: number }>();
+const logoCache = new Map<string, { value: BrandLogoAsset | null; expiresAt: number }>();
+const variantCache = new Map<string, { value: EmailBrandingLogoVariant; expiresAt: number }>();
 
 export function clearBrandLogoCache(): void {
   logoCache.clear();
+  variantCache.clear();
 }
 
 function tenantTable(knex: Knex, tenantId: string, table: string) {
@@ -138,27 +140,47 @@ async function readLogoAsset(
   return { content, contentType, filename: `logo.${extension}` };
 }
 
+/** Keeps a worker that serves many tenants from holding every logo forever. */
+function cache<T>(store: Map<string, { value: T; expiresAt: number }>, key: string, value: T): T {
+  const now = Date.now();
+  for (const [existing, entry] of store) {
+    if (entry.expiresAt <= now) store.delete(existing);
+  }
+  store.set(key, { value, expiresAt: now + LOGO_CACHE_TTL_MS });
+  return value;
+}
+
+function cached<T>(store: Map<string, { value: T; expiresAt: number }>, key: string): { value: T } | null {
+  const entry = store.get(key);
+  return entry && entry.expiresAt > Date.now() ? entry : null;
+}
+
 async function loadLogoAsset(
   knex: Knex,
   tenantId: string,
   variant: EmailBrandingLogoVariant,
 ): Promise<BrandLogoAsset | null> {
   const key = `${tenantId}:${variant}`;
-  const cached = logoCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.asset;
+  const hit = cached(logoCache, key);
+  if (hit) return hit.value;
 
-  const asset = await readLogoAsset(knex, tenantId, variant);
-  logoCache.set(key, { asset, expiresAt: Date.now() + LOGO_CACHE_TTL_MS });
-  return asset;
+  return cache(logoCache, key, await readLogoAsset(knex, tenantId, variant));
 }
 
-/** Which variant a row written before the cid form meant. */
-async function readSavedVariant(knex: Knex, tenantId: string): Promise<EmailBrandingLogoVariant> {
+/**
+ * Which variant a row written before the cid form meant. Those rows are only
+ * repaired in the database by a re-apply, so this read recurs on every send
+ * until then and is cached like the bytes.
+ */
+async function loadSavedVariant(knex: Knex, tenantId: string): Promise<EmailBrandingLogoVariant> {
+  const hit = cached(variantCache, tenantId);
+  if (hit) return hit.value;
+
   const row = await tenantTable(knex, tenantId, 'tenant_settings')
     .select('settings')
     .first<{ settings?: Record<string, any> | null }>();
 
-  return row?.settings?.emailBranding?.logo?.variant === 'wide' ? 'wide' : 'default';
+  return cache(variantCache, tenantId, row?.settings?.emailBranding?.logo?.variant === 'wide' ? 'wide' : 'default');
 }
 
 function withCidSrc(tag: string, cid: string): string {
@@ -188,7 +210,7 @@ export async function embedBrandLogo(
   while ((match = tags.exec(html)) !== null) {
     const tag = match[0];
     const variant = parseBrandLogoVariant(SRC_ATTRIBUTE.exec(tag)?.[1])
-      ?? (savedVariant ??= await readSavedVariant(knex, options.tenantId));
+      ?? (savedVariant ??= await loadSavedVariant(knex, options.tenantId));
     const cid = brandLogoCid(variant);
     const asset = await loadLogoAsset(knex, options.tenantId, variant);
 
