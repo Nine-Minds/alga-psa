@@ -150,23 +150,34 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  # Coverage report for the full server unit suite. This is the only gate that
-  # runs the entire server suite, so it fails loudly on PRs and protected-branch
-  # pushes rather than leaving a required check in the skipped state.
+  # The full server unit suite with coverage, partitioned across shards. This
+  # is the only gate that runs the entire suite, so it fails loudly on PRs and
+  # protected-branch pushes rather than leaving a required check skipped.
   # Scope: src/test/unit plus the workspace package/shared unit tests the
   # server vitest config already includes — running them here is what gets
   # package sources into the coverage report (the v8 provider only measures
   # loaded files, and its untested-file crawl never leaves server/).
-  # src/test/infrastructure is DB-backed and runs in its own job below with a
-  # Postgres service.
-  coverage-report:
-    name: Server unit suite + coverage
+  # src/test/infrastructure is DB-backed and runs in integration-tests.yml
+  # with a Postgres service.
+  #
+  # Every shard collects the full inventory and takes its modulo partition
+  # (scripts/lib/test-sharding.mjs); server-unit-complete proves the
+  # partitions tile that inventory before merging reports and coverage.
+  # Each file still gets a fresh forked process (a shared worker once stalled
+  # during InvoicePreviewPanel's import after 20 minutes of good files), but
+  # the forks now run in parallel: recycling processes serially cost ~40
+  # minutes of spawn gaps for ~10 minutes of test time.
+  server-unit:
+    name: Server unit shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    # Native run 34118119027 hit 60 minutes while still making progress:
-    # 2544/2692 files and 13843/14550 cases had finished in the execution
-    # journal. Collection/import plus isolated per-file coverage needs more
-    # headroom; retain a bounded job and per-file progress diagnostics.
-    timeout-minutes: 90
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      SERVER_UNIT_SHARD_INDEX: ${{ matrix.shard }}
+      SERVER_UNIT_SHARD_TOTAL: '4'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -196,7 +207,9 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=8192'
       - name: Verify per-file worker isolation
         run: node --test scripts/tests/vitest-worker-isolation.test.mjs
+      # Timezone-sensitive files run once; they are independent of the partition.
       - name: Exercise calendar boundaries in non-UTC timezones
+        if: matrix.shard == 1
         working-directory: ./server
         run: |
           mkdir -p ../test-results/calendar-timezones
@@ -218,33 +231,18 @@ jobs:
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''
       - name: Upload calendar timezone execution
-        if: always()
+        if: always() && matrix.shard == 1
         uses: actions/upload-artifact@v4
         with:
           name: calendar-timezone-execution
           path: test-results/calendar-timezones/
           if-no-files-found: error
           retention-days: 7
-      # A shared worker stalled during InvoicePreviewPanel module import after
-      # 20 minutes of successful files, before the test timeout could start.
-      # Recycle the process between files; retain serial execution and the same
-      # collection/coverage scope. The progress journal records any recurrence.
-      - name: Run server unit tests with coverage
-        id: server-unit-run
-        working-directory: ./server
-        run: |
-          selection=(src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions)
-          mkdir -p ../test-results/server-coverage
-          node ../scripts/verify-server-unit-execution.mjs --capture-source
-          npx vitest list "${selection[@]}" --filesOnly --json=../test-results/server-coverage/collected.json
-          # Collect registrations in two isolated processes; test execution
-          # below remains serial. Keep the same independent identity inventory.
-          npx vitest list "${selection[@]}" --poolOptions.forks.singleFork=false --fileParallelism=true --maxWorkers=2 --json=../test-results/server-coverage/collected-tests.json
-          node -e 'for (const file of ["collected.json", "collected-tests.json"]) { const entries = require("../test-results/server-coverage/" + file); if (!Array.isArray(entries) || entries.length === 0) throw new Error("Empty mandatory collection: " + file); }'
-          npx vitest run "${selection[@]}" --poolOptions.forks.singleFork=false --maxWorkers=1 --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results.json
+      - name: Collect, execute and reconcile the assigned server unit partition
+        run: node scripts/run-server-unit-shard.mjs
         env:
-          TEST_PROGRESS_PATH: ${{ github.workspace }}/test-results/server-coverage/progress.jsonl
-          NODE_OPTIONS: '--max-old-space-size=14336'
+          SERVER_UNIT_WORKERS: '4'
+          NODE_OPTIONS: '--max-old-space-size=8192'
           # This job has no database; *.db.test.* suites are DB-backed
           # integration tests (see the exclude block in server/vitest.config.ts).
           SKIP_DB_TESTS: '1'
@@ -255,13 +253,69 @@ jobs:
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''
           VITEST_SEED: '20260610'
+      # `if: always()`: a red shard is exactly the evidence the merge job and
+      # the metrics sheet exist to capture. The blob alone is ~150MB per
+      # shard; the merged server-unit-execution artifact keeps the durable
+      # diagnostics, so shard bundles only need to outlive the run.
+      - name: Retain shard execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-unit-shard-${{ matrix.shard }}
+          path: test-results/server-coverage/
+          if-no-files-found: error
+          retention-days: 7
+
+  server-unit-complete:
+    name: Server unit execution complete
+    needs: [server-unit]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SERVER_UNIT_JOB_RESULT: ${{ needs.server-unit.result }}
+      SERVER_UNIT_SHARD_TOTAL: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+      # `vitest --merge-reports` replays the shard blobs through the server
+      # config and its coverage provider, so this job needs the workspace.
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify the shard runner, reunion and merged verification end to end
+        run: node --test scripts/tests/server-unit-shards.test.mjs
+      - name: Download every shard's raw execution evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          pattern: server-unit-shard-*
+          path: test-results/server-unit-shards
+      - name: Verify every partition and reunite the collection manifests
+        id: shards
+        if: always()
+        run: node scripts/merge-server-unit-shards.mjs
+      - name: Merge shard reports and render coverage
+        id: merge
+        if: always()
+        working-directory: ./server
+        run: npx vitest run --merge-reports ../test-results/server-unit-blobs --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
+        env:
+          # AST-aware remapping of the merged package/shared/server map still
+          # needs the headroom the single full run had.
+          NODE_OPTIONS: '--max-old-space-size=14336'
+          SKIP_DB_TESTS: '1'
+          DB_USER_ADMIN: ''
+          DB_PASSWORD_ADMIN: ''
       - name: Require complete server unit execution
         if: always()
         run: node scripts/verify-server-unit-execution.mjs
         env:
-          SERVER_UNIT_RUN_OUTCOME: ${{ steps.server-unit-run.outcome }}
-      # `if: always()`: a red run is exactly the data point the coverage
-      # artifact and metrics sheet exist to capture.
+          SERVER_UNIT_RUN_OUTCOME: ${{ (needs.server-unit.result == 'success' && steps.shards.outcome == 'success' && steps.merge.outcome == 'success') && 'success' || 'failure' }}
       - name: Upload lcov artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -269,6 +323,9 @@ jobs:
           name: server-unit-coverage
           path: server/coverage/lcov.info
           retention-days: 30
+      # Same layout the single full run produced, so the repository inventory
+      # and readiness consumers read it unchanged; shard-aggregate.json adds
+      # the partition verdict.
       - name: Upload unit execution diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -280,9 +337,22 @@ jobs:
             test-results/server-coverage/progress.jsonl
             test-results/server-coverage/evidence.json
             test-results/server-coverage/source-before.json
+            test-results/server-coverage/shard-aggregate.json
             server/test-results.json
             server/coverage/coverage-summary.json
           retention-days: 30
+      - name: Independently reconcile required files and assertions
+        if: always()
+        run: node scripts/verify-server-unit-aggregate.mjs
+        env:
+          SERVER_UNIT_INPUT_DIR: '.'
+      - name: Upload unit aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-unit-aggregate
+          path: test-results/server-unit-gate/
+          if-no-files-found: error
       # Appends pass/coverage numbers to the shared metrics sheet
       # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
       - name: Record metrics to Google Sheet
@@ -297,36 +367,6 @@ jobs:
           TEST_METRICS_DETAIL: '1'
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
-
-  server-unit-complete:
-    name: Server unit execution complete
-    needs: [coverage-report]
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      SERVER_UNIT_JOB_RESULT: ${{ needs.coverage-report.result }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Download raw unit execution evidence
-        if: always()
-        uses: actions/download-artifact@v4
-        with:
-          name: server-unit-execution
-          path: test-results/server-unit-input
-      - name: Independently reconcile required files and assertions
-        if: always()
-        run: node scripts/verify-server-unit-aggregate.mjs
-      - name: Upload unit aggregate verdict
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: server-unit-aggregate
-          path: test-results/server-unit-gate/
-          if-no-files-found: error
 
   # DB-backed infrastructure tests run inside integration-tests.yml (sharing its
   # Postgres job): Tier-1 subset on PRs, full suite nightly — both non-blocking.
