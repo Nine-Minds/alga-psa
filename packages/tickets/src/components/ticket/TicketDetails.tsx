@@ -3235,6 +3235,13 @@ const handleClose = () => {
             ? t('liveUpdates.connection.unavailable', 'Live updates unavailable')
             : null;
 
+    const bundleMasterRef = bundle?.isBundleChild && bundle?.masterTicket
+        ? {
+            ticketId: bundle.masterTicket.ticket_id as string,
+            ticketNumber: (bundle.masterTicket.ticket_number ?? null) as string | null,
+        }
+        : undefined;
+
     const bundleAndCloseBanners = (
         <>
                                 {bundle?.isBundleChild && bundle?.masterTicket ? (
@@ -3776,6 +3783,7 @@ const handleClose = () => {
                     onAddNewComment={handleAddNewComment}
                     closedStatusOptions={closedStatusOptions}
                     onAddReplyComment={handleAddReplyComment}
+                    bundleMaster={bundleMasterRef}
                     bentoStreams={bootstrap?.streams ?? undefined}
                     currentUser={currentUser ? {
                         id: currentUser.user_id,
@@ -3941,6 +3949,7 @@ const handleClose = () => {
                                     onNewCommentContentChange={setNewCommentContent}
                                     onAddNewComment={handleAddNewComment}
                                     onAddReplyComment={handleAddReplyComment}
+                                    bundleMaster={bundleMasterRef}
                                     onTabChange={setActiveTab}
                                     onEdit={handleEdit}
                                     onSave={handleSave}

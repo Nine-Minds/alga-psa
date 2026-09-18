@@ -3308,6 +3308,10 @@ export const addTicketCommentWithCache = withAuth(async (
       thread_id: threadId,
       ticket_id: ticketId,
       user_id: user.user_id,
+      // Record the author's linked contact when present so the row is a
+      // faithful source for downstream copies (bundle mirrors) and author
+      // resolution can fall back to the contact map.
+      contact_id: user.contact_id ?? null,
       author_type: authorType,
       note: content,
       is_internal: effectiveIsInternal,
@@ -3391,7 +3395,7 @@ export const addTicketCommentWithCache = withAuth(async (
             reply_count: 0,
             last_activity_at: now,
             created_at: now,
-            created_by: null,
+            created_by: newComment.user_id ?? null,
           });
 
           await tenantDb(trx, tenant).table('comments').insert({
@@ -3399,8 +3403,9 @@ export const addTicketCommentWithCache = withAuth(async (
             comment_id: childGenerated.comment_id,
             thread_id: childGenerated.thread_id,
             ticket_id: child.ticket_id,
-            user_id: null,
-            author_type: 'unknown',
+            user_id: newComment.user_id ?? null,
+            contact_id: newComment.contact_id ?? null,
+            author_type: newComment.author_type,
             note: content,
             is_internal: false,
             is_resolution: isResolution,
