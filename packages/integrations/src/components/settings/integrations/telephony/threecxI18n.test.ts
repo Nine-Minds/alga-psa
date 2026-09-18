@@ -14,13 +14,16 @@ function get(obj: any, dottedKey: string): unknown {
   return dottedKey.split('.').reduce((acc, part) => (acc == null ? acc : acc[part]), obj);
 }
 
-const cardSource = fs.readFileSync(path.resolve(__dirname, 'ThreecxProviderCard.tsx'), 'utf8');
-const referencedKeys = [...cardSource.matchAll(/t\('(integrations\.telephony\.providers\.threecx\.[^']+)'/g)].map(
+const panelSource = fs.readFileSync(path.resolve(__dirname, 'ThreecxIntegrationSettings.tsx'), 'utf8');
+const referencedKeys = [...panelSource.matchAll(/t\('(integrations\.telephony\.providers\.threecx\.[^']+)'/g)].map(
   (m) => m[1],
 );
 
-describe('3CX card i18n', () => {
-  it('T125: every threecx.* key referenced by the card exists in the en pack', () => {
+const chooserSource = fs.readFileSync(path.resolve(__dirname, 'TelephonyIntegrationSettings.tsx'), 'utf8');
+const setupKeys = [...chooserSource.matchAll(/t\('(integrations\.telephony\.setup\.[^']+)'/g)].map((m) => m[1]);
+
+describe('3CX settings i18n', () => {
+  it('T125: every threecx.* key referenced by the panel exists in the en pack', () => {
     expect(referencedKeys.length).toBeGreaterThan(0);
     const en = readJson(path.join(localesDir, 'en/msp/integrations.json'));
     for (const key of referencedKeys) {
@@ -40,6 +43,16 @@ describe('3CX card i18n', () => {
       expect(get(account, 'features.pbxTelephony'), `missing pbxTelephony label in ${locale}`).toEqual(
         expect.any(String),
       );
+    }
+  });
+
+  it('every telephony.setup.* key the provider chooser renders exists in every locale', () => {
+    expect(setupKeys.length).toBeGreaterThan(0);
+    for (const locale of LOCALES) {
+      const integrations = readJson(path.join(localesDir, locale, 'msp/integrations.json'));
+      for (const key of setupKeys) {
+        expect(get(integrations, key), `missing ${key} in ${locale}`).toEqual(expect.any(String));
+      }
     }
   });
 });
