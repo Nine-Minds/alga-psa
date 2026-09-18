@@ -1,8 +1,19 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, installStorage, resolveChannelMetadata, validateSetupInputs } from './setup-engine.mjs';
+import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, installStorage, resolveChannelMetadata, validateReleaseManifest, validateSetupInputs } from './setup-engine.mjs';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 import { appendUpdateHistory, readJsonFile, writeSecureJsonFileAtomic } from './update-state.mjs';
+import {
+  APPLIANCE_HELM_RELEASES,
+  BOOTSTRAP_HOOK_JOB,
+  clearBootstrapHookJob,
+  expectedChartVersions,
+  forceHelmReleaseReconcile,
+  isBootstrapHookCollision,
+  nudgeChildKustomizations,
+  readHelmRelease,
+  setHelmReleasesSuspended
+} from './helm-release-recovery.mjs';
 
 const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 // release-selection.json lives in /var/lib/alga-appliance — the writable hostPath
@@ -56,97 +67,270 @@ function finishUpdateFailure(failure, context) {
   return failure;
 }
 
-// Read the alga-core HelmRelease Ready condition so a non-zero `flux reconcile`
-// exit can be judged against the release's *actual* state instead of the CLI's
-// (often transient) result. Returns { readable, ready, hardFailed, reason,
-// message }; readable=false means we could not determine the state.
-// LEVERAGE: pattern appliance-transient-reconcile-vs-failure — status-engine
-// already distinguishes transient Helm convergence from real failure
-// (isTransientHelmReleaseConvergenceIssue); this is the same judgment applied to
-// the update path. A shared classifier would unify them.
-function readHelmReleaseReadiness(options = {}) {
-  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
-  const name = options.helmReleaseName || 'alga-core';
-  const namespace = options.helmReleaseNamespace || 'alga-system';
-  const cmd = options.readHelmReleaseCommand
-    || `kubectl --kubeconfig ${kubeconfigPath} -n ${namespace} get helmrelease ${name} -o json`;
-  const res = spawnSync('sh', ['-c', cmd], { env: process.env, encoding: 'utf8' });
-  if (res.status !== 0) return { readable: false };
-  let condition = null;
-  try {
-    const hr = JSON.parse(res.stdout || '{}');
-    condition = (hr?.status?.conditions || []).find((c) => c.type === 'Ready') || null;
-  } catch {
-    return { readable: false };
-  }
-  if (!condition) return { readable: false };
-  const status = condition.status || 'Unknown';
-  const reason = condition.reason || 'Unknown';
-  return {
-    readable: true,
-    ready: status === 'True',
-    // helm-controller terminal reasons; anything else is still converging.
-    hardFailed: status === 'False' && /Failed|RetriesExceeded|Stalled|Exhausted/i.test(reason),
-    reason,
-    message: condition.message || ''
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", "'\\''")}'`;
+}
+
+function sleepMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// kubectl runner in the shape helm-release-recovery.mjs expects
+// ({ ok, stdout, stderr } per invocation), bound to the engine's kubeconfig.
+function makeKubectlRunner(kubeconfigPath) {
+  return async (args) => {
+    const res = spawnSync('sh', ['-c', `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} ${args}`], { env: process.env, encoding: 'utf8' });
+    return { ok: res.status === 0, status: res.status ?? 1, stdout: res.stdout || '', stderr: res.stderr || '' };
   };
 }
 
-function reconcileFluxAndHelm(options = {}) {
+function runShell(command) {
+  const res = spawnSync('sh', ['-c', command], { env: process.env, encoding: 'utf8' });
+  return { ok: res.status === 0, status: res.status ?? 1, stdout: res.stdout || '', stderr: res.stderr || '' };
+}
+
+function fluxFailure(message, cause, suggestedNextStep, extra = {}) {
+  return {
+    ok: false,
+    phase: 'flux',
+    message,
+    suspectedCause: cause,
+    suggestedNextStep,
+    retrySafe: true,
+    ...extra
+  };
+}
+
+// Tests (and dry runs) inject the manifest via releaseManifestOverride, the
+// same way setup-engine's apply steps accept it.
+function runtimeValuesManifest(options) {
+  return validateReleaseManifest(options.releaseManifestOverride);
+}
+
+function releaseNames(options) {
+  return (options.helmReleases || APPLIANCE_HELM_RELEASES).map((r) => r.name);
+}
+
+// Hold every appliance HelmRelease still while the update rewrites its inputs.
+// Values (ConfigMaps) and chart pins (config bundle via the Flux Kustomization)
+// arrive at different moments; suspended, helm-controller sees both at once
+// when we resume and runs exactly one upgrade per release.
+export async function suspendAppReleases(options = {}) {
+  const runKubectl = options.runKubectl || makeKubectlRunner(options.kubeconfigPath || DEFAULT_KUBECONFIG);
+  const result = await setHelmReleasesSuspended({ runKubectl, names: releaseNames(options), suspended: true });
+  if (!result.ok) {
+    return fluxFailure(
+      'Could not suspend the application HelmReleases before applying the update.',
+      result.failures.map((f) => `${f.name}: ${f.error}`).join('; '),
+      'Check kubectl access to the alga-system namespace and retry the update.',
+      { step: 'suspend-helmreleases' }
+    );
+  }
+  return { ok: true, phase: 'flux', step: 'suspend-helmreleases', suspended: releaseNames(options) };
+}
+
+export async function resumeAppReleases(options = {}) {
+  const runKubectl = options.runKubectl || makeKubectlRunner(options.kubeconfigPath || DEFAULT_KUBECONFIG);
+  const result = await setHelmReleasesSuspended({ runKubectl, names: releaseNames(options), suspended: false });
+  if (!result.ok) {
+    return fluxFailure(
+      'Could not resume the application HelmReleases after applying the update.',
+      result.failures.map((f) => `${f.name}: ${f.error}`).join('; '),
+      'Use Recover on the Manage page (it resumes the releases) or run `flux resume helmrelease --all -n alga-system`.',
+      { step: 'resume-helmreleases' }
+    );
+  }
+  return { ok: true, phase: 'flux', step: 'resume-helmreleases' };
+}
+
+// Confirm the config bundle actually reached the HelmReleases: each pinned
+// chart version in the release manifest must be the HelmRelease's
+// spec.chart.spec.version. Resuming before that would run an upgrade with the
+// new values but the old chart — the second half of the double-upgrade race.
+// The pins are written by the bundle's nested Kustomizations (see
+// nudgeChildKustomizations), so this polls instead of checking once.
+async function chartPinMismatches({ runKubectl, expected }) {
+  const mismatches = [];
+  for (const [name, version] of Object.entries(expected)) {
+    if (!version) continue;
+    const hr = await readHelmRelease({ runKubectl, name });
+    if (hr.notFound || (!hr.readable && hr.error)) {
+      mismatches.push(`${name}: ${hr.error || 'HelmRelease not readable'}`);
+      continue;
+    }
+    if (hr.specChartVersion !== version) {
+      mismatches.push(`${name}: chart version is ${hr.specChartVersion || 'unset'}, expected ${version}`);
+    }
+  }
+  return mismatches;
+}
+
+async function waitForChartPins({ runKubectl, sleep, expected, timeoutMs, pollMs }) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const mismatches = await chartPinMismatches({ runKubectl, expected });
+    if (mismatches.length === 0) return { ok: true };
+    if (Date.now() >= deadline) return { ok: false, mismatches };
+    await sleep(pollMs);
+  }
+}
+
+// Poll the appliance HelmReleases until each is Ready for its current spec at
+// the expected chart version. Returns { converged } | { pending } |
+// { failed, name, summary }. A stall caused by the bootstrap hook Job
+// collision is cleared and retried once (clear Job, force + reset reconcile).
+async function waitForAppReleasesConverged({ runKubectl, sleep, expected, names, timeoutMs, pollMs, onProgress }) {
+  const deadline = Date.now() + timeoutMs;
+  let hookRetryDone = false;
+  let lastProgress = '';
+  for (;;) {
+    const waiting = [];
+    for (const name of names) {
+      const hr = await readHelmRelease({ runKubectl, name });
+      if (hr.notFound || (!hr.readable && hr.error)) {
+        return { failed: true, name, summary: { message: hr.error || 'HelmRelease not readable', reason: 'Unreadable' } };
+      }
+      if (!hr.readable) {
+        waiting.push(`${name} (no status yet)`);
+        continue;
+      }
+      const atVersion = !expected[name] || hr.lastAttemptedRevision === expected[name];
+      if (hr.observedCurrent && hr.ready && atVersion && !hr.suspended) continue;
+      if (hr.hardFailed) {
+        if (name === names[0] && !hookRetryDone && isBootstrapHookCollision(hr.message)) {
+          hookRetryDone = true;
+          onProgress?.(`Clearing the leftover ${BOOTSTRAP_HOOK_JOB.name} Job and retrying the ${name} upgrade.`);
+          const cleared = await clearBootstrapHookJob({ runKubectl, sleep, waitForActiveMs: 0 });
+          if (!cleared.ok) return { failed: true, name, summary: { message: cleared.error, reason: 'HookJobCleanupFailed' } };
+          const forced = await forceHelmReleaseReconcile({ runKubectl, name });
+          if (!forced.ok) return { failed: true, name, summary: { message: forced.error, reason: 'ForceReconcileFailed' } };
+          waiting.push(`${name} (retrying after hook Job collision)`);
+          continue;
+        }
+        return { failed: true, name, summary: hr };
+      }
+      waiting.push(`${name} (${hr.reason})`);
+    }
+    if (waiting.length === 0) return { converged: true };
+    const progress = `Waiting for services to converge: ${waiting.join(', ')}`;
+    if (progress !== lastProgress) {
+      lastProgress = progress;
+      onProgress?.(progress);
+    }
+    if (Date.now() >= deadline) return { pending: true, waiting };
+    await sleep(pollMs);
+  }
+}
+
+// Bring the update live: reconcile the OCI source and the Kustomization (chart
+// pins), verify the pins landed, make sure no stale bootstrap hook Job can
+// collide with the coming upgrade, resume the releases, and wait for all of
+// them to reach Ready at the new chart version.
+export async function reconcileFluxAndHelm(options = {}, context = {}) {
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const fluxSourceName = options.fluxSourceName || 'alga-appliance';
   const reconcileTimeout = options.reconcileTimeout || '15m';
+  const runKubectl = options.runKubectl || makeKubectlRunner(kubeconfigPath);
+  const sleep = options.sleep || sleepMs;
+  const names = releaseNames(options);
+  const expected = expectedChartVersions(context.manifest, options.helmReleases || APPLIANCE_HELM_RELEASES);
+  const onProgress = context.onProgress || (() => {});
 
   const reconcileSourceCmd = options.reconcileSourceCommand
     || `flux --kubeconfig ${kubeconfigPath} reconcile source oci ${fluxSourceName} -n flux-system --timeout ${reconcileTimeout}`;
+  const reconcileKustomizationCmd = options.reconcileKustomizationCommand
+    || `flux --kubeconfig ${kubeconfigPath} reconcile kustomization ${fluxSourceName} -n flux-system --timeout ${reconcileTimeout}`;
   const reconcileHelmCmd = options.reconcileHelmCommand
-    || `flux --kubeconfig ${kubeconfigPath} reconcile helmrelease alga-core -n alga-system --with-source --timeout ${reconcileTimeout}`;
+    || `flux --kubeconfig ${kubeconfigPath} reconcile helmrelease ${names[0]} -n alga-system --with-source --timeout ${reconcileTimeout}`;
 
-  const source = spawnSync('sh', ['-c', reconcileSourceCmd], { env: process.env, encoding: 'utf8' });
-  if (source.status !== 0) {
-    return {
-      ok: false,
-      phase: 'flux',
-      message: 'Flux source reconcile failed during app update.',
-      suspectedCause: (source.stderr || source.stdout || '').trim() || `exit ${source.status ?? 1}`,
-      suggestedNextStep: 'Verify Flux source-controller health and OCIRepository readiness.',
-      retrySafe: true
-    };
+  onProgress('Reconciling the Flux config source.');
+  const source = runShell(reconcileSourceCmd);
+  if (!source.ok) {
+    return fluxFailure(
+      'Flux source reconcile failed during app update.',
+      (source.stderr || source.stdout || '').trim() || `exit ${source.status}`,
+      'Verify Flux source-controller health and OCIRepository readiness.',
+      { step: 'reconcile-source' }
+    );
   }
 
-  const helm = spawnSync('sh', ['-c', reconcileHelmCmd], { env: process.env, encoding: 'utf8' });
-  if (helm.status !== 0) {
-    const cliCause = (helm.stderr || helm.stdout || '').trim() || `exit ${helm.status ?? 1}`;
-    // `flux reconcile helmrelease --with-source` kicks a reconcile and waits for
-    // the Ready condition; a non-zero exit is frequently transient — the
-    // controller is already reconciling, or the wait times out while the roll
-    // continues. The runtime values + release-selection are already written, so
-    // Flux keeps converging regardless. Judge the outcome from the HelmRelease's
-    // actual Ready condition rather than the CLI exit code; only a genuinely
-    // failed release (or one we cannot read at all) is reported as a block.
-    const readiness = readHelmReleaseReadiness(options);
-    if (readiness.readable && readiness.ready) {
-      return { ok: true, phase: 'flux', message: 'Flux source and HelmRelease reconcile completed.' };
-    }
-    if (readiness.readable && !readiness.hardFailed) {
-      return {
-        ok: true,
-        phase: 'flux',
-        pending: true,
-        message: 'Update applied; services are still reconciling in the background.'
-      };
-    }
-    return {
-      ok: false,
-      phase: 'flux',
-      message: 'HelmRelease reconcile failed during app update.',
-      suspectedCause: readiness.message || cliCause,
-      suggestedNextStep: 'Inspect alga-core HelmRelease events and controller logs.',
-      retrySafe: true
-    };
+  onProgress('Applying the release config bundle (chart versions).');
+  const kustomization = runShell(reconcileKustomizationCmd);
+  if (!kustomization.ok) {
+    return fluxFailure(
+      'Flux Kustomization reconcile failed during app update.',
+      (kustomization.stderr || kustomization.stdout || '').trim() || `exit ${kustomization.status}`,
+      'Verify Flux kustomize-controller health and the alga-appliance Kustomization status.',
+      { step: 'reconcile-kustomization' }
+    );
   }
 
-  return { ok: true, phase: 'flux', message: 'Flux source and HelmRelease reconcile completed.' };
+  onProgress('Waiting for the new chart versions to reach the HelmReleases.');
+  await nudgeChildKustomizations({ runKubectl, parentName: fluxSourceName, parentNamespace: options.fluxNamespace || 'flux-system' });
+  const pins = await waitForChartPins({
+    runKubectl,
+    sleep,
+    expected,
+    timeoutMs: options.chartPinTimeoutMs ?? 10 * 60_000,
+    pollMs: options.convergePollMs ?? 5000
+  });
+  if (!pins.ok) {
+    return fluxFailure(
+      'The release config bundle did not update the HelmRelease chart versions.',
+      pins.mismatches.join('; '),
+      'Check the alga-core and alga-background Kustomizations (flux-system); if a release was already failed before this update, use Recover on the Manage page first, then retry.',
+      { step: 'verify-chart-pins' }
+    );
+  }
+
+  const hookJob = await clearBootstrapHookJob({ runKubectl, sleep, waitForActiveMs: options.hookJobWaitMs ?? 10 * 60_000, pollMs: options.convergePollMs ?? 5000 });
+  if (!hookJob.ok) {
+    return fluxFailure(
+      `Could not clear the previous ${BOOTSTRAP_HOOK_JOB.name} Job before upgrading.`,
+      hookJob.error,
+      `Delete the Job (kubectl -n ${BOOTSTRAP_HOOK_JOB.namespace} delete job ${BOOTSTRAP_HOOK_JOB.name}) or use Recover, then retry.`,
+      { step: 'clear-bootstrap-hook-job' }
+    );
+  }
+
+  const resumed = await resumeAppReleases(options);
+  if (!resumed.ok) return resumed;
+
+  onProgress('Upgrading the application release.');
+  // `flux reconcile helmrelease --with-source` kicks the reconcile and waits
+  // for Ready; a non-zero exit is frequently transient (already reconciling,
+  // wait timed out while the roll continues). The convergence wait below is
+  // the judge, not the CLI's exit code.
+  const helm = runShell(reconcileHelmCmd);
+  const cliCause = helm.ok ? null : ((helm.stderr || helm.stdout || '').trim() || `exit ${helm.status}`);
+
+  const outcome = await waitForAppReleasesConverged({
+    runKubectl,
+    sleep,
+    expected,
+    names,
+    timeoutMs: options.convergeTimeoutMs ?? 20 * 60_000,
+    pollMs: options.convergePollMs ?? 5000,
+    onProgress
+  });
+  if (outcome.failed) {
+    return fluxFailure(
+      `HelmRelease ${outcome.name} failed during app update.`,
+      outcome.summary.message || cliCause || outcome.summary.reason,
+      'Use Recover on the Manage page, or inspect the HelmRelease events and helm-controller logs.',
+      { step: 'wait-for-convergence', helmRelease: outcome.name }
+    );
+  }
+  if (outcome.pending) {
+    return {
+      ok: true,
+      phase: 'flux',
+      pending: true,
+      waiting: outcome.waiting,
+      message: `Update applied; still converging in the background: ${outcome.waiting.join(', ')}.`
+    };
+  }
+  return { ok: true, phase: 'flux', message: 'Flux source, config bundle, and all application HelmReleases reconciled.' };
 }
 
 export async function runAppChannelUpdate(rawInputs, options = {}) {
@@ -226,24 +410,32 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
     });
   }
 
+  // From here on the HelmReleases are suspended: values, the config bundle,
+  // and the release selection all land while helm-controller is not looking,
+  // so the resume below produces one upgrade per release instead of one per
+  // changed input (the double-upgrade race, see helm-release-recovery.mjs).
+  // Any failure after this point resumes the releases first — a silently
+  // suspended appliance would never update again.
+  const gate = await suspendAppReleases(options);
+  if (!gate.ok) {
+    return finishUpdateFailure(gate, { stateFile, updateHistoryFile, channel: validated.channel, owner });
+  }
+  const failWhileSuspended = async (failure) => {
+    const resumed = await resumeAppReleases(options);
+    if (!resumed.ok) {
+      failure = { ...failure, suspectedCause: `${failure.suspectedCause || failure.message} (additionally: ${resumed.suspectedCause})`, suggestedNextStep: resumed.suggestedNextStep };
+    }
+    return finishUpdateFailure(failure, { stateFile, updateHistoryFile, channel: validated.channel, owner });
+  };
+
   const runtimeValuesResult = await applyRuntimeValuesAndReleaseSelection(validated, releaseSelection, workflowOptions);
   if (!runtimeValuesResult.ok) {
-    return finishUpdateFailure(runtimeValuesResult, {
-      stateFile,
-      updateHistoryFile,
-      channel: validated.channel,
-      owner
-    });
+    return failWhileSuspended(runtimeValuesResult);
   }
 
   const fluxSourceResult = applyFluxSource(validated, releaseSelection, workflowOptions);
   if (!fluxSourceResult.ok) {
-    return finishUpdateFailure(fluxSourceResult, {
-      stateFile,
-      updateHistoryFile,
-      channel: validated.channel,
-      owner
-    });
+    return failWhileSuspended(fluxSourceResult);
   }
 
   const configResult = applyReleaseSelectionConfiguration(validated, releaseSelection, {
@@ -251,29 +443,30 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
     releaseSelectionFile
   });
   if (!configResult.ok) {
-    return finishUpdateFailure(configResult, {
-      stateFile,
-      updateHistoryFile,
-      channel: validated.channel,
-      owner
-    });
+    return failWhileSuspended(configResult);
   }
 
-  const reconcileResult = reconcileFluxAndHelm(options);
+  const reconcileResult = await reconcileFluxAndHelm(options, {
+    manifest: options.releaseManifestOverride ? runtimeValuesManifest(options) : releaseSelection.manifest,
+    onProgress: (lastAction) => writeInstallState({
+      status: 'update-running',
+      phase: 'flux',
+      lastAction,
+      updatedAt: nowIso(),
+      update: updateIntent(validated.channel, owner)
+    }, stateFile)
+  });
   if (!reconcileResult.ok) {
-    return finishUpdateFailure(reconcileResult, {
-      stateFile,
-      updateHistoryFile,
-      channel: validated.channel,
-      owner
-    });
+    // reconcileFluxAndHelm resumes the releases itself before the upgrade; a
+    // failure before that point still needs them resumed here.
+    return failWhileSuspended(reconcileResult);
   }
 
   const result = {
     ok: true,
     phase: 'registry-release-source',
     message: reconcileResult.pending
-      ? `App-channel update applied for ${validated.channel}; services are reconciling in the background.`
+      ? `App-channel update applied for ${validated.channel}; services are still reconciling in the background (${reconcileResult.waiting.join(', ')}).`
       : `App-channel update applied for ${validated.channel}; OS and k3s updates remain manual in v1.`,
     releaseVersion: releaseSelection.releaseVersion,
     selectedChannel: validated.channel,

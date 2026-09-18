@@ -28,6 +28,7 @@ import {
 import { SupportControlClient } from './support-control-client.mjs';
 import { SupportSessionError, SupportSessionManager } from './support-session-manager.mjs';
 import { supportErrorPayload } from './support-api-errors.mjs';
+import { APPLIANCE_HELM_RELEASES, APPLIANCE_HELM_RELEASE_NAMESPACE, recoverAppRelease } from './helm-release-recovery.mjs';
 import {
   readInitialAdminIdentity,
   runInitialAdminPasswordReset,
@@ -1338,26 +1339,30 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Force a Flux reconcile of the alga-core HelmRelease (same as
-    // `flux reconcile helmrelease alga-core --force`): bumping requestedAt and
-    // forceAt to the same value makes the helm-controller run a forced upgrade,
-    // which creates a fresh bootstrap Job. That job re-runs migrations,
-    // onboarding seeds, and creates the initial tenant/admin if no users exist.
-    const namespace = 'alga-system';
-    const name = 'alga-core';
-    const requestedAt = new Date().toISOString();
+    // Recover the application release without SSH. Equivalent to
+    // `flux resume hr --all && kubectl delete job alga-core-sebastian-bootstrap
+    // && flux reconcile helmrelease alga-core --force --reset`: resume anything
+    // an interrupted update left suspended, remove a leftover bootstrap hook
+    // Job (its immutable spec makes the next upgrade's hook creation fail),
+    // then force + reset the reconcile so even a Stalled/RetriesExceeded
+    // release runs a fresh upgrade. That upgrade's bootstrap Job re-runs
+    // migrations, onboarding seeds, and creates the initial tenant/admin if no
+    // users exist.
     const signal = requestAbortSignal(req, res);
-    const command = kubectlCommand(`-n ${shellQuote(namespace)} annotate helmrelease ${shellQuote(name)} reconcile.fluxcd.io/requestedAt=${shellQuote(requestedAt)} reconcile.fluxcd.io/forceAt=${shellQuote(requestedAt)} --overwrite`, KUBECTL_API_TIMEOUT_MS);
-    const result = await runQueuedKubectl(command, { timeoutMs: KUBECTL_API_TIMEOUT_MS, signal });
+    const result = await recoverAppRelease({
+      runKubectl: (args) => runQueuedKubectl(kubectlCommand(args, KUBECTL_API_TIMEOUT_MS), { timeoutMs: KUBECTL_API_TIMEOUT_MS, signal })
+    });
+    const helmRelease = `${APPLIANCE_HELM_RELEASE_NAMESPACE}/${APPLIANCE_HELM_RELEASES[0].name}`;
     if (!result.ok) {
-      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Failed to trigger reconcile.', helmRelease: `${namespace}/${name}` });
+      jsonResponse(res, 502, { error: result.error || 'Failed to trigger reconcile.', step: result.step, helmRelease });
       return;
     }
     jsonResponse(res, 200, {
       ok: true,
-      helmRelease: `${namespace}/${name}`,
-      requestedAt,
-      message: 'Forced a Flux reconcile of alga-core. A fresh bootstrap job will run migrations and onboarding seeds, and create the initial tenant/admin if it is missing. This usually takes about a minute.'
+      helmRelease,
+      requestedAt: result.at,
+      clearedHookJob: result.clearedHookJob,
+      message: 'Forced a Flux reconcile of alga-core (reset + force). A fresh bootstrap job will run migrations and onboarding seeds, and create the initial tenant/admin if it is missing. This usually takes a few minutes.'
     });
     return;
   }
