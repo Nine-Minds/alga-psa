@@ -129,6 +129,15 @@
     "copyId": "Copy ID",
     "openInWeb": "Open in web",
     "openInWebConfirm": "Open in web?",
+    "bundle": {
+      "closeTitle": "Close {{count}} child ticket too?",
+      "reopenTitle": "Reopen {{count}} child ticket too?",
+      "closeDescription": "This bundle master is in sync mode. Closing it will also close {{count}} open child ticket(s). Board close rules are not checked on children.",
+      "reopenDescription": "This bundle master is in sync mode. Reopening it will reopen {{count}} child ticket(s) it closed. Independently closed children stay closed.",
+      "masterOnly": "Master only",
+      "closeWithChildren": "Close children too",
+      "reopenWithChildren": "Reopen children too"
+    },
     "errors": {
       "unableToLoadStatuses": "Unable to load statuses.",
       "unableToLoadPriorities": "Unable to load priorities.",
