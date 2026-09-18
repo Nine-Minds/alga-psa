@@ -39,12 +39,12 @@ export const fetchEligibleTimeEntrySubjects = withAuth(async (user, { tenant }):
   const subjectsById = new Map<string, IUser>();
   subjectsById.set(user.user_id, user);
 
-  const canApprove = await hasPermission(user, 'timesheet', 'approve', db);
+  const canApprove = await hasPermission(user, 'time_sheet', 'approve', db);
   if (!canApprove) {
     return sortUsersByName(Array.from(subjectsById.values()));
   }
 
-  const canReadAll = await hasPermission(user, 'timesheet', 'read_all', db);
+  const canReadAll = await hasPermission(user, 'time_sheet', 'read_all', db);
 
   if (canReadAll) {
     const rows = await scopedDb.table('users')

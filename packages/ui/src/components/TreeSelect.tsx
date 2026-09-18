@@ -676,7 +676,7 @@ function TreeSelect<T extends string>({
                           onClick={(e) => handleModeChange(m, e)}
                           className={`flex-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
                             selectMode === m
-                              ? 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] shadow-sm'
+                              ? 'chip-primary shadow-sm'
                               : 'text-gray-500 hover:text-[rgb(var(--color-primary-600))]'
                           }`}
                         >

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createFixedPlanAssignment, createTestService, setupClientTaxConfiguration, assignServiceTaxRate, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
+import { createFixedPlanAssignment, createTestService, setupClientTaxConfiguration, assignServiceTaxRate, ensureClientPlanBundlesTable, materializeRecurringServicePeriods } from '../../../../../test-utils/billingTestHelpers';
 import { createClient } from '../../../../../test-utils/testDataFactory';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -194,10 +194,17 @@ describe('Contract Invoice Manual Credit', () => {
       billingTiming: 'advance'
     });
 
+    // owner_client_id is load-bearing: invoice generation resolves a window's
+    // recurring service periods through
+    // recurring_service_periods -> contract_lines -> contracts -> clients on
+    // contracts.owner_client_id, so an ownerless contract yields no periods
+    // and the run fails with "Recurring service periods were not materialized".
     const contractId = await context.createEntity('contracts', {
       contract_name: 'Support Agreement',
       billing_frequency: 'monthly',
-      is_active: true
+      is_active: true,
+      owner_client_id: clientId,
+      status: 'active'
     }, 'contract_id');
 
     const clientContractId = await context.createEntity('client_contracts', {
@@ -216,6 +223,12 @@ describe('Contract Invoice Manual Credit', () => {
     });
 
     await ensureClientBillingSettings(context.clientId);
+
+    // generateInvoice refuses a window with no recurring service period, and
+    // the fixture only materializes on request. Run it after the line is
+    // attached to its contract, so the schedule is anchored where it will be
+    // read from.
+    await materializeRecurringServicePeriods(context, contractLineId);
 
     const periodStart = startDate;
     const periodEnd = createTestDateISO({ year: 2025, month: 2, day: 1 });
@@ -446,6 +459,12 @@ describe('Contract Invoice Manual Credit', () => {
     await ensureClientBillingSettings(preservedClientId);
     await ensureClientBillingSettings(clonedClientId);
 
+    for (const line of [preservedBase, preservedAddOn, clonedBase, clonedAddOn]) {
+      // Every active line needs a period for the window, or generateInvoice
+      // fails the whole run.
+      await materializeRecurringServicePeriods(context, line.contractLineId);
+    }
+
     const preservedBillingCycleId = await context.createEntity('client_billing_cycles', {
       client_id: preservedClientId,
       billing_cycle: 'monthly',
@@ -471,21 +490,32 @@ describe('Contract Invoice Manual Credit', () => {
     expect(Number(clonedInvoice!.tax)).toBe(Number(preservedInvoice!.tax));
     expect(Number(clonedInvoice!.total_amount)).toBe(Number(preservedInvoice!.total_amount));
 
-    const preservedCharges = await context.db('invoice_charges')
-      .where({ tenant: context.tenantId, invoice_id: preservedInvoice!.invoice_id })
-      .whereNotNull('contract_line_id')
-      .orderBy('description', 'asc');
-    const clonedCharges = await context.db('invoice_charges')
-      .where({ tenant: context.tenantId, invoice_id: clonedInvoice!.invoice_id })
-      .whereNotNull('contract_line_id')
-      .orderBy('description', 'asc');
+    // invoice_charges no longer carries contract_line_id. A charge reaches its
+    // contract line through invoice_charge_details.config_id ->
+    // contract_line_service_configuration.contract_line_id, which is the
+    // linkage this test is really about.
+    const chargesWithContractLine = async (invoiceId: string) => {
+      const rows = await context.db('invoice_charges as ic')
+        .join('invoice_charge_details as icd', function joinDetails() {
+          this.on('icd.item_id', '=', 'ic.item_id').andOn('icd.tenant', '=', 'ic.tenant');
+        })
+        .join('contract_line_service_configuration as clsc', function joinConfig() {
+          this.on('clsc.config_id', '=', 'icd.config_id').andOn('clsc.tenant', '=', 'icd.tenant');
+        })
+        .where({ 'ic.tenant': context.tenantId, 'ic.invoice_id': invoiceId })
+        .orderBy('ic.description', 'asc')
+        .select('ic.description', 'ic.net_amount', 'clsc.contract_line_id');
+      return rows;
+    };
+
+    const preservedCharges = await chargesWithContractLine(preservedInvoice!.invoice_id);
+    const clonedCharges = await chargesWithContractLine(clonedInvoice!.invoice_id);
 
     expect(preservedCharges).toHaveLength(2);
     expect(clonedCharges).toHaveLength(2);
-    expect(clonedCharges.map((charge) => charge.contract_line_id)).toEqual([
-      clonedAddOn.contractLineId,
-      clonedBase.contractLineId,
-    ]);
+    expect(clonedCharges.map((charge) => charge.contract_line_id).sort()).toEqual(
+      [clonedAddOn.contractLineId, clonedBase.contractLineId].sort()
+    );
     expect(clonedCharges.some((charge) =>
       charge.contract_line_id === preservedBase.contractLineId ||
       charge.contract_line_id === preservedAddOn.contractLineId

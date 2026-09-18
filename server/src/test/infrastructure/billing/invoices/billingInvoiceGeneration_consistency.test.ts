@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import { generateManualInvoice as generateManualInvoiceRaw } from '@alga-psa/billing/actions';
 import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, ensureClientPlanBundlesTable,
+  seedBillingChargeSources,
   unwrapManualInvoice
 } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -159,7 +160,7 @@ async function ensureDefaultBillingSettings() {
     await ensureDefaultTaxConfiguration();
     await ensureDefaultBillingSettings();
     await ensureClientPlanBundlesTable(context);
-  }, 60000);
+  });
 
   beforeEach(async () => {
     context = await resetContext();
@@ -234,6 +235,10 @@ async function ensureDefaultBillingSettings() {
         adjustments: [],
         finalAmount: 1000
       };
+
+      // persistInvoiceCharges marks each usage charge's source usage_tracking
+      // row invoiced and throws when there is none behind a fabricated usageId.
+      await seedBillingChargeSources(context, [autoCharge as unknown as Record<string, unknown>]);
 
       const createdAutoInvoice = await createInvoiceFromBillingResult(
         billingResult,

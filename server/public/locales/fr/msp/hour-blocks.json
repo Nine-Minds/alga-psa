@@ -137,5 +137,22 @@
     "remaining": "{{hours}} h inutilisées seront perdues.",
     "submit": "Faire expirer le bloc",
     "title": "Faire expirer le bloc d'heures"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "Bloc d’heures introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "serviceNotFound": "Service introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "hoursPositive": "Les heures du bloc doivent être supérieures à zéro.",
+      "ratePositive": "Le tarif horaire doit être supérieur ou égal à zéro.",
+      "reasonRequired": "Un motif est obligatoire pour cette opération.",
+      "adjustExpiredOrVoided": "Impossible d’ajuster un bloc d’heures expiré ou annulé.",
+      "usedCannotVoid": "Ce bloc d’heures a été utilisé et ne peut pas être annulé. Faites-le plutôt expirer.",
+      "onlyPendingOrActiveVoid": "Seuls les blocs d’heures en attente ou actifs peuvent être annulés.",
+      "expireVoided": "Impossible de faire expirer un bloc d’heures annulé.",
+      "updateExpirationVoided": "Impossible de mettre à jour l’expiration d’un bloc d’heures annulé.",
+      "invalidValue": "L’une des valeurs sélectionnées du bloc d’heures n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire du bloc d’heures est manquant. Veuillez vérifier le formulaire et réessayer.",
+      "referenceMissing": "Le client, le service ou la facture sélectionné n’existe plus. Veuillez actualiser la page et réessayer."
+    }
   }
 }

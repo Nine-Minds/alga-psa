@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 import {
   WORKFLOW_ENTITY_TYPE_LABEL_DEFAULTS,
@@ -63,18 +64,17 @@ describe('workflow data-store enum localization contracts', () => {
 
     for (const locale of ['xx', 'yy']) {
       const data = readWorkflowLocale(locale);
-      const marker = locale === 'xx' ? '11111' : '55555';
 
-      expect(data.designer.palette.groups['data-store'].label).toContain(marker);
-      expect(data.designer.actions['store.get'].label).toContain(marker);
-      expect(data.inputMappingEditor.softEnumPlaceholder).toContain(marker);
+      expect(data.designer.palette.groups['data-store'].label).toMatch(pseudoPattern(locale));
+      expect(data.designer.actions['store.get'].label).toMatch(pseudoPattern(locale));
+      expect(data.inputMappingEditor.softEnumPlaceholder).toMatch(pseudoPattern(locale));
 
       for (const value of WORKFLOW_ENTITY_TYPE_VALUES) {
-        expect(data.enums.workflowEntityType[value]).toContain(marker);
+        expect(data.enums.workflowEntityType[value]).toMatch(pseudoPattern(locale));
         expect(data.enums.workflowEntityType[value]).not.toBe(WORKFLOW_ENTITY_TYPE_LABEL_DEFAULTS[value]);
       }
       for (const value of WORKFLOW_LINK_RELATION_VALUES) {
-        expect(data.enums.workflowLinkRelation[value]).toContain(marker);
+        expect(data.enums.workflowLinkRelation[value]).toMatch(pseudoPattern(locale));
         expect(data.enums.workflowLinkRelation[value]).not.toBe(WORKFLOW_LINK_RELATION_LABEL_DEFAULTS[value]);
       }
     }

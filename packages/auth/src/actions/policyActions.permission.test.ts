@@ -85,6 +85,7 @@ describe('policyActions authorization', () => {
 
       await expect(assignRoleToUser('target-1', 'role-admin')).resolves.toEqual({
         permissionError: 'Permission denied: You do not have permission to change user roles.',
+      messageKey: 'msp/settings:errors.roles.changePermission',
       });
       expect(insertSpy).not.toHaveBeenCalled();
     });
@@ -128,6 +129,7 @@ describe('policyActions authorization', () => {
 
       await expect(removeRoleFromUser('target-1', 'role-admin')).resolves.toEqual({
         permissionError: 'Permission denied: You do not have permission to change user roles.',
+      messageKey: 'msp/settings:errors.roles.changePermission',
       });
       expect(delSpy).not.toHaveBeenCalled();
     });

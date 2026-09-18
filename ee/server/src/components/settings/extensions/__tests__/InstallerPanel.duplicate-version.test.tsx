@@ -22,6 +22,11 @@ const mockExtFinalizeUpload = vi.fn(async () => ({
 
 const mockInstall = vi.fn(async () => ({ success: true }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('@ee/__tests__/utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/extensions');
+});
+
 vi.mock('@ee/lib/actions/extBundleActions', () => ({
   extUploadProxy: (...args: any[]) => mockExtUploadProxy(...args),
   extFinalizeUpload: (...args: any[]) => mockExtFinalizeUpload(...args),

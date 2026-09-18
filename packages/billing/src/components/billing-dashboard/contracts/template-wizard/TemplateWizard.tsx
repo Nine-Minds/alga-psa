@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import { WizardNavigation } from '@alga-psa/ui/components/onboarding/WizardNavigation';
@@ -454,9 +455,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           )}
 
           {errors[currentStep] && (
-            <div className="bg-[rgb(var(--color-destructive)/0.1)] text-[rgb(var(--color-destructive))] px-4 py-3 rounded-md text-sm border border-[rgb(var(--color-destructive)/0.2)]">
-              {errors[currentStep]}
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{errors[currentStep]}</AlertDescription>
+            </Alert>
           )}
         </div>
       </div>

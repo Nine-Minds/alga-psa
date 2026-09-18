@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { resolveEntraCallbackUrl } from '@alga-psa/shared/services/entra/entraCallbackUrl';
 import { routes } from '@alga-psa/integrations/entra/routes/entry';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
@@ -181,7 +182,10 @@ export type EntraStatusResponse = {
   connectionDetails?: {
     cippBaseUrl: string | null;
     directTenantId: string | null;
-    directCredentialSource: 'tenant-secret' | 'env' | 'app-secret' | null;
+    directCredentialSource: 'profile' | null;
+    directProfileId: string | null;
+    directProfileName: string | null;
+    directProfileMissing: boolean;
   } | null;
   fieldSyncConfig?: EntraFieldSyncConfig;
 };
@@ -423,7 +427,7 @@ export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
   const resolverModule = await import('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver');
   const credentials = await resolverModule.resolveMicrosoftCredentialsForTenant(tenant);
   if (!credentials) {
-    return { success: false, error: 'Microsoft OAuth credentials are not configured for Entra direct connection' } as const;
+    return { success: false, error: 'Select the Microsoft app registration to use for Entra, then reconnect.' } as const;
   }
 
   // Initiating OAuth is not connecting. The operator has not consented yet, the
@@ -432,14 +436,7 @@ export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
   // Retiring the CIPP credentials here would have already broken it. The stale
   // credentials are cleared by the callback, after the swap to Direct commits.
   const secretProvider = await getSecretProviderInstance();
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
-    process.env.NEXTAUTH_URL ||
-    (await secretProvider.getAppSecret('NEXTAUTH_URL')) ||
-    'http://localhost:3000';
-
-  const redirectUri = `${baseUrl.replace(/\/+$/, '')}/api/auth/microsoft/entra/callback`;
+  const redirectUri = await resolveEntraCallbackUrl(secretProvider);
   const statePayload: EntraDirectConnectState = {
     tenant,
     userId: String((user as { user_id?: string } | undefined)?.user_id || ''),

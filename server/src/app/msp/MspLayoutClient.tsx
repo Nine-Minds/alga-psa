@@ -22,6 +22,8 @@ import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
+import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
+import { IncomingCallProvider } from '@/components/layout/IncomingCallProvider';
 import { MspBrandingProvider, type MspBranding } from '@/components/layout/MspBrandingContext';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
@@ -166,6 +168,8 @@ export function MspLayoutClient({
       <MspBrandingProvider branding={mspBranding}>
       <ProductProvider>
         <TierProvider selfHostLicensing={selfHostLicensing}>
+          <MspCallLinkProvider>
+          <IncomingCallProvider tenant={session?.user?.tenant} userId={session?.user?.id}>
           {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
@@ -208,6 +212,8 @@ export function MspLayoutClient({
               )}
             </ClientUIStateProvider>
           </TagProvider>
+          </IncomingCallProvider>
+          </MspCallLinkProvider>
         </TierProvider>
       </ProductProvider>
       </MspBrandingProvider>

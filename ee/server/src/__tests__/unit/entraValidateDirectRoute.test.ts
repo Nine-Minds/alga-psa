@@ -56,7 +56,7 @@ describe('validate-direct route', () => {
       clientId: 'client-id-38',
       clientSecret: 'client-secret-38',
       tenantId: null,
-      source: 'tenant-secret',
+      source: 'profile', profileId: 'profile-38', profileDisplayName: 'MSP app',
     });
 
     const getTenantSecretMock = vi
@@ -87,7 +87,7 @@ describe('validate-direct route', () => {
     expect(axiosGetMock).toHaveBeenCalledWith(
       'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?$top=1',
       expect.objectContaining({
-        headers: { Authorization: 'Bearer access-token-38' },
+        headers: { Authorization: 'Bearer access-token-38', 'client-request-id': expect.any(String) },
       })
     );
     expect(updateEntraConnectionValidationMock).toHaveBeenCalledWith({
@@ -108,7 +108,7 @@ describe('validate-direct route', () => {
       clientId: 'client-id-39',
       clientSecret: 'client-secret-39',
       tenantId: null,
-      source: 'tenant-secret',
+      source: 'profile', profileId: 'profile-39', profileDisplayName: 'MSP app',
     });
 
     const getTenantSecretMock = vi

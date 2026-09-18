@@ -1,0 +1,177 @@
+[
+  {
+    "id": "F001",
+    "title": "Request Mail.Send.Shared",
+    "description": "Add https://graph.microsoft.com/Mail.Send.Shared to MICROSOFT_EMAIL_OAUTH_SCOPES in shared/services/email/microsoftGraphEndpoints.ts.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Scope request"]
+  },
+  {
+    "id": "F002",
+    "title": "Scope applies to connect",
+    "description": "The initial connect authorization URL carries the new scope.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Scope request"]
+  },
+  {
+    "id": "F003",
+    "title": "Scope applies to reconnect",
+    "description": "The reconnect authorization URL carries the new scope so existing providers can upgrade their grant.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Scope request"]
+  },
+  {
+    "id": "F004",
+    "title": "Send path resolution",
+    "description": "MicrosoftGraphAdapter.sendMail resolves its endpoint through the same mailbox-path logic the read path uses instead of hardcoding /users/{mailbox}.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Send path resolution"]
+  },
+  {
+    "id": "F005",
+    "title": "Personal mailbox sends via /me",
+    "description": "When the configured mailbox equals the authenticated user, sendMail posts to /me/sendMail.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Send path resolution"]
+  },
+  {
+    "id": "F006",
+    "title": "Shared mailbox sends via /users",
+    "description": "When the configured mailbox differs from the authenticated user, sendMail posts to /users/{mailbox}/sendMail.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Send path resolution"]
+  },
+  {
+    "id": "F007",
+    "title": "Mailbox comparison is case-insensitive",
+    "description": "Mailbox-to-authenticated-user matching ignores case and surrounding whitespace, matching the read path's behavior.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Send path resolution"]
+  },
+  {
+    "id": "F008",
+    "title": "Unknown authenticated user falls back to /users",
+    "description": "When the authenticated user's address has not been resolved, sendMail uses /users/{mailbox} rather than guessing /me.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Send path resolution"]
+  },
+  {
+    "id": "F009",
+    "title": "Consent assertion accounts for shared sends",
+    "description": "assertMailSendConsent in MicrosoftGraphEmailProvider requires Mail.Send.Shared when the configured mailbox is not the authenticated user, and Mail.Send otherwise.",
+    "implemented": false,
+    "prdRefs": ["Product behavior / Failure reporting"]
+  },
+  {
+    "id": "F010",
+    "title": "Consent failure names the missing scope",
+    "description": "A provider that cannot send because of an absent scope reports which scope is missing and that a reconnect is required.",
+    "implemented": false,
+    "prdRefs": ["Product behavior / Failure reporting"]
+  },
+  {
+    "id": "F011",
+    "title": "403 distinguishes scope from delegation",
+    "description": "toProviderError inspects the token's scopes when Graph returns 403 and reports a missing-scope failure separately from an Exchange delegation failure.",
+    "implemented": false,
+    "prdRefs": ["Product behavior / Failure reporting"]
+  },
+  {
+    "id": "F012",
+    "title": "Send As guidance in the delegation error",
+    "description": "The Exchange delegation error names the mailbox and the authorizing user so an administrator knows exactly which grant to add.",
+    "implemented": false,
+    "prdRefs": ["Product behavior / Failure reporting", "Customer remediation"]
+  },
+  {
+    "id": "F013",
+    "title": "Graph error code is retained",
+    "description": "The Graph error code and request id survive into the stored error metadata rather than being flattened to an axios code.",
+    "implemented": false,
+    "prdRefs": ["Product behavior / Failure reporting"]
+  },
+  {
+    "id": "F014",
+    "title": "System fallback uses a verified from-address",
+    "description": "When the system provider handles a tenant send, the from-address is a verified system domain rather than the tenant's configured address.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Fallback from-address"]
+  },
+  {
+    "id": "F015",
+    "title": "Tenant name survives the fallback",
+    "description": "The tenant's display name is preserved as the from-name on a system-provider send.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Fallback from-address"]
+  },
+  {
+    "id": "F016",
+    "title": "Tenant address moves to Reply-To",
+    "description": "A system-provider send sets Reply-To to the tenant's configured address so replies still reach the service desk.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Fallback from-address"]
+  },
+  {
+    "id": "F017",
+    "title": "Outbound state on provider health",
+    "description": "Provider health records whether outbound sending currently succeeds, so a broken sender is visible without querying email_sending_logs.",
+    "implemented": false,
+    "prdRefs": ["Product behavior / Failure reporting"]
+  },
+  {
+    "id": "F018",
+    "title": "Settings surface shows the outbound failure",
+    "description": "The email settings screen shows the outbound failure reason and the required remediation for a provider that cannot send.",
+    "implemented": false,
+    "prdRefs": ["Product behavior / Failure reporting"]
+  },
+  {
+    "id": "F019",
+    "title": "Reconnect prompt for stale grants",
+    "description": "A connected Microsoft provider whose token lacks the scope its mailbox requires prompts for reconnect rather than waiting for the next send to fail.",
+    "implemented": false,
+    "prdRefs": ["Rollout"]
+  },
+  {
+    "id": "F020",
+    "title": "Setup documentation covers Send As",
+    "description": "docs/inbound-email/setup/microsoft.md states that a shared sending mailbox needs both the reconnect and an Exchange Send As grant, and gives the admin center path and the PowerShell equivalent.",
+    "implemented": false,
+    "prdRefs": ["Customer remediation"]
+  },
+  {
+    "id": "F021",
+    "title": "Send As is recommended over Send on Behalf",
+    "description": "The documentation states why Send As is the correct grant and what Send on Behalf does to the visible sender.",
+    "implemented": false,
+    "prdRefs": ["Customer remediation"]
+  },
+  {
+    "id": "F023",
+    "title": "Manifest declares outbound permissions",
+    "description": "createMicrosoftEmailApplicationManifest declares Mail.Send and Mail.Send.Shared, with their delegated permission ids added to MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Provisioned app registration"]
+  },
+  {
+    "id": "F024",
+    "title": "Manifest assertion inverted",
+    "description": "The microsoftEmailSetup test requires the outbound permissions in the manifest instead of asserting Mail.Send is absent.",
+    "implemented": true,
+    "prdRefs": ["Product behavior / Provisioned app registration"]
+  },
+  {
+    "id": "F025",
+    "title": "Existing provisioned apps are re-consented",
+    "description": "A tenant whose provisioned registration predates the manifest change is prompted through admin consent again, so the new permissions are actually granted rather than only declared.",
+    "implemented": false,
+    "prdRefs": ["Product behavior / Provisioned app registration", "Rollout"]
+  },
+  {
+    "id": "F022",
+    "title": "Affected tenant report",
+    "description": "A query identifies active Microsoft providers whose stored token lacks the scope their configured mailbox requires, for use in the rollout notification.",
+    "implemented": false,
+    "prdRefs": ["Rollout"]
+  }
+]

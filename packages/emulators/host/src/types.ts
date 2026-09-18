@@ -18,6 +18,12 @@ export interface HostEnv {
 export interface EmulatorCore {
   /** Drop all state and return to the just-started condition. */
   reset(): void;
+  /**
+   * Optional `--state-file` support: return a JSON-serializable projection of
+   * durable seeded state. Cores that omit these simply do not persist.
+   */
+  snapshot?(): unknown;
+  restore?(state: unknown): void;
 }
 
 /**
@@ -94,6 +100,10 @@ export interface EmulatorPackage<C extends EmulatorCore = EmulatorCore> {
   defaultPort: number;
   createCore(env: HostEnv): C;
   wire?(router: Router, core: C, env: HostEnv): void;
-  serve?(core: C, port: number, env: HostEnv): Promise<EmulatorServer>;
+  /** Opt in only when the non-HTTP listener records real DATA transactions. */
+  requestHistoryProtocol?: 'smtp';
+  serve?(core: C, port: number, env: HostEnv, journal: {
+    begin(): (status: number | null, aborted: boolean) => void;
+  }): Promise<EmulatorServer>;
   register(reg: ControlRegistry, core: C): void;
 }

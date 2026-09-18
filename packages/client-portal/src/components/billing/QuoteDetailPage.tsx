@@ -14,6 +14,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ArrowLeft, Download } from 'lucide-react';
 import type { IQuote, IQuoteItem, QuoteStatus } from '@alga-psa/types';
 import { useFormatQuoteStatus } from '@alga-psa/ui/hooks/useQuoteEnumOptions';
+import { QuoteTermsContent, hasQuoteTermsContent } from '@alga-psa/ui/editor';
 import {
   acceptClientQuote,
   downloadClientQuotePdf,
@@ -647,10 +648,16 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
             </div>
           )}
 
-          {quote.terms_and_conditions && (
+          {hasQuoteTermsContent(quote.terms_and_conditions_block, quote.terms_and_conditions) && (
             <div>
               <h3 className="mb-2 text-sm font-semibold">{t('quotes.detail.termsAndConditions', { defaultValue: 'Terms & Conditions' })}</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quote.terms_and_conditions}</p>
+              <QuoteTermsContent
+                id="client-portal-quote-terms-content"
+                block={quote.terms_and_conditions_block}
+                text={quote.terms_and_conditions}
+                textClassName="text-sm text-muted-foreground"
+                richClassName="text-sm text-muted-foreground"
+              />
             </div>
           )}
         </div>

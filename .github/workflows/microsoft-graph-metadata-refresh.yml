@@ -1,0 +1,90 @@
+name: Microsoft Graph metadata refresh
+
+on:
+  workflow_dispatch:
+  # Monthly, not weekly: each repin commits ~1.2 MB of incompressible gzipped
+  # CSDL, and three attempts still fit inside the guard's 90-day age gate.
+  schedule:
+    - cron: '0 7 1 * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # A failing repin still opens the pull request, and the final step fails
+      # this run, so a Microsoft-side removal is never swallowed. That failed run
+      # is the signal to rely on: because the branch and the pull request are
+      # both created with GITHUB_TOKEN, the push starts no workflow at all and
+      # the bump PR's guard run sits in "Approve workflows to run" until someone
+      # with write access starts it. Swap in a PAT if that check must be
+      # unattended.
+      - name: Repin Microsoft Graph metadata
+        id: repin
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run guard:microsoft-graph-endpoints:update
+
+      # Needs "Allow GitHub Actions to create and approve pull requests"
+      # (Settings > Actions > General). Without it `gh pr create` fails, this run
+      # goes red, and the branch pushed just above is deleted again so the next
+      # run retries cleanly instead of mistaking it for an open pull request.
+      - name: Open bump pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- tools/microsoft-graph; then
+            echo "Microsoft Graph metadata already current; nothing to bump."
+            exit 0
+          fi
+          commit="$(node -p "require('./tools/microsoft-graph/endpoints.json').metadata.commit.slice(0, 12)")"
+          branch="chore/microsoft-graph-metadata-${commit}"
+          # An existing branch is not evidence of an open pull request: a run can
+          # push and then fail to open one. Ask about the pull request itself, or
+          # a dangling branch would make every later run exit green having done
+          # nothing -- the exact silent staleness this guard exists to prevent.
+          open_pr="$(gh pr list --head "${branch}" --state open --json number --jq '.[].number')"
+          if [ -n "${open_pr}" ]; then
+            echo "A bump pull request for ${branch} is already open."
+            exit 0
+          fi
+          if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
+            echo "Reusing ${branch} from an earlier run that pushed it but could not open a pull request."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git checkout -b "${branch}"
+            git add tools/microsoft-graph
+            git commit -m "chore: repin Microsoft Graph metadata" \
+              -m "Repin msgraph-metadata to ${commit} so the endpoint guard validates against Microsoft's current published surface and the freshness gate stays green."
+            git push origin "${branch}"
+          fi
+          if ! gh pr create \
+            --title "chore: repin Microsoft Graph metadata (${commit})" \
+            --body "Automated monthly repin of the Microsoft Graph CSDL used by \`npm run guard:microsoft-graph-endpoints\`. If the endpoint guard fails on this PR, Microsoft changed or removed a surface Alga calls." \
+            --base main \
+            --head "${branch}"; then
+            echo "::error::Could not open the bump pull request; deleting ${branch} so the next run retries from a clean slate."
+            git push origin --delete "${branch}"
+            exit 1
+          fi
+
+      - name: Fail the run when the repin did not validate
+        if: steps.repin.outcome == 'failure'
+        run: |
+          echo "::error::Repinned Graph metadata failed the endpoint guard: Microsoft changed or removed a surface Alga calls. See the bump pull request."
+          exit 1

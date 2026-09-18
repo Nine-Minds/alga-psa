@@ -1,0 +1,28 @@
+{
+  "status": "source repair verified; rebuilt HTTP acceptance pending",
+  "sourceHeadBeforeRepair": "ce042cf434",
+  "defect": "Legacy API authentication wrappers required ambient tenant context and rejected valid API keys without a browser session, including when x-tenant-id was supplied.",
+  "repair": "Reuse REST API key validation: explicit tenant header is validated within that tenant; absent header resolves tenant from the hashed key. Preserve user context, client rejection, NM Store system path and rate limiting.",
+  "databaseRegression": {
+    "file": "server/src/test/integration/api/apiKeyRequestIdentity.integration.test.ts",
+    "database": "api_key_request_identity_82cc",
+    "beforeFailed": 4,
+    "beforePassed": 14,
+    "afterPassed": 18,
+    "afterDurationSeconds": 14.7,
+    "beforeLogLocal": "/tmp/alga-api-key-identity-before.log",
+    "afterLogLocal": "/tmp/alga-api-key-identity-after.log",
+    "boundaries": "Real key hashing, migrated PostgreSQL, owner/suspension validation and user loading. Connection factories target a per-test transaction with no ambient session tenant. Avatar resolution and external rate limiting are substituted. Both wrappers cover header absent/present, wrong tenant, expired/revoked keys, inactive/client owners, suspended tenant and exhausted usage."
+  },
+  "relatedUnits": {
+    "files": 4,
+    "passed": 20,
+    "logLocal": "/tmp/alga-api-key-identity-unit-final.log",
+    "note": "NM Store and ordinary user branches retained; mock state resets per test to prevent validator return values leaking between cases."
+  },
+  "types": {
+    "status": "passed",
+    "logLocal": "/tmp/alga-api-key-identity-types.log"
+  },
+  "remaining": "Actual built application user-search API must be rerun on the repaired candidate."
+}

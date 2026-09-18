@@ -260,7 +260,7 @@ export async function verifyUserInvitationToken(token: string): Promise<{
 export async function completeUserInvitationSetup(
   token: string,
   password: string
-): Promise<{ success: boolean; userId?: string; username?: string; message?: string; error?: string; errorCode?: UserInvitationErrorCode }> {
+): Promise<{ success: boolean; userId?: string; username?: string; message?: string; error?: string; errorCode?: UserInvitationErrorCode; messageKey?: string }> {
   try {
     if (!token || !password) {
       return { success: false, error: 'Token and password are required', errorCode: 'TOKEN_AND_PASSWORD_REQUIRED' };
@@ -268,9 +268,15 @@ export async function completeUserInvitationSetup(
 
     // Full policy, not just length: this action is reachable without a
     // session, so the accept page's client-side checks are advisory only.
-    const passwordPolicyError = validatePassword(password);
+    // There is no session to resolve a locale from either, so the failing rule's
+    // key rides along with the English and the page renders it.
+    let passwordPolicyKey: string | undefined;
+    const passwordPolicyError = validatePassword(password, (key, options) => {
+      passwordPolicyKey = key;
+      return String(options?.defaultValue ?? '');
+    });
     if (passwordPolicyError) {
-      return { success: false, error: passwordPolicyError, errorCode: 'PASSWORD_POLICY' };
+      return { success: false, error: passwordPolicyError, errorCode: 'PASSWORD_POLICY', messageKey: passwordPolicyKey };
     }
 
     const verificationResult = await UserInvitationService.verifyToken(token);

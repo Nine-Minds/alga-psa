@@ -38,21 +38,21 @@ function vendorBillActionErrorFrom(error: unknown): VendorBillActionError | null
 
     switch (error.message) {
       case 'Vendor bill not found':
-        return actionError('Vendor bill not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Vendor bill not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.vendorBills.notFound');
       case 'vendor_id is required':
-        return actionError('Select a vendor before creating the bill.');
+        return actionError('Select a vendor before creating the bill.', 'features/inventory:errors.vendorBills.vendorRequired');
       case 'bill_number is required':
-        return actionError("Enter the vendor's bill number.");
+        return actionError("Enter the vendor's bill number.", 'features/inventory:errors.vendorBills.numberRequired');
       case 'Vendor not found':
-        return actionError('Vendor not found. It may have been deleted. Please choose another vendor.');
+        return actionError('Vendor not found. It may have been deleted. Please choose another vendor.', 'features/inventory:errors.shared.vendorNotFoundChooseAnother');
       case 'Line quantity must be a positive integer':
-        return actionError('Line quantity must be a positive whole number.');
+        return actionError('Line quantity must be a positive whole number.', 'features/inventory:errors.vendorBills.lineQuantityPositive');
       case 'Line unit_cost must be non-negative cents':
-        return actionError("Line unit cost can't be negative.");
+        return actionError("Line unit cost can't be negative.", 'features/inventory:errors.vendorBills.lineUnitCostNonNegative');
       case 'Purchase order not found':
-        return actionError('Purchase order not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Purchase order not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.shared.purchaseOrderNotFound');
       case 'Nothing received on this purchase order yet':
-        return actionError('Receive stock on this purchase order before creating a vendor bill from it.');
+        return actionError('Receive stock on this purchase order before creating a vendor bill from it.', 'features/inventory:errors.vendorBills.receiveStockFirst');
       default:
         if (error.message.startsWith('Cannot move a ')) {
           return actionError(error.message);
@@ -62,10 +62,10 @@ function vendorBillActionErrorFrom(error: unknown): VendorBillActionError | null
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23505') {
-    return actionError('A bill with this number already exists for the selected vendor.');
+    return actionError('A bill with this number already exists for the selected vendor.', 'features/inventory:errors.vendorBills.duplicateNumber');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected vendor bill records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected vendor bill records is no longer valid. Please refresh and try again.', 'features/inventory:errors.vendorBills.recordInvalid');
   }
 
   return null;

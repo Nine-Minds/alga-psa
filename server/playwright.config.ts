@@ -95,8 +95,7 @@ export default defineConfig({
             NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
             // Feature-flag overrides for e2e, forwarded from the environment when set.
             NEXT_PUBLIC_FORCE_FEATURE_FLAGS:
-              process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS ||
-              (paymentLinksEnabled ? "release-v1-5-feature:true" : ""),
+              process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS || "",
             STRIPE_API_BASE_URL: stripeEnv("STRIPE_API_BASE_URL", "http://127.0.0.1:4050"),
             STRIPE_SECRET_KEY: stripeEnv("STRIPE_SECRET_KEY", "sk_test_algasim"),
             NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: stripeEnv(

@@ -189,6 +189,7 @@ describe('client portal visibility group actions', () => {
 
     expect(group).toEqual({
       permissionError: 'Permission denied: Cannot manage visibility groups for another client',
+      messageKey: 'client-portal:errors.visibilityGroups.otherClient',
     });
   });
 
@@ -298,10 +299,12 @@ describe('client portal visibility group actions', () => {
       clientId,
       name: 'HR Contacts',
       description: 'Restricted HR boards',
+      ticketScope: 'contact',
       boardIds: [boardIdOne, boardIdTwo],
     });
 
     expect(result).toEqual({ group_id: 'group-new' });
+    expect(insertGroupMock).toHaveBeenCalledWith(expect.objectContaining({ ticket_scope: 'contact' }));
     expect(insertGroupBoardsMock).toHaveBeenCalledWith([
       { tenant: 'tenant-1', group_id: 'group-new', board_id: boardIdOne },
       { tenant: 'tenant-1', group_id: 'group-new', board_id: boardIdTwo },
@@ -374,6 +377,7 @@ describe('client portal visibility group actions', () => {
     await updateClientPortalVisibilityGroup(groupId, {
       name: 'Executives',
       description: 'Exec-only boards',
+      ticketScope: 'contact',
       boardIds: [boardIdThree],
     });
 
@@ -381,6 +385,7 @@ describe('client portal visibility group actions', () => {
       expect.objectContaining({
         name: 'Executives',
         description: 'Exec-only boards',
+        ticket_scope: 'contact',
       })
     );
     expect(deleteBoardsMock).toHaveBeenCalled();
@@ -431,6 +436,7 @@ describe('client portal visibility group actions', () => {
 
     expect(result).toEqual({
       actionError: 'One or more selected boards are no longer available. Please refresh and try again.',
+      messageKey: 'client-portal:errors.visibilityGroups.boardsUnavailable',
     });
   });
 
@@ -476,6 +482,7 @@ describe('client portal visibility group actions', () => {
 
     expect(result).toEqual({
       actionError: 'One or more selected boards are no longer available. Please refresh and try again.',
+      messageKey: 'client-portal:errors.visibilityGroups.boardsUnavailable',
     });
   });
 

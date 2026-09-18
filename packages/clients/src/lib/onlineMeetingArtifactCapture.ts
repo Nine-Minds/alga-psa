@@ -85,6 +85,20 @@ export interface FetchAndPersistMeetingArtifactsDependencies {
   loadMeetingEntity?: (tenantId: string, meeting: IOnlineMeeting) => Promise<MeetingEntity>;
   createTranscriptDocument?: (input: CreateTranscriptDocumentInput) => Promise<string>;
   downloadRecording?: (input: DownloadRecordingInput) => Promise<string | null>;
+  /**
+   * EE hook: post an AI summary of a newly captured transcript to the ticket
+   * the meeting is linked to (via interaction/appointment request). Wired by
+   * the scheduling layer; best-effort — failures never abort capture.
+   */
+  annotateTicketFromTranscript?: (input: {
+    tenantId: string;
+    meetingId: string;
+    interactionId?: string | null;
+    appointmentRequestId?: string | null;
+    subject?: string | null;
+    transcriptVtt: string;
+    providerArtifactId?: string | null;
+  }) => Promise<unknown>;
   revalidate?: (meeting: IOnlineMeeting, entity: MeetingEntity) => void;
   now?: () => Date;
 }
@@ -237,12 +251,20 @@ function findExistingArtifact(
 }
 
 function revalidateMeeting(_meeting: IOnlineMeeting, entity: MeetingEntity): void {
-  revalidatePath('/msp/interactions/[id]', 'page');
-  if (entity.clientId) {
-    revalidatePath('/msp/clients/[id]', 'page');
-  }
-  if (entity.contactNameId) {
-    revalidatePath('/msp/contacts/[id]', 'page');
+  // Capture also runs from background jobs (webhook-triggered artifact
+  // processing), where Next has no request store and revalidatePath throws
+  // "static generation store missing". Revalidation is a UI-freshness nicety;
+  // never let it fail the capture.
+  try {
+    revalidatePath('/msp/interactions/[id]', 'page');
+    if (entity.clientId) {
+      revalidatePath('/msp/clients/[id]', 'page');
+    }
+    if (entity.contactNameId) {
+      revalidatePath('/msp/contacts/[id]', 'page');
+    }
+  } catch {
+    /* background execution: no request context to revalidate */
   }
 }
 
@@ -308,6 +330,25 @@ export async function fetchAndPersistMeetingArtifacts(
         actorUserId,
         isClientVisible: settings.exposeRecordingsInPortal,
       });
+
+      // First-time transcript capture (the !documentId guard doubles as the
+      // once-per-artifact dedupe): let the EE hook summarize onto the linked
+      // ticket. Best-effort — capture never fails because annotation did.
+      if (dependencies.annotateTicketFromTranscript) {
+        try {
+          await dependencies.annotateTicketFromTranscript({
+            tenantId: input.tenantId,
+            meetingId: meeting.meeting_id,
+            interactionId: meeting.interaction_id ?? null,
+            appointmentRequestId: meeting.appointment_request_id ?? null,
+            subject: meeting.subject ?? null,
+            transcriptVtt: artifact.transcriptContent,
+            providerArtifactId: artifact.providerArtifactId ?? null,
+          });
+        } catch (error) {
+          console.warn('[OnlineMeetingArtifacts] Transcript ticket annotation failed', error);
+        }
+      }
     }
 
     if (artifact.artifactType === 'recording' && settings.downloadRecordings && artifact.contentUrl && !fileId) {

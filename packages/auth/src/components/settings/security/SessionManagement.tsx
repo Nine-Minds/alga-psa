@@ -9,6 +9,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { formatDistanceToNow } from 'date-fns';
+import { getDateFnsLocale } from '@alga-psa/ui/lib/dateFnsLocale';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getUserSessionsAction,
@@ -28,7 +29,8 @@ import {
 } from 'lucide-react';
 
 export default function SessionManagement() {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
+  const dateFnsLocale = getDateFnsLocale(i18n.language);
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
@@ -253,6 +255,7 @@ export default function SessionManagement() {
                             {t('sessionManagement.labels.lastActive', 'Last active')}{' '}
                             {formatDistanceToNow(new Date(session.last_activity_at), {
                               addSuffix: true,
+                              locale: dateFnsLocale,
                             })}
                           </span>
                         </div>

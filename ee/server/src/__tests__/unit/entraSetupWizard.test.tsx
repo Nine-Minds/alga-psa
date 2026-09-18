@@ -13,6 +13,10 @@ const {
   runEntraPreflightMock,
   startEntraSyncMock,
   updateEntraFieldSyncConfigMock,
+  listMicrosoftProfilesMock,
+  listMicrosoftConsumerBindingsMock,
+  setMicrosoftConsumerBindingMock,
+  getMicrosoftIntegrationStatusMock,
 } = vi.hoisted(() => ({
   disconnectEntraIntegrationMock: vi.fn(),
   discoverEntraManagedTenantsMock: vi.fn(),
@@ -21,6 +25,10 @@ const {
   runEntraPreflightMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
   updateEntraFieldSyncConfigMock: vi.fn(),
+  listMicrosoftProfilesMock: vi.fn(),
+  listMicrosoftConsumerBindingsMock: vi.fn(),
+  setMicrosoftConsumerBindingMock: vi.fn(),
+  getMicrosoftIntegrationStatusMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -36,6 +44,10 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   runEntraPreflight: runEntraPreflightMock,
   startEntraSync: startEntraSyncMock,
   updateEntraFieldSyncConfig: updateEntraFieldSyncConfigMock,
+  listMicrosoftProfiles: listMicrosoftProfilesMock,
+  listMicrosoftConsumerBindings: listMicrosoftConsumerBindingsMock,
+  setMicrosoftConsumerBinding: setMicrosoftConsumerBindingMock,
+  getMicrosoftIntegrationStatus: getMicrosoftIntegrationStatusMock,
 }));
 
 // The mapping table and the CIPP dialog have their own suites; the wizard only
@@ -127,12 +139,21 @@ function renderWizard(status: EntraStatusResponse, cippAvailable = true) {
 
 describe('EntraSetupWizard', () => {
   beforeEach(() => {
+    listMicrosoftProfilesMock.mockResolvedValue({ success: true, profiles: [] });
+    listMicrosoftConsumerBindingsMock.mockResolvedValue({ success: true, bindings: [] });
+    getMicrosoftIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      redirectUris: { entra: 'https://psa.example.com/api/auth/microsoft/entra/callback' },
+      scopes: { entra: ['https://graph.microsoft.com/User.Read', 'offline_access'] },
+    });
     discoverEntraManagedTenantsMock.mockReset();
     initiateEntraDirectOAuthMock.mockReset();
     startEntraSyncMock.mockReset();
   });
 
   it('renders the action inside the current step and nowhere else', () => {
+    listMicrosoftProfilesMock.mockResolvedValue({ success: true, profiles: [{ profileId: 'profile-direct', displayName: 'MSP app', clientId: 'client', isArchived: false, capabilities: ['entra'] }] });
+    listMicrosoftConsumerBindingsMock.mockResolvedValue({ success: true, bindings: [{ consumerType: 'entra', profileId: 'profile-direct', profileDisplayName: 'MSP app', isArchived: false }] });
     renderWizard(statusOf());
 
     // Step 1 is current, so the chooser lives inside step 1's card.
@@ -236,6 +257,8 @@ describe('EntraSetupWizard', () => {
 
   it('gates the Microsoft redirect behind the consent interstitial', async () => {
     initiateEntraDirectOAuthMock.mockResolvedValue({ success: true, data: { authUrl: 'https://login' } });
+    listMicrosoftProfilesMock.mockResolvedValue({ success: true, profiles: [{ profileId: 'profile-direct', displayName: 'MSP app', clientId: 'client', isArchived: false, capabilities: ['entra'] }] });
+    listMicrosoftConsumerBindingsMock.mockResolvedValue({ success: true, bindings: [{ consumerType: 'entra', profileId: 'profile-direct', profileDisplayName: 'MSP app', isArchived: false }] });
     // jsdom cannot navigate, and assigning `location.href` for real makes it log
     // an unhandled "Not implemented: navigation" error. Swap in a plain object so
     // the redirect target is assertable instead of merely implied.
@@ -254,6 +277,7 @@ describe('EntraSetupWizard', () => {
     expect(document.getElementById('entra-direct-consent-dialog')).toBeNull();
 
     fireEvent.click(screen.getAllByRole('radio')[0]);
+    await waitFor(() => expect((document.getElementById('entra-connection-method-continue') as HTMLButtonElement).disabled).toBe(false));
     // The button names the method once one is chosen, and says what happens next.
     expect(
       document.getElementById('entra-connection-method-continue')?.textContent

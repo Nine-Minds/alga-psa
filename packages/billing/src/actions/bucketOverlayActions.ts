@@ -62,19 +62,25 @@ function bucketOverlayActionErrorFrom(error: unknown): BucketOverlayActionError 
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected bucket overlay values is invalid. Please refresh and try again.');
+    return actionError('One of the selected bucket overlay values is invalid. Please refresh and try again.', 'msp/billing:errors.bucketOverlay.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required bucket overlay field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required bucket overlay field: ${dbError.column}.`,
+          'msp/billing:errors.bucketOverlay.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required bucket overlay field.', 'msp/billing:errors.bucketOverlay.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected bucket overlay records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected bucket overlay records is no longer valid. Please refresh and try again.', 'msp/billing:errors.bucketOverlay.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A bucket overlay for this service already exists.');
+    return actionError('A bucket overlay for this service already exists.', 'msp/billing:errors.bucketOverlay.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the bucket overlay values is not allowed. Please review the form and try again.');
+    return actionError('One of the bucket overlay values is not allowed. Please review the form and try again.', 'msp/billing:errors.bucketOverlay.notAllowed');
   }
 
   return null;
@@ -185,7 +191,7 @@ export const upsertBucketOverlay = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx) => {
-    if (!await hasPermission(user, 'billing', 'update')) {
+    if (!await hasPermission(user, 'billing', 'update', trx)) {
       throw new Error('Permission denied: Cannot update bucket overlays');
     }
 
@@ -318,7 +324,7 @@ export const deleteBucketOverlay = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx) => {
-    if (!await hasPermission(user, 'billing', 'delete')) {
+    if (!await hasPermission(user, 'billing', 'delete', trx)) {
       throw new Error('Permission denied: Cannot delete bucket overlays');
     }
 
@@ -391,7 +397,7 @@ export const getBucketOverlay = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    if (!await hasPermission(user, 'billing', 'read')) {
+    if (!await hasPermission(user, 'billing', 'read', trx)) {
       throw new Error('Permission denied: Cannot read bucket overlays');
     }
 

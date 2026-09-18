@@ -1,15 +1,18 @@
+import { persistCommentPublication } from '../lib/ticketCommentAttachments';
 /**
  * Shared Ticket Model - Core business logic for ticket operations
  * This model contains the essential ticket business logic extracted from
  * server actions and used by both server actions and workflow actions.
  */
 
+import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { SharedNumberingService } from '../services/numberingService';
 
 const TICKET_ORIGINS = {
   INTERNAL: 'internal',
@@ -719,16 +722,9 @@ export class TicketModel {
       throw new Error(businessRuleValidation.error);
     }
 
-    // Generate ticket number using the database function
-    const numberResult = await trx.raw(
-      'SELECT generate_next_number(?::uuid, ?::text) as number',
-      [tenant, 'TICKET']
-    );
-    
-    const ticketNumber = numberResult?.rows?.[0]?.number;
-    if (!ticketNumber) {
-      throw new Error('Failed to generate ticket number');
-    }
+    // Single numbering entry point: applies the tenant's prefix, padding and
+    // optional date format.
+    const ticketNumber = await SharedNumberingService.getNextNumber('TICKET', { knex: trx, tenant });
 
     const ticketId = uuidv4();
     const now = new Date();
@@ -1337,6 +1333,7 @@ export class TicketModel {
     }
 
     await db.table('comments').insert(baseCommentData);
+    await reconcileCommentAttachments(trx, tenant, commentId, userId || validatedData.author_id || '');
 
     if (parentCommentId) {
       await db.table('comment_threads')
@@ -1384,7 +1381,7 @@ export class TicketModel {
           authorName = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || undefined : undefined;
         }
 
-        await eventPublisher.publishCommentCreated({
+        const event = {
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
           commentId: commentId,
@@ -1397,12 +1394,20 @@ export class TicketModel {
             content: validatedData.content,
             author: authorName
           }
-        });
+        };
+        if ((eventPublisher as any).__inboundOutboxPublisher === true) {
+          // The inbound publisher writes its durable outbox in this transaction.
+          await eventPublisher.publishCommentCreated(event);
+        } else {
+          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
+            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId,
+            comment: { id: commentId, content: validatedData.content, author: authorName,
+              isInternal: commentIsInternal, authorType: dbAuthorType },
+          } });
+        }
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
-        if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
-          throw error;
-        }
+        throw error;
       }
     }
 

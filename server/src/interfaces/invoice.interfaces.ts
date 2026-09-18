@@ -315,14 +315,8 @@ export interface IConditionalRule {
   format?: any;
 }
 
-export type PreviewInvoiceResponse = {
-  success: true;
-  data: WasmInvoiceViewModel; // Use the imported ViewModel alias
-} | {
-  success: false;
-  error: string;
-  executionIdentityKey?: string;
-};
+// Canonical definition lives in @alga-psa/types; re-export so the two cannot drift.
+export type { PreviewInvoiceResponse } from '@alga-psa/types';
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';
 

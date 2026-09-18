@@ -32,13 +32,16 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@alga-psa/auth": "*",
     "@alga-psa/authorization": "*",
     "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
-    "@alga-psa/inventory": "*",
     "@alga-psa/documents": "*",
+    "@alga-psa/email": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/inventory": "*",
+    "@alga-psa/notifications": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",

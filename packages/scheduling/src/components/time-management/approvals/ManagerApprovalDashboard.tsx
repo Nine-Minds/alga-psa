@@ -6,12 +6,13 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { Users } from 'lucide-react';
+import { CheckCircle, Users } from 'lucide-react';
 import {
   fetchTimeSheetsForApproval,
   bulkApproveTimeSheets,
@@ -211,15 +212,26 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
               ? t('managerDashboard.actions.hideApproved', { defaultValue: 'Hide Approved' })
               : t('managerDashboard.actions.showApproved', { defaultValue: 'Show Approved' })}
           </Button>
-          <Button
-            id="bulk-approve-btn"
-            onClick={handleBulkApprove}
-            disabled={selectedTimeSheets.length === 0}
-          >
-            {t('managerDashboard.actions.bulkApproveSelected', { defaultValue: 'Bulk Approve Selected' })}
-          </Button>
         </div>
       </div>
+      <BulkActionBar
+        idPrefix="timesheet-approval-bulk-action-bar"
+        count={selectedTimeSheets.length}
+        selectedLabel={t('managerDashboard.bulk.actionBar.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedTimeSheets.length,
+        })}
+        actions={[
+          {
+            id: 'approve',
+            label: t('managerDashboard.actions.bulkApproveSelected', { defaultValue: 'Bulk Approve Selected' }),
+            icon: <CheckCircle className="h-4 w-4" />,
+            onClick: () => { void handleBulkApprove(); },
+          },
+        ]}
+        onClear={() => setSelectedTimeSheets([])}
+        clearLabel={t('managerDashboard.bulk.actionBar.clear', { defaultValue: 'Clear' })}
+      />
       <DataTable
         id="manager-approval-timesheets"
         data={timeSheets}
@@ -243,9 +255,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
                       rangeSelect.handleSelect(record.id, {
                         shiftKey: event.shiftKey,
                         selected: !isChecked,
-                        preventDefault: () => event.preventDefault(),
                       });
-                      event.preventDefault();
                     }}
                     onChange={() => { /* controlled via onClick for shift-range support */ }}
                     disabled={isDisabled}

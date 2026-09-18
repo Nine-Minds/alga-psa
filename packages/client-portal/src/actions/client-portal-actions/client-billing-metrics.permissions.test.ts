@@ -102,7 +102,7 @@ describe('client billing metrics permission hardening', () => {
     const result = await getClientBucketUsage();
 
     expect(hasBillingReadPermissionMock).toHaveBeenCalledWith(expect.anything(), currentUser, 'tenant-1');
-    expect(result).toEqual({ permissionError: 'Unauthorized to access billing data' });
+    expect(result).toEqual({ permissionError: 'Unauthorized to access billing data', messageKey: 'client-portal:errors.access.billingData' });
   });
 
   it('T150: getClientBucketUsageHistory fails closed without billing read', async () => {
@@ -111,7 +111,7 @@ describe('client billing metrics permission hardening', () => {
     const result = await getClientBucketUsageHistory();
 
     expect(hasBillingReadPermissionMock).toHaveBeenCalledWith(expect.anything(), currentUser, 'tenant-1');
-    expect(result).toEqual({ permissionError: 'Unauthorized to access billing data' });
+    expect(result).toEqual({ permissionError: 'Unauthorized to access billing data', messageKey: 'client-portal:errors.access.billingData' });
   });
 
   it('T151: getClientHoursByService fails closed without billing read', async () => {
@@ -124,7 +124,7 @@ describe('client billing metrics permission hardening', () => {
     });
 
     expect(hasBillingReadPermissionMock).toHaveBeenCalledWith(expect.anything(), currentUser, 'tenant-1');
-    expect(result).toEqual({ permissionError: 'Unauthorized to access billing data' });
+    expect(result).toEqual({ permissionError: 'Unauthorized to access billing data', messageKey: 'client-portal:errors.access.billingData' });
   });
 
   it('T152: getClientUsageMetrics fails closed without billing read', async () => {
@@ -136,7 +136,7 @@ describe('client billing metrics permission hardening', () => {
     });
 
     expect(hasBillingReadPermissionMock).toHaveBeenCalledWith(expect.anything(), currentUser, 'tenant-1');
-    expect(result).toEqual({ permissionError: 'Unauthorized to access billing data' });
+    expect(result).toEqual({ permissionError: 'Unauthorized to access billing data', messageKey: 'client-portal:errors.access.billingData' });
   });
 
   it('T153: each metrics action runs its query when billing read is granted', async () => {

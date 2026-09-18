@@ -5,17 +5,17 @@ exports.seed = async function (knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const ticketId = (title) => db.table('tickets')
+    const ticketId = async (title) => (await db.table('tickets')
         .where({ title })
         .select('ticket_id')
-        .first();
+        .first())?.ticket_id ?? null;
 
     // Create schedule entries
     const entries = [
         {
             tenant: tenantId,
             title: 'Cheshire Cat Pathways',
-            work_item_id: ticketId('Missing White Rabbit'),
+            work_item_id: await ticketId('Missing White Rabbit'),
             scheduled_start: knex.raw("CURRENT_TIMESTAMP - INTERVAL '1 day'"),
             scheduled_end: knex.raw("CURRENT_TIMESTAMP + INTERVAL '1 day'"),
             status: 'Scheduled',
@@ -25,7 +25,7 @@ exports.seed = async function (knex) {
         {
             tenant: tenantId,
             title: 'Through the Looking Glass Expedition',
-            work_item_id: ticketId('Missing White Rabbit'),
+            work_item_id: await ticketId('Missing White Rabbit'),
             scheduled_start: knex.raw("CURRENT_TIMESTAMP + INTERVAL '2 days'"),
             scheduled_end: knex.raw("CURRENT_TIMESTAMP + INTERVAL '2 days' + INTERVAL '2 hours'"),
             status: 'Scheduled',
@@ -35,7 +35,7 @@ exports.seed = async function (knex) {
         {
             tenant: tenantId,
             title: 'Emerald City Garden Enchantment',
-            work_item_id: ticketId('Enhance Emerald City Gardens'),
+            work_item_id: await ticketId('Enhance Emerald City Gardens'),
             scheduled_start: knex.raw("CURRENT_TIMESTAMP + INTERVAL '3 days'"),
             scheduled_end: knex.raw("CURRENT_TIMESTAMP + INTERVAL '3 days' + INTERVAL '3 hours'"),
             status: 'Scheduled',

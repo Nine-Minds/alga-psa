@@ -9,11 +9,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getErrorMessage, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { TEMPLATE_AST_VERSION, type IQuoteDocumentTemplate } from '@alga-psa/types';
+import { TEMPLATE_AST_VERSION, type IQuoteDocumentTemplate, type QuoteViewModel } from '@alga-psa/types';
+import { getQuoteForRendering, listQuotes } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplate, saveQuoteDocumentTemplate } from '../../../actions/quoteDocumentTemplates';
 import { runAuthoritativeQuoteTemplatePreview } from '../../../actions/quoteTemplatePreview';
+import { getTenantBrandingForDocumentPreview } from '../../../actions/tenantBrandingPreview';
 import { getStandardQuoteTemplateAstByCode } from '../../../lib/quote-template-ast/standardTemplates';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
@@ -28,16 +31,21 @@ import {
 import {
   createInitialPreviewSessionState,
   previewSessionReducer,
+  type PreviewSessionState,
+  type PreviewSourceKind,
 } from '../../invoice-designer/preview/previewSessionState';
 import {
   derivePreviewPipelineDisplayStatuses,
   hasRenderablePreviewOutput,
+  hasValidPreviewSelectionForSource,
 } from '../../invoice-designer/preview/previewStatus';
 import {
   DEFAULT_QUOTE_PREVIEW_SAMPLE_ID,
   getQuotePreviewSampleScenarioById,
   QUOTE_PREVIEW_SAMPLE_SCENARIOS,
 } from '../../invoice-designer/preview/quoteSampleScenarios';
+import { overlayQuoteSampleTenant } from '../../invoice-designer/preview/tenantBrandingOverlay';
+import type { TenantParty } from '../../../lib/adapters/tenantPartyAdapter';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { LOCALE_CONFIG, normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { PreviewLocaleSelect } from '../../invoice-designer/preview/PreviewLocaleSelect';
@@ -59,6 +67,18 @@ const useDebouncedValue = <T,>(value: T, delayMs: number) => {
   }, [value, delayMs]);
   return debounced;
 };
+
+const createInitialQuotePreviewSessionState = (): PreviewSessionState<QuoteViewModel> => ({
+  ...createInitialPreviewSessionState<QuoteViewModel>(),
+  selectedSampleId: DEFAULT_QUOTE_PREVIEW_SAMPLE_ID,
+});
+
+const buildPreviewSourceOptions = (
+  t: (key: string, options?: Record<string, unknown>) => string,
+): { value: PreviewSourceKind; label: string }[] => [
+  { value: 'sample', label: t('templateEditor.preview.source.sample', { defaultValue: 'Sample' }) },
+  { value: 'existing', label: t('templateEditor.preview.source.existing', { defaultValue: 'Existing' }) },
+];
 
 const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = ({ templateId, standardCode, onBack }) => {
   const { t, i18n } = useTranslation('msp/quotes');
@@ -89,8 +109,14 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
   const designerRootId = useInvoiceDesignerStore((state) => state.rootId);
   const [designerHydratedFor, setDesignerHydratedFor] = useState<string | null>(null);
 
-  // Preview state
-  const [previewState, dispatch] = useReducer(previewSessionReducer, undefined, createInitialPreviewSessionState);
+  // Preview state — the session carries the loaded quote when previewing an existing document.
+  // The shared session seeds the invoice designer's default sample id, so a quote designer has to
+  // seed its own scenario for the sample preview to render as soon as the tab opens.
+  const [previewState, dispatch] = useReducer(
+    previewSessionReducer<QuoteViewModel>,
+    undefined,
+    createInitialQuotePreviewSessionState,
+  );
   const [authoritativePreview, setAuthoritativePreview] = useState<
     Awaited<ReturnType<typeof runAuthoritativeQuoteTemplatePreview>> | null
   >(null);
@@ -101,10 +127,31 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
   );
   const debouncedNodes = useDebouncedValue(designerNodes, 140);
   const previewRunSequence = useRef(0);
+  const detailRequestSequence = useRef(0);
 
   const activeSampleId = previewState.selectedSampleId ?? DEFAULT_QUOTE_PREVIEW_SAMPLE_ID;
   const activeSample = useMemo(() => getQuotePreviewSampleScenarioById(activeSampleId), [activeSampleId]);
-  const previewData = previewState.sourceKind === 'sample' ? activeSample?.data ?? null : null;
+  // Sample scenarios ship a synthetic issuer; show the tenant's real branding so the preview matches
+  // the document a client receives. Null branding keeps the synthetic party.
+  const [tenantBranding, setTenantBranding] = useState<TenantParty | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getTenantBrandingForDocumentPreview()
+      .then((party) => {
+        if (!cancelled) setTenantBranding(party ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const previewData = useMemo(
+    () => (previewState.sourceKind === 'sample'
+      ? (activeSample ? overlayQuoteSampleTenant(activeSample.data, tenantBranding) : null)
+      // Existing quotes already carry the tenant's real branding from the render adapter.
+      : previewState.selectedInvoiceData),
+    [activeSample, previewState.selectedInvoiceData, previewState.sourceKind, tenantBranding],
+  );
 
   const generatedCodeViewSource = useMemo(() => {
     try {
@@ -166,13 +213,20 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     html: authoritativePreview?.render.html ?? null,
   });
 
+  const hasValidSelectionForSource = hasValidPreviewSelectionForSource({
+    sourceKind: previewState.sourceKind,
+    selectedInvoiceId: previewState.selectedInvoiceId,
+    selectedInvoiceData: previewState.selectedInvoiceData,
+    previewData,
+  });
+
   const displayStatuses = derivePreviewPipelineDisplayStatuses({
     statuses: {
       shapeStatus: previewState.shapeStatus,
       renderStatus: previewState.renderStatus,
       verifyStatus: previewState.verifyStatus,
     },
-    canDisplaySuccessStates: Boolean(previewData) && hasRenderedPreviewOutput,
+    canDisplaySuccessStates: hasValidSelectionForSource && hasRenderedPreviewOutput,
   });
 
   const shapeDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
@@ -186,6 +240,71 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     previewState.shapeStatus === 'running' ||
     previewState.renderStatus === 'running' ||
     previewState.verifyStatus === 'running';
+
+  const loadExistingQuoteOptions = async ({
+    search,
+    page,
+    limit,
+  }: {
+    search: string;
+    page: number;
+    limit: number;
+  }) => {
+    const result = await listQuotes({
+      page,
+      pageSize: limit,
+      search,
+      sortBy: 'quote_date',
+      sortOrder: 'desc',
+    });
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      throw new Error(getErrorMessage(result));
+    }
+    return {
+      options: result.data.map((quote) => ({
+        value: quote.quote_id,
+        label: quote.client_name
+          ? `${quote.display_quote_number} · ${quote.client_name}`
+          : quote.display_quote_number,
+      })),
+      total: result.total,
+    };
+  };
+
+  // Load the selected existing quote's render model — the same view model the sent document uses.
+  useEffect(() => {
+    if (previewState.sourceKind !== 'existing' || !previewState.selectedInvoiceId) {
+      return;
+    }
+
+    const requestId = ++detailRequestSequence.current;
+    dispatch({ type: 'detail-load-start' });
+
+    getQuoteForRendering(previewState.selectedInvoiceId)
+      .then((quote) => {
+        if (requestId !== detailRequestSequence.current) {
+          return;
+        }
+        if (isActionMessageError(quote) || isActionPermissionError(quote)) {
+          throw new Error(getErrorMessage(quote));
+        }
+        if (!quote) {
+          throw new Error(t('templateEditor.errors.quoteNotFound', {
+            defaultValue: 'Could not load quote details for preview.',
+          }));
+        }
+        dispatch({ type: 'detail-load-success', payload: quote });
+      })
+      .catch((detailError) => {
+        if (requestId !== detailRequestSequence.current) {
+          return;
+        }
+        const message = detailError instanceof Error
+          ? detailError.message
+          : t('templateEditor.errors.quoteDetailLoad', { defaultValue: 'Failed to load quote details.' });
+        dispatch({ type: 'detail-load-error', error: message });
+      });
+  }, [previewState.selectedInvoiceId, previewState.sourceKind, t]);
 
   // Load template
   useEffect(() => {
@@ -294,7 +413,12 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     if (!previewData) {
       previewRunSequence.current += 1;
       dispatch({ type: 'pipeline-reset' });
-      setAuthoritativePreview(null);
+      const shouldRetainPreviousRender =
+        previewState.sourceKind === 'existing' &&
+        (previewState.isInvoiceDetailLoading || Boolean(previewState.selectedInvoiceId));
+      if (!shouldRetainPreviousRender) {
+        setAuthoritativePreview(null);
+      }
       return;
     }
 
@@ -322,7 +446,18 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
         setAuthoritativePreview(null);
         dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: message });
       });
-  }, [editorTab, manualRunNonce, previewData, previewLocale, previewWorkspace, t, visualWorkspaceTab]);
+  }, [
+    editorTab,
+    manualRunNonce,
+    previewData,
+    previewLocale,
+    previewState.isInvoiceDetailLoading,
+    previewState.selectedInvoiceId,
+    previewState.sourceKind,
+    previewWorkspace,
+    t,
+    visualWorkspaceTab,
+  ]);
 
   const handleSave = async () => {
     if (!template) return;
@@ -482,36 +617,93 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                   activeSample={activeSample}
                   onSourceKindChange={(source) => dispatch({ type: 'set-source', source })}
                   onSampleChange={(sampleId) => dispatch({ type: 'set-sample', sampleId })}
-                  onExistingInvoiceChange={() => {}}
-                  onClearExistingInvoice={() => {}}
-                  loadExistingInvoiceOptions={async () => ({ options: [], total: 0 })}
+                  onExistingInvoiceChange={(quoteId) => dispatch({ type: 'select-existing-invoice', invoiceId: quoteId })}
+                  onClearExistingInvoice={() => dispatch({ type: 'clear-existing-invoice' })}
+                  loadExistingInvoiceOptions={loadExistingQuoteOptions}
                 />
               </TabsContent>
 
               <TabsContent value="preview" className="pt-3 space-y-3">
                 <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
-                  <div className="space-y-1">
-                    <label htmlFor="quote-preview-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {t('templateEditor.preview.sampleScenario', { defaultValue: 'Sample Scenario' })}
-                    </label>
-                    <div className="w-fit">
-                      <CustomSelect
-                        id="quote-designer-preview-sample-select"
-                        options={QUOTE_PREVIEW_SAMPLE_SCENARIOS.map((scenario) => ({
-                          value: scenario.id,
-                          label: scenario.label,
-                        }))}
-                        value={activeSample?.id ?? ''}
-                        onValueChange={(value: string) => dispatch({ type: 'set-sample', sampleId: value })}
-                        placeholder={t('templateEditor.preview.selectScenario', { defaultValue: 'Select scenario...' })}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <ViewSwitcher
+                      currentView={previewState.sourceKind}
+                      onChange={(source: PreviewSourceKind) => dispatch({ type: 'set-source', source })}
+                      options={buildPreviewSourceOptions(t)}
+                    />
+                  </div>
+
+                  {previewState.sourceKind === 'sample' ? (
+                    <div className="space-y-1">
+                      <label htmlFor="quote-preview-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {t('templateEditor.preview.sampleScenario', { defaultValue: 'Sample Scenario' })}
+                      </label>
+                      <div className="w-fit">
+                        <CustomSelect
+                          id="quote-designer-preview-sample-select"
+                          options={QUOTE_PREVIEW_SAMPLE_SCENARIOS.map((scenario) => ({
+                            value: scenario.id,
+                            label: scenario.label,
+                          }))}
+                          value={activeSample?.id ?? ''}
+                          onValueChange={(value: string) => dispatch({ type: 'set-sample', sampleId: value })}
+                          placeholder={t('templateEditor.preview.selectScenario', { defaultValue: 'Select scenario...' })}
+                        />
+                      </div>
+                      {activeSample && (
+                        <p className="text-xs text-slate-500" data-automation-id="quote-designer-preview-sample-description">
+                          {activeSample.description}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-72">
+                      <AsyncSearchableSelect
+                        id="quote-designer-preview-existing-select"
+                        value={previewState.selectedInvoiceId ?? ''}
+                        onChange={(value: string) => {
+                          if (!value) {
+                            dispatch({ type: 'clear-existing-invoice' });
+                            return;
+                          }
+                          dispatch({ type: 'select-existing-invoice', invoiceId: value });
+                        }}
+                        loadOptions={loadExistingQuoteOptions}
+                        placeholder={t('templateEditor.preview.searchQuotes', { defaultValue: 'Search quotes...' })}
+                        searchPlaceholder={t('templateEditor.preview.searchQuotesHint', { defaultValue: 'Search by number or client...' })}
+                        emptyMessage={t('templateEditor.preview.noQuotesFound', { defaultValue: 'No quotes found.' })}
+                        dropdownMode="overlay"
+                        label={t('templateEditor.preview.selectQuote', { defaultValue: 'Select Quote' })}
                       />
                     </div>
-                    {activeSample && (
-                      <p className="text-xs text-slate-500" data-automation-id="quote-designer-preview-sample-description">
-                        {activeSample.description}
-                      </p>
-                    )}
-                  </div>
+                  )}
+
+                  {previewState.sourceKind === 'existing' && previewState.isInvoiceDetailLoading && (
+                    <p
+                      className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400"
+                      data-automation-id="quote-designer-preview-existing-detail-loading"
+                    >
+                      {t('templateEditor.preview.loadingQuoteDetails', { defaultValue: 'Loading quote details...' })}
+                    </p>
+                  )}
+
+                  {previewState.sourceKind === 'existing' && previewState.invoiceDetailError && (
+                    <p
+                      className="rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs text-destructive"
+                      data-automation-id="quote-designer-preview-existing-detail-error"
+                    >
+                      {previewState.invoiceDetailError}
+                    </p>
+                  )}
+
+                  {previewState.sourceKind === 'existing' && !previewState.selectedInvoiceId && (
+                    <p
+                      className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400"
+                      data-automation-id="quote-designer-preview-existing-detail-empty"
+                    >
+                      {t('templateEditor.preview.selectQuoteHint', { defaultValue: 'Select a quote to preview data-bound output.' })}
+                    </p>
+                  )}
                 </div>
 
                 <div
@@ -575,9 +767,13 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 <div className="border dark:border-[rgb(var(--color-border-200))] rounded overflow-hidden bg-white dark:bg-[rgb(var(--color-card))] min-h-[320px]">
                   {!previewData && (
                     <div className="p-4 text-sm text-slate-500">
-                      {t('templateEditor.preview.selectScenarioPrompt', {
-                        defaultValue: 'Select a sample scenario to generate an authoritative preview.',
-                      })}
+                      {previewState.sourceKind === 'existing'
+                        ? t('templateEditor.preview.selectQuoteHint', {
+                          defaultValue: 'Select a quote to preview data-bound output.',
+                        })
+                        : t('templateEditor.preview.selectScenarioPrompt', {
+                          defaultValue: 'Select a sample scenario to generate an authoritative preview.',
+                        })}
                     </div>
                   )}
 

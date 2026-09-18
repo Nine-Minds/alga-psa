@@ -12,6 +12,11 @@ import {
 } from '@alga-psa/billing/services';
 import { getStoredQboCredentialsMap } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroClientService';
+import {
+  isProviderDisconnectActive,
+  PROVIDER_QBO,
+  PROVIDER_XERO,
+} from '@alga-psa/integrations/lib/providerDisconnect';
 
 export interface AccountingSyncCycleJobData extends BaseJobData {
   tenantId: string;
@@ -42,35 +47,49 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
   }
 
   const knex = await getConnection(tenantId);
-  const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
-  if (!integration) {
-    return; // cycle guard: no connection, nothing to do
-  }
 
-  const registry = await AccountingAdapterRegistry.createDefault();
-  const adapter = registry.get(integration.adapterType);
-  if (!adapter) {
-    logger.warn('[accountingSync] No adapter registered for scheduled cycle', {
+  // Explicit early guard (the credential tombstone is the backstop): while a
+  // provider disconnect is pending, no sync cycle may start.
+  const [qboBlocked, xeroBlocked] = await Promise.all([
+    isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => false),
+    isProviderDisconnectActive(knex, tenantId, PROVIDER_XERO).catch(() => false),
+  ]);
+  if (qboBlocked || xeroBlocked) {
+    logger.info('[accountingSync] Cycle skipped: provider disconnect in progress', {
       tenantId,
-      adapterType: integration.adapterType
+      qboBlocked,
+      xeroBlocked,
     });
     return;
   }
 
-  const targets =
-    integration.adapterType === 'quickbooks_online'
-      ? Object.entries(await getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, any>))).map(
-          ([targetRealm, credentials]) => ({
-            targetRealm,
-            refreshTokenExpiresAt: (credentials as any)?.refreshTokenExpiresAt ?? null
-          })
-        )
-      : [{
-          targetRealm: integration.targetRealm,
-          refreshTokenExpiresAt:
-            (await getStoredXeroConnections(tenantId).catch(() => ({} as Record<string, any>)))[integration.targetRealm]
-              ?.refreshTokenExpiresAt ?? null
-        }];
+  const registry = await AccountingAdapterRegistry.createDefault();
+
+  // Scheduled cycles converge EVERY connected target across BOTH providers:
+  // all QBO realms AND all Xero connections. The default resolver's single
+  // selected provider is only a preference for interactive actions — a tenant
+  // connected to both must not have one provider silently skipped.
+  const [qboCredentials, xeroConnections] = await Promise.all([
+    getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, any>)),
+    getStoredXeroConnections(tenantId).catch(() => ({} as Record<string, any>)),
+  ]);
+
+  const targets: Array<{
+    adapterType: string;
+    targetRealm: string;
+    refreshTokenExpiresAt: string | null;
+  }> = [
+    ...Object.entries(qboCredentials).map(([targetRealm, credentials]) => ({
+      adapterType: 'quickbooks_online',
+      targetRealm,
+      refreshTokenExpiresAt: (credentials as any)?.refreshTokenExpiresAt ?? null,
+    })),
+    ...Object.entries(xeroConnections).map(([targetRealm, connection]) => ({
+      adapterType: 'xero',
+      targetRealm,
+      refreshTokenExpiresAt: (connection as any)?.refreshTokenExpiresAt ?? null,
+    })),
+  ];
 
   if (targets.length === 0) {
     return;
@@ -78,11 +97,20 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
 
   await runWithTenant(tenantId, async () => {
     for (const target of targets) {
+      const adapter = registry.get(target.adapterType);
+      if (!adapter) {
+        logger.warn('[accountingSync] No adapter registered for scheduled target', {
+          tenantId,
+          adapterType: target.adapterType,
+          realm: target.targetRealm
+        });
+        continue;
+      }
       try {
         const result = await runAccountingSyncCycle({
           knex,
           tenantId,
-          adapterType: integration.adapterType,
+          adapterType: target.adapterType,
           targetRealm: target.targetRealm,
           adapter,
           refreshTokenExpiresAt: target.refreshTokenExpiresAt

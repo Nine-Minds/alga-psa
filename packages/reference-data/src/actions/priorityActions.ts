@@ -48,24 +48,30 @@ function priorityActionErrorFrom(error: unknown): PriorityActionError | null {
     return actionError(message);
   }
   if (/^Priority .+ not found/.test(message)) {
-    return actionError('Priority not found.');
+    return actionError('Priority not found.', 'msp/settings:errors.priority.notFound');
   }
   if (message === 'Board not found') {
-    return actionError('The selected board no longer exists.');
+    return actionError('The selected board no longer exists.', 'msp/settings:errors.priority.boardMissing');
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '23505') {
-    return actionError('A priority with these details already exists.');
+    return actionError('A priority with these details already exists.', 'msp/settings:errors.priority.duplicate');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required priority field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required priority field: ${dbError.column}.`,
+          'msp/settings:errors.priority.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required priority field.', 'msp/settings:errors.priority.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected priority reference is no longer valid. Please refresh and try again.');
+    return actionError('The selected priority reference is no longer valid. Please refresh and try again.', 'msp/settings:errors.priority.referenceInvalid');
   }
   if (dbError?.code === '23514' || dbError?.code === '22P02') {
-    return actionError('Invalid priority data provided. Please check the priority details.');
+    return actionError('Invalid priority data provided. Please check the priority details.', 'msp/settings:errors.priority.invalidData');
   }
 
   return null;

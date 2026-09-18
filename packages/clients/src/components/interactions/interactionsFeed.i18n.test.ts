@@ -23,8 +23,9 @@ describe('interactions feeds i18n wiring', () => {
     const source = read('./OverallInteractionsFeed.tsx');
     expect(source).toContain("useTranslation('msp/clients')");
     expect(source).toContain("t('interactions.overall.title'");
-    expect(source).toContain("t('interactions.overall.byUser'");
-    expect(source).toContain("t('interactions.feed.filterDialogTitle'");
+    expect(source).toContain("t('interactions.overall.columns.title'");
+    expect(source).toContain("t('interactions.overall.empty'");
+    expect(source).toContain("t('interactions.feed.filter'");
     expect(source).not.toMatch(/>\s*Recent Interactions\s*</);
   });
 
@@ -35,6 +36,9 @@ describe('interactions feeds i18n wiring', () => {
       expect(data.interactions.feed.applyFilters, `${loc} feed.applyFilters`).toBeTruthy();
       expect(data.interactions.overall.title, `${loc} overall.title`).toBeTruthy();
       expect(data.interactions.overall.byUser, `${loc} overall.byUser`).toContain('{{name}}');
+      expect(Object.keys(data.interactions.overall.columns), `${loc} overall.columns`).toHaveLength(7);
+      expect(data.interactions.overall.empty, `${loc} overall.empty`).toBeTruthy();
+      expect(data.interactions.overall.loading, `${loc} overall.loading`).toBeTruthy();
     }
   });
 });

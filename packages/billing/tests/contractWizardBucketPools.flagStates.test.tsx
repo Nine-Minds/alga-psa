@@ -7,14 +7,9 @@ import { HourlyServicesStep } from '../src/components/billing-dashboard/contract
 import { createDefaultContractWizardData, ContractWizardData } from '../src/components/billing-dashboard/contracts/ContractWizard';
 
 const mocks = vi.hoisted(() => ({
-  useFeatureFlag: vi.fn(),
   getBusinessHoursSchedules: vi.fn(),
   getCurrencySymbol: vi.fn(() => '$'),
   translate: vi.fn(),
-}));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: (...args: unknown[]) => mocks.useFeatureFlag(...args),
 }));
 
 vi.mock('@alga-psa/sla/actions', () => ({
@@ -23,10 +18,18 @@ vi.mock('@alga-psa/sla/actions', () => ({
 
 vi.mock('@alga-psa/core', () => ({
   getCurrencySymbol: (...args: unknown[]) => mocks.getCurrencySymbol(...args),
+  // CurrencyInput (rendered inside the draft editor) resolves the currency's
+  // fraction digits; mirror the real Intl-backed implementation.
+  currencyFractionDigits: (currency = 'USD', locale = 'en-US') =>
+    new Intl.NumberFormat(locale, { style: 'currency', currency }).resolvedOptions()
+      .maximumFractionDigits ?? 2,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (...args: unknown[]) => mocks.translate(...args) }),
+  // NumericInput (rendered inside the draft editor) reads the optional i18n
+  // context for locale-aware formatting; outside a provider it returns null.
+  useOptionalI18n: () => null,
 }));
 
 vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
@@ -35,10 +38,6 @@ vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
 
 vi.mock('../src/components/billing-dashboard/contracts/ServiceCatalogPicker', () => ({
   ServiceCatalogPicker: () => <div data-testid="service-picker" />,
-}));
-
-vi.mock('../src/components/billing-dashboard/contracts/BucketOverlayFields', () => ({
-  BucketOverlayFields: () => <div data-testid="bucket-overlay-fields" />,
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/BillingFrequencyOverrideSelect', () => ({
@@ -59,20 +58,6 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
 }));
 
-vi.mock('@alga-psa/ui/components/SwitchWithLabel', () => ({
-  SwitchWithLabel: ({ label, checked, onCheckedChange, ...props }: any) => (
-    <label>
-      <input
-        type="checkbox"
-        checked={Boolean(checked)}
-        onChange={(e) => onCheckedChange?.(e.target.checked)}
-        {...props}
-      />
-      {label}
-    </label>
-  ),
-}));
-
 vi.mock('@alga-psa/ui/components/Alert', () => ({
   Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -91,31 +76,13 @@ function renderStep(data: ContractWizardData, updateData: (d: Partial<ContractWi
   return render(<HourlyServicesStep data={data} updateData={updateData} />);
 }
 
-describe('ContractWizard pool configuration (flag states)', () => {
+describe('ContractWizard pool configuration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.useFeatureFlag.mockReturnValue({ enabled: false, loading: false, error: null });
     mocks.getBusinessHoursSchedules.mockResolvedValue([]);
   });
 
-  it('flag-off: preserves the legacy per-service bucket overlay UI and collects no pools', () => {
-    const data = createDefaultContractWizardData();
-    data.hourly_services = [
-      { service_id: 'svc-1', service_name: 'Support', hourly_rate: 10000, bucket_overlay: undefined },
-    ];
-    const updateData = vi.fn();
-
-    renderStep(data, updateData);
-
-    // Legacy toggle is present (per-service "Set bucket of hours").
-    expect(screen.getByText('Set bucket of hours')).not.toBeNull();
-    // No flag-on pool editor.
-    expect(screen.queryByText('Bucket pools for this line')).toBeNull();
-    expect(screen.queryByText('Add Pool')).toBeNull();
-  });
-
-  it('flag-on: renders the line-level pool draft editor and surfaces drafts through updateData', async () => {
-    mocks.useFeatureFlag.mockReturnValue({ enabled: true, loading: false, error: null });
+  it('renders the line-level pool draft editor and surfaces drafts through updateData', async () => {
     mocks.getBusinessHoursSchedules.mockResolvedValue([
       { schedule_id: 'sch-1', schedule_name: 'Standard hours', is_default: true },
     ]);
@@ -126,19 +93,23 @@ describe('ContractWizard pool configuration (flag states)', () => {
     ];
     const updateData = vi.fn();
 
-    renderStep(data, updateData);
+    const { container } = renderStep(data, updateData);
 
     expect(await screen.findByText('Bucket pools for this line')).not.toBeNull();
-    // Flag ON selects exactly one bucket-authoring path: the legacy per-service
-    // bucket-of-hours input must not coexist with the pool editor.
+    // The legacy per-service bucket-of-hours input no longer exists.
     expect(screen.queryByText('Set bucket of hours')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Add Pool' }));
 
     // Fill the create form: 20 hours, 150 $/hr overage, member service svc-1 at 2x.
-    fireEvent.change(screen.getByDisplayValue('40'), { target: { value: '20' } });
-    fireEvent.change(screen.getByDisplayValue('0'), { target: { value: '150' } });
+    // Locate inputs by their stable ids: the shared NumericInput/CurrencyInput
+    // render formatted values (e.g. "40.00"), so display-value lookups are brittle.
+    const hoursInput = container.querySelector('#wizard-pool-hours')!;
+    const overageInput = container.querySelector('#wizard-pool-overage-rate')!;
+    const memberMultiplierInput = container.querySelector('#wizard-create-pool-member-multiplier')!;
+    fireEvent.change(hoursInput, { target: { value: '20' } });
+    fireEvent.change(overageInput, { target: { value: '150' } });
     fireEvent.change(screen.getByText('Select a service…').closest('select')!, { target: { value: 'svc-1' } });
-    fireEvent.change(screen.getByDisplayValue('1'), { target: { value: '2' } });
+    fireEvent.change(memberMultiplierInput, { target: { value: '2' } });
     fireEvent.click(document.getElementById('add-create-wizard-pool-member-button')!);
 
     fireEvent.click(screen.getByRole('button', { name: 'Create pool' }));

@@ -14,6 +14,10 @@ import { SUITE_EMULATORS } from './index';
  *                              ALGASIM_PORT_MSGRAPH, ALGASIM_PORT_SMTP_SINK
  *   ALGASIM_SCENARIOS          scenario directory (default: bundled scenarios/)
  *   ALGASIM_SEED               PRNG seed (default 1)
+ *   ALGASIM_STATE_FILE         snapshot seeded state here so a container
+ *                              restart does not wipe it (compose sets this)
+ *   ALGASIM_RECORD_SCENARIO    "true" to capture control calls into a
+ *                              replayable scenario (GET /control/recording)
  */
 function packageRoot(): string {
   if (typeof __dirname !== 'undefined') {
@@ -39,6 +43,8 @@ const host = new EmulatorHost({
   ports,
   seed: Number(process.env.ALGASIM_SEED ?? 1),
   scenarios: existsSync(scenarioDir) ? loadScenarioDir(scenarioDir) : [],
+  stateFile: process.env.ALGASIM_STATE_FILE,
+  recordScenario: process.env.ALGASIM_RECORD_SCENARIO === 'true',
 });
 
 host.start().catch((err: unknown) => {

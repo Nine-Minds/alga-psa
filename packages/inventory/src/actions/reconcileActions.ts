@@ -33,7 +33,7 @@ export type ReconcileActionError = ActionPermissionError;
 export const rebuildStockCaches = withAuth(
   async (user, { tenant }): Promise<RebuildStockCachesResult | ReconcileActionError> => {
     if (!(await hasPermission(user, 'inventory', 'update'))) {
-      return permissionError('Permission denied: inventory update required');
+      return permissionError('Permission denied: inventory update required', 'features/inventory:errors.permissions.inventoryUpdate');
     }
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {

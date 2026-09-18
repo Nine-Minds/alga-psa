@@ -20,4 +20,13 @@ describe('document upload and association mutation tenant-scoped query contract'
     expect(uploadAssociationSection).not.toContain(".where('tenant', tenant)");
     expect(uploadAssociationSection).not.toContain(".where({ document_id: document.document_id, tenant })");
   });
+
+  it('files inline editor images and links them to the document they live in', () => {
+    // Without the folder they land in the library root; without the
+    // association nothing ties the image to the article it belongs to.
+    expect(uploadAssociationSection).toContain('resolvedFolderPath === INLINE_IMAGE_FOLDER_PATH');
+    expect(uploadAssociationSection).toContain('ensureInlineImageFolder(knex, tenant, authenticatedUserId)');
+    expect(uploadAssociationSection).toContain('if (options.parentDocumentId) {');
+    expect(uploadAssociationSection).toContain("entity_type: 'document'");
+  });
 });

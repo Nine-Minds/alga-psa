@@ -1,21 +1,25 @@
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
 /**
  * Ticket Service
  * Business logic for ticket-related operations
  */
 
+import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
-import { applyVisibilityBoardFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
+import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
+import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
-import { TICKET_ORIGINS } from '@alga-psa/types';
+import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
-import { prepareTicketResourceReassignment } from '@alga-psa/tickets/lib/reassignTicketResources';
+import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import {
   TicketResourceError,
   addTicketResourceCore,
@@ -31,7 +35,12 @@ import {
 } from '@alga-psa/tickets/lib/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  persistExternalLinksForCreate,
+  publishExternalLinkEvent,
+} from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -65,6 +74,7 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { generateDocumentPreviews, type PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -84,7 +94,16 @@ const TICKET_MOBILE_LIST_FIELDS = [
   'entered_at',
   'closed_at',
   'tags',
+  'master_ticket_id',
+  'bundle_master_ticket_number',
+  'bundle_child_count',
 ];
+
+// Shared with packages/tickets/src/actions/optimizedTicketActions.ts: the
+// fields a bundled child cannot change directly, and the fields a
+// sync_updates master pushes down to its children.
+const BUNDLE_CHILD_LOCKED_FIELDS = ['status_id', 'assigned_to', 'priority_id'] as const;
+const BUNDLE_SYNCED_FIELDS = ['status_id', 'assigned_to', 'priority_id', 'is_closed', 'closed_by', 'closed_at'] as const;
 
 const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   ...TICKET_MOBILE_LIST_FIELDS,
@@ -225,6 +244,43 @@ export interface BundleView {
   settings: { mode: BundleMode; reopen_on_child_reply: boolean } | null;
 }
 
+export type TicketDocumentVariant = 'thumbnail' | 'preview';
+
+// Same job the web composer arms; publishScheduledCommentHandler flips the row
+// to 'published' and dispatches the withheld TICKET_COMMENT_ADDED event.
+const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
+
+type ScheduledCommentPublication = { publishAt: Date; timeZone: string };
+
+function resolveScheduledCommentPublication(
+  data: { scheduled_publish_at?: string; scheduled_publish_tz?: string },
+  isInternal: boolean,
+): ScheduledCommentPublication | null {
+  if (!data.scheduled_publish_at) return null;
+  const publishAt = new Date(data.scheduled_publish_at);
+  if (Number.isNaN(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_at'], message: 'Scheduled publication time must be in the future' },
+    ]);
+  }
+  if (isInternal) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_at'], message: 'Only client-visible comments can be scheduled' },
+    ]);
+  }
+  if (!data.scheduled_publish_tz) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_tz'], message: 'A valid IANA time zone is required for scheduled comments' },
+    ]);
+  }
+  return { publishAt, timeZone: data.scheduled_publish_tz };
+}
+
+function isPreviewableMime(mimeType: string | null | undefined): boolean {
+  const mime = (mimeType ?? '').toLowerCase();
+  return mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('video/');
+}
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -282,7 +338,7 @@ export class TicketService extends BaseService<ITicket> {
     visibility: ContactVisibilityContext
   ): Knex.QueryBuilder {
     query = query.where('t.client_id', visibility.clientId);
-    return applyVisibilityBoardFilter(query, visibility.visibleBoardIds, 't.board_id');
+    return applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
   }
 
   /**
@@ -398,6 +454,17 @@ export class TicketService extends BaseService<ITicket> {
     const needsStatuses = !selectedFields || wants('status_name') || wants('status_is_closed') || mappedSortField === 'status_name';
     const needsPriorities = !selectedFields || wants('priority_name') || mappedSortField === 'priority_name';
     const needsAssignedUser = !selectedFields || wants('assigned_to_name');
+    const needsBundleMaster = !selectedFields || wants('bundle_master_ticket_number');
+    const needsBundleChildCount = !selectedFields || wants('bundle_child_count');
+
+    // Correlated on t.tenant so the count stays inside the ticket's shard.
+    const bundleChildCountSelect = knex.raw(
+      '(SELECT COUNT(*)::int FROM tickets tc WHERE tc.tenant = t.tenant AND tc.master_ticket_id = t.ticket_id) AS bundle_child_count'
+    );
+
+    if (needsBundleMaster) {
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+    }
 
     if (needsClients) {
       dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
@@ -452,6 +519,8 @@ export class TicketService extends BaseService<ITicket> {
           'cat.category_name',
           'subcat.category_name as subcategory_name',
           'board.board_name as board_name',
+          'mt.ticket_number as bundle_master_ticket_number',
+          bundleChildCountSelect,
           knex.raw(`CASE 
             WHEN entered_user.first_name IS NOT NULL AND entered_user.last_name IS NOT NULL 
             THEN CONCAT(entered_user.first_name, ' ', entered_user.last_name) 
@@ -478,6 +547,9 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('updated_at')) selectParts.push('t.updated_at');
       if (selectedFields.includes('entered_at')) selectParts.push('t.entered_at');
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
+      if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
+      if (needsBundleMaster) selectParts.push('mt.ticket_number as bundle_master_ticket_number');
+      if (needsBundleChildCount) selectParts.push(bundleChildCountSelect);
 
       if (selectedFields.includes('assigned_to_name')) {
         selectParts.push(
@@ -611,9 +683,14 @@ export class TicketService extends BaseService<ITicket> {
     scopedDb.tenantJoin(ticketQuery, 'priorities as pri', 't.priority_id', 'pri.priority_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
     const ticket = await ticketQuery
       .select(
         't.*',
+        'mt.ticket_number as bundle_master_ticket_number',
+        knex.raw(
+          '(SELECT COUNT(*)::int FROM tickets tc WHERE tc.tenant = t.tenant AND tc.master_ticket_id = t.ticket_id) AS bundle_child_count'
+        ),
         'comp.client_name',
         'cl.location_name as location_name',
         'cl.email as client_email',
@@ -684,7 +761,7 @@ export class TicketService extends BaseService<ITicket> {
       )
       .orderBy('d.updated_at', 'desc');
 
-    return documents as IDocument[];
+    return filterReadableCommentAttachments(knex, context.tenant, context.userId, documents) as Promise<IDocument[]>;
   }
 
   /**
@@ -1014,7 +1091,7 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
-  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
+  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext, commentAttachmentDraft = false): Promise<IDocument> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
@@ -1033,6 +1110,7 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
+    if (commentAttachmentDraft && !await canAccessAttachmentTicket(knex, context.tenant, context.userId, ticketId)) throw new NotFoundError('Ticket not found');
     const mimeType = file.type || 'application/octet-stream';
     try {
       await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
@@ -1052,6 +1130,8 @@ export class TicketService extends BaseService<ITicket> {
       uploaded_by_id: context.userId,
     });
 
+    let documentCommitted = false;
+    try {
     const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
       .where({
         entity_id: ticketId,
@@ -1077,10 +1157,15 @@ export class TicketService extends BaseService<ITicket> {
       mime_type: mimeType,
       file_size: file.size,
       folder_path: folderRecord?.folder_path,
+      ...(commentAttachmentDraft ? { is_client_visible: true } : {}),
     };
 
     await withTransaction(knex, async (trx) => {
       await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
+      if (commentAttachmentDraft) await tenantDb(trx, context.tenant).table('ticket_comment_attachments').insert({
+        tenant: context.tenant, ticket_id: ticketId, document_id: documentId,
+        created_by: context.userId, state: 'draft', expires_at: new Date(Date.now() + 86400000),
+      });
       await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
         association_id: uuidv4(),
         document_id: documentId,
@@ -1111,12 +1196,20 @@ export class TicketService extends BaseService<ITicket> {
       });
     });
 
+    documentCommitted = true;
+    await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
     }
 
     return createdDocument;
+    } finally {
+      if (commentAttachmentDraft && !documentCommitted) {
+        try { await StorageService.deleteFile(uploadResult.file_id, context.userId); }
+        catch (error) { console.error('Unable to remove unclaimed comment attachment storage', error); }
+      }
+    }
   }
 
   async downloadTicketDocument(
@@ -1147,7 +1240,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
 
-    if (!doc || !doc.file_id) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -1157,6 +1250,85 @@ export class TicketService extends BaseService<ITicket> {
       fileName: doc.document_name || result.metadata.original_name,
       mimeType: doc.mime_type || result.metadata.mime_type,
     };
+  }
+
+  /**
+   * Serve the cached thumbnail (200x200) or preview (800x600) image for a
+   * ticket document. Images and PDFs uploaded before previews existed get
+   * their previews generated on first request and persisted.
+   */
+  async downloadTicketDocumentVariant(
+    ticketId: string,
+    documentId: string,
+    variant: TicketDocumentVariant,
+    context: ServiceContext
+  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const scopedDb = tenantDb(knex, context.tenant);
+    const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
+    scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      docQuery.where('d.is_client_visible', true);
+    }
+
+    const doc = await docQuery
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+      })
+      .select('d.*')
+      .first() as IDocument | undefined;
+
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+      throw new NotFoundError('Document not found');
+    }
+
+    const column = variant === 'thumbnail' ? 'thumbnail_file_id' : 'preview_file_id';
+    let fileId = doc[column] ?? null;
+
+    if (!fileId && !doc.preview_generated_at && isPreviewableMime(doc.mime_type)) {
+      const original = await StorageService.downloadFile(doc.file_id);
+      const generated = await this.persistDocumentPreviews(knex, doc, original.buffer, context.tenant);
+      fileId = generated?.[column] ?? null;
+    }
+
+    if (!fileId) {
+      throw new NotFoundError(`Document ${variant} not available`);
+    }
+
+    const result = await StorageService.downloadFile(fileId);
+    return {
+      buffer: result.buffer,
+      fileId,
+      mimeType: result.metadata.mime_type || 'image/jpeg',
+    };
+  }
+
+  private async persistDocumentPreviews(
+    knex: Knex,
+    document: IDocument,
+    buffer: Buffer,
+    tenant: string,
+  ): Promise<PreviewGenerationResult | null> {
+    try {
+      const result = await generateDocumentPreviews(document, buffer);
+      await tenantScopedTable(knex, 'documents', tenant)
+        .where({ document_id: document.document_id })
+        .update({
+          thumbnail_file_id: result.thumbnail_file_id,
+          preview_file_id: result.preview_file_id,
+          preview_generated_at: result.preview_generated_at,
+        });
+      return result;
+    } catch (error) {
+      console.error(`[TicketService] Preview generation failed for document ${document.document_id}:`, error);
+      return null;
+    }
   }
 
   async deleteTicketDocument(
@@ -1423,7 +1595,7 @@ export class TicketService extends BaseService<ITicket> {
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
       const { knex } = await this.getKnex();
   
-      const fullTicket = await withTransaction(knex, async (trx) => {
+      const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -1477,6 +1649,18 @@ export class TicketService extends BaseService<ITicket> {
           await this.handleTags(ticketResult.ticket_id, data.tags, context, trx);
         }
 
+        // Persist ticket-level external links in the same transaction so a bot's
+        // create-with-links is atomic. Any invalid link — a second origin, a
+        // duplicate external record, or an unusable destination — throws and
+        // rolls back the whole ticket create.
+        const externalLinks = await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketResult.ticket_id,
+          data.external_links ?? null,
+          context.userId,
+        );
+
         // Get the full ticket data for return
         const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
           .where({ ticket_id: ticketResult.ticket_id })
@@ -1514,7 +1698,7 @@ export class TicketService extends BaseService<ITicket> {
           },
         });
 
-        return fullTicket as ITicket;
+        return { fullTicket, externalLinks };
       });
 
       await this.safePublishEvent('TICKET_CREATED', context, {
@@ -1528,7 +1712,29 @@ export class TicketService extends BaseService<ITicket> {
         board_id: fullTicket.board_id,
         priority_id: fullTicket.priority_id,
         client_id: fullTicket.client_id,
+        ...(externalLinks.length > 0
+          ? {
+              externalLinks: externalLinks.map((link) => ({
+                linkId: link.link_id,
+                entityType: link.entity_type,
+                entityId: link.entity_id,
+                system: link.system,
+                externalId: link.external_id,
+                externalParentId: link.external_parent_id ?? null,
+                realm: link.realm ?? null,
+                url: link.url ?? null,
+                relationship: link.relationship,
+              })),
+            }
+          : {}),
       });
+
+      // Post-commit: announce each inline ticket link so subscribers see the
+      // same events as links added through the dedicated endpoint. Publishing
+      // here (not inside the transaction) means a rollback emits nothing.
+      for (const link of externalLinks) {
+        await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', context.tenant, link, context.userId ?? null);
+      }
 
       return fullTicket;
     }
@@ -1567,6 +1773,25 @@ export class TicketService extends BaseService<ITicket> {
       delete (cleanedData as any).override_close_rules_reason;
       delete (cleanedData as any).suppressContactNotifications;
       delete (cleanedData as any).suppressInternalNotifications;
+      // Create-only field: never a `tickets` column, so it must not reach the
+      // UPDATE statement. Inline links are written by the create paths only.
+      delete (cleanedData as any).external_links;
+
+      // Bundled child tickets lock workflow fields, same as the in-app
+      // update action: status, assignment and priority flow down from the
+      // master (sync_updates) or are managed there (link_only).
+      if (currentTicket.master_ticket_id) {
+        const attempted = BUNDLE_CHILD_LOCKED_FIELDS.filter(
+          (field) => (cleanedData as Record<string, unknown>)[field] !== undefined
+            && (cleanedData as Record<string, unknown>)[field] !== (currentTicket as Record<string, unknown>)[field]
+        );
+        if (attempted.length > 0) {
+          throw new ValidationError('Validation failed', attempted.map((field) => ({
+            path: [field],
+            message: `This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`,
+          })));
+        }
+      }
 
       const isBoardChange =
         cleanedData.board_id !== undefined &&
@@ -1599,16 +1824,29 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
       
+      const statusChanged =
+        !!cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id;
+
+      // Resolve the old/new status rows once, up front. The statuses table is
+      // not mutated by this method, so hoisting these reads above the write is
+      // safe; it lets the denormalized close fields be folded into the same
+      // UPDATE that produces the returned row. Mirrors the "keep is_closed in
+      // sync" handling in updateTicketWithCache / ticketBundleUtils.
+      const nextStatus = statusChanged
+        ? await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: cleanedData.status_id })
+          .first()
+        : null;
+      const previousStatus = statusChanged
+        ? await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: currentTicket.status_id })
+          .first()
+        : null;
+
       // Pre-close validation gates: when this update flips the ticket from an
       // open to a closed status, enforce the board's close rules before any
       // writes. Surfaces as a 422 with structured failure details.
-      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
-        const nextStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: cleanedData.status_id })
-          .first();
-        const previousStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: currentTicket.status_id })
-          .first();
+      if (statusChanged) {
         if (nextStatus?.is_closed && !previousStatus?.is_closed) {
           const merged = { ...currentTicket, ...cleanedData };
           try {
@@ -1648,11 +1886,33 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      const updateData = {
+      const updateData: Record<string, unknown> = {
         ...cleanedData,
         updated_by: context.userId,
         updated_at: knex.raw('now()')
       };
+
+      // Fold the denormalized close fields into the same write whose result is
+      // returned, so the response cannot report a stale is_closed / closed_at.
+      // Derived values are applied after the spread so they win when the status
+      // crosses the closed boundary; a caller-supplied closed_by / closed_at
+      // still applies on a status change that does not cross it.
+      // LEVERAGE: pattern close-denormalization — the same set-or-clear
+      // is_closed/closed_at/closed_by shape is duplicated in
+      // optimizedTicketActions.updateTicketWithCache and
+      // ticketBundleUtils.maybeReopenBundleMasterFromChildReply.
+      let closedAt: Date | null = null;
+      if (statusChanged) {
+        updateData.is_closed = !!nextStatus?.is_closed;
+        if (nextStatus?.is_closed && !previousStatus?.is_closed) {
+          closedAt = new Date();
+          updateData.closed_at = closedAt;
+          updateData.closed_by = context.userId;
+        } else if (!nextStatus?.is_closed && previousStatus?.is_closed) {
+          updateData.closed_at = null;
+          updateData.closed_by = null;
+        }
+      }
 
       // Changing the primary assignee requires clearing the ticket_resources
       // rows that reference the old one, then re-keying them afterwards.
@@ -1680,42 +1940,20 @@ export class TicketService extends BaseService<ITicket> {
         await finalizeResourceReassignment();
       }
 
+      await this.propagateBundleMasterUpdate(trx, context, id, updateData);
+
       // Handle tags if provided
       if (data.tags) {
         await this.handleTags(id, data.tags, context, trx);
       }
 
       // Publish appropriate events
-      if (data.status_id && data.status_id !== currentTicket.status_id) {
-        // Check if ticket is being closed or reopened
-        const newStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: data.status_id })
-          .first();
-        const oldStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: currentTicket.status_id })
-          .first();
-
-        // Keep the ticket row's denormalized close flag aligned with the selected status.
-        await tenantScopedTable(trx, 'tickets', context.tenant)
-          .where({ ticket_id: id })
-          .update({ is_closed: !!newStatus?.is_closed });
-
-        // Record closed_at / closed_by when transitioning to/from closed status
-        if (newStatus?.is_closed && !oldStatus?.is_closed) {
-          await tenantScopedTable(trx, 'tickets', context.tenant)
-            .where({ ticket_id: id })
-            .update({ closed_at: new Date(), closed_by: context.userId });
-        } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
-          await tenantScopedTable(trx, 'tickets', context.tenant)
-            .where({ ticket_id: id })
-            .update({ closed_at: null, closed_by: null });
-        }
-
-        if (newStatus?.is_closed) {
+      if (statusChanged) {
+        if (nextStatus?.is_closed) {
           await this.safePublishEvent('TICKET_CLOSED', context, {
             ticketId: ticket.ticket_id,
             closedByUserId: context.userId,
-            closedAt: new Date().toISOString(),
+            closedAt: (closedAt ?? new Date()).toISOString(),
             suppressContactNotifications,
             suppressInternalNotifications,
           });
@@ -1795,6 +2033,41 @@ export class TicketService extends BaseService<ITicket> {
 
       return this.withDescriptionHtml(ticket as ITicket);
     });
+  }
+
+  /**
+   * Bundle masters in sync_updates mode push workflow changes to their
+   * children. Mirrors the in-app update action so a master closed from the
+   * mobile app or the public API cascades exactly like one closed on the web.
+   * Children publish no events of their own; the master's carry the change.
+   */
+  private async propagateBundleMasterUpdate(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    masterTicketId: string,
+    updateData: Record<string, unknown>
+  ): Promise<void> {
+    const propagate: Record<string, unknown> = {};
+    for (const field of BUNDLE_SYNCED_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(updateData, field)) {
+        propagate[field] = updateData[field];
+      }
+    }
+    if (Object.keys(propagate).length === 0) return;
+
+    const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+      .select('mode')
+      .where({ master_ticket_id: masterTicketId })
+      .first();
+    if (settings?.mode !== 'sync_updates') return;
+
+    await tenantScopedTable(trx, 'tickets', context.tenant)
+      .where({ master_ticket_id: masterTicketId })
+      .update({
+        ...propagate,
+        updated_by: context.userId,
+        updated_at: new Date().toISOString(),
+      });
   }
 
   private withDescriptionHtml<T extends ITicket>(ticket: T): T & { description_html: string } {
@@ -2041,6 +2314,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<any> {
     const { knex } = await this.getKnex();
     const notificationSuppression = resolveTicketNotificationSuppression(data);
+    let createdExternalLinks: IExternalEntityLink[] = [];
 
     const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
@@ -2128,6 +2402,10 @@ export class TicketService extends BaseService<ITicket> {
         });
       }
 
+      // A reply into an internal thread inherits is_internal=true, so this
+      // check runs after visibility is resolved rather than on the raw body.
+      const scheduledPublication = resolveScheduledCommentPublication(data, apiIsInternal);
+
       const commentData = {
         comment_id: apiCommentId,
         thread_id: apiThreadId,
@@ -2141,9 +2419,34 @@ export class TicketService extends BaseService<ITicket> {
         created_at: apiNowIso,
         updated_at: apiNowIso,
         metadata: data.metadata,
+        ...(scheduledPublication
+          ? {
+              publish_state: 'scheduled',
+              scheduled_publish_at: scheduledPublication.publishAt.toISOString(),
+              scheduled_publish_tz: scheduledPublication.timeZone,
+            }
+          : {}),
       };
 
       const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
+
+      await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
+
+      // Persist comment-level external links in the same transaction as the
+      // comment they describe. Invalid links roll back the comment create.
+      if (data.external_links && data.external_links.length > 0) {
+        createdExternalLinks = await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketId,
+          data.external_links.map((link) => ({
+            ...link,
+            entity_type: 'comment' as const,
+            comment_id: comment.comment_id,
+          })),
+          context.userId,
+        );
+      }
 
       if (apiIsReply) {
         await tenantScopedTable(trx, 'comment_threads', context.tenant)
@@ -2154,7 +2457,8 @@ export class TicketService extends BaseService<ITicket> {
           });
       }
 
-      if (!comment.is_internal) {
+      // A scheduled public comment is not a client reply until publication.
+      if (!comment.is_internal && !scheduledPublication) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
       }
 
@@ -2185,31 +2489,105 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_email: null
       };
 
-      return {
-        response,
-        eventPayload: {
-          ticketId: ticketId,
-          userId: context.userId,
-          comment: {
-            id: comment.comment_id,
-            content: comment.note,
-            author: authorName,
-            isInternal: comment.is_internal
-          },
-          ...notificationSuppression,
-        }
+      const eventPayload = {
+        tenantId: context.tenant, ticketId, commentId: comment.comment_id, userId: context.userId,
+        comment: { id: comment.comment_id, content: comment.note, author: authorName, isInternal: comment.is_internal },
+        ...notificationSuppression,
       };
+      if (scheduledPublication) {
+        // Never arm the worker before the row is committed; the boot
+        // reconciler repairs a post-commit scheduling failure.
+        registerAfterCommit(trx, async () => {
+          const scheduled = await scheduleBackgroundJobAt(
+            SCHEDULED_COMMENT_JOB,
+            { tenantId: context.tenant, ticketId, commentId: comment.comment_id },
+            scheduledPublication.publishAt,
+            { singletonKey: `publish-comment:${comment.comment_id}`, metadata: { scheduledPublishTz: scheduledPublication.timeZone } },
+          );
+          await tenantScopedTable(knex, 'comments', context.tenant)
+            .where({ comment_id: comment.comment_id, publish_state: 'scheduled' })
+            .update({ schedule_job_id: scheduled.jobId });
+        }, `schedule comment publication ${comment.comment_id}`);
+      } else {
+        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
+      }
+      return { response, externalLinks: createdExternalLinks };
     });
 
-    // Publish after the transaction commits so email and in-app notification
-    // subscribers can load the ticket/comment rows reliably.
-    await this.safePublishEvent('TICKET_COMMENT_ADDED', context, result.eventPayload);
+    // Intent is persisted; after-commit dispatch and recurring recovery deliver it.
+
+    // Post-commit: announce comment-level inline links. A rolled-back comment
+    // create never reaches this point, so no event is emitted for it.
+    for (const link of result.externalLinks) {
+      await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', context.tenant, link, context.userId ?? null);
+    }
 
     return result.response;
   }
 
   /**
-   * Update an existing comment (only the comment author may edit)
+   * Cancel a scheduled (not yet published) comment. Mirrors the web
+   * cancelScheduledComment action: cancellation is a retained audit state and
+   * the compare-and-set on publish_state races safely against the worker.
+   */
+  async cancelScheduledComment(
+    ticketId: string,
+    commentId: string,
+    context: ServiceContext
+  ): Promise<{ comment_id: string; publish_state: 'canceled' }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    return withTransaction(knex, async (trx) => {
+      const existing = await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, ticket_id: ticketId })
+        .first();
+
+      if (!existing) {
+        throw new NotFoundError('Comment not found');
+      }
+      if (existing.publish_state !== 'scheduled') {
+        throw new ValidationError('Only scheduled comments can be canceled');
+      }
+      if (existing.user_id !== context.userId && context.user?.user_type !== 'internal') {
+        throw new ForbiddenError('You can only cancel your own scheduled comments');
+      }
+
+      await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, publish_state: 'scheduled' })
+        .update({
+          publish_state: 'canceled',
+          deleted_at: trx.fn.now(),
+          schedule_job_id: null,
+          updated_at: trx.fn.now(),
+        });
+      await withdrawCommentAttachments(trx, context.tenant, commentId);
+      if (existing.schedule_job_id) {
+        await cancelScheduledJob(existing.schedule_job_id, context.tenant);
+      }
+
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED',
+        entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+        entityId: commentId,
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: { canceled: true },
+      });
+
+      return { comment_id: commentId, publish_state: 'canceled' as const };
+    });
+  }
+
+  /**
+   * Update an existing comment. Only the comment author may edit their own
+   * comment. Comments with no authoring user (user_id null — e.g. inbound
+   * email comments attributed to a contact) have no owner who could ever
+   * edit them, so an operator holding the `ticket:update` RBAC permission
+   * (which covers updating tickets and their comments) may repair them; the
+   * repair is recorded in the comment metadata.
    */
   async updateComment(
     ticketId: string,
@@ -2232,17 +2610,49 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('System-generated comments cannot be edited');
       }
 
+      let operatorRepair = false;
       if (comment.user_id !== context.userId) {
-        throw new ValidationError('You can only edit your own comments');
+        // Fail closed: the operator path requires a loaded caller user record
+        // (the API controller always provides one) and the RBAC permission.
+        const canOperatorRepair =
+          comment.user_id == null &&
+          context.user != null &&
+          (await hasPermission(context.user, 'ticket', 'update', trx));
+        if (!canOperatorRepair) {
+          throw new ValidationError('You can only edit your own comments');
+        }
+        operatorRepair = true;
+      }
+
+      const update: Record<string, unknown> = {
+        note: data.comment_text,
+        updated_at: knex.raw('now()'),
+      };
+      if (operatorRepair) {
+        // Preserve existing metadata (parser results, email threading data,
+        // attachments references) and append an attributable audit record.
+        const existingMetadata =
+          typeof comment.metadata === 'string'
+            ? JSON.parse(comment.metadata)
+            : comment.metadata ?? {};
+        const operatorEdits = Array.isArray(existingMetadata.operatorEdits)
+          ? existingMetadata.operatorEdits
+          : [];
+        update.metadata = {
+          ...existingMetadata,
+          operatorEdits: [
+            ...operatorEdits,
+            { userId: context.userId, at: new Date().toISOString() },
+          ],
+        };
       }
 
       const [updated] = await tenantScopedTable(trx, 'comments', context.tenant)
         .where({ comment_id: commentId })
-        .update({
-          note: data.comment_text,
-          updated_at: knex.raw('now()'),
-        })
+        .update(update)
         .returning('*');
+
+      await reconcileCommentAttachments(trx, context.tenant, commentId, context.userId);
 
       return {
         ...updated,
@@ -2474,8 +2884,30 @@ export class TicketService extends BaseService<ITicket> {
    */
   private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData, knex: Knex, tenant: string): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
+
+    // external_system + external_id must match the SAME external-link row when
+    // both are supplied; separate EXISTS clauses would let a ticket with
+    // github/42 and jira/99 match github + 99.
+    const externalSystem = filters.external_system;
+    const externalId = filters.external_id;
+    if (externalSystem || externalId) {
+      const externalLinkSubquery = scopedDb.subquery('external_entity_links as eel')
+        .select('*')
+        .whereRaw('eel.ticket_id = t.ticket_id')
+        .andWhere('eel.entity_type', 'ticket');
+      if (externalSystem) {
+        externalLinkSubquery.andWhere('eel.system', externalSystem);
+      }
+      if (externalId) {
+        externalLinkSubquery.andWhere('eel.external_id', externalId);
+      }
+      query.whereExists(externalLinkSubquery);
+    }
+    const handledExternalFilters = new Set(['external_system', 'external_id']);
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
+      if (handledExternalFilters.has(key)) return;
 
       switch (key) {
         case 'title':
@@ -2637,6 +3069,11 @@ export class TicketService extends BaseService<ITicket> {
           break;
         case 'created_to':
           query.where('t.entered_at', '<=', value);
+          break;
+        case 'bundle_view':
+          if (value === 'bundled') {
+            query.whereNull('t.master_ticket_id');
+          }
           break;
       }
     });

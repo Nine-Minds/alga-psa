@@ -67,7 +67,8 @@ describe('DraftsTab i18n wiring contract', () => {
     );
 
     const sourceKeyChecks = [
-      'draftsTab.bulkActions',
+      'draftsTab.bulk.actionBar.selectedCount',
+      'draftsTab.bulk.actionBar.clear',
       'draftsTab.actions.finalizeSelected',
       'draftsTab.actions.reverseSelected',
       'draftsTab.empty.title',
@@ -79,8 +80,8 @@ describe('DraftsTab i18n wiring contract', () => {
       'draftsTab.reverseDialog.cancel',
     ];
     const localeKeyChecks = [
-      'draftsTab.bulkActions_one',
-      'draftsTab.bulkActions_other',
+      'draftsTab.bulk.actionBar.selectedCount',
+      'draftsTab.bulk.actionBar.clear',
       'draftsTab.actions.finalizeSelected',
       'draftsTab.actions.reverseSelected',
       'draftsTab.empty.title',
@@ -94,7 +95,7 @@ describe('DraftsTab i18n wiring contract', () => {
       'draftsTab.reverseDialog.cancel',
     ];
 
-    expect(source).toContain("t('draftsTab.bulkActions'");
+    expect(source).toContain("t('draftsTab.bulk.actionBar.selectedCount'");
     expect(source).toContain("t('draftsTab.reverseDialog.title'");
     expect(source).toContain("t('draftsTab.reverseDialog.message'");
 

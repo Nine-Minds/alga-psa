@@ -88,7 +88,7 @@ export const BoardFilterPicker: React.FC<BoardFilterPickerProps & AutomationProp
           }}
           className={`flex-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
             filterState === opt.value
-              ? 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] shadow-sm'
+              ? 'chip-primary shadow-sm'
               : 'text-gray-500 hover:text-[rgb(var(--color-primary-600))]'
           }`}
         >

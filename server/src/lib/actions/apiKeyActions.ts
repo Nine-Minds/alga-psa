@@ -52,7 +52,7 @@ interface AdminApiKeyListView extends ApiKeyListView {
  */
 function clientUserPermissionError(user: { user_type?: string }): ActionPermissionError | null {
   if (user.user_type === 'client') {
-    return permissionError('Permission denied: API key management is restricted to internal users');
+    return permissionError('Permission denied: API key management is restricted to internal users', 'msp/profile:errors.apiKeys.internalOnly');
   }
   return null;
 }
@@ -67,7 +67,7 @@ async function requireTenantAdmin(userId: string): Promise<ActionPermissionError
     return null;
   }
 
-  return permissionError('Permission denied: Admin access required');
+  return permissionError('Permission denied: Admin access required', 'msp/profile:errors.permissions.adminRequired');
 }
 
 /**
@@ -86,7 +86,7 @@ export const createApiKey = withAuth(async (
 
   const expiresOn = expiresAt ? new Date(expiresAt) : undefined;
   if (expiresAt && Number.isNaN(expiresOn?.getTime())) {
-    return actionError('Choose a valid expiration date for this API key.');
+    return actionError('Choose a valid expiration date for this API key.', 'msp/profile:errors.apiKeys.invalidExpiration');
   }
 
   const apiKey = await ApiKeyService.createApiKey(
@@ -154,7 +154,7 @@ export const deactivateApiKey = withAuth(async (
   const keyExists = apiKeys.some(key => key.api_key_id === apiKeyId);
 
   if (!keyExists) {
-    return actionError('API key not found.');
+    return actionError('API key not found.', 'msp/profile:errors.apiKeys.notFound');
   }
 
   await ApiKeyService.deactivateApiKey(apiKeyId, tenant);
@@ -225,7 +225,7 @@ export const adminDeactivateApiKey = withAuth(async (
     return { deactivated: true };
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
-      return actionError('API key not found.');
+      return actionError('API key not found.', 'msp/profile:errors.apiKeys.notFound');
     }
     throw error;
   }

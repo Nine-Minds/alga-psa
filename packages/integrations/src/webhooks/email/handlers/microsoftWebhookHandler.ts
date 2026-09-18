@@ -1,10 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
+import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
 import { persistIngressPointer } from '@alga-psa/shared/services/email/inboundEmailProducer';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
+const WEBHOOK_RATE_LIMIT_NAMESPACE = 'email-webhook-inbound';
+const WEBHOOK_RATE_LIMIT_TENANT = 'global';
+
+function safeEquals(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a, 'utf8');
+  const bBuf = Buffer.from(b, 'utf8');
+  return aBuf.length === bBuf.length && timingSafeEqual(aBuf, bBuf);
+}
+
+function requestIp(request: NextRequest): string {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')?.trim()
+    || 'unknown';
+}
+
+async function enforceWebhookRateLimit(request: NextRequest): Promise<NextResponse | null> {
+  const result = await TokenBucketRateLimiter.getInstance().tryConsume(
+    WEBHOOK_RATE_LIMIT_NAMESPACE,
+    WEBHOOK_RATE_LIMIT_TENANT,
+    requestIp(request),
+  );
+  if (result.allowed) return null;
+  const retryAfterSeconds = Math.max(1, Math.ceil((result.retryAfterMs || 1000) / 1000));
+  return NextResponse.json(
+    { error: 'Too many webhook requests' },
+    { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } },
+  );
+}
 
 interface MicrosoftNotification {
   changeType: string;
@@ -36,6 +66,8 @@ async function assertTenantEmailProductAccess(trx: any, tenantId: string): Promi
 // Handle GET for Microsoft validation handshake
 export async function handleMicrosoftWebhookGet(request: NextRequest) {
   try {
+    const rateLimited = await enforceWebhookRateLimit(request);
+    if (rateLimited) return rateLimited;
     const url = request.nextUrl;
     const validationToken = url.searchParams.get('validationtoken') || url.searchParams.get('validationToken');
     if (validationToken) {
@@ -55,6 +87,8 @@ export async function handleMicrosoftWebhookGet(request: NextRequest) {
 
 export async function handleMicrosoftWebhookPost(request: NextRequest) {
   try {
+    const rateLimited = await enforceWebhookRateLimit(request);
+    if (rateLimited) return rateLimited;
     // Handle subscription validation
     // Microsoft may send validation either via querystring (GET) or header on POST in some flows/tests
     const url = request.nextUrl;
@@ -126,6 +160,7 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
         const providerId = notification.subscriptionId;
         console.log(`🔍 Processing notification for subscription: ${providerId}`);
 
+        let securityRejection: 'missing_stored_client_state' | 'missing_client_state' | 'invalid_client_state' | null = null;
         await withTransaction(knex, async (trx) => {
           // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
           const discoveryDb = tenantDb(trx, PROVIDER_TENANT_DISCOVERY);
@@ -198,23 +233,24 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
         });
           await assertTenantEmailProductAccess(trx, row.tenant);
 
-          // Validate clientState against stored verification token if present
-          // Note: MicrosoftGraphAdapter sets clientState to webhook_verification_token (not tenant ID)
+          // Graph does not sign notifications; clientState is the origin check.
           const storedToken = (row as any).mc_webhook_verification_token as string | undefined;
-          if (storedToken) {
-            if (!notification.clientState) {
-              console.error(`❌ Missing clientState for provider ${row.id}`);
-              return;
-            }
-            if (notification.clientState !== storedToken) {
-              console.error(`❌ Invalid client state for provider ${row.id}`);
-              console.error(`  Expected: ${storedToken.substring(0, 8)}...(${storedToken.length} chars)`);
-              console.error(`  Received: ${notification.clientState.substring(0, 8)}...(${notification.clientState.length} chars)`);
-              return;
-            }
-            console.log(`✅ Client state validation passed for provider ${row.id}`);
-          } else {
-            console.warn(`⚠️ No stored verification token for provider ${row.id} - skipping client state validation`);
+          if (!storedToken) {
+            securityRejection = 'missing_stored_client_state';
+          } else if (!notification.clientState) {
+            securityRejection = 'missing_client_state';
+          } else if (!safeEquals(notification.clientState, storedToken)) {
+            securityRejection = 'invalid_client_state';
+          }
+          if (securityRejection) {
+            console.warn('[MicrosoftWebhook] Rejected notification clientState validation', {
+              event: 'microsoft_email_webhook_client_state_rejected',
+              reason: securityRejection,
+              providerId: row.id,
+              tenantId: row.tenant,
+              subscriptionId: notification.subscriptionId,
+            });
+            return;
           }
 
           const acceptedAt = new Date().toISOString();
@@ -349,6 +385,9 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
             jobId: enqueueResult.job.jobId,
           });
         });
+        if (securityRejection) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
       } catch (error: any) {
         console.error('Error processing Microsoft notification:', error);
         if (error?.code === 'UNIFIED_INBOUND_ENQUEUE_FAILED' && error?.details) {

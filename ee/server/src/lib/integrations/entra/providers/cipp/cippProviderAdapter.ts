@@ -111,8 +111,85 @@ function extractPrimaryDomain(raw: Record<string, unknown>): string | null {
   return null;
 }
 
+export type CippTenantProbeOutcome =
+  | 'ok'
+  | 'auth_rejected'
+  | 'http_error'
+  | 'invalid_payload'
+  | 'unreachable';
+
+export interface CippTenantProbe {
+  outcome: CippTenantProbeOutcome;
+  reachable: boolean;
+  authRejected: boolean;
+  endpoint: string | null;
+  attempted: string[];
+  status?: number;
+  networkCode?: string;
+  error?: string;
+  tenants: EntraManagedTenantRecord[];
+}
+
+function isRecognizableTenantList(payload: unknown): boolean {
+  if (Array.isArray(payload)) return true;
+  const obj = toObject(payload);
+  return (
+    Array.isArray(obj.data) ||
+    Array.isArray(obj.tenants) ||
+    Array.isArray(obj.value) ||
+    Array.isArray(obj.items)
+  );
+}
+
+function mapCippTenants(payload: unknown): EntraManagedTenantRecord[] {
+  const rows = extractCollection(payload);
+  const tenants: EntraManagedTenantRecord[] = [];
+  const seen = new Set<string>();
+
+  for (const row of rows) {
+    const raw = toObject(row);
+    // Real CIPP ListTenants identifies a tenant as `customerId`.
+    const entraTenantId =
+      toStringOrNull(raw.customerId) ||
+      toStringOrNull(raw.tenantId) ||
+      toStringOrNull(raw.id) ||
+      toStringOrNull(raw.customerTenantId);
+    if (!entraTenantId || seen.has(entraTenantId)) {
+      continue;
+    }
+
+    seen.add(entraTenantId);
+    tenants.push({
+      entraTenantId,
+      displayName:
+        toStringOrNull(raw.displayName) ||
+        toStringOrNull(raw.name) ||
+        toStringOrNull(raw.tenantName),
+      primaryDomain: extractPrimaryDomain(raw),
+      sourceUserCount:
+        toNumber(raw.userCount) ||
+        toNumber(raw.usersCount) ||
+        toNumber(raw.licensedUsers),
+      raw,
+    });
+  }
+
+  return tenants;
+}
+
 /** How long CIPP gets to answer one call before we call it a timeout. */
 const CIPP_REQUEST_TIMEOUT_MS = 20_000;
+
+/**
+ * Candidate tenant-list endpoints in the order the integration has always
+ * tried them. The first is stock CIPP-API; the aliases are kept for older
+ * deployments.
+ */
+const CIPP_TENANT_LIST_CANDIDATES = [
+  '/api/listtenants',
+  '/api/tenant/list',
+  '/api/tenants',
+];
 
 export class CippProviderAdapter implements EntraProviderAdapter {
   public readonly connectionType = 'cipp' as const;
@@ -120,7 +197,8 @@ export class CippProviderAdapter implements EntraProviderAdapter {
   private async requestFromCandidates(
     baseUrl: string,
     apiToken: string,
-    candidates: string[]
+    candidates: string[],
+    signal?: AbortSignal
   ): Promise<unknown> {
     let lastError: Error | null = null;
 
@@ -129,6 +207,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
       try {
         const response = await axios.get(url, {
           timeout: CIPP_REQUEST_TIMEOUT_MS,
+          signal,
           headers: {
             Authorization: `Bearer ${apiToken}`,
             'X-API-KEY': apiToken,
@@ -186,60 +265,126 @@ export class CippProviderAdapter implements EntraProviderAdapter {
       throw new Error('CIPP credentials are not configured.');
     }
 
+    // CIPP-API exposes Azure Functions by name: ListTenants is the endpoint.
+    // The REST-style aliases this adapter used to guess at (/api/tenant/list,
+    // /api/tenants) do not exist in stock CIPP.
     const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
       '/api/listtenants',
-      '/api/tenant/list',
-      '/api/tenants',
     ]);
-    const rows = extractCollection(payload);
+    return mapCippTenants(payload);
+  }
 
-    const tenants: EntraManagedTenantRecord[] = [];
-    const seen = new Set<string>();
-
-    for (const row of rows) {
-      const raw = toObject(row);
-      const entraTenantId =
-        toStringOrNull(raw.tenantId) ||
-        toStringOrNull(raw.id) ||
-        toStringOrNull(raw.customerTenantId);
-      if (!entraTenantId || seen.has(entraTenantId)) {
-        continue;
-      }
-
-      seen.add(entraTenantId);
-      tenants.push({
-        entraTenantId,
-        displayName:
-          toStringOrNull(raw.displayName) ||
-          toStringOrNull(raw.name) ||
-          toStringOrNull(raw.tenantName),
-        primaryDomain: extractPrimaryDomain(raw),
-        sourceUserCount:
-          toNumber(raw.userCount) ||
-          toNumber(raw.usersCount) ||
-          toNumber(raw.licensedUsers),
-        raw,
-      });
+  /**
+   * Read-only tenant-list probe that preserves endpoint-fallback and
+   * normalization evidence for diagnostics. It reuses the same candidate
+   * order, credential remedies, and tenant mapping as listManagedTenants.
+   */
+  public async probeTenantList(tenant: string): Promise<CippTenantProbe> {
+    const credentials = await getEntraCippCredentials(tenant);
+    if (!credentials) {
+      throw new Error('CIPP credentials are not configured.');
     }
 
-    return tenants;
+    const base = credentials.baseUrl.replace(/\/+$/, '');
+    const attempted: string[] = [];
+    let lastError: unknown = null;
+
+    for (const candidate of CIPP_TENANT_LIST_CANDIDATES) {
+      const url = `${base}${candidate}`;
+      attempted.push(url);
+      try {
+        const response = await axios.get(url, {
+          timeout: CIPP_REQUEST_TIMEOUT_MS,
+          headers: {
+            Authorization: `Bearer ${credentials.apiToken}`,
+            'X-API-KEY': credentials.apiToken,
+          },
+        });
+        if (!isRecognizableTenantList(response.data)) {
+          return {
+            outcome: 'invalid_payload',
+            reachable: true,
+            authRejected: false,
+            endpoint: url,
+            attempted,
+            status: response.status,
+            error: 'CIPP returned a payload that is not a tenant list.',
+            tenants: [],
+          };
+        }
+        return {
+          outcome: 'ok',
+          reachable: true,
+          authRejected: false,
+          endpoint: url,
+          attempted,
+          status: response.status,
+          tenants: mapCippTenants(response.data),
+        };
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          const status = error.response?.status;
+          if (status === 401 || status === 403) {
+            return {
+              outcome: 'auth_rejected',
+              reachable: true,
+              authRejected: true,
+              endpoint: url,
+              attempted,
+              status,
+              tenants: [],
+            };
+          }
+          if (status === 404) {
+            lastError = error;
+            continue;
+          }
+        }
+        lastError = error;
+      }
+    }
+
+    const axiosError = axios.isAxiosError(lastError) ? lastError : null;
+    if (axiosError?.response) {
+      return {
+        outcome: 'http_error',
+        reachable: true,
+        authRejected: false,
+        endpoint: null,
+        attempted,
+        status: axiosError.response.status,
+        error: axiosError.message,
+        tenants: [],
+      };
+    }
+    return {
+      outcome: 'unreachable',
+      reachable: false,
+      authRejected: false,
+      endpoint: null,
+      attempted,
+      networkCode: axiosError?.code,
+      error: axiosError ? axiosError.message : (lastError as Error)?.message,
+      tenants: [],
+    };
   }
 
   public async listUsersForTenant(
-    input: EntraListUsersForTenantInput
+    input: EntraListUsersForTenantInput,
+    options: { signal?: AbortSignal } = {}
   ): Promise<EntraManagedUserRecord[]> {
     const credentials = await getEntraCippCredentials(input.tenant);
     if (!credentials) {
       throw new Error('CIPP credentials are not configured.');
     }
 
+    // Per CIPP-API source (Invoke-ListUsers.ps1): the tenant scope parameter
+    // is `tenantFilter` — a customerId GUID or default domain — and the
+    // response is a plain array of Graph beta user objects.
     const tenantId = encodeURIComponent(input.managedTenantId);
     const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
-      `/api/listusers?tenantId=${tenantId}`,
-      `/api/users?tenantId=${tenantId}`,
-      `/api/tenant/${tenantId}/users`,
-      `/api/tenants/${tenantId}/users`,
-    ]);
+      `/api/listusers?tenantFilter=${tenantId}`,
+    ], options.signal);
     const rows = extractCollection(payload);
 
     const users: EntraManagedUserRecord[] = [];
@@ -301,12 +446,13 @@ export class CippProviderAdapter implements EntraProviderAdapter {
       throw new Error('CIPP credentials are not configured.');
     }
 
+    // Per CIPP-API source (Invoke-ListGroups.ps1): `tenantFilter` scopes the
+    // read, and the rows are Graph group objects that include ALL group types
+    // — securityEnabled is selected precisely so callers can filter, which
+    // the direct adapter already does and this one must match.
     const tenantId = encodeURIComponent(input.managedTenantId);
     const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
-      `/api/listgroups?tenantId=${tenantId}`,
-      `/api/groups?tenantId=${tenantId}`,
-      `/api/tenant/${tenantId}/groups`,
-      `/api/tenants/${tenantId}/groups`,
+      `/api/listgroups?tenantFilter=${tenantId}`,
     ]);
     const rows = extractCollection(payload);
     const groups: Array<{ id: string; displayName: string | null }> = [];
@@ -316,6 +462,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
       const raw = toObject(row);
       const id = toStringOrNull(raw.id) || toStringOrNull(raw.groupId) || toStringOrNull(raw.objectId);
       if (!id || seen.has(id)) continue;
+      if (!toBoolean(raw.securityEnabled, true)) continue;
       seen.add(id);
       groups.push({
         id,
@@ -338,13 +485,13 @@ export class CippProviderAdapter implements EntraProviderAdapter {
       throw new Error('CIPP credentials are not configured.');
     }
 
+    // Per CIPP-API source (Invoke-ListUserGroups.ps1): `tenantFilter` +
+    // `userId`, returning the user's memberOf groups with a lowercase `id`
+    // (the display fields are PascalCase — DisplayName, SecurityGroup).
     const tenantId = encodeURIComponent(input.managedTenantId);
     const userId = encodeURIComponent(input.userEntraObjectId);
     const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
-      `/api/usergroups?tenantId=${tenantId}&userId=${userId}`,
-      `/api/users/${userId}/groups?tenantId=${tenantId}`,
-      `/api/tenant/${tenantId}/users/${userId}/groups`,
-      `/api/tenants/${tenantId}/users/${userId}/groups`,
+      `/api/listusergroups?tenantFilter=${tenantId}&userId=${userId}`,
     ]);
     const rows = extractCollection(payload);
     const groupIds = new Set(

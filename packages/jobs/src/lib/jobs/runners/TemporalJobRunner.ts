@@ -156,14 +156,17 @@ export class TemporalJobRunner implements IJobRunner {
     const workflowId = `job-${jobName}-${jobRecord.jobId}`;
 
     try {
-      // Start the generic job workflow
+      // Start the generic job workflow. jobServiceId mirrors PgBossJobRunner:
+      // handlers that report progress (invoice_zip, kb-article-import) read it
+      // from job data, and the runner's job record lives in the same `jobs`
+      // table the JobService progress APIs operate on.
       const handle = await this.client.workflow.start('genericJobWorkflow', {
         args: [
           {
             jobId: jobRecord.jobId,
             jobName,
             tenantId: data.tenantId,
-            data,
+            data: { ...data, jobServiceId: data.jobServiceId ?? jobRecord.jobId },
           },
         ],
         taskQueue: this.config.taskQueue,
@@ -225,14 +228,14 @@ export class TemporalJobRunner implements IJobRunner {
     const workflowId = `job-${jobName}-${jobRecord.jobId}`;
 
     try {
-      // Start the generic job workflow with start delay
+      // Start the generic job workflow with start delay (jobServiceId: see scheduleJob)
       const handle = await this.client.workflow.start('genericJobWorkflow', {
         args: [
           {
             jobId: jobRecord.jobId,
             jobName,
             tenantId: data.tenantId,
-            data,
+            data: { ...data, jobServiceId: data.jobServiceId ?? jobRecord.jobId },
           },
         ],
         taskQueue: this.config.taskQueue,

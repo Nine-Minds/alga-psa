@@ -16,9 +16,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('../../xero/XeroLiveMappingManager', () => ({
-  XeroLiveMappingManager: ({ defaultConnection }: { defaultConnection: { connectionId: string } }) => (
-    <div data-testid="xero-live-mapping-manager">{defaultConnection.connectionId}</div>
-  )
+  XeroLiveMappingManager: ({ defaultConnection }: { defaultConnection: { connectionId: string } }) => <div data-testid="xero-live-mapping-manager">{defaultConnection.connectionId}</div>
 }));
 
 vi.mock('../../../actions/integrations/xeroActions', () => ({
@@ -27,9 +25,38 @@ vi.mock('../../../actions/integrations/xeroActions', () => ({
   disconnectXero: (...args: unknown[]) => disconnectXeroMock(...args)
 }));
 
+// The accounting-capability hook is exercised per-test through this mutable
+// state holder; default to a fully-capable user so the panels render their
+// content (an unauthenticated test session would otherwise show the
+// no-permission card).
+const accountingCapsState = vi.hoisted(() => ({
+  current: {
+    catalogRead: true,
+    connectionsManage: true,
+    mappingsManage: true,
+    exportsExecute: true,
+    remoteMutate: true,
+    hasAny: true,
+    loaded: true
+  }
+}));
+
+vi.mock('./useAccountingCapabilities', () => ({
+  useAccountingCapabilities: () => accountingCapsState.current
+}));
+
 describe('XeroIntegrationSettings contracts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    accountingCapsState.current = {
+      catalogRead: true,
+      connectionsManage: true,
+      mappingsManage: true,
+      exportsExecute: true,
+      remoteMutate: true,
+      hasAny: true,
+      loaded: true
+    };
     useSearchParamsMock.mockReturnValue(new URLSearchParams('accounting_integration=xero'));
     getXeroConnectionStatusMock.mockResolvedValue({
       connections: [],
@@ -37,14 +64,8 @@ describe('XeroIntegrationSettings contracts', () => {
       defaultConnectionId: undefined,
       defaultConnection: undefined,
       redirectUri: 'https://example.com/api/integrations/xero/callback',
-      scopes: [
-        'offline_access',
-        'accounting.settings',
-        'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
-        'accounting.contacts'
-      ],
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.payments.read', 'accounting.contacts'],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: false,
         clientSecretConfigured: false,
@@ -67,11 +88,37 @@ describe('XeroIntegrationSettings contracts', () => {
 
     expect(await screen.findByText('https://example.com/api/integrations/xero/callback')).toBeInTheDocument();
     expect(screen.getByText('offline_access')).toBeInTheDocument();
-    expect(screen.getByText('accounting.settings')).toBeInTheDocument();
+    expect(screen.getByText('accounting.settings.read')).toBeInTheDocument();
     expect(screen.getByText('accounting.invoices')).toBeInTheDocument();
-    expect(screen.getByText('accounting.banktransactions')).toBeInTheDocument();
-    expect(screen.getByText('accounting.payments')).toBeInTheDocument();
+    expect(screen.getByText('accounting.payments.read')).toBeInTheDocument();
     expect(screen.getByText('accounting.contacts')).toBeInTheDocument();
+    expect(screen.queryByText('accounting.banktransactions')).not.toBeInTheDocument();
+    // The write payment scope is never requested; only the read scope is.
+    expect(screen.queryByText('accounting.payments')).not.toBeInTheDocument();
+    expect(screen.getByText(/Reconnect Xero after changing permissions/)).toBeInTheDocument();
+  });
+
+  it('flags a deployment scope override and reports ignored invalid override entries', async () => {
+    getXeroConnectionStatusMock.mockResolvedValueOnce({
+      connections: [],
+      connected: false,
+      defaultConnectionId: undefined,
+      defaultConnection: undefined,
+      redirectUri: 'https://example.com/api/integrations/xero/callback',
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts'],
+      scopeSource: 'default',
+      scopeOverrideInvalid: ['Accounting.Settings'],
+      credentials: {
+        clientIdConfigured: false,
+        clientSecretConfigured: false,
+        ready: false
+      }
+    });
+    const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
+
+    render(<XeroIntegrationSettings />);
+
+    expect(await screen.findByText(/XERO_OAUTH_SCOPES override was ignored because it contains invalid entries/)).toBeInTheDocument();
   });
 
   it('T009/T027: keeps Connect disabled and surfaces missing-credentials guidance until credentials are configured', async () => {
@@ -79,27 +126,40 @@ describe('XeroIntegrationSettings contracts', () => {
 
     render(<XeroIntegrationSettings />);
 
-    expect(await screen.findByText('Credentials Required')).toBeInTheDocument();
-    expect(
-      screen.getByText('No live Xero organisation is connected yet. Save credentials, then click Connect Xero.')
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Credentials required')).toBeInTheDocument();
+    expect(screen.getByText('No live Xero organisation is connected yet. Save credentials, then click Connect Xero.')).toBeInTheDocument();
     // fdce19500a: the raw status.error alert is reserved for connection-level issues
     // (expired tokens); when no connection exists it must not echo the disconnected state.
-    expect(
-      screen.queryByText('Add a Xero client ID and client secret before connecting live Xero.')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Add a Xero client ID and client secret before connecting live Xero.')).not.toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getAllByRole('button', { name: 'Connect Xero' })[0]).toBeDisabled();
     });
   });
 
-  it('T022: includes guidance that Xero CSV remains available as the manual fallback', async () => {
+  it('T022: offers Xero CSV as a quiet file-based alternative', async () => {
     const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
 
     render(<XeroIntegrationSettings />);
 
-    expect((await screen.findAllByText('Xero CSV remains available')).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Billing → Accounting Exports/)).toBeInTheDocument();
+    expect(await screen.findByText(/Prefer a file-based workflow\?/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Use Xero CSV' })).toHaveAttribute('href', '/msp/settings/integrations?category=accounting&accounting_integration=xero_csv');
+  });
+
+  it('shows the Accounting Exports link only with exports_execute', async () => {
+    const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
+
+    render(<XeroIntegrationSettings />);
+    expect(await screen.findByRole('link', { name: 'Open Accounting Exports' })).toHaveAttribute('href', '/msp/billing?tab=accounting-exports');
+
+    cleanup();
+    accountingCapsState.current = {
+      ...accountingCapsState.current,
+      exportsExecute: false
+    };
+    render(<XeroIntegrationSettings />);
+
+    await waitFor(() => expect(getXeroConnectionStatusMock).toHaveBeenCalled());
+    expect(screen.queryByRole('link', { name: 'Open Accounting Exports' })).not.toBeInTheDocument();
   });
 
   it('T021: renders the live Xero mapping area only when a default connected organisation exists', async () => {
@@ -121,14 +181,8 @@ describe('XeroIntegrationSettings contracts', () => {
         status: 'connected'
       },
       redirectUri: 'https://example.com/api/integrations/xero/callback',
-      scopes: [
-        'offline_access',
-        'accounting.settings',
-        'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
-        'accounting.contacts'
-      ],
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts'],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: true,
         clientSecretConfigured: true,
@@ -151,14 +205,8 @@ describe('XeroIntegrationSettings contracts', () => {
       defaultConnectionId: undefined,
       defaultConnection: undefined,
       redirectUri: 'https://example.com/api/integrations/xero/callback',
-      scopes: [
-        'offline_access',
-        'accounting.settings',
-        'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
-        'accounting.contacts'
-      ],
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts'],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: true,
         clientSecretConfigured: true,
@@ -199,14 +247,8 @@ describe('XeroIntegrationSettings contracts', () => {
         status: 'connected'
       },
       redirectUri: 'https://example.com/api/integrations/xero/callback',
-      scopes: [
-        'offline_access',
-        'accounting.settings',
-        'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
-        'accounting.contacts'
-      ],
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts'],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: true,
         clientSecretConfigured: true,
@@ -242,14 +284,8 @@ describe('XeroIntegrationSettings contracts', () => {
         status: 'expired'
       },
       redirectUri: 'https://example.com/api/integrations/xero/callback',
-      scopes: [
-        'offline_access',
-        'accounting.settings',
-        'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
-        'accounting.contacts'
-      ],
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts'],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: true,
         clientSecretConfigured: true,
@@ -262,9 +298,8 @@ describe('XeroIntegrationSettings contracts', () => {
 
     render(<XeroIntegrationSettings />);
 
-    expect(
-      await screen.findByText('Your default Xero connection has expired. Disconnect and reconnect Xero to continue.')
-    ).toBeInTheDocument();
-    expect(screen.getAllByText('Connection Expired').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Sync and exports are paused. Reconnect once to resume them for all 1 linked organisations.')).toBeInTheDocument();
+    expect(screen.getByText('Connection expired')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reconnect Xero' })).toBeInTheDocument();
   });
 });

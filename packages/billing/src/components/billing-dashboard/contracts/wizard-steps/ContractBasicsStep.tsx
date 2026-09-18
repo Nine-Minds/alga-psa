@@ -5,6 +5,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -213,7 +214,7 @@ export function ContractBasicsStep({
           <p className="text-xs text-red-600">{templateError}</p>
         )}
         {selectedTemplate && (
-          <div className="text-xs text-[rgb(var(--color-text-500))] border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] rounded-md p-3 mt-2 space-y-1">
+          <div className="text-xs text-[rgb(var(--color-text-700))] border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] rounded-md p-3 mt-2 space-y-1">
             <p>
               <span className="font-semibold text-[rgb(var(--color-primary-700))]">
                 {t('wizardBasics.template.preview.templateLabel', { defaultValue: 'Template:' })}
@@ -343,9 +344,8 @@ export function ContractBasicsStep({
           <Coins className="h-4 w-4" />
           {t('wizardBasics.currency.label', { defaultValue: 'Currency' })} *
         </Label>
-        <CustomSelect
+        <CurrencyPicker
           id="currency"
-          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
           onValueChange={(value: string) => updateData({ currency_code: value })}
           value={data.currency_code}
           placeholder={t('wizardBasics.currency.placeholder', { defaultValue: 'Select currency' })}

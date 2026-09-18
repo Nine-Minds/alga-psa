@@ -40,10 +40,10 @@ function openingBalanceActionErrorFrom(error: unknown): OpeningBalanceActionErro
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected opening-balance records is no longer valid. Validate the file again and retry.');
+    return actionError('One of the selected opening-balance records is no longer valid. Validate the file again and retry.', 'features/inventory:errors.openingBalance.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('The import conflicts with existing inventory records. Validate the file again and retry.');
+    return actionError('The import conflicts with existing inventory records. Validate the file again and retry.', 'features/inventory:errors.openingBalance.conflict');
   }
 
   return null;

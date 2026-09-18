@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "suite": "workspace-db",
+  "revision": "e1a0295918af8420e8cea10328b593aa18160a5a",
+  "status": "passed",
+  "counts": {
+    "passed": 455,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "source": {
+    "before": {
+      "revision": "e1a0295918af8420e8cea10328b593aa18160a5a",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "e1a0295918af8420e8cea10328b593aa18160a5a",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "selection": {
+    "mode": "full",
+    "filters": []
+  },
+  "files": 60,
+  "durationSeconds": 341.03,
+  "discoveryStatus": "passed",
+  "aggregate": {
+    "schemaVersion": 1,
+    "revision": "e1a0295918af8420e8cea10328b593aa18160a5a",
+    "scope": "workspace-db-execution",
+    "status": "passed",
+    "results": [
+      {
+        "id": "workspace-db",
+        "status": "passed",
+        "counts": {
+          "passed": 455,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "pending": 0
+        },
+        "failures": []
+      }
+    ],
+    "failures": []
+  },
+  "artifacts": [
+    {
+      "path": "test-results/workspace-db/collected.json",
+      "sha256": "885d70f794716f9c6f67038984cbb2df2e30fe64e395ce04ee97103bca6a343a"
+    },
+    {
+      "path": "test-results/workspace-db/collected-tests.json",
+      "sha256": "ca9f94f19e17cb067a80ab786a816a784c9e0ac5cd853fa7025700056da52656"
+    },
+    {
+      "path": "test-results/workspace-db/results.json",
+      "sha256": "4b7079e4839a90b37c0d6fb6a006fda90538cf0635b91b3cab7bce7766c6dca2"
+    },
+    {
+      "path": "test-results/workspace-db/evidence.json",
+      "sha256": "c3a5438b1e2e4a358caea7ca12e8ef76a8f58b76ec11cde9e2f4a78ea56bcc78"
+    },
+    {
+      "path": "test-results/workspace-db/discovery.json",
+      "sha256": "3b683b21bd3d17d44e999e4b374782985449634de78ad1aa5cc2ff0b15d21d44"
+    },
+    {
+      "path": "test-results/workspace-db-gate/aggregate.json",
+      "sha256": "ea7cc8b39b41cef3dca6853f9158825a0fef79a4e72c722057a5cfef5d476e04"
+    },
+    {
+      "path": "/tmp/alga-workspace-db-full-e1a029.log",
+      "sha256": "cfb1a2a221c7ff88379eb0df663c2d398042de4624d1dd0da903cd5e40ec02a4"
+    }
+  ],
+  "cleanup": "Removed disposable PostgreSQL and Redis containers after confirmed successful termination",
+  "limitations": [
+    "Local Node 25, not native Node 22 CI.",
+    "Fresh migration/bootstrap coverage is not a previous-supported-release upgrade."
+  ]
+}

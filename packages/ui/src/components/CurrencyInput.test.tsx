@@ -132,4 +132,11 @@ describe('CurrencyInput component', () => {
     render(<CurrencyInput id="c" value={1234.56} />);
     expect(screen.getByDisplayValue('1,234.56')).toBeTruthy();
   });
+
+  it('shows the selected currency as a non-editable adornment and keeps JPY at zero decimals', () => {
+    render(<CurrencyInput id="c" value={1234} currencyCode="JPY" />);
+
+    expect(screen.getByText('¥').getAttribute('aria-hidden')).toBe('true');
+    expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('1,234');
+  });
 });

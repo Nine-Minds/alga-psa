@@ -320,11 +320,9 @@ describe('XeroClientService.createInvoices payload mapping', () => {
       {
         documentId: 'INV-100',
         message: 'AccountCode: account is archived',
-        validationErrors: [{ message: 'AccountCode: account is archived', field: 'AccountCode' }],
-        raw: {
-          Invoice: { InvoiceNumber: 'INV-100' },
-          ValidationErrors: [{ Message: 'AccountCode: account is archived' }]
-        }
+        // Raw provider elements are never attached to error details: they can
+        // carry customer and invoice contents.
+        validationErrors: [{ message: 'AccountCode: account is archived', field: 'AccountCode' }]
       }
     ]);
   });

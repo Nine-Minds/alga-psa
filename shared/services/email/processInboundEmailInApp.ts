@@ -1,7 +1,7 @@
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
@@ -19,6 +19,7 @@ import {
 } from './processInboundEmailArtifacts';
 import {
   buildInboundWatchListRecipients,
+  getActiveWatchListEmails,
   mergeTicketWatchListRecipients,
   setTicketWatchListOnAttributes,
   type TicketWatchListRecipientInput,
@@ -29,11 +30,51 @@ import {
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId } from './inboundEmailIdentity';
+import { withTenantAdminTransaction } from './tenantAdminTransaction';
+import {
+  detectOutboundNotificationLoop,
+  type NotificationLoopDetectionResult,
+} from './notificationLoopDetection';
+import {
+  allowsContactSenderAttribution,
+  allowsInternalSenderAttribution,
+  verifySenderAuthentication,
+} from '../../lib/email/senderAuthVerification';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
   providerId: string;
   emailData: EmailMessageDetails;
+}
+
+async function logInboundSenderAuthFailure(input: {
+  tenantId: string;
+  providerId: string;
+  emailId: string;
+  senderEmail: string;
+  authResults: unknown;
+}): Promise<void> {
+  try {
+    const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
+    await withAdminTransaction(async (trx: any) => {
+      // audit_logs has a legacy trigger that derives tenant from this
+      // transaction-local GUC rather than from the insert payload.
+      await trx.raw("select set_config('app.current_tenant', ?, true)", [input.tenantId]);
+      await tenantDb(trx, input.tenantId).table('audit_logs').insert({
+        audit_id: randomUUID(),
+        operation: 'inbound_email_internal_sender_auth_failed',
+        table_name: 'email_providers',
+        record_id: input.providerId,
+        changed_data: {},
+        details: { emailId: input.emailId, senderEmail: input.senderEmail, authResults: input.authResults },
+        timestamp: new Date().toISOString(),
+      });
+    });
+  } catch (error) {
+    // Security logging must not discard the inbound message; the identity gate
+    // remains fail-closed even if the audit store is temporarily unavailable.
+    console.error('Failed to persist inbound sender-auth security event', { ...input, error });
+  }
 }
 
 export interface ProcessInboundEmailInAppOptions {
@@ -98,19 +139,28 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
       | 'invalid_email_data'
       | 'missing_defaults'
       | 'self_notification'
+      | 'notification_loop'
       | 'rule_skip'
       | 'new_ticket_created'
       | 'deduped'
+      | 'quarantined'
       | null;
   };
+  /**
+   * Present only when `outcome.reason === 'notification_loop'`: the composite
+   * evidence that decided this was our own outbound notification looping back
+   * through a different connected mailbox, not genuine correspondence. See
+   * `notificationLoopDetection.ts` for what each field means.
+   */
+  notificationLoop?: NotificationLoopDetectionResult;
   outcome?: {
-    kind: 'skipped' | 'deduped' | 'replied' | 'created';
+    kind: 'skipped' | 'deduped' | 'replied' | 'created' | 'quarantined';
     matchedBy?: 'reply_token' | 'thread_headers';
     ticketId?: string;
     ticketNumber?: string;
     commentId?: string;
     dedupeKey?: string;
-    reason?: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'rule_skip';
+    reason?: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'notification_loop' | 'rule_skip';
     rule?: { ruleId: string; ruleName: string };
   };
 }
@@ -118,7 +168,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
 type ProcessInboundEmailInAppBaseResult =
   | {
       outcome: 'skipped';
-      reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'rule_skip';
+      reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'notification_loop' | 'rule_skip';
       rule?: { ruleId: string; ruleName: string };
     }
   | {
@@ -138,6 +188,12 @@ type ProcessInboundEmailInAppBaseResult =
       ticketId: string;
       ticketNumber?: string;
       commentId: string;
+    }
+  | {
+      outcome: 'quarantined';
+      reason: 'unauthorized_thread_header_sender';
+      ticketId: string;
+      matchedBy: 'thread_headers';
     };
 
 export type ProcessInboundEmailInAppResult = ProcessInboundEmailInAppBaseResult & {
@@ -175,6 +231,8 @@ type InboundReplyReopenPolicyContext = {
   inboundReplyReopenCutoffHours: number;
   inboundReplyReopenStatusId: string | null;
   inboundReplyAiAckSuppressionEnabled: boolean;
+  clientId: string | null;
+  attributes: unknown;
 };
 
 type InboundReplyDecisionMetadata = {
@@ -284,12 +342,18 @@ function withDiagnostics<T extends ProcessInboundEmailInAppBaseResult>(
               ticketId: result.ticketId,
               commentId: result.commentId,
             }
-          : {
-              kind: result.outcome,
-              ticketId: result.ticketId,
-              ticketNumber: result.ticketNumber,
-              commentId: result.commentId,
-            };
+          : result.outcome === 'created'
+            ? {
+                kind: result.outcome,
+                ticketId: result.ticketId,
+                ticketNumber: result.ticketNumber,
+                commentId: result.commentId,
+              }
+            : {
+                kind: result.outcome,
+                ticketId: result.ticketId,
+                matchedBy: result.matchedBy,
+              };
 
   return {
     ...result,
@@ -343,15 +407,6 @@ function toIsoOrNull(value: unknown): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-async function withTenantAdminTransaction<T>(
-  tenantId: string,
-  callback: (trx: any, db: any) => Promise<T>,
-  existingConnection?: any
-): Promise<T> {
-  const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
-  return withAdminTransaction(async (trx: any) => callback(trx, tenantDb(trx, tenantId)), existingConnection);
-}
-
 function isClosedTicketBeyondReopenCutoff(params: {
   closedAt: string | null;
   receivedAt?: string;
@@ -383,6 +438,8 @@ async function loadInboundReplyPolicyContext(params: {
         'status_id',
         'is_closed',
         'closed_at',
+        'client_id',
+        'attributes',
       )
       .where('ticket_id', params.ticketId)
       .first();
@@ -428,6 +485,8 @@ async function loadInboundReplyPolicyContext(params: {
       inboundReplyReopenCutoffHours: normalizePositiveInteger(board?.inbound_reply_reopen_cutoff_hours, 168),
       inboundReplyReopenStatusId: board?.inbound_reply_reopen_status_id ?? null,
       inboundReplyAiAckSuppressionEnabled: Boolean(board?.inbound_reply_ai_ack_suppression_enabled),
+      clientId: ticket.client_id ?? null,
+      attributes: ticket.attributes,
     };
   });
 }
@@ -599,6 +658,7 @@ async function findExistingEmailComment(params: {
   tenantId: string;
   ticketId: string;
   messageId: string;
+  sourceSha256?: string;
 }): Promise<string | null> {
   return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
     const forms = rfcMessageIdLookupForms(params.messageId);
@@ -610,8 +670,7 @@ async function findExistingEmailComment(params: {
       .where('c.ticket_id', params.ticketId)
       .andWhere(function (this: any) {
         for (const form of forms) {
-          this.orWhereRaw("c.metadata->'email'->>'messageId' = ?", [form])
-            .orWhereRaw("c.metadata->>'messageId' = ?", [form]);
+          this.orWhereRaw("(c.metadata->'email'->>'messageId' = ? OR c.metadata->>'messageId' = ?) AND (c.metadata->'email'->>'sourceSha256' = ? OR c.metadata->'email'->>'sourceSha256' IS NULL)", [form, form, params.sourceSha256 || null]);
         }
       })
       .first();
@@ -623,6 +682,7 @@ async function findExistingEmailTicket(params: {
   tenantId: string;
   providerId: string;
   messageId: string;
+  sourceSha256?: string;
 }): Promise<{ ticketId: string; ticketNumber?: string } | null> {
   return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
     const forms = rfcMessageIdLookupForms(params.messageId);
@@ -633,7 +693,7 @@ async function findExistingEmailTicket(params: {
       .select('t.ticket_id as ticketId', 't.ticket_number as ticketNumber')
       .andWhere(function (this: any) {
         for (const form of forms) {
-          this.orWhereRaw("t.email_metadata->>'messageId' = ?", [form]);
+          this.orWhereRaw("t.email_metadata->>'messageId' = ? AND (t.email_metadata->>'sourceSha256' = ? OR t.email_metadata->>'sourceSha256' IS NULL)", [form, params.sourceSha256 || null]);
         }
       })
       .andWhere(function (this: any) {
@@ -963,6 +1023,11 @@ export async function processInboundEmailInApp(
   const emailData = input.emailData;
   const dedupeKey = buildDedupeKey(input);
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
+  const authenticationResultsHeader = Object.entries(emailData.headers ?? {}).find(
+    ([name]) => name.toLowerCase() === 'authentication-results'
+  )?.[1];
+  const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
+  const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
   const durableExecution = options.durableExecution ?? null;
 
   const helperExecutionOptions = (kind: 'ticket' | 'comment'): InboundEmailExecutionOptions | undefined => {
@@ -990,6 +1055,7 @@ export async function processInboundEmailInApp(
     tenantId,
     providerId,
     messageId: emailData.id,
+    sourceSha256: emailData.sourceSha256,
   });
   if (existingTicket) {
     const diagnostics = options.collectDiagnostics
@@ -1048,7 +1114,24 @@ export async function processInboundEmailInApp(
       return null;
     }
 
-    return findContactByEmail(senderEmail, tenantId, context);
+    const matched = await findContactByEmail(senderEmail, tenantId, context);
+    if (!matched) return null;
+
+    if (matched.user_type === 'internal') {
+      if (allowsInternalSenderAttribution(senderAuthResults)) return matched;
+      // A list rewrite may be trusted for contact matching, but never grants an
+      // internal identity: only authentication aligned to the original From can.
+      console.warn('SECURITY_EVENT inbound_email_internal_sender_auth_failed', {
+        tenantId, providerId, emailId: emailData.id, senderEmail,
+        authResults: senderAuthResults,
+      });
+      await logInboundSenderAuthFailure({
+        tenantId, providerId, emailId: emailData.id, senderEmail, authResults: senderAuthResults,
+      });
+      return null;
+    }
+    if (allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite) return matched;
+    return null;
   };
 
   let providerMailboxEmail: string | null = null;
@@ -1090,6 +1173,55 @@ export async function processInboundEmailInApp(
         conversationToken,
       })
     : undefined;
+
+  // Cross-mailbox notification-loop guard: runs before the narrower
+  // single-mailbox self_notification heuristics below (and before any
+  // ticket/comment/watch-list mutation) because it is the most authoritative
+  // signal available — a tenant-scoped ledger correlation, not a sender-string
+  // heuristic. See notificationLoopDetection.ts for the full predicate and why
+  // it cannot fire on genuine replies (including replies that legitimately
+  // thread via In-Reply-To/References into our own outbound Message-ID, or
+  // that quote the same reply token).
+  let loopDetection: NotificationLoopDetectionResult | null = null;
+  try {
+    loopDetection = await detectOutboundNotificationLoop({
+      tenantId,
+      emailData,
+      senderEmail,
+      providerMailboxEmail,
+      conversationToken,
+    });
+  } catch (error) {
+    console.warn('processInboundEmailInApp: notification-loop detection failed (continuing)', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  if (diagnostics && loopDetection) {
+    // Attached whether or not it suppressed: "we checked and here's why we
+    // did/didn't" is useful forensic signal either way.
+    diagnostics.notificationLoop = loopDetection;
+  }
+
+  if (loopDetection?.isLoop) {
+    console.info('processInboundEmailInApp: skipping outbound-notification loop redelivery', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      senderEmail,
+      providerMailboxEmail,
+      tier: loopDetection.tier,
+      matchedEntityType: loopDetection.matchedEntityType,
+      matchedEntityId: loopDetection.matchedEntityId,
+    });
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'notification_loop';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
+  }
 
   if (conversationToken && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
     console.info('processInboundEmailInApp: skipping token-only inbound email with no reply content', {
@@ -1139,6 +1271,7 @@ export async function processInboundEmailInApp(
     primaryContactEmail?: string | null;
   } = {}) => ({
     messageId: normalizeStoredMessageId(emailData.id),
+    sourceSha256: emailData.sourceSha256,
     provider: emailData.provider,
     providerId,
     threadId: emailData.threadId,
@@ -1152,6 +1285,7 @@ export async function processInboundEmailInApp(
     to: emailData.to,
     subject: emailData.subject,
     receivedAt: emailData.receivedAt,
+    authResults: senderAuthResults,
   });
 
   const buildUnmatchedSenderWatchListRecipients = (matchedContactId?: string | null) => {
@@ -1225,6 +1359,7 @@ export async function processInboundEmailInApp(
       tenantId,
       ticketId: params.ticketId,
       messageId: emailData.id,
+      sourceSha256: emailData.sourceSha256,
     });
     if (existingCommentId) {
       if (diagnostics) {
@@ -1265,6 +1400,50 @@ export async function processInboundEmailInApp(
         ticketId: params.ticketId,
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+
+    if (params.matchedBy === 'thread_headers') {
+      const senderIsTicketClientContact = Boolean(
+        matchedSenderContact
+        && !matchedSenderIsInternalUser
+        && policyContext?.clientId
+        && matchedSenderContact.client_id === policyContext.clientId
+      );
+      const senderIsActiveWatcher = Boolean(
+        senderEmail && policyContext && getActiveWatchListEmails(policyContext.attributes).includes(senderEmail)
+      );
+
+      if (!senderIsTicketClientContact && !matchedSenderIsInternalUser && !senderIsActiveWatcher) {
+        // Keep this a structured security log rather than creating a ticket by default.
+        // Operations can route this event through their log/audit pipeline without giving
+        // an untrusted sender another ticket-creation side effect.
+        console.warn('security_event: inbound_thread_header_sender_quarantined', {
+          tenantId,
+          providerId,
+          ticketId: params.ticketId,
+          senderEmail: senderEmail ?? null,
+          matchedMessageId: emailData.inReplyTo ?? emailData.references?.at(-1) ?? null,
+          emailId: emailData.id,
+          matchedContactId: matchedSenderContactId ?? null,
+          ticketClientId: policyContext?.clientId ?? null,
+          authorization: {
+            senderIsTicketClientContact,
+            senderIsInternalUser: Boolean(matchedSenderIsInternalUser),
+            senderIsActiveWatcher,
+          },
+          securityBoardTicketHookEnabled:
+            process.env.INBOUND_THREAD_HEADER_QUARANTINE_CREATE_SECURITY_TICKET === 'true',
+        });
+        if (diagnostics) {
+          diagnostics.threading.failureReason = 'quarantined';
+        }
+        return withDiagnostics({
+          outcome: 'quarantined',
+          reason: 'unauthorized_thread_header_sender',
+          ticketId: params.ticketId,
+          matchedBy: 'thread_headers',
+        }, diagnostics);
+      }
     }
 
     const aiSuppressionDefault: InboundReplyDecisionMetadata['aiSuppression'] = {
@@ -1412,10 +1591,18 @@ export async function processInboundEmailInApp(
       }
     }
 
-    const watchListRecipients = mergeTicketWatchListRecipients(
-      inboundWatchListRecipients,
-      buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null)
-    );
+    const watchListRecipients = params.matchedBy === 'thread_headers'
+      ? buildInboundWatchListRecipients({
+          to: emailData.to,
+          cc: emailData.cc,
+          senderEmail: emailData.from?.email,
+          providerMailboxEmail,
+          requireMatchedContact: true,
+        })
+      : mergeTicketWatchListRecipients(
+          inboundWatchListRecipients,
+          buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null)
+        );
     const commentId = await createCommentFromEmail(
       {
         ticket_id: params.ticketId,
@@ -1469,7 +1656,12 @@ export async function processInboundEmailInApp(
         ticketId: params.ticketId,
         emailData,
         scopeLabel: 'reply',
-        clientVisibleAttachments: !matchedSenderIsInternalUser,
+        clientVisibleAttachments: Boolean(
+          !matchedSenderIsInternalUser
+          && matchedSenderContact?.client_id
+          && policyContext?.clientId
+          && matchedSenderContact.client_id === policyContext.clientId
+        ),
       });
       await maybeRewriteCommentWithEmbeddedAttachmentUrls({
         tenantId,
@@ -1587,13 +1779,17 @@ export async function processInboundEmailInApp(
           diagnostics.threading.matchedBy = 'thread_headers';
           diagnostics.threading.matchedTicketId = threadTarget.ticketId;
         }
-      } else {
+      } else if (emailData.inReplyTo || emailData.references?.length || emailData.threadId) {
         const ticket = await findTicketByEmailThread(
           {
             threadId: emailData.threadId,
             inReplyTo: emailData.inReplyTo,
             references: emailData.references,
-            originalMessageId: emailData.inReplyTo ?? emailData.id,
+            // An inbound message's Message-ID is its identity, not evidence
+            // that it belongs to a pre-existing conversation.  Passing it as
+            // a parent candidate lets a separately delivered MIME with a
+            // forgeable duplicate Message-ID attach to another ticket.
+            originalMessageId: emailData.inReplyTo ?? undefined,
           },
           tenantId
         );
@@ -1832,6 +2028,7 @@ export async function processInboundEmailInApp(
     tenantId,
     providerId,
     messageId: emailData.id,
+    sourceSha256: emailData.sourceSha256,
   });
   if (existingTicketAfterDefaults) {
     if (diagnostics) {
@@ -1875,11 +2072,13 @@ export async function processInboundEmailInApp(
       entered_by: defaults.entered_by,
       email_metadata: {
         messageId: normalizeStoredMessageId(emailData.id),
+        sourceSha256: emailData.sourceSha256,
         threadId: emailData.threadId,
         from: emailData.from,
         inReplyTo: normalizeStoredMessageId(emailData.inReplyTo),
         references: (emailData.references ?? []).map((reference) => normalizeStoredMessageId(reference)),
         providerId,
+        authResults: senderAuthResults,
         clientMatchSource,
         ...(appliedRule
           ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName }
@@ -1915,7 +2114,7 @@ export async function processInboundEmailInApp(
           heuristics: parsedEmail?.appliedHeuristics,
           warnings: parsedEmail?.warnings,
         },
-        unmatchedSender: !commentAuthorContactId,
+        unmatchedSender: !matchedSenderContact,
         inboundReopenDecision: rerouteReasonMetadata ?? undefined,
       },
     },
@@ -1930,7 +2129,11 @@ export async function processInboundEmailInApp(
       ticketId: ticketResult.ticket_id,
       emailData,
       scopeLabel: 'new-ticket',
-      clientVisibleAttachments: !matchedSenderIsInternalUser,
+      clientVisibleAttachments: Boolean(
+        !matchedSenderIsInternalUser
+        && matchedSenderContact?.client_id
+        && matchedSenderContact.client_id === targetClientId
+      ),
     });
     await maybeRewriteCommentWithEmbeddedAttachmentUrls({
       tenantId,

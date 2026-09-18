@@ -411,6 +411,273 @@
       "valuationReport": "Bewertungsbericht"
     }
   },
+  "errors": {
+    "cycleCounts": {
+      "approvedCannotCancel": "Eine genehmigte Zählsitzung kann nicht storniert werden.",
+      "conflict": "Diese Zählaktualisierung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "countNonNegative": "Die Zählmenge muss eine nicht negative ganze Zahl sein.",
+      "locationRequired": "Wählen Sie einen Standort für die Zählung aus.",
+      "productNotInSession": "Dieses Produkt gehört nicht zur Zählsitzung. Aktualisieren Sie die Sitzung und versuchen Sie es erneut.",
+      "recordInvalid": "Einer der ausgewählten Zähldatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "separateApproverRequired": "Da Sie in dieser Sitzung gezählt haben, muss eine andere Person die Genehmigung erteilen.",
+      "sessionAlreadyOpen": "Für diesen Standort ist bereits eine Zählsitzung geöffnet.",
+      "sessionNotFound": "Zählsitzung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "stockLocationNotFound": "Bestandsstandort nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "dropShip": {
+      "conflict": "Diese Direktversand-Sendung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "lineNotDropShip": "Diese Kundenauftragsposition ist nicht für den Direktversand konfiguriert.",
+      "lineRequired": "Wählen Sie eine Direktversand-Position aus, bevor Sie den Lieferantenversand bestätigen.",
+      "poLineNotLinked": "Diese Bestellposition ist mit keiner Kundenauftragsposition verknüpft.",
+      "purchaseOrderNotDropShip": "Diese Bestellung ist nicht für den Direktversand konfiguriert.",
+      "purchaseOrderNotFound": "Bestellung nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "purchaseOrderRequired": "Legen Sie die Direktversand-Bestellung an, bevor Sie den Lieferantenversand bestätigen.",
+      "recordInvalid": "Einer der ausgewählten Direktversand-Datensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "salesOrderLineNotFound": "Kundenauftragsposition nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "salesOrderNotFound": "Kundenauftrag nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "serialsRequired": "Geben Sie mindestens eine Seriennummer für diese serialisierte Direktversand-Sendung an.",
+      "vendorRequired": "Wählen Sie einen Lieferanten aus, bevor Sie die Direktversand-Bestellung anlegen."
+    },
+    "fulfillment": {
+      "conflict": "Diese Auslieferung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "exceedsOrdered": "Die Auslieferung würde die bestellte Menge überschreiten. Aktualisieren Sie den Auftrag und versuchen Sie es erneut.",
+      "noSerializedUnits": "Es sind keine serialisierten Einheiten verfügbar, um diese Position auszuliefern.",
+      "quantityRequired": "Geben Sie eine Menge an, um diese nicht serialisierte Position auszuliefern.",
+      "recordInvalid": "Einer der ausgewählten Auslieferungsdatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "sourceLocationRequired": "Wählen Sie einen Quellstandort aus, bevor Sie diese Position ausliefern.",
+      "trackingDisabled": "Für dieses Produkt ist die Bestandsverfolgung nicht aktiviert.",
+      "useDropShipFlow": "Verwenden Sie den Direktversand-Wareneingang, um diese Position auszuliefern."
+    },
+    "ghostUsage": {
+      "aiRequiresEe": "Die KI-Triage erfordert die Enterprise Edition und das Add-on KI-Assistent.",
+      "reviewNotFound": "Prüfung nicht gefunden. Sie wurde möglicherweise bereits aktualisiert. Aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "kits": {
+      "componentNotFound": "Komponentenprodukt nicht gefunden. Es wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "componentQuantityPositive": "Die Komponentenmenge muss eine positive ganze Zahl sein.",
+      "componentsRequired": "Fügen Sie diesem Kit mindestens eine Komponente hinzu, bevor Sie es einem Kundenauftrag hinzufügen.",
+      "currencyCodeInvalid": "Die Währung muss ein dreibuchstabiger Code wie USD sein.",
+      "duplicateComponent": "Diese Kit-Komponente existiert bereits. Aktualisieren Sie stattdessen ihre Menge.",
+      "duplicateSku": "Ein Produkt mit dieser SKU existiert bereits. Verwenden Sie eine andere SKU oder bearbeiten Sie das vorhandene Produkt.",
+      "enableInventoryAndKitFirst": "Aktivieren Sie die Bestandsverfolgung und markieren Sie dieses Produkt als Kit, bevor Sie Komponenten verwalten.",
+      "fixedPriceRequired": "Legen Sie einen festen Kit-Preis größer als 0 fest oder stellen Sie dieses Kit auf die Preisbildung als Summe der Komponenten um.",
+      "markAsKitFirst": "Markieren Sie dieses Produkt als Kit, bevor Sie Kit-Komponenten verwalten oder bepreisen.",
+      "nameRequired": "Geben Sie einen Namen für dieses Kit ein.",
+      "nestedKit": "Ein Kit kann kein weiteres Kit enthalten. Wählen Sie ein Produkt, das kein Kit ist, als Komponente.",
+      "notFound": "Kit nicht gefunden. Es wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "pricingModeInvalid": "Der Preismodus des Kits muss entweder die Summe der Komponenten oder ein Festpreis sein.",
+      "productTypeNotFound": "Der ausgewählte Produkttyp existiert nicht mehr. Bitte aktualisieren Sie die Seite und wählen Sie einen anderen.",
+      "productTypeRequired": "Wählen Sie einen Produkttyp für dieses Kit.",
+      "recordInvalid": "Einer der ausgewählten Kit-Datensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "savedButNotReloaded": "Das Kit wurde gespeichert, konnte aber nicht neu geladen werden. Bitte aktualisieren Sie die Seite, um den aktuellen Stand zu sehen.",
+      "selfComponent": "Ein Kit kann sich nicht selbst als Komponente enthalten.",
+      "updateParentLine": "Aktualisieren Sie die übergeordnete Kit-Position statt einer einzelnen Komponentenposition."
+    },
+    "landedCost": {
+      "amountPositive": "Der Betrag der Einstandskosten muss größer als null sein.",
+      "appliedCannotRemove": "Zugewiesene Einstandskostenpositionen können nicht entfernt werden.",
+      "conflict": "Diese Einstandskostenaktualisierung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "orderCancelled": "Einstandskosten können einer stornierten Bestellung nicht hinzugefügt werden.",
+      "receiveLineFirst": "Vereinnahmen Sie mindestens eine Bestellposition, bevor Sie Einstandskosten zuweisen.",
+      "recordInvalid": "Einer der ausgewählten Einstandskostendatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "loaners": {
+      "cannotLoanOut": "Diese Einheit kann nicht verliehen werden.",
+      "cannotLoanOutStatus": {
+        "allocated": "Diese Einheit kann nicht verliehen werden – sie ist derzeit zugewiesen.",
+        "delivered": "Diese Einheit kann nicht verliehen werden – sie ist derzeit geliefert.",
+        "in_rma": "Diese Einheit kann nicht verliehen werden – sie ist derzeit in RMA.",
+        "in_stock": "Diese Einheit kann nicht verliehen werden – sie ist derzeit auf Lager.",
+        "in_transit": "Diese Einheit kann nicht verliehen werden – sie ist derzeit unterwegs.",
+        "on_loan": "Diese Einheit kann nicht verliehen werden – sie ist derzeit verliehen.",
+        "retired": "Diese Einheit kann nicht verliehen werden – sie ist derzeit ausgemustert.",
+        "returned": "Diese Einheit kann nicht verliehen werden – sie ist derzeit zurückgegeben."
+      },
+      "clientRequired": "Wählen Sie einen Kunden aus, bevor Sie die Einheit verleihen.",
+      "conflict": "Diese Leihgeräteaktualisierung steht im Konflikt mit einem vorhandenen Datensatz. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "dueDateInvalid": "Wählen Sie ein gültiges Fälligkeitsdatum.",
+      "invalidReferenceUnitClient": "Das sieht nicht nach einem gültigen Datensatzverweis aus. Wählen Sie die Einheit und den Kunden aus den Listen aus.",
+      "notOnLoan": "Diese Einheit ist nicht verliehen.",
+      "notOnLoanStatus": {
+        "allocated": "Diese Einheit ist nicht verliehen – sie ist derzeit zugewiesen.",
+        "delivered": "Diese Einheit ist nicht verliehen – sie ist derzeit geliefert.",
+        "in_rma": "Diese Einheit ist nicht verliehen – sie ist derzeit in RMA.",
+        "in_stock": "Diese Einheit ist nicht verliehen – sie ist derzeit auf Lager.",
+        "in_transit": "Diese Einheit ist nicht verliehen – sie ist derzeit unterwegs.",
+        "on_loan": "Diese Einheit ist nicht verliehen – sie ist derzeit verliehen.",
+        "retired": "Diese Einheit ist nicht verliehen – sie ist derzeit ausgemustert.",
+        "returned": "Diese Einheit ist nicht verliehen – sie ist derzeit zurückgegeben."
+      },
+      "recordInvalid": "Einer der ausgewählten Leihgerätedatensätze ist nicht mehr gültig. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "returnLocationRequired": "Wählen Sie einen Rückgabestandort aus."
+    },
+    "openingBalance": {
+      "conflict": "Der Import steht im Konflikt mit vorhandenen Bestandsdatensätzen. Prüfen Sie die Datei erneut und versuchen Sie es noch einmal.",
+      "recordInvalid": "Einer der ausgewählten Anfangsbestandsdatensätze ist nicht mehr gültig. Prüfen Sie die Datei erneut und versuchen Sie es noch einmal."
+    },
+    "permissions": {
+      "inventoryRead": "Berechtigung verweigert: Leseberechtigung für den Bestand erforderlich",
+      "inventoryUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für den Bestand erforderlich",
+      "settingsUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für die Einstellungen erforderlich",
+      "vendorCreate": "Berechtigung verweigert: Erstellungsberechtigung für Lieferanten erforderlich",
+      "vendorUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Lieferanten erforderlich"
+    },
+    "productSettings": {
+      "alreadyExists": "Für dieses Produkt existieren bereits Bestandseinstellungen. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidKitPricingMode": "Wählen Sie einen gültigen Preismodus für das Kit.",
+      "productNotFound": "Produkt nicht gefunden. Es wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "productsOnly": "Die Bestandsführung kann nur für Produkte aktiviert werden.",
+      "removeComponentsFirst": "Entfernen Sie alle Kit-Komponenten, bevor Sie die Kit-Markierung aufheben.",
+      "serializedUnitsExist": "Für dieses Produkt existieren serialisierte Einheiten. Verschieben, mustern oder entfernen Sie diese Einheiten, bevor Sie die Serialisierung deaktivieren."
+    },
+    "purchaseOrders": {
+      "cancelledCannotEdit": "Diese Bestellung ist storniert und kann nicht bearbeitet werden.",
+      "cancelledCannotReceive": "Diese Bestellung ist storniert und kann keinen Bestand vereinnahmen.",
+      "currencyRequired": "Wählen Sie eine Währung aus, bevor Sie die Bestellung anlegen.",
+      "fullyReceivedCannotCancel": "Diese Bestellung ist bereits vollständig vereinnahmt und kann nicht storniert werden.",
+      "lineNotFound": "Bestellposition nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "lineReceivedCannotRemove": "Für diese Position wurde bereits Bestand vereinnahmt; sie kann nicht entfernt werden.",
+      "lineRequired": "Fügen Sie mindestens eine Position hinzu, bevor Sie diese Bestellung übermitteln.",
+      "onlyDraftDeletable": "Nur Bestellungen im Entwurfsstatus können gelöscht werden. Stornieren Sie übermittelte Bestellungen stattdessen.",
+      "quantityPositive": "Die Menge muss größer als 0 sein.",
+      "receivedStockCannotCancel": "Für diese Bestellung wurde bereits Bestand vereinnahmt; sie kann nicht storniert werden.",
+      "recordInvalid": "Einer der ausgewählten Bestelldatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "stockLocationNotFound": "Bestandsstandort nicht gefunden. Er wurde möglicherweise gelöscht. Bitte wählen Sie einen anderen Standort.",
+      "submitBeforeReceiving": "Übermitteln Sie diese Bestellung, bevor Sie Bestand dagegen vereinnahmen.",
+      "trackingDisabled": "Für dieses Produkt ist die Bestandsverfolgung deaktiviert.",
+      "vendorRequired": "Wählen Sie einen Lieferanten aus, bevor Sie die Bestellung anlegen."
+    },
+    "reorder": {
+      "destinationAndSourceRequired": "Wählen Sie sowohl ein Beladeziel als auch ein Quellregal aus.",
+      "recordInvalid": "Einer der ausgewählten Ladelistendatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "reporting": {
+      "invalidDateRange": "Wählen Sie einen gültigen Berichtszeitraum."
+    },
+    "restock": {
+      "cannotRestock": "Diese Einheit kann nicht wieder eingelagert werden. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",
+      "cannotRestockStatus": {
+        "allocated": "Diese Einheit kann nicht wieder eingelagert werden – sie ist derzeit zugewiesen. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",
+        "delivered": "Diese Einheit kann nicht wieder eingelagert werden – sie ist derzeit geliefert. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",
+        "in_rma": "Diese Einheit kann nicht wieder eingelagert werden – sie ist derzeit in RMA. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",
+        "in_stock": "Diese Einheit kann nicht wieder eingelagert werden – sie ist derzeit auf Lager. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",
+        "in_transit": "Diese Einheit kann nicht wieder eingelagert werden – sie ist derzeit unterwegs. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",
+        "on_loan": "Diese Einheit kann nicht wieder eingelagert werden – sie ist derzeit verliehen. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",
+        "retired": "Diese Einheit kann nicht wieder eingelagert werden – sie ist derzeit ausgemustert. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden.",
+        "returned": "Diese Einheit kann nicht wieder eingelagert werden – sie ist derzeit zurückgegeben. Nur gelieferte oder zurückgegebene Einheiten können wieder eingelagert werden."
+      },
+      "conflict": "Diese Wiedereinlagerung steht im Konflikt mit einem vorhandenen Datensatz. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "feeNonNegative": "Die Wiedereinlagerungsgebühr darf nicht negativ sein.",
+      "invalidReferenceUnitLocation": "Das sieht nicht nach einem gültigen Datensatzverweis aus. Wählen Sie die Einheit und den Standort aus den Listen aus.",
+      "locationRequired": "Wählen Sie einen Standort für die Wiedereinlagerung dieser Einheit aus.",
+      "productAndLocationRequired": "Wählen Sie ein Produkt und einen Standort aus, bevor Sie nicht serialisierten Bestand wieder einlagern.",
+      "quantityPositive": "Die Wiedereinlagerungsmenge muss größer als null sein.",
+      "recordInvalid": "Einer der ausgewählten Datensätze ist nicht mehr gültig. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "serializedUnitRequired": "Dieses Produkt ist serialisiert. Wählen Sie die konkrete Einheit für die Wiedereinlagerung aus."
+    },
+    "rma": {
+      "caseNotFound": "RMA-Vorgang nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "deadUnitDueDateRequired": "Wählen Sie ein Fälligkeitsdatum für die zurückgesendete defekte Einheit.",
+      "duplicateStockUnit": "Es existiert bereits eine Bestandseinheit mit dieser Seriennummer oder MAC-Adresse.",
+      "missingProductDetails": "Für diese RMA fehlen Produktangaben. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "noReplacementUnit": "Für diese RMA ist keine Ersatzeinheit erfasst. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "noReturnedUnit": "Für diese RMA ist keine zurückgesendete Einheit erfasst. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "recordInvalid": "Einer der ausgewählten RMA-Datensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "replacementLocationRequired": "Wählen Sie den Eingangsstandort für die Ersatzeinheit aus.",
+      "replacementSerialRequired": "Geben Sie die Seriennummer der Ersatzeinheit ein.",
+      "returnLocationRequired": "Wählen Sie einen Standort aus, bevor Sie die Rücksendung vereinnahmen.",
+      "returnedUnitNotFound": "Zurückgesendete Bestandseinheit nicht gefunden. Bitte aktualisieren Sie die Seite und wählen Sie eine andere Einheit.",
+      "returnedUnitRequired": "Die ID der zurückgesendeten Einheit ist erforderlich.",
+      "vendorRequired": "Wählen Sie einen Lieferanten aus, bevor Sie die RMA senden."
+    },
+    "salesOrders": {
+      "clientRequired": "Wählen Sie einen Kunden aus, bevor Sie den Kundenauftrag anlegen.",
+      "conflict": "Diese Kundenauftragsaktualisierung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "currencyRequired": "Wählen Sie eine Währung aus, bevor Sie den Kundenauftrag anlegen.",
+      "fulfilledCannotCancel": "Dieser Kundenauftrag enthält ausgelieferte Positionen und kann nicht storniert werden.",
+      "fulfilledCannotReopen": "Dieser Kundenauftrag enthält ausgelieferte Positionen und kann nicht wieder geöffnet werden.",
+      "invalidDate": "Wählen Sie ein gültiges Kundenauftragsdatum.",
+      "invalidValue": "Einer der ausgewählten Kundenauftragswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invoicedCannotCancel": "Dieser Kundenauftrag enthält abgerechnete Positionen und kann nicht storniert werden.",
+      "invoicedCannotReopen": "Dieser Kundenauftrag enthält abgerechnete Positionen und kann nicht wieder geöffnet werden.",
+      "missingData": "Erforderliche Kundenauftragsdaten fehlen. Bitte überprüfen Sie das Formular und versuchen Sie es erneut.",
+      "onlyDraftDeletable": "Nur Kundenaufträge im Entwurfsstatus können gelöscht werden. Stornieren Sie bestätigte Aufträge stattdessen.",
+      "recordInvalid": "Einer der ausgewählten Kundenauftragsdatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "valueNotAllowed": "Einer der Kundenauftragswerte ist nicht zulässig. Bitte überprüfen Sie das Formular und versuchen Sie es erneut."
+    },
+    "shared": {
+      "duplicateStockUnit": "Es existiert bereits eine Bestandseinheit mit derselben Seriennummer oder MAC-Adresse.",
+      "inventoryNotEnabledForProduct": "Für dieses Produkt ist die Bestandsführung nicht aktiviert.",
+      "inventoryRecordInvalid": "Einer der ausgewählten Bestandsdatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "inventorySettingsDisabled": "Für dieses Produkt sind keine Bestandseinstellungen aktiviert. Aktivieren Sie zuerst die Bestandsverfolgung.",
+      "lineQuantityPositive": "Jede Positionsmenge muss größer als 0 sein.",
+      "locationRequiredForReceipt": "Wählen Sie einen Standort aus, bevor Sie Bestand vereinnahmen.",
+      "purchaseOrderNotFound": "Bestellung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "salesOrderLineAlreadyFulfilled": "Diese Kundenauftragsposition ist bereits vollständig ausgeliefert.",
+      "salesOrderLineNotFound": "Kundenauftragsposition nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "salesOrderNotFound": "Kundenauftrag nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "sameSourceAndDestination": "Wählen Sie unterschiedliche Quell- und Zielstandorte.",
+      "serialNumberRequired": "Jede serialisierte Einheit benötigt eine Seriennummer.",
+      "stockUnitNotFound": "Bestandseinheit nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "vendorNotFoundChooseAnother": "Lieferant nicht gefunden. Er wurde möglicherweise gelöscht. Bitte wählen Sie einen anderen Lieferanten."
+    },
+    "stockLedger": {
+      "productRequired": "Wählen Sie ein Produkt aus, bevor Sie Bestand vereinnahmen.",
+      "quantityPositiveInteger": "Die Menge muss eine positive ganze Zahl sein.",
+      "recordInvalid": "Das ausgewählte Produkt oder der ausgewählte Standort ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "trackingDisabled": "Für dieses Produkt ist die Bestandsverfolgung deaktiviert.",
+      "unitCostNonNegative": "Die Stückkosten dürfen nicht negativ sein."
+    },
+    "stockLocations": {
+      "duplicate": "Ein Standort mit diesen Angaben existiert bereits.",
+      "invalidType": "Wählen Sie einen gültigen Standorttyp.",
+      "moveStockBeforeDeactivate": "Lagern Sie den gesamten Bestand aus diesem Standort aus, bevor Sie ihn deaktivieren.",
+      "moveUnitsBeforeDeactivate": "Verschieben oder mustern Sie alle Einheiten dieses Standorts, bevor Sie ihn deaktivieren.",
+      "nameRequired": "Der Name des Standorts ist erforderlich.",
+      "notFound": "Standort nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "recordInvalid": "Einer der ausgewählten Standortdatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "stockUnits": {
+      "conflict": "Diese Bestandseinheitsabfrage steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidDateRange": "Wählen Sie einen gültigen Zeitraum für Bestandsbewegungen.",
+      "invalidValue": "Einer der ausgewählten Bestandseinheitswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "recordInvalid": "Einer der ausgewählten Bestandseinheitsdatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "transfers": {
+      "conflict": "Diese Umlagerung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "lineRequired": "Fügen Sie mindestens eine Umlagerungsposition hinzu.",
+      "locationsRequired": "Wählen Sie sowohl einen Quellstandort als auch einen Zielstandort aus.",
+      "notFound": "Umlagerung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "productRequired": "Jede Umlagerungsposition benötigt ein Produkt oder einen Dienst.",
+      "quantityPositive": "Die Menge der Umlagerungsposition muss größer als null sein.",
+      "recordInvalid": "Einer der ausgewählten Umlagerungsdatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "unitNotAtSource": "Die ausgewählte Bestandseinheit befindet sich nicht am Quellstandort.",
+      "unitNotInStock": "Nur Einheiten, die derzeit auf Lager sind, können umgelagert werden.",
+      "unitProductMismatch": "Die ausgewählte Bestandseinheit passt nicht zum Produkt der Umlagerungsposition."
+    },
+    "vendorBills": {
+      "duplicateNumber": "Für den ausgewählten Lieferanten existiert bereits eine Rechnung mit dieser Nummer.",
+      "lineQuantityPositive": "Die Positionsmenge muss eine positive ganze Zahl sein.",
+      "lineUnitCostNonNegative": "Die Stückkosten der Position dürfen nicht negativ sein.",
+      "notFound": "Lieferantenrechnung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "numberRequired": "Geben Sie die Rechnungsnummer des Lieferanten ein.",
+      "receiveStockFirst": "Vereinnahmen Sie Bestand zu dieser Bestellung, bevor Sie daraus eine Lieferantenrechnung erstellen.",
+      "recordInvalid": "Einer der ausgewählten Lieferantenrechnungsdatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "vendorRequired": "Wählen Sie einen Lieferanten aus, bevor Sie die Rechnung anlegen."
+    },
+    "vendorProducts": {
+      "costNonNegative": "Die Lieferantenkosten dürfen nicht negativ sein.",
+      "duplicate": "Dieses Lieferantenangebot existiert bereits. Aktualisieren Sie die Seite und bearbeiten Sie das vorhandene Angebot.",
+      "recordInvalid": "Der ausgewählte Lieferant oder das ausgewählte Produkt ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "vendorAndProductRequired": "Wählen Sie sowohl einen Lieferanten als auch ein Produkt aus, bevor Sie das Angebot speichern."
+    },
+    "vendors": {
+      "duplicateName": "Ein Lieferant mit dem Namen „{{name}}“ existiert bereits",
+      "hasOpenPurchaseOrders": "Ein Lieferant mit offenen Bestellungen kann nicht deaktiviert werden",
+      "nameRequired": "Der Name des Lieferanten ist erforderlich",
+      "notFound": "Lieferant nicht gefunden"
+    }
+  },
   "ghostUsage": {
     "actions": {
       "dismiss": "Verwerfen",

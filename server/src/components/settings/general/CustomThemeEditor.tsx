@@ -86,7 +86,7 @@ export function CustomThemeEditor({
             onClick={() => onModeChange(candidate)}
             className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
               mode === candidate
-                ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
+                ? 'chip-primary border-[rgb(var(--color-primary-500))]'
                 : 'border-[rgb(var(--color-border-300))] text-[rgb(var(--color-text-600))]'
             }`}
             data-automation-id={`custom-theme-mode-${candidate}`}

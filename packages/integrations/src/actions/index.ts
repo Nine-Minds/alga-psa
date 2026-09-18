@@ -10,6 +10,7 @@ export {
   getQboConnectionStatus,
   saveQboCredentials,
   disconnectQbo,
+  forceFinalizeQboDisconnect,
   getQboTaxCodes,
   getQboAutomatedSalesTaxMode,
   setQboAutomatedSalesTaxMode,
@@ -168,7 +169,6 @@ export {
   validateTeamsBotConnector,
   listTeamsDeliveries,
   listTeamsAuditEvents,
-  getTeamsAddonPurchaseAccess,
   type TeamsDiagnosticsReport,
   type TeamsTestMessageResult,
   type TeamsGraphCredentialValidationResult,
@@ -184,6 +184,12 @@ export {
 export {
   getTeamsAppPackageStatus,
 } from './integrations/teamsPackageActions';
+export {
+  createTelephonyCallIntent,
+  getTelephonyCallLinkState,
+  type CreateTelephonyCallIntentResult,
+  type TelephonyCallLinkState,
+} from './integrations/telephonyActions';
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
@@ -234,6 +240,10 @@ export {
   type EntraSyncScheduleSettings,
 } from './integrations/entraActions';
 export {
+  runEntraConnectionDiagnostics,
+  runEntraClientAccessDiagnostics,
+} from './integrations/entraDiagnosticsActions';
+export {
   getTacticalRmmSettings,
   saveTacticalRmmConfiguration,
   testTacticalRmmConnection,
@@ -274,6 +284,7 @@ export {
   getXeroIntegrationStatus,
   saveXeroCredentials,
   disconnectXero,
+  forceFinalizeXeroDisconnect,
   getXeroAccounts,
   getXeroItems,
   getXeroTaxRates,
@@ -292,3 +303,12 @@ export {
 export {
   getTaxRegions
 } from './taxRegionActions';
+
+export {
+  getAssetRmmData,
+  refreshAssetRmmData,
+  triggerRmmReboot,
+  triggerRmmScript,
+  getAssetRemoteControlUrl,
+  type RmmCommandResult,
+} from './integrations/assetRmmActions';

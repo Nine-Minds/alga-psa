@@ -16,19 +16,8 @@ name: Citus Migration Smoke
 # maintaining a custom citus+pgvector image.
 
 on:
+  workflow_call:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'server/migrations/**'
-      - 'ee/server/migrations/**'
-      - '.github/workflows/citus-migration-smoke.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'server/migrations/**'
-      - 'ee/server/migrations/**'
-
 jobs:
   citus-migrate:
     name: Combined migrations on single-node Citus
@@ -143,3 +132,75 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Install PDF text extraction tools
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Run workflow and invoice regressions on distributed tables
+        working-directory: server
+        env:
+          CI: 'true'
+          TEST_DB_BACKEND: citus
+          TEST_DB_NAME: citus_runtime
+          DB_NAME_SERVER: citus_runtime
+          TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/combined-migrations
+        run: node ../scripts/run-citus-runtime-tests.mjs
+
+      - name: Run tenant creation and product upgrade behavior on migrated Citus
+        env:
+          DB_NAME_SERVER: citus_runtime
+          TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP: '1'
+          TEMPORAL_TENANT_E2E_ISOLATED: 'true'
+        run: node scripts/run-additional-workspace-tests.mjs temporal-database
+
+      - name: Upload tenant product upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporal-database-execution
+          path: test-results/temporal-database/
+          if-no-files-found: error
+
+      - name: Upload Citus runtime results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: citus-runtime
+          path: test-results/citus-runtime/
+          if-no-files-found: error
+
+  citus-complete:
+    name: Citus execution complete
+    needs: [citus-migrate]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CITUS_JOB_RESULT: ${{ needs.citus-migrate.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download distributed runtime evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: citus-runtime
+          path: test-results/citus-input/citus-runtime
+      - name: Download tenant database evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: temporal-database-execution
+          path: test-results/citus-input/temporal-database
+      - name: Independently verify complete candidate execution
+        if: always()
+        run: node scripts/verify-citus-execution.mjs
+      - name: Upload Citus aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: citus-aggregate
+          path: test-results/citus-gate/
+          if-no-files-found: error

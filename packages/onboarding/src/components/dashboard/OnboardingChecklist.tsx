@@ -137,7 +137,7 @@ function StepItem({ step, onCtaClick }: StepItemProps) {
   };
 
   return (
-    <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-border bg-[rgb(var(--color-card))] p-4 card-elevated">
       <div className="flex items-start gap-3">
         <div className="rounded-full bg-primary-50 p-2">
           <Icon className="h-5 w-5 text-primary-700" />

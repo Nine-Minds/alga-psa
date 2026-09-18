@@ -37,14 +37,28 @@ export interface DbResetOptions {
 }
 
 /**
- * Resets the database to a clean state
- * @param db Knex database instance
+ * Resets the database to a clean state.
+ *
+ * Destructive in two ways the name does not advertise: it destroys the pool of
+ * the handle it is given, and it drops and recreates the database itself. The
+ * caller's handle is dead afterwards — reconnect rather than reuse it. Suites
+ * that need per-test isolation want `TestContext.reset()` (transaction
+ * rollback), which is also two orders of magnitude faster.
+ *
+ * @param db Knex database instance (a root connection, never a transaction)
  * @param options Reset options
  */
 export async function resetDatabase(
   db: Knex,
   options: DbResetOptions = {}
 ): Promise<void> {
+  if ((db as Knex & { isTransaction?: boolean }).isTransaction) {
+    throw new Error(
+      'resetDatabase() drops and recreates the database and cannot be passed a ' +
+      'transaction — the rollback would fail on a connection the drop killed. ' +
+      'Use TestContext.reset() for per-test isolation.'
+    );
+  }
   const {
     cleanupTables = [],
     runSeeds = true,

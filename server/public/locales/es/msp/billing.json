@@ -43,13 +43,14 @@
       "contractTemplates": "Plantillas de contrato",
       "invoicing": "Facturación",
       "invoiceLayouts": "Diseños de factura",
-      "taxRates": "Tasas de impuestos",
+      "taxRates": "Impuestos",
       "contractLinePresets": "Preajustes de línea de contrato",
       "billingCycles": "Ciclos de facturación",
       "servicePeriods": "Períodos de servicio",
       "usageTracking": "Seguimiento de uso",
       "reports": "Informes",
       "serviceTypes": "Tipos de servicio",
+      "serviceCategories": "Categorías de servicio",
       "serviceCatalog": "Servicios",
       "products": "Productos"
     }
@@ -141,6 +142,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Resumen de las bolsas de horas",
+    "bucketLoadError": "No se pudieron cargar los saldos de las bolsas de horas. Vuelva a intentarlo para ver los saldos actuales.",
+    "retryBucketBalances": "Volver a cargar los saldos de horas",
     "usageRecords": "Registros de uso",
     "actions": {
       "addUsage": "Agregar uso",
@@ -211,6 +214,12 @@
       "updateError": "No se pudo actualizar el registro de uso",
       "deleteSuccess": "Registro de uso eliminado correctamente",
       "deleteError": "No se pudo eliminar el registro de uso"
+    },
+    "periodReport": "Informe de uso del período",
+    "periodAlreadyInvoiced": "Este período ya está facturado. Corríjalo mediante el proceso de ajuste de facturas.",
+    "periodFilter": {
+      "notice": "Mostrando el uso del período de servicio del {{start}} al {{end}}",
+      "clear": "Limpiar"
     }
   },
   "lineItem": {
@@ -381,13 +390,17 @@
       "execute": "Ejecutar",
       "createBatch": "Crear lote",
       "creating": "Creando...",
-      "cancelBatch": "Cancelar lote"
+      "cancelBatch": "Cancelar lote",
+      "retry": "Reintentar"
     },
     "states": {
       "loadingBatches": "Cargando lotes...",
       "empty": "Aún no hay lotes de exportación.",
       "loadingDetails": "Cargando detalles del lote...",
-      "batchNotFound": "Lote no encontrado."
+      "batchNotFound": "Lote no encontrado.",
+      "checkingAccess": "Comprobando acceso...",
+      "accessDeniedTitle": "Acceso denegado",
+      "accessDeniedDescription": "No tiene permiso para acceder a las exportaciones contables."
     },
     "createDialog": {
       "title": "Nueva exportación contable",
@@ -405,7 +418,12 @@
         "invoiceStatuses": "Separados por comas (opcional), p.e. finalizado, publicado",
         "notes": "Notas opcionales"
       },
-      "defaultRealmLabel": "{{realmId}} (predeterminado)"
+      "defaultRealmLabel": "{{realmId}} (predeterminado)",
+      "loadingConnections": "Cargando conexiones contables...",
+      "connectionLoadError": "No se pudieron cargar las conexiones contables. Verifique la configuración de conexión e inténtelo de nuevo.",
+      "ambiguousRealm": "Su organización contable predeterminada está compartida por más de una conexión. Elija una conexión para continuar.",
+      "noXeroConnection": "No hay ninguna conexión de Xero disponible. Conecte Xero en la configuración contable para exportar.",
+      "noQboConnection": "No hay ninguna conexión de QuickBooks Online disponible. Conéctela en la configuración contable para exportar."
     },
     "detailDialog": {
       "title": "Lote de exportación contable",
@@ -429,7 +447,8 @@
       "createError": "No se pudo crear el lote de exportación",
       "executeError": "No se pudo ejecutar el lote",
       "cancelled": "Lote cancelado",
-      "cancelError": "No se pudo cancelar el lote"
+      "cancelError": "No se pudo cancelar el lote",
+      "realmRequired": "Elija una empresa contable conectada antes de crear la exportación."
     },
     "status": {
       "pending": "Pendiente",
@@ -569,6 +588,142 @@
     "reason": {
       "uncovered": "No cubierto por ningún contrato",
       "ambiguous": "Coincide con más de una línea de contrato"
+    }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Ya existe una factura para este período de facturación recurrente.",
+    "permissions": {
+      "billingRead": "Permiso denegado: se requiere permiso de lectura de facturación",
+      "billingUpdate": "Permiso denegado: se requiere permiso de actualización de facturación",
+      "billingCreate": "Permiso denegado: se requiere permiso de creación de facturación",
+      "billingDelete": "Permiso denegado: se requiere permiso de eliminación de facturación",
+      "clientRead": "Permiso denegado: se requiere permiso de lectura de clientes",
+      "otherClientLocations": "Permiso denegado: no se puede acceder a las ubicaciones de otro cliente",
+      "clientPortalUnavailable": "Permiso denegado: la operación no está disponible en el portal del cliente",
+      "resolveCurrency": "Permiso denegado: no se puede determinar la moneda de facturación del cliente",
+      "clientBillingAccess": "Permiso denegado: no tiene acceso a la facturación de este cliente."
+    },
+    "context": {
+      "tenantNotFound": "Inquilino no encontrado",
+      "tenantContextNotFound": "No se encontró el contexto del inquilino",
+      "noTenantContext": "No hay contexto de inquilino. Actualice la página e inténtelo de nuevo.",
+      "clientContextNotFound": "No se encontró el contexto del cliente",
+      "notAuthenticated": "No autorizado: no se encontró ningún usuario autenticado",
+      "notLoggedIn": "el usuario no ha iniciado sesión"
+    },
+    "client": {
+      "notFound": "Cliente no encontrado",
+      "notFoundRefresh": "Cliente no encontrado. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "idRequired": "Se requiere el ID del cliente."
+    },
+    "clientContract": {
+      "notFound": "No se encontró la asignación de contrato del cliente. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores seleccionados del contrato del cliente no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El cliente, contrato o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Esta asignación de contrato del cliente ya existe.",
+      "missingField": "Falta un campo obligatorio del contrato del cliente.",
+      "missingFieldNamed": "Falta un campo obligatorio del contrato del cliente: {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "No se puede crear el siguiente ciclo de facturación en este momento"
+    },
+    "currency": {
+      "multipleActive": "El cliente tiene contratos activos en varias monedas ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "Uno de los valores seleccionados de la superposición de bolsa de horas no es válido. Actualice la página e inténtelo de nuevo.",
+      "recordInvalid": "Uno de los registros seleccionados de la superposición de bolsa de horas ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe una superposición de bolsa de horas para este servicio.",
+      "notAllowed": "Uno de los valores de la superposición de bolsa de horas no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la superposición de bolsa de horas.",
+      "missingFieldNamed": "Falta un campo obligatorio de la superposición de bolsa de horas: {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "Ya existe un grupo de bolsa de horas o un miembro con esta configuración. Actualice la página e inténtelo de nuevo.",
+      "recordInvalid": "Uno de los registros seleccionados del grupo de bolsa de horas ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores del grupo de bolsa de horas no está permitido. Revise el formulario e inténtelo de nuevo."
+    },
+    "material": {
+      "invalidValue": "Uno de los valores de material seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "recordInvalid": "Uno de los registros de material seleccionados ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Este registro de material ya existe.",
+      "notAllowed": "Uno de los valores de material no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del material.",
+      "missingFieldNamed": "Falta un campo obligatorio del material: {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "No se encontró el registro de uso. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "bucketUpdateFailed": "No se puede actualizar el consumo de la bolsa de horas para este registro de uso. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "El registro de uso, cliente, servicio o línea de contrato seleccionado no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El cliente, servicio o línea de contrato seleccionado ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un registro de uso en conflicto. Actualice la página e inténtelo de nuevo.",
+      "alreadyDeleted": "No se encontró el registro de uso. Es posible que ya se haya eliminado.",
+      "missingField": "Falta un campo obligatorio del registro de uso.",
+      "missingFieldNamed": "Falta un campo obligatorio del registro de uso: {{field}}."
+    },
+    "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "La fecha de activación debe ser una fecha de calendario válida.",
+        "thresholdsAscending": "Los umbrales de notificación deben estar en orden estrictamente ascendente.",
+        "amountOrPercentage": "Se requiere exactamente uno de los valores: importe o porcentaje.",
+        "increaseTotalAmountOnly": "El aumento del total solo es válido para las entradas basadas en importes.",
+        "amountAndPercentageTogether": "El importe y el porcentaje deben actualizarse juntos, con exactamente uno establecido en nulo."
+      },
+      "invalidValue": "Uno de los valores seleccionados de la facturación del proyecto no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El proyecto, factura, fase, servicio o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un registro de facturación del proyecto en conflicto. Actualice la página e inténtelo de nuevo.",
+      "ruleViolation": "Los valores de facturación del proyecto infringen una regla de datos. Revise el formulario e inténtelo de nuevo.",
+      "requestFailed": "La facturación del proyecto no pudo completar la solicitud. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la facturación del proyecto.",
+      "missingFieldNamed": "Falta un campo obligatorio de la facturación del proyecto: {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "La fecha de inicio y la fecha de fin son obligatorias."
+    },
+    "recurringRun": {
+      "selectPeriods": "Seleccione al menos un período de facturación recurrente para generar.",
+      "invoicePermission": "Permiso denegado: se requiere permiso para crear o generar facturas",
+      "monthEndCloseNotMaterialized": "No se materializaron períodos de servicio recurrentes para esta ventana de ejecución recurrente.",
+      "monthEndCloseNotEligible": "El período {{servicePeriod}} solo se puede cerrar a fin de mes, el {{finalCalendarDay}}. Solo los períodos de servicio a mes vencido que abarcan un mes natural completo pueden cerrarse de forma anticipada en su último día calendario."
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "Se requiere una clave de calendario para inspeccionar los períodos de servicio recurrentes.",
+      "scheduleKeyRequiredRepair": "Se requiere una clave de calendario para reparar los períodos de servicio recurrentes."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Los usuarios del portal del cliente no pueden gestionar las exportaciones contables",
+      "permissions": {
+        "create": "Permiso denegado: no se pueden crear lotes de exportación contable",
+        "read": "Permiso denegado: no se puede acceder a los lotes de exportación contable",
+        "update": "Permiso denegado: no se pueden modificar los lotes de exportación contable",
+        "execute": "Permiso denegado: no se pueden ejecutar los lotes de exportación contable"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "No se encontró la factura de proveedor. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo."
+    },
+    "documentTemplate": {
+      "unknownType": "Tipo de documento desconocido: {{documentType}}",
+      "permissions": {
+        "read": "Permiso denegado: no se pueden leer las plantillas de documento",
+        "modify": "Permiso denegado: no se pueden modificar las plantillas de documento",
+        "setDefault": "Permiso denegado: no se puede establecer la plantilla de documento predeterminada",
+        "clearOverride": "Permiso denegado: no se puede borrar la anulación de la plantilla de documento",
+        "delete": "Permiso denegado: no se pueden eliminar las plantillas de documento",
+        "preview": "Permiso denegado: no se pueden previsualizar las plantillas de documento",
+        "readSalesOrders": "Permiso denegado: no se pueden leer los pedidos de venta"
+      },
+      "existingNotFound": "Documento no encontrado."
+    },
+    "billingProfile": {
+      "periodOrder": "Elija un período cuyo inicio sea anterior o igual a su fin.",
+      "comparisonPeriodOrder": "Elija un período de comparación cuyo inicio sea anterior o igual a su fin.",
+      "notThisClient": "Ese perfil de facturación no pertenece a este cliente."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Ese elemento ya no existe.",
+      "alreadyInvoiced": "Ese elemento ya se facturó.",
+      "contractLineNotFound": "Esa línea de contrato ya no existe."
     }
   }
 }

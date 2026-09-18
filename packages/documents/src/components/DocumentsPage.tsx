@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { DocumentFilters as DocumentFilterType } from '@alga-psa/types';
 import Documents from './Documents';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
@@ -339,17 +340,15 @@ export default function DocumentsPage() {
               </>
             )}
           </div>
-          <button
+          <Button
+            id="documents-default-folders-toggle"
+            variant={showDefaultFolders ? 'soft' : 'outline'}
+            size="sm"
             onClick={() => setShowDefaultFolders(prev => !prev)}
-            className={`p-2 rounded-md border transition-colors ${
-              showDefaultFolders
-                ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-900)/0.2)] border-[rgb(var(--color-primary-300))] dark:border-[rgb(var(--color-primary-700))] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))]'
-                : 'border-gray-200 dark:border-[rgb(var(--color-border-200))] text-gray-500 dark:text-[rgb(var(--color-text-400))] hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-50))]'
-            }`}
             title="Configure default folders"
           >
             <Settings2 className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
       </div>
 

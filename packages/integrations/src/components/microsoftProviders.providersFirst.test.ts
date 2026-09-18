@@ -89,7 +89,9 @@ describe('Microsoft providers-first form contracts', () => {
   it('T020/T021: Microsoft calendar form uses providers-first CTA and saves without manual credentials', () => {
     expect(calendarFormSource).toContain('Microsoft provider settings are not configured.');
     expect(calendarFormSource).toContain('configure-microsoft-calendar-providers-link');
-    expect(calendarFormSource).toContain('/msp/settings?category=providers');
+    // tab=integrations is required — without it the settings page ignores the
+    // category param and lands on the default tab.
+    expect(calendarFormSource).toContain('/msp/settings?tab=integrations&category=providers');
 
     expect(calendarFormSource).toContain('createCalendarProvider({');
     expect(calendarFormSource).toContain("client_id: ''");

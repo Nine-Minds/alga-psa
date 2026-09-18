@@ -5,7 +5,7 @@ import type { IClient, IContact, ISlaPolicy, ITag, SurveyClientSatisfactionSumma
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { TagManager } from '@alga-psa/tags/components';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { translateFieldValidation, validateAnnualRevenue, validateClientNameField, validateCompanySize, validateIndustry, validateWebsiteUrlField, type FieldValidation } from '@alga-psa/validation';
+import { translateFieldValidation, validateAnnualRevenueField, validateClientNameField, validateCompanySizeField, validateIndustryField, validateWebsiteUrlField, type FieldValidation } from '@alga-psa/validation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -552,7 +552,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.industry || ''}
             onEdit={(value) => onFieldChange('properties.industry', value)}
             automationId="industry-field"
-            validate={validateIndustry}
+            validateField={validateIndustryField}
           />
 
           <TextDetailItem
@@ -560,7 +560,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.company_size || ''}
             onEdit={(value) => onFieldChange('properties.company_size', value)}
             automationId="company-size-field"
-            validate={validateCompanySize}
+            validateField={validateCompanySizeField}
           />
 
           <TextDetailItem
@@ -568,7 +568,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.annual_revenue || ''}
             onEdit={(value) => onFieldChange('properties.annual_revenue', value)}
             automationId="annual-revenue-field"
-            validate={validateAnnualRevenue}
+            validateField={validateAnnualRevenueField}
           />
 
           <div className="space-y-2">

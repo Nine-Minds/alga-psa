@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ActivityPriority, ActivityType } from '@alga-psa/types';
+import { ActivityPriority, ActivityType, type ScheduleActivity } from '@alga-psa/types';
 
 const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
@@ -180,6 +180,8 @@ describe('schedule activity aggregation', () => {
     const result = await fetchScheduleActivities('owner-1', 'tenant-1', {});
 
     expect(result.map((activity) => activity.id)).toEqual(['entry-plain']);
-    expect(result[0].workItemType).toBe('ticket');
+    // fetchScheduleActivities is typed Activity[]; only the schedule member of
+    // that union carries workItemType, so narrow before reading it.
+    expect((result[0] as ScheduleActivity).workItemType).toBe('ticket');
   });
 });

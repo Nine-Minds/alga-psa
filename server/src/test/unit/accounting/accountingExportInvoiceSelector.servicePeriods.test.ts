@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
+// Explicit manual export targets are validated against the tenant's connected
+// integrations, so the realm-1 QBO company used below must be "connected".
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
+  getDefaultQboRealmId: async () => 'realm-1',
+  getStoredQboCredentialsMap: async () => ({ 'realm-1': { realmId: 'realm-1' } })
+}));
+
 import { AccountingExportInvoiceSelector, AccountingExportService } from '@alga-psa/billing/services';
 
 function buildThenableQuery(result: any[]) {
@@ -200,6 +207,9 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
         return buildThenableQuery([{ invoice_id: 'invoice-1', transaction_id: 'txn-1' }]);
       }
       if (table === 'tenant_external_entity_mappings as map') {
+        return buildThenableQuery([]);
+      }
+      if (table === 'tenant_external_entity_mappings as qmap') {
         return buildThenableQuery([]);
       }
       throw new Error(`Unexpected table ${table}`);

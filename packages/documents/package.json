@@ -42,6 +42,10 @@
       "import": "./src/lib/collabPersistence.ts",
       "types": "./src/lib/collabPersistence.ts"
     },
+    "./lib/documentPreviewGenerator": {
+      "import": "./src/lib/documentPreviewGenerator.ts",
+      "types": "./src/lib/documentPreviewGenerator.ts"
+    },
     "./lib/documentUtils": {
       "import": "./src/lib/documentUtils.ts",
       "types": "./src/lib/documentUtils.ts"
@@ -78,13 +82,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/auth": "*",
     "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",

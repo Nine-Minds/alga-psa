@@ -149,7 +149,10 @@ describe('Document Folder Operations', () => {
     it('should throw error if user lacks document read permission', async () => {
       vi.mocked(hasPermission).mockResolvedValue(false);
 
-      await expect(getFolderTree()).resolves.toEqual({ permissionError: 'Permission denied' });
+      await expect(getFolderTree()).resolves.toEqual({
+        permissionError: 'Permission denied',
+        messageKey: 'documents:errors.permissions.denied',
+      });
     });
 
     it('should build folder tree from explicit and implicit folders', async () => {
@@ -264,7 +267,10 @@ describe('Document Folder Operations', () => {
     it('should require document read permission', async () => {
       vi.mocked(hasPermission).mockResolvedValue(false);
 
-      await expect(getFolders()).resolves.toEqual({ permissionError: 'Permission denied' });
+      await expect(getFolders()).resolves.toEqual({
+        permissionError: 'Permission denied',
+        messageKey: 'documents:errors.permissions.denied',
+      });
     });
   });
 
@@ -599,7 +605,10 @@ describe('Document Folder Operations', () => {
         return resource === 'document' && action === 'update' ? false : true;
       });
 
-      await expect(moveDocumentsToFolder(['doc-1'], '/Legal')).resolves.toEqual({ permissionError: 'Permission denied' });
+      await expect(moveDocumentsToFolder(['doc-1'], '/Legal')).resolves.toEqual({
+        permissionError: 'Permission denied',
+        messageKey: 'documents:errors.permissions.denied',
+      });
     });
 
     it('should update updated_at timestamp', async () => {
@@ -691,6 +700,7 @@ describe('Document Folder Operations', () => {
 
       await expect(toggleFolderVisibility('missing-folder', true, false)).resolves.toEqual({
         actionError: 'Folder not found. It may have been deleted. Please refresh and try again.',
+        messageKey: 'documents:errors.folder.notFound',
       });
       expect(mockKnex.update).not.toHaveBeenCalled();
     });
@@ -700,7 +710,10 @@ describe('Document Folder Operations', () => {
         return resource === 'document' && action === 'update' ? false : true;
       });
 
-      await expect(toggleFolderVisibility('folder-1', true, false)).resolves.toEqual({ permissionError: 'Permission denied' });
+      await expect(toggleFolderVisibility('folder-1', true, false)).resolves.toEqual({
+        permissionError: 'Permission denied',
+        messageKey: 'documents:errors.permissions.denied',
+      });
     });
   });
 
@@ -774,7 +787,10 @@ describe('Document Folder Operations', () => {
         return resource === 'document' && action === 'read' ? false : true;
       });
 
-      await expect(ensureEntityFolders('entity-123', 'client')).resolves.toEqual({ permissionError: 'Permission denied' });
+      await expect(ensureEntityFolders('entity-123', 'client')).resolves.toEqual({
+        permissionError: 'Permission denied',
+        messageKey: 'documents:errors.permissions.denied',
+      });
     });
   });
 
@@ -887,7 +903,10 @@ describe('Document Folder Operations', () => {
         return resource === 'document' && action === 'create' ? false : true;
       });
 
-      await expect(createFolder('/Legal')).resolves.toEqual({ permissionError: 'Permission denied' });
+      await expect(createFolder('/Legal')).resolves.toEqual({
+        permissionError: 'Permission denied',
+        messageKey: 'documents:errors.permissions.denied',
+      });
     });
   });
 
@@ -908,6 +927,7 @@ describe('Document Folder Operations', () => {
 
       await expect(deleteFolder('/Legal')).resolves.toEqual({
         actionError: 'Move or delete the documents in this folder before deleting it.',
+        messageKey: 'documents:errors.folder.emptyDocumentsFirst',
       });
       expect(mockKnex.delete).not.toHaveBeenCalled();
     });
@@ -919,6 +939,7 @@ describe('Document Folder Operations', () => {
 
       await expect(deleteFolder('/Legal')).resolves.toEqual({
         actionError: 'Delete the subfolders in this folder before deleting it.',
+        messageKey: 'documents:errors.folder.emptySubfoldersFirst',
       });
       expect(mockKnex.delete).not.toHaveBeenCalled();
     });
@@ -928,7 +949,10 @@ describe('Document Folder Operations', () => {
         return resource === 'document' && action === 'delete' ? false : true;
       });
 
-      await expect(deleteFolder('/Legal')).resolves.toEqual({ permissionError: 'Permission denied' });
+      await expect(deleteFolder('/Legal')).resolves.toEqual({
+        permissionError: 'Permission denied',
+        messageKey: 'documents:errors.permissions.denied',
+      });
     });
 
     it('should filter by tenant when checking for documents and subfolders', async () => {

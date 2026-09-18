@@ -1,0 +1,183 @@
+{
+  "observedAt": "2026-09-07T04:09:42.129414+00:00",
+  "repository": "Nine-Minds/alga-psa",
+  "branch": "main",
+  "status": "Read-only live audit; enforcement changes remain pending",
+  "pr": {
+    "number": 3343,
+    "author": "RobertAtNineMinds",
+    "publishedHead": "df9b92815621dbfe2bfe71c141df459f218cb67a",
+    "localAuditHead": "48360961af9a59119fd401c57db4011833377288"
+  },
+  "effectiveRules": [
+    {
+      "type": "deletion",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "non_fast_forward",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Run ext-v2 guard and ESLint",
+            "integration_id": 15368
+          }
+        ]
+      },
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "deletion",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    },
+    {
+      "type": "non_fast_forward",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Check for new circular dependencies",
+            "integration_id": 15368
+          }
+        ]
+      },
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    }
+  ],
+  "rulesets": [
+    {
+      "id": 7438254,
+      "name": "ext-v2 guard and ESLint",
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/heads/main",
+            "refs/heads/release/*."
+          ]
+        }
+      },
+      "bypass_actors": [
+        {
+          "actor_id": 2787854,
+          "actor_type": "Integration",
+          "bypass_mode": "always"
+        }
+      ]
+    },
+    {
+      "id": 13189070,
+      "name": "no new circular dependencies",
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/heads/main"
+          ]
+        }
+      },
+      "bypass_actors": [
+        {
+          "actor_id": 2787854,
+          "actor_type": "Integration",
+          "bypass_mode": "always"
+        }
+      ]
+    }
+  ],
+  "classicProtection": {
+    "requiredStatusChecks": {
+      "strict": true,
+      "contexts": [],
+      "checks": []
+    },
+    "enforceAdmins": false,
+    "requiredApprovingReviews": 1,
+    "requireCodeOwnerReviews": false,
+    "dismissStaleReviews": false,
+    "requireLastPushApproval": false,
+    "pullRequestBypassApps": [
+      {
+        "id": 2787854,
+        "slug": "nine-minds-release-bot"
+      }
+    ]
+  },
+  "findings": [
+    "Only ext-v2/ESLint and circular-dependency checks are named in effective required checks. Unit, integration, discovery and browser checks are not yet required.",
+    "Both active rulesets disable their strict freshness policy; classic status checks report strict=true but name no checks. Effective candidate freshness must be behaviorally verified when new gates are enabled.",
+    "Release bot integration 2787854 has always-bypass on both rulesets and a PR-review bypass allowance. Classic protection does not enforce administrators.",
+    "No CODEOWNERS file found in the tracked/unignored checkout; domain/release owner assignments remain unconfirmed."
+  ],
+  "releaseEntryPoints": [
+    {
+      "path": "ee/appliance/scripts/deploy-app.sh",
+      "behavior": "Applies a selected Flux profile using operator-supplied kubeconfig",
+      "scope": "Appliance operator entry point; not proof of production SaaS deployment path"
+    },
+    {
+      "path": "ee/temporal-workflows/scripts/deploy.sh",
+      "behavior": "Builds/pushes mutable tags (default latest), applies Kubernetes resources and waits for rollout; no inspected gate or tested digest manifest",
+      "scope": "Operator worker deployment helper; production use unverified"
+    },
+    {
+      "path": ".github/workflows/mobile-distribute.yml",
+      "behavior": "Manual EAS build/submit with lint, type, unit and Expo preflight",
+      "scope": "Mobile distribution, not the server release pipeline"
+    }
+  ],
+  "failureResolution": [
+    {
+      "run": 34078331080,
+      "category": "harness fixture",
+      "resolution": "48360961af, local core and server deletion tests passed; native pending"
+    },
+    {
+      "run": 34078331062,
+      "category": "browser product lifecycle defects and API harness setup",
+      "resolution": "Calendar subscription 5f2566f966, table continuity 055e1b19c8, attestation fe023f0fcf; native pending"
+    },
+    {
+      "run": 34078331083,
+      "category": "workspace deletion assertion; full suite still live",
+      "resolution": "4a2a0b2d75 fixes the observed assertion locally; retain full-run handle 101608767833"
+    }
+  ],
+  "ownership": {
+    "currentPROwner": "RobertAtNineMinds",
+    "namedDomainAndReleaseOwners": "Unconfirmed; no external assignments or notifications made"
+  },
+  "pendingUserInput": "Production deployment pipeline link and previous supported release tag requested asynchronously; independent work continues.",
+  "remaining": [
+    "Complete aggregate/discovery and execution reconciliation requirements",
+    "Validate representative success and deliberate failure before changing effective protections",
+    "Confirm intended administrator/release-bot bypass policy and real candidate freshness",
+    "Identify actual production pipeline and previous supported release before dependent release work",
+    "Confirm named operational/domain owners; F001 remains incomplete"
+  ]
+}

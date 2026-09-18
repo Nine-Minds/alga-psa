@@ -75,7 +75,7 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
 
   return (
     <div
-      className={`p-4 border-l-4 ${typeColorMap[activity.type]} bg-white rounded-md shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
+      className={`p-4 border-l-4 ${typeColorMap[activity.type]} bg-[rgb(var(--color-card))] rounded-md card-elevated card-elevated-hover transition-shadow cursor-pointer`}
       style={borderStyle}
       onClick={() => openActivityDrawer(activity)}
       id={`activity-card-${activity.id}`}

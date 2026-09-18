@@ -38,7 +38,7 @@ const LAYERS: Layer[] = [
 interface CatColor { fg: string; bg: string; dot: string }
 const PRIMARY: CatColor = { fg: 'rgb(var(--color-primary-700))', bg: 'rgb(var(--color-primary-50))', dot: 'rgb(var(--color-primary-500))' };
 const SECONDARY: CatColor = { fg: 'rgb(var(--color-secondary-900))', bg: 'rgb(var(--color-secondary-50))', dot: 'rgb(var(--color-secondary-500))' };
-const GREEN: CatColor = { fg: 'rgb(22 101 52)', bg: 'rgb(220 252 231)', dot: 'rgb(34 197 94)' };
+const GREEN: CatColor = { fg: 'rgb(var(--badge-success-text))', bg: 'rgb(var(--badge-success-bg))', dot: 'rgb(var(--badge-success-border))' };
 const ACCENT: CatColor = { fg: 'rgb(var(--color-accent-700))', bg: 'rgb(var(--color-accent-50))', dot: 'rgb(var(--color-accent-500))' };
 const CAT_COLOR: Record<string, CatColor> = {
   global: PRIMARY, navigation: PRIMARY,
@@ -88,7 +88,7 @@ function KeyCap({ children, tone = 'plain', size = 'sm' }: { children: React.Rea
   const h = size === 'md' ? 24 : 20;
   const wide = String(children).length > 1;
   const palettes: Record<CapTone, React.CSSProperties> = {
-    plain: { background: '#fff', color: 'rgb(var(--color-text-800))', border: '1px solid rgb(var(--color-border-300))', boxShadow: '0 1px 0 rgb(var(--color-border-300)), inset 0 -1px 0 rgb(var(--color-border-100))' },
+    plain: { background: 'var(--keycap-flat)', color: 'rgb(var(--color-text-800))', border: '1px solid var(--keycap-edge)', boxShadow: '0 1px 0 rgb(var(--color-border-300)), inset 0 -1px 0 rgb(var(--color-border-100))' },
     soft: { background: 'rgb(var(--color-primary-50))', color: 'rgb(var(--color-primary-700))', border: '1px solid rgb(var(--color-primary-200))', boxShadow: '0 1px 0 rgb(var(--color-primary-200))' },
     muted: { background: 'rgb(var(--color-border-50))', color: 'rgb(var(--color-text-500))', border: '1px dashed rgb(var(--color-border-300))' },
   };
@@ -426,7 +426,7 @@ export default function KeyboardShortcutsPanel(): React.JSX.Element {
           </div>
 
           {/* Keyboard */}
-          <div style={{ background: 'rgb(var(--color-card))', border: '1px solid rgb(var(--color-border-200))', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: GAP, boxShadow: '0 2px 6px rgba(15,23,42,0.04)' }}>
+          <div style={{ background: 'rgb(var(--color-card))', border: '1px solid rgb(var(--color-border-200))', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: GAP, boxShadow: 'var(--shadow-card)' }}>
             {KB_ROWS.map((row, ri) => (
               <div key={ri} style={{ display: 'flex', gap: GAP }}>
                 {row.map((cell, ci) => {
@@ -436,13 +436,13 @@ export default function KeyboardShortcutsPanel(): React.JSX.Element {
                   const isBound = Boolean(entry);
                   const isSelected = selectedKey === value.toLowerCase();
                   const col = entry ? colorOf(entry.action) : null;
-                  let bg = 'linear-gradient(180deg,#fff,rgb(var(--color-border-50)))';
+                  let bg = 'var(--keycap-face)';
                   let color = 'rgb(var(--color-text-700))';
-                  let border = '1px solid rgb(var(--color-border-300))';
-                  let shadow = '0 1px 0 rgb(var(--color-border-300)), inset 0 1px 0 rgb(255 255 255 / 0.5)';
+                  let border = '1px solid var(--keycap-edge)';
+                  let shadow = '0 1px 0 var(--keycap-edge), inset 0 1px 0 var(--keycap-gloss)';
                   let cursor = 'default';
                   if (kind === 'mod') { bg = 'rgb(var(--color-border-100))'; color = 'rgb(var(--color-text-500))'; border = '1px solid rgb(var(--color-border-200))'; }
-                  if (isBound && col) { bg = col.bg; color = col.fg; border = `1px solid ${col.dot}`; shadow = `0 1px 0 ${col.dot}, inset 0 1px 0 rgb(255 255 255 / 0.7)`; cursor = 'pointer'; }
+                  if (isBound && col) { bg = col.bg; color = col.fg; border = `1px solid ${col.dot}`; shadow = `0 1px 0 ${col.dot}, inset 0 1px 0 var(--keycap-gloss)`; cursor = 'pointer'; }
                   if (isSelected && isBound && col) { border = `2px solid ${col.dot}`; shadow = `0 0 0 3px ${col.dot}33, ${shadow}`; }
                   return (
                     <div

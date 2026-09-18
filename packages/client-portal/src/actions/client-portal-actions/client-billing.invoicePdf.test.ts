@@ -133,7 +133,7 @@ describe('downloadClientInvoicePdf', () => {
     const { downloadClientInvoicePdf } = await import('./client-billing');
     const result = await downloadClientInvoicePdf('invoice-other-client');
 
-    expect(result).toEqual({ actionError: 'Invoice not found or access denied' });
+    expect(result).toEqual({ actionError: 'Invoice not found or access denied', messageKey: 'client-portal:errors.billing.invoiceNotFound' });
     expect(generateAndStoreMock).not.toHaveBeenCalled();
     expect(getStoredInvoicePdfMock).not.toHaveBeenCalled();
   });

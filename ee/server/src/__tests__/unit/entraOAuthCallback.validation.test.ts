@@ -119,7 +119,7 @@ describe('Entra OAuth callback validation', () => {
       clientId: 'client-id-1',
       clientSecret: 'client-secret-1',
       tenantId: null,
-      source: 'tenant-secret',
+      source: 'profile', profileId: 'profile-1', profileDisplayName: 'MSP app',
     });
     axiosPostMock.mockResolvedValue({
       data: {
@@ -187,7 +187,7 @@ describe('Entra OAuth callback validation', () => {
     expect(axiosGetMock).toHaveBeenCalledWith(
       'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?$top=1',
       expect.objectContaining({
-        headers: { Authorization: 'Bearer access-token-1' },
+        headers: { Authorization: 'Bearer access-token-1', 'client-request-id': expect.any(String) },
       })
     );
     expect(axiosGetMock.mock.invocationCallOrder[0]).toBeLessThan(

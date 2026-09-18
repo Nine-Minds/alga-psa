@@ -35,6 +35,15 @@ export function humanStatus(raw: string): string {
   return STATUS_LABELS[raw] ?? raw.replace(/_/g, ' ');
 }
 
+/**
+ * One whole sentence per status rather than a shared prefix plus an interpolated noun —
+ * a prefix and a status do not agree across languages. A status outside the table has no
+ * sentence in the catalogue, so it carries no key and stays English.
+ */
+function statusMessageKey(base: string, status: string): string | undefined {
+  return status in STATUS_LABELS ? `features/inventory:errors.${base}.${status}` : undefined;
+}
+
 /** Pull the `(current status: X)` the guard messages embed, so the mapper can humanize it. */
 export function currentStatusOf(message: string): string | null {
   const m = message.match(/\(current status: ([^)]+)\)/);
@@ -69,31 +78,33 @@ export function loanerActionErrorFrom(error: unknown): InventoryActionError | nu
 
     switch (error.message) {
       case 'client_id is required to loan out a unit':
-        return actionError('Choose a client before loaning out the unit.');
+        return actionError('Choose a client before loaning out the unit.', 'features/inventory:errors.loaners.clientRequired');
       case 'location_id is required to return a loaner':
-        return actionError('Choose a return location.');
+        return actionError('Choose a return location.', 'features/inventory:errors.loaners.returnLocationRequired');
       case 'loan_due_at must be a valid date':
-        return actionError('Choose a valid due date.');
+        return actionError('Choose a valid due date.', 'features/inventory:errors.loaners.dueDateInvalid');
       case 'Stock unit not found':
-        return actionError('Stock unit not found. It may have been updated or deleted. Refresh and try again.');
+        return actionError('Stock unit not found. It may have been updated or deleted. Refresh and try again.', 'features/inventory:errors.shared.stockUnitNotFound');
     }
 
     // Status guards throw with the raw enum embedded; translate to a sentence here.
     if (error.message.startsWith('Unit must be in_stock ')) {
       const status = currentStatusOf(error.message);
-      return actionError(
-        status
-          ? `This unit can't be loaned out — it's currently ${humanStatus(status)}.`
-          : "This unit can't be loaned out.",
-      );
+      return status
+        ? actionError(
+            `This unit can't be loaned out — it's currently ${humanStatus(status)}.`,
+            statusMessageKey('loaners.cannotLoanOutStatus', status),
+          )
+        : actionError("This unit can't be loaned out.", 'features/inventory:errors.loaners.cannotLoanOut');
     }
     if (error.message.startsWith('Unit must be on_loan ')) {
       const status = currentStatusOf(error.message);
-      return actionError(
-        status
-          ? `This unit isn't out on loan — it's currently ${humanStatus(status)}.`
-          : "This unit isn't out on loan.",
-      );
+      return status
+        ? actionError(
+            `This unit isn't out on loan — it's currently ${humanStatus(status)}.`,
+            statusMessageKey('loaners.notOnLoanStatus', status),
+          )
+        : actionError("This unit isn't out on loan.", 'features/inventory:errors.loaners.notOnLoan');
     }
   }
 
@@ -101,13 +112,13 @@ export function loanerActionErrorFrom(error: unknown): InventoryActionError | nu
   // A serial/MAC typed where a UUID is expected casts to `22P02`; without pickers this
   // is defense-in-depth, but the raw Knex SQL text must never reach a toast.
   if (dbError?.code === '22P02') {
-    return actionError("That doesn't look like a valid record reference. Pick the unit and client from the lists.");
+    return actionError("That doesn't look like a valid record reference. Pick the unit and client from the lists.", 'features/inventory:errors.loaners.invalidReferenceUnitClient');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected loaner records is no longer valid. Refresh and try again.');
+    return actionError('One of the selected loaner records is no longer valid. Refresh and try again.', 'features/inventory:errors.loaners.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This loaner update conflicts with an existing record. Refresh and try again.');
+    return actionError('This loaner update conflicts with an existing record. Refresh and try again.', 'features/inventory:errors.loaners.conflict');
   }
 
   return null;
@@ -121,38 +132,42 @@ export function restockReturnActionErrorFrom(error: unknown): InventoryActionErr
 
     switch (error.message) {
       case 'Stock unit not found':
-        return actionError('Stock unit not found. It may have been updated or deleted. Refresh and try again.');
+        return actionError('Stock unit not found. It may have been updated or deleted. Refresh and try again.', 'features/inventory:errors.shared.stockUnitNotFound');
       case 'restocking_fee_cents must be a non-negative integer (cents)':
-        return actionError('Restocking fee must be a non-negative amount.');
+        return actionError('Restocking fee must be a non-negative amount.', 'features/inventory:errors.restock.feeNonNegative');
       case 'location_id is required to restock this unit':
-        return actionError('Choose a location to restock this unit.');
+        return actionError('Choose a location to restock this unit.', 'features/inventory:errors.restock.locationRequired');
       case 'service_id and location_id are required for a non-serialized restock return':
-        return actionError('Choose a product and location before restocking non-serialized inventory.');
+        return actionError('Choose a product and location before restocking non-serialized inventory.', 'features/inventory:errors.restock.productAndLocationRequired');
       case 'quantity must be a positive number for a non-serialized restock return':
-        return actionError('Restock quantity must be greater than zero.');
+        return actionError('Restock quantity must be greater than zero.', 'features/inventory:errors.restock.quantityPositive');
       case 'This product is serialized; provide unit_id to restock a specific unit':
-        return actionError('This product is serialized. Choose the specific unit to restock.');
+        return actionError('This product is serialized. Choose the specific unit to restock.', 'features/inventory:errors.restock.serializedUnitRequired');
     }
 
     if (error.message.startsWith('Unit must be delivered or returned ')) {
       const status = currentStatusOf(error.message);
-      return actionError(
-        status
-          ? `This unit can't be restocked — it's currently ${humanStatus(status)}. Only delivered or returned units can be restocked.`
-          : "This unit can't be restocked. Only delivered or returned units can be restocked.",
-      );
+      return status
+        ? actionError(
+            `This unit can't be restocked — it's currently ${humanStatus(status)}. Only delivered or returned units can be restocked.`,
+            statusMessageKey('restock.cannotRestockStatus', status),
+          )
+        : actionError(
+            "This unit can't be restocked. Only delivered or returned units can be restocked.",
+            'features/inventory:errors.restock.cannotRestock',
+          );
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError("That doesn't look like a valid record reference. Pick the unit and location from the lists.");
+    return actionError("That doesn't look like a valid record reference. Pick the unit and location from the lists.", 'features/inventory:errors.restock.invalidReferenceUnitLocation');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected records is no longer valid. Refresh and try again.');
+    return actionError('One of the selected records is no longer valid. Refresh and try again.', 'features/inventory:errors.restock.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This restock conflicts with an existing record. Refresh and try again.');
+    return actionError('This restock conflicts with an existing record. Refresh and try again.', 'features/inventory:errors.restock.conflict');
   }
 
   return null;

@@ -1,4 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
+import { translateFieldValidation, type FieldValidation } from './fieldValidation';
 import {
   validateClientName,
   validateWebsiteUrl,
@@ -19,7 +22,16 @@ import {
   validateContactNameField,
   validateEmailAddressField,
   validatePhoneNumberField,
-  validateWebsiteUrlField
+  validateWebsiteUrlField,
+  validateAddressField,
+  validateAnnualRevenueField,
+  validateCityNameField,
+  validateCompanySizeField,
+  validateIndustryField,
+  validateNotesField,
+  validatePostalCodeField,
+  validateRoleField,
+  validateStateProvinceField
 } from './clientFormValidation';
 
 describe('Client Form Validation', () => {
@@ -566,5 +578,90 @@ describe('validateAnnualRevenue', () => {
   it('rejects gibberish and emojis', () => {
     expect(validateAnnualRevenue('lots of money')).not.toBeNull();
     expect(validateAnnualRevenue('🤑')).toBe('Annual revenue cannot contain emojis');
+  });
+});
+
+// The address/city/state/postal/industry/role/notes/size/revenue validators were
+// the last ones still returning bare English. Each now carries a key, and every
+// key has to exist in all nine shipped locales — a typo here fails silently in
+// production, falling back to the English default nobody notices.
+describe('carried validation keys', () => {
+  const localesDir = path.resolve(__dirname, '../../../../server/public/locales');
+  const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'];
+
+  const lookup = (locale: string, key: string): unknown =>
+    key
+      .split('.')
+      .reduce<any>(
+        (node, part) => (node && typeof node === 'object' ? node[part] : undefined),
+        JSON.parse(fs.readFileSync(path.join(localesDir, locale, 'common.json'), 'utf8'))
+      );
+
+  const cases: Array<[string, FieldValidation]> = [
+    ['address.tooLong', validateAddressField('a'.repeat(101))],
+    ['address.emoji', validateAddressField('1 Main St 🚀')],
+    ['address.noLetters', validateAddressField('123')],
+    ['address.invalidCharacters', validateAddressField('1 Main St ~')],
+    ['city.tooLong', validateCityNameField('a'.repeat(101))],
+    ['city.emoji', validateCityNameField('Springfield 🚀')],
+    ['city.noLetters', validateCityNameField('123')],
+    ['city.invalidCharacters', validateCityNameField('Spring1field')],
+    ['stateProvince.tooLong', validateStateProvinceField('a'.repeat(101))],
+    ['stateProvince.emoji', validateStateProvinceField('Ohio 🚀')],
+    ['stateProvince.noLetters', validateStateProvinceField('12')],
+    ['stateProvince.invalidCharacters', validateStateProvinceField('Ohio1')],
+    ['postalCode.emoji', validatePostalCodeField('12345 🚀')],
+    ['postalCode.us', validatePostalCodeField('123', 'US')],
+    ['postalCode.usShort', validatePostalCodeField('00000', 'US')],
+    ['postalCode.ca', validatePostalCodeField('123', 'CA')],
+    ['postalCode.gb', validatePostalCodeField('123', 'GB')],
+    ['postalCode.de', validatePostalCodeField('123', 'DE')],
+    ['postalCode.fr', validatePostalCodeField('123', 'FR')],
+    ['postalCode.jp', validatePostalCodeField('123', 'JP')],
+    ['postalCode.au', validatePostalCodeField('123', 'AU')],
+    ['postalCode.nl', validatePostalCodeField('123', 'NL')],
+    ['postalCode.ch', validatePostalCodeField('123', 'CH')],
+    ['postalCode.it', validatePostalCodeField('123', 'IT')],
+    ['postalCode.es', validatePostalCodeField('123', 'ES')],
+    ['postalCode.br', validatePostalCodeField('123', 'BR')],
+    ['postalCode.in', validatePostalCodeField('123', 'IN')],
+    ['postalCode.generic', validatePostalCodeField('!!', 'ZZ')],
+    ['industry.tooLong', validateIndustryField('a'.repeat(101))],
+    ['industry.tooShortText', validateIndustryField('🚀')],
+    ['industry.tooShort', validateIndustryField('a')],
+    ['industry.noLetters', validateIndustryField('12')],
+    ['industry.invalidCharacters', validateIndustryField('Retail1')],
+    ['role.tooLong', validateRoleField('a'.repeat(101))],
+    ['role.noAlphanumeric', validateRoleField('---')],
+    ['notes.tooLong', validateNotesField('a'.repeat(2001))],
+    ['companySize.tooLong', validateCompanySizeField('5'.repeat(51))],
+    ['companySize.emoji', validateCompanySizeField('🚀')],
+    ['companySize.invalid', validateCompanySizeField('asdfghjkl')],
+    ['annualRevenue.tooLong', validateAnnualRevenueField('5'.repeat(51))],
+    ['annualRevenue.emoji', validateAnnualRevenueField('🤑')],
+    ['annualRevenue.invalid', validateAnnualRevenueField('lots of money')],
+  ];
+
+  it.each(cases)('%s is produced as a key, not prose', (suffix, result) => {
+    expect(result.errorMessage?.key).toBe(`clients.validation.${suffix}`);
+  });
+
+  it.each(locales)('%s translates every carried key', (locale) => {
+    const missing = cases
+      .map(([suffix]) => `clients.validation.${suffix}`)
+      .filter((key) => typeof lookup(locale, key) !== 'string');
+    expect(missing).toEqual([]);
+  });
+
+  it('translates through the injected translator instead of the English default', () => {
+    const t = (key: string) => `[${key}]`;
+    expect(translateFieldValidation(validateAddressField('1 Main St ~'), t).error).toBe(
+      '[clients.validation.address.invalidCharacters]'
+    );
+    // validateClientForm is the submit path: it must resolve the same messages
+    // the blur path does, rather than falling back to English.
+    expect(validateClientForm({ clientName: 'Acme Corp', city: '123' }, t).errors.city).toBe(
+      '[clients.validation.city.noLetters]'
+    );
   });
 });

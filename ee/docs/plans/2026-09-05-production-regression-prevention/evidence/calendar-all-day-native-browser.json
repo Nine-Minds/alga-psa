@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "scope": "Native Microsoft all-day browser journey before explicit provenance follow-up",
+  "applicationRevision": "4141329c32",
+  "status": "passed",
+  "passed": 1,
+  "duration": "3.9 minutes",
+  "timezone": "Europe/Berlin",
+  "mode": "headed native development server",
+  "priorAttempts": [
+    "OAuth callback timeout during cold compile",
+    "Next memory-threshold restart interrupted reload",
+    "Fresh emulator lacked local callback certificate trust"
+  ],
+  "resolvedSetup": [
+    "Owned Next dev memory limit20GB",
+    "NODE_EXTRA_CA_CERTS on owned Graph emulator"
+  ],
+  "limits": [
+    "Current explicit is_all_day model follow-up is not covered by this earlier pass.",
+    "No production-image or current-source CI completion claim.",
+    "Widget span and exact-midnight timed distinction require added assertions."
+  ]
+}

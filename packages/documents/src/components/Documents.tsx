@@ -13,6 +13,7 @@ import DocumentsPagination from './DocumentsPagination';
 import { DocumentsGridSkeleton } from './DocumentsPageSkeleton';
 import { DocumentCredentialsSection } from './DocumentCredentialsSection';
 import { Button } from '@alga-psa/ui/components/Button';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -91,6 +92,10 @@ const isDocumentActionError = (value: unknown): value is ActionMessageError | Ac
   isActionPermissionError(value) || isActionMessageError(value);
 
 interface DocumentsProps {
+  /** Open the standard document editor without showing the document manager. */
+  documentToOpen?: IDocument;
+  drawerOnly?: boolean;
+  onDocumentClosed?: () => void;
   id?: string;
   documents: IDocument[];
   gridColumns?: 3 | 4;
@@ -117,6 +122,9 @@ interface DocumentsProps {
 }
 
 const Documents = ({
+  documentToOpen,
+  drawerOnly = false,
+  onDocumentClosed,
   id = 'documents',
   documents: initialDocuments,
   gridColumns,
@@ -364,24 +372,6 @@ const Documents = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
 
-  // Track previous initialDocuments to avoid infinite loops
-  const prevInitialDocumentsRef = useRef<string>('');
-
-  // Sync documents from props when they change (e.g., after router.refresh() in entity mode)
-  useEffect(() => {
-    // In entity mode, sync from initialDocuments when they actually change
-    if (!inFolderMode) {
-      // Compare document IDs to detect actual changes (not just reference changes)
-      const currentIds = initialDocuments.map(d => d.document_id).sort().join(',');
-      if (currentIds !== prevInitialDocumentsRef.current) {
-        prevInitialDocumentsRef.current = currentIds;
-        setDocumentsToDisplay(initialDocuments);
-        setTotalDocuments(initialDocuments.length);
-      }
-    }
-  }, [initialDocuments, inFolderMode]);
-
-
   // Folder mode: fetch documents from server
   // Track all fetch dependencies to detect actual changes vs reference-only changes
   const prevFetchKeyRef = useRef<string>('');
@@ -441,7 +431,8 @@ const Documents = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, inFolderMode, currentFolder, filters]);
 
-  // Entity mode: handle search filtering
+  // Entity mode: sync the complete rows, including same-ID attachment metadata
+  // after claim/edit, and apply search in the same effect.
   useEffect(() => {
     if (inFolderMode) return;
 
@@ -454,6 +445,7 @@ const Documents = ({
     }
 
     setDocumentsToDisplay(filtered);
+    setTotalDocuments(initialDocuments.length);
   }, [searchTermFromParent, inFolderMode, initialDocuments]);
 
   // Refresh documents - handles both folder mode and entity mode
@@ -617,6 +609,46 @@ const Documents = ({
           ? error.message
           : tDoc('messages.moveDocumentsFailed', 'Failed to move documents');
       setError(errorMessage);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedDocumentsForMove.size;
+    if (count === 0) return;
+    if (
+      !confirm(
+        tDoc('prompts.confirmBulkDelete', {
+          count,
+          defaultValue: `Are you sure you want to delete ${count} document${count !== 1 ? 's' : ''}?`
+        })
+      )
+    ) {
+      return;
+    }
+    try {
+      const deletePromises = Array.from(selectedDocumentsForMove).map(docId => {
+        const doc = documentsToDisplay.find(d => d.document_id === docId);
+        return doc ? deleteDocument(docId, userId) : Promise.resolve(null);
+      });
+      const results = await Promise.all(deletePromises);
+      const failed = results.filter(
+        (result) => result && 'success' in result && !result.success
+      );
+      if (failed.length > 0) {
+        toast.error(tDoc('messages.bulkDeleteFailed', 'Failed to delete some documents'));
+      } else {
+        toast.success(
+          tDoc('messages.bulkDeleteSuccess', {
+            count,
+            defaultValue: `${count} document${count !== 1 ? 's' : ''} deleted successfully`
+          })
+        );
+      }
+      setSelectedDocumentsForMove(new Set());
+      await refreshDocuments();
+      setFolderTreeKey(prev => prev + 1);
+    } catch (error) {
+      handleError(error, tDoc('messages.bulkDeleteFailed', 'Failed to delete some documents'));
     }
   };
 
@@ -1162,7 +1194,7 @@ const Documents = ({
     }
 
     // For other files, trigger download
-    const downloadUrl = getDocumentDownloadUrl(document.file_id);
+    const downloadUrl = getDocumentDownloadUrl(document.document_id);
     const filename = document.document_name || 'download';
     try {
       await downloadDocument(downloadUrl, filename, true);
@@ -1185,6 +1217,14 @@ const Documents = ({
   useEffect(() => {
     handleDocumentClickRef.current = handleDocumentClick;
   });
+  useEffect(() => {
+    if (documentToOpen) void handleDocumentClickRef.current(documentToOpen);
+  }, [documentToOpen]);
+  const wasDrawerOpen = useRef(false);
+  useEffect(() => {
+    if (wasDrawerOpen.current && !isDrawerOpen) onDocumentClosed?.();
+    wasDrawerOpen.current = isDrawerOpen;
+  }, [isDrawerOpen, onDocumentClosed]);
   useEffect(() => {
     if (!inFolderMode) return;
     const docId = searchParams?.get('doc') ?? null;
@@ -1577,6 +1617,33 @@ const Documents = ({
     </div>
   );
 
+  if (drawerOnly) {
+    return (
+      <>
+        <Drawer
+          id={`${id}-document-drawer`}
+          isOpen={isDrawerOpen}
+          onClose={handleDrawerClose}
+          isInDrawer={isInDrawer}
+          hideCloseButton={true}
+          drawerVariant="document"
+        >
+          {renderDrawerBody()}
+        </Drawer>
+        <ConfirmationDialog
+          id={`${id}-unsaved-changes-dialog`}
+          isOpen={showUnsavedChangesDialog}
+          onClose={() => setShowUnsavedChangesDialog(false)}
+          onConfirm={executeDrawerClose}
+          title="Unsaved Changes"
+          message="Are you sure you want to cancel? Any unsaved changes will be lost."
+          confirmLabel="Discard changes"
+          cancelLabel="Continue editing"
+        />
+      </>
+    );
+  }
+
   // Folder mode: show folder tree sidebar and new layout
   if (inFolderMode) {
     return (
@@ -1698,88 +1765,34 @@ const Documents = ({
                 </Alert>
               ) : (
                 <>
-                  {/* Bulk Actions Toolbar */}
-                  {selectedDocumentsForMove.size > 0 && viewMode === 'list' && (
-                    <div className="mb-4 p-3 bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-900))]/20 border border-[rgb(var(--color-primary-200))] dark:border-[rgb(var(--color-primary-800))] rounded-lg flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-[rgb(var(--color-primary-900))] dark:text-[rgb(var(--color-primary-100))]">
-                          {tDoc('bulkActions.selected', {
-                            count: selectedDocumentsForMove.size,
-                            defaultValue: `${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''} selected`
-                          })}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {!entityId && !entityType && (
-                            <Button
-                              id="bulk-move-button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setShowBulkMoveFolderModal(true)}
-                            >
-                              <FolderInput className="w-4 h-4 mr-2" />
-                              {tDoc('bulkActions.moveToFolder', 'Move to Folder')}
-                            </Button>
-                          )}
-                          <Button
-                            id="bulk-delete-button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              const count = selectedDocumentsForMove.size;
-                              if (
-                                !confirm(
-                                  tDoc('prompts.confirmBulkDelete', {
-                                    count,
-                                    defaultValue: `Are you sure you want to delete ${count} document${count !== 1 ? 's' : ''}?`
-                                  })
-                                )
-                              ) {
-                                return;
-                              }
-                              try {
-                                const deletePromises = Array.from(selectedDocumentsForMove).map(docId => {
-                                  const doc = documentsToDisplay.find(d => d.document_id === docId);
-                                  return doc ? deleteDocument(docId, userId) : Promise.resolve(null);
-                                });
-                                const results = await Promise.all(deletePromises);
-                                const failed = results.filter(
-                                  (result) => result && 'success' in result && !result.success
-                                );
-                                if (failed.length > 0) {
-                                  toast.error(
-                                    tDoc('messages.bulkDeleteFailed', 'Failed to delete some documents')
-                                  );
-                                } else {
-                                  toast.success(
-                                    tDoc('messages.bulkDeleteSuccess', {
-                                      count,
-                                      defaultValue: `${count} document${count !== 1 ? 's' : ''} deleted successfully`
-                                    })
-                                  );
-                                }
-                                setSelectedDocumentsForMove(new Set());
-                                await refreshDocuments();
-                                setFolderTreeKey(prev => prev + 1);
-                              } catch (error) {
-                                handleError(error, tDoc('messages.bulkDeleteFailed', 'Failed to delete some documents'));
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            {tDoc('bulkActions.deleteSelected', 'Delete Selected')}
-                          </Button>
-                        </div>
-                      </div>
-                      <Button
-                        id="bulk-clear-selection-button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedDocumentsForMove(new Set())}
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        {tDoc('bulkActions.clearSelection', 'Clear Selection')}
-                      </Button>
-                    </div>
+                  {viewMode === 'list' && (
+                    <BulkActionBar
+                      idPrefix="documents-bulk-action-bar"
+                      count={selectedDocumentsForMove.size}
+                      selectedLabel={tDoc('bulkActions.selected', {
+                        count: selectedDocumentsForMove.size,
+                        defaultValue: `${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''} selected`
+                      })}
+                      actions={[
+                        ...(!entityId && !entityType
+                          ? [{
+                              id: 'move',
+                              label: tDoc('bulkActions.moveToFolder', 'Move to Folder'),
+                              icon: <FolderInput className="w-4 h-4" />,
+                              onClick: () => setShowBulkMoveFolderModal(true),
+                            }]
+                          : []),
+                        {
+                          id: 'delete',
+                          label: tDoc('bulkActions.deleteSelected', 'Delete Selected'),
+                          icon: <Trash2 className="w-4 h-4" />,
+                          onClick: () => { void handleBulkDelete(); },
+                          destructive: true,
+                        },
+                      ]}
+                      onClear={() => setSelectedDocumentsForMove(new Set())}
+                      clearLabel={tDoc('bulkActions.clearSelection', 'Clear Selection')}
+                    />
                   )}
 
                   {viewMode === 'list' ? (
@@ -1900,21 +1913,21 @@ const Documents = ({
                 </button>
                 {previewDocument.mime_type?.startsWith('image/') && (
                   <img
-                    src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.file_id}`}
+                    src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
                     alt={previewDocument.document_name}
                     className="max-w-full max-h-[90vh] object-contain mx-auto"
                   />
                 )}
                 {previewDocument.mime_type?.startsWith('video/') && (
                   <video
-                    src={`/api/documents/view/${previewDocument.file_id}`}
+                    src={`/api/documents/view/${previewDocument.document_id}`}
                     controls
                     className="max-w-full max-h-[90vh] mx-auto"
                   />
                 )}
                 {previewDocument.mime_type === 'application/pdf' && (
                   <iframe
-                    src={`/api/documents/view/${previewDocument.file_id}`}
+                    src={`/api/documents/view/${previewDocument.document_id}`}
                     className="w-full h-[90vh] bg-white"
                     title={previewDocument.document_name}
                   />
@@ -2093,21 +2106,21 @@ const Documents = ({
               </button>
               {previewDocument.mime_type?.startsWith('image/') && (
                 <img
-                  src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.file_id}`}
+                  src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
                   alt={previewDocument.document_name}
                   className="max-w-full max-h-[90vh] object-contain mx-auto"
                 />
               )}
               {previewDocument.mime_type?.startsWith('video/') && (
                 <video
-                  src={`/api/documents/view/${previewDocument.file_id}`}
+                  src={`/api/documents/view/${previewDocument.document_id}`}
                   controls
                   className="max-w-full max-h-[90vh] mx-auto"
                 />
               )}
               {previewDocument.mime_type === 'application/pdf' && (
                 <iframe
-                  src={`/api/documents/view/${previewDocument.file_id}`}
+                  src={`/api/documents/view/${previewDocument.document_id}`}
                   className="w-full h-[90vh] bg-white"
                   title={previewDocument.document_name}
                 />

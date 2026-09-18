@@ -96,7 +96,7 @@ export const setPortalUserBillingProfileAccess = withAuth(async (
 
       const requested = [...new Set(input.permittedProfileIds)].filter((id) => validIds.has(id));
       if (requested.length !== new Set(input.permittedProfileIds).size) {
-        return actionError('One of the selected billing profiles does not belong to this client.');
+        return actionError('One of the selected billing profiles does not belong to this client.', 'msp/clients:errors.billingProfile.selectionNotThisClient');
       }
 
       await db.table(TABLE).where({ user_id: input.portalUserId }).del();

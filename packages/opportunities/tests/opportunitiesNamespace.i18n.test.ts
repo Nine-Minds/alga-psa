@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { getNamespacesForRoute } from '@alga-psa/core/lib/i18n/config';
+import { pseudoPattern } from '../../../tools/i18n/lib/pseudo-locale.mjs';
 
 const LOCALES = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'];
 
@@ -27,8 +28,8 @@ describe('msp/opportunities translation namespace', () => {
   });
 
   it('keeps pseudo-locales visibly distinct from English', () => {
-    expect(locale('xx')).toHaveProperty('opportunities.pageTitle', '11111');
-    expect(locale('yy')).toHaveProperty('opportunities.pageTitle', '55555');
+    expect((locale('xx') as any).opportunities.pageTitle).toMatch(pseudoPattern('xx'));
+    expect((locale('yy') as any).opportunities.pageTitle).toMatch(pseudoPattern('yy'));
   });
 });
 

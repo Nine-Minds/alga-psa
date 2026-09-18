@@ -109,7 +109,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
     const tenantScopedDb = tenantDb(db, tenant) as any;
 
   // Check permission for time entry reading
-  if (!await hasPermission(user, 'timeentry', 'read', db)) {
+  if (!await hasPermission(user, 'time_entry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');
   }
 
@@ -311,12 +311,12 @@ export const saveTimeEntry = withAuth(async (
   // Check permission based on whether this is a create or update operation
   if (timeEntry.entry_id) {
     // Update operation
-    if (!await hasPermission(user, 'timeentry', 'update', db)) {
+    if (!await hasPermission(user, 'time_entry', 'update', db)) {
       throw new Error('Permission denied: Cannot update time entries');
     }
   } else {
     // Create operation
-    if (!await hasPermission(user, 'timeentry', 'create', db)) {
+    if (!await hasPermission(user, 'time_entry', 'create', db)) {
       throw new Error('Permission denied: Cannot create time entries');
     }
   }
@@ -999,7 +999,7 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
   try {
-    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot update time entry approval status');
     }
 
@@ -1111,7 +1111,7 @@ export const deleteTimeEntry = withAuth(async (
 
   try {
   // Check permission for time entry deletion
-  if (!await hasPermission(user, 'timeentry', 'delete', db)) {
+  if (!await hasPermission(user, 'time_entry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete time entries');
   }
 
@@ -1247,7 +1247,7 @@ export const getTimeEntryById = withAuth(async (
 
   try {
   // Check permission for time entry reading
-  if (!await hasPermission(user, 'timeentry', 'read', db)) {
+  if (!await hasPermission(user, 'time_entry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');
   }
 

@@ -8,6 +8,7 @@
  *   TEST_METRICS_SUITE      required — suite label (unit-coverage, integration-full, ...)
  *   TEST_METRICS_RESULTS    path to a vitest --reporter=json output file
  *   TEST_METRICS_COVERAGE   path to a coverage-summary.json (optional)
+ *   TEST_METRICS_EXECUTION  required execution evidence path for reconciled lanes (optional)
  *   GOOGLE_SA_KEY           service-account key JSON (raw or base64)
  *   TEST_METRICS_SHEET_ID   spreadsheet id from the sheet URL
  *   TEST_METRICS_SHEET_TAB  tab name (default "metrics")
@@ -21,11 +22,19 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
 
+export const METRICS_SCHEMA_VERSION = 2;
+// Increment when the source inventory/coverage interpretation changes. This
+// describes measured coverage, never whole-repository execution readiness.
+export const COVERAGE_METHODOLOGY = 'v8-loaded-files/source-inventory-v1';
+
 export const HEADER = [
   'timestamp_utc', 'suite', 'branch', 'commit',
   'passed', 'failed', 'skipped', 'todo', 'total', 'pass_pct',
   'lines_pct', 'statements_pct', 'branches_pct', 'functions_pct',
   'duration_s', 'run_url',
+  'executed', 'run_status', 'files_measured', 'files_total',
+  'schema_version', 'run_kind', 'event_name', 'coverage_methodology',
+  'expected_files', 'collected_tests', 'execution_gate_status', 'tested_sha',
 ];
 
 export const DETAIL_HEADER = [
@@ -33,7 +42,37 @@ export const DETAIL_HEADER = [
   'lines_pct', 'lines_covered', 'lines_total',
   'statements_pct', 'branches_pct', 'functions_pct',
   'files_measured', 'files_total', 'run_url',
+  'schema_version', 'run_kind', 'event_name', 'coverage_methodology',
 ];
+
+export function runKind(env) {
+  switch (env.GITHUB_EVENT_NAME) {
+    case undefined: case '': return 'local';
+    case 'pull_request': case 'pull_request_target': return 'pr';
+    case 'schedule': return 'nightly';
+    case 'workflow_dispatch': return 'manual';
+    case 'push': return env.GITHUB_REF_NAME === 'main' ? 'main' : 'branch';
+    default: return 'other';
+  }
+}
+
+function executionMetrics(execution, revision) {
+  const unknown = { expectedFiles: '', collectedTests: '', gateStatus: 'incomplete' };
+  if (execution === undefined) return { ...unknown, gateStatus: 'unverified' };
+  if (execution?.schemaVersion !== 1 || (revision && execution.revision !== revision)
+    || !['passed', 'failed'].includes(execution.status) || !Array.isArray(execution.failures)) return unknown;
+  const files = execution.expectedFiles;
+  const tests = execution.expectedTests;
+  const validFiles = Array.isArray(files) && files.every(file => typeof file === 'string' && file.length)
+    && new Set(files).size === files.length;
+  const validTests = Array.isArray(tests) && tests.every(entry => Number.isSafeInteger(entry.count) && entry.count > 0);
+  return {
+    expectedFiles: validFiles ? files.length : '',
+    collectedTests: validTests ? tests.reduce((sum, entry) => sum + entry.count, 0) : '',
+    gateStatus: execution.status === 'failed' || execution.failures.length ? 'failed'
+      : validFiles && files.length && validTests && tests.length ? 'passed' : 'incomplete',
+  };
+}
 
 function readJson(path) {
   if (!path || !existsSync(path)) return null;
@@ -45,15 +84,52 @@ function readJson(path) {
   }
 }
 
-export function testCounts(results) {
+// A run that never reached most of its tests still writes a report, and
+// pass_pct over the handful that did run reads as a green day (2026-08-21
+// infrastructure-full: 5 of 354 executed, recorded 100%). Two signals say the
+// report is not a whole run:
+//   - an assertion left in "pending": vitest maps run/queued state there when
+//     the process is cut short, while an intentional skip maps to "skipped"
+//     and a todo to "todo";
+//   - a no-show majority: fewer than half the collected tests executed, which
+//     is what a dead bootstrap looks like.
+export const MIN_EXECUTED_RATIO = 0.5;
+
+export function runStatus(results) {
+  if (!results) return '';
+  // A reconciled multi-job run knows its required set, including absent
+  // shards. Its explicit incompleteness must override ratios of observed tests.
+  if (results.executionCompleteness === 'incomplete') return 'partial';
+  const executed = (results.numPassedTests ?? 0) + (results.numFailedTests ?? 0);
+  const total = results.numTotalTests ?? 0;
+  const cutShort = (results.testResults ?? []).some(
+    (f) => (f.assertionResults ?? []).some((a) => a.status === 'pending'),
+  );
+  const noShow = total > 0 && executed < total * MIN_EXECUTED_RATIO;
+  // Collection/setup/teardown can fail a suite without failing an assertion.
+  // Successful sibling tests must not turn that failed lifecycle into 100%.
+  const lifecycleFailure = (results.testResults ?? []).some(
+    (file) => file.status === 'failed'
+      && !(file.assertionResults ?? []).some((assertion) => assertion.status === 'failed'),
+  ) || ((results.numFailedTestSuites ?? 0) > 0 && (results.numFailedTests ?? 0) === 0);
+  return cutShort || noShow || lifecycleFailure ? 'partial' : 'complete';
+}
+
+export function testCounts(results, execution, revision) {
   if (!results) return null;
   const passed = results.numPassedTests ?? 0;
   const failed = results.numFailedTests ?? 0;
   const skipped = results.numPendingTests ?? 0;
   const todo = results.numTodoTests ?? 0;
   const total = results.numTotalTests ?? passed + failed + skipped + todo;
-  const passPct = passed + failed > 0
-    ? Math.round((passed / (passed + failed)) * 10000) / 100
+  const executed = passed + failed;
+  const evidenceRejected = execution !== undefined && executionMetrics(execution, revision).gateStatus !== 'passed';
+  // Evidence can only downgrade this diagnostic. It does not replace raw
+  // report checks or independently prove release readiness.
+  const status = evidenceRejected ? 'partial' : runStatus(results);
+  // Blank on partial runs so sheet formulas cannot average a vacuous green.
+  const passPct = executed > 0 && status !== 'partial'
+    ? Math.round((passed / executed) * 10000) / 100
     : '';
   let durationS = '';
   const files = results.testResults ?? [];
@@ -62,7 +138,7 @@ export function testCounts(results) {
   if (starts.length && ends.length) {
     durationS = Math.round((Math.max(...ends) - Math.min(...starts)) / 1000);
   }
-  return { passed, failed, skipped, todo, total, passPct, durationS };
+  return { passed, failed, skipped, todo, total, executed, passPct, durationS, runStatus: status };
 }
 
 export function coveragePcts(summary) {
@@ -167,18 +243,34 @@ export function coverageByDirectory(summary, repoRoot = process.cwd()) {
   return rows.sort((a, b) => a.dir.localeCompare(b.dir));
 }
 
+// Headline coverage only describes the files the suite loaded. Carrying the
+// measured/on-disk file counts onto the summary row keeps a percentage over
+// three quarters of the tree from reading as a percentage over all of it.
+export function coverageFileCounts(summary, repoRoot = process.cwd()) {
+  if (!summary) return { measured: '', total: '' };
+  return coverageByDirectory(summary, repoRoot).reduce(
+    (acc, r) => ({ measured: acc.measured + (r.filesMeasured || 0), total: acc.total + (r.filesTotal || 0) }),
+    { measured: 0, total: 0 },
+  );
+}
+
 export function buildRow() {
   const suite = process.env.TEST_METRICS_SUITE;
   if (!suite) {
     console.error('test-metrics: TEST_METRICS_SUITE is required');
     process.exit(1);
   }
-  const counts = testCounts(readJson(process.env.TEST_METRICS_RESULTS));
-  const cov = coveragePcts(readJson(process.env.TEST_METRICS_COVERAGE));
+  const execution = process.env.TEST_METRICS_EXECUTION
+    ? readJson(process.env.TEST_METRICS_EXECUTION) : undefined;
+  const counts = testCounts(readJson(process.env.TEST_METRICS_RESULTS), execution, process.env.GITHUB_SHA);
+  const executionData = executionMetrics(execution, process.env.GITHUB_SHA);
+  const summary = readJson(process.env.TEST_METRICS_COVERAGE);
+  const cov = coveragePcts(summary);
+  const files = coverageFileCounts(summary);
   if (!counts && cov.lines === '') {
-    console.warn('test-metrics: no results or coverage files found, nothing to record');
-    process.exit(0);
+    console.warn('test-metrics: no results or coverage files found; recording incomplete run');
   }
+  const missingRequiredReport = !counts && (Boolean(process.env.TEST_METRICS_RESULTS) || cov.lines === '');
   const runUrl = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_SERVER_URL ?? 'https://github.com'}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : '';
@@ -192,6 +284,12 @@ export function buildRow() {
     cov.lines, cov.statements, cov.branches, cov.functions,
     counts?.durationS ?? '',
     runUrl,
+    counts?.executed ?? '', counts?.runStatus ?? (missingRequiredReport ? 'partial' : ''),
+    files.measured, files.total,
+    METRICS_SCHEMA_VERSION, runKind(process.env), process.env.GITHUB_EVENT_NAME ?? '',
+    summary ? COVERAGE_METHODOLOGY : '',
+    executionData.expectedFiles, executionData.collectedTests, executionData.gateStatus,
+    process.env.GITHUB_SHA ?? execution?.revision ?? '',
   ];
 }
 
@@ -227,17 +325,35 @@ export async function getAccessToken(sa) {
 }
 
 async function sheetsApi(token, sheetId, pathAndQuery, method = 'GET', body) {
-  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}${pathAndQuery}`, {
-    method,
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const json = await res.json().catch(() => ({}));
-  return { ok: res.ok, status: res.status, json };
+  // A header read can safely recover from a transient Sheets outage. Writes
+  // remain single-attempt: a lost append response does not prove no row landed.
+  const attempts = method === 'GET' ? 4 : 1;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}${pathAndQuery}`, {
+        method,
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+        ...(method === 'GET' ? { signal: AbortSignal.timeout(30_000) } : {}),
+      });
+      const json = await res.json().catch(error => {
+        // A successful but unreadable header is not evidence of an empty tab.
+        if (res.ok) throw error;
+        return {};
+      });
+      if (![429, 500, 502, 503, 504].includes(res.status) || attempt === attempts - 1) {
+        return { ok: res.ok, status: res.status, json };
+      }
+    } catch (error) {
+      if (attempt === attempts - 1) throw error;
+    }
+    // Truncated exponential backoff with jitter; at most three waits.
+    await new Promise(resolve => setTimeout(resolve, 1000 * 2 ** attempt + Math.floor(Math.random() * 1000)));
+  }
 }
 
 async function ensureHeaderRow(token, sheetId, tab, header) {
-  const range = encodeURIComponent(`${tab}!A1:A1`);
+  const range = encodeURIComponent(`${tab}!1:1`);
   let head = await sheetsApi(token, sheetId, `/values/${range}`);
   if (!head.ok && head.status === 400) {
     // Tab doesn't exist yet — create it, then fall through to write the header.
@@ -248,12 +364,27 @@ async function ensureHeaderRow(token, sheetId, tab, header) {
     head = { ok: true, json: {} };
   }
   if (!head.ok) throw new Error(`could not read sheet: ${head.status} ${JSON.stringify(head.json)}`);
-  if (!head.json.values?.length) {
+  const existing = head.json.values?.[0] ?? [];
+  for (let index = 0; index < Math.min(existing.length, header.length); index++) {
+    if (existing[index] !== header[index]) {
+      throw new Error(`Sheet header mismatch in "${tab}" at column ${index + 1}; refusing to append metrics`);
+    }
+  }
+  if (existing.length < header.length) {
+    // Extend a verified legacy prefix without overwriting existing headings or
+    // user-added columns. Historical rows keep their original column meanings.
+    let number = existing.length + 1;
+    let column = '';
+    while (number > 0) {
+      number--;
+      column = String.fromCharCode(65 + number % 26) + column;
+      number = Math.floor(number / 26);
+    }
     const write = await sheetsApi(
       token, sheetId,
-      `/values/${encodeURIComponent(`${tab}!A1`)}?valueInputOption=RAW`,
+      `/values/${encodeURIComponent(`${tab}!${column}1`)}?valueInputOption=RAW`,
       'PUT',
-      { values: [header] },
+      { values: [header.slice(existing.length)] },
     );
     if (!write.ok) throw new Error(`could not write header: ${JSON.stringify(write.json)}`);
   }
@@ -278,11 +409,13 @@ function writeJobSummary(row) {
   appendFileSync(
     process.env.GITHUB_STEP_SUMMARY,
     [
-      `### Test metrics — ${row[1]}`,
+      `### Test metrics — ${row[1]}${row[17] === 'partial' ? ' (partial run)' : ''}`,
       '',
-      '| passed | failed | skipped | pass % | lines % | branches % | duration |',
-      '|---|---|---|---|---|---|---|',
-      `| ${cell(row[4])} | ${cell(row[5])} | ${cell(row[6])} | ${cell(row[9])} | ${cell(row[10])} | ${cell(row[12])} | ${row[14] !== '' ? `${row[14]}s` : '—'} |`,
+      `Execution gate: **${cell(row[26])}**. Expected files: ${cell(row[24])}; collected tests: ${cell(row[25])}; executed: ${cell(row[16])}.`,
+      '',
+      '| passed | failed | skipped | executed | pass % | lines % | branches % | duration |',
+      '|---|---|---|---|---|---|---|---|',
+      `| ${cell(row[4])} | ${cell(row[5])} | ${cell(row[6])} | ${cell(row[16])} | ${cell(row[9])} | ${cell(row[10])} | ${cell(row[12])} | ${row[14] !== '' ? `${row[14]}s` : '—'} |`,
       '',
     ].join('\n'),
   );
@@ -297,6 +430,7 @@ async function main() {
         d.lines, d.linesCovered, d.linesTotal,
         d.statements, d.branches, d.functions,
         d.filesMeasured, d.filesTotal, row[15],
+        ...row.slice(20, 24),
       ])
     : [];
 
@@ -325,7 +459,7 @@ async function main() {
   if (detailRows.length) {
     await appendRows(token, sheetId, 'coverage_by_dir', DETAIL_HEADER, detailRows);
   }
-  console.log(`test-metrics: recorded ${row[1]} run (${row[4]} passed / ${row[5]} failed)${detailRows.length ? ` + ${detailRows.length} directory rows` : ''} to sheet`);
+  console.log(`test-metrics: recorded ${row[1]} run (${row[4]} passed / ${row[5]} failed${row[17] === 'partial' ? ', partial run' : ''})${detailRows.length ? ` + ${detailRows.length} directory rows` : ''} to sheet`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

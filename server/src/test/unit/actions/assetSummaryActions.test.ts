@@ -161,6 +161,7 @@ describe('Asset Summary Actions', () => {
         getAssetSummaryMetrics(TEST_ASSET_ID)
       ).resolves.toEqual({
         actionError: 'Asset not found. It may have been deleted. Please refresh and try again.',
+        messageKey: 'msp/assets:errors.asset.notFoundRefresh',
       });
     });
 

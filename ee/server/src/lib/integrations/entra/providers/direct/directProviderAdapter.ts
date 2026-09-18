@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, type AxiosResponse } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import {
   getMicrosoftGraphBaseUrl,
@@ -27,9 +27,11 @@ const GRAPH_REQUEST_TIMEOUT_MS = 20_000;
 
 // Resolved per call: MICROSOFT_GRAPH_BASE_URL points the whole adapter at the
 // Graph emulator (test-harness/graph-emulator) so the integration can be walked
-// end to end without a CSP tenant. The managedTenants endpoints live on the
-// beta base (the API is beta-only; v1.0 answers 400), with its own emulator
-// override MICROSOFT_GRAPH_BETA_BASE_URL.
+// end to end without a CSP tenant. The Lighthouse tenant list lives on the
+// beta base (the managedTenants API is beta-only; v1.0 answers 400), with its
+// own emulator override MICROSOFT_GRAPH_BETA_BASE_URL. Per-customer directory
+// reads (/users, /groups) use v1.0 with a token minted against the customer
+// tenant's authority — managedTenants has no user directory.
 const graphBaseUrl = (): string => getMicrosoftGraphBaseUrl();
 const graphBetaBaseUrl = (): string => getMicrosoftGraphBetaBaseUrl();
 
@@ -120,6 +122,33 @@ function toObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+/**
+ * Never let a raw AxiosError escape the adapter: its config/request dump
+ * carries the Authorization header (a live Graph token) into whatever logs the
+ * failure, and its message ("Request failed with status code 400") names
+ * neither the Graph error code nor the message Microsoft actually returned.
+ */
+function sanitizeGraphError(error: unknown): Error {
+  if (isTimeoutError(error)) {
+    return new EntraOperatorError(
+      'timeout',
+      `Microsoft did not answer within ${Math.round(GRAPH_REQUEST_TIMEOUT_MS / 1000)} seconds. Large directories are read in pages — try again in a moment.`
+    );
+  }
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      const graphError = toObject(toObject(error.response.data).error);
+      const code = getNullableString(graphError.code);
+      const message = getNullableString(graphError.message);
+      return new Error(
+        `Microsoft Graph request failed (HTTP ${error.response.status}${code ? `, ${code}` : ''})${message ? `: ${message}` : '.'}`
+      );
+    }
+    return new Error(`Microsoft Graph could not be reached${error.code ? ` (${error.code})` : ''}.`);
+  }
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 function getFirstString(value: unknown, fallback = ''): string {
@@ -280,6 +309,37 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     return accessToken;
   }
 
+  /**
+   * One Graph call against a managed (customer) tenant, authenticated with a
+   * token minted for that tenant's authority. A 401 invalidates the cached
+   * token and retries once with a fresh one.
+   */
+  private async managedTenantGraphRequest(
+    tenant: string,
+    managedTenantId: string,
+    request: (accessToken: string) => Promise<AxiosResponse>
+  ): Promise<Record<string, unknown>> {
+    const accessToken = await this.getManagedTenantAccessToken(tenant, managedTenantId);
+
+    try {
+      const response = await request(accessToken);
+      return toObject(response.data);
+    } catch (error) {
+      const status = (error as AxiosError).response?.status;
+      if (status === 401) {
+        this.managedTenantTokenCache.delete(`${tenant}:${managedTenantId}`);
+        const refreshedToken = await this.getManagedTenantAccessToken(tenant, managedTenantId);
+        try {
+          const retry = await request(refreshedToken);
+          return toObject(retry.data);
+        } catch (retryError) {
+          throw sanitizeGraphError(retryError);
+        }
+      }
+      throw sanitizeGraphError(error);
+    }
+  }
+
   private async graphGet(
     tenant: string,
     url: string
@@ -300,19 +360,14 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       if (status === 401) {
         const refreshed = await refreshEntraDirectToken(tenant);
         accessToken = refreshed.accessToken;
-        const retry = await request(accessToken);
-        return toObject(retry.data);
+        try {
+          const retry = await request(accessToken);
+          return toObject(retry.data);
+        } catch (retryError) {
+          throw sanitizeGraphError(retryError);
+        }
       }
-      // A timeout is not a refusal. Graph is up and the directory read is
-      // simply taking longer than one request is allowed to; the remedy is to
-      // try again, not to go looking at the connection.
-      if (isTimeoutError(error)) {
-        throw new EntraOperatorError(
-          'timeout',
-          `Microsoft did not answer within ${Math.round(GRAPH_REQUEST_TIMEOUT_MS / 1000)} seconds. Large directories are read in pages — try again in a moment.`
-        );
-      }
-      throw error;
+      throw sanitizeGraphError(error);
     }
   }
 
@@ -357,19 +412,52 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     return tenants;
   }
 
-  public async listUsersForTenant(
-    input: EntraListUsersForTenantInput
-  ): Promise<EntraManagedUserRecord[]> {
-    if (IS_SELF_TENANT_SMOKE) {
-      return this.listSelfTenantUsers(input);
-    }
+  private mapUserRows(
+    rows: unknown[],
+    managedTenantId: string,
+    seenObjectIds: Set<string>
+  ): EntraManagedUserRecord[] {
+    const users: EntraManagedUserRecord[] = [];
+    for (const row of rows) {
+      const raw = toObject(row);
+      const entraObjectId = getFirstString(raw.id);
+      if (!entraObjectId || seenObjectIds.has(entraObjectId)) {
+        continue;
+      }
 
+      seenObjectIds.add(entraObjectId);
+
+      const userPrincipalName = getNullableString(raw.userPrincipalName);
+      const email = getNullableString(raw.mail) || userPrincipalName;
+      const entraTenantId = getNullableString(raw.tenantId) || managedTenantId;
+
+      users.push(normalizeEntraSyncUser({
+        entraTenantId,
+        entraObjectId,
+        userPrincipalName,
+        email,
+        displayName: getNullableString(raw.displayName),
+        givenName: getNullableString(raw.givenName),
+        surname: getNullableString(raw.surname),
+        accountEnabled: getBoolean(raw.accountEnabled, true),
+        jobTitle: getNullableString(raw.jobTitle),
+        mobilePhone: getNullableString(raw.mobilePhone),
+        businessPhones: getStringArray(raw.businessPhones),
+        raw,
+      }));
+    }
+    return users;
+  }
+
+  private async collectUsers(
+    managedTenantId: string,
+    fetchPage: (pageUrl: string) => Promise<Record<string, unknown>>,
+    maxPages?: number
+  ): Promise<{ users: EntraManagedUserRecord[]; pages: number; truncated: boolean }> {
     const users: EntraManagedUserRecord[] = [];
     const seenObjectIds = new Set<string>();
-    const encodedTenant = encodeURIComponent(input.managedTenantId);
     const select = [
       'id',
-      'tenantId',
       'displayName',
       'givenName',
       'surname',
@@ -381,48 +469,132 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       'businessPhones',
     ].join(',');
 
-    let nextUrl =
-      `${graphBetaBaseUrl()}/tenantRelationships/managedTenants/users` +
-      `?$filter=tenantId eq '${encodedTenant}'&$select=${select}&$top=999`;
+    // The Lighthouse managedTenants API has no user directory (real Graph
+    // answers 400 for /tenantRelationships/managedTenants/users). A managed
+    // tenant's users are read from that tenant's own directory, with a token
+    // minted against its authority — the same GDAP pattern
+    // listSecurityGroupsForTenant already uses.
+    let nextUrl: string | null = `${graphBaseUrl()}/users?$select=${select}&$top=999`;
+    let pages = 0;
+    let truncated = false;
 
     while (nextUrl) {
-      const payload = await this.graphGet(input.tenant, nextUrl);
-      const rows = Array.isArray(payload.value) ? payload.value : [];
-
-      for (const row of rows) {
-        const raw = toObject(row);
-        const entraObjectId = getFirstString(raw.id);
-        if (!entraObjectId || seenObjectIds.has(entraObjectId)) {
-          continue;
-        }
-
-        seenObjectIds.add(entraObjectId);
-
-        const userPrincipalName = getNullableString(raw.userPrincipalName);
-        const email = getNullableString(raw.mail) || userPrincipalName;
-        const entraTenantId = getNullableString(raw.tenantId) || input.managedTenantId;
-
-        users.push(normalizeEntraSyncUser({
-          entraTenantId,
-          entraObjectId,
-          userPrincipalName,
-          email,
-          displayName: getNullableString(raw.displayName),
-          givenName: getNullableString(raw.givenName),
-          surname: getNullableString(raw.surname),
-          accountEnabled: getBoolean(raw.accountEnabled, true),
-          jobTitle: getNullableString(raw.jobTitle),
-          mobilePhone: getNullableString(raw.mobilePhone),
-          businessPhones: getStringArray(raw.businessPhones),
-          raw,
-        }));
+      if (typeof maxPages === 'number' && pages >= maxPages) {
+        truncated = true;
+        break;
       }
 
+      const pageUrl = nextUrl;
+      const payload = await fetchPage(pageUrl);
+      const rows = Array.isArray(payload.value) ? payload.value : [];
+      users.push(...this.mapUserRows(rows, managedTenantId, seenObjectIds));
+
       const candidateNextLink = getNullableString(payload['@odata.nextLink']);
-      nextUrl = candidateNextLink || '';
+      nextUrl = candidateNextLink || null;
+      pages += 1;
     }
 
+    return { users, pages, truncated };
+  }
+
+  /**
+   * Diagnostics seam: read exactly one page of a managed tenant's directory
+   * with a caller-supplied token, returning the next page URL so an expensive
+   * preview can resume across requests without serializing the token.
+   */
+  public async listUsersPageWithToken(input: {
+    tenant: string;
+    managedTenantId: string;
+    accessToken: string;
+    url?: string;
+    signal?: AbortSignal;
+  }): Promise<{ users: EntraManagedUserRecord[]; nextLink: string | null }> {
+    const select = [
+      'id',
+      'displayName',
+      'givenName',
+      'surname',
+      'mail',
+      'userPrincipalName',
+      'accountEnabled',
+      'jobTitle',
+      'mobilePhone',
+      'businessPhones',
+    ].join(',');
+    const pageUrl = input.url || `${graphBaseUrl()}/users?$select=${select}&$top=999`;
+    const expected = new URL(`${graphBaseUrl()}/users`);
+    const requested = new URL(pageUrl);
+    if (requested.origin !== expected.origin || requested.pathname !== expected.pathname) {
+      throw new Error('Graph returned an unexpected users paging URL. Restart diagnostics or contact support.');
+    }
+
+    const response = await axios.get(pageUrl, {
+      headers: { Authorization: `Bearer ${input.accessToken}` },
+      timeout: GRAPH_REQUEST_TIMEOUT_MS,
+      signal: input.signal,
+      maxRedirects: 0,
+    });
+    const payload = toObject(response.data);
+    const rows = Array.isArray(payload.value) ? payload.value : [];
+    const users = this.mapUserRows(rows, input.managedTenantId, new Set<string>());
+    return {
+      users,
+      nextLink: getNullableString(payload['@odata.nextLink']) || null,
+    };
+  }
+
+  public async listUsersForTenant(
+    input: EntraListUsersForTenantInput
+  ): Promise<EntraManagedUserRecord[]> {
+    if (IS_SELF_TENANT_SMOKE) {
+      return this.listSelfTenantUsers(input);
+    }
+
+    const { users } = await this.collectUsers(
+      input.managedTenantId,
+      (pageUrl) =>
+        this.managedTenantGraphRequest(
+          input.tenant,
+          input.managedTenantId,
+          (accessToken) =>
+            axios.get(pageUrl, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+              timeout: GRAPH_REQUEST_TIMEOUT_MS,
+            })
+        )
+    );
+
     return users;
+  }
+
+  /**
+   * Diagnostics seam: read a managed tenant's directory with a token the caller
+   * already minted, optionally bounded to a page budget. Reuses the same
+   * normalization and paging as listUsersForTenant without minting a second
+   * token. `truncated` is reported honestly rather than silently dropping pages.
+   */
+  public async listUsersForTenantWithToken(input: {
+    tenant: string;
+    managedTenantId: string;
+    accessToken: string;
+    maxPages?: number;
+  }): Promise<{ users: EntraManagedUserRecord[]; pages: number; truncated: boolean }> {
+    if (IS_SELF_TENANT_SMOKE) {
+      const users = await this.listSelfTenantUsers(input);
+      return { users, pages: 1, truncated: false };
+    }
+
+    return this.collectUsers(
+      input.managedTenantId,
+      (pageUrl) =>
+        axios
+          .get(pageUrl, {
+            headers: { Authorization: `Bearer ${input.accessToken}` },
+            timeout: GRAPH_REQUEST_TIMEOUT_MS,
+          })
+          .then((response) => toObject(response.data)),
+      input.maxPages
+    );
   }
 
   private async listSelfTenantAsManaged(
@@ -579,14 +751,18 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     const groups: Array<{ id: string; displayName: string | null }> = [];
     const seen = new Set<string>();
     let nextUrl = `${graphBaseUrl()}/groups?$select=id,displayName,securityEnabled&$top=200`;
-    const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
 
     while (nextUrl) {
-      const response = await axios.get(nextUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        timeout: 20_000,
-      });
-      const payload = toObject(response.data);
+      const pageUrl = nextUrl;
+      const payload = await this.managedTenantGraphRequest(
+        input.tenant,
+        input.managedTenantId,
+        (accessToken) =>
+          axios.get(pageUrl, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            timeout: GRAPH_REQUEST_TIMEOUT_MS,
+          })
+      );
       const rows = Array.isArray(payload.value) ? payload.value : [];
       for (const row of rows) {
         const raw = toObject(row);
@@ -616,16 +792,19 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   }): Promise<boolean> {
     const encodedUser = encodeURIComponent(input.userEntraObjectId);
     const endpoint = `${graphBaseUrl()}/users/${encodedUser}/checkMemberGroups`;
-    const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
-    const response = await axios.post(
-      endpoint,
-      { groupIds: [input.groupId] },
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        timeout: 20_000,
-      }
+    const payload = await this.managedTenantGraphRequest(
+      input.tenant,
+      input.managedTenantId,
+      (accessToken) =>
+        axios.post(
+          endpoint,
+          { groupIds: [input.groupId] },
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            timeout: GRAPH_REQUEST_TIMEOUT_MS,
+          }
+        )
     );
-    const payload = toObject(response.data);
     const values = Array.isArray(payload.value) ? payload.value : [];
     return values.some((value) => getNullableString(value) === input.groupId);
   }

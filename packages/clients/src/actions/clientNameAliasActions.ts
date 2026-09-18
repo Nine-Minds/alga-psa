@@ -60,7 +60,7 @@ export const listClientNameAliases = withAuth(async (
   clientId: string
 ): Promise<ClientNameAlias[] | ClientNameAliasActionError> => {
   if (!await hasMspPermission(user, 'client', 'read')) {
-    return permissionError('Permission denied: Cannot read clients');
+    return permissionError('Permission denied: Cannot read clients', 'msp/clients:errors.permissions.readClients');
   }
 
   const { knex } = await createTenantKnex();
@@ -80,15 +80,15 @@ export const addClientNameAlias = withAuth(async (
   rawAlias: string
 ): Promise<ClientNameAlias | ClientNameAliasActionError> => {
   if (!await hasMspPermission(user, 'client', 'update')) {
-    return permissionError('Permission denied: Cannot update clients');
+    return permissionError('Permission denied: Cannot update clients', 'msp/clients:errors.permissions.updateClients');
   }
 
   const alias = normalizeAliasInput(rawAlias);
   if (!alias) {
-    return actionError('Alias is required');
+    return actionError('Alias is required', 'msp/clients:errors.alias.required');
   }
   if (alias.length > 255) {
-    return actionError('Alias is too long');
+    return actionError('Alias is too long', 'msp/clients:errors.alias.tooLong');
   }
 
   const { knex } = await createTenantKnex();
@@ -125,7 +125,7 @@ export const addClientNameAlias = withAuth(async (
       return actionError(e.message);
     }
     console.error('Unexpected failure while adding client name alias:', e);
-    return actionError('Failed to add client alias. Please try again.');
+    return actionError('Failed to add client alias. Please try again.', 'msp/clients:errors.alias.addFailed');
   }
 });
 
@@ -136,7 +136,7 @@ export const removeClientNameAlias = withAuth(async (
   aliasId: string
 ): Promise<{ success: true } | ClientNameAliasActionError> => {
   if (!await hasMspPermission(user, 'client', 'update')) {
-    return permissionError('Permission denied: Cannot update clients');
+    return permissionError('Permission denied: Cannot update clients', 'msp/clients:errors.permissions.updateClients');
   }
 
   const { knex } = await createTenantKnex();
@@ -145,7 +145,7 @@ export const removeClientNameAlias = withAuth(async (
       .where({ client_id: clientId, id: aliasId })
       .delete();
     if (deleted === 0) {
-      return actionError('Alias not found.');
+      return actionError('Alias not found.', 'msp/clients:errors.alias.notFound');
     }
     return { success: true as const };
   });

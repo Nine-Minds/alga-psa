@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import { isTeamsEmulatorModeEnabled } from '../teams/emulatorMode';
+import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import { resolveTeamsMeetingGraphConfig } from './meetingConfig';
 
 const SUBSCRIPTION_TTL_HOURS = 60;
@@ -105,7 +107,10 @@ export function resolveTeamsRecordingsWebhookUrl(): string {
     ? clean
     : `${clean}/api/teams/webhooks/recordings`;
 
-  if (!/^https:\/\//i.test(webhookUrl)) {
+  // Real Graph rejects non-HTTPS notification URLs; the local emulator (which
+  // receives the subscription instead) does not. Same deny-by-default gate as
+  // every other Teams emulator override.
+  if (!/^https:\/\//i.test(webhookUrl) && !isTeamsEmulatorModeEnabled()) {
     throw new Error(`Invalid Teams recordings webhook URL "${webhookUrl}". Microsoft Graph requires HTTPS.`);
   }
 
@@ -118,7 +123,7 @@ async function graphRequest(params: {
   path: string;
   body?: Record<string, unknown>;
 }): Promise<Response> {
-  return fetch(`https://graph.microsoft.com/v1.0${params.path}`, {
+  return fetch(`${getMicrosoftGraphBaseUrl()}${params.path}`, {
     method: params.method,
     headers: {
       'Content-Type': 'application/json',

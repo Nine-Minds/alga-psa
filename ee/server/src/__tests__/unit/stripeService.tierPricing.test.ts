@@ -7,33 +7,60 @@ vi.mock('@/lib/db/db', () => ({
   getConnection: getConnectionMock,
 }));
 
+// These pricing-unit fixtures supply persistence results. SQL and tenant
+// isolation require separate database integration coverage. Keep query chains composable so a
+// tenant predicate and a business predicate can both reach the fixture.
+function queryFixture(handlers: {
+  first?: (criteria: Record<string, any>) => any;
+  update?: (criteria: Record<string, any>, values: Record<string, any>) => any;
+  insert?: (values: Record<string, any>) => any;
+}) {
+  const criteria: Record<string, any> = {};
+  const predicates: Array<(row: any) => boolean> = [];
+  const query: any = {
+    where: (field: string | Record<string, any>, value?: unknown) => {
+      const additions = typeof field === 'string' ? { [field]: value } : field;
+      for (const [key, value] of Object.entries(additions)) criteria[key.split('.').at(-1)!] = value;
+      return query;
+    },
+    whereIn: (column: string, values: unknown[]) => {
+      predicates.push(row => values.includes(row[column]));
+      return query;
+    },
+    whereRaw: (sql: string) => {
+      if (sql !== "COALESCE(metadata->>'addon_key', '') = ''") throw new Error(`Unexpected fixture predicate: ${sql}`);
+      predicates.push(row => !row.metadata?.addon_key);
+      return query;
+    },
+    orderByRaw: () => query,
+    select: () => query,
+    count: () => query,
+    first: async () => {
+      const row = await handlers.first?.(criteria);
+      return row && predicates.every(predicate => predicate(row)) ? row : null;
+    },
+    update: async (values: Record<string, any>) => {
+      if (!handlers.update) throw new Error('Unexpected fixture update');
+      return handlers.update(criteria, values);
+    },
+    insert: (values: Record<string, any>) => {
+      if (!handlers.insert) throw new Error('Unexpected fixture insert');
+      return handlers.insert(values);
+    },
+  };
+  return query;
+}
+
+function connectionFixture(resolve: (table: string) => any) {
+  return Object.assign(resolve, { fn: { now: () => new Date('2026-03-26T00:00:00.000Z') } });
+}
+
 function createTenantKnex(planByTenant: Record<string, string>) {
-  return ((table: string) => {
-    if (table === 'stripe_subscriptions') {
-      return {
-        where: () => ({
-          whereIn: () => ({ first: async () => null }),
-          first: async () => null,
-        }),
-      };
-    }
-
-    if (table !== 'tenants') {
-      throw new Error(`Unexpected table ${table}`);
-    }
-
-    return {
-      where: (criteriaOrColumn: Record<string, any> | string, tenantId?: string) => ({
-        select: (_field: string) => ({
-          first: async () => ({ plan: planByTenant[tenantId as string] }),
-        }),
-        first: async () => ({
-          plan: typeof criteriaOrColumn === 'string' ? planByTenant[tenantId as string] : planByTenant[criteriaOrColumn.tenant],
-          billing_source: 'stripe',
-        }),
-      }),
-    };
-  }) as any;
+  return connectionFixture(table => {
+    if (table === 'stripe_subscriptions') return queryFixture({ first: () => null });
+    if (table === 'tenants') return queryFixture({ first: criteria => ({ plan: planByTenant[criteria.tenant], billing_source: 'stripe' }) });
+    throw new Error(`Unexpected table ${table}`);
+  });
 }
 
 function createCheckoutWebhookKnex(state: {
@@ -41,38 +68,13 @@ function createCheckoutWebhookKnex(state: {
   tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
   subscriptionUpdate?: Record<string, any>;
 }) {
-  const knex = ((table: string) => {
-    if (table === 'stripe_customers') {
-      return {
-        where: (_criteria: Record<string, any>) => ({
-          first: async () => state.customer ?? {
-            tenant: 'tenant-solo',
-            stripe_customer_id: 'cust_db_checkout',
-            stripe_customer_external_id: 'cus_checkout',
-          },
-        }),
-      };
-    }
-
-    if (table === 'tenants') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          update: async (values: Record<string, any>) => {
-            state.tenantUpdates.push({ criteria, values });
-            return 1;
-          },
-        }),
-      };
-    }
-
+  return connectionFixture(table => {
+    if (table === 'stripe_customers') return queryFixture({ first: () => state.customer ?? {
+      tenant: 'tenant-solo', stripe_customer_id: 'cust_db_checkout', stripe_customer_external_id: 'cus_checkout',
+    } });
+    if (table === 'tenants') return queryFixture({ update: (criteria, values) => { state.tenantUpdates.push({ criteria, values }); return 1; } });
     throw new Error(`Unexpected table ${table}`);
-  }) as any;
-
-  knex.fn = {
-    now: () => new Date('2026-03-26T00:00:00.000Z'),
-  };
-
-  return knex;
+  });
 }
 
 function createSubscriptionWebhookKnex(state: {
@@ -82,239 +84,81 @@ function createSubscriptionWebhookKnex(state: {
   priceRecords?: Record<string, Record<string, any>>;
   productRecords?: Record<string, Record<string, any>>;
 }) {
-  const priceRecords = state.priceRecords ?? {};
-  const productRecords = state.productRecords ?? {};
-
-  const knex = ((table: string) => {
-    if (table === 'stripe_subscriptions') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          first: async () => (
-            criteria.tenant === state.existingSubscription.tenant &&
-            criteria.stripe_subscription_external_id === state.existingSubscription.stripe_subscription_external_id
-          )
-            ? state.existingSubscription
-            : null,
-          update: async (values: Record<string, any>) => {
-            state.subscriptionUpdates.push({ criteria, values });
-            return 1;
-          },
-        }),
-      };
+  return connectionFixture(table => {
+    if (table === 'stripe_subscriptions') return queryFixture({
+      first: criteria => Object.entries(criteria).every(([key, value]) => state.existingSubscription[key] === value) ? state.existingSubscription : null,
+      update: (criteria, values) => { state.subscriptionUpdates.push({ criteria, values }); return 1; },
+    });
+    if (table === 'stripe_products' || table === 'stripe_prices') {
+      const prefix = table === 'stripe_products' ? 'product' : 'price';
+      const records = table === 'stripe_products' ? state.productRecords : state.priceRecords;
+      return queryFixture({
+        first: criteria => records?.[criteria[`stripe_${prefix}_external_id`]] ?? null,
+        insert: values => ({ returning: async () => [{ ...values,
+          [`stripe_${prefix}_id`]: `${prefix === 'product' ? 'prod' : 'price'}_record_${values[`stripe_${prefix}_external_id`]}`,
+        }] }),
+      });
     }
-
-    if (table === 'stripe_products') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          first: async () => productRecords[criteria.stripe_product_external_id] ?? null,
-        }),
-        insert: (values: Record<string, any>) => ({
-          returning: async () => [{
-            ...values,
-            stripe_product_id: `prod_record_${values.stripe_product_external_id}`,
-          }],
-        }),
-      };
-    }
-
-    if (table === 'stripe_prices') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          first: async () => priceRecords[criteria.stripe_price_external_id] ?? null,
-        }),
-        insert: (values: Record<string, any>) => ({
-          returning: async () => [{
-            ...values,
-            stripe_price_id: `price_record_${values.stripe_price_external_id}`,
-          }],
-        }),
-      };
-    }
-
-    if (table === 'tenants') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          update: async (values: Record<string, any>) => {
-            state.tenantUpdates.push({ criteria, values });
-            return 1;
-          },
-        }),
-      };
-    }
-
+    if (table === 'tenants') return queryFixture({ update: (criteria, values) => { state.tenantUpdates.push({ criteria, values }); return 1; } });
     throw new Error(`Unexpected table ${table}`);
-  }) as any;
-
-  knex.fn = {
-    now: () => new Date('2026-03-26T00:00:00.000Z'),
-  };
-
-  return knex;
+  });
 }
 
 function createSoloTrialKnex(state: {
-  tenantPlan: 'solo' | 'pro';
-  existingSubscription: Record<string, any> | null;
+  tenantPlan: 'solo' | 'pro'; existingSubscription: Record<string, any> | null;
   subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
 }) {
-  const knex = ((table: string) => {
-    if (table === 'tenants') {
-      return {
-        where: (_criteria: Record<string, any>) => ({
-          first: async () => ({ billing_source: 'stripe' }),
-          select: (_field: string) => ({
-            first: async () => ({ plan: state.tenantPlan }),
-          }),
-        }),
-      };
-    }
-
-    if (table === 'stripe_subscriptions') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          whereIn: (_column: string, _values: string[]) => ({
-            first: async () => state.existingSubscription
-              && criteria.tenant === state.existingSubscription.tenant
-              && criteria.stripe_customer_id === state.existingSubscription.stripe_customer_id
-              ? state.existingSubscription
-              : null,
-          }),
-          update: async (values: Record<string, any>) => {
-            state.subscriptionUpdates.push({ criteria, values });
-            return 1;
-          },
-        }),
-      };
-    }
-
+  return connectionFixture(table => {
+    if (table === 'tenants') return queryFixture({ first: () => ({ billing_source: 'stripe', plan: state.tenantPlan }) });
+    if (table === 'stripe_subscriptions') return queryFixture({
+      first: criteria => state.existingSubscription && Object.entries(criteria).every(([key, value]) => state.existingSubscription?.[key] === value) ? state.existingSubscription : null,
+      update: (criteria, values) => { state.subscriptionUpdates.push({ criteria, values }); return 1; },
+    });
     throw new Error(`Unexpected table ${table}`);
-  }) as any;
-
-  knex.fn = {
-    now: () => new Date('2026-03-26T00:00:00.000Z'),
-  };
-
-  return knex;
+  });
 }
 
 function createUpgradeKnex(state: {
-  existingSubscription: Record<string, any>;
-  priceRecords: Record<string, Record<string, any>>;
+  existingSubscription: Record<string, any>; priceRecords: Record<string, Record<string, any>>;
   subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
   tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
   activeUserCount?: number;
 }) {
-  const knex = ((table: string) => {
-    if (table === 'stripe_subscriptions') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          first: async () => (
-            criteria.tenant === state.existingSubscription.tenant &&
-            criteria.stripe_customer_id === state.existingSubscription.stripe_customer_id &&
-            criteria.status === state.existingSubscription.status
-          )
-            ? state.existingSubscription
-            : null,
-          update: async (values: Record<string, any>) => {
-            state.subscriptionUpdates.push({ criteria, values });
-            return 1;
-          },
-        }),
-      };
-    }
-
-    if (table === 'stripe_prices') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          first: async () => state.priceRecords[criteria.stripe_price_external_id] ?? null,
-        }),
-      };
-    }
-
-    if (table === 'tenants') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          first: async () => ({ billing_source: 'stripe' }),
-          update: async (values: Record<string, any>) => {
-            state.tenantUpdates.push({ criteria, values });
-            return 1;
-          },
-        }),
-      };
-    }
-
-    if (table === 'users') {
-      return {
-        where: (_criteria: Record<string, any>) => ({
-          count: (_column: string) => ({
-            first: async () => ({ count: String(state.activeUserCount ?? 1) }),
-          }),
-        }),
-      };
-    }
-
+  return connectionFixture(table => {
+    if (table === 'stripe_subscriptions') return queryFixture({
+      first: criteria => Object.entries(criteria).every(([key, value]) => state.existingSubscription[key] === value) ? state.existingSubscription : null,
+      update: (criteria, values) => { state.subscriptionUpdates.push({ criteria, values }); return 1; },
+    });
+    if (table === 'stripe_prices') return queryFixture({ first: criteria => state.priceRecords[criteria.stripe_price_external_id] ?? null });
+    if (table === 'tenants') return queryFixture({ first: () => ({ billing_source: 'stripe' }),
+      update: (criteria, values) => { state.tenantUpdates.push({ criteria, values }); return 1; },
+    });
+    if (table === 'users') return queryFixture({ first: () => ({ count: String(state.activeUserCount ?? 1) }) });
     throw new Error(`Unexpected table ${table}`);
-  }) as any;
-
-  knex.fn = {
-    now: () => new Date('2026-03-26T00:00:00.000Z'),
-  };
-
-  return knex;
+  });
 }
 
 function createAddOnKnex(addOnRecord?: Record<string, any>) {
-  return ((table: string) => {
-    if (table !== 'tenant_addons') {
-      throw new Error(`Unexpected table ${table}`);
-    }
-
-    return {
-      where: (_criteria: Record<string, any>) => ({
-        first: async () => addOnRecord ?? null,
-      }),
-    };
-  }) as any;
+  return connectionFixture(table => {
+    if (table === 'tenant_addons') return queryFixture({ first: () => addOnRecord ?? null });
+    throw new Error(`Unexpected table ${table}`);
+  });
 }
 
 function createTenantAddOnMutationKnex(state: {
-  inserted?: Record<string, any>;
-  merged?: Record<string, any>;
-  updated?: Record<string, any>;
-  where?: Record<string, any>;
+  inserted?: Record<string, any>; merged?: Record<string, any>;
+  updated?: Record<string, any>; where?: Record<string, any>;
 }) {
-  const knex = ((table: string) => {
-    if (table !== 'tenant_addons') {
-      throw new Error(`Unexpected table ${table}`);
-    }
-
-    return {
-      insert: (values: Record<string, any>) => {
+  return connectionFixture(table => {
+    if (table !== 'tenant_addons') throw new Error(`Unexpected table ${table}`);
+    return queryFixture({
+      insert: values => {
         state.inserted = values;
-        return {
-          onConflict: (_keys: string[]) => ({
-            merge: (mergeValues: Record<string, any>) => {
-              state.merged = mergeValues;
-              return 1;
-            },
-          }),
-        };
+        return { onConflict: () => ({ merge: (values: Record<string, any>) => { state.merged = values; return 1; } }) };
       },
-      where: (criteria: Record<string, any>) => ({
-        update: (values: Record<string, any>) => {
-          state.where = criteria;
-          state.updated = values;
-          return 1;
-        },
-      }),
-    };
-  }) as any;
-
-  knex.fn = {
-    now: () => new Date('2026-03-26T00:00:00.000Z'),
-  };
-
-  return knex;
+      update: (criteria, values) => { state.where = criteria; state.updated = values; return 1; },
+    });
+  });
 }
 
 function createService(planByTenant: Record<string, string>) {
@@ -327,8 +171,6 @@ function createService(planByTenant: Record<string, string>) {
     proAnnualPriceId: 'price_pro_seat_year',
     aiAddOnPriceId: 'price_ai_addon',
     aiAddOnAnnualPriceId: 'price_ai_addon_year',
-    teamsAddOnPriceId: 'price_teams_addon',
-    teamsAddOnAnnualPriceId: 'price_teams_addon_year',
     enterpriseAddOnPriceId: 'price_enterprise_addon',
     enterpriseAddOnAnnualPriceId: 'price_enterprise_addon_year',
     earlyAdoptersBasePriceId: null,
@@ -828,24 +670,7 @@ describe('StripeService tier pricing', () => {
     const subscriptionUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
     const tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }> = [];
 
-    const knex = ((table: string) => {
-      if (table === 'tenants') {
-        return {
-          where: (criteria: Record<string, any>) => ({
-            first: async () => ({ billing_source: 'stripe' }),
-            select: (_field: string) => ({
-              first: async () => ({ plan: 'pro' }),
-            }),
-            update: async (values: Record<string, any>) => {
-              tenantUpdates.push({ criteria, values });
-              return 1;
-            },
-          }),
-        };
-      }
-
-      if (table === 'stripe_subscriptions') {
-        const subscriptionRow = {
+    const subscriptionRow = {
           tenant: 'tenant-pro',
           stripe_subscription_id: 'sub_db_pro',
           stripe_subscription_external_id: 'sub_ext_pro',
@@ -860,23 +685,15 @@ describe('StripeService tier pricing', () => {
           metadata: {},
           current_period_end: new Date('2026-04-26T00:00:00.000Z'),
         };
-        return {
-          where: (criteria: Record<string, any>) => ({
-            whereIn: (_column: string, _values: string[]) => ({
-              first: async () => subscriptionRow,
-            }),
-            first: async () => subscriptionRow,
-            update: async (values: Record<string, any>) => {
-              subscriptionUpdates.push({ criteria, values });
-              return 1;
-            },
-          }),
-        };
-      }
-
+    const knex = connectionFixture(table => {
+      if (table === 'tenants') return queryFixture({ first: () => ({ billing_source: 'stripe', plan: 'pro' }),
+        update: (criteria, values) => { tenantUpdates.push({ criteria, values }); return 1; },
+      });
+      if (table === 'stripe_subscriptions') return queryFixture({ first: () => subscriptionRow,
+        update: (criteria, values) => { subscriptionUpdates.push({ criteria, values }); return 1; },
+      });
       throw new Error(`Unexpected table ${table}`);
-    }) as any;
-    knex.fn = { now: () => new Date('2026-03-26T00:00:00.000Z') };
+    });
 
     getConnectionMock.mockResolvedValue(knex);
     service.getOrImportCustomer = vi.fn().mockResolvedValue({
@@ -1011,24 +828,15 @@ describe('StripeService tier pricing', () => {
     );
   });
 
-  it('creates embedded checkout sessions for Teams and Enterprise add-ons', async () => {
+  it('creates embedded checkout sessions for the Enterprise add-on', async () => {
     const service = createService({});
     service.initPromise = Promise.resolve();
 
-    const teamsResult = await service.purchaseAddOn('tenant-teams', 'teams', 'month');
     const enterpriseResult = await service.purchaseAddOn('tenant-enterprise', 'enterprise', 'year');
 
-    expect(teamsResult.success).toBe(true);
     expect(enterpriseResult.success).toBe(true);
     expect(service.stripe.checkout.sessions.create).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({
-        line_items: [{ price: service.config.teamsAddOnPriceId, quantity: 1 }],
-        metadata: expect.objectContaining({ addon_key: 'teams' }),
-      }),
-    );
-    expect(service.stripe.checkout.sessions.create).toHaveBeenNthCalledWith(
-      2,
       expect.objectContaining({
         line_items: [{ price: service.config.enterpriseAddOnAnnualPriceId, quantity: 1 }],
         metadata: expect.objectContaining({ addon_key: 'enterprise' }),

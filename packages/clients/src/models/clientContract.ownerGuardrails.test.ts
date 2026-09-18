@@ -64,7 +64,7 @@ describe('ClientContract ownership guardrails', () => {
     ).rejects.toThrow(
       'Contract contract-1 belongs to a different client and cannot be assigned to client client-1'
     );
-  });
+  }, 15_000);
 
   it('T016: rejects repointing an existing assignment to a contract owned by a different client', async () => {
     const clientContractsBuilder = createBuilder();

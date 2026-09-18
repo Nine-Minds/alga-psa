@@ -1272,7 +1272,7 @@ export default function TaskListView({
   return (
     <div
       ref={containerRef}
-      className="project-task-list-density flex flex-col bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-xl shadow-sm overflow-hidden h-[calc(100vh-220px)] min-h-[400px]"
+      className="project-task-list-density flex flex-col bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-xl card-elevated overflow-hidden h-[calc(100vh-220px)] min-h-[400px]"
       style={{ ['--tl-font' as string]: `${densityFontPx}px`, ['--tl-cell-pad' as string]: densityCellPadding }}
     >
       {/*
@@ -1446,7 +1446,7 @@ export default function TaskListView({
                             <div>
                               <div className="flex items-center gap-3">
                                 <h4 className="font-semibold text-[rgb(var(--color-text-900))]">{phaseGroup.phase.phase_name}</h4>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
+                                <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded text-xs font-medium">
                                   {phaseGroup.totalTasks} {t(phaseGroup.totalTasks === 1 ? 'task' : 'tasks.title', phaseGroup.totalTasks === 1 ? 'task' : 'tasks')}
                                 </span>
                                 {phaseBillingBadges?.[phaseGroup.phase.phase_id] && (

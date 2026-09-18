@@ -43,13 +43,14 @@
       "contractTemplates": "Contractsjablonen",
       "invoicing": "Facturering",
       "invoiceLayouts": "Factuurlay-outs",
-      "taxRates": "Belastingtarieven",
+      "taxRates": "Belastingen",
       "contractLinePresets": "Voorinstellingen voor contractregels",
       "billingCycles": "Factureringscycli",
       "servicePeriods": "Serviceperioden",
       "usageTracking": "Gebruik volgen",
       "reports": "Rapporten",
       "serviceTypes": "Servicetypen",
+      "serviceCategories": "Servicecategorieën",
       "serviceCatalog": "Diensten",
       "products": "Producten"
     }
@@ -141,6 +142,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Overzicht van bucketuren",
+    "bucketLoadError": "De saldi van de urenbundels konden niet worden geladen. Probeer het opnieuw om de huidige saldi te bekijken.",
+    "retryBucketBalances": "Saldi van urenbundels opnieuw laden",
     "usageRecords": "Gebruiksrecords",
     "actions": {
       "addUsage": "Gebruik toevoegen",
@@ -211,6 +214,12 @@
       "updateError": "Kan het gebruiksrecord niet bijwerken",
       "deleteSuccess": "Gebruiksrecord is succesvol verwijderd",
       "deleteError": "Kan gebruiksrecord niet verwijderen"
+    },
+    "periodReport": "Gebruiksrapport per periode",
+    "periodAlreadyInvoiced": "Deze periode is al gefactureerd. Corrigeer dit via het correctieproces voor facturen.",
+    "periodFilter": {
+      "notice": "Toont het gebruik voor de serviceperiode {{start}} tot {{end}}",
+      "clear": "Wissen"
     }
   },
   "lineItem": {
@@ -381,13 +390,17 @@
       "execute": "Uitvoeren",
       "createBatch": "Batch maken",
       "creating": "Creëren...",
-      "cancelBatch": "Batch annuleren"
+      "cancelBatch": "Batch annuleren",
+      "retry": "Opnieuw proberen"
     },
     "states": {
       "loadingBatches": "Batch laden...",
       "empty": "Nog geen exportbatches.",
       "loadingDetails": "Batchgegevens laden...",
-      "batchNotFound": "Partij niet gevonden."
+      "batchNotFound": "Partij niet gevonden.",
+      "checkingAccess": "Toegang controleren...",
+      "accessDeniedTitle": "Toegang geweigerd",
+      "accessDeniedDescription": "U hebt geen toestemming om toegang te krijgen tot boekhoudexporten."
     },
     "createDialog": {
       "title": "Nieuwe boekhoudkundige export",
@@ -405,7 +418,12 @@
         "invoiceStatuses": "Door komma's gescheiden (optioneel), b.v. afgerond, geplaatst",
         "notes": "Optionele opmerkingen"
       },
-      "defaultRealmLabel": "{{realmId}} (standaard)"
+      "defaultRealmLabel": "{{realmId}} (standaard)",
+      "loadingConnections": "Boekhoudverbindingen laden...",
+      "connectionLoadError": "Kan boekhoudverbindingen niet laden. Controleer uw verbindingsinstellingen en probeer het opnieuw.",
+      "ambiguousRealm": "Uw opgeslagen standaard boekhoudorganisatie wordt gedeeld door meer dan één verbinding. Kies een verbinding om door te gaan.",
+      "noXeroConnection": "Er is geen Xero-verbinding beschikbaar. Verbind Xero in de boekhoudinstellingen om te exporteren.",
+      "noQboConnection": "Er is geen QuickBooks Online-verbinding beschikbaar. Verbind deze in de boekhoudinstellingen om te exporteren."
     },
     "detailDialog": {
       "title": "Boekhoudkundige exportbatch",
@@ -429,7 +447,8 @@
       "createError": "Kan exportbatch niet maken",
       "executeError": "Kan batch niet uitvoeren",
       "cancelled": "Batch geannuleerd",
-      "cancelError": "Kan batch niet annuleren"
+      "cancelError": "Kan batch niet annuleren",
+      "realmRequired": "Kies een verbonden boekhoudbedrijf voordat u de export aanmaakt."
     },
     "status": {
       "pending": "In afwachting",
@@ -569,6 +588,142 @@
     "reason": {
       "uncovered": "Niet gedekt door een contract",
       "ambiguous": "Meer dan één contractregel komt overeen"
+    }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Er bestaat al een factuur voor deze terugkerende factuurperiode.",
+    "permissions": {
+      "billingRead": "Toestemming geweigerd: leesrechten voor facturatie vereist",
+      "billingUpdate": "Toestemming geweigerd: bijwerkrechten voor facturatie vereist",
+      "billingCreate": "Toestemming geweigerd: aanmaakrechten voor facturatie vereist",
+      "billingDelete": "Toestemming geweigerd: verwijderrechten voor facturatie vereist",
+      "clientRead": "Toestemming geweigerd: leesrechten voor klanten vereist",
+      "otherClientLocations": "Toestemming geweigerd: locaties van een andere klant zijn niet toegankelijk",
+      "clientPortalUnavailable": "Toestemming geweigerd: bewerking niet beschikbaar in het klantenportaal",
+      "resolveCurrency": "Toestemming geweigerd: de factuurvaluta van de klant kan niet worden bepaald",
+      "clientBillingAccess": "Toestemming geweigerd: u hebt geen toegang tot de facturatie van deze klant."
+    },
+    "context": {
+      "tenantNotFound": "Tenant niet gevonden",
+      "tenantContextNotFound": "Tenantcontext niet gevonden",
+      "noTenantContext": "Geen tenantcontext. Vernieuw de pagina en probeer het opnieuw.",
+      "clientContextNotFound": "Klantcontext niet gevonden",
+      "notAuthenticated": "Niet geautoriseerd: geen geverifieerde gebruiker gevonden",
+      "notLoggedIn": "gebruiker is niet aangemeld"
+    },
+    "client": {
+      "notFound": "Klant niet gevonden",
+      "notFoundRefresh": "Klant niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "idRequired": "Klant-ID is verplicht."
+    },
+    "clientContract": {
+      "notFound": "Contracttoewijzing van de klant niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde waarden van het klantcontract is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde klant, het contract of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Deze contracttoewijzing van de klant bestaat al.",
+      "missingField": "Er ontbreekt een verplicht veld van het klantcontract.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het klantcontract: {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "De volgende factuurcyclus kan momenteel niet worden aangemaakt"
+    },
+    "currency": {
+      "multipleActive": "De klant heeft actieve contracten in meerdere valuta’s ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "Een van de geselecteerde waarden van de urenbundel-overlay is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "recordInvalid": "Een van de geselecteerde records van de urenbundel-overlay is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een urenbundel-overlay voor deze service.",
+      "notAllowed": "Een van de waarden van de urenbundel-overlay is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de urenbundel-overlay.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de urenbundel-overlay: {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "Er bestaat al een urenbundelpool of lid met deze configuratie. Vernieuw de pagina en probeer het opnieuw.",
+      "recordInvalid": "Een van de geselecteerde records van de urenbundelpool is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de waarden van de urenbundelpool is niet toegestaan. Controleer het formulier en probeer het opnieuw."
+    },
+    "material": {
+      "invalidValue": "Een van de geselecteerde materiaalwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "recordInvalid": "Een van de geselecteerde materiaalrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Dit materiaalrecord bestaat al.",
+      "notAllowed": "Een van de materiaalwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht materiaalveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht materiaalveld: {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "Verbruiksrecord niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "bucketUpdateFailed": "Het verbruik van de urenbundel kan voor dit verbruiksrecord niet worden bijgewerkt. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Het geselecteerde verbruiksrecord, de klant, de service of de contractregel is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde klant, service of contractregel is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een conflicterend verbruiksrecord. Vernieuw de pagina en probeer het opnieuw.",
+      "alreadyDeleted": "Verbruiksrecord niet gevonden. Mogelijk is het al verwijderd.",
+      "missingField": "Er ontbreekt een verplicht verbruiksveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht verbruiksveld: {{field}}."
+    },
+    "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "De activeringsdatum moet een geldige kalenderdatum zijn.",
+        "thresholdsAscending": "Meldingsdrempels moeten strikt oplopend zijn.",
+        "amountOrPercentage": "Precies één van bedrag of percentage is verplicht.",
+        "increaseTotalAmountOnly": "Het totaal verhogen is alleen geldig voor posten op basis van een bedrag.",
+        "amountAndPercentageTogether": "Bedrag en percentage moeten samen worden bijgewerkt, waarbij precies één op null wordt ingesteld."
+      },
+      "invalidValue": "Een van de geselecteerde waarden van de projectfacturatie is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde project, de factuur, de fase, de service of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een conflicterende projectfacturatieregistratie. Vernieuw de pagina en probeer het opnieuw.",
+      "ruleViolation": "De waarden van de projectfacturatie schenden een gegevensregel. Controleer het formulier en probeer het opnieuw.",
+      "requestFailed": "De projectfacturatie kon de aanvraag niet voltooien. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de projectfacturatie.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de projectfacturatie: {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "Begindatum en einddatum zijn verplicht."
+    },
+    "recurringRun": {
+      "selectPeriods": "Selecteer minstens één terugkerende factuurperiode om te genereren.",
+      "invoicePermission": "Toestemming geweigerd: rechten voor het aanmaken of genereren van facturen vereist",
+      "monthEndCloseNotMaterialized": "Er zijn geen terugkerende serviceperioden gematerialiseerd voor dit terugkerende uitvoeringsvenster.",
+      "monthEndCloseNotEligible": "De periode {{servicePeriod}} kan alleen aan het einde van de maand worden afgesloten op {{finalCalendarDay}}. Alleen achteraf gefactureerde serviceperioden die een volledige kalendermaand beslaan, kunnen vroegtijdig worden afgesloten op hun laatste kalenderdag."
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "Er is een planningssleutel vereist om terugkerende serviceperioden te bekijken.",
+      "scheduleKeyRequiredRepair": "Er is een planningssleutel vereist om terugkerende serviceperioden te herstellen."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Gebruikers van het klantenportaal mogen boekhoudexports niet beheren",
+      "permissions": {
+        "create": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden aangemaakt",
+        "read": "Toestemming geweigerd: boekhoudexportbatches zijn niet toegankelijk",
+        "update": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden gewijzigd",
+        "execute": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden uitgevoerd"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "Leveranciersfactuur niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "documentTemplate": {
+      "unknownType": "Onbekend documenttype: {{documentType}}",
+      "permissions": {
+        "read": "Toestemming geweigerd: documentsjablonen kunnen niet worden gelezen",
+        "modify": "Toestemming geweigerd: documentsjablonen kunnen niet worden gewijzigd",
+        "setDefault": "Toestemming geweigerd: het standaarddocumentsjabloon kan niet worden ingesteld",
+        "clearOverride": "Toestemming geweigerd: de overschrijving van het documentsjabloon kan niet worden gewist",
+        "delete": "Toestemming geweigerd: documentsjablonen kunnen niet worden verwijderd",
+        "preview": "Toestemming geweigerd: documentsjablonen kunnen niet worden voorvertoond",
+        "readSalesOrders": "Toegang geweigerd: verkooporders kunnen niet worden gelezen"
+      },
+      "existingNotFound": "Document niet gevonden."
+    },
+    "billingProfile": {
+      "periodOrder": "Kies een periode waarvan de start op of vóór het einde ligt.",
+      "comparisonPeriodOrder": "Kies een vergelijkingsperiode waarvan de start op of vóór het einde ligt.",
+      "notThisClient": "Dat facturatieprofiel hoort niet bij deze klant."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Dat item bestaat niet meer.",
+      "alreadyInvoiced": "Dat item is al gefactureerd.",
+      "contractLineNotFound": "Die contractregel bestaat niet meer."
     }
   }
 }

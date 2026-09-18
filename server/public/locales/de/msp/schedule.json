@@ -26,7 +26,17 @@
     "loading": "Laden...",
     "errors": {
       "loadPermissions": "Benutzerberechtigungen konnten nicht geladen werden",
-      "forbidden": "Sie sind nicht berechtigt, diesen Zeitplan anzuzeigen."
+      "forbidden": "Sie sind nicht berechtigt, diesen Zeitplan anzuzeigen.",
+      "moveFailed": "Zeitplaneintrag konnte nicht verschoben werden"
+    },
+    "schedulingFor": "Planung für",
+    "selectSlotHint": "Ziehen, um Einträge zu erstellen, zu verschieben oder ihre Dauer zu ändern. Klicken Sie auf einen Eintrag, um ihn zu bearbeiten.",
+    "readOnlyHint": "Sie können diesen Zeitplan ansehen, benötigen aber die Berechtigung zum Aktualisieren von Zeitplänen, um Einträge hinzuzufügen oder zu ändern.",
+    "workItemLegend": "Dieses Arbeitselement",
+    "schedulingForAgent": "Planung für {{name}}",
+    "otherWorkLegend": "Andere Arbeit",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -279,8 +289,9 @@
         "placeholder": "Genehmiger auswählen"
       },
       "teamSelect": {
-        "label": "Wählen Sie Team",
-        "placeholder": "Wählen Sie ein Team aus"
+        "label": "Techniker nach Team filtern",
+        "placeholder": "Alle autorisierten Techniker",
+        "help": "Dies filtert nur die Technikerliste; die Buchungsverfügbarkeit gilt für den Techniker in allen Teams."
       }
     },
     "feedback": {
@@ -319,16 +330,16 @@
     "userHours": {
       "roleManager": {
         "label": "Teammanager:",
-        "description": "Sie können Verfügbarkeitseinstellungen für Mitglieder Ihres Teams konfigurieren. Die Tabelle „Konfigurierte Benutzer“ unten zeigt alle Benutzer mit Verfügbarkeitseinstellungen im gesamten System."
+        "description": "Sie können die Buchungsverfügbarkeit nur für autorisierte Teammitglieder und direkte Mitarbeiter konfigurieren. Die Tabelle unten folgt dem aktuellen Teamfilter."
       },
       "roleAdmin": {
         "label": "Administrator:",
-        "description": "Sie können Verfügbarkeitseinstellungen für jeden Benutzer im System konfigurieren. Die Tabelle „Konfigurierte Benutzer“ unten zeigt alle Benutzer mit Verfügbarkeitseinstellungen."
+        "description": "Sie können die teamübergreifende Buchungsverfügbarkeit für jeden autorisierten Techniker konfigurieren. Die Tabelle unten folgt dem aktuellen Teamfilter."
       },
       "userSelect": {
-        "label": "Wählen Sie den zu konfigurierenden Benutzer aus",
+        "label": "Techniker",
         "placeholderSelectTeamFirst": "Wählen Sie zunächst ein Team aus",
-        "placeholder": "Wählen Sie einen Benutzer zum Konfigurieren aus"
+        "placeholder": "Techniker zum Konfigurieren auswählen"
       },
       "appointmentSettings": {
         "title": "Termineinstellungen",
@@ -357,22 +368,31 @@
           "available": "Verfügbar",
           "startTime": "Startzeit",
           "endTime": "Endzeit"
-        }
+        },
+        "availableFor": "{{day}} verfügbar",
+        "startTimeFor": "Startzeit am {{day}}",
+        "endTimeFor": "Endzeit am {{day}}"
       },
       "configuredUsers": {
         "title": "Konfigurierte Benutzer",
-        "description": "Benutzer mit konfigurierten Verfügbarkeitseinstellungen",
-        "empty": "Noch keine Benutzer konfiguriert",
+        "description": "Techniker mit gespeicherter Buchungsverfügbarkeit im aktuellen Filter",
+        "empty": "Für keinen Techniker in diesem Filter ist bisher Buchungsverfügbarkeit gespeichert",
         "columns": {
           "userName": "Benutzername",
           "status": "Status"
         },
         "status": {
           "configured": "Konfiguriert"
+        },
+        "actions": {
+          "edit": "Buchungszeiten von {{name}} bearbeiten",
+          "delete": "Buchungszeiten von {{name}} löschen"
         }
       },
       "actions": {
-        "save": "Benutzerstunden speichern"
+        "save": "Benutzerstunden speichern",
+        "retry": "Erneut versuchen",
+        "saving": "Wird gespeichert..."
       },
       "feedback": {
         "selectUserError": "Bitte wählen Sie einen Benutzer aus",
@@ -384,7 +404,19 @@
       "deleteDialog": {
         "title": "Benutzerverfügbarkeit löschen",
         "message": "Möchten Sie die Verfügbarkeitseinstellungen für {{userName}} wirklich löschen? Dadurch werden alle konfigurierten Arbeitszeiten entfernt. Diese Aktion kann nicht rückgängig gemacht werden."
-      }
+      },
+      "scope": {
+        "team": "Teamfilter:",
+        "allTeams": "Alle autorisierten Techniker",
+        "technician": "Techniker:",
+        "schedule": "Zeitplan:",
+        "loading": "Gespeicherte Buchungszeiten werden geprüft",
+        "saved": "Gespeicherte Buchungszeiten",
+        "partial": "Gespeicherte Buchungszeiten mit ungespeicherten Standardwerten für fehlende Tage",
+        "draft": "Ungespeicherte Vorlage Montag–Freitag, 09:00–17:00 Uhr",
+        "explanation": "Diese Buchungszeiten gelten teamübergreifend für den Benutzer. Sie werden nicht aus dem separaten Arbeitsplan übernommen."
+      },
+      "loading": "Technikerzeiten werden geladen..."
     },
     "serviceRules": {
       "serviceSelect": {
@@ -531,7 +563,8 @@
       "appointmentRequest": "Terminanfrage",
       "view": "Eintrag anzeigen",
       "edit": "Eintrag bearbeiten",
-      "new": "Neuer Eintrag"
+      "new": "Neuer Eintrag",
+      "newForWorkItem": "{{name}} planen"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Dies ist ein privater Eintrag. Nur der Ersteller kann Details anzeigen oder bearbeiten."
@@ -556,7 +589,9 @@
       "privateEntry": "Privater Eintrag (für andere Benutzer nicht sichtbar)",
       "start": "Start *",
       "end": "Ende *",
-      "notes": "Notizen"
+      "notes": "Notizen",
+      "technician": "Techniker",
+      "notesPlaceholder": "Alles, was der Techniker vor dem Start wissen sollte"
     },
     "actions": {
       "cancel": "Abbrechen",
@@ -566,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Ad-hoc-Eintrag (kein Workitem)",
-      "openDetails": "Details"
+      "openDetails": "Details",
+      "loading": "Arbeitselement wird geladen…",
+      "openTicket": "Ticket öffnen",
+      "openTask": "Aufgabe öffnen",
+      "openInteraction": "Interaktion öffnen"
     },
     "appointmentRequest": {
       "approved": {
@@ -661,6 +700,19 @@
     },
     "errors": {
       "loadWorkItem": "Das Arbeitselement konnte nicht geladen werden."
+    },
+    "teamsMeeting": {
+      "create": "Teams-Besprechung erstellen",
+      "creating": "Teams-Besprechung wird erstellt…",
+      "join": "Teams-Besprechung beitreten",
+      "created": "Microsoft Teams-Besprechung erstellt",
+      "createFailed": "Teams-Besprechung konnte nicht erstellt werden",
+      "recurringUnsupported": "Teams-Besprechungen können nur zu eigenständigen Einträgen hinzugefügt werden, nicht zu wiederkehrenden Serien."
+    },
+    "duration": {
+      "minutes": "{{count}} Min.",
+      "hours": "{{count}} Std.",
+      "hoursMinutes": "{{hours}} Std. {{minutes}} Min."
     }
   },
   "actions": {
@@ -685,5 +737,44 @@
     "notAvailable": "k. A.",
     "title": "Interaktionsdetails",
     "unknownUser": "Unbekannt"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Zeitplaneintrag nicht gefunden.",
+      "invalid": "Der ausgewählte Zeitplaneintrag ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "assigneesMissing": "Ein oder mehrere zugewiesene Benutzer konnten nicht gefunden werden."
+    },
+    "activities": {
+      "otherUserForbidden": "Berechtigung verweigert: Die Zeitplanaktivitäten eines anderen Benutzers können nicht angezeigt werden"
+    },
+    "workItem": {
+      "adHocTimesRequired": "Für Ad-hoc-Einträge sind Start- und Endzeit erforderlich.",
+      "typeUnsupported": "Dieser Arbeitselementtyp wird für die Zeitplanung nicht unterstützt.",
+      "entryOrUserUnavailable": "Der ausgewählte Zeitplaneintrag oder Benutzer ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalid": "Das ausgewählte Arbeitselement ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Das ausgewählte Arbeitselement, der Zeitplaneintrag oder die zugewiesene Person ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicateEntry": "Dieser Zeitplaneintrag existiert bereits. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Zeitplanfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Zeitplanfeld fehlt: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "Die Besprechungs-ID ist erforderlich",
+      "refreshPermission": "Berechtigung verweigert: Besprechungsaufzeichnungen können nicht aktualisiert werden.",
+      "refreshFailed": "Die Besprechungsaufzeichnungen konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "graphForbidden": "Microsoft Graph hat den Zugriff auf die Teams-Aufzeichnung verweigert. Prüfen Sie die Aufzeichnungsberechtigungen und versuchen Sie es erneut.",
+      "graphNotFound": "Die Teams-Aufzeichnung ist über Microsoft Graph nicht mehr verfügbar.",
+      "graphThrottled": "Microsoft Graph drosselt derzeit Aufzeichnungs-Downloads. Bitte versuchen Sie es in Kürze erneut.",
+      "graphHttpStatus": "Microsoft Graph hat beim Herunterladen der Teams-Aufzeichnung HTTP {{status}} zurückgegeben."
+    }
+  },
+  "workItemEditor": {
+    "created": "{{title}} geplant",
+    "updated": "Zeitplaneintrag aktualisiert",
+    "deleted": "Zeitplaneintrag gelöscht",
+    "createFailed": "Diese Arbeit konnte nicht geplant werden",
+    "updateFailed": "Zeitplaneintrag konnte nicht aktualisiert werden",
+    "deleteFailed": "Zeitplaneintrag konnte nicht gelöscht werden",
+    "loadFailed": "Zeitplaneintrag konnte nicht geladen werden",
+    "noPermission": "Sie benötigen die Berechtigung zum Aktualisieren von Zeitplänen, um Arbeit zu planen."
   }
 }

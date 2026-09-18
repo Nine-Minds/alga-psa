@@ -529,9 +529,9 @@ export function TimeSheetListView({
                                                                             </span>
                                                                             <span className={`inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-xs font-medium ${
                                                                                 workItem.type === 'ticket'
-                                                                                    ? 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]'
+                                                                                    ? 'chip-primary'
                                                                                     : workItem.type === 'project_task'
-                                                                                        ? 'bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-700))]'
+                                                                                        ? 'chip-secondary'
                                                                                         : workItem.type === 'interaction'
                                                                                             ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                                                                                             : 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300'

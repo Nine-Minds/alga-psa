@@ -28,9 +28,8 @@ describe('client portal follows the organization theme', () => {
     expect(settingsSource).toContain('data-automation-id="client-portal-follow-theme-switch"');
   });
 
-  it('keeps the advanced appearance UI behind Enterprise and the v1.5 release flag', () => {
-    expect(settingsSource).toContain("useFeatureFlag(RELEASE_V1_5_FLAG, { defaultValue: false })");
-    expect(settingsSource).toContain('isEEAvailable && releaseV15Flag.enabled');
+  it('keeps the advanced appearance UI behind Enterprise', () => {
+    expect(settingsSource).toContain('const advancedAppearanceEnabled = isEEAvailable');
     expect(settingsSource).toMatch(
       /<ClientPortalDomainSettings\s+headerAction=\{advancedAppearanceEnabled \? \(\s*<CopyClientPortalLinkButton/,
     );
@@ -38,13 +37,19 @@ describe('client portal follows the organization theme', () => {
       /advancedAppearanceEnabled && \(\s*<div className="flex justify-end">\s*<CopyClientPortalLinkButton/,
     );
     expect(settingsSource).not.toContain('clientPortal.branding.help.companyLogoMsp');
-    expect(appearancePageSource).toContain("'release-v1-5-feature'");
-    expect(appearancePageSource).toContain('isEnterprise && await checkFeatureFlag');
-    expect(sidebarSource).toContain("useFeatureFlag('release-v1-5-feature', { defaultValue: false })");
+    expect(appearancePageSource).toContain('if (!isEnterprise)');
+    expect(sidebarSource).not.toContain('release-v1-5-feature');
   });
 
   it('keeps the CE logo variants and client-portal sidebar color available', () => {
-    expect(settingsSource).toContain("uploadTenantLogo(entityId, formData, 'dark')");
+    // Uploads share one wrapper per variant, so the CE contract is that the
+    // dark square slot stays wired above the Enterprise-only wordmark gate.
+    expect(settingsSource).toContain('uploadTenantLogo(entityId, formData, variant)');
+    const darkSlot = settingsSource.indexOf("handleLogoUpload('dark')");
+    const wordmarkGate = settingsSource.indexOf('{advancedAppearanceEnabled && (');
+    expect(darkSlot).toBeGreaterThan(-1);
+    expect(wordmarkGate).toBeGreaterThan(darkSlot);
+    expect(settingsSource.indexOf("handleLogoUpload('wide')")).toBeGreaterThan(wordmarkGate);
     expect(settingsSource).toContain('id="client-portal-sidebar-style"');
     expect(settingsSource).toContain('data-automation-id="client-portal-sidebar-color-picker"');
   });

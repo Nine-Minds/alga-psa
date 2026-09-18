@@ -13,6 +13,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
@@ -229,6 +230,7 @@ export function SalesOrdersManager({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation('features/inventory');
+  const { renderQuickAddClient } = useQuickAddClient();
   const attentionFilter = searchParams?.get('attention');
   const showInvoiceableOnly = attentionFilter === 'invoiceable';
   const requestedServiceId = searchParams?.get('service_id') || null;
@@ -284,8 +286,10 @@ export function SalesOrdersManager({
   const [sos, setSos] = useState<ISalesOrder[]>(initialSos || []);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<ISalesOrder | null>(null);
   const [emailTarget, setEmailTarget] = useState<ISalesOrder | null>(null);
@@ -323,8 +327,10 @@ export function SalesOrdersManager({
 
   // Currency is a property of who you bill, not a per-order choice: derive it from the picked
   // client and render it read-only (falling back to the tenant default when the client has none).
-  const onClientSelect = (clientId: string | null) => {
-    const picked = clientId ? clients.find((c) => c.client_id === clientId) : undefined;
+  const onClientSelect = (clientId: string | null, createdClient?: IClient) => {
+    const picked = createdClient ?? (clientId
+      ? clientOptions.find((client) => client.client_id === clientId)
+      : undefined);
     const nextCurrency = picked?.default_currency_code || (clientId ? defaultCurrencyCode : '');
     setForm((f) => ({
       ...f,
@@ -770,13 +776,14 @@ export function SalesOrdersManager({
               <label className="block text-sm font-medium">{t('salesOrders.columns.client', 'Client')}</label>
               <ClientPicker
                 id="sales-order-client"
-                clients={clients}
+                clients={clientOptions}
                 selectedClientId={form.client_id || null}
                 onSelect={onClientSelect}
                 filterState={clientFilterState}
                 onFilterStateChange={setClientFilterState}
                 clientTypeFilter={clientTypeFilter}
                 onClientTypeFilterChange={setClientTypeFilter}
+                onAddNew={() => setIsQuickAddClientOpen(true)}
               />
             </div>
             <div className="space-y-1">
@@ -1020,6 +1027,24 @@ export function SalesOrdersManager({
           </div>
         </div>
       </Dialog>
+
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
+          setClientOptions((currentClients) => {
+            const existingIndex = currentClients.findIndex(
+              (client) => client.client_id === newClient.client_id,
+            );
+            if (existingIndex === -1) return [...currentClients, newClient];
+            const nextClients = [...currentClients];
+            nextClients[existingIndex] = newClient;
+            return nextClients;
+          });
+          onClientSelect(newClient.client_id, newClient);
+        },
+        skipSuccessDialog: true,
+      })}
 
       <ConfirmationDialog
         id="cancel-so-confirm"

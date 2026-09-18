@@ -323,7 +323,6 @@ describe('Credit Draw-Down Policy Controls', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     const policy = await resolveCreditDrawdownPolicy(context.db, context.tenantId, clientId);
@@ -337,7 +336,6 @@ describe('Credit Draw-Down Policy Controls', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     const laborTypeId = await createServiceType('Labor');
@@ -374,7 +372,6 @@ describe('Credit Draw-Down Policy Controls', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     await setupDefaultTax(clientId);
@@ -429,7 +426,6 @@ describe('Credit Draw-Down Policy Controls', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     await setupDefaultTax(clientId);
@@ -496,7 +492,6 @@ describe('Credit Draw-Down Policy Controls', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     await setupDefaultTax(clientId);
@@ -580,7 +575,6 @@ describe('Credit Draw-Down Policy Controls', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     await setupDefaultTax(clientId);
@@ -655,7 +649,6 @@ describe('Credit Draw-Down Policy Controls', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     await setupDefaultTax(clientId);
@@ -712,7 +705,6 @@ describe('Credit Draw-Down Policy Controls', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
     await setupDefaultTax(oldestFirstClient);
     await ensureClientBillingSettings(oldestFirstClient, { credit_application_order: 'oldest_first' });
@@ -767,7 +759,6 @@ describe('Credit Draw-Down Policy Controls', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
     await setupDefaultTax(clientId);
     await ensureClientBillingSettings(clientId, { credit_application_order: 'expiration_first' });

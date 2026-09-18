@@ -1,9 +1,68 @@
-const IMAGE_DATA_URI_RE = /data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+/gi;
+// Only the (short) prefix is matched with a regex; the base64 payload is
+// consumed by a linear scan. A single regex over the whole `data:image/...`
+// span overflows V8's regex stack on multi-megabyte payloads (embedded images
+// routinely exceed 10MB) — the failure surfaced under Node 24. The manual scan
+// below strips the same spans in O(n) with no engine recursion.
+const IMAGE_DATA_URI_PREFIX_RE = /^data:image\/[a-z0-9.+-]+;base64,/i;
 const SECRET_KEY_RE = /password|secret|token|api_key|authorization/i;
 
+function isBase64PayloadCharCode(code: number): boolean {
+  return (
+    (code >= 0x30 && code <= 0x39) || // 0-9
+    (code >= 0x41 && code <= 0x5a) || // A-Z
+    (code >= 0x61 && code <= 0x7a) || // a-z
+    code === 0x2b || // +
+    code === 0x2f || // /
+    code === 0x3d || // =
+    code === 0x20 || // space
+    code === 0x09 || // tab
+    code === 0x0a || // newline
+    code === 0x0d || // carriage return
+    code === 0x0c || // form feed
+    code === 0x0b // vertical tab
+  );
+}
+
+function stripImageDataUris(text: string): string {
+  if (!text.includes('data:image/')) {
+    return text;
+  }
+
+  let result = '';
+  let cursor = 0;
+  const length = text.length;
+
+  while (cursor < length) {
+    const start = text.indexOf('data:image/', cursor);
+    if (start === -1) {
+      result += text.slice(cursor);
+      break;
+    }
+
+    result += text.slice(cursor, start);
+
+    // The prefix (`data:image/<type>;base64,`) is short; bound the window.
+    const prefixMatch = text.slice(start, start + 128).match(IMAGE_DATA_URI_PREFIX_RE);
+    if (!prefixMatch) {
+      result += text[start];
+      cursor = start + 1;
+      continue;
+    }
+
+    let end = start + prefixMatch[0].length;
+    while (end < length && isBase64PayloadCharCode(text.charCodeAt(end))) {
+      end += 1;
+    }
+
+    result += ' ';
+    cursor = end;
+  }
+
+  return result;
+}
+
 function normalizeWhitespace(text: string): string {
-  return text
-    .replace(IMAGE_DATA_URI_RE, ' ')
+  return stripImageDataUris(text)
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -28,12 +87,11 @@ export function flattenBlockNote(json: unknown): string {
   const visit = (value: unknown, keyHint?: string): void => {
     if (typeof value === 'string') {
       if (keyHint === 'text' || keyHint === 'content') {
-        const cleaned = value.replace(IMAGE_DATA_URI_RE, ' ');
+        const cleaned = stripImageDataUris(value);
         if (cleaned.trim()) {
           parts.push(cleaned);
         }
       }
-      IMAGE_DATA_URI_RE.lastIndex = 0;
       return;
     }
 
@@ -103,11 +161,10 @@ export function flattenJsonbPayload(obj: unknown): string {
     }
 
     if (typeof value === 'string') {
-      const cleaned = value.replace(IMAGE_DATA_URI_RE, ' ');
+      const cleaned = stripImageDataUris(value);
       if (cleaned.trim()) {
         parts.push(cleaned);
       }
-      IMAGE_DATA_URI_RE.lastIndex = 0;
       return;
     }
 

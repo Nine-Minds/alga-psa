@@ -3,9 +3,11 @@ import { isEnterprise } from '@alga-psa/core/features';
 
 export interface TeamsMeetingCapabilityResult {
   available: boolean;
-  reason?: 'ee_disabled' | 'addon_required' | 'not_configured' | 'no_organizer';
+  reason?: 'ee_disabled' | 'feature_disabled' | 'not_configured' | 'no_organizer';
   recordingsAvailable: boolean;
   recordingReason?: 'meeting_unavailable' | 'missing_organizer_object_id';
+  /** Whether Microsoft emails calendar invites to attendees (tenant toggle). */
+  sendMeetingInvites?: boolean;
 }
 
 export interface CreateTeamsMeetingInput {
@@ -18,7 +20,7 @@ export interface CreateTeamsMeetingInput {
   appointmentRequestId?: string | null;
 }
 
-export type TeamsMeetingSkipReason = 'ee_disabled' | 'addon_inactive' | 'not_configured' | 'no_organizer';
+export type TeamsMeetingSkipReason = 'ee_disabled' | 'feature_disabled' | 'not_configured' | 'no_organizer';
 
 export type CreateTeamsMeetingOutcome =
   | { status: 'created'; meeting: CreateTeamsMeetingResult }

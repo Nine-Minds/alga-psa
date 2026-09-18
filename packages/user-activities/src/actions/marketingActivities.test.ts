@@ -22,6 +22,17 @@ const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
   tenantDb: vi.fn(),
   isFeatureFlagEnabled: vi.fn(),
+  hasPermission: vi.fn(),
+}));
+
+// This suite was written against server/src/test/setup.ts, which installs a
+// global @alga-psa/auth mock. It lives in a package with no setup file, so
+// `hasPermission` was the real function and `vi.mocked()` on it had no
+// mockResolvedValue — every test in the file threw before asserting anything.
+// Mock it locally instead of depending on another package's ambient harness.
+vi.mock('@alga-psa/auth', () => ({
+  hasPermission: mocks.hasPermission,
+  withAuth: (fn: any) => fn,
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({

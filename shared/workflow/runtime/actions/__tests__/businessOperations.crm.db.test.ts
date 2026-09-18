@@ -9,6 +9,7 @@ import { tenantDb } from '@alga-psa/db';
 
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerCrmActions } from '../businessOperations/crm';
+import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 import { registerWorkflowEmailProvider, resetWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 
 dotenv.config();
@@ -197,7 +198,6 @@ async function createClient(db: Knex, tenantId: string, name = 'Test Client'): P
     created_at: now,
     updated_at: now,
     is_inactive: false,
-    credit_balance: 0,
   });
 
   return clientId;
@@ -367,6 +367,8 @@ async function createQuote(
     title?: string;
     status?: string;
     isTemplate?: boolean;
+    termsBlock?: unknown[];
+    termsText?: string | null;
   }
 ): Promise<string> {
   const quoteId = uuidv4();
@@ -380,6 +382,8 @@ async function createQuote(
     description: 'Quote description',
     quote_date: new Date().toISOString(),
     status: params.status ?? 'draft',
+    terms_and_conditions: params.termsText ?? null,
+    terms_and_conditions_block: params.termsBlock ? JSON.stringify(params.termsBlock) : null,
     version: 1,
     subtotal: 10000,
     discount_total: 0,
@@ -410,6 +414,9 @@ async function createQuoteItemRecord(
     isOptional?: boolean;
     isSelected?: boolean;
     displayOrder?: number;
+    serviceId?: string | null;
+    serviceName?: string | null;
+    catalogDescription?: string | null;
   }
 ): Promise<string> {
   const quoteItemId = uuidv4();
@@ -421,6 +428,9 @@ async function createQuoteItemRecord(
     tenant: params.tenantId,
     quote_item_id: quoteItemId,
     quote_id: params.quoteId,
+    service_id: params.serviceId ?? null,
+    service_name: params.serviceName ?? null,
+    catalog_description: params.catalogDescription ?? null,
     description: params.description,
     quantity,
     unit_price: unitPrice,
@@ -758,6 +768,127 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.create_quote' })
       .first();
     expect(quoteAudit).toBeTruthy();
+  });
+
+  it('T010: crm.create_quote_from_template carries authored rich terms onto the new quote', async () => {
+    const RICH_TERMS_BLOCK = [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Template terms ' },
+          { type: 'link', href: 'https://example.com/terms', content: [{ type: 'text', text: 'link' }] },
+        ],
+      },
+    ];
+
+    const clientId = await createClient(db, runtimeState.tenantId, 'Rich Terms Client');
+    const templateId = await createQuote(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      title: 'Rich Terms Template',
+      status: null as any,
+      isTemplate: true,
+      termsBlock: RICH_TERMS_BLOCK,
+      termsText: 'stale projection',
+    });
+
+    const fromTemplate = await invokeAction('crm.create_quote_from_template', {
+      template_id: templateId,
+      client_id: clientId,
+      title: 'Rich Templated Quote',
+      quote_date: new Date('2026-03-01').toISOString(),
+      valid_until: new Date('2026-03-30').toISOString(),
+    });
+
+    const row = await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .where({ quote_id: fromTemplate.quote.quote_id })
+      .first();
+
+    expect(row.terms_and_conditions_block).toEqual(RICH_TERMS_BLOCK);
+    expect(row.terms_and_conditions).toBe(flattenBlockContentToPlainText(RICH_TERMS_BLOCK));
+  });
+
+  it('T016b: crm.create_quote_from_template preserves the authoritative catalog_description snapshot (incl. deleted catalog FK) and rejects caller-supplied snapshots', async () => {
+    const CATALOG_SNAPSHOT =
+      '23.8-inch Full HD business monitor with integrated Tiny PC mounting for a clean, space-saving workstation.';
+
+    const clientId = await createClient(db, runtimeState.tenantId, 'Snapshot Client');
+    const contactId = await createContact(db, runtimeState.tenantId, clientId, 'Snapshot Contact');
+    const templateId = await createQuote(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      contactId,
+      title: 'Catalog Snapshot Template',
+      status: null as any,
+      isTemplate: true,
+    });
+
+    // Template line whose catalog entry was later deleted: the FK is SET NULL,
+    // but the authoritative quote-time snapshot survives on the row. This is the
+    // exact "catalog FK deleted" case the fix must preserve verbatim.
+    await createQuoteItemRecord(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      quoteId: templateId,
+      serviceId: null,
+      serviceName: '24-inch Business Tiny-in-One Monitor',
+      catalogDescription: CATALOG_SNAPSHOT,
+      description: '24-inch Business Tiny-in-One Monitor',
+      unitPrice: 45000,
+      displayOrder: 0,
+    });
+
+    // Custom line with no catalog identity: snapshot must stay null.
+    await createQuoteItemRecord(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      quoteId: templateId,
+      description: 'Custom onsite install',
+      unitPrice: 12000,
+      displayOrder: 1,
+    });
+
+    // Caller smuggles a forged catalog_description into the action input. The
+    // action schema strips it and the model never trusts caller data, so the
+    // resulting snapshots come from the template rows, not the caller.
+    const fromTemplate = await invokeAction('crm.create_quote_from_template', {
+      template_id: templateId,
+      client_id: clientId,
+      contact_id: contactId,
+      title: 'Catalog Snapshot Quote',
+      quote_date: new Date('2026-05-01').toISOString(),
+      valid_until: new Date('2026-05-31').toISOString(),
+      catalog_description: 'CALLER FORGED SNAPSHOT',
+    } as Record<string, unknown>);
+
+    const newQuoteId = fromTemplate.quote.quote_id as string;
+    expect(newQuoteId).toBeTruthy();
+
+    const persistedItems = await tenantTable(db, runtimeState.tenantId, 'quote_items')
+      .where({ tenant: runtimeState.tenantId, quote_id: newQuoteId })
+      .orderBy('display_order', 'asc');
+    expect(persistedItems).toHaveLength(2);
+
+    const catalogLine = persistedItems.find(
+      (row: any) => row.service_name === '24-inch Business Tiny-in-One Monitor'
+    );
+    const customLine = persistedItems.find(
+      (row: any) => row.description === 'Custom onsite install'
+    );
+
+    // Snapshot preserved verbatim through the copy even though the catalog FK is
+    // gone (service_id null) — not nulled, not recaptured from live catalog.
+    expect(catalogLine?.catalog_description).toBe(CATALOG_SNAPSHOT);
+    expect(catalogLine?.service_id).toBeNull();
+    // Custom line stays null.
+    expect(customLine?.catalog_description).toBeNull();
+
+    // No forged caller value leaked onto any persisted line.
+    expect(persistedItems.map((row: any) => row.catalog_description)).not.toContain(
+      'CALLER FORGED SNAPSHOT'
+    );
   });
 
   it('T008/T009: crm.convert_quote converts accepted quotes and rejects ineligible/template/cross-tenant/permission cases', async () => {

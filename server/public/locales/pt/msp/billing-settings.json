@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Gerenciar regiões fiscais",
+      "title": "Regiões e taxas de imposto",
       "loading": "Carregando regiões...",
       "fields": {
         "code": {
           "label": "Código da região",
-          "placeholder": "por exemplo, CA, NY, VAT-UK"
+          "placeholder": "por exemplo, CA, NY, VAT-UK",
+          "immutableHint": "O código da região identifica esta região para taxas de imposto, clientes e locais, por isso não pode ser alterado."
         },
         "name": {
           "label": "Nome da região",
@@ -268,6 +269,57 @@
         "update": "Falha ao atualizar a região fiscal.",
         "activate": "Falha ao ativar a região fiscal.",
         "deactivate": "Falha ao desativar a região fiscal."
+      },
+      "search": {
+        "placeholder": "Pesquisar regiões"
+      },
+      "columns": {
+        "region": "Região",
+        "currentRate": "Taxa atual",
+        "rates": "Taxas"
+      },
+      "rateSummary": {
+        "noRates": "Sem taxa",
+        "noCurrentRate": "Sem taxa em vigor",
+        "combined": "{{count}} combinadas",
+        "combinedHint": "{{count}} taxas ativas aplicam-se hoje e são somadas nas faturas."
+      },
+      "empty": {
+        "title": "Ainda não há regiões de imposto",
+        "description": "Adicione uma região para cada local onde cobra imposto e atribua-lhe uma taxa.",
+        "noMatch": "Nenhuma região corresponde a \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Mostrar taxas",
+        "collapse": "Ocultar taxas"
+      },
+      "rates": {
+        "empty": "Esta região não tem taxas. As faturas tributadas aqui falharão até que uma seja adicionada.",
+        "composite": "Composta",
+        "effectiveRange": "De {{start}} a {{end}}",
+        "effectiveFrom": "A partir de {{start}}",
+        "deleteEntity": "a taxa de {{rate}} para {{region}}",
+        "columns": {
+          "rate": "Taxa",
+          "description": "Descrição",
+          "effective": "Vigência"
+        },
+        "status": {
+          "current": "Em vigor",
+          "scheduled": "Agendada",
+          "expired": "Expirada",
+          "inactive": "Inativa"
+        },
+        "actions": {
+          "add": "Adicionar taxa",
+          "edit": "Editar",
+          "advanced": "Definições avançadas",
+          "delete": "Eliminar"
+        },
+        "errors": {
+          "validateDeletion": "Não foi possível validar a eliminação. Tente novamente.",
+          "delete": "Não foi possível eliminar a taxa de imposto."
+        }
       }
     },
     "thresholds": {
@@ -506,6 +558,7 @@
   },
   "serviceCategories": {
     "title": "Categorias de serviço",
+    "description": "Agrupamentos opcionais dos seus produtos. As categorias controlam a coluna e o filtro Categoria no separador Produtos e são distintas dos Tipos de serviço, que são obrigatórios e usados em relatórios e registro de tempo.",
     "dialog": {
       "addTitle": "Adicionar categoria de serviço",
       "editTitle": "Editar categoria de serviço",
@@ -531,6 +584,11 @@
       "importFromStandard": "Importar de categorias padrão",
       "create": "Criar",
       "update": "Atualizar"
+    },
+    "empty": {
+      "title": "Ainda não há categorias de serviço",
+      "description": "Importe a lista padrão para começar, ou adicione as suas. As categorias são opcionais e só são necessárias se quiser agrupar produtos.",
+      "importPrimary": "Importar categorias de serviço padrão"
     },
     "delete": {
       "message": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita."
@@ -635,6 +693,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Próxima alteração {{date}}",
+    "scheduledPriceNotice": "Há uma alteração de preço agendada para {{date}}. Guardar aqui atualiza o preço atual e não cancela a alteração agendada.",
     "title": "Gerenciamento de catálogo de serviços",
     "loading": "Carregando serviços",
     "dialog": {
@@ -713,6 +773,33 @@
       "cancel": "Cancelar",
       "saveChanges": "Salvar alterações"
     },
+    "bulk": {
+      "selectedCount": "{{count}} selecionado",
+      "selectAll": "Selecionar todos os serviços",
+      "clear": "Limpar seleção",
+      "actions": {
+        "activate": "Ativar",
+        "deactivate": "Desativar",
+        "delete": "Excluir"
+      },
+      "deleteDialog": {
+        "title": "Excluir serviços",
+        "message": "Excluir permanentemente {{count}} serviço(s) selecionado(s)? Serviços ainda referenciados por contratos ou faturas serão ignorados. Esta ação não pode ser desfeita."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} serviço(s) ativado(s)",
+        "activatePartial": "{{count}} serviço(s) ativado(s); {{failed}} não puderam ser ativados",
+        "activateError": "Falha ao ativar {{count}} serviço(s)",
+        "deactivateSuccess": "{{count}} serviço(s) desativado(s)",
+        "deactivatePartial": "{{count}} serviço(s) desativado(s); {{failed}} não puderam ser desativados",
+        "deactivateError": "Falha ao desativar {{count}} serviço(s)",
+        "deleteSuccess": "{{count}} serviço(s) excluído(s)",
+        "deletePartial": "{{count}} serviço(s) excluído(s); {{failed}} não puderam ser excluídos",
+        "deletePartialBlocked": "{{count}} serviço(s) excluído(s); {{failed}} não puderam ser excluídos: {{names}}",
+        "deleteBlocked": "Não foi possível excluir {{count}} serviço(s) — ainda em uso: {{names}}",
+        "deleteError": "Falha ao excluir {{count}} serviço(s)"
+      }
+    },
     "table": {
       "serviceName": "Nome do serviço",
       "serviceType": "Tipo de serviço",
@@ -721,7 +808,11 @@
       "unit": "Unidade",
       "taxRate": "Taxa de imposto",
       "nonTaxable": "Não Tributável",
-      "thisService": "este serviço"
+      "thisService": "este serviço",
+      "contractUsage": "Contratos",
+      "contractUsageNone": "Não utilizada",
+      "contractUsageOne": "Usada em {{contracts}} contrato",
+      "contractUsageMany": "Usada em {{contracts}} contratos"
     },
     "errors": {
       "fetchServices": "Falha ao buscar serviços",
@@ -748,6 +839,33 @@
       "restore": "Restaurar",
       "archive": "Arquivo",
       "delete": "Excluir"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selecionado",
+      "selectAll": "Selecionar todos os produtos",
+      "clear": "Limpar seleção",
+      "actions": {
+        "archive": "Arquivar",
+        "restore": "Restaurar",
+        "delete": "Excluir"
+      },
+      "deleteDialog": {
+        "title": "Excluir produtos permanentemente",
+        "message": "Excluir permanentemente {{count}} produto(s) selecionado(s)? Produtos associados a dados existentes serão ignorados. Esta ação não pode ser desfeita."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} produto(s) arquivado(s)",
+        "archivePartial": "{{count}} produto(s) arquivado(s); {{failed}} não puderam ser arquivados",
+        "archiveError": "Falha ao arquivar {{count}} produto(s)",
+        "restoreSuccess": "{{count}} produto(s) restaurado(s)",
+        "restorePartial": "{{count}} produto(s) restaurado(s); {{failed}} não puderam ser restaurados",
+        "restoreError": "Falha ao restaurar {{count}} produto(s)",
+        "deleteSuccess": "{{count}} produto(s) excluído(s) permanentemente",
+        "deletePartial": "{{count}} produto(s) excluído(s); {{failed}} não puderam ser excluídos",
+        "deletePartialBlocked": "{{count}} produto(s) excluído(s); {{failed}} não puderam ser excluídos: {{names}}",
+        "deleteBlocked": "Não foi possível excluir {{count}} produto(s) — ainda em uso: {{names}}",
+        "deleteError": "Falha ao excluir {{count}} produto(s)"
+      }
     },
     "filters": {
       "searchPlaceholder": "Pesquise por nome, SKU, descrição...",
@@ -902,8 +1020,8 @@
         "loading": "Carregando..."
       },
       "label": {
-        "label": "Rótulo",
-        "placeholder": "Etiqueta de formato livre opcional"
+        "label": "Rótulo da categoria",
+        "placeholder": "Rótulo livre opcional"
       },
       "vendor": {
         "label": "Fornecedor"
@@ -1151,7 +1269,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Falha ao carregar as configurações",
-    "failedToSaveSettings": "Falha ao salvar as configurações"
+    "failedToSaveSettings": "Falha ao salvar as configurações",
+    "permissions": {
+      "readSettings": "Permissão negada: não é possível ler as configurações de faturamento",
+      "updateSettings": "Permissão negada: não é possível atualizar as configurações de faturamento",
+      "readClientSettings": "Permissão negada: não é possível ler as configurações de faturamento do cliente",
+      "updateClientSettings": "Permissão negada: não é possível atualizar as configurações de faturamento do cliente",
+      "settingsRead": "Permissão negada: é necessária permissão de leitura das configurações de faturamento",
+      "settingsUpdate": "Permissão negada: é necessária permissão de atualização das configurações de faturamento",
+      "readTaxRates": "Permissão negada: não é possível ler as alíquotas de imposto",
+      "createTaxRates": "Permissão negada: não é possível criar alíquotas de imposto",
+      "updateTaxRates": "Permissão negada: não é possível atualizar as alíquotas de imposto",
+      "updateTaxRegions": "Permissão negada: não é possível atualizar as regiões fiscais"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Permissão negada: as alíquotas de imposto de faturamento não estão disponíveis para este tenant.",
+      "overlap": "O intervalo de datas da alíquota de imposto se sobrepõe a uma alíquota existente para esta região.",
+      "regionRequired": "A região é obrigatória.",
+      "idRequired": "O ID da alíquota de imposto é obrigatório para atualizações.",
+      "notFound": "Alíquota de imposto não encontrada.",
+      "notFoundOrAlreadyDeleted": "Alíquota de imposto não encontrada ou já excluída.",
+      "invalid": "A alíquota de imposto ou a região selecionada é inválida. Atualize a página e tente novamente.",
+      "regionInvalid": "A região fiscal selecionada não é mais válida. Atualize a página e escolha outra região.",
+      "duplicate": "Já existe uma alíquota de imposto para esta região e intervalo de datas.",
+      "missingField": "Falta um campo obrigatório da alíquota de imposto.",
+      "missingFieldNamed": "Falta um campo obrigatório da alíquota de imposto: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Configure pelo menos uma alíquota de imposto ativa antes de criar as configurações fiscais padrão.",
+      "componentNotFound": "Componente de imposto não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "bracketNotFound": "Faixa de imposto não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "holidayNotFound": "Isenção fiscal não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "recordInvalid": "Um dos registros fiscais selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros fiscais selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro fiscal com esses dados.",
+      "notAllowed": "Um dos valores de imposto não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório de imposto.",
+      "missingFieldNamed": "Falta um campo obrigatório de imposto: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Já existe uma região fiscal com o código \"{{code}}\".",
+      "notFoundCode": "Região fiscal com o código \"{{code}}\" não encontrada."
+    }
   },
   "toast": {
     "saved": "Salvo com sucesso"
@@ -1164,7 +1323,12 @@
     "fields": {
       "prefix": {
         "label": "Prefixo numérico",
-        "help": "Prefixo opcional para a sequência numérica. Deixe em branco para nenhum prefixo ou insira um prefixo personalizado."
+        "help": "Prefixo fixo opcional para a sequência numérica. Deixe em branco para nenhum prefixo ou insira um prefixo personalizado. Para incluir a data de emissão, use o campo Formato de data em vez de digitá-la aqui."
+      },
+      "dateFormat": {
+        "label": "Formato de data",
+        "help": "Data opcional inserida entre o prefixo e o número sequencial. Por exemplo, {YYYY}-{MM}- produz INV-2026-08-000001. Deixe em branco para manter os números sem data.",
+        "tokensHint": "Marcadores: {YYYY} ano com quatro dígitos, {YY} ano com dois dígitos, {MM} mês, {DD} dia. A data é calculada no momento em que o número é atribuído, no fuso horário padrão configurado em Configurações. A sequência é contínua — ela não recomeça a cada ano, mês ou dia."
       },
       "minimumDigits": {
         "label": "Dígitos Mínimos",
@@ -1198,7 +1362,14 @@
     },
     "errors": {
       "load": "Falha ao carregar as configurações de numeração.",
-      "save": "Falha ao atualizar as configurações."
+      "save": "Falha ao atualizar as configurações.",
+      "dateFormat": {
+        "notText": "O formato de data deve ser texto.",
+        "unmatchedBrace": "O formato de data tem uma chave { ou } sem par. Escreva os marcadores assim: {{supported}}.",
+        "unknownToken": "Marcador desconhecido {{tokens}}. Marcadores compatíveis: {{supported}}.",
+        "unknownTokens": "Marcadores desconhecidos {{tokens}}. Marcadores compatíveis: {{supported}}.",
+        "tooLong": "O formato de data resulta em {{length}} caracteres e ultrapassa o limite de {{max}} caracteres."
+      }
     }
   },
   "payment": {
@@ -1379,6 +1550,70 @@
     },
     "sections": {
       "userRates": "Taxas por usuário"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Implementação da alteração de preço",
+    "previewFailed": "Não foi possível carregar a pré-visualização da alteração de preço.",
+    "skip": "Apenas guardar o preço",
+    "apply": "Aplicar às linhas herdadas",
+    "applying": "A guardar…",
+    "effectiveDate": "Data de vigência",
+    "effectiveDateHint": "Por predefinição, o próximo limite do período de faturação.",
+    "willChange": "Vai alterar",
+    "noInheritedLines": "Nenhuma linha herdada é alterada nesta data.",
+    "custom": "Não altera — personalizada",
+    "unreviewed": "Não altera — ainda não classificada",
+    "unreviewedAlert": "Estas linhas são faturadas sem alterações até que as reveja.",
+    "reviewRates": "Rever preços",
+    "excluded": "Excluída — já faturada",
+    "none": "Nenhuma.",
+    "totalMonthlyDelta": "Variação total da receita mensal",
+    "acrossAllInherited": "Em todas as {{lines}} linha(s) herdadas.",
+    "applyFailed": "Não foi possível aplicar a implementação. Não foram feitas alterações.",
+    "skipFailed": "Não foi possível guardar a alteração de preço.",
+    "columns": {
+      "client": "Cliente",
+      "contract": "Contrato",
+      "line": "Linha",
+      "current": "Atual",
+      "new": "Novo",
+      "delta": "Variação",
+      "rateAtDate": "Preço na data"
+    },
+    "followsCatalog": "Segue o catálogo",
+    "close": "Fechar",
+    "usageTitle": "Utilização do serviço"
+  },
+  "rateReview": {
+    "title": "Revisão de preços",
+    "close": "Fechar",
+    "applySelected": "Aplicar selecionadas",
+    "applying": "A aplicar…",
+    "previewFailed": "Não foi possível carregar os preços para revisão.",
+    "applyFailed": "Não foi possível aplicar a revisão de preços. Não foram feitas alterações.",
+    "intro": "As linhas ao preço exato do catálogo não serão alteradas na sua próxima fatura. As linhas diferentes mantêm o preço atual como preço negociado.",
+    "applied": "{{applied}} alteração(ões) aplicada(s).",
+    "refused": "{{refused}} linha(s) foram recusadas porque foram alteradas desde a pré-visualização.",
+    "summary": "{{total}} linha(s) por rever: {{inherited}} correspondência(s) exata(s), {{custom}} negociadas, {{skipped}} ignoradas.",
+    "allClassified": "Todas as linhas foram classificadas. Nada a rever.",
+    "noService": "Sem serviço",
+    "columns": {
+      "contract": "Contrato",
+      "currentRate": "Preço atual",
+      "catalogRate": "Preço do catálogo",
+      "proposed": "Proposto",
+      "confidence": "Confiança"
+    },
+    "proposal": {
+      "inherited": "Seguir o catálogo",
+      "custom": "Manter como personalizada",
+      "unreviewed": "Deixar por rever"
+    },
+    "confidence": {
+      "exact": "Correspondência exata",
+      "differs": "Difere do catálogo",
+      "needsDecision": "Requer decisão"
     }
   }
 }

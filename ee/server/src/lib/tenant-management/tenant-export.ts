@@ -108,6 +108,7 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
   'asset_associations',
   'asset_software',
   'asset_maintenance_schedules',
+  'asset_maintenance_occurrences',
 
   // Schedules
   'schedules',

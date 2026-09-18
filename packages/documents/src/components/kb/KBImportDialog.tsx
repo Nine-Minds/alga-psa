@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   useArticleAudienceOptions,
@@ -11,11 +11,18 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Upload, FileText, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import {
-  importArticles,
+  getArticleImportStatus,
+  startArticleImport,
   type ArticleAudience,
   type ArticleType,
   type IImportResult,
 } from '../../actions/kbArticleActions';
+import {
+  KB_IMPORT_ALLOWED_EXTENSIONS,
+  KB_IMPORT_MAX_FILES,
+  KB_IMPORT_MAX_FILE_BYTES,
+  KB_IMPORT_MAX_TOTAL_BYTES,
+} from '../../lib/kbImportLimits';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -28,9 +35,18 @@ interface KBImportDialogProps {
 interface PendingFile {
   name: string;
   content: string;
+  size: number;
 }
 
-const ACCEPTED_EXTENSIONS = ['.md', '.markdown', '.html', '.htm'];
+const ACCEPTED_EXTENSIONS = KB_IMPORT_ALLOWED_EXTENSIONS;
+const POLL_INTERVAL_MS = 2000;
+// Has to outlast the job's worst legitimate case, not just one attempt: an
+// attempt runs up to 10 minutes and is retried once, so a worker lost at minute
+// nine still finishes a little past twenty. Giving up earlier tells the user the
+// import failed while it is still running, and the re-import duplicates the
+// whole batch under -2 slugs.
+const POLL_TIMEOUT_MS = 25 * 60 * 1000;
+const MB = 1024 * 1024;
 
 export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KBImportDialogProps) {
   const { t } = useTranslation('msp/knowledge-base');
@@ -41,17 +57,31 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<IImportResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [progress, setProgress] = useState<{ imported: number; total: number } | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  // Never leave an interval behind when the dialog unmounts mid-import.
+  useEffect(() => stopPolling, [stopPolling]);
 
   const audienceOptions = useArticleAudienceOptions();
   const articleTypeOptions = useArticleTypeOptions();
 
   const reset = useCallback(() => {
+    stopPolling();
     setFiles([]);
     setResult(null);
     setImporting(false);
+    setProgress(null);
     setAudience('internal');
     setArticleType('reference');
-  }, []);
+  }, [stopPolling]);
 
   const handleClose = useCallback(() => {
     reset();
@@ -69,11 +99,44 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
         }));
         continue;
       }
+      if (file.size > KB_IMPORT_MAX_FILE_BYTES) {
+        toast.error(t('importDialog.feedback.fileTooLarge', {
+          defaultValue: '{{fileName}} is larger than {{limit}}MB',
+          fileName: file.name,
+          limit: Math.floor(KB_IMPORT_MAX_FILE_BYTES / MB),
+        }));
+        continue;
+      }
       const content = await file.text();
-      newFiles.push({ name: file.name, content });
+      newFiles.push({ name: file.name, content, size: file.size });
     }
-    setFiles((prev) => [...prev, ...newFiles]);
-  }, []);
+
+    setFiles((prev) => {
+      const accepted: PendingFile[] = [];
+      let totalBytes = prev.reduce((sum, f) => sum + f.size, 0);
+
+      for (const file of newFiles) {
+        if (prev.length + accepted.length >= KB_IMPORT_MAX_FILES) {
+          toast.error(t('importDialog.feedback.tooManyFiles', {
+            defaultValue: 'You can import at most {{limit}} files at a time',
+            limit: KB_IMPORT_MAX_FILES,
+          }));
+          break;
+        }
+        if (totalBytes + file.size > KB_IMPORT_MAX_TOTAL_BYTES) {
+          toast.error(t('importDialog.feedback.batchTooLarge', {
+            defaultValue: 'This batch is larger than {{limit}}MB. Import fewer files at once.',
+            limit: Math.floor(KB_IMPORT_MAX_TOTAL_BYTES / MB),
+          }));
+          break;
+        }
+        totalBytes += file.size;
+        accepted.push(file);
+      }
+
+      return [...prev, ...accepted];
+    });
+  }, [t]);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,19 +177,11 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
     if (!files.length) return;
     setImporting(true);
     setResult(null);
+    setProgress(null);
 
-    try {
-      const importResult = await importArticles({
-        files: files.map((f) => ({ filename: f.name, content: f.content })),
-        audience,
-        articleType,
-      });
-
-      if (isActionPermissionError(importResult)) {
-        toast.error(t('importDialog.feedback.permissionDenied', { defaultValue: 'Permission denied' }));
-        return;
-      }
-
+    const finish = (importResult: IImportResult) => {
+      stopPolling();
+      setImporting(false);
       setResult(importResult);
 
       if (importResult.imported > 0) {
@@ -141,12 +196,68 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
       if (importResult.failed.length > 0 && importResult.imported === 0) {
         toast.error(t('importDialog.feedback.allFailed', { defaultValue: 'All imports failed' }));
       }
+    };
+
+    try {
+      const started = await startArticleImport({
+        files: files.map((f) => ({ filename: f.name, content: f.content })),
+        audience,
+        articleType,
+      });
+
+      if (isActionPermissionError(started)) {
+        setImporting(false);
+        toast.error(t('importDialog.feedback.permissionDenied', { defaultValue: 'Permission denied' }));
+        return;
+      }
+
+      setProgress({ imported: 0, total: started.total });
+
+      // Parsing runs in a background job, so poll for progress instead of
+      // holding the request open.
+      stopPolling();
+      const startedAt = Date.now();
+      pollRef.current = setInterval(async () => {
+        try {
+          if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+            stopPolling();
+            setImporting(false);
+            toast.error(t('importDialog.feedback.importTimedOut', {
+              defaultValue: 'The import is taking longer than expected. Check back shortly.',
+            }));
+            return;
+          }
+
+          const status = await getArticleImportStatus(started.jobId);
+
+          if (isActionPermissionError(status)) {
+            stopPolling();
+            setImporting(false);
+            toast.error(t('importDialog.feedback.permissionDenied', { defaultValue: 'Permission denied' }));
+            return;
+          }
+
+          setProgress({ imported: status.imported, total: status.total || started.total });
+
+          if (status.status === 'completed' || status.status === 'failed') {
+            finish({
+              total: status.total || started.total,
+              imported: status.imported,
+              failed: status.failed,
+            });
+          }
+        } catch (error) {
+          stopPolling();
+          setImporting(false);
+          handleError(error, t('importDialog.feedback.importError', { defaultValue: 'Import failed' }));
+        }
+      }, POLL_INTERVAL_MS);
     } catch (error) {
-      handleError(error, t('importDialog.feedback.importError', { defaultValue: 'Import failed' }));
-    } finally {
+      stopPolling();
       setImporting(false);
+      handleError(error, t('importDialog.feedback.importError', { defaultValue: 'Import failed' }));
     }
-  }, [files, audience, articleType, onImportComplete]);
+  }, [files, audience, articleType, onImportComplete, stopPolling, t]);
 
   const footer = result ? (
     <div className="flex justify-end space-x-2">
@@ -165,7 +276,13 @@ export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KB
         disabled={files.length === 0 || importing}
       >
         {importing
-          ? t('importDialog.actions.importing', { defaultValue: 'Importing...' })
+          ? progress
+            ? t('importDialog.actions.importingProgress', {
+                defaultValue: 'Imported {{imported}} of {{total}}...',
+                imported: progress.imported,
+                total: progress.total,
+              })
+            : t('importDialog.actions.importing', { defaultValue: 'Importing...' })
           : t('importDialog.actions.import', {
               defaultValue: 'Import {{count}} file(s)',
               count: files.length,

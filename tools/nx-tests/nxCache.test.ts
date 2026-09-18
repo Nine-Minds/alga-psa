@@ -1,13 +1,15 @@
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+const execFileAsync = promisify(execFile);
 const nxBin = path.resolve(process.cwd(), 'node_modules/.bin/nx');
 
-function runNx(args: string[], extraEnv: Record<string, string>) {
-  return execFileSync(nxBin, args, {
+async function runNx(args: string[], extraEnv: Record<string, string>) {
+  const { stdout } = await execFileAsync(nxBin, args, {
     cwd: process.cwd(),
     env: {
       ...process.env,
@@ -19,20 +21,22 @@ function runNx(args: string[], extraEnv: Record<string, string>) {
       ...extraEnv,
     },
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 180_000,
+    maxBuffer: 8 * 1024 * 1024,
   });
+  return stdout;
 }
 
 describe('nx caching', () => {
-  it('reuses the local computation cache for repeated builds', { timeout: 180_000 }, () => {
+  it('reuses the local computation cache for repeated builds', { timeout: 180_000 }, async () => {
     const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-cache-'));
 
-    const first = runNx(['build', '@alga-psa/types'], {
+    const first = await runNx(['build', '@alga-psa/types'], {
       NX_CACHE_DIRECTORY: cacheDir,
     });
     expect(first).toContain('Successfully ran target');
 
-    const second = runNx(['build', '@alga-psa/types'], {
+    const second = await runNx(['build', '@alga-psa/types'], {
       NX_CACHE_DIRECTORY: cacheDir,
     });
 
@@ -42,15 +46,15 @@ describe('nx caching', () => {
     ).toBe(true);
   });
 
-  it('caches @alga-psa/core builds when unchanged', { timeout: 180_000 }, () => {
+  it('caches @alga-psa/core builds when unchanged', { timeout: 180_000 }, async () => {
     const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-cache-core-'));
 
-    const first = runNx(['build', '@alga-psa/core'], {
+    const first = await runNx(['build', '@alga-psa/core'], {
       NX_CACHE_DIRECTORY: cacheDir,
     });
     expect(first).toContain('Successfully ran target');
 
-    const second = runNx(['build', '@alga-psa/core'], {
+    const second = await runNx(['build', '@alga-psa/core'], {
       NX_CACHE_DIRECTORY: cacheDir,
     });
 

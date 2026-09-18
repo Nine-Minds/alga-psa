@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import { Dialog, DialogDescription, DialogFooter, Button } from '@alga-psa/ui/components';
 import { usePostHog } from 'posthog-js/react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface SignOutDialogProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export default function SignOutDialog({ isOpen, onClose }: SignOutDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { data: session } = useSession();
   const posthog = usePostHog();
+  const { t } = useTranslation('common');
 
   const handleSignOut = async () => {
     setIsLoading(true);
@@ -35,10 +37,10 @@ export default function SignOutDialog({ isOpen, onClose }: SignOutDialogProps) {
     <Dialog 
       isOpen={isOpen} 
       onClose={onClose} 
-      title="Sign Out"
+      title={t('auth.signOut.title')}
     >
       <DialogDescription>
-        Are you sure you want to sign out?
+        {t('auth.signOut.confirmation')}
       </DialogDescription>
       <DialogFooter>
         <Button
@@ -47,14 +49,14 @@ export default function SignOutDialog({ isOpen, onClose }: SignOutDialogProps) {
           onClick={onClose}
           disabled={isLoading}
         >
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button
           id='sign-out-button'
           onClick={handleSignOut}
           disabled={isLoading}
         >
-          {isLoading ? 'Signing out...' : 'Sign out'}
+          {isLoading ? t('auth.signOut.signingOut') : t('auth.signOut.action')}
         </Button>
       </DialogFooter>
     </Dialog>

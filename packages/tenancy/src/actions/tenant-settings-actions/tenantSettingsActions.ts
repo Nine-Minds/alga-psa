@@ -40,10 +40,10 @@ function tenantSettingsActionErrorFrom(error: unknown): TenantSettingsActionErro
       return permissionError(message);
     }
     if (message === 'Only admin users can clear onboarding data') {
-      return permissionError('Permission denied: Only admin users can clear onboarding data.');
+      return permissionError('Permission denied: Only admin users can clear onboarding data.', 'msp/settings:errors.tenantSettings.permissions.clearOnboarding');
     }
     if (message === 'tenantId is required') {
-      return actionError('Tenant id is required.');
+      return actionError('Tenant id is required.', 'msp/settings:errors.tenantSettings.tenantIdRequired');
     }
     if (message.startsWith('Invalid timezone:')) {
       return actionError(message);
@@ -52,10 +52,16 @@ function tenantSettingsActionErrorFrom(error: unknown): TenantSettingsActionErro
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected tenant setting values is invalid. Please refresh and try again.');
+    return actionError('One of the selected tenant setting values is invalid. Please refresh and try again.', 'msp/settings:errors.tenantSettings.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required tenant settings field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required tenant settings field: ${dbError.column}.`,
+          'msp/settings:errors.tenantSettings.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required tenant settings field.', 'msp/settings:errors.tenantSettings.missingField');
   }
 
   return null;
@@ -149,11 +155,11 @@ export const updateExperimentalFeatures = withAuth(async (
   try {
     const permissions = await getCurrentUserPermissions();
     if (!permissions.includes('settings:update')) {
-      return permissionError('Permission denied: Cannot update settings');
+      return permissionError('Permission denied: Cannot update settings', 'msp/settings:errors.tenantSettings.permissions.update');
     }
 
     if (features.aiAssistant === true && !(await canTenantActivateAiAssistant(tenant, user))) {
-      return permissionError('Permission denied: Cannot enable AI Assistant for this tenant');
+      return permissionError('Permission denied: Cannot enable AI Assistant for this tenant', 'msp/settings:errors.tenantSettings.permissions.enableAiAssistant');
     }
 
     const current = await getExperimentalFeaturesForTenant(tenant, user);
@@ -253,7 +259,7 @@ export const clearTenantOnboardingData = withAuth(async (
   try {
     // Check if user has admin permissions
     if (!user.roles.some((role: any) => role.role_name === 'admin')) {
-      return permissionError('Permission denied: Only admin users can clear onboarding data.');
+      return permissionError('Permission denied: Only admin users can clear onboarding data.', 'msp/settings:errors.tenantSettings.permissions.clearOnboarding');
     }
 
     const { knex } = await createTenantKnex();
@@ -405,7 +411,7 @@ export async function setTenantTimezone(
   try {
     Intl.DateTimeFormat(undefined, { timeZone: timezone });
   } catch {
-    return actionError(`Invalid timezone: ${timezone}`);
+    return actionError(`Invalid timezone: ${timezone}`, 'msp/settings:errors.tenantSettings.invalidTimezone', { timezone });
   }
   return updateTenantSettings({ timezone });
 }

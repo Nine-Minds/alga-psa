@@ -309,7 +309,7 @@ export const retryVendorBillExport = withAuth(async (
   billId: string
 ): Promise<VendorBillExportStatus | VendorBillExportActionError> => {
   if (!(await hasPermission(user, 'billing', 'update'))) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
 
   const { knex } = await createTenantKnex();
@@ -334,7 +334,7 @@ export const retryVendorBillExport = withAuth(async (
     return true;
   });
   if (!bill) {
-    return actionError('Vendor bill not found. It may have been updated or deleted. Please refresh and try again.');
+    return actionError('Vendor bill not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.vendorBill.notFoundRefresh');
   }
 
   await enqueueVendorBillExportRetry(knex, tenant, billId);
@@ -355,7 +355,7 @@ export const getVendorBillExportStatuses = withAuth(async (
   billIds: string[]
 ): Promise<VendorBillExportStatus[] | VendorBillExportActionError> => {
   if (!(await hasPermission(user, 'billing', 'read'))) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   const { knex } = await createTenantKnex();

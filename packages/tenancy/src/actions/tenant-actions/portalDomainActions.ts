@@ -4,11 +4,11 @@ import { getTenantForCurrentRequest } from '../../server';
 import { getPortalDomainStatusForTenant } from '../../server/portalDomainStatus';
 import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
-import type {
-  PortalDomainStatusResponse,
-  PortalDomainRegistrationRequest,
-  PortalDomainRegistrationResult,
-} from './portalDomain.types';
+import type { PortalDomainStatusResponse } from './portalDomain.types';
+
+// Read-only status for package consumers (client portal branding). The editable
+// lifecycle (register, refresh, retry, disable) lives in
+// server/src/lib/actions/tenant-actions and works in every edition.
 
 export const getPortalDomainStatusAction = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null): Promise<PortalDomainStatusResponse> => {
   // First try to get tenant from user session (works in client component effects)
@@ -29,18 +29,4 @@ export async function getPortalDomainStatusActionForTenant(
   }
 
   return getPortalDomainStatusForTenant(tenantId);
-}
-
-export async function requestPortalDomainRegistrationAction(
-  _request: PortalDomainRegistrationRequest
-): Promise<PortalDomainRegistrationResult> {
-  throw new Error('Custom portal domains are only available in the Enterprise edition.');
-}
-
-export async function refreshPortalDomainStatusAction(): Promise<PortalDomainStatusResponse> {
-  return getPortalDomainStatusAction();
-}
-
-export async function disablePortalDomainAction(): Promise<PortalDomainStatusResponse> {
-  throw new Error('Custom portal domains are only available in the Enterprise edition.');
 }

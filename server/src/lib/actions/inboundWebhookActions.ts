@@ -10,6 +10,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
   actionError,
+  actionErrorFromValidationIssue,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -461,7 +462,10 @@ async function getInboundWebhookPermissionError(
     return null;
   }
 
-  return permissionError(`Permission denied: inbound_webhook:${action} permission required`);
+  return permissionError(
+    `Permission denied: inbound_webhook:${action} permission required`,
+    `msp/profile:errors.inboundWebhooks.permissions.${action}`,
+  );
 }
 
 export const listInboundWebhooks = withAuth(async (
@@ -605,7 +609,9 @@ export const upsertInboundWebhook = withAuth(
     const parsedInput = inboundWebhookUpsertInputSchema.safeParse(input);
     if (!parsedInput.success) {
       const firstIssue = parsedInput.error.issues[0];
-      return actionError(firstIssue?.message ?? 'Check the inbound webhook settings and try again.');
+      return firstIssue?.message
+        ? actionErrorFromValidationIssue(firstIssue)
+        : actionError('Check the inbound webhook settings and try again.', 'msp/profile:errors.inboundWebhooks.invalidInput');
     }
 
     const parsed = parsedInput.data;
@@ -617,7 +623,7 @@ export const upsertInboundWebhook = withAuth(
     }
     if (parsed.handler_type === 'workflow' || parsed.handler_config.type === 'workflow') {
       if (!canUseInboundWebhookWorkflowHandlers()) {
-        return actionError('Inbound webhook workflow handlers require Enterprise edition.');
+        return actionError('Inbound webhook workflow handlers require Enterprise edition.', 'msp/profile:errors.inboundWebhooks.workflowRequiresEe');
       }
     }
 
@@ -629,7 +635,7 @@ export const upsertInboundWebhook = withAuth(
       : null;
 
     if (parsed.inbound_webhook_id && !existing) {
-      return actionError('Inbound webhook not found.');
+      return actionError('Inbound webhook not found.', 'msp/profile:errors.inboundWebhooks.notFound');
     }
 
     const slugCollision = await db.table<InboundWebhookRow>('inbound_webhooks')
@@ -642,7 +648,11 @@ export const upsertInboundWebhook = withAuth(
       .first('inbound_webhook_id');
 
     if (slugCollision) {
-      return actionError(`Inbound webhook slug "${parsed.slug}" already exists.`);
+      return actionError(
+        `Inbound webhook slug "${parsed.slug}" already exists.`,
+        'msp/profile:errors.inboundWebhooks.duplicateSlug',
+        { slug: parsed.slug },
+      );
     }
 
     const inboundWebhookId = parsed.inbound_webhook_id ?? crypto.randomUUID();
@@ -714,7 +724,7 @@ export const deleteInboundWebhook = withAuth(
       .first();
 
     if (!existing) {
-      return actionError('Inbound webhook not found.');
+      return actionError('Inbound webhook not found.', 'msp/profile:errors.inboundWebhooks.notFound');
     }
 
     // Citus does not allow ON DELETE SET NULL when the distribution column is
@@ -752,11 +762,11 @@ export const rotateInboundWebhookSecret = withAuth(
       .first();
 
     if (!existing) {
-      return actionError('Inbound webhook not found.');
+      return actionError('Inbound webhook not found.', 'msp/profile:errors.inboundWebhooks.notFound');
     }
 
     if (existing.auth_type === 'ip_allowlist') {
-      return actionError('IP allowlist inbound webhooks do not have a secret to rotate.');
+      return actionError('IP allowlist inbound webhooks do not have a secret to rotate.', 'msp/profile:errors.inboundWebhooks.noSecretToRotate');
     }
 
     const authConfig = { ...(existing.auth_config ?? {}) };
@@ -782,7 +792,11 @@ export const rotateInboundWebhookSecret = withAuth(
       authConfig.type = 'path_token';
       authConfig.token_vault_path = vaultPath;
     } else {
-      return actionError(`Unsupported inbound webhook auth type: ${existing.auth_type}.`);
+      return actionError(
+        `Unsupported inbound webhook auth type: ${existing.auth_type}.`,
+        'msp/profile:errors.inboundWebhooks.unsupportedAuthType',
+        { authType: String(existing.auth_type) },
+      );
     }
 
     await writeTenantSecret(tenant, vaultPath, secret);
@@ -835,7 +849,7 @@ export const setInboundWebhookActiveState = withAuth(
       .returning('*');
 
     if (!row) {
-      return actionError('Inbound webhook not found.');
+      return actionError('Inbound webhook not found.', 'msp/profile:errors.inboundWebhooks.notFound');
     }
 
     return safeMapInboundWebhook(row);
@@ -944,7 +958,7 @@ export const captureSamplePayload = withAuth(
       .returning('*');
 
     if (!row) {
-      return actionError('Inbound webhook not found.');
+      return actionError('Inbound webhook not found.', 'msp/profile:errors.inboundWebhooks.notFound');
     }
 
     return safeMapInboundWebhook(row);
@@ -974,7 +988,7 @@ export const clearSamplePayload = withAuth(
       .returning('*');
 
     if (!row) {
-      return actionError('Inbound webhook not found.');
+      return actionError('Inbound webhook not found.', 'msp/profile:errors.inboundWebhooks.notFound');
     }
 
     return safeMapInboundWebhook(row);
@@ -1057,11 +1071,11 @@ export const replayInboundDelivery = withAuth(
       .first();
 
     if (!original) {
-      return actionError('Inbound delivery not found.');
+      return actionError('Inbound delivery not found.', 'msp/profile:errors.inboundWebhooks.deliveryNotFound');
     }
 
     if (!original.inbound_webhook_id) {
-      return actionError('Cannot replay an inbound delivery without a webhook config.');
+      return actionError('Cannot replay an inbound delivery without a webhook config.', 'msp/profile:errors.inboundWebhooks.replayMissingConfig');
     }
 
     const webhook = await db.table<InboundWebhookRow>('inbound_webhooks')
@@ -1069,7 +1083,7 @@ export const replayInboundDelivery = withAuth(
       .first();
 
     if (!webhook || !webhook.is_active) {
-      return actionError('Inbound webhook not found or inactive.');
+      return actionError('Inbound webhook not found or inactive.', 'msp/profile:errors.inboundWebhooks.notFoundOrInactive');
     }
 
     const { deliveryId: replayDeliveryId } = await createInboundDelivery(knex, {
@@ -1121,7 +1135,7 @@ export const sendInboundWebhookTest = withAuth(
       .first();
 
     if (!webhook || !webhook.is_active) {
-      return actionError('Inbound webhook not found or inactive.');
+      return actionError('Inbound webhook not found or inactive.', 'msp/profile:errors.inboundWebhooks.notFoundOrInactive');
     }
 
     const headers = Object.fromEntries(

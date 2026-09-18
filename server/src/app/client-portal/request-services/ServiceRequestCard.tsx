@@ -21,7 +21,7 @@ export function ServiceRequestCard({
   noDescription,
 }: ServiceRequestCardProps) {
   return (
-    <div className="group h-full rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 shadow-sm transition-all hover:border-[rgb(var(--color-primary-300))] hover:shadow-md">
+    <div className="group h-full rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 card-elevated card-elevated-hover transition-all hover:border-[rgb(var(--color-primary-300))]">
       <div className="mb-1 flex items-center gap-2 text-[rgb(var(--color-text-500))]">
         <ServiceRequestIcon iconName={icon} className="h-4 w-4" />
         <span className="text-xs uppercase tracking-wide">

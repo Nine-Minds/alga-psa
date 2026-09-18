@@ -3,8 +3,8 @@
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { auditLog } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
-import { IInvoice, IInvoiceCharge } from '@alga-psa/types';
-import { ITransaction, ICreditTracking } from '@alga-psa/types';
+import { IInvoice, IInvoiceCharge, ITransaction, ICreditTracking } from '@alga-psa/types';
+import type { IUser } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
@@ -22,6 +22,8 @@ import {
     buildCreditNoteCreatedPayload,
 } from '@alga-psa/workflow-streams';
 import { enqueueCreditApplication } from '../services/accountingSync/syncProducers';
+import { getAccountingSyncSettings } from '../services/accountingSync/accountingSyncSettings';
+import { resolveConnectedAccountingIntegration } from '../services/accountingSync/connectedAccountingIntegration';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import {
     actionError,
@@ -70,34 +72,90 @@ type CreditActionTableRows = {
     credit_allocations: CreditAllocationRow;
 };
 
+// LEVERAGE: pattern edition-gate — same local isEnterpriseEdition as syncProducers.ts
+function isEnterpriseEdition(): boolean {
+  return (
+    (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+    (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise'
+  );
+}
+
+/**
+ * Authoritative, in-transaction decision about whether a credit application
+ * that collected apply_credit ops may enqueue them for the remote provider.
+ * Evaluates the full gate — Enterprise Edition, auto-sync enabled, a default
+ * realm to target, and the actor's accounting_integrations:remote_mutate
+ * capability — against the SAME transaction that records the credit
+ * application, and returns the realm that decision is pinned to.
+ *
+ * The enqueue that fires after the transaction commits is derived strictly
+ * from this decision (creditActions.ts passes it through to
+ * enqueueCreditApplication). Nothing is re-evaluated at enqueue time, so a
+ * permission revocation, auto-sync disable, or connection change between the
+ * in-transaction decision and the enqueue cannot turn a decided "yes" into a
+ * skipped remote mutation or a decided "no" into a fired one.
+ *
+ * Mirrors the voidInvoiceActions.ts idiom: fast-fail checks may run on a
+ * snapshot, but the authoritative re-check runs under the transaction.
+ */
+async function resolveCreditSyncEnqueueDecision(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUser,
+    collectedOps: boolean
+): Promise<{ shouldEnqueue: boolean; realm: string | null; adapterType: string | null }> {
+    if (!collectedOps) {
+        return { shouldEnqueue: false, realm: null, adapterType: null };
+    }
+    if (!isEnterpriseEdition()) {
+        return { shouldEnqueue: false, realm: null, adapterType: null };
+    }
+    const settings = await getAccountingSyncSettings(trx, tenant);
+    if (!settings.autoSyncEnabled) {
+        return { shouldEnqueue: false, realm: null, adapterType: null };
+    }
+    // Resolve the connected provider + organisation rather than assuming QBO,
+    // so a Xero tenant's credit applications reach the same capability gate as
+    // any other outbound operation.
+    const integration = await resolveConnectedAccountingIntegration(trx, tenant);
+    if (!integration) {
+        return { shouldEnqueue: false, realm: null, adapterType: null };
+    }
+    if (!(await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx))) {
+        // Generic denial: never hint whether the integration exists.
+        throw new Error('Permission denied: applying credits that sync to the accounting integration requires the accounting remote-mutate permission.');
+    }
+    return { shouldEnqueue: true, realm: integration.targetRealm, adapterType: integration.adapterType };
+}
+
 function creditActionErrorFrom(error: unknown): CreditActionError | null {
     if (error instanceof Error) {
         if (error.message.startsWith('Permission denied')) {
             return permissionError(error.message);
         }
         if (error.message === 'Client ID is required') {
-            return actionError('Client ID is required.');
+            return actionError('Client ID is required.', 'msp/billing:errors.client.idRequired');
         }
         if (error.message === 'Client not found') {
-            return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.client.notFoundRefresh');
         }
         if (/^Invoice .+ not found$/.test(error.message)) {
-            return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.invoice.notFoundRefresh');
         }
         if (/^Credit with ID .+ not found$/.test(error.message)) {
-            return actionError('Credit not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Credit not found. It may have been updated or deleted. Please refresh and try again.', 'msp/credits:errors.credit.notFoundRefresh');
         }
         if (/^Original transaction for credit .+ not found$/.test(error.message)) {
-            return actionError('The original credit transaction could not be found. Please refresh and try again.');
+            return actionError('The original credit transaction could not be found. Please refresh and try again.', 'msp/credits:errors.credit.originalTransactionMissing');
         }
         if (/^Source credit with ID .+ not found$/.test(error.message)) {
-            return actionError('Source credit not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Source credit not found. It may have been updated or deleted. Please refresh and try again.', 'msp/credits:errors.credit.sourceNotFound');
         }
         if (/^Target client with ID .+ not found$/.test(error.message)) {
-            return actionError('Target client not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Target client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/credits:errors.credit.targetClientNotFound');
         }
         if (/^Insufficient remaining amount .+ for transfer of .+$/.test(error.message)) {
-            return actionError('Insufficient remaining amount for transfer.');
+            return actionError('Insufficient remaining amount for transfer.', 'msp/credits:errors.credit.insufficientTransferAmount');
         }
         if (error.message.startsWith('No ') && error.message.includes(' credits available. Credits exist in other currencies')) {
             return actionError(error.message);
@@ -119,19 +177,25 @@ function creditActionErrorFrom(error: unknown): CreditActionError | null {
 
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02') {
-        return actionError('One of the selected credit values is invalid. Please refresh and try again.');
+        return actionError('One of the selected credit values is invalid. Please refresh and try again.', 'msp/credits:errors.credit.invalidValue');
     }
     if (dbError?.code === '23502') {
-        return actionError(`Missing required credit field${dbError.column ? `: ${dbError.column}` : ''}.`);
+        return dbError.column
+          ? actionError(
+              `Missing required credit field: ${dbError.column}.`,
+              'msp/credits:errors.credit.missingFieldNamed',
+              { field: dbError.column },
+            )
+          : actionError('Missing required credit field.', 'msp/credits:errors.credit.missingField');
     }
     if (dbError?.code === '23503') {
-        return actionError('The selected credit, client, invoice, or transaction no longer exists. Please refresh and try again.');
+        return actionError('The selected credit, client, invoice, or transaction no longer exists. Please refresh and try again.', 'msp/credits:errors.credit.referenceMissing');
     }
     if (dbError?.code === '23505') {
-        return actionError('A conflicting credit transaction already exists. Please refresh and try again.');
+        return actionError('A conflicting credit transaction already exists. Please refresh and try again.', 'msp/credits:errors.credit.duplicate');
     }
     if (dbError?.code === '23514') {
-        return actionError('One of the credit values is not allowed. Please review the form and try again.');
+        return actionError('One of the credit values is not allowed. Please review the form and try again.', 'msp/credits:errors.credit.notAllowed');
     }
 
     return null;
@@ -707,7 +771,8 @@ export const createPrepaymentInvoice = withAuth(async (
      * where it resolves to the only profile there is. The credit this invoice
      * issues inherits the same profile, so it can pay that entity's invoices.
      */
-    billingProfileId?: string
+    billingProfileId?: string,
+    description?: string,
 ): Promise<IInvoice | CreditActionError> => {
     return withCreditActionErrors(async () => {
     // Check permission for credit creation
@@ -751,6 +816,7 @@ export const createPrepaymentInvoice = withAuth(async (
             await generateInvoiceNumber(),
             expirationDate,
             billingProfileId,
+            description,
         );
     });
 
@@ -768,9 +834,10 @@ export async function createPrepaymentInvoiceInternal(
     invoiceNumber: string,
     manualExpirationDate?: string,
     billingProfileId?: string,
+    description?: string,
 ): Promise<IInvoice> {
-    if (!Number.isFinite(amount) || amount <= 0) {
-        throw new Error('Prepayment amount must be greater than zero');
+    if (!Number.isInteger(amount) || amount <= 0) {
+        throw new Error('Prepayment amount must be a positive integer in minor units');
     }
     const now = new Date().toISOString();
     const prepaymentProfileId = await resolvePaymentBillingProfileId(
@@ -797,6 +864,7 @@ export async function createPrepaymentInvoiceInternal(
             currency_code: client.default_currency_code || 'USD',
             is_prepayment: true,
             credit_expiration_date: manualExpirationDate,
+            prepayment_description: description,
         })
         .returning('*');
     return createdInvoice as IInvoice;
@@ -818,7 +886,7 @@ export async function createPrepaymentInvoiceInternal(
  */
 export async function applyCreditToInvoiceInternal(
     tenant: string,
-    userId: string,
+    user: IUser,
     clientId: string,
     invoiceId: string,
     requestedAmount: number
@@ -849,6 +917,15 @@ export async function applyCreditToInvoiceInternal(
         amountCents: number;
     }> = [];
 
+    // Authoritative decision, computed inside the transaction below, that the
+    // post-commit enqueue derives from strictly. Unset until the transaction
+    // body runs; reading it outside the transaction is the creditSyncOps guard.
+    let creditSyncDecision: { shouldEnqueue: boolean; realm: string | null; adapterType: string | null } = {
+        shouldEnqueue: false,
+        realm: null,
+        adapterType: null,
+    };
+
     await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check if the invoice already has credit applied and get its currency.
         //
@@ -874,7 +951,7 @@ export async function applyCreditToInvoiceInternal(
                 invoice_id: invoiceId,
                 tenant
             })
-            .select('credit_applied', 'currency_code', 'project_id', 'billing_profile_id')
+            .select('credit_applied', 'total_amount', 'currency_code', 'project_id', 'billing_profile_id')
             .forUpdate()
             .first();
 
@@ -1087,9 +1164,16 @@ export async function applyCreditToInvoiceInternal(
         // already consumes part of it).
         const eligibleAmount = await computeEligibleCreditAmount(trx, tenant, invoiceId, policy);
         const remainingEligible = Math.max(0, eligibleAmount - alreadyAppliedCredit);
-        if (requestedAmount > remainingEligible) {
-            requestedAmount = remainingEligible;
-        }
+        // Payment writers acquire the same invoice lock. Read their net ledger
+        // amount while holding it so credits cannot consume money already paid,
+        // including when a payment was partially or fully reversed.
+        const paymentTotal = await tenantScopedTable(trx, tenant, 'invoice_payments')
+            .where({ invoice_id: invoiceId })
+            .sum('amount as total')
+            .first();
+        const remainingDue = Math.max(0,
+            Number(invoice.total_amount) - alreadyAppliedCredit - Number(paymentTotal?.total ?? 0));
+        requestedAmount = Math.min(requestedAmount, remainingEligible, remainingDue);
         if (requestedAmount <= 0) {
             console.log(`No eligible credit amount for invoice ${invoiceId}; skipping application.`);
             return;
@@ -1224,7 +1308,7 @@ export async function applyCreditToInvoiceInternal(
             amountApplied: appliedCredit.amount,
             currency: invoiceCurrency,
             appliedAt: now,
-            appliedByUserId: userId,
+            appliedByUserId: user.user_id,
             idempotencyKey: `credit_note_applied:${creditTransaction.transaction_id}:${appliedCredit.creditId}`,
             appliedInvoiceNumber: appliedInvoice.invoice?.invoice_number ?? null,
             appliedInvoiceStatus: appliedInvoice.invoice?.status ?? null,
@@ -1256,6 +1340,25 @@ export async function applyCreditToInvoiceInternal(
                 });
             }
         }
+
+        // The apply_credit ops are a remote money-moving operation: pushing a
+        // credit application into the connected accounting ledger. That branch
+        // is gated by accounting_integrations:remote_mutate (Admin-only), so a
+        // user without it is refused up front rather than silently applying
+        // locally and desynchronizing the books. The check runs inside this
+        // transaction so the refusal rolls back every write above — a purely
+        // local application (no ops, no auto-sync, no realm) is untouched.
+        //
+        // The decision captured here is the single source of truth for the
+        // post-commit enqueue: permission and connection configuration are
+        // evaluated atomically with the write that commits the credit
+        // application, and the enqueue derives strictly from this decision.
+        creditSyncDecision = await resolveCreditSyncEnqueueDecision(
+            trx,
+            tenant,
+            user,
+            creditSyncOps.length > 0
+        );
     });
 
     for (const event of creditNoteAppliedEvents) {
@@ -1285,9 +1388,16 @@ export async function applyCreditToInvoiceInternal(
 
     // Fire-and-forget: enqueue apply_credit ops for QBO. Never throw — applyCreditToInvoice
     // must succeed even if the accounting sync enqueue fails.
-    for (const op of creditSyncOps) {
-        const { knex: syncKnex } = await createTenantKnex();
-        void enqueueCreditApplication(syncKnex, tenant, op);
+    //
+    // The enqueue derives strictly from the in-transaction decision: it fires
+    // exactly when that decision said yes (and uses the realm it pinned), and
+    // never when it said no — a config or permission change after the credit
+    // transaction commits cannot resurrect or cancel the enqueue.
+    if (creditSyncDecision.shouldEnqueue) {
+        for (const op of creditSyncOps) {
+            const { knex: syncKnex } = await createTenantKnex();
+            void enqueueCreditApplication(syncKnex, tenant, op, creditSyncDecision);
+        }
     }
 
     return { appliedAmount: appliedAmountResult };
@@ -1355,7 +1465,7 @@ export const applyCreditToInvoice = withAuth(async (
         throw new Error('Permission denied: Cannot apply credits to invoices');
     }
 
-    const { appliedAmount } = await applyCreditToInvoiceInternal(tenant, user.user_id, clientId, invoiceId, requestedAmount);
+    const { appliedAmount } = await applyCreditToInvoiceInternal(tenant, user, clientId, invoiceId, requestedAmount);
 
     // Reconcile any still-active Checkout links now that the balance changed:
     // a customer must not be able to pay the pre-credit amount through an old

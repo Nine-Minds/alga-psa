@@ -58,7 +58,8 @@
     "cipp": "CIPP-integratie — verbind uw CIPP-instantie voor multi-tenant Entra-beheer",
     "teamsIntegration": "Microsoft Teams — vergaderintegratie en Teams-bot voor ticketmeldingen",
     "advancedAuthorizationBundles": "Geavanceerde autorisatiebundels — maak en beheer herbruikbare ABAC-inperkingsbundels",
-    "scimProvisioning": "SCIM-gebruikersinrichting — synchroniseer gebruikersactivering vanuit uw identiteitsprovider"
+    "scimProvisioning": "SCIM-gebruikersinrichting — synchroniseer gebruikersactivering vanuit uw identiteitsprovider",
+    "pbxTelephony": "PBX-telefonie — verbind een 3CX-centrale voor herkenning van bellers en gesprekslogboek"
   },
   "summary": {
     "licensesUsed": "Gebruikte licenties",

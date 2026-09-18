@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { evaluateTemplateAst } from '../../../lib/invoice-template-ast/evaluator';
+import { renderEvaluatedTemplateAst } from '../../../lib/invoice-template-ast/react-renderer';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import type { DesignerWorkspaceSnapshot } from '../state/designerStore';
 import {
@@ -83,6 +85,21 @@ const createWorkspaceWithTransforms = (): DesignerWorkspaceSnapshot => ({
 });
 
 describe('exportWorkspaceToTemplateAst', () => {
+  it('renders default line-item amounts as currency after workspace export', async () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable();
+    workspace.nodesById['ast-table-1'].type = 'table';
+    workspace.nodesById['ast-table-1'].props.metadata = {};
+    const ast = exportWorkspaceToTemplateAst(workspace);
+    const evaluation = evaluateTemplateAst(ast, {
+      invoiceNumber: 'INV-HISTORICAL', currencyCode: 'USD',
+      items: [{ id: 'charge', description: 'Frozen service charge', quantity: 2, total: 37500 }],
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+    expect(rendered.html).toContain('Frozen service charge');
+    expect(rendered.html).toContain('$375.00');
+    expect(rendered.html).not.toContain('>37500<');
+  });
+
   it('exports designer workspace to a versioned AST document', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
     const ast = exportWorkspaceToTemplateAst(workspace);

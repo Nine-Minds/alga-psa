@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "No tiene permiso para ver secretos.",
       "success": {
         "tenantNameUpdated": "Nombre del inquilino actualizado correctamente",
         "timezoneUpdated": "Zona horaria predeterminada actualizada correctamente",
@@ -267,7 +268,9 @@
         "licenseLimitReached": "Ha alcanzado el límite de licencias de usuario MSP.",
         "soloPlanLimit": "El plan Solo está limitado a 1 usuario. Actualice a Pro para agregar más usuarios.",
         "revokeInvitation": "No se pudo revocar la invitación",
-        "invitationNotFound": "Invitación no encontrada o ya utilizada"
+        "invitationNotFound": "Invitación no encontrada o ya utilizada",
+        "createContact": "No se pudo crear el contacto: {{reason}}",
+        "unknown": "Error desconocido"
       }
     },
     "invitations": {
@@ -438,7 +441,8 @@
       "boards": "Tableros",
       "priorities": "Prioridades",
       "categories": "Categorías",
-      "checklistTemplates": "Plantillas de lista de verificación"
+      "checklistTemplates": "Plantillas de lista de verificación",
+      "externalSystems": "Sistemas externos"
     },
     "numbering": {
       "title": "Formato de numeración",
@@ -546,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Activo",
-        "inactive": "Inactivo"
+        "inactive": "Inactivo",
+        "hiddenFromPortal": "Oculto en el portal"
       },
       "actions": {
         "addBoard": "Agregar tablero",
@@ -626,7 +631,8 @@
           "loading": "Cargando estados de tickets del tablero…",
           "statusName": "Nombre del estado",
           "closed": "Cerrado",
-          "default": "Predeterminado"
+          "default": "Predeterminado",
+          "portalSelectable": "Los usuarios del portal de clientes pueden seleccionar este estado"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reabrir tickets cerrados con respuestas entrantes",
@@ -642,6 +648,10 @@
         "liveTimer": {
           "label": "Activar temporizador de tickets en vivo",
           "help": "Muestra el temporizador en vivo y los intervalos registrados en los tickets de este tablero. La entrada manual de tiempo sigue disponible."
+        },
+        "clientPortalVisible": {
+          "label": "Visible en el portal de clientes",
+          "help": "Si está desactivado, este tablero y sus tickets se ocultan a todos los usuarios del portal de clientes, independientemente de los grupos de visibilidad."
         },
         "defaultBoard": {
           "label": "Tablero predeterminado para tickets del portal del cliente",
@@ -984,6 +994,47 @@
           "ruleSaveFailed": "Error al guardar la regla de aplicación automática"
         }
       }
+    },
+    "externalSystems": {
+      "title": "Sistemas externos",
+      "subtitle": "Agregue sistemas externos personalizados para que los tickets puedan vincularse a registros fuera del catálogo integrado.",
+      "addButton": "Agregar sistema",
+      "builtInTitle": "Sistemas integrados",
+      "builtInSubtitle": "Disponibles para todos los inquilinos; sus URL se generan a partir de la plantilla del sistema.",
+      "table": {
+        "label": "Etiqueta",
+        "key": "Clave",
+        "urlTemplate": "Plantilla de URL",
+        "actions": "Acciones"
+      },
+      "actions": {
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "cancel": "Cancelar",
+        "save": "Guardar"
+      },
+      "fields": {
+        "key": "Clave",
+        "keyHint": "Debe coincidir con custom:<slug> usando letras minúsculas, dígitos o guiones bajos.",
+        "label": "Etiqueta",
+        "urlTemplate": "Plantilla de URL",
+        "urlTemplateHint": "Opcional. Use los marcadores {realm} y {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Agregar sistema externo",
+        "editTitle": "Editar sistema externo"
+      },
+      "deleteDialog": {
+        "title": "Eliminar sistema externo",
+        "message": "¿Eliminar \"{{label}}\"? Los sistemas que aún usan los vínculos no se pueden eliminar."
+      },
+      "messages": {
+        "success": {
+          "created": "Sistema externo creado.",
+          "updated": "Sistema externo actualizado.",
+          "deleted": "Sistema externo eliminado."
+        }
+      }
     }
   },
   "interactions": {
@@ -1048,7 +1099,8 @@
         "name": "Nombre",
         "status": "Estado",
         "order": "Orden",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "default": "Predeterminado"
       },
       "statusLabels": {
         "closedHelp": "Las interacciones con este estado se marcarán como cerradas",
@@ -1064,14 +1116,21 @@
         "success": {
           "updated": "Estado actualizado correctamente",
           "deleted": "Estado eliminado correctamente",
-          "imported": "Se importaron {{count}} estados correctamente"
+          "imported": "Se importaron {{count}} estados correctamente",
+          "defaultUpdated": "Estado de interacción predeterminado actualizado"
         },
         "error": {
           "lastClosed": "Al menos un estado debe permanecer marcado como cerrado",
           "deleteLastClosed": "No se puede eliminar el último estado cerrado para este tipo.",
           "skipped": "Se omitieron {{count}} estados ({{reason}})",
-          "importFailed": "No se pudieron importar los estados"
+          "importFailed": "No se pudieron importar los estados",
+          "defaultRequired": "Un estado debe seguir siendo el predeterminado: establezca otro estado como predeterminado.",
+          "closedCannotBeDefault": "Un estado cerrado no puede ser el predeterminado para las interacciones nuevas."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Predeterminado para las interacciones nuevas",
+        "setDefault": "Usar como predeterminado"
       }
     },
     "quickAdd": {
@@ -1129,6 +1188,8 @@
         "companyName": "Nombre de la empresa",
         "companyLogo": "Logotipo de la empresa",
         "companyLogoDark": "Logotipo para fondos oscuros",
+        "companyLogoWide": "Logotipo ancho (opcional)",
+        "companyLogoWideDark": "Logotipo ancho para fondos oscuros (opcional)",
         "colorPalette": "Paleta de colores",
         "primaryColor": "Color primario",
         "secondaryColor": "Color secundario",
@@ -1145,6 +1206,8 @@
         "companyLogo": "Recomendado: PNG o SVG, máximo 2 MB, fondo transparente",
         "companyLogoMsp": "Este logotipo también sustituye la marca de Alga en el menú lateral MSP.",
         "companyLogoDark": "Opcional. Se usa en el panel lateral del portal y en las pantallas en modo oscuro. Si se deja vacío, se usa el logotipo de la empresa.",
+        "companyLogoWide": "Se muestra en la parte superior del panel lateral expandido del portal, con 32 px de alto. Incluya el nombre de su empresa en la imagen: el panel deja de escribirlo por separado.",
+        "companyLogoWideDark": "Opcional. Se usa mientras el fondo del panel lateral sea oscuro. Recurre al logotipo ancho.",
         "primaryColor": "Se utiliza para botones, enlaces y elementos destacados",
         "secondaryColor": "Se utiliza para acentos y acciones secundarias",
         "supportEmail": "Se muestra a los clientes en las confirmaciones de citas y otros correos salientes como dirección de contacto para obtener ayuda.",
@@ -1174,7 +1237,11 @@
         "previewSignIn": "Vista previa de la página de inicio de sesión",
         "hideSignIn": "Ocultar página de inicio de sesión"
       },
-      "customDomainRequired": "Debe tener configurado un dominio personalizado"
+      "customDomainRequired": "Debe tener configurado un dominio personalizado",
+      "warnings": {
+        "expectSquare": "Esa imagen es mucho más ancha que alta. Este espacio rellena zonas cuadradas; probablemente busque el espacio del logotipo ancho.",
+        "expectWide": "Esa imagen es casi cuadrada. El espacio del logotipo ancho espera un logotipo apaisado; una marca cuadrada va en el espacio de arriba."
+      }
     },
     "dashboardPreview": {
       "title": "Su portal del cliente",
@@ -1279,11 +1346,11 @@
         "canonicalHostFallback": "host canónico"
       },
       "appliance": {
-        "helpText": "Apunte este nombre de host a su appliance y haga que su proxy inverso reenvíe el encabezado Host original antes de guardar.",
+        "helpText": "Apunte este nombre de host a su servidor y haga que su proxy inverso reenvíe el encabezado Host original antes de guardar.",
         "checklistTitle": "Configuración del proxy inverso",
         "step1Prefix": "Apunte ",
-        "step1Suffix": " a este appliance (un registro A a su dirección o un CNAME a su host de appliance).",
-        "step2": "En su proxy inverso, termine TLS para el dominio y reenvíe a este appliance en el puerto 3000, preservando el encabezado Host original (p. ej. proxy_set_header Host $host) y enviando X-Forwarded-Proto: https.",
+        "step1Suffix": " a este servidor (un registro A a su dirección o un CNAME al nombre de host de su servidor).",
+        "step2": "En su proxy inverso, termine TLS para el dominio y reenvíe a este servidor en el puerto 3000, preservando el encabezado Host original (p. ej. proxy_set_header Host $host) y enviando X-Forwarded-Proto: https.",
         "step3": "Obtenga y mantenga el certificado TLS para el dominio en su proxy.",
         "step4": "Guarde el dominio aquí — se activa de inmediato. Configure primero el DNS y su proxy, ya que los enlaces del portal cambian a este dominio de inmediato.",
         "docLinkText": "Guía de configuración y resolución de problemas del proxy inverso",
@@ -1420,10 +1487,24 @@
     "whiteLabel": {
       "title": "Marca propia en la aplicación MSP",
       "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
-      "logoHelp": "El menú lateral MSP es oscuro en ambos temas, así que usa el logotipo para fondos oscuros cuando lo proporciona y, si no, el logotipo principal.",
+      "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral se adapta a su propio fondo: usa las variantes para fondos oscuros cuando el menú es oscuro y las claras cuando es claro, y recurre a la variante que haya subido.",
       "fields": {
-        "logo": "Logotipo",
-        "logoDark": "Logotipo para fondos oscuros"
+        "mark": "Marca cuadrada",
+        "markDark": "Marca cuadrada para fondos oscuros",
+        "wide": "Logotipo ancho (opcional)",
+        "wideDark": "Logotipo ancho para fondos oscuros (opcional)",
+        "favicon": "Icono del navegador (favicon)"
+      },
+      "hints": {
+        "mark": "Se usa en el menú lateral contraído y en todos los marcos circulares. Lo cuadrado funciona mejor.",
+        "markDark": "Opcional. Recurre a la marca cuadrada.",
+        "wide": "Solo se muestra en el menú lateral expandido, con 32 px de alto. Incluya el nombre de su empresa en la imagen.",
+        "wideDark": "Opcional. Se usa mientras el fondo del menú lateral sea oscuro, como ocurre en todos los temas incluidos.",
+        "favicon": "PNG, SVG o ICO. Las imágenes de mapa de bits se redimensionan a 32x32. Se aplica a la aplicación MSP y al portal de clientes de su organización."
+      },
+      "warnings": {
+        "expectSquare": "Esa imagen es mucho más ancha que alta. El espacio de la marca cuadrada se usa en zonas cuadradas; probablemente busque el espacio del logotipo ancho.",
+        "expectWide": "Esa imagen es casi cuadrada. El espacio ancho espera un logotipo apaisado; probablemente busque el espacio de la marca cuadrada."
       },
       "colors": {
         "label": "Usar sus colores de marca en la aplicación MSP",
@@ -1440,6 +1521,9 @@
       "notice": "Está viendo una vista previa de un tema sin guardar. El resto conserva el tema guardado hasta que lo aplique.",
       "save": "Aplicar para todos",
       "discard": "Descartar"
+    },
+    "upgrade": {
+      "pitch": "Los pares de temas para toda la organización, el editor de paleta personalizada y la marca blanca de la aplicación MSP forman parte de la edición Enterprise."
     }
   },
   "mspLanguage": {
@@ -1467,6 +1551,7 @@
     "emailTabs": {
       "settings": "Configuración",
       "emailTemplates": "Plantillas de correo electrónico",
+      "emailBranding": "Marca de los correos electrónicos",
       "categories": "Categorías",
       "telemetry": "Telemetría"
     },
@@ -1523,7 +1608,8 @@
       "preview": {
         "subjectLabel": "Vista previa del asunto",
         "iframeTitle": "Vista previa de la plantilla de correo electrónico",
-        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales."
+        "sampleDataNote": "La vista previa usa datos de muestra. Los correos electrónicos reales contendrán valores reales.",
+        "sourceSyncNote": "Haga clic en cualquier elemento de la vista previa para seleccionar su código; al mover el cursor en el código, el elemento se resalta aquí."
       },
       "errors": {
         "loadFailed": "Error al cargar las plantillas"
@@ -1572,7 +1658,8 @@
       },
       "tabs": {
         "source": "Código fuente",
-        "preview": "Vista previa"
+        "preview": "Vista previa",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1589,6 +1676,110 @@
         "it": "Italiano",
         "pl": "Polaco",
         "pt": "Portugués"
+      }
+    },
+    "emailBranding": {
+      "title": "Marca de los correos electrónicos",
+      "description": "Aplique sus colores a todos los correos electrónicos salientes. Véalos aquí en vista previa y luego elija a qué plantillas aplicarlos.",
+      "unsavedHint": "Guarde la paleta antes de aplicarla.",
+      "source": {
+        "saved": "Guardada",
+        "custom-theme": "De su tema personalizado",
+        "theme-pair": "De su tema",
+        "portal-branding": "De la marca de su portal de clientes",
+        "default": "Predeterminado de AlgaPSA"
+      },
+      "fields": {
+        "primary": "Color principal",
+        "secondary": "Color secundario",
+        "singleColor": "Color único (el degradado se deriva del color principal)"
+      },
+      "tokens": {
+        "dark": "Acento oscuro",
+        "outerBg": "Fondo exterior",
+        "footerBg": "Fondo del pie de página",
+        "cardBorder": "Borde de la tarjeta",
+        "infoBoxBg": "Fondo del cuadro informativo",
+        "infoBoxBorder": "Borde del cuadro informativo"
+      },
+      "preview": {
+        "title": "Vista previa"
+      },
+      "actions": {
+        "save": "Guardar paleta",
+        "saving": "Guardando...",
+        "useSuggested": "Usar los colores sugeridos",
+        "adjust": "Ajustar los colores derivados",
+        "apply": "Aplicar a las plantillas",
+        "applying": "Aplicando...",
+        "applyCount": "Aplicar a {{count}} plantillas",
+        "applyToTemplate": "Aplicar mi paleta",
+        "remove": "Quitar la marca de todas las plantillas",
+        "removing": "Quitando...",
+        "cancel": "Cancelar",
+        "done": "Listo"
+      },
+      "apply": {
+        "title": "Aplicar la marca a las plantillas",
+        "languages": "Idiomas",
+        "selectAll": "Seleccionar todo",
+        "selectNone": "Deseleccionar todo",
+        "differs": "Difiere en {{parts}}",
+        "differsParts": {
+          "colors": "colores",
+          "text": "texto",
+          "subject": "asunto"
+        },
+        "overwrite": "Sobrescribir",
+        "overwriteHint": "Sobrescribir reconstruye una plantilla a partir de la estándar con su paleta y descarta sus ediciones.",
+        "preview": {
+          "open": "Ver el resultado",
+          "title": "Vista previa: {{name}}",
+          "loading": "Generando la vista previa...",
+          "captions": {
+            "create": "Se creará una copia con su marca a partir de la plantilla estándar.",
+            "update": "Su copia con la marca se volverá a crear desde la plantilla estándar con la paleta guardada.",
+            "customized": "Sus cambios se conservan palabra por palabra. Solo se reemplazan los colores originales que quedan en esta plantilla.",
+            "overwrite": "Se descartarán sus ediciones de esta plantilla. Se reconstruirá a partir de la plantilla estándar con su paleta.",
+            "skipped": "No se escribirá nada: {{reason}}. Esta es la plantilla tal como está hoy."
+          }
+        },
+        "summary": "{{written}} con su marca, {{skipped}} omitidas, {{failed}} con errores",
+        "groups": {
+          "system": {
+            "title": "Sin personalizar",
+            "action": "Crear una copia con su marca"
+          },
+          "branded": {
+            "title": "Con su marca",
+            "action": "Actualizar los colores"
+          },
+          "customized": {
+            "title": "Personalizadas",
+            "action": "Reemplazar solo los colores originales restantes"
+          },
+          "no-stock-colors": {
+            "title": "Sin colores originales",
+            "action": "Nada que reemplazar"
+          }
+        },
+        "skipReasons": {
+          "customized": "Personalizada: no seleccionada",
+          "nothing-to-replace": "Nada que reemplazar",
+          "unchanged": "Ya está actualizada"
+        }
+      },
+      "newTemplates": {
+        "message": "Se agregaron {{count}} plantillas desde la última vez que aplicó su paleta.",
+        "action": "Aplicar la paleta a las plantillas nuevas",
+        "dismiss": "Descartar"
+      },
+      "enterprise": {
+        "useLogo": "Usar mi logo en el encabezado del correo electrónico",
+        "logoWide": "Logo ancho",
+        "logoDefault": "Logo cuadrado",
+        "noLogo": "Cargue un logo en Configuración → Portal de clientes → Marca para usarlo aquí.",
+        "showAttribution": "Mostrar «Powered by AlgaPSA» en el pie de página"
       }
     },
     "categoriesUi": {
@@ -1689,7 +1880,138 @@
   },
   "timeEntry": {
     "title": "Configuración de registro de tiempo",
-    "description": "Administre la configuración de registro de tiempo y los períodos de tiempo"
+    "description": "Administre la configuración de registro de tiempo y los períodos de tiempo",
+    "timePeriods": {
+      "title": "Configuración de períodos de tiempo",
+      "description": "Configure los períodos de tiempo de facturación",
+      "loading": "Cargando la configuración de períodos de tiempo...",
+      "addNew": "Añadir nueva configuración de período",
+      "help": {
+        "title": "Cómo funcionan las configuraciones de período",
+        "intro": "Puede definir varias configuraciones activas para crear ciclos de facturación complejos. El día final es el último día incluido en el período.",
+        "exampleIntro": "Por ejemplo, para configurar períodos quincenales (del 1 al 15 y del 16 al fin de mes):",
+        "firstSettingLabel": "Configuración 1:",
+        "firstSetting": "Día inicial: 1, día final: 15 → el período cubre del 1 al 15",
+        "secondSettingLabel": "Configuración 2:",
+        "secondSetting": "Día inicial: 16, día final: fin de mes → el período cubre del 16 al último día",
+        "outro": "El sistema usa estas configuraciones para sugerir y generar períodos. Asegúrese de que cubran el ciclo completo sin huecos."
+      },
+      "form": {
+        "requiredFields": "Complete los campos obligatorios:",
+        "frequency": "Frecuencia *",
+        "frequencyPlaceholder": "Introduzca la frecuencia",
+        "frequencyUnit": "Unidad de frecuencia *",
+        "frequencyUnitPlaceholder": "Seleccione la unidad de frecuencia",
+        "startDay": "Día inicial *",
+        "selectDay": "Seleccione el día",
+        "startDayPlaceholder": "Introduzca el día inicial",
+        "endDay": "Día final *",
+        "endDayPlaceholder": "Introduzca el día final",
+        "endOfUnit": "Fin de: {{unit}}",
+        "endOfMonth": "Fin de mes",
+        "startMonth": "Mes inicial",
+        "endMonth": "Mes final",
+        "startDayOfMonth": "Día inicial del mes *",
+        "endDayOfMonth": "Día final del mes *",
+        "add": "Añadir configuración de período"
+      },
+      "validation": {
+        "frequencyMin": "La frecuencia debe ser al menos 1",
+        "startDayRequired": "El día inicial es obligatorio",
+        "endDayRequired": "El día final es obligatorio",
+        "startDayOfMonthRequired": "El día inicial del mes es obligatorio",
+        "endDayOfMonthRequired": "El día final del mes es obligatorio"
+      },
+      "errors": {
+        "fetch": "No se pudo cargar la configuración de períodos de tiempo",
+        "overlap": "Esta configuración de período se solapa con otra configuración activa.",
+        "add": "No se pudo añadir la configuración de período. Revise los valores e inténtelo de nuevo.",
+        "update": "No se pudo actualizar la configuración de período",
+        "delete": "No se pudo eliminar la configuración de período"
+      },
+      "summary": {
+        "frequency": "Frecuencia: cada {{count}} × {{unit}}",
+        "startDay": "Día inicial: {{value}}",
+        "endDay": "Día final: {{value}}",
+        "start": "Inicio: {{value}}",
+        "end": "Fin: {{value}}",
+        "effectiveFrom": "Vigente desde: {{value}}",
+        "effectiveTo": "Vigente hasta: {{value}}",
+        "noEnd": "Sin fin",
+        "notSet": "Sin definir"
+      },
+      "units": {
+        "day": "Día",
+        "week": "Semana",
+        "month": "Mes",
+        "year": "Año"
+      },
+      "months": {
+        "1": "enero",
+        "2": "febrero",
+        "3": "marzo",
+        "4": "abril",
+        "5": "mayo",
+        "6": "junio",
+        "7": "julio",
+        "8": "agosto",
+        "9": "septiembre",
+        "10": "octubre",
+        "11": "noviembre",
+        "12": "diciembre"
+      },
+      "weekDays": {
+        "1": "lunes",
+        "2": "martes",
+        "3": "miércoles",
+        "4": "jueves",
+        "5": "viernes",
+        "6": "sábado",
+        "7": "domingo"
+      }
+    },
+    "periods": {
+      "title": "Períodos de tiempo",
+      "description": "Consulte y gestione los períodos de entrada de tiempo para el seguimiento de horas",
+      "loading": "Cargando períodos de tiempo...",
+      "create": "Crear nuevo período de tiempo",
+      "openMenu": "Abrir menú",
+      "columns": {
+        "startDate": "Fecha de inicio",
+        "endDate": "Fecha de fin",
+        "actions": "Acciones"
+      },
+      "form": {
+        "createTitle": "Crear nuevo período de tiempo",
+        "editTitle": "Editar período de tiempo",
+        "suggestion": "Según su configuración, se sugiere el siguiente período de tiempo.",
+        "frequency": "Frecuencia: cada {{value}} × {{unit}}",
+        "overrideDates": "Reemplazar las fechas sugeridas",
+        "startDate": "Fecha de inicio",
+        "startDatePlaceholder": "Seleccione la fecha de inicio",
+        "noEndDate": "Sin fecha de fin",
+        "endDate": "Fecha de fin",
+        "endDatePlaceholder": "Seleccione la fecha de fin",
+        "deletePeriod": "Eliminar período",
+        "confirmDeleteTitle": "Confirmar eliminación",
+        "confirmDeleteBody": "¿Seguro que desea eliminar este período de tiempo? Esta acción no se puede deshacer.",
+        "checkSettingsLink": "Revise su configuración de períodos de tiempo."
+      },
+      "errors": {
+        "load": "No se pudieron cargar los períodos de tiempo.",
+        "suggest": "No se pudo sugerir un nuevo período de tiempo",
+        "noApplicableSettings": "No se encontró ninguna configuración de períodos de tiempo aplicable.",
+        "noSettings": "No hay configuración de períodos de tiempo disponible. No se puede crear un nuevo período.",
+        "settingsRequired": "No se puede gestionar el período de tiempo sin configuración.",
+        "startDateRequired": "Debe indicar una fecha de inicio.",
+        "startBeforeEnd": "La fecha de inicio debe ser anterior a la fecha de fin.",
+        "overlap": "El período de tiempo se solapa con un período existente.",
+        "overlapRetry": "Este período de tiempo se solapa con otro existente. Elija fechas diferentes.",
+        "create": "No se pudo crear el período de tiempo.",
+        "delete": "No se pudo eliminar el período de tiempo",
+        "unexpected": "Se produjo un error inesperado."
+      }
+    }
   },
   "billing": {
     "title": "Configuración de facturación",
@@ -1769,7 +2091,8 @@
         "valueRequired": "El valor del secreto es obligatorio",
         "noChanges": "No hay cambios para guardar",
         "fixValidation": "Corrija los errores de validación"
-      }
+      },
+      "permissionDenied": "No tiene permiso para ver secretos."
     }
   },
   "importExport": {
@@ -1848,6 +2171,45 @@
     "templates": {
       "comingSoon": "Las plantillas de mapeo y las importaciones programadas se ubicarán aquí. Guarde mapeos de columnas, compártalos con el equipo y configure trabajos recurrentes."
     },
+    "migration": {
+      "actions": {
+        "back": "Volver a migraciones",
+        "upload": "Subir paquete"
+      },
+      "errors": {
+        "noImportableRecords": "Este paquete no contenía registros importables.",
+        "permissionDenied": "No tiene permiso para importar o exportar datos.",
+        "invalidSpreadsheet": "No se pudo leer esa hoja de cálculo. Compruebe que sea un archivo CSV o XLSX válido e inténtelo de nuevo.",
+        "notAmpPackage": "Ese archivo no es un paquete AMP. Suba un archivo .amp o .sqlite.",
+        "tooLarge": "Esta carga supera el tamaño máximo permitido.",
+        "sizeMismatch": "La carga no se completó. Inténtelo de nuevo.",
+        "noRecognizedHeaders": "No se reconoció ninguna de las columnas de esa hoja de cálculo. Compruebe la fila de encabezados e inténtelo de nuevo.",
+        "storageRejected": "El servidor rechazó esta carga. Pida a su administrador que revise la configuración de tipos de archivo del almacenamiento.",
+        "spreadsheetFailed": "No se pudo importar la hoja de cálculo. Inténtelo de nuevo.",
+        "uploadFailed": "No se pudo subir el paquete. Inténtelo de nuevo.",
+        "unknown": "La carga falló. Inténtelo de nuevo."
+      },
+      "preflight": {
+        "title": "Verificación previa"
+      },
+      "run": {
+        "queued": "Migración en cola",
+        "applying": "Migración en curso"
+      },
+      "badges": {
+        "nothingImported": "No se importó nada"
+      },
+      "results": {
+        "skippedSamePackage": "Los registros omitidos ya se migraron en una ejecución anterior del mismo paquete.",
+        "skippedOtherPackage": "Los registros omitidos coincidieron con entidades creadas por una migración anterior de un paquete diferente: {{packages}}.",
+        "skippedExistingEntity": "Los registros omitidos coincidieron con entidades existentes.",
+        "nothingImportedTitle": "No se importó nada",
+        "nothingImportedBody": "Esta ejecución no creó registros nuevos. Cada fila coincidió con algo que ya existía, así que no se cambió nada.",
+        "claimedBySamePackage": "Ya migrado por este paquete",
+        "claimedByOtherPackage": "Ya migrado por {{file}}",
+        "claimedByExistingEntity": "Coincide con una entidad existente"
+      }
+    },
     "jobDetails": {
       "title": "Detalles del trabajo de importación",
       "stats": {
@@ -1922,6 +2284,50 @@
     "loading": {
       "extensions": "Cargando extensiones...",
       "installer": "Cargando instalador..."
+    }
+  },
+  "policyManagement": {
+    "title": "Administración de políticas",
+    "upgradeDescription": "La administración de políticas es una función Pro. Actualice su plan para acceder a controles avanzados de políticas."
+  },
+  "roleManagement": {
+    "title": "Administrar roles",
+    "description": "Cree y administre roles para el acceso de MSP y del portal del cliente",
+    "columns": {
+      "roleNameRequired": "Nombre del rol *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Nombre del rol",
+      "roleNamePlaceholder": "Ingrese el nombre del rol",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Ingrese la descripción del rol"
+    },
+    "portal": {
+      "none": "Ninguno",
+      "access": "Acceso al portal",
+      "msp": "Portal de MSP",
+      "client": "Portal del cliente",
+      "mspShort": "MSP",
+      "clientShort": "Cliente",
+      "required": "Un rol debe tener acceso al menos a un portal"
+    },
+    "actions": {
+      "addRole": "Agregar rol",
+      "createRole": "Crear rol"
+    },
+    "createDialog": {
+      "title": "Crear nuevo rol"
+    },
+    "deleteDialog": {
+      "entityFallback": "este rol"
+    },
+    "adminDeleteDisabled": "Los roles de administrador no se pueden eliminar porque son roles del sistema",
+    "errors": {
+      "createFailed": "No se pudo crear el rol",
+      "updateFailed": "No se pudo actualizar el rol",
+      "validateDeletionFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
+      "deleteFailed": "No se pudo eliminar el rol"
     }
   },
   "security": {
@@ -2323,6 +2729,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Acepte pagos con tarjeta de crédito para facturas a través de Stripe"
+      },
+      "telephony": {
+        "name": "Telefonía",
+        "description": "Registra las llamadas como interacciones, reconoce a quien llama y convierte una llamada en un ticket"
       }
     }
   },
@@ -2647,7 +3057,8 @@
         "fieldCount": "Campos",
         "order": "Orden",
         "actions": "Acciones",
-        "openMenu": "Abrir menú"
+        "openMenu": "Abrir menú",
+        "searchPlaceholder": "Buscar tipos de activos…"
       },
       "actions": {
         "addType": "Agregar tipo de activo",
@@ -2875,6 +3286,173 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Permiso denegado: no se puede crear el equipo.",
+        "update": "Permiso denegado: no se puede actualizar el equipo.",
+        "modify": "Permiso denegado: no se puede modificar el equipo.",
+        "modifyMembers": "Permiso denegado: no se pueden modificar los miembros del equipo.",
+        "view": "Permiso denegado: no se puede ver el equipo.",
+        "viewAll": "Permiso denegado: no se pueden ver los equipos.",
+        "assignManager": "Permiso denegado: no se puede asignar el responsable del equipo."
+      },
+      "notFoundRefresh": "No se encontró el equipo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "leadRequired": "Un equipo debe tener un responsable. Seleccione un responsable e inténtelo de nuevo.",
+      "inactiveUser": "Los usuarios inactivos no se pueden añadir a un equipo.",
+      "cannotRemoveLead": "No se puede quitar al responsable del equipo. Asigne primero un nuevo responsable.",
+      "invalidValue": "Uno de los valores del equipo seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicateMember": "Este usuario ya es miembro del equipo.",
+      "referenceMissing": "El responsable o el miembro del equipo seleccionado ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del equipo.",
+      "missingFieldNamed": "Falta un campo obligatorio del equipo: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Permiso denegado: no tiene permiso para ver las políticas de SLA",
+        "create": "Permiso denegado: no tiene permiso para crear políticas de SLA",
+        "update": "Permiso denegado: no tiene permiso para actualizar políticas de SLA",
+        "delete": "Permiso denegado: no tiene permiso para eliminar políticas de SLA"
+      },
+      "policyNotFound": "No se encontró la política de SLA. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "targetNotFound": "No se encontró el objetivo de la política de SLA. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "priorityNotFound": "No se encontró la prioridad seleccionada. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "clientNotFound": "No se encontró el cliente seleccionado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "boardNotFound": "No se encontró el tablero seleccionado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "ticketNotFound": "No se encontró el ticket. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "duplicateTarget": "Ya existe un objetivo para esta prioridad en esta política.",
+      "pauseRequiresBoardStatus": "La configuración de pausa del SLA requiere un estado de ticket propio del tablero.",
+      "invalidValue": "Uno de los valores de SLA seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El registro de SLA o el valor relacionado seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio del SLA entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores del SLA no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del SLA.",
+      "missingFieldNamed": "Falta un campo obligatorio del SLA: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "No se encontró el tablero. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "userNotFound": "No se encontró el usuario responsable de escalado seleccionado. Actualice la página y elija otro usuario.",
+      "configNotFound": "No se encontró la configuración del responsable de escalado. Es posible que ya se haya eliminado.",
+      "recordInvalid": "Uno de los registros del responsable de escalado seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El tablero o el usuario seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya hay un responsable de escalado configurado para este tablero y nivel.",
+      "missingField": "Falta un campo obligatorio del responsable de escalado.",
+      "missingFieldNamed": "Falta un campo obligatorio del responsable de escalado: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "No se encontró el estado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de estado seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El registro relacionado seleccionado para este estado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "orderInUse": "Este número de orden ya está en uso. Elija un número de orden diferente.",
+      "duplicateName": "Ya existe un estado con este nombre.",
+      "notAllowed": "Uno de los valores de estado no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del estado.",
+      "missingFieldNamed": "Falta un campo obligatorio del estado: {{field}}.",
+      "nameRequired": "El nombre del estado es obligatorio",
+      "nameEmpty": "El nombre del estado no puede estar vacío",
+      "idRequired": "El ID del estado es obligatorio",
+      "manageFromBoard": "Los estados de ticket deben gestionarse desde la configuración del tablero",
+      "closedCannotBeDefault": "Un estado cerrado no puede ser el estado predeterminado",
+      "defaultMustStayOpen": "Establezca otro estado como predeterminado antes de cerrar este"
+    },
+    "priority": {
+      "notFound": "No se encontró la prioridad.",
+      "boardMissing": "El tablero seleccionado ya no existe.",
+      "duplicate": "Ya existe una prioridad con estos datos.",
+      "referenceInvalid": "La referencia de prioridad seleccionada ya no es válida. Actualice la página e inténtelo de nuevo.",
+      "invalidData": "Se proporcionaron datos de prioridad no válidos. Compruebe los datos de la prioridad.",
+      "missingField": "Falta un campo obligatorio de la prioridad.",
+      "missingFieldNamed": "Falta un campo obligatorio de la prioridad: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Uno de los usuarios seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los usuarios seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "readClientInfoPermission": "Permiso denegado: no se puede leer la información de cliente del usuario"
+    },
+    "roles": {
+      "userNotFound": "No se encontró el usuario. Actualice la lista de usuarios e inténtelo de nuevo.",
+      "roleNotFound": "No se encontró el rol. Actualice la lista de roles e inténtelo de nuevo.",
+      "portalRoleOnMspUser": "No se puede asignar un rol del portal del cliente a un usuario MSP.",
+      "mspRoleOnPortalUser": "No se puede asignar un rol MSP a un usuario del portal del cliente.",
+      "invalidValue": "Uno de los valores de usuario o rol seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El usuario o el rol seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ese usuario ya tiene el rol seleccionado.",
+      "changePermission": "Permiso denegado: no tiene permiso para cambiar los roles de usuario.",
+      "missingField": "Falta un campo obligatorio del rol de usuario.",
+      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Falta el contexto del inquilino. Actualice la página e inténtelo de nuevo.",
+      "notFound": "No se encontró el secreto. Es posible que ya se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidName": "Nombre de inquilino o de secreto no válido.",
+      "readOnly": "El almacenamiento de secretos es de solo lectura en este entorno.",
+      "noDurablePath": "El almacenamiento de secretos no está configurado para escrituras duraderas en este entorno.",
+      "recordInvalid": "Uno de los registros de secreto seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de secreto seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un secreto con este nombre.",
+      "missingField": "Falta un campo obligatorio del secreto.",
+      "missingFieldNamed": "Falta un campo obligatorio del secreto: {{field}}.",
+      "permissions": {
+        "create": "Permiso denegado: no se pueden crear secretos",
+        "update": "Permiso denegado: no se pueden actualizar secretos",
+        "delete": "Permiso denegado: no se pueden eliminar secretos"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Se requiere el id del inquilino.",
+      "invalidValue": "Uno de los valores de configuración del inquilino seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la configuración del inquilino.",
+      "missingFieldNamed": "Falta un campo obligatorio de la configuración del inquilino: {{field}}.",
+      "invalidTimezone": "Zona horaria no válida: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Permiso denegado: solo los administradores pueden borrar los datos de incorporación.",
+        "update": "Permiso denegado: no se puede actualizar la configuración",
+        "enableAiAssistant": "Permiso denegado: no se puede habilitar el Asistente de IA para este inquilino"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "No se encontró la plantilla del sistema. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "templateNotFound": "No se encontró la plantilla de notificación. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "categoryNotFound": "No se encontró la categoría de notificación. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "subtypeNotFound": "No se encontró el subtipo de notificación. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "notificationNotFound": "No se encontró la notificación. Es posible que ya se haya actualizado o eliminado.",
+      "recordInvalid": "Uno de los registros de notificación seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de notificación seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe una configuración de notificación con estos datos.",
+      "missingField": "Falta un campo obligatorio de la notificación.",
+      "missingFieldNamed": "Falta un campo obligatorio de la notificación: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "No se encontró el rol o el permiso. Actualice la lista de permisos e inténtelo de nuevo.",
+      "ticketNotFound": "No se encontró el ticket. Actualice el ticket e inténtelo de nuevo.",
+      "policyNotFound": "No se encontró la política. Actualice la lista de políticas e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de rol, permiso o política seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de seguridad seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "permissionAlreadyAssigned": "Ese permiso ya está asignado a este rol.",
+      "duplicate": "Ya existe un registro de seguridad con estos datos.",
+      "missingField": "Falta un campo obligatorio de seguridad.",
+      "missingFieldNamed": "Falta un campo obligatorio de seguridad: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Permiso denegado: los administradores del portal del cliente solo pueden gestionar roles del portal del cliente.",
+        "portalUsersOnly": "Permiso denegado: los administradores del portal del cliente solo pueden gestionar usuarios del portal del cliente.",
+        "portalAdminRequired": "Permiso denegado: se requiere acceso de administrador del portal del cliente.",
+        "otherClientUsers": "Permiso denegado: no se pueden gestionar usuarios de otro cliente."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Los usuarios del portal de clientes no pueden gestionar dominios personalizados.",
+      "noPermission": "No tiene permiso para gestionar la configuración del portal de clientes.",
+      "required": "El dominio es obligatorio.",
+      "length": "El dominio debe tener entre 3 y 253 caracteres.",
+      "charset": "El dominio solo puede incluir letras, números, guiones y puntos.",
+      "needsDot": "El dominio debe incluir al menos un punto.",
+      "notCanonicalHost": "Elija un dominio distinto del host canónico.",
+      "noLeadingTrailingDot": "El dominio no puede empezar ni terminar con un punto.",
+      "notApplianceHost": "Elija un dominio distinto del host principal de este servidor. El dominio personalizado del portal debe ser otro nombre de host que su proxy inverso reenvíe aquí.",
+      "nothingToRetry": "No hay ningún registro de dominio personalizado fallido que reintentar.",
+      "retryOnlyAfterFailure": "El reintento solo está disponible después de un registro fallido."
     }
   }
 }

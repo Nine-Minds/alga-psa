@@ -44,24 +44,24 @@ function landedCostActionErrorFrom(error: unknown): LandedCostActionError | null
 
     switch (error.message) {
       case 'amount must be a positive integer (cents)':
-        return actionError('Landed cost amount must be greater than zero.');
+        return actionError('Landed cost amount must be greater than zero.', 'features/inventory:errors.landedCost.amountPositive');
       case 'Purchase order not found':
-        return actionError('Purchase order not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Purchase order not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.shared.purchaseOrderNotFound');
       case 'Cannot add landed cost to a cancelled purchase order':
-        return actionError('Landed cost cannot be added to a cancelled purchase order.');
+        return actionError('Landed cost cannot be added to a cancelled purchase order.', 'features/inventory:errors.landedCost.orderCancelled');
       case 'An applied landed-cost entry cannot be removed':
-        return actionError('Applied landed-cost entries cannot be removed.');
+        return actionError('Applied landed-cost entries cannot be removed.', 'features/inventory:errors.landedCost.appliedCannotRemove');
       case 'Nothing has been received on this purchase order yet — receive first, then apply landed cost':
-        return actionError('Receive at least one purchase order line before applying landed cost.');
+        return actionError('Receive at least one purchase order line before applying landed cost.', 'features/inventory:errors.landedCost.receiveLineFirst');
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected landed-cost records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected landed-cost records is no longer valid. Please refresh and try again.', 'features/inventory:errors.landedCost.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This landed-cost update conflicts with an existing record. Please refresh and try again.');
+    return actionError('This landed-cost update conflicts with an existing record. Please refresh and try again.', 'features/inventory:errors.landedCost.conflict');
   }
 
   return null;

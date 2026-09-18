@@ -76,7 +76,7 @@ const ClientGridCard = ({
 
     return (
         <div
-            className="group flex flex-col rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 cursor-pointer shadow-sm dark:shadow-[0_1px_3px_rgb(0_0_0/0.4)] transition-colors hover:border-[rgb(var(--color-primary-500)/0.5)] hover:bg-[rgb(var(--color-primary-500)/0.03)]"
+            className="group flex flex-col rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 cursor-pointer card-elevated card-elevated-hover transition-colors hover:border-[rgb(var(--color-primary-500)/0.5)] hover:bg-[rgb(var(--color-primary-500)/0.03)]"
             onClick={handleCardClick}
             data-testid={`client-card-${client.client_id}`}
         >
@@ -119,18 +119,18 @@ const ClientGridCard = ({
                         for either would be noise on nearly every card. */}
                     <div className="flex flex-wrap items-center gap-1 mt-1 empty:hidden">
                         {isDefault && (
-                            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-[rgb(var(--color-primary-500)/0.14)] text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">
+                            <span className="chip-primary inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                                 {t('clientGridCard.default', { defaultValue: 'Default' })}
                             </span>
                         )}
                         {lifecycle && lifecycle !== 'active' && (
-                            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-[rgb(var(--color-text-500)/0.14)] text-[rgb(var(--color-text-600))]">
+                            <span className="chip-neutral inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                                 {t(`clientGridCard.lifecycle.${lifecycle}`, { defaultValue: lifecycle })}
                             </span>
                         )}
                         {client.is_tax_exempt && (
                             <Tooltip content={t('clientGridCard.taxExemptTooltip', { defaultValue: 'This client is tax exempt - no taxes will be applied to their invoices' })}>
-                                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-[rgb(var(--color-accent-500)/0.16)] text-[rgb(var(--color-accent-700))] dark:text-[rgb(var(--color-accent-300))]">
+                                <span className="chip-accent inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                                     {t('clientGridCard.taxExempt', { defaultValue: 'Tax Exempt' })}
                                 </span>
                             </Tooltip>
@@ -140,7 +140,7 @@ const ClientGridCard = ({
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                     {openTicketCount ? (
-                        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold bg-[rgb(var(--color-primary-500)/0.14)] text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">
+                        <span className="chip-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold">
                             <Ticket className="h-3 w-3" />
                             {t('clientGridCard.openTickets', {
                                 defaultValue: '{{count}} open',

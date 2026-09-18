@@ -7,7 +7,6 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Wallet, History } from 'lucide-react';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   ClientPortalCreditSummary,
@@ -69,15 +68,11 @@ function getCreditHistoryLabel(t: TranslateFn, entry: ClientPortalCreditHistoryE
 
 /**
  * Available-credit card for the portal billing overview: headline derived
- * balance plus the client's recent credit history with provenance. When the
- * release-v1-5-feature flag is on, a "View history" link opens a ledger dialog
- * of recent credit transactions.
+ * balance plus the client's recent credit history with provenance. A "View
+ * history" link opens a ledger dialog of recent credit transactions.
  */
 export default function CreditsSummaryCard({ formatCurrency, formatDate }: CreditsSummaryCardProps) {
   const { t } = useTranslation('features/billing');
-  const { enabled: historyEnabled } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
   const [summary, setSummary] = useState<ClientPortalCreditSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
@@ -192,17 +187,15 @@ export default function CreditsSummaryCard({ formatCurrency, formatDate }: Credi
                   ))}
                 </ul>
               )}
-              {historyEnabled && (
-                <Button
-                  id="credits-view-history-button"
-                  className="mt-3 w-full"
-                  variant="outline"
-                  onClick={() => setIsHistoryOpen(true)}
-                >
-                  <History className="mr-2 h-4 w-4" />
-                  {t('credits.history.viewHistory', 'View history')}
-                </Button>
-              )}
+              <Button
+                id="credits-view-history-button"
+                className="mt-3 w-full"
+                variant="outline"
+                onClick={() => setIsHistoryOpen(true)}
+              >
+                <History className="mr-2 h-4 w-4" />
+                {t('credits.history.viewHistory', 'View history')}
+              </Button>
             </>
           )}
         </div>

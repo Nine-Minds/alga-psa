@@ -26,6 +26,7 @@ import {
   createCustomDraftQuoteItem,
   createDraftDiscountQuoteItem,
   createDraftQuoteItemFromService,
+  resolveDraftDiscountAmounts,
   type DraftQuoteItem,
 } from './quoteLineItemDraft';
 
@@ -361,27 +362,6 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     setDiscountTargetValue('');
   };
 
-  const resolveDiscountAmount = (item: DraftQuoteItem): number => {
-    if (!item.is_discount) return item.quantity * item.unit_price;
-
-    if (item.discount_type === 'fixed') return item.quantity * item.unit_price;
-
-    const includedBaseItems = items.filter((i) => !i.is_discount && (!i.is_optional || i.is_selected !== false));
-    const baseSubtotal = includedBaseItems.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-
-    let baseAmount = baseSubtotal;
-    if (item.applies_to_item_id) {
-      const target = includedBaseItems.find((i) => (i.quote_item_id ?? i.local_id) === item.applies_to_item_id);
-      baseAmount = target ? target.quantity * target.unit_price : 0;
-    } else if (item.applies_to_service_id) {
-      baseAmount = includedBaseItems
-        .filter((i) => i.service_id === item.applies_to_service_id)
-        .reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-    }
-
-    return Math.round(baseAmount * ((item.discount_percentage ?? 0) / 100));
-  };
-
   const getDiscountTargetLabel = (item: DraftQuoteItem): string => {
     if (item.applies_to_item_id) {
       const target = items.find((i) => (i.quote_item_id ?? i.local_id) === item.applies_to_item_id);
@@ -410,15 +390,19 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     });
   };
 
-  const renderItemRows = (sectionItems: DraftQuoteItem[]) => sectionItems.map((item) => {
-    const isDiscount = item.is_discount === true;
-    const resolvedTotal = resolveDiscountAmount(item);
-    const dragClass = draggedItemId === item.local_id ? 'opacity-60' : '';
-    const discountRowClass = isDiscount ? 'bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400' : '';
+  const renderItemRows = (sectionItems: DraftQuoteItem[]) => {
+    const discountAmounts = resolveDraftDiscountAmounts(items);
+    return sectionItems.map((item) => {
+      const isDiscount = item.is_discount === true;
+      const resolvedTotal = isDiscount
+        ? (discountAmounts.get(item.quote_item_id ?? item.local_id) ?? 0)
+        : item.quantity * item.unit_price;
+      const dragClass = draggedItemId === item.local_id ? 'opacity-60' : '';
+      const discountRowClass = isDiscount ? 'bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400' : '';
 
-    return (
-      <tr
-        key={item.local_id}
+      return (
+        <tr
+          key={item.local_id}
         draggable={!disabled}
         onDragStart={() => setDraggedItemId(item.local_id)}
         onDragEnd={() => setDraggedItemId(null)}
@@ -627,7 +611,8 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         </td>
       </tr>
     );
-  });
+    });
+  };
 
   const renderPhaseSections = (sections: QuotePhaseSection[], sectionKeyPrefix: string) => (
     <div className="space-y-4">

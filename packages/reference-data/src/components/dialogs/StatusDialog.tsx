@@ -9,6 +9,7 @@ import type { IStatus, ItemType } from '@alga-psa/types';
 import { createStatus, isStatusActionError, statusActionErrorMessage, updateStatus } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface StatusDialogProps {
   open: boolean;
@@ -33,6 +34,14 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
   const [statusOrder, setStatusOrder] = useState(0);
   const [isClosed, setIsClosed] = useState(false);
   const [isDefault, setIsDefault] = useState(false);
+  const { t } = useTranslation('common');
+
+  // Types whose "new record" flow picks a status automatically and therefore needs one
+  // marked as the default. A closed status can never be that default.
+  const supportsDefault = selectedStatusType === 'ticket' || selectedStatusType === 'interaction';
+  // Legacy seeds left some tenants with a closed default; editing such a status must not
+  // silently clear the tenant's default, so its flag is preserved as-is.
+  const isClosedDefault = !!editingStatus?.is_closed && !!editingStatus?.is_default;
 
   useEffect(() => {
     if (editingStatus) {
@@ -55,7 +64,7 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
     e.preventDefault();
     
     if (!statusName.trim()) {
-      toast.error('Status name is required');
+      toast.error(t('statusDialog.nameRequired', 'Status name is required'));
       return;
     }
 
@@ -67,7 +76,13 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
     );
     
     if (existingWithOrder) {
-      toast.error(`Order number ${statusOrder} is already taken by "${existingWithOrder.name}". Please choose a different order number.`);
+      toast.error(
+        t(
+          'statusDialog.orderTaken',
+          'Order number {{order}} is already taken by "{{name}}". Please choose a different order number.',
+          { order: statusOrder, name: existingWithOrder.name },
+        ),
+      );
       return;
     }
 
@@ -84,13 +99,13 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
           toast.error(statusActionErrorMessage(updatedStatus));
           return;
         }
-        toast.success('Status updated successfully');
+        toast.success(t('statusDialog.updated', 'Status updated successfully'));
       } else {
         const newStatus: Omit<IStatus, 'status_id'> = {
           name: statusName,
           status_type: selectedStatusType,
           is_closed: isClosed,
-          is_default: selectedStatusType === 'ticket' ? isDefault : false,
+          is_default: supportsDefault ? isDefault : false,
           order_number: statusOrder,
           created_by: userId
         };
@@ -99,7 +114,7 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
           toast.error(statusActionErrorMessage(createdStatus));
           return;
         }
-        toast.success('Status created successfully');
+        toast.success(t('statusDialog.created', 'Status created successfully'));
       }
       
       onSuccess();
@@ -110,9 +125,14 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
       setIsDefault(false);
     } catch (error) {
       if (error instanceof Error && error.message.includes('unique_tenant_type_order')) {
-        handleError(error, 'This order number is already in use. Please choose a different order number.');
+        handleError(error, t('statusDialog.orderInUse', 'This order number is already in use. Please choose a different order number.'));
       } else {
-        handleError(error, editingStatus ? 'Failed to update status' : 'Failed to create status');
+        handleError(
+          error,
+          editingStatus
+            ? t('statusDialog.updateFailed', 'Failed to update status')
+            : t('statusDialog.createFailed', 'Failed to create status'),
+        );
       }
     }
   };
@@ -131,7 +151,7 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
           setIsDefault(false);
         }}
       >
-        Cancel
+        {t('actions.cancel', 'Cancel')}
       </Button>
       <Button
         id="save-status-button"
@@ -139,7 +159,9 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
         className="bg-primary-500 text-white hover:bg-primary-600"
         onClick={() => (document.getElementById('status-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
       >
-        {editingStatus ? 'Update' : 'Add'} Status
+        {editingStatus
+          ? t('statusDialog.submitUpdate', 'Update Status')
+          : t('statusDialog.submitAdd', 'Add Status')}
       </Button>
     </div>
   );
@@ -148,7 +170,7 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange(false)}
-      title={editingStatus ? 'Edit Status' : 'Add New Status'}
+      title={editingStatus ? t('statusDialog.editTitle', 'Edit Status') : t('statusDialog.addTitle', 'Add New Status')}
       className="max-w-lg"
       id="status-dialog"
       footer={footer}
@@ -158,20 +180,20 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status Name
+                {t('statusDialog.nameLabel', 'Status Name')}
               </label>
               <Input
                 id="status-name"
                 value={statusName}
                 onChange={(e) => setStatusName(e.target.value)}
-                placeholder="e.g., In Progress"
+                placeholder={t('statusDialog.namePlaceholder', 'e.g., In Progress')}
                 required
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Order Number (1-100, lower numbers appear first)
+                {t('statusDialog.orderLabel', 'Order Number (1-100, lower numbers appear first)')}
               </label>
               <Input
                 id="status-order"
@@ -183,7 +205,10 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                Controls the order in which statuses appear in dropdown menus throughout the platform.
+                {t(
+                  'statusDialog.orderHelp',
+                  'Controls the order in which statuses appear in dropdown menus throughout the platform.',
+                )}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {(() => {
@@ -194,9 +219,11 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
                     .filter((n): n is number => n !== null && n !== undefined)
                     .sort((a, b) => a - b);
                   if (usedOrders.length > 0) {
-                    return `Used order numbers: ${usedOrders.join(', ')}`;
+                    return t('statusDialog.usedOrders', 'Used order numbers: {{orders}}', {
+                      orders: usedOrders.join(', '),
+                    });
                   }
-                  return 'No order numbers used yet';
+                  return t('statusDialog.noUsedOrders', 'No order numbers used yet');
                 })()}
               </p>
             </div>
@@ -204,18 +231,32 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
             <div className="space-y-3">
               <Checkbox
                 id="status-is-closed"
-                label="Mark as closed status"
+                label={t('statusDialog.markClosed', 'Mark as closed status')}
                 checked={isClosed}
-                onChange={(e) => setIsClosed((e.target as HTMLInputElement).checked)}
+                onChange={(e) => {
+                  const checked = (e.target as HTMLInputElement).checked;
+                  setIsClosed(checked);
+                  if (checked && !isClosedDefault) {
+                    setIsDefault(false);
+                  }
+                }}
               />
               
-              {selectedStatusType === 'ticket' && (
-                <Checkbox
-                  id="status-is-default"
-                  label="Set as default status for new tickets"
-                  checked={isDefault}
-                  onChange={(e) => setIsDefault((e.target as HTMLInputElement).checked)}
-                />
+              {supportsDefault && (
+                <div>
+                  <Checkbox
+                    id="status-is-default"
+                    label={t('statusDialog.setDefault', 'Set as default status for new items')}
+                    checked={isDefault}
+                    disabled={isClosed}
+                    onChange={(e) => setIsDefault((e.target as HTMLInputElement).checked)}
+                  />
+                  {isClosed && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('statusDialog.defaultClosedHelp', 'A closed status cannot be the default for new items.')}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>

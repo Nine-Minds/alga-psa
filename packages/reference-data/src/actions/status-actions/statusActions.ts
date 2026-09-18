@@ -109,11 +109,11 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: st
 
 export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<IStatus, 'status_id' | 'tenant'>): Promise<IStatus | StatusActionError> => {
   if (!statusData.name || statusData.name.trim() === '') {
-    return actionError('Status name is required');
+    return actionError('Status name is required', 'msp/settings:errors.status.nameRequired');
   }
 
   if (statusData.status_type === ('ticket' as ItemType)) {
-    return actionError('Ticket statuses must be managed from board settings');
+    return actionError('Ticket statuses must be managed from board settings', 'msp/settings:errors.status.manageFromBoard');
   }
 
   const {knex: db} = await createTenantKnex();
@@ -202,11 +202,11 @@ export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<I
 
 export const updateStatus = withAuth(async (_user, { tenant }, statusId: string, statusData: Partial<IStatus>): Promise<IStatus | StatusActionError> => {
   if (!statusId) {
-    return actionError('Status ID is required');
+    return actionError('Status ID is required', 'msp/settings:errors.status.idRequired');
   }
 
   if (statusData.name && statusData.name.trim() === '') {
-    return actionError('Status name cannot be empty');
+    return actionError('Status name cannot be empty', 'msp/settings:errors.status.nameEmpty');
   }
 
   const {knex: db} = await createTenantKnex();
@@ -225,6 +225,23 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
       const effectiveStatusType = statusData.status_type || currentStatus.status_type;
       if (effectiveStatusType === ('ticket' as ItemType)) {
         throw new Error('Ticket statuses must be managed from board settings');
+      }
+
+      // New records are created with the default status, so it must stay open — otherwise
+      // every logged interaction is born closed. Existing closed defaults (the old interaction
+      // seed) stay editable so they can be repaired. Only interactions pick a default this way
+      // and offer a UI to move it, so other status types are left alone — guarding them would
+      // make a default-flagged status impossible to close with no way to clear the flag.
+      const nextIsClosed = statusData.is_closed !== undefined ? statusData.is_closed : currentStatus.is_closed;
+      const nextIsDefault = statusData.is_default !== undefined ? statusData.is_default : currentStatus.is_default;
+      const wasClosedDefault = !!currentStatus.is_closed && !!currentStatus.is_default;
+      const defaultPicksNewRecords = effectiveStatusType === ('interaction' as ItemType);
+
+      if (defaultPicksNewRecords && currentStatus.is_default && nextIsClosed && !currentStatus.is_closed) {
+        throw new Error('Set another status as the default before closing this one');
+      }
+      if (defaultPicksNewRecords && nextIsDefault && nextIsClosed && !wasClosedDefault) {
+        throw new Error('A closed status cannot be the default status');
       }
 
       // Check if new name conflicts with existing status

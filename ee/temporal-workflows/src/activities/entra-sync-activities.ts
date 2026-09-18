@@ -338,9 +338,9 @@ export async function syncTenantUsersActivity(
 
   const users = await adapter.listUsersForTenant({
     tenant: input.tenantId,
-    // Adapter expects the Microsoft tenant GUID (used as `tenantId eq ...` filter
-    // in the managedTenants/users Graph call). The DB's managed_tenant_id is a
-    // local PK and must not be passed here.
+    // Adapter expects the Microsoft tenant GUID (the authority the customer
+    // tenant token is minted against). The DB's managed_tenant_id is a local
+    // PK and must not be passed here.
     managedTenantId: input.mapping.entraTenantId,
   });
   const filteredUsers = await filterEntraUsersForTenant(input.tenantId, users);
@@ -710,11 +710,14 @@ export async function recordSyncTenantResultWithDb(
   };
 
   if (existing?.run_tenant_id) {
+    // Citus forbids the distribution column (tenant) in an UPDATE's SET list;
+    // the row's identity columns never change on re-record anyway.
+    const { tenant: _tenant, run_id: _runId, managed_tenant_id: _managedTenantId, ...updatable } = row;
     await db.table('entra_sync_run_tenants')
       .where({
         run_tenant_id: existing.run_tenant_id,
       })
-      .update(row);
+      .update(updatable);
   } else {
     await db.table('entra_sync_run_tenants').insert({
       ...row,

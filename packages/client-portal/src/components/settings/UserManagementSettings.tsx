@@ -8,6 +8,7 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { 
@@ -24,7 +25,15 @@ import {
   getUserClientId,
   getClientUsersForClient
 } from '@alga-psa/user-composition/actions/userQueryActions';
-import { deleteUser, updateUser } from '@alga-psa/users/actions/user-actions/userActions';
+import {
+  deactivateUserWithDisposition,
+  deleteUser,
+  getActiveInternalUsersForDeactivation,
+  getOpenWorkCountsForUserDeactivation,
+  updateUser,
+  type OpenWorkDisposition,
+  type UserOpenWorkCounts,
+} from "@alga-psa/users/actions/user-actions/userActions";
 import { createOrFindContactByEmail } from '@alga-psa/clients/actions/queryActions';
 import { createClientUser, getClientPortalRoles, getClientUserRoles } from '../../actions/client-portal-actions/clientUserActions';
 import type { DeletionValidationResult, IUser, IPermission } from '@alga-psa/types';
@@ -48,12 +57,29 @@ export function UserManagementSettings() {
   const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', roleId: '' });
   const [clientId, setClientId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
-  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [userToDeactivate, setUserToDeactivate] = useState<IUser | null>(null);
+  const [deleteValidation, setDeleteValidation] =
+    useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [availableRoles, setAvailableRoles] = useState<SharedIRole[]>([]);
-  const [userRoles, setUserRoles] = useState<{ [key: string]: SharedIRole[] }>({});
+  const [userRoles, setUserRoles] = useState<{ [key: string]: SharedIRole[] }>(
+    {},
+  );
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [openWorkCounts, setOpenWorkCounts] =
+    useState<UserOpenWorkCounts | null>(null);
+  const [activeAssignees, setActiveAssignees] = useState<
+    Array<Pick<IUser, "user_id" | "first_name" | "last_name" | "email">>
+  >([]);
+  const [ticketDisposition, setTicketDisposition] =
+    useState<OpenWorkDisposition>({ action: "reassign", assigneeId: "" });
+  const [taskDisposition, setTaskDisposition] = useState<OpenWorkDisposition>({
+    action: "reassign",
+    assigneeId: "",
+  });
+  const [dispositionConfirmed, setDispositionConfirmed] = useState(false);
   const { openDrawer } = useDrawer();
 
   // Pagination state
@@ -78,6 +104,7 @@ export function UserManagementSettings() {
         router.push('/auth/signin');
         return;
       }
+      setCurrentUserId(user.user_id);
 
       const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id);
       
@@ -194,6 +221,15 @@ export function UserManagementSettings() {
     setDeleteValidation(null);
   };
 
+  const resetDispositionState = () => {
+    setUserToDeactivate(null);
+    setOpenWorkCounts(null);
+    setActiveAssignees([]);
+    setTicketDisposition({ action: "reassign", assigneeId: "" });
+    setTaskDisposition({ action: "reassign", assigneeId: "" });
+    setDispositionConfirmed(false);
+  };
+
   const runDeleteValidation = useCallback(async (userId: string) => {
     setIsDeleteValidating(true);
     try {
@@ -239,33 +275,127 @@ export function UserManagementSettings() {
   };
 
   const handleDeleteAlternativeAction = async (action: string) => {
-    if (action !== 'deactivate' || !userToDelete) {
+    if (action !== "deactivate" || !userToDelete) {
       return;
     }
 
+    try {
+      setIsDeleteProcessing(true);
+      const counts = await getOpenWorkCountsForUserDeactivation(
+        userToDelete.user_id,
+      );
+      if (counts.openTickets === 0 && counts.openProjectTasks === 0) {
+        const result = await updateUser(userToDelete.user_id, {
+          is_inactive: true,
+        });
+        if (!result.success) {
+          setError(
+            tProfile("clientSettings.users.updateFailed", {
+              defaultValue: result.error,
+            }),
+          );
+          return;
+        }
+        if (result.user) {
+          setUsers((prev) =>
+            prev.map((user) =>
+              user.user_id === result.user!.user_id ? result.user! : user,
+            ),
+          );
+        }
+        resetDeleteState();
+        return;
+      }
+
+      const assignees = await getActiveInternalUsersForDeactivation(
+        userToDelete.user_id,
+      );
+      const defaultAssignee =
+        assignees.find((user) => user.user_id === currentUserId) ??
+        assignees[0];
+      const defaultDisposition: OpenWorkDisposition = defaultAssignee
+        ? { action: "reassign", assigneeId: defaultAssignee.user_id }
+        : { action: "unassign" };
+      setOpenWorkCounts(counts);
+      setActiveAssignees(assignees);
+      setTicketDisposition(defaultDisposition);
+      setTaskDisposition(defaultDisposition);
+      setDispositionConfirmed(false);
+      setUserToDeactivate(userToDelete);
+      resetDeleteState();
+    } catch (error) {
+      console.error("Error preparing user deactivation:", error);
+      setError(
+        tProfile(
+          "clientSettings.users.deleteError",
+          "Failed to prepare user deactivation",
+        ),
+      );
+    } finally {
+      setIsDeleteProcessing(false);
+    }
+  };
+
+  const changeDisposition = (
+    bucket: "tickets" | "tasks",
+    action: OpenWorkDisposition["action"],
+  ) => {
+    const next =
+      action === "reassign"
+        ? ({
+            action,
+            assigneeId: activeAssignees[0]?.user_id ?? "",
+          } as OpenWorkDisposition)
+        : ({ action } as OpenWorkDisposition);
+    if (bucket === "tickets") {
+      setTicketDisposition(next);
+    } else {
+      setTaskDisposition(next);
+    }
+    setDispositionConfirmed(false);
+  };
+
+  const handleDispositionAssigneeChange = (assigneeId: string) => {
+    if (ticketDisposition.action === "reassign") {
+      setTicketDisposition({ action: "reassign", assigneeId });
+    }
+    if (taskDisposition.action === "reassign") {
+      setTaskDisposition({ action: "reassign", assigneeId });
+    }
+    setDispositionConfirmed(false);
+  };
+
+  const handleConfirmDeactivationDisposition = async () => {
+    if (!userToDeactivate || !openWorkCounts) return;
     setIsDeleteProcessing(true);
     try {
-      const result = await updateUser(userToDelete.user_id, { is_inactive: true });
+      const result = await deactivateUserWithDisposition(
+        userToDeactivate.user_id,
+        {
+          tickets: ticketDisposition,
+          projectTasks: taskDisposition,
+        },
+      );
       if (!result.success) {
-        const errorKeys: Record<typeof result.code, string> = {
-          EMAIL_ALREADY_EXISTS: 'clientSettings.users.emailAlreadyExists',
-          REPORTS_TO_SELF: 'clientSettings.users.reportsToSelf',
-          REPORTS_TO_CYCLE: 'clientSettings.users.reportsToCycle',
-          SCIM_MANAGED_INACTIVE: 'clientSettings.users.scimManagedInactive',
-          PERMISSION_DENIED: 'clientSettings.users.permissionDenied',
-          USER_UPDATE_FAILED: 'clientSettings.users.updateFailed',
-        };
-        setError(tProfile(errorKeys[result.code], { defaultValue: result.error }));
+        setError(result.error);
         return;
       }
       if (result.user) {
-        const updated = result.user;
-        setUsers(prev => prev.map(user => user.user_id === updated.user_id ? updated : user));
+        setUsers((prev) =>
+          prev.map((user) =>
+            user.user_id === result.user!.user_id ? result.user! : user,
+          ),
+        );
       }
-      resetDeleteState();
+      resetDispositionState();
     } catch (error) {
-      console.error('Error deactivating user:', error);
-      setError(tProfile('clientSettings.users.deleteError', 'Failed to deactivate user'));
+      console.error("Error applying user deactivation disposition:", error);
+      setError(
+        tProfile(
+          "clientSettings.users.deleteError",
+          "Failed to deactivate user",
+        ),
+      );
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -527,6 +657,224 @@ export function UserManagementSettings() {
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
       />
+      <Dialog
+        id="client-portal-deactivate-user-disposition"
+        isOpen={Boolean(userToDeactivate && openWorkCounts)}
+        onClose={resetDispositionState}
+        title="Deactivate user and dispose of open work"
+        className="max-w-lg"
+        allowOverflow
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              id="cancel-user-deactivation-disposition"
+              variant="ghost"
+              onClick={resetDispositionState}
+              disabled={isDeleteProcessing}
+            >
+              {tCommon("common.cancel", "Cancel")}
+            </Button>
+            <Button
+              id="confirm-user-deactivation-disposition"
+              onClick={handleConfirmDeactivationDisposition}
+              disabled={
+                !dispositionConfirmed ||
+                isDeleteProcessing ||
+                (ticketDisposition.action === "reassign" &&
+                  !ticketDisposition.assigneeId) ||
+                (taskDisposition.action === "reassign" &&
+                  !taskDisposition.assigneeId)
+              }
+            >
+              {isDeleteProcessing ? "Deactivating…" : "Deactivate user"}
+            </Button>
+          </div>
+        }
+      >
+        <DialogContent>
+          <p className="text-sm text-[rgb(var(--color-text-700))]">
+            {userToDeactivate
+              ? `${userToDeactivate.first_name ?? ""} ${userToDeactivate.last_name ?? ""}`.trim() ||
+                "This user"
+              : "This user"}{" "}
+            has open work. Choose what should happen before they are
+            deactivated.
+          </p>
+
+          <div className="mt-4 space-y-4">
+            {openWorkCounts && openWorkCounts.openTickets > 0 && (
+              <DispositionBucket
+                bucket="tickets"
+                count={openWorkCounts.openTickets}
+                disposition={ticketDisposition}
+                onChange={changeDisposition}
+                disableReassign={activeAssignees.length === 0}
+              />
+            )}
+            {openWorkCounts && openWorkCounts.openProjectTasks > 0 && (
+              <DispositionBucket
+                bucket="tasks"
+                count={openWorkCounts.openProjectTasks}
+                disposition={taskDisposition}
+                onChange={changeDisposition}
+                disableReassign={activeAssignees.length === 0}
+              />
+            )}
+
+            {(ticketDisposition.action === "reassign" ||
+              taskDisposition.action === "reassign") && (
+              <div>
+                <Label htmlFor="deactivation-reassignment-user">
+                  Reassign open work to
+                </Label>
+                <CustomSelect
+                  id="deactivation-reassignment-user"
+                  value={
+                    ticketDisposition.action === "reassign"
+                      ? ticketDisposition.assigneeId
+                      : taskDisposition.action === "reassign"
+                        ? taskDisposition.assigneeId
+                        : null
+                  }
+                  onValueChange={handleDispositionAssigneeChange}
+                  options={activeAssignees.map((user) => ({
+                    value: user.user_id,
+                    label:
+                      `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() ||
+                      user.email,
+                  }))}
+                  placeholder="Select an active internal user"
+                  disabled={activeAssignees.length === 0}
+                  className="mt-1"
+                />
+                {activeAssignees.length === 0 && (
+                  <p className="mt-1 text-sm text-destructive">
+                    No active internal user is available for reassignment.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <label
+              className="flex items-start gap-2 text-sm text-[rgb(var(--color-text-700))]"
+              htmlFor="confirm-user-deactivation-disposition-checkbox"
+            >
+              <input
+                id="confirm-user-deactivation-disposition-checkbox"
+                type="checkbox"
+                checked={dispositionConfirmed}
+                onChange={(event) =>
+                  setDispositionConfirmed(event.target.checked)
+                }
+                className="mt-0.5"
+              />
+              <span>
+                {buildDispositionSummary(
+                  openWorkCounts ?? { openTickets: 0, openProjectTasks: 0 },
+                  ticketDisposition,
+                  taskDisposition,
+                  activeAssignees,
+                )}
+              </span>
+            </label>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
+  );
+}
+
+function DispositionBucket({
+  bucket,
+  count,
+  disposition,
+  onChange,
+  disableReassign,
+}: {
+  bucket: "tickets" | "tasks";
+  count: number;
+  disposition: OpenWorkDisposition;
+  onChange: (
+    bucket: "tickets" | "tasks",
+    action: OpenWorkDisposition["action"],
+  ) => void;
+  disableReassign: boolean;
+}) {
+  const label = bucket === "tickets" ? "Tickets" : "Project tasks";
+  return (
+    <fieldset className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
+      <legend className="px-1 text-sm font-medium text-[rgb(var(--color-text-900))]">
+        {count} open {label.toLowerCase()}
+      </legend>
+      <div className="mt-2 flex flex-wrap gap-4">
+        {(["reassign", "unassign", "archive"] as const).map((action) => (
+          <label
+            key={action}
+            className="flex items-center gap-1.5 text-sm text-[rgb(var(--color-text-700))]"
+            htmlFor={`deactivation-${bucket}-${action}`}
+          >
+            <input
+              id={`deactivation-${bucket}-${action}`}
+              type="radio"
+              name={`deactivation-${bucket}`}
+              value={action}
+              checked={disposition.action === action}
+              disabled={action === "reassign" && disableReassign}
+              onChange={() => onChange(bucket, action)}
+            />
+            {action === "reassign"
+              ? "Reassign"
+              : action === "unassign"
+                ? "Unassign"
+                : "Archive"}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function buildDispositionSummary(
+  counts: UserOpenWorkCounts,
+  tickets: OpenWorkDisposition,
+  tasks: OpenWorkDisposition,
+  assignees: Array<
+    Pick<IUser, "user_id" | "first_name" | "last_name" | "email">
+  >,
+): string {
+  const describe = (
+    count: number,
+    label: string,
+    disposition: OpenWorkDisposition,
+  ) => {
+    if (count === 0) return null;
+    if (disposition.action === "archive")
+      return `${count} ${label} will be archived`;
+    if (disposition.action === "unassign")
+      return `${count} ${label} will be unassigned`;
+    const assignee = assignees.find(
+      (user) => user.user_id === disposition.assigneeId,
+    );
+    const name = assignee
+      ? `${assignee.first_name ?? ""} ${assignee.last_name ?? ""}`.trim() ||
+        assignee.email
+      : "the selected user";
+    return `${count} ${label} will be reassigned to ${name}`;
+  };
+  return (
+    [
+      describe(
+        counts.openTickets,
+        counts.openTickets === 1 ? "ticket" : "tickets",
+        tickets,
+      ),
+      describe(
+        counts.openProjectTasks,
+        counts.openProjectTasks === 1 ? "project task" : "project tasks",
+        tasks,
+      ),
+    ]
+      .filter(Boolean)
+      .join("; ") + "."
   );
 }

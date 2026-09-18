@@ -141,6 +141,14 @@ export async function parseStagedMimeIntoEmailDetails(params: {
 
   const emailData: EmailMessageDetails = {
     id: identity.rfcMessageId ?? identity.providerMessageId ?? params.fallbackProviderMessageId ?? '',
+    providerIdentity: normalizeInboundMessageIdentity({
+      providerType: params.providerType,
+      providerMessageId: params.fallbackProviderMessageId,
+      mailbox: params.mailbox,
+      uidValidity: params.uidValidity,
+      uid: params.uid,
+    })?.normalized,
+    sourceSha256: sha256Hex(params.rawMime),
     provider: params.providerType,
     providerId: params.providerId,
     tenant: params.tenant,

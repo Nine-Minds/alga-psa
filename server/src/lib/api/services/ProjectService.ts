@@ -29,6 +29,8 @@ import {
 } from '../schemas/project';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { ProjectModel } from '@alga-psa/projects/models';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { projectKanbanHiddenStatusesKey } from '@alga-psa/projects/lib/kanbanPreferences';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
 import { SharedNumberingService } from '@shared/services/numberingService';
@@ -300,6 +302,7 @@ export class ProjectService extends BaseService<IProject> {
       };
 
       const [project] = await db.table(this.tableName).insert(projectData).returning('*');
+      await this.setupDefaultStatusMappings(project.project_id, context, trx);
 
       // Create initial phase if needed
       if (data.create_default_phase) {
@@ -378,11 +381,6 @@ export class ProjectService extends BaseService<IProject> {
           throw new NotFoundError('Project not found');
         }
         
-        // If status is requested in response, resolve it back to the expected format
-        if (data.status && !this.isUUID(data.status)) {
-          project.status = data.status;
-        }
-  
         return { beforeProject, project, occurredAt: updateData.updated_at };
       });
 
@@ -435,42 +433,41 @@ export class ProjectService extends BaseService<IProject> {
         }),
       });
 
-      return result.project as IProject;
+      // Keep events based on the persisted UUID. Named API inputs retain their
+      // response compatibility without changing the row used by subscribers.
+      return {
+        ...result.project,
+        ...(data.status && !this.isUUID(data.status) ? { status: data.status } : {}),
+      } as IProject;
     }
 
 
-  // TODO: This bare DELETE has the same gap that was fixed for tickets — it
-  // skips dependency validation and child-row cleanup. A project with blocking
-  // records (phases, ticket links, interactions, materials, asset associations)
-  // will FK-crash (500) instead of returning a clean 409, and there's no
-  // safeguard against the API force-deleting a project that shouldn't be deleted.
-  // Mirror TicketService.delete: route through deleteEntityWithValidation('project', ...)
-  // (config already exists in @alga-psa/core), clean up child rows, and throw
-  // ConflictError when blocking dependencies exist.
   async delete(id: string, context: ServiceContext): Promise<void> {
-      const { knex } = await this.getKnex();
+    const { knex } = await this.getKnex();
+    const project = await scopedTable(knex, context.tenant, this.tableName)
+      .where({ [this.primaryKey]: id }).first(this.primaryKey);
+    if (!project) throw new NotFoundError('Project not found');
 
-      await withTransaction(knex, async (trx) => {
-        const result = await scopedTable(trx, context.tenant, this.tableName)
-          .where({ [this.primaryKey]: id })
-          .del();
-
-        if (result === 0) {
-          throw new NotFoundError('Project not found');
-        }
-      });
-
-      await publishEvent({
-        eventType: 'PROJECT_DELETED',
-        payload: {
-          tenantId: context.tenant,
-          projectId: id,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
-      });
+    const result = await deleteEntityWithValidation('project', id, knex, context.tenant, async (trx, tenant) => {
+      const db = tenantDb(trx, tenant);
+      const phaseIds = db.table('project_phases').where({ project_id: id }).select('phase_id');
+      const taskIds = db.table('project_tasks').whereIn('phase_id', phaseIds).select('task_id');
+      await db.table('tag_mappings').where({ tagged_type: 'project_task' }).whereIn('tagged_id', taskIds).delete();
+      await db.table('tag_mappings').where({ tagged_type: 'project', tagged_id: id }).delete();
+      await db.table('project_ticket_links').where({ project_id: id }).delete();
+      await db.table('email_reply_tokens').where({ project_id: id }).delete();
+      await db.table('user_preferences').where({ setting_name: projectKanbanHiddenStatusesKey(id) }).delete();
+      await ProjectModel.delete(trx, tenant, id);
+    });
+    if (!result.deleted) {
+      throw new ConflictError(result.message ?? 'Project has blocking dependencies', { dependencies: result.dependencies });
     }
 
+    await publishEvent({
+      eventType: 'PROJECT_DELETED',
+      payload: { tenantId: context.tenant, projectId: id, userId: context.userId, timestamp: new Date().toISOString() },
+    });
+  }
 
   // Project phases
   async getPhases(projectId: string, context: ServiceContext): Promise<IProjectPhase[]> {
@@ -1125,27 +1122,23 @@ export class ProjectService extends BaseService<IProject> {
   }
 
 
-  private async setupDefaultStatusMappings(projectId: string, context: ServiceContext): Promise<void> {
-      const { knex } = await this.getKnex();
-      
-      const db = tenantDb(knex, context.tenant);
-      const standardStatuses = await db.table('standard_statuses')
-        .where({ item_type: 'project_task' })
-        .orderBy('display_order');
-  
-      for (const status of standardStatuses) {
-        await db.table('project_status_mappings').insert({
-          project_id: projectId,
-          standard_status_id: status.standard_status_id,
-          is_standard: true,
-          custom_name: null,
-          display_order: status.display_order,
-          is_visible: true,
-          tenant: context.tenant
-        });
-      }
-    }
+  private async setupDefaultStatusMappings(
+    projectId: string,
+    context: ServiceContext,
+    trx: Knex.Transaction,
+  ): Promise<void> {
+    const customStatuses = await ProjectModel.getStatusesByType(trx, context.tenant, 'project_task');
+    const mappings = customStatuses.length
+      ? customStatuses.map(status => ({ status_id: status.status_id, is_standard: false }))
+      : (await ProjectModel.getStandardStatusesByType(trx, context.tenant, 'project_task'))
+          .map(status => ({ standard_status_id: status.standard_status_id, is_standard: true }));
 
+    for (const [index, mapping] of mappings.entries()) {
+      await ProjectModel.addProjectStatusMapping(trx, context.tenant, projectId, {
+        ...mapping, custom_name: null, display_order: index + 1, is_visible: true,
+      });
+    }
+  }
 
   private async getProjectStatistics(projectId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();

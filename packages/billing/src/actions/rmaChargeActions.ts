@@ -62,7 +62,7 @@ export const chargeRmaForUnreturned = withAuth(
     rmaId: string,
   ): Promise<{ rma_id: string; status: string; invoiceId?: string; invoiced_amount_cents: number } | RmaChargeActionError> => {
     if (!(await hasPermission(user, 'billing', 'create'))) {
-      return permissionError('Permission denied: billing create required');
+      return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
     }
 
     // Step 1 — locked status flip (throws unless dead_unit_owed → idempotent).

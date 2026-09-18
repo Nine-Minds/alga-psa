@@ -1,0 +1,46 @@
+{
+  "applicationRevision": "c5938cdad5",
+  "application": "Reused host EE production build; no rebuild",
+  "session": 63859,
+  "stats": {
+    "startTime": "2026-09-08T00:27:34.112Z",
+    "duration": 31552.168,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "coverage": [
+    "Three owned project tasks: two same public names, one unnamed; first task billed through two service rates",
+    "Authenticated API captures eight invoice time snapshots, including four task entries with three distinct owned task IDs",
+    "Separate same-name group headings plus flat/nested entry names verified by exact PDF occurrence count",
+    "English, French and unsupported-locale fallback preserve unnamed-task label, sixteen detail dates, $180 service amount and $1600.50 total",
+    "Independent expected subtotal145500/tax14550/total160050 minor units",
+    "Deliberate post-invoice edits to owned task names/descriptions do not affect PDF; private/edited strings excluded and snapshots/charges unchanged; source fixture fields restored in finally",
+    "Existing historical and long multi-tax PDF matrix executes in the same journey"
+  ],
+  "pdfArtifacts": [
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000003-tasks-en.pdf",
+      "bytes": 125817,
+      "sha256": "ba8f1d2f6a1a4b646fa3e55e50716da8a814506af7ce70bd30690ea96e03fd90"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000003-tasks-fr.pdf",
+      "bytes": 130582,
+      "sha256": "54f740a0cda08cd7c6729811e56ce3d9d8ed695d0831104a5c4d8e58827cdf5c"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000003-tasks-zz-unavailable.pdf",
+      "bytes": 125817,
+      "sha256": "90f1b968c673c882ae54f83e3842e449728da32f4ce1d5f97db07ff23e5d44a8"
+    }
+  ],
+  "log": "/tmp/alga-host-task-invoice-final.log",
+  "limitations": [
+    "Project/task source rows are fixture setup, not a test of project authoring UI.",
+    "Empty task title is an explicit database fixture; no claim that current authoring UI accepts an empty title.",
+    "Hour-block, historical ad-hoc fallback and complete preview/canvas parity remain incomplete.",
+    "Native CI/container packaging and full plan completion remain unverified."
+  ]
+}

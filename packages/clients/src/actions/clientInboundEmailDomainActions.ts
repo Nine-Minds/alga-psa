@@ -71,7 +71,7 @@ export const listClientInboundEmailDomains = withAuth(async (
   clientId: string,
 ): Promise<ClientInboundEmailDomain[] | ClientInboundEmailDomainActionError> => {
   if (!await hasMspPermission(user, 'client', 'read')) {
-    return permissionError('Permission denied: Cannot read clients');
+    return permissionError('Permission denied: Cannot read clients', 'msp/clients:errors.permissions.readClients');
   }
 
   const { knex } = await createTenantKnex();
@@ -91,7 +91,7 @@ export const addClientInboundEmailDomain = withAuth(async (
   rawDomain: string
 ): Promise<ClientInboundEmailDomain | ClientInboundEmailDomainActionError> => {
   if (!await hasMspPermission(user, 'client', 'update')) {
-    return permissionError('Permission denied: Cannot update clients');
+    return permissionError('Permission denied: Cannot update clients', 'msp/clients:errors.permissions.updateClients');
   }
 
   const domain = normalizeDomain(rawDomain);
@@ -134,7 +134,7 @@ export const addClientInboundEmailDomain = withAuth(async (
       return actionError(e.message);
     }
     console.error('Unexpected failure while adding client inbound email domain:', e);
-    return actionError('Failed to add inbound email domain. Please try again.');
+    return actionError('Failed to add inbound email domain. Please try again.', 'msp/clients:errors.inboundEmailDomain.addFailed');
   }
 });
 
@@ -145,7 +145,7 @@ export const removeClientInboundEmailDomain = withAuth(async (
   domainId: string
 ): Promise<{ success: true } | ClientInboundEmailDomainActionError> => {
   if (!await hasMspPermission(user, 'client', 'update')) {
-    return permissionError('Permission denied: Cannot update clients');
+    return permissionError('Permission denied: Cannot update clients', 'msp/clients:errors.permissions.updateClients');
   }
 
   const { knex } = await createTenantKnex();
@@ -154,7 +154,7 @@ export const removeClientInboundEmailDomain = withAuth(async (
       .where({ client_id: clientId, id: domainId })
       .delete();
     if (deleted === 0) {
-      return actionError('Inbound email domain not found.');
+      return actionError('Inbound email domain not found.', 'msp/clients:errors.inboundEmailDomain.notFound');
     }
     return { success: true as const };
   });

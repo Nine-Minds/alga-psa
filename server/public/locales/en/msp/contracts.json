@@ -320,8 +320,15 @@
       "noContractLinesDescription": "Add contract lines to define what's included in this contract",
       "noContractLinesYet": "No contract lines yet",
       "noServicesConfigured": "No services configured",
+      "billedOnRecordedUsage": "Billed on recorded usage",
       "serviceCountOne": "{{count}} service",
-      "serviceCountOther": "{{count}} services"
+      "serviceCountOther": "{{count}} services",
+      "previouslyConfiguredQuantity": "Previously configured quantity: {{count}} — not used for billing",
+      "billedOnPeriodCount": "Billed on the count reported for each period",
+      "recurringSeats": "{{count}} × {{rate}} (recurring seats)",
+      "bundleAllocation": "Allocation of the bundle price — not billable seats",
+      "setUpRecurringSeats": "Set up recurring seats",
+      "reportPeriodCount": "Report a period count"
     },
     "stats": {
       "contractLines": "Contract Lines",
@@ -331,7 +338,35 @@
       "variableSuffix": "+ variable (hourly/usage)",
       "viewDetails": "View details"
     },
-    "title": "What's Included"
+    "title": "What's Included",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Set up recurring seats",
+        "explanation": "Recurring seats bill quantity × unit rate every period without usage records, so they live on a Fixed contract line priced by recurring seats/units — not on this Usage line.",
+        "nextStep": "Go to Contract Lines, add (or open) a Fixed line, add this service, and choose “Recurring seats/units”, then confirm the quantity and unit rate. The change takes effect at the next unbilled service period; this Usage line and its history stay as they are until you remove it.",
+        "manualHandoff": "Go to Contract Lines → Create Custom, choose Fixed, add this service, and select “Recurring seats/units”. Review the quantity, unit rate and billing schedule before saving. This creates a separate recurring commitment; it does not convert or close this Usage service. Coordinate its start with the end of usage billing and review outstanding usage before enabling both for the same period."
+      },
+      "periodCount": {
+        "title": "Report a period count",
+        "explanation": "Reporting a period count switches this service to one replaceable count per service period: correcting 10 to 12 bills 12, never 22, and the minimum applies once. The next period starts unreported — no count carries forward.",
+        "nextStep": "Confirming changes only how this service is measured from the next unbilled service period. Existing entries stay additive, and no count is created — report the count for the period in Usage Tracking afterwards."
+      },
+      "referenceHeading": "Unconfirmed reference from the previous configuration",
+      "referenceQuantity": "Previously configured quantity: {{count}}",
+      "referenceRate": "Saved rate: {{rate}}",
+      "referenceCaveat": "These values have never billed. Nothing here is saved or charged until you confirm the values yourself in the flow below.",
+      "actions": {
+        "close": "Close",
+        "cancel": "Cancel",
+        "switching": "Switching…",
+        "confirmPeriodCount": "Switch to period counts"
+      },
+      "errors": {
+        "missingConfiguration": "This service has no saved configuration to convert. Refresh and try again.",
+        "failed": "Could not change how this service is measured."
+      },
+      "effectiveFrom": "Measurement change effective from"
+    }
   },
   "contractDialog": {
     "actions": {
@@ -389,7 +424,7 @@
       "noServicesConfigured": "No services configured for this preset",
       "notSet": "Not set",
       "overrideBaseRate": "Override Base Rate",
-      "quantity": "Quantity",
+      "usageRecordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "quantityShort": "Qty: {{quantity}}",
       "ratePerUnit": "Rate (per unit)",
       "roundUpToNearestMinutes": "Round up to nearest (minutes)",
@@ -469,7 +504,8 @@
       "addFromPresets": "Add from Presets",
       "collapseLine": "Collapse contract line",
       "createCustom": "Create Custom",
-      "expandLine": "Expand contract line"
+      "expandLine": "Expand contract line",
+      "resetToStandard": "Reset to standard"
     },
     "billingProfile": {
       "hint": "Charges from this line are billed to this profile, overriding the contract.",
@@ -515,7 +551,8 @@
       "readOnly": "This system-managed default contract is attribution-only. Contract line authoring is disabled."
     },
     "dialogs": {
-      "confirmRemove": "Remove contract line \"{{name}}\"?"
+      "confirmRemove": "Remove contract line \"{{name}}\"?",
+      "confirmResetRate": "Reset this line to the standard catalog rate? The stored custom rate will be removed."
     },
     "empty": {
       "noneAdded": "No contract lines added yet.",
@@ -527,7 +564,8 @@
       "failedToLoad": "Failed to load contract lines",
       "failedToRefresh": "Failed to refresh contract lines",
       "failedToRemove": "Failed to remove contract line",
-      "failedToUpdate": "Failed to update contract line"
+      "failedToUpdate": "Failed to update contract line",
+      "failedToResetRate": "Failed to reset the line rate"
     },
     "loading": {
       "contractLines": "Loading contract lines",
@@ -559,9 +597,19 @@
       "typeLabel": "{{type}} Service",
       "unitOfMeasure": "Unit of Measure",
       "unitPlaceholder": "unit",
-      "unitRate": "Unit Rate"
+      "unitRate": "Unit Rate",
+      "effectiveFrom": "Recurring seat changes effective from",
+      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
+      "recurringUnits": "Recurring seats/units",
+      "semanticsEffectiveFrom": "Service pricing and measurement changes effective from",
+      "prospectiveSemanticsHelp": "Changes apply at this service-period boundary; earlier quantities, measurement and pricing are preserved. Changing the date reloads the applicable settings for review."
     },
-    "title": "Contract Lines"
+    "title": "Contract Lines",
+    "rateProvenance": {
+      "standard": "Standard",
+      "custom": "Custom",
+      "unreviewed": "Unreviewed"
+    }
   },
   "contractLineEdit": {
     "actions": {
@@ -667,7 +715,7 @@
     "title": "Add Contract Lines from Presets",
     "usageConfig": {
       "defaultRate": "Default: ${{rate}}",
-      "quantity": "Quantity",
+      "recordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "ratePerUnit": "Rate (per unit)",
       "unitHint": "e.g., GB, API call, user",
       "unitOfMeasure": "Unit of Measure",
@@ -692,7 +740,8 @@
       "hourlyDescription": "Bill based on approved time entries.",
       "hourlyTitle": "Hourly",
       "usageDescription": "Invoice for units consumed.",
-      "usageTitle": "Usage-Based"
+      "usageTitle": "Usage-Based",
+      "fixedSemantics": "Bill a bundle price or recurring quantity × unit rate every period."
     },
     "billingTiming": {
       "advance": "Advance (bill at start of period)",
@@ -758,8 +807,15 @@
       "unitOfMeasureRequired": "Service {{index}}: Unit of measure is required",
       "unitRateRequired": "Service {{index}}: Unit rate is required",
       "usageServiceRequired": "At least one usage-based service is required",
-      "usageServiceSelectRequired": "Service {{index}}: Please select a service"
-    }
+      "usageServiceSelectRequired": "Service {{index}}: Please select a service",
+      "invalidQuantity": "Quantity must be zero or greater.",
+      "recurringUnitRateRequired": "Enter a unit rate for each recurring service."
+    },
+    "fixedServicesPricingIntent": "Choose a bundle price or recurring seats/units for each service.",
+    "fixedServicesPricingExplanation": "Bundle allocations share the line base rate. Recurring seats bill the agreed quantity × unit rate each period without usage records.",
+    "recurringQuantity": "Recurring quantity",
+    "allocationQuantity": "Allocation quantity",
+    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate."
   },
   "pricingSchedules": {
     "list": {
@@ -833,7 +889,6 @@
         "editPricingSchedule": "Edit Pricing Schedule"
       },
       "validation": {
-        "currencySettingsLoading": "Currency settings are still loading; try again in a moment",
         "customRatePositive": "Custom rate must be a positive number",
         "customRateRequired": "Custom rate is required when not using default rate",
         "durationPositive": "Duration must be a positive number",
@@ -2178,8 +2233,8 @@
     },
     "runBar": {
       "compareToggle": "Show changes from current contract",
-      "horizonOption": "{{count}} billing periods",
-      "lastRun": "Simulation current · {{count}} billing periods",
+      "horizonOption": "{{count}} client billing periods",
+      "lastRun": "Simulation current · {{count}} client billing periods",
       "neverRun": "Not simulated yet",
       "simulate": "Simulate",
       "simulating": "Simulating…",
@@ -2348,7 +2403,7 @@
       "scopeCatchAll": "Covers all services on the line (members are multiplier overrides)",
       "scopeMembers": "Member services only",
       "totalHours": "Total hours",
-      "overageRate": "Overage rate ($/hr)",
+      "overageRate": "Overage rate per hour",
       "rollover": "Allow rollover",
       "afterHours": "After-hours burn multiplier",
       "afterHoursMultiplier": "Multiplier (e.g. 1.5)",
@@ -2357,20 +2412,80 @@
       "members": "Member services",
       "multiplier": "×",
       "noMembers": "No member services attached.",
+      "noServicesOnLine": "Add a service to this contract line before creating a bucket pool.",
       "selectService": "Select a service…",
       "poolName": "Pool name (optional)",
       "poolNamePlaceholder": "e.g. Standard hours",
-      "coversAll": "Covers all services on this line"
+      "coversAll": "Covers all services on this line",
+      "burnMultiplier": "Burn multiplier"
     },
     "badges": {
       "dormant": "no services attached — nothing burns from this pool"
     },
     "errors": {
-      "catchAllExists": "This line already has a catch-all pool."
+      "catchAllExists": "This line already has a catch-all pool.",
+      "invalidAfterHoursRule": "Enter a valid after-hours rule.",
+      "scheduleLoadFailed": "Unable to load business hours schedules.",
+      "scheduleRequired": "Select a business hours schedule before applying this rule."
     }
   },
   "wizardBucketPools": {
     "heading": "Bucket pools for this line",
     "empty": "No bucket pools on this line yet. Add a pool to include prepaid hours."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Permission denied: Cannot modify contract lines",
+      "deleteContracts": "Permission denied: Cannot delete billing contracts"
+    },
+    "contract": {
+      "hasInvoices": "This contract has associated invoices and cannot be deleted.",
+      "invalidValue": "One of the selected contract values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected contract, client, or related record no longer exists. Please refresh and try again.",
+      "conflict": "This contract change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the contract values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required contract field.",
+      "missingFieldNamed": "Missing required contract field: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Permission denied: Cannot create billing templates",
+        "createContracts": "Permission denied: Cannot create billing contracts",
+        "listTemplates": "Permission denied: Cannot list contract templates",
+        "viewSnapshot": "Permission denied: Cannot view contract template snapshot",
+        "resumeContracts": "Permission denied: Cannot resume billing contracts"
+      },
+      "templateNotFound": "Template not found",
+      "contractNotFound": "Contract not found",
+      "notDraft": "Contract is not a draft",
+      "missingClient": "Draft contract is missing client assignment",
+      "invalidStartDate": "Draft contract has an invalid start date",
+      "recordInvalid": "One of the selected contract wizard records is no longer valid. Please refresh and try again.",
+      "duplicate": "A matching contract wizard record already exists."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "End date must be after effective date",
+      "overlaps": "This schedule overlaps with an existing pricing schedule",
+      "wouldOverlap": "This schedule would overlap with an existing pricing schedule",
+      "notFound": "Pricing schedule not found"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Permission denied: Cannot read renewals queue",
+        "update": "Permission denied: Cannot update renewals queue",
+        "ownerOtherTenant": "Permission denied: Cannot assign renewals to a user from another tenant.",
+        "contractOtherTenant": "Permission denied: Cannot complete renewal with a contract from another tenant."
+      },
+      "clientContractIdRequired": "Client contract id is required.",
+      "workItemNotFound": "Renewal work item not found. It may have been updated or deleted. Please refresh and try again.",
+      "snoozeDateRequired": "Choose a snooze date before saving.",
+      "snoozeDateInvalid": "Choose a valid snooze date.",
+      "snoozeDateFuture": "Choose a future snooze date.",
+      "ownerInvalid": "Choose a valid renewal owner.",
+      "ownerUnavailable": "The selected renewal owner is no longer available. Please refresh and try again.",
+      "activatedContractIdRequired": "Activated renewal contract id is required.",
+      "contractNotActive": "The activated renewal contract is no longer active. Please refresh and try again.",
+      "manualRetryDueOnly": "Manual retry is only available for due renewal cycles."
+    }
   }
 }

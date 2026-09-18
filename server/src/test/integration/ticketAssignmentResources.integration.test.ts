@@ -63,7 +63,7 @@ vi.mock('../../../../packages/tickets/src/lib/liveUpdates', async (importOrigina
 }));
 
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { prepareTicketResourceReassignment } from '../../../../packages/tickets/src/lib/reassignTicketResources';
+import { prepareTicketResourceReassignment } from '../../../../packages/db/src/lib/reassignTicketResources';
 import {
   addTicketResourceCore,
   getTicketResourcesCore,

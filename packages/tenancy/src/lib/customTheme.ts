@@ -56,7 +56,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       surface: '#f8fafc',
       textPrimary: '#0f172a',
       textSecondary: '#475569',
-      textMuted: '#64748b',
+      textMuted: '#617086',
       border: '#e2e8f0',
       borderStrong: '#94a3b8',
       primary: '#8a4dea',
@@ -92,7 +92,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       surface: '#f7f8f9',
       textPrimary: '#111827',
       textSecondary: '#4b5563',
-      textMuted: '#6b7280',
+      textMuted: '#666d7a',
       border: '#e2e4e8',
       borderStrong: '#b9bec7',
       primary: '#8a4dea',
@@ -128,7 +128,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       surface: '#eef2f8',
       textPrimary: '#101828',
       textSecondary: '#344054',
-      textMuted: '#667085',
+      textMuted: '#5c6578',
       border: '#d0d5dd',
       borderStrong: '#98a2b3',
       primary: '#1d4ed8',
@@ -164,7 +164,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       surface: '#e9f7ff',
       textPrimary: '#082f49',
       textSecondary: '#365f78',
-      textMuted: '#54758a',
+      textMuted: '#4f6d81',
       border: '#c7e8f8',
       borderStrong: '#7dc3e8',
       primary: '#0284c7',
@@ -200,7 +200,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       surface: '#f2f7f3',
       textPrimary: '#131c16',
       textSecondary: '#4d6152',
-      textMuted: '#6b7f70',
+      textMuted: '#5d6e61',
       border: '#d5e2d8',
       borderStrong: '#b7cbbc',
       primary: '#16a34a',
@@ -217,7 +217,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       surface: '#0c150f',
       textPrimary: '#e4f2e8',
       textSecondary: '#93ab9b',
-      textMuted: '#6b8272',
+      textMuted: '#728a79',
       border: '#1f3327',
       borderStrong: '#33513c',
       primary: '#16a34a',
@@ -235,8 +235,8 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       card: '#ffffff',
       surface: '#fbf6ef',
       textPrimary: '#1c1917',
-      textSecondary: '#78716c',
-      textMuted: '#8b7d6d',
+      textSecondary: '#655d54',
+      textMuted: '#74685b',
       border: '#e8dcc8',
       borderStrong: '#cdbb9c',
       primary: '#c2410c',
@@ -253,7 +253,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       surface: '#180e06',
       textPrimary: '#f6ede4',
       textSecondary: '#a89383',
-      textMuted: '#7d6a5c',
+      textMuted: '#937d6c',
       border: '#4a2f17',
       borderStrong: '#6e4826',
       primary: '#ea580c',
@@ -272,7 +272,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       surface: '#faf6f1',
       textPrimary: '#211a14',
       textSecondary: '#5e4f43',
-      textMuted: '#7d6a5b',
+      textMuted: '#796758',
       border: '#e7d9c9',
       borderStrong: '#c3a988',
       primary: '#8b5e3c',
@@ -554,6 +554,15 @@ export function validateCustomThemeContrast(
   return issues;
 }
 
+/**
+ * How dark the light-mode shell ground (shade 100) may sit under the card,
+ * as a fraction of the card's brightness. The shipped presets land between
+ * 89.7% (Ocean) and 94.6% (Alga), so a floor below that range leaves every one
+ * of them untouched and only catches palettes — High contrast is the one that
+ * shipped — whose border is dark enough to drag the ground into a mid-tone.
+ */
+export const LIGHT_GROUND_FLOOR = 0.88;
+
 function modeBlock(selector: string, tokens: CustomThemeTokens, mode: CustomThemeMode): string {
   const rgb = (key: CustomThemeTokenKey): Rgb => hexToRgbTuple(tokens[key]) ?? [0, 0, 0];
   const background = rgb('background');
@@ -574,7 +583,20 @@ function modeBlock(selector: string, tokens: CustomThemeTokens, mode: CustomThem
   const brightness = (color: Rgb) => color[0] + color[1] + color[2];
   const lowStops: Array<[number, Rgb]> = (() => {
     const ground = mix(surface, border, 0.5);
-    if (mode === 'light' || brightness(ground) <= brightness(card)) {
+    if (mode === 'light') {
+      // Light has the mirror failure: an ink-black border (high contrast) drags
+      // shade-100 — the shell ground the whole app paints — down to a mid-grey
+      // under near-white cards, and every ink rung tuned for a light ground
+      // loses its contrast. Lift it back toward the card, hue intact, so it
+      // stays the small step under the card that shipped palettes already are.
+      const floor = brightness(card) * LIGHT_GROUND_FLOOR;
+      if (brightness(ground) >= floor) {
+        return [[0, surface], [2 / 9, border]];
+      }
+      const lift = (floor - brightness(ground)) / (brightness(card) - brightness(ground));
+      return [[0, surface], [1 / 9, mix(ground, card, lift)], [2 / 9, border]];
+    }
+    if (brightness(ground) <= brightness(card)) {
       return [[0, surface], [2 / 9, border]];
     }
     const cappedGround = mix(background, card, 0.7);

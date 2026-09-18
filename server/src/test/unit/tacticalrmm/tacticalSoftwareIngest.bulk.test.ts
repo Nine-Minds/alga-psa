@@ -4,6 +4,7 @@ let secretProvider: { getTenantSecret: (tenant: string, key: string) => Promise<
 let knexMock: any;
 
 let tacticalSoftwareRows: any[] = [];
+let tacticalAgents: any[] = [];
 let requestCalls: Array<{ method: string; path: string }> = [];
 
 vi.mock('@alga-psa/auth', () => ({
@@ -48,8 +49,10 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/tacticalApiClient', async ()
       if (args.method === 'GET' && args.path === '/software/') return tacticalSoftwareRows;
       throw new Error(`Unexpected Tactical request: ${args.method} ${args.path}`);
     }
-    async listAllBeta(_args: any) {
-      throw new Error('listAllBeta not implemented in this mock');
+    async listAllBeta(args: any) {
+      requestCalls.push({ method: 'GET', path: String(args.path) });
+      if (args.path === '/beta/v1/agent/') return tacticalAgents;
+      throw new Error(`Unexpected Tactical list: ${args.path}`);
     }
     async checkCreds() {
       return { totp: false };
@@ -193,10 +196,26 @@ describe('Tactical software inventory ingest (bulk)', () => {
       }),
     };
 
+    // Real Tactical shape: InstalledSoftwareSerializer(many=True) — one row per
+    // agent keyed by the agent's numeric pk, with the inventory nested under `software`.
+    tacticalAgents = [
+      { id: 1, agent_id: 'a1', hostname: 'pc-1' },
+      { id: 2, agent_id: 'a2', hostname: 'pc-2' },
+    ];
     tacticalSoftwareRows = [
-      { agent_id: 'a1', name: 'App One', version: '1.0.0', publisher: 'Pub', install_path: 'C:\\\\AppOne' },
-      { agent_id: 'a1', name: 'App Two', version: '2.0.0', publisher: 'Pub' },
-      { agent_id: 'a2', name: 'Unmapped App', version: '3.0.0', publisher: 'Pub' },
+      {
+        id: 10,
+        agent: 1,
+        software: [
+          { name: 'App One', version: '1.0.0', publisher: 'Pub', location: 'C:\\AppOne', install_date: '20260101', size: '10 MB', source: 'msi', uninstall: '' },
+          { name: 'App Two', version: '2.0.0', publisher: 'Pub', location: '', install_date: '', size: '', source: '', uninstall: '' },
+        ],
+      },
+      {
+        id: 11,
+        agent: 2,
+        software: [{ name: 'Unmapped App', version: '3.0.0', publisher: 'Pub' }],
+      },
     ];
   });
 
@@ -204,7 +223,7 @@ describe('Tactical software inventory ingest (bulk)', () => {
     vi.useRealTimers();
   });
 
-  it('ingests via GET /software/ without per-agent refresh calls and writes normalized software tables', async () => {
+  it('ingests via GET /software/ plus one agent listing, with no per-agent refresh calls, and writes normalized software tables', async () => {
     const { ingestTacticalRmmSoftwareInventory } = await import(
       '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
     );
@@ -212,12 +231,16 @@ describe('Tactical software inventory ingest (bulk)', () => {
     const res = await ingestTacticalRmmSoftwareInventory({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
     expect(res.success).toBe(true);
 
-    expect(requestCalls).toEqual([{ method: 'GET', path: '/software/' }]);
+    expect(requestCalls).toEqual([
+      { method: 'GET', path: '/software/' },
+      { method: 'GET', path: '/beta/v1/agent/' },
+    ]);
     expect(requestCalls.some((c) => c.method === 'PUT')).toBe(false);
 
     expect(res.items_processed).toBe(3);
     expect(state.software_catalog.length).toBeGreaterThan(0);
     expect(state.asset_software.length).toBeGreaterThan(0);
+    expect(state.asset_software.find((r) => r.install_path === 'C:\\AppOne')).toBeTruthy();
   });
 
   it('associates ingested software to the correct asset via Tactical agent_id mappings', async () => {

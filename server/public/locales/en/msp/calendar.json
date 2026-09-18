@@ -104,6 +104,9 @@
           "confirmLabel": "Delete Provider",
           "cancelLabel": "Keep Provider"
         }
+      },
+      "errors": {
+        "notAuthorized": "This calendar provider has not completed OAuth authorization yet. Open its settings and click Authorize, then sync again."
       }
     },
     "sync": {

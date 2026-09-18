@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact, listInboundTicketDestinationOptions, getAllCountries, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
+import { updateContact, listInboundTicketDestinationOptions, getAllCountries, getTenantDefaultCountry, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -24,7 +24,6 @@ import ContactAvatarUpload from './ContactAvatarUpload';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
-  translateContactPhoneValidationErrors,
   validateContactPhoneNumbers,
 } from './ContactPhoneNumbersEditor';
 import ContactEmailAddressesEditor, {
@@ -32,6 +31,7 @@ import ContactEmailAddressesEditor, {
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { parseContactActionError } from '../../lib/contactActionErrorCodes';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -79,6 +79,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [phoneValidationErrors, setPhoneValidationErrors] = useState<string[]>([]);
   const [emailValidationErrors, setEmailValidationErrors] = useState<string[]>([]);
@@ -145,18 +146,21 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     let cancelled = false;
     (async () => {
       try {
-        const [countryRows, phoneTypeLabels] = await Promise.all([
+        const [countryRows, phoneTypeLabels, tenantCountry] = await Promise.all([
           getAllCountries(),
           listContactPhoneTypeSuggestions(),
+          getTenantDefaultCountry(),
         ]);
         if (cancelled) return;
         setCountries(countryRows);
         setCustomPhoneTypeSuggestions(phoneTypeLabels);
+        setTenantDefaultCountry(tenantCountry);
       } catch (err) {
         if (!cancelled) {
           console.error('Error loading phone metadata:', err);
           setCountries([]);
           setCustomPhoneTypeSuggestions([]);
+          setTenantDefaultCountry(null);
         }
       }
     })();
@@ -194,10 +198,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         return;
       }
 
-      const currentPhoneErrors = translateContactPhoneValidationErrors(
-        validateContactPhoneNumbers(contact.phone_numbers, { existingRows: initialContact.phone_numbers }),
-        t
-      );
+      const currentPhoneErrors = validateContactPhoneNumbers(contact.phone_numbers, { existingRows: initialContact.phone_numbers, t });
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
         setError(currentPhoneErrors[0]);
@@ -229,30 +230,29 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     } catch (err) {
       console.error('Error updating contact:', err);
       if (err instanceof Error) {
-        // Handle specific error types with more detailed messages
-        if (err.message.includes('VALIDATION_ERROR:')) {
-          setError(err.message.replace(
-            'VALIDATION_ERROR:',
-            t('contactDetailsEdit.errors.validationPrefix', { defaultValue: 'Please fix the following:' })
-          ));
-        } else if (err.message.includes('EMAIL_EXISTS:')) {
-          setError(t('contactDetailsEdit.errors.emailExists', {
-            defaultValue: 'Email already exists: A contact with this email address already exists in the system'
-          }));
-        } else if (err.message.includes('FOREIGN_KEY_ERROR:')) {
-          setError(err.message.replace(
-            'FOREIGN_KEY_ERROR:',
-            t('contactDetailsEdit.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })
-          ));
-        } else if (err.message.includes('SYSTEM_ERROR:')) {
-          setError(t('contactDetailsEdit.errors.saveFailed', {
-            defaultValue: 'An error occurred while saving. Please try again.'
-          }));
-        } else {
-          console.log('Unhandled error:', err.message);
-          setError(t('contactDetailsEdit.errors.saveFailed', {
-            defaultValue: 'An error occurred while saving. Please try again.'
-          }));
+        const { code, detail } = parseContactActionError(err.message);
+        const saveFailed = t('contactDetailsEdit.errors.saveFailed', {
+          defaultValue: 'An error occurred while saving. Please try again.'
+        });
+
+        switch (code) {
+          case 'VALIDATION_ERROR':
+            setError(`${t('contactDetailsEdit.errors.validationPrefix', { defaultValue: 'Please fix the following:' })} ${detail}`);
+            break;
+          case 'EMAIL_EXISTS':
+            setError(t('contactDetailsEdit.errors.emailExists', {
+              defaultValue: 'Email already exists: A contact with this email address already exists in the system'
+            }));
+            break;
+          case 'FOREIGN_KEY_ERROR':
+            setError(`${t('contactDetailsEdit.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })} ${detail}`);
+            break;
+          case 'SYSTEM_ERROR':
+            setError(saveFailed);
+            break;
+          default:
+            console.log('Unhandled error:', err.message);
+            setError(saveFailed);
         }
       } else {
         setError(t('contactDetailsEdit.errors.unexpected', {
@@ -359,6 +359,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                   value={contact.phone_numbers}
                   onChange={(rows) => handleInputChange('phone_numbers', rows)}
                   countries={countries}
+                  defaultCountryCode={tenantDefaultCountry?.code}
                   customTypeSuggestions={customPhoneTypeSuggestions}
                   errorMessages={phoneValidationErrors}
                   onValidationChange={setPhoneValidationErrors}

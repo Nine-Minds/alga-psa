@@ -9,6 +9,8 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
+import { ContentCardVariantProvider } from '@alga-psa/ui/components/ContentCard';
 
 import { CustomTypeDetailsPanel } from './CustomTypeDetailsPanel';
 
@@ -135,8 +137,26 @@ describe('CustomTypeDetailsPanel (T315)', () => {
     // absent value -> row skipped
     expect(screen.queryByText('Badge Format:')).toBeNull();
     // stable row ids
-    expect(document.getElementById('custom-type-details-card')).toBeTruthy();
+    expect(document.getElementById('custom-type-details-card')).toHaveClass('bg-white');
     expect(document.getElementById('custom-type-field-vendor')).toBeTruthy();
+  });
+
+  it('uses a compact bento shell under the bento variant provider', async () => {
+    const { container } = render(
+      <ContentCardVariantProvider variant="bento">
+        <CustomTypeDetailsPanel
+          asset={baseAsset('door_access', { vendor: 'Acme Security' })}
+        />
+      </ContentCardVariantProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Door Access System Details')).toBeTruthy();
+    });
+    const shell = container.querySelector('section#custom-type-details-card');
+    expect(shell).toBeTruthy();
+    expect(shell).toHaveClass('p-4');
+    expect(container.querySelector('.bg-white')).toBeNull();
   });
 
   it('renders boolean false as No and a non-http url as plain text', async () => {

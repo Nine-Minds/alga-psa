@@ -48,8 +48,6 @@ describe('invoicing generate tab recurring copy wiring', () => {
     expect(prepaymentSource).toContain(
       'Prepayment invoices create client credit for future value. They do not create recurring service periods; later recurring invoices keep their own service-period coverage.'
     );
-    expect(prepaymentSource).toContain(
-      'Credit memos adjust financial balances without redefining recurring service-period coverage on the source invoice.'
-    );
+    expect(prepaymentSource).not.toContain('creditMemo');
   });
 });

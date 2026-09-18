@@ -539,7 +539,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </div>
             <Badge
               variant="default"
-              className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))]"
+              className="chip-primary"
             >
               {data.product_services.length === 1
                 ? t('wizardReview.products.badgeCount.one', {
@@ -589,7 +589,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </div>
             <Badge
               variant="default"
-              className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))]"
+              className="chip-primary"
             >
               {data.hourly_services.length === 1
                 ? t('wizardReview.hourly.badgeCount.one', {

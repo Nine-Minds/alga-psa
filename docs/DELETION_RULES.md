@@ -1,95 +1,104 @@
 # AlgaPSA Deletion Rules
 
-This document explains how client and contact deletion works in AlgaPSA.
+How client and contact deletion works in AlgaPSA.
 
-## Client Deletion Rules
+> **Source of truth:** the blocker lists below are declared in
+> [`packages/core/src/config/deletion/index.ts`](../packages/core/src/config/deletion/index.ts)
+> (`DELETION_CONFIGS`) and enforced by `deleteEntityWithValidation` in
+> [`packages/core/src/server/deletion/deletionActions.ts`](../packages/core/src/server/deletion/deletionActions.ts).
+> Cascade lists come from `deleteClient` / `deleteContact` in
+> `packages/clients/src/actions/`. If you change either, update this file — it is
+> prose, not generated, and it has drifted before.
 
-### You CAN delete a client if they have:
-- Addresses/locations only (these will be automatically cleaned up)
-- Tax settings (these will be automatically cleaned up)
-- Tags (these will be automatically cleaned up)
+## How a deletion is evaluated
 
-### You CANNOT delete a client if they have:
-- **Contacts** - Remove or reassign contacts first
-- **Tickets** (including closed tickets) - For audit trail preservation
-- **Projects** - Complete or reassign projects first
-- **Documents** - Move or delete documents first
-- **Invoices or billing history** - For legal/compliance requirements
-- **Interactions** - Communication history must be preserved
-- **Assets or devices** - Reassign or remove assets first
+1. The caller's `client:delete` / `contact:delete` permission is checked.
+2. `validateDeletion` counts every configured dependency inside one transaction.
+3. Any non-zero count blocks the delete and is returned to the UI as a named
+   dependency (with a link to the blocking records where a `viewUrlTemplate` exists).
+4. If nothing blocks, the cascade runs and the entity row is deleted — same transaction.
 
-### Alternative: Mark as Inactive
+Both entities support **deactivation** (`supportsInactive: true`). Neither supports archiving.
 
-If a client has business records, consider **marking as inactive** instead:
-- Hides the client from active lists
-- Preserves all historical data
-- Prevents new business activities
-- Can be reactivated if needed
-- Related contacts can also be marked inactive
+## Client deletion
 
-## Contact Deletion Rules
+### Blocked by any of these
 
-### You CAN delete a contact if they have:
-- No ticket history
-- No communication records
-- Not set as billing contact
+| Dependency | Table |
+|---|---|
+| Contacts | `contacts` |
+| Tickets (including closed) | `tickets` |
+| Projects | `projects` |
+| Invoices | `invoices` |
+| Documents | `document_associations` |
+| Interactions | `interactions` |
+| Assets | `assets` |
+| Usage records | `usage_tracking` |
+| Bucket usage records | `bucket_usage` |
+| Survey invitations | `survey_invitations` |
+| Survey responses | `survey_responses` |
+| Ticket materials | `ticket_materials` |
+| Project materials | `project_materials` |
+| Asset associations | `asset_associations` |
 
-### You CANNOT delete a contact if they are:
-- **Billing contact** for their client - Assign a different billing contact first
-- **Referenced in tickets** (including closed) - For support history
-- **Referenced in interactions** - For communication history
-- **Associated with documents** - For audit trails
-- **Assigned to projects** - Reassign or complete projects first
+### Also blocked when
 
-### Alternative: Mark as Inactive
+- The client is the tenant's **default client** (`tenant_companies.is_default`).
+  Set another default in General Settings first. Returned as `IS_DEFAULT`.
 
-Instead of deletion, mark contacts as **inactive**:
-- Hides from active contact lists
-- Preserves all business relationships
-- Maintains audit trails
-- Prevents new activities
-- Can be reactivated if needed
+### Cleaned up automatically on delete
 
-## Why These Rules Exist
+Tags, tax settings (`client_tax_settings`), tax rates (`client_tax_rates`),
+contracts (`client_contracts`), billing cycles (`client_billing_cycles`),
+billing settings (`client_billing_settings`), locations (`client_locations`),
+the client logo and its document rows, and — on Enterprise — payment customer
+records (`client_payment_customers`).
 
-These deletion rules ensure:
+Note that billing *configuration* is cascade-deleted while **invoices block the
+delete**. Financial history is preserved; the settings that produced it are not.
 
-1. **Data Integrity** - Prevents orphaned records and broken relationships
-2. **Audit Compliance** - Maintains required business records
-3. **Legal Protection** - Preserves invoices and communications
-4. **Business Continuity** - Protects operational history and reporting
-5. **User Experience** - Clear, predictable behavior
+## Contact deletion
 
-## Best Practices
+### Blocked by any of these
 
-### Instead of Deleting:
-1. **Mark clients as inactive** when they have business history
-2. **Mark contacts as inactive** rather than deleting
-3. **Clean up test data** before it accumulates business records
+| Dependency | Table |
+|---|---|
+| Tickets (including closed) | `tickets` |
+| Interactions | `interactions` |
+| Documents | `document_associations` |
+| Portal user account | `users` |
+| Survey invitations | `survey_invitations` |
+| Survey responses | `survey_responses` |
+| Asset associations | `asset_associations` |
 
-### When Deletion is Appropriate:
-1. **Test/demo clients** with no real business data
-2. **Duplicate entries** created by mistake (before they gain dependencies)
-3. **Initial setup cleanup** during implementation
+Being a client's **billing contact no longer blocks deletion** — that rule was
+removed. `billing_contact_id` is left pointing at a deleted contact only if the
+contact clears every blocker above.
 
-## Technical Implementation
+### Cleaned up automatically on delete
 
-- All deletions happen within **database transactions** for safety
-- **Permission checks** ensure only authorized users can delete/mark inactive
-- **Cascade cleanup** automatically removes safe-to-delete related data
-- **Detailed error messages** explain exactly what's blocking deletion
+Tags, phone numbers (`contact_phone_numbers`), additional email addresses
+(`contact_additional_email_addresses`), comments, and portal invitations.
 
-## Error Messages You Might See
+## Deactivate instead
 
-**Client with dependencies:**
-> "Cannot delete client with active business records. Consider marking as inactive instead to preserve data integrity."
+Deactivation is the intended path for any record with business history: it hides
+the entity from active lists, preserves all data, and is reversible.
 
-**Contact with history:**
-> "Cannot delete contact with business history: 5 tickets, communication history. Consider marking the contact as inactive instead."
+**One caveat worth knowing.** Deactivating a client also deactivates its active
+contacts and their portal users. Reactivating the client reactivates *every*
+inactive contact on it — including contacts that were deactivated individually,
+long before the client was. There is no column recording why a contact is
+inactive, so the cascade cannot tell the two apart.
 
-**Billing contact:**
-> "Cannot delete this contact because they are set as the billing contact. Please assign a different billing contact first."
+## Why blockers exist
 
----
+- **Audit and legal retention** — tickets, invoices, and interactions are records.
+- **Referential integrity** — avoids orphaned rows across a distributed schema.
+- **Reporting continuity** — usage, bucket, and material rows feed billing history.
 
-*This document describes the actual deletion behavior implemented in AlgaPSA.*
+## Error messages
+
+Blocked deletions return a `DeletionValidationResult` with a `code`, a message,
+and the `dependencies` array that the UI renders as a list of counts. Codes in
+use include `PERMISSION_DENIED`, `NOT_FOUND`, `IS_DEFAULT`, and `UNKNOWN_ENTITY`.

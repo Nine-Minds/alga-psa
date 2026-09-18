@@ -23,7 +23,6 @@ const baseCtx = {
 const USER_ID = '550e8400-e29b-41d4-a716-446655440000';
 
 type KnexFixture = {
-  addonActive?: boolean;
   installStatus?: string | null;
   capabilities?: string[];
   profileArchived?: boolean;
@@ -34,7 +33,6 @@ type KnexFixture = {
 
 const buildKnex = (fixture: KnexFixture = {}): any => {
   const {
-    addonActive = true,
     installStatus = 'active',
     capabilities = ['activity_notifications', 'personal_bot'],
     profileArchived = false,
@@ -44,13 +42,6 @@ const buildKnex = (fixture: KnexFixture = {}): any => {
   } = fixture;
 
   const knex: any = vi.fn((table: string) => {
-    if (table === 'tenant_addons') {
-      return {
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue(addonActive ? { addon_key: 'teams' } : undefined)
-      };
-    }
     if (table === 'teams_integrations') {
       return {
         where: vi.fn().mockReturnThis(),
@@ -295,10 +286,10 @@ describe('Teams availability resolver (T012)', () => {
     return teamsIntegrationAvailability;
   };
 
-  it('is available only when the add-on is active AND the integration is installed', async () => {
+  it('is available only when the integration is installed', async () => {
     const resolver = await loadResolver();
     await expect(resolver(buildKnex(), 'tenant-1')).resolves.toBe(true);
-    await expect(resolver(buildKnex({ addonActive: false }), 'tenant-1')).resolves.toBe(false);
+
     await expect(resolver(buildKnex({ installStatus: 'install_pending' }), 'tenant-1')).resolves.toBe(false);
     await expect(resolver(buildKnex({ installStatus: null }), 'tenant-1')).resolves.toBe(false);
   });

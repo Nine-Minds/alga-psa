@@ -42,8 +42,9 @@ function postJson(url, payload, headers = {}) {
   });
 }
 
-test('T003 first-boot smoke: console banner and the token -> password -> session flow', async () => {
+test('T003 first-boot smoke: console banner and the token -> password -> session flow', { timeout: 30000 }, async (t) => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-t003-'));
+  t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
   const tokenFile = path.join(tmp, 'setup-token');
   const staticUiDir = path.join(tmp, 'status-ui');
   const issueFile = path.join(tmp, 'issue');
@@ -59,6 +60,26 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
   fs.writeFileSync(path.join(staticUiDir, 'index.html'), '<!doctype html><h1>Status UI</h1>');
   fs.writeFileSync(path.join(staticUiDir, 'setup', 'index.html'), '<!doctype html><h1>Setup UI</h1>');
   fs.writeFileSync(path.join(staticUiDir, 'assets', 'app.js'), 'console.log("status-ui");');
+
+  // First boot has no support pods. Simulate only this external command so
+  // startup cannot depend on a developer/CI runner's Kubernetes installation.
+  // Authentication, HTTP routing and credential persistence still run in the
+  // actual host-service process below.
+  const binDir = path.join(tmp, 'bin');
+  const kubeCalls = path.join(tmp, 'kube-calls.jsonl');
+  fs.mkdirSync(binDir);
+  fs.writeFileSync(path.join(binDir, 'kubectl'), `#!${process.execPath}
+import fs from 'node:fs';
+const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(kubeCalls)}, JSON.stringify(args) + '\\n');
+if (args.includes('get') && args.includes('pods') && args.includes('alga-appliance-support')
+    && args.includes('alga.nineminds.com/support-session')) {
+  process.stdout.write(JSON.stringify({ items: [] }));
+} else {
+  process.stderr.write('Unexpected Kubernetes command: ' + JSON.stringify(args));
+  process.exitCode = 1;
+}
+`, { mode: 0o755 });
 
   const consoleResult = await new Promise((resolve) => {
     const child = spawn(process.execPath, [consoleScript], {
@@ -104,20 +125,39 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
     env: {
       ...process.env,
       ALGA_APPLIANCE_DISABLE_SETUP_QUEUE: '1',
+      PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}`,
+      ALGA_APPLIANCE_KUBECONFIG: path.join(tmp, 'absent-kubeconfig'),
       ALGA_APPLIANCE_PORT: '18081',
       ALGA_APPLIANCE_TOKEN_FILE: tokenFile,
       ALGA_APPLIANCE_ADMIN_CREDENTIAL_FILE: path.join(tmp, 'admin-ui-credential.json'),
       ALGA_APPLIANCE_SESSION_SECRET_FILE: path.join(tmp, 'session-secret'),
       ALGA_APPLIANCE_STATE_FILE: path.join(tmp, 'install-state.json'),
       ALGA_APPLIANCE_SETUP_INPUTS_FILE: path.join(tmp, 'setup-inputs.json'),
+      ALGA_APPLIANCE_SUPPORT_STATE_DIR: path.join(tmp, 'support-sessions'),
       ALGA_APPLIANCE_STATUS_UI_DIR: staticUiDir
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
+  let serverOutput = '';
+  let startupError;
+  server.stdout.on('data', chunk => { serverOutput += chunk.toString(); });
+  server.stderr.on('data', chunk => { serverOutput += chunk.toString(); });
+  server.on('error', error => { startupError = error; });
+  const serverClosed = new Promise(resolve => server.once('close', resolve));
   const base = 'http://127.0.0.1:18081';
   try {
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    const deadline = Date.now() + 10000;
+    while (true) {
+      if (startupError) throw startupError;
+      assert.equal(server.exitCode, null, `Host service exited during startup: ${serverOutput}`);
+      try {
+        const response = await httpGet(`${base}/healthz`);
+        if (response.statusCode === 200) break;
+      } catch { /* The child may still be loading its dependencies. */ }
+      assert.ok(Date.now() < deadline, `Host service did not become ready: ${serverOutput}`);
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
 
     const health = await httpGet(`${base}/healthz`);
     assert.equal(health.statusCode, 200);
@@ -211,7 +251,15 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
     assert.equal(loginOk.statusCode, 200);
     const loginBad = await postJson(`${base}/api/auth/login`, { password: 'nope' });
     assert.equal(loginBad.statusCode, 401);
+    const calls = fs.readFileSync(kubeCalls, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.ok(calls.length > 0, 'Startup must inspect support pods through the external adapter');
+    for (const args of calls) {
+      assert.deepEqual(args.slice(args.indexOf('get')), [
+        'get', 'pods', '-n', 'alga-appliance-support', '-l', 'alga.nineminds.com/support-session', '-o', 'json', '-o', 'json',
+      ]);
+    }
   } finally {
     server.kill('SIGTERM');
+    await serverClosed;
   }
 });

@@ -41,9 +41,11 @@ const noopService: BaseService = {
 export class ApiCSVAccountingController extends ApiBaseController {
   constructor() {
     super(noopService, {
-      // CSV integration is managed from the settings UI; use billing settings permissions
-      // so MSP users who can manage mappings can also run CSV exports/imports.
-      resource: 'billing_settings'
+      // CSV integration is managed from the settings UI. Export generation and
+      // tax import are part of the accounting export/sync surface, so they use
+      // the accounting-integrations `exports_execute` capability rather than
+      // the billing settings gate they previously shared.
+      resource: 'accounting_integrations'
     });
   }
 
@@ -81,8 +83,9 @@ export class ApiCSVAccountingController extends ApiBaseController {
     if (user && user.user_type === 'client') {
       throw new ForbiddenError('Client portal users are not permitted to manage accounting exports');
     }
-    // Treat both export/import as billing settings updates (same gate as mapping changes)
-    await this.checkPermission(apiRequest, 'update');
+    // Both CSV export generation and tax import are export/sync-cycle work:
+    // the accounting-integrations `exports_execute` capability gates them.
+    await this.checkPermission(apiRequest, 'exports_execute');
   }
 
   /**

@@ -18,15 +18,21 @@ const deleteTenantSecretMock = vi.hoisted(() => vi.fn(async (tenant: string, key
 }));
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
 const getXeroConnectionSummariesMock = vi.hoisted(() => vi.fn(async () => []));
+const resolveDefaultXeroConnectionIdMock = vi.hoisted(() => vi.fn(async () => null as string | null));
+const getXeroDefaultSelectionMock = vi.hoisted(() =>
+  vi.fn(async (): Promise<{ status: string; connectionId?: string; organisationId?: string; persistedRealm?: string }> => ({ status: 'absent' }))
+);
 const getXeroRedirectUriMock = vi.hoisted(() => vi.fn(async () => 'https://example.com/api/integrations/xero/callback'));
-const getXeroOAuthScopesMock = vi.hoisted(() => vi.fn(() => [
-  'offline_access',
-  'accounting.settings',
-  'accounting.invoices',
-  'accounting.banktransactions',
-  'accounting.payments',
-  'accounting.contacts'
-]));
+const getXeroOAuthScopeConfigMock = vi.hoisted(() => vi.fn(() => ({
+  scopes: [
+    'offline_access',
+    'accounting.settings.read',
+    'accounting.invoices',
+    'accounting.payments.read',
+    'accounting.contacts'
+  ],
+  source: 'default'
+})));
 const resolveXeroOAuthCredentialsMock = vi.hoisted(() => vi.fn(async () => ({
   clientId: 'tenant-client-id',
   clientSecret: 'tenant-client-secret',
@@ -37,6 +43,9 @@ const revalidatePathMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
 const loggerErrorMock = vi.hoisted(() => vi.fn());
+const disconnectProviderMock = vi.hoisted(() => vi.fn());
+const forceFinalizeProviderDisconnectMock = vi.hoisted(() => vi.fn());
+const getProviderDisconnectStatusInfoMock = vi.hoisted(() => vi.fn(async () => null));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
@@ -69,13 +78,27 @@ vi.mock('next/cache', () => ({
   revalidatePath: revalidatePathMock
 }));
 
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async () => ({ knex: {}, tenant: 'tenant-1' }),
+  writeAccountingAudit: async () => undefined
+}));
+
+vi.mock('../../lib/providerDisconnect', () => ({
+  PROVIDER_XERO: 'xero',
+  disconnectProvider: disconnectProviderMock,
+  forceFinalizeProviderDisconnect: forceFinalizeProviderDisconnectMock,
+  getProviderDisconnectStatusInfo: getProviderDisconnectStatusInfoMock
+}));
+
 vi.mock('../../lib/xero/xeroClientService', () => ({
   XERO_CREDENTIALS_SECRET_NAME: 'xero_credentials',
   XERO_CLIENT_ID_SECRET_NAME: 'xero_client_id',
   XERO_CLIENT_SECRET_SECRET_NAME: 'xero_client_secret',
   getXeroConnectionSummaries: getXeroConnectionSummariesMock,
+  getXeroDefaultSelection: getXeroDefaultSelectionMock,
+  resolveDefaultXeroConnectionId: resolveDefaultXeroConnectionIdMock,
   getXeroRedirectUri: getXeroRedirectUriMock,
-  getXeroOAuthScopes: getXeroOAuthScopesMock,
+  getXeroOAuthScopeConfig: getXeroOAuthScopeConfigMock,
   resolveXeroOAuthCredentials: resolveXeroOAuthCredentialsMock,
   XeroClientService: {
     create: xeroCreateMock
@@ -103,21 +126,27 @@ describe('Xero integration actions', () => {
     vi.clearAllMocks();
     hasPermissionMock.mockResolvedValue(true);
     getXeroConnectionSummariesMock.mockResolvedValue([]);
+    resolveDefaultXeroConnectionIdMock.mockResolvedValue(null);
+    getXeroDefaultSelectionMock.mockResolvedValue({ status: 'absent' });
     getXeroRedirectUriMock.mockResolvedValue('https://example.com/api/integrations/xero/callback');
-    getXeroOAuthScopesMock.mockReturnValue([
-      'offline_access',
-      'accounting.settings',
-      'accounting.invoices',
-      'accounting.banktransactions',
-      'accounting.payments',
-      'accounting.contacts'
-    ]);
+    getXeroOAuthScopeConfigMock.mockReturnValue({
+      scopes: [
+        'offline_access',
+        'accounting.settings.read',
+        'accounting.invoices',
+        'accounting.payments.read',
+        'accounting.contacts'
+      ],
+      source: 'default'
+    });
     resolveXeroOAuthCredentialsMock.mockResolvedValue({
       clientId: 'tenant-client-id',
       clientSecret: 'tenant-client-secret',
       source: 'tenant'
     });
     xeroCreateMock.mockResolvedValue({});
+    disconnectProviderMock.mockResolvedValue({ status: 'disconnected', record: null });
+    getProviderDisconnectStatusInfoMock.mockResolvedValue(null);
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     process.env.EDITION = 'ee';
   });
@@ -146,10 +175,18 @@ describe('Xero integration actions', () => {
     expect(result.credentials.clientSecretMasked).not.toContain('super-secret-value');
     expect(JSON.stringify(result)).not.toContain('super-secret-value');
     expect(result.redirectUri).toBe('https://example.com/api/integrations/xero/callback');
-    expect(result.scopes).toContain('accounting.invoices');
-    expect(result.scopes).toContain('accounting.banktransactions');
-    expect(result.scopes).toContain('accounting.payments');
-    expect(result.scopes).not.toContain('accounting.transactions');
+    expect(result.scopes).toEqual([
+      'offline_access',
+      'accounting.settings.read',
+      'accounting.invoices',
+      'accounting.payments.read',
+      'accounting.contacts'
+    ]);
+    expect(result.scopes).not.toContain('accounting.banktransactions');
+    expect(result.scopes).not.toContain('accounting.payments');
+    expect(result.scopes).not.toContain('accounting.settings');
+    expect(result.scopes).toContain('accounting.payments.read');
+    expect(result.scopeSource).toBe('default');
     expect(result.defaultConnectionId).toBe('connection-1');
     expect(result.defaultConnection?.tenantName).toBe('Acme Holdings');
     expect(result.connected).toBe(true);
@@ -215,17 +252,51 @@ describe('Xero integration actions', () => {
     expect(status.error).toBe('No live Xero organisation is connected yet. Save credentials, then click Connect Xero.');
   });
 
-  it('T015: disconnect deletes xero_credentials but preserves tenant-owned Xero app credentials', async () => {
+  it('T015: disconnect delegates to the durable provider-first workflow and preserves tenant-owned Xero app credentials', async () => {
     tenantSecrets.set('tenant-1:xero_credentials', '{"connection-1":{"connectionId":"connection-1"}}');
     tenantSecrets.set('tenant-1:xero_client_id', 'client-id');
     tenantSecrets.set('tenant-1:xero_client_secret', 'client-secret');
 
+    disconnectProviderMock.mockResolvedValue({ status: 'disconnected', record: null });
     const result = await disconnectXero();
 
-    expect(result).toEqual({ success: true });
-    expect(deleteTenantSecretMock).toHaveBeenCalledWith('tenant-1', 'xero_credentials');
+    expect(result).toEqual({ success: true, status: 'disconnected' });
+    expect(disconnectProviderMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'tenant-1',
+      'xero',
+      expect.objectContaining({ userId: 'user-1' })
+    );
+    // Local credential deletion is the durable service's job, not the action's.
+    expect(deleteTenantSecretMock).not.toHaveBeenCalled();
     expect(tenantSecrets.get('tenant-1:xero_client_id')).toBe('client-id');
     expect(tenantSecrets.get('tenant-1:xero_client_secret')).toBe('client-secret');
+  });
+
+  it('T015b: disconnect surfaces pending/partial/failed-permanent results instead of blind success', async () => {
+    tenantSecrets.set('tenant-1:xero_credentials', '{"connection-1":{"connectionId":"connection-1"}}');
+
+    disconnectProviderMock.mockResolvedValue({
+      status: 'pending',
+      record: null,
+      error: 'Provider cleanup is not complete yet.'
+    });
+    expect(await disconnectXero()).toEqual({
+      success: false,
+      status: 'pending',
+      error: 'Provider cleanup is not complete yet.'
+    });
+
+    disconnectProviderMock.mockResolvedValue({
+      status: 'failed_permanent',
+      record: null,
+      error: 'Provider cleanup hit a permanent error. An admin must finalize the disconnect manually.'
+    });
+    expect(await disconnectXero()).toEqual({
+      success: false,
+      status: 'failed_permanent',
+      error: 'Provider cleanup hit a permanent error. An admin must finalize the disconnect manually.'
+    });
   });
 
   it('T016: status and catalog actions use the stored default Xero connection after tenant-owned credentials are configured', async () => {
@@ -315,13 +386,115 @@ describe('Xero integration actions', () => {
     expect(xeroCreateMock).toHaveBeenNthCalledWith(5, 'tenant-1', null);
   });
 
+  it('T016b: persisted Xero default selection drives status and catalog routing', async () => {
+    tenantSecrets.set('tenant-1:xero_client_id', 'client-id');
+    tenantSecrets.set('tenant-1:xero_client_secret', 'client-secret');
+    getXeroConnectionSummariesMock.mockResolvedValue([
+      { connectionId: 'connection-1', xeroTenantId: 'tenant-guid-1', tenantName: 'Acme Holdings', status: 'connected' },
+      { connectionId: 'connection-2', xeroTenantId: 'tenant-guid-2', tenantName: 'Backup Org', status: 'connected' }
+    ] as any);
+    getXeroDefaultSelectionMock.mockResolvedValue({ status: 'resolved', connectionId: 'connection-2' });
+    xeroCreateMock.mockResolvedValue({
+      listItems: vi.fn(async () => []),
+      listAccounts: vi.fn(async () => [])
+    });
+
+    const status = await getXeroConnectionStatus();
+    expect(status.defaultConnectionId).toBe('connection-2');
+    expect(status.defaultConnection?.tenantName).toBe('Backup Org');
+    expect(status.connected).toBe(true);
+
+    await getXeroItems();
+    expect(xeroCreateMock).toHaveBeenLastCalledWith('tenant-1', 'connection-2');
+  });
+
+  it('T016c: a reduced-scope connection surfaces actionable reauthorization and does not attempt a write', async () => {
+    tenantSecrets.set('tenant-1:xero_client_id', 'client-id');
+    tenantSecrets.set('tenant-1:xero_client_secret', 'client-secret');
+    getXeroConnectionSummariesMock.mockResolvedValue([
+      {
+        connectionId: 'connection-1',
+        xeroTenantId: 'tenant-guid-1',
+        tenantName: 'Acme Holdings',
+        status: 'connected',
+        scope: 'offline_access accounting.invoices accounting.contacts',
+        missingScopes: ['accounting.payments.read']
+      }
+    ] as any);
+
+    const status = await getXeroConnectionStatus();
+
+    expect(status.connected).toBe(false);
+    expect(status.errorCode).toBe('SCOPE_INSUFFICIENT');
+    expect(status.error).toContain('accounting.payments.read');
+    expect(status.error).toContain('Reconnect');
+    expect(status.error).toContain('refreshing'); // refresh does not grant new scopes
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('T016d: a read-only legacy grant reports the missing invoice-write permission', async () => {
+    tenantSecrets.set('tenant-1:xero_client_id', 'client-id');
+    tenantSecrets.set('tenant-1:xero_client_secret', 'client-secret');
+    getXeroConnectionSummariesMock.mockResolvedValue([
+      {
+        connectionId: 'connection-1',
+        xeroTenantId: 'tenant-guid-1',
+        tenantName: 'Acme Holdings',
+        status: 'connected',
+        scope: 'offline_access accounting.settings.read accounting.transactions.read accounting.contacts',
+        // getXeroConnectionSummaries derives this; the mock states it directly.
+        missingScopes: ['accounting.invoices']
+      }
+    ] as any);
+
+    const status = await getXeroConnectionStatus();
+
+    expect(status.connected).toBe(false);
+    expect(status.errorCode).toBe('SCOPE_INSUFFICIENT');
+    expect(status.error).toContain('accounting.invoices');
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Xero accounts', getXeroAccounts],
+    ['Xero items', getXeroItems],
+    ['Xero tax rates', getXeroTaxRates],
+    ['Xero tracking categories', getXeroTrackingCategories],
+  ] as const)('T016e: an ambiguous persisted organisation fails closed in status and %s', async (catalogName, getCatalog) => {
+    tenantSecrets.set('tenant-1:xero_client_id', 'client-id');
+    tenantSecrets.set('tenant-1:xero_client_secret', 'client-secret');
+    getXeroConnectionSummariesMock.mockResolvedValue([
+      { connectionId: 'connection-unrelated', xeroTenantId: 'tenant-guid-u', tenantName: 'Unrelated', status: 'connected' },
+      { connectionId: 'connection-1', xeroTenantId: 'org-shared', tenantName: 'Shared One', status: 'connected' },
+      { connectionId: 'connection-2', xeroTenantId: 'org-shared', tenantName: 'Shared Two', status: 'connected' }
+    ] as any);
+    getXeroDefaultSelectionMock.mockResolvedValue({ status: 'ambiguous', organisationId: 'org-shared' });
+
+    const status = await getXeroConnectionStatus();
+    expect(status.connected).toBe(false);
+    expect(status.errorCode).toBe('SELECTION_AMBIGUOUS');
+    expect(status.error).toContain('org-shared');
+    // Never silently falls back to the unrelated first connection.
+    expect(status.defaultConnectionId).toBeUndefined();
+
+    for (const connectionId of [undefined, null]) {
+      const result = await getCatalog(connectionId);
+      expect(result).toEqual({
+        actionError: `The saved default Xero organisation is owned by more than one connection, so ${catalogName} cannot be loaded. Choose which connection is the default in the accounting settings.`,
+        messageKey: 'msp/integrations:errors.xero.organisationAmbiguous'
+      });
+    }
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+  });
+
   it('catalog actions report a missing Xero connection instead of returning an empty catalog', async () => {
     getXeroConnectionSummariesMock.mockResolvedValue([]);
 
     const result = await getXeroAccounts();
 
     expect(result).toEqual({
-      actionError: 'Connect Xero before loading Xero accounts.'
+      actionError: 'Connect Xero before loading Xero accounts.',
+      messageKey: 'msp/integrations:errors.xero.accounts.notConnected'
     });
     expect(xeroCreateMock).not.toHaveBeenCalled();
   });
@@ -339,7 +512,8 @@ describe('Xero integration actions', () => {
     const result = await getXeroItems();
 
     expect(result).toEqual({
-      actionError: 'Reconnect Xero before loading Xero items.'
+      actionError: 'Reconnect Xero before loading Xero items.',
+      messageKey: 'msp/integrations:errors.xero.items.reconnect'
     });
     expect(xeroCreateMock).not.toHaveBeenCalled();
   });
@@ -362,7 +536,8 @@ describe('Xero integration actions', () => {
     const result = await getXeroTaxRates();
 
     expect(result).toEqual({
-      actionError: 'Reconnect Xero before loading Xero tax rates.'
+      actionError: 'Reconnect Xero before loading Xero tax rates.',
+      messageKey: 'msp/integrations:errors.xero.taxRates.reconnect'
     });
   });
 
@@ -390,9 +565,10 @@ describe('Xero integration actions', () => {
 
     expect(result).toEqual({
       success: false,
+      status: 'failed_permanent',
       error: 'Xero integration is only available in Enterprise Edition.'
     });
-    expect(deleteTenantSecretMock).not.toHaveBeenCalled();
+    expect(disconnectProviderMock).not.toHaveBeenCalled();
   });
 
   it('T031/T032/T033: tenant-scoped saves stay isolated and save logs include tenant context without secret values', async () => {
@@ -439,11 +615,12 @@ describe('Xero integration actions', () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: 'Forbidden: You do not have permission to manage Xero integration settings.'
+      error: 'Forbidden: You do not have permission to manage Xero integration connections.'
     });
     await expect(disconnectXero()).resolves.toEqual({
       success: false,
-      error: 'Forbidden: You do not have permission to manage Xero integration settings.'
+      status: 'failed_permanent',
+      error: 'Forbidden: You do not have permission to manage Xero integration connections.'
     });
   });
 

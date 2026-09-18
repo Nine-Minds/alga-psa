@@ -200,7 +200,6 @@ async function createClient(db: Knex, tenantId: string, name = 'Test Client'): P
     created_at: now,
     updated_at: now,
     is_inactive: false,
-    credit_balance: 0,
   });
 
   return clientId;

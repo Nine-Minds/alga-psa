@@ -1,0 +1,490 @@
+{
+  "schemaVersion": 1,
+  "scope": "bounded-upgrade-pool-lifecycle-and-diagnostics-acceptance",
+  "repository": "Nine-Minds/alga-psa",
+  "runId": "34320694357",
+  "runAttempt": 1,
+  "jobId": "102373190823",
+  "testedRevision": "cec08351189624fb4db8db7ec453e788157fbdad",
+  "overallJobConclusion": "failure",
+  "lanes": [
+    {
+      "backend": "pg",
+      "artifacts": {
+        "execution": {
+          "id": "10093566639",
+          "archiveSha256": "714be1ea06b80c943f5c66de92efa3a0e887371e4a4ea2570f28f4d79d39edaf",
+          "members": {
+            "collected.json": {
+              "sha256": "d80839d37054033f1e7599a54bd01f7b258b6e2ab5dbf6d834ae0f6f00c857f4",
+              "bytes": 4399
+            },
+            "evidence.json": {
+              "sha256": "938f5a337c19722890498dfc632f892c3b5268528f01b7a3e1862fbfd008d27c",
+              "bytes": 3220
+            },
+            "results.json": {
+              "sha256": "5a281f1bedf7dc332f71d0725269255339bb1340bc0f4fa80cffa84b03253bc4",
+              "bytes": 213729
+            },
+            "runner.json": {
+              "sha256": "0d6c3a682e0f4970e3619b766305485bea92dee29a5cb7e3750068c77dfb6710",
+              "bytes": 117
+            },
+            "schema.json": {
+              "sha256": "3eaf14eb4ca30cbbc789cbd263be99369340bfd7a94fd2bc167128f677594ec6",
+              "bytes": 3070
+            }
+          }
+        },
+        "diagnostics": {
+          "id": "10093567045",
+          "archiveSha256": "3792101c1c62d9308d7bf7fd028861c13a1c20af87ae15f333b60e891cc88fef",
+          "members": {
+            "upgrade-postgres-runtime/connection-counts.json": {
+              "sha256": "c3d4ce603b333de9ed37c2559ceb85573f2ff8e1fb57fdeca00decd5a722ba9a",
+              "bytes": 1055
+            },
+            "upgrade-postgres-runtime/database.log": {
+              "sha256": "291ea605de50a22a740e28e32fb59203a375e86ac1dc475fcc0e82d22f65f16d",
+              "bytes": 220203,
+              "lines": 1297,
+              "connectionPressurePatternMatches": 0
+            },
+            "upgrade-postgres-runtime/server.log": {
+              "sha256": "f2e5442ac7ac7b4974501f2674220bc2c689d5636eb7816c05e6c25450bb51ba",
+              "bytes": 3543563,
+              "lines": 38698,
+              "connectionPressurePatternMatches": 0
+            }
+          }
+        }
+      },
+      "status": "passed",
+      "source": {
+        "before": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "schemaStatus": "passed",
+      "baseline": {
+        "schemaVersion": 1,
+        "release": "v1.5.0",
+        "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+        "selection": "Explicitly approved by the user for the supported-upgrade test",
+        "fixtureStatus": "implemented"
+      },
+      "tests": [
+        {
+          "file": "retained-invoice.spec.ts",
+          "title": "upgraded billing sources generate a correctly priced invoice without consuming other tenant records",
+          "projectId": "enterprise-chromium",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0
+            }
+          ]
+        },
+        {
+          "file": "retained-ticket.spec.ts",
+          "title": "upgraded tenants retain ticket writes and reject other-tenant record access",
+          "projectId": "enterprise-chromium",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0
+            }
+          ]
+        },
+        {
+          "file": "retained-usage.spec.ts",
+          "title": "Add Usage after upgrade preserves the old record and uses its existing contract line",
+          "projectId": "enterprise-chromium",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0
+            }
+          ]
+        }
+      ],
+      "connectionSnapshot": {
+        "max_connections": "100",
+        "connections": [
+          {
+            "datname": "upgrade_ci",
+            "usename": "app_user",
+            "backend_type": "client backend",
+            "state": "idle",
+            "count": 20
+          },
+          {
+            "datname": "temporal_visibility",
+            "usename": "postgres",
+            "backend_type": "client backend",
+            "state": "idle",
+            "count": 8
+          },
+          {
+            "datname": null,
+            "usename": null,
+            "backend_type": "checkpointer",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": "postgres",
+            "usename": "postgres",
+            "backend_type": "client backend",
+            "state": "active",
+            "count": 1
+          },
+          {
+            "datname": null,
+            "usename": null,
+            "backend_type": "autovacuum launcher",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": null,
+            "usename": "postgres",
+            "backend_type": "logical replication launcher",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": null,
+            "usename": null,
+            "backend_type": "walwriter",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": "upgrade_ci",
+            "usename": "postgres",
+            "backend_type": "client backend",
+            "state": "idle",
+            "count": 14
+          },
+          {
+            "datname": "temporal",
+            "usename": "postgres",
+            "backend_type": "client backend",
+            "state": "idle",
+            "count": 35
+          },
+          {
+            "datname": null,
+            "usename": null,
+            "backend_type": "background writer",
+            "state": null,
+            "count": 1
+          }
+        ]
+      },
+      "clientBackendCount": 78
+    },
+    {
+      "backend": "citus",
+      "artifacts": {
+        "execution": {
+          "id": "10093682343",
+          "archiveSha256": "4365847d218c7416735cbca17bab3f94cf09dcaeea2c27b808adb536dc3aa78c",
+          "members": {
+            "collected.json": {
+              "sha256": "95e21df7947107cd59650fea218385dd94101ebbccf5e7c6a35934665e638fe6",
+              "bytes": 4399
+            },
+            "results.json": {
+              "sha256": "16dadb57f115f0a0d65912ad4ee7f07b5622cfb5f40245819e68f00a1fc836ca",
+              "bytes": 213720
+            },
+            "evidence.json": {
+              "sha256": "5ad515ba3bfa6ac0b08e5a4a0e99c409ad73def95899b6906bab59d49982c840",
+              "bytes": 3223
+            },
+            "runner.json": {
+              "sha256": "af958dedce9d1550825b6d39bd9b764465b0e6e93686c13d29daf9f520a93044",
+              "bytes": 123
+            },
+            "schema.json": {
+              "sha256": "e59170ef4967ca9cdf1568cf0ccc657ac500658ad8f83bb711d84be149935732",
+              "bytes": 4925
+            }
+          }
+        },
+        "diagnostics": {
+          "id": "10093682770",
+          "archiveSha256": "72398156157e988dee195048ae01ad725f5889b950d97551a51f96f12481f44d",
+          "members": {
+            "upgrade-citus-runtime/connection-counts.json": {
+              "sha256": "b84d94ec93536f21c805c9062f018a78daa0f4eab6f6a6fbac7a9c76b8b6d821",
+              "bytes": 1095
+            },
+            "upgrade-citus-runtime/services.log": {
+              "sha256": "e4a852e6f4da70a9b8e5d347dfb2c3051add4da214f32409f504d6734382c319",
+              "bytes": 3689672,
+              "lines": 40262,
+              "connectionPressurePatternMatches": 0
+            }
+          }
+        }
+      },
+      "status": "passed",
+      "source": {
+        "before": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "schemaStatus": "passed",
+      "baseline": {
+        "schemaVersion": 1,
+        "release": "v1.5.0",
+        "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+        "selection": "Explicitly approved by the user for the supported-upgrade test",
+        "fixtureStatus": "implemented"
+      },
+      "tests": [
+        {
+          "file": "retained-invoice.spec.ts",
+          "title": "upgraded billing sources generate a correctly priced invoice without consuming other tenant records",
+          "projectId": "enterprise-chromium",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0
+            }
+          ]
+        },
+        {
+          "file": "retained-ticket.spec.ts",
+          "title": "upgraded tenants retain ticket writes and reject other-tenant record access",
+          "projectId": "enterprise-chromium",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0
+            }
+          ]
+        },
+        {
+          "file": "retained-usage.spec.ts",
+          "title": "Add Usage after upgrade preserves the old record and uses its existing contract line",
+          "projectId": "enterprise-chromium",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0
+            }
+          ]
+        }
+      ],
+      "connectionSnapshot": {
+        "max_connections": "100",
+        "connections": [
+          {
+            "datname": "postgres",
+            "usename": "postgres",
+            "backend_type": "Citus Maintenance Daemon: 5/10",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": "upgrade_citus_ci",
+            "usename": "app_user",
+            "backend_type": "client backend",
+            "state": "idle",
+            "count": 46
+          },
+          {
+            "datname": "upgrade_citus_ci",
+            "usename": "postgres",
+            "backend_type": "Citus Maintenance Daemon: 17226/10",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": null,
+            "usename": null,
+            "backend_type": "checkpointer",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": "postgres",
+            "usename": "postgres",
+            "backend_type": "client backend",
+            "state": "active",
+            "count": 1
+          },
+          {
+            "datname": "upgrade_citus_ci",
+            "usename": "postgres",
+            "backend_type": "client backend",
+            "state": "idle",
+            "count": 14
+          },
+          {
+            "datname": null,
+            "usename": null,
+            "backend_type": "autovacuum launcher",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": null,
+            "usename": "postgres",
+            "backend_type": "logical replication launcher",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": null,
+            "usename": null,
+            "backend_type": "walwriter",
+            "state": null,
+            "count": 1
+          },
+          {
+            "datname": null,
+            "usename": null,
+            "backend_type": "background writer",
+            "state": null,
+            "count": 1
+          }
+        ]
+      },
+      "clientBackendCount": 61
+    }
+  ],
+  "successfulSteps": [
+    {
+      "number": 48,
+      "name": "Switch candidate server to upgraded database",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:43:49Z",
+      "completedAt": "2026-09-09T07:44:29Z"
+    },
+    {
+      "number": 49,
+      "name": "Run supported-upgrade browser gate",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:44:29Z",
+      "completedAt": "2026-09-09T07:45:33Z"
+    },
+    {
+      "number": 50,
+      "name": "Preserve PostgreSQL upgrade runtime diagnostics before server replacement",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:45:33Z",
+      "completedAt": "2026-09-09T07:45:34Z"
+    },
+    {
+      "number": 51,
+      "name": "Upload supported-upgrade evidence",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:45:34Z",
+      "completedAt": "2026-09-09T07:45:35Z"
+    },
+    {
+      "number": 52,
+      "name": "Upload upgrade browser diagnostics",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:45:35Z",
+      "completedAt": "2026-09-09T07:45:35Z"
+    },
+    {
+      "number": 53,
+      "name": "Release PostgreSQL upgrade pooler before the next phase",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:45:35Z",
+      "completedAt": "2026-09-09T07:45:45Z"
+    },
+    {
+      "number": 54,
+      "name": "Start isolated Citus upgrade service",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:45:45Z",
+      "completedAt": "2026-09-09T07:45:54Z"
+    },
+    {
+      "number": 56,
+      "name": "Switch the same candidate image to upgraded Citus",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:47:29Z",
+      "completedAt": "2026-09-09T07:47:55Z"
+    },
+    {
+      "number": 57,
+      "name": "Run supported Citus upgrade browser gate",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:47:55Z",
+      "completedAt": "2026-09-09T07:49:03Z"
+    },
+    {
+      "number": 58,
+      "name": "Preserve Citus upgrade runtime diagnostics before server replacement",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:49:03Z",
+      "completedAt": "2026-09-09T07:49:03Z"
+    },
+    {
+      "number": 59,
+      "name": "Upload supported Citus upgrade evidence",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:49:03Z",
+      "completedAt": "2026-09-09T07:49:04Z"
+    },
+    {
+      "number": 60,
+      "name": "Upload supported Citus upgrade diagnostics",
+      "conclusion": "success",
+      "startedAt": "2026-09-09T07:49:04Z",
+      "completedAt": "2026-09-09T07:49:05Z"
+    }
+  ],
+  "poolerIdentityAndReadiness": {
+    "log": "private /tmp/alga-c523-ee-terminal.log",
+    "lines": [
+      6310,
+      6340
+    ],
+    "verifiedBySuccessfulFailClosedStep48": [
+      "Image org.opencontainers.image.revision equals GITHUB_SHA",
+      "Running upgrade-pgbouncer container Image equals inspected candidate image ID",
+      "Actual app_user secret-authenticated PostgreSQL connection to upgrade-pgbouncer:6432 returns current_database() upgrade_ci"
+    ],
+    "actualStartLogLine": 6501,
+    "actualStoppedLogLine": 6775,
+    "exactPoolerImageDigestRetained": false
+  },
+  "acceptance": {
+    "R053": "Satisfied: native concurrent initialization behavioral coverage plus actual first-attempt retained-ticket recovery within both complete upgrade browser suites. Browser success alone does not prove the cold-call race.",
+    "R068": "Satisfied: both actual phase log and grouped connection-count artifacts retained before server replacement.",
+    "R070": "Satisfied: candidate-bound isolated pooler, real app-user SQL readiness, PostgreSQL browser pass, and successful pooler release before Citus."
+  },
+  "limits": [
+    "Evidence belongs to completed prior run34320694357; current candidate run34330619264 remains pending at this audit.",
+    "Prior enterprise job failed in another phase; these bounded acceptances do not imply an overall green run.",
+    "Single connection snapshots are not peak telemetry or capacity guarantees.",
+    "Zero case-insensitive matches for too many clients, remaining connection slots, or connection limit exceeded is limited to retained files; other errors are not ruled out.",
+    "Candidate pooler identity is proven by successful fail-closed shell checks; the exact inspected pooler SHA was not printed or retained.",
+    "Synthetic approved v1.5.0 fixtures and single-node Citus do not prove all production upgrades or distributed topology."
+  ]
+}

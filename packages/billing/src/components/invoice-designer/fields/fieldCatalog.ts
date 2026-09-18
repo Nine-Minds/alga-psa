@@ -7,6 +7,7 @@ export type InvoiceFieldCategory =
   | 'Line Item'
   | 'Quote'
   | 'Quote Totals'
+  | 'Sales Order'
   | 'Client'
   | 'Contact';
 
@@ -63,12 +64,6 @@ const FIELD_DEFINITIONS: Record<string, TemplateFieldDefinition> = {
     label: 'Tax',
     category: 'Invoice',
     description: 'The tax amount for the invoice.',
-  },
-  'invoice.discount': {
-    path: 'invoice.discount',
-    label: 'Discount',
-    category: 'Invoice',
-    description: 'The invoice discount amount.',
   },
   'invoice.total': {
     path: 'invoice.total',
@@ -191,14 +186,6 @@ export const humanizeBindingToken = (input: string): string =>
 export const getTemplateFieldDefinition = (bindingKey: string): TemplateFieldDefinition | null => {
   const normalized = bindingKey.trim();
   return FIELD_DEFINITIONS[normalized] ?? null;
-};
-
-export const resolveTemplateFieldLabel = (bindingKey: string): string => {
-  const normalized = bindingKey.trim();
-  if (!normalized) {
-    return 'Unbound';
-  }
-  return getTemplateFieldDefinition(normalized)?.label ?? humanizeBindingToken(normalized);
 };
 
 export const getTemplateFieldDisplayFormats = (bindingKey: string): TemplateFieldDisplayFormat[] =>

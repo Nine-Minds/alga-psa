@@ -153,6 +153,7 @@ import {
   ticketCreatedEventPayloadSchema,
   ticketCustomerRepliedEventPayloadSchema,
   ticketEscalatedEventPayloadSchema,
+  ticketExternalLinkEventPayloadSchema,
   ticketInternalNoteAddedEventPayloadSchema,
   ticketMergedEventPayloadSchema,
   ticketMessageAddedEventPayloadSchema,
@@ -230,6 +231,9 @@ export const EVENT_TYPES = [
   'TICKET_APPROVAL_REQUESTED',
   'TICKET_APPROVAL_GRANTED',
   'TICKET_APPROVAL_REJECTED',
+  'TICKET_EXTERNAL_LINK_ADDED',
+  'TICKET_EXTERNAL_LINK_UPDATED',
+  'TICKET_EXTERNAL_LINK_REMOVED',
 
   // Scheduling (legacy requests)
   'APPOINTMENT_REQUEST_CREATED',
@@ -553,6 +557,7 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(), // The user being assigned to the ticket
   assignedByUserId: z.string().uuid().optional(), // The user who performed the action
   changes: z.record(z.unknown()).optional(),
+  externalLinks: z.array(z.record(z.unknown())).optional(),
   ...TicketNotificationSuppressionSchema,
   comment: z.object({
     id: z.string().uuid(),
@@ -1022,23 +1027,30 @@ export const SurveyInvitationSentPayloadSchema = BasePayloadSchema.extend({
 
 export const SurveyResponseSubmittedPayloadSchema = BasePayloadSchema.extend({
   responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
+  ticketId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
   companyId: z.string().uuid().optional(),
   rating: z.number(),
   hasComment: z.boolean(),
-});
+}).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' });
 
 export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
   responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
-  ticketNumber: z.string(),
+  ticketId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+  ticketNumber: z.string().optional(),
+  projectNumber: z.string().optional(),
   companyId: z.string().uuid().optional(),
   companyName: z.string().optional(),
   contactName: z.string().optional(),
   rating: z.number(),
   comment: z.string().optional(),
   assignedTo: z.string().uuid().optional(),
-});
+}).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' })
+  .refine(value => value.projectId
+    ? value.projectNumber !== undefined && value.ticketNumber === undefined
+    : value.ticketNumber !== undefined && value.projectNumber === undefined,
+  { message: 'Survey subject number must match its subject type' });
 
 export const TicketResponseStateChangedPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
@@ -1221,6 +1233,9 @@ export const EventPayloadSchemas = {
   TICKET_APPROVAL_REQUESTED: ticketApprovalRequestedEventPayloadSchema,
   TICKET_APPROVAL_GRANTED: ticketApprovalGrantedEventPayloadSchema,
   TICKET_APPROVAL_REJECTED: ticketApprovalRejectedEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_ADDED: ticketExternalLinkEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_UPDATED: ticketExternalLinkEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_REMOVED: ticketExternalLinkEventPayloadSchema,
 
   // Scheduling (legacy requests)
   APPOINTMENT_REQUEST_CREATED: AppointmentRequestEventPayloadSchema,

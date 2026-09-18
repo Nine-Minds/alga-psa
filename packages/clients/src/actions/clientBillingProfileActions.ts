@@ -48,20 +48,20 @@ function billingProfileActionErrorFrom(error: unknown): ClientBillingProfileActi
       return permissionError(error.message);
     }
     if (/unauthorized|not authenticated|must sign in/i.test(error.message)) {
-      return permissionError('You must be signed in to manage billing profiles.');
+      return permissionError('You must be signed in to manage billing profiles.', 'msp/clients:errors.billingProfile.signInRequired');
     }
   }
 
   const dbError = error as { code?: string; message?: string };
   if (dbError?.code === '23505') {
-    return actionError('This client already has a default billing profile.');
+    return actionError('This client already has a default billing profile.', 'msp/clients:errors.billingProfile.duplicateDefault');
   }
   if (dbError?.code === '23503') {
-    return actionError('The billing profile is still referenced and cannot be removed.');
+    return actionError('The billing profile is still referenced and cannot be removed.', 'msp/clients:errors.billingProfile.stillReferenced');
   }
   // The F002 deferred guard raises a plain exception at COMMIT.
   if (typeof dbError?.message === 'string' && dbError.message.includes('no default profile')) {
-    return actionError('A client must always have exactly one default billing profile.');
+    return actionError('A client must always have exactly one default billing profile.', 'msp/clients:errors.billingProfile.defaultRequired');
   }
   return null;
 }
@@ -136,7 +136,7 @@ export const createClientBillingProfile = withAuth(async (
 ): Promise<ClientBillingProfile | ClientBillingProfileActionError> => {
   const name = input.name?.trim();
   if (!name) {
-    return actionError('A billing profile needs a name.');
+    return actionError('A billing profile needs a name.', 'msp/clients:errors.billingProfile.nameRequired');
   }
 
   try {
@@ -178,7 +178,7 @@ export const renameClientBillingProfile = withAuth(async (
 ): Promise<{ success: true } | ClientBillingProfileActionError> => {
   const name = input.name?.trim();
   if (!name) {
-    return actionError('A billing profile needs a name.');
+    return actionError('A billing profile needs a name.', 'msp/clients:errors.billingProfile.nameRequired');
   }
 
   try {
@@ -226,10 +226,10 @@ export const setDefaultClientBillingProfile = withAuth(async (
         .where({ billing_profile_id: input.billingProfileId, client_id: input.clientId })
         .first('is_active');
       if (!target) {
-        return actionError('That billing profile does not belong to this client.');
+        return actionError('That billing profile does not belong to this client.', 'msp/clients:errors.billingProfile.notThisClient');
       }
       if (!target.is_active) {
-        return actionError('An archived billing profile cannot be made the default.');
+        return actionError('An archived billing profile cannot be made the default.', 'msp/clients:errors.billingProfile.archivedCannotBeDefault');
       }
 
       await db
@@ -271,11 +271,12 @@ export const archiveClientBillingProfile = withAuth(async (
         .where({ billing_profile_id: input.billingProfileId })
         .first('is_default');
       if (!profile) {
-        return actionError('That billing profile no longer exists.');
+        return actionError('That billing profile no longer exists.', 'msp/clients:errors.billingProfile.notFound');
       }
       if (profile.is_default) {
         return actionError(
           'The default billing profile cannot be archived. Make another profile the default first.',
+          'msp/clients:errors.billingProfile.defaultCannotArchive',
         );
       }
 
@@ -334,11 +335,12 @@ export const deleteClientBillingProfile = withAuth(async (
         .where({ billing_profile_id: input.billingProfileId })
         .first('is_default');
       if (!profile) {
-        return actionError('That billing profile no longer exists.');
+        return actionError('That billing profile no longer exists.', 'msp/clients:errors.billingProfile.notFound');
       }
       if (profile.is_default) {
         return actionError(
           'The default billing profile cannot be deleted. Make another profile the default first.',
+          'msp/clients:errors.billingProfile.defaultCannotDelete',
         );
       }
 
@@ -346,6 +348,8 @@ export const deleteClientBillingProfile = withAuth(async (
       if (references.length > 0) {
         return actionError(
           `This billing profile is used by ${references.join(', ')}. Archive it instead — deleting it would erase how those charges were attributed.`,
+          'msp/clients:errors.billingProfile.inUse',
+          { references: references.join(', ') },
         );
       }
 
@@ -476,13 +480,13 @@ export const assignBillingProfile = withAuth(async (
           .where({ billing_profile_id: input.billingProfileId })
           .first('client_id', 'is_active');
         if (!ownerClientId || !profile) {
-          return actionError('That record or billing profile no longer exists.');
+          return actionError('That record or billing profile no longer exists.', 'msp/clients:errors.billingProfile.recordNotFound');
         }
         if (ownerClientId !== profile.client_id) {
-          return actionError('That billing profile belongs to a different client.');
+          return actionError('That billing profile belongs to a different client.', 'msp/clients:errors.billingProfile.otherClient');
         }
         if (!profile.is_active) {
-          return actionError('That billing profile is archived.');
+          return actionError('That billing profile is archived.', 'msp/clients:errors.billingProfile.archived');
         }
       }
 
@@ -569,7 +573,7 @@ export const getClientBillingProfileSettings = withAuth(async (
         .where({ billing_profile_id: input.billingProfileId, client_id: input.clientId })
         .first(...SETTINGS_FIELDS);
       if (!row) {
-        return actionError('That billing profile does not belong to this client.');
+        return actionError('That billing profile does not belong to this client.', 'msp/clients:errors.billingProfile.notThisClient');
       }
       return {
         stored: row as ClientBillingProfileSettingsInput,
@@ -609,7 +613,7 @@ export const updateClientBillingProfileSettings = withAuth(async (
         .where({ billing_profile_id: input.billingProfileId, client_id: input.clientId })
         .first('billing_profile_id');
       if (!profile) {
-        return actionError('That billing profile does not belong to this client.');
+        return actionError('That billing profile does not belong to this client.', 'msp/clients:errors.billingProfile.notThisClient');
       }
 
       // Only fields the caller actually sent are written; an omitted field is

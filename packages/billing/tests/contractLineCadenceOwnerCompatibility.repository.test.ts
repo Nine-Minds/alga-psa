@@ -120,6 +120,7 @@ describe('contract line cadence_owner repository compatibility', () => {
       table: 'contract_lines',
       payload: {
         custom_rate: 125,
+        rate_provenance: 'custom',
         display_order: undefined,
         billing_timing: 'arrears',
         cadence_owner: 'client',

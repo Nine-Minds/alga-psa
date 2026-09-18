@@ -8,6 +8,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronRight,
+  Link2,
   Lock,
   Mail,
   MessageSquare,
@@ -151,9 +152,23 @@ function eventIcon(eventType: string): React.ReactElement {
       return <Paperclip className="h-4 w-4" />;
     case 'TICKET_INBOUND_EMAIL_RECEIVED':
       return <Mail className="h-4 w-4" />;
+    case 'TICKET_EXTERNAL_LINK_ADDED':
+    case 'TICKET_EXTERNAL_LINK_UPDATED':
+    case 'TICKET_EXTERNAL_LINK_REMOVED':
+      return <Link2 className="h-4 w-4" />;
     default:
       return <Activity className="h-4 w-4" />;
   }
+}
+
+function externalLinkReference(activity: TicketActivityRow): string {
+  const details = (activity.details ?? {}) as {
+    system?: string;
+    system_label?: string;
+    external_id?: string;
+  };
+  const system = details.system_label ?? details.system ?? 'an external system';
+  return details.external_id ? `${system} #${details.external_id}` : system;
 }
 
 function notificationSuppressionAnnotation(activity: TicketActivityRow): string | undefined {
@@ -274,6 +289,12 @@ function describeActivity(activity: TicketActivityRow): { title: string; annotat
         subtitle: fields.length > 0 ? fields.map(fieldLabel).join(', ') : undefined,
       };
     }
+    case 'TICKET_EXTERNAL_LINK_ADDED':
+      return { title: `${actor} linked ${externalLinkReference(activity)}` };
+    case 'TICKET_EXTERNAL_LINK_UPDATED':
+      return { title: `${actor} updated the ${externalLinkReference(activity)} link` };
+    case 'TICKET_EXTERNAL_LINK_REMOVED':
+      return { title: `${actor} unlinked ${externalLinkReference(activity)}` };
     default:
       return { title: `${actor} • ${activity.event_type}` };
   }
@@ -392,8 +413,8 @@ const ENTRY_TYPE_OPTIONS: { value: string; label: string }[] = [
 
 function sourceBadge(source: string): { label: string; className: string } {
   const map: Record<string, { label: string; className: string }> = {
-    ui: { label: 'UI', className: 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]' },
-    api: { label: 'API', className: 'bg-[rgb(var(--color-secondary-50))] text-[rgb(var(--color-secondary-700))]' },
+    ui: { label: 'UI', className: 'chip-primary' },
+    api: { label: 'API', className: 'chip-secondary' },
     client_portal: { label: 'Client Portal', className: 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' },
     inbound_email: { label: 'Inbound Email', className: 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
     workflow: { label: 'Workflow', className: 'bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300' },

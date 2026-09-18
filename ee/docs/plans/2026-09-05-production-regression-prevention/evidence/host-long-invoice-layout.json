@@ -1,0 +1,76 @@
+{
+  "applicationRevision": "c5938cdad5",
+  "applicationLifecycle": "Reused existing host EE production build; no application or Docker rebuild",
+  "browserSession": 1374,
+  "stats": {
+    "startTime": "2026-09-08T00:20:26.243Z",
+    "duration": 29390.412,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "pagination": [
+    {
+      "locale": "en",
+      "pages": 12,
+      "invoiceId": "5cb4aff6-2e33-4da4-b94a-e512cfd7f8ea",
+      "sourceEntries": 74,
+      "expectedDetailRows": 148,
+      "subtotal": 1132500,
+      "tax": 167250,
+      "total": "1299750"
+    },
+    {
+      "locale": "fr",
+      "pages": 13,
+      "invoiceId": "5cb4aff6-2e33-4da4-b94a-e512cfd7f8ea",
+      "sourceEntries": 74,
+      "expectedDetailRows": 148,
+      "subtotal": 1132500,
+      "tax": 167250,
+      "total": "1299750"
+    },
+    {
+      "locale": "zz-unavailable",
+      "pages": 12,
+      "invoiceId": "5cb4aff6-2e33-4da4-b94a-e512cfd7f8ea",
+      "sourceEntries": 74,
+      "expectedDetailRows": 148,
+      "subtotal": 1132500,
+      "tax": 167250,
+      "total": "1299750"
+    }
+  ],
+  "coverage": [
+    "Same UI-authored sorted flat table and nested group layout generates a 74-entry invoice from approved time sources via authenticated API",
+    "10% and 20% charge tax rates, subtotal1132500/tax167250/total1299750 minor units independently asserted",
+    "All148 flat and nested entry dates survive pagination in English/French/fallback, with Date/Ticket headers on pages containing detail",
+    "Localized mixed-rate labels and invoice total, private text exclusion, immutable snapshots and charges",
+    "Existing invoice tenant-isolation and downloaded PDF journey passes after reader refactor"
+  ],
+  "pdfArtifacts": [
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000002-long-en.pdf",
+      "bytes": 478632,
+      "sha256": "bde3b3804e82b4603554a06edcd1523087c54067bc0cc31b36514dba4b969ceb"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000002-long-fr.pdf",
+      "bytes": 487318,
+      "sha256": "022d46c0fe61ff8b3304db5b1fb26e72ced1af001b0b07f30f132a9993cd6c43"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000002-long-zz-unavailable.pdf",
+      "bytes": 478632,
+      "sha256": "97384fa2c6b4a4814bcf4be9aa8002d61c9e212c3f6d951f212501f415064616"
+    }
+  ],
+  "log": "/tmp/alga-host-long-invoice-final.log",
+  "limitations": [
+    "Native CI and container packaging remain unverified.",
+    "Task/ad-hoc and hour-block authored-layout matrix, full authoritative preview/canvas parity remain incomplete.",
+    "PDF text and page counts do not prove every visual layout property.",
+    "Invoice source fixture is synthetic and tenant-owned; no existing customer data used."
+  ]
+}

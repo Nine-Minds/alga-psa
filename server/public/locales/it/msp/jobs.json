@@ -140,5 +140,10 @@
   "page": {
     "heading": "Monitoraggio job",
     "recentJobs": "Job recenti"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Job non trovato. Potrebbe essere scaduto o essere stato eliminato."
+    }
   }
 }

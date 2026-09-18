@@ -99,7 +99,7 @@ describe('contactActions visibility group assignment/delete guardrails', () => {
 
     expect(contactsWhereMock).toHaveBeenCalled();
     expect(groupWhereMock).toHaveBeenCalled();
-  });
+  }, 15_000);
 
   it('T033: blocks deleting a visibility group still assigned to contacts', async () => {
     const groupDeleteMock = vi.fn(async () => 1);

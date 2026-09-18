@@ -5,6 +5,7 @@ import { Input } from './Input';
 import { useOptionalI18n } from '../lib/i18n/client';
 import { LOCALE_CONFIG } from '../lib/i18n/config';
 import { currencyFractionDigits } from '@alga-psa/core';
+import { useCurrencyFormat } from '../lib/currency/useCurrencyFormat';
 
 interface CurrencyInputProps {
   id?: string;
@@ -68,6 +69,7 @@ export function CurrencyInput({
 }: CurrencyInputProps) {
   const i18n = useOptionalI18n();
   const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
+  const { symbol } = useCurrencyFormat();
   const [displayValue, setDisplayValue] = useState('');
 
   useEffect(() => {
@@ -112,6 +114,7 @@ export function CurrencyInput({
       required={required}
       className={className}
       containerClassName={containerClassName}
+      leadingAdornment={symbol(currencyCode)}
     />
   );
 }

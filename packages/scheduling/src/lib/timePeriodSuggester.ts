@@ -16,7 +16,7 @@ export class TimePeriodSuggester {
   static suggestNewTimePeriod(
     settings: TimePeriodSettings[],
     existingPeriods: ITimePeriod[] = []
-  ): { success: boolean; data?: ITimePeriodView; error?: string } {
+  ): { success: boolean; data?: ITimePeriodView; error?: string; errorKey?: string } {
     let currentDate = Temporal.Now.plainDateISO();
 
     if (existingPeriods.length > 0) {
@@ -67,7 +67,8 @@ export class TimePeriodSuggester {
     if (applicableSettings.length === 0) {
       return {
         success: false,
-        error: 'No applicable time period settings found. Please check your time period settings.',
+        error: 'No applicable time period settings found.',
+        errorKey: 'timeEntry.periods.errors.noApplicableSettings',
       };
     }
 
@@ -78,7 +79,13 @@ export class TimePeriodSuggester {
 
     switch (setting.frequency_unit) {
       case 'day':
-        endDate = startDate.add({ days: setting.frequency - 1 });
+        // Time periods are half-open intervals [start, end) — TimePeriod
+        // .findOverlapping says so, and every other arm here (and
+        // generateTimePeriods) adds the whole frequency. Subtracting a day made
+        // daily periods one day short of their configured frequency, so a
+        // 7-day setting produced 6-day periods on the create-next-period path
+        // while the bulk generator produced 7-day ones.
+        endDate = startDate.add({ days: setting.frequency });
         break;
       case 'week':
         endDate = startDate.add({ weeks: setting.frequency });

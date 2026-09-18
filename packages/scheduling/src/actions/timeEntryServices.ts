@@ -22,7 +22,7 @@ export const fetchTaxRegions = withAuth(async (
     const scopedDb = tenantDb(db, tenant) as any;
 
     // Check permission for time entry reading (reading tax regions for time entries)
-    if (!await hasPermission(user, 'timeentry', 'read', db)) {
+    if (!await hasPermission(user, 'time_entry', 'read', db)) {
       throw new Error('Permission denied: Cannot read tax regions for time entries');
     }
 
@@ -50,7 +50,7 @@ export const fetchClientTaxRateForWorkItem = withAuth(async (
     const scopedDb = tenantDb(db, tenant) as any;
 
     // Check permission for time entry reading (reading tax rates for time entries)
-    if (!await hasPermission(user, 'timeentry', 'read', db)) {
+    if (!await hasPermission(user, 'time_entry', 'read', db)) {
       throw new Error('Permission denied: Cannot read tax rates for time entries');
     }
 
@@ -117,7 +117,7 @@ export const fetchDefaultClientTaxRateInfoForWorkItem = withAuth(async (
     const scopedDb = tenantDb(db, tenant) as any;
 
     // Check permission for time entry reading (reading tax rate info for time entries)
-    if (!await hasPermission(user, 'timeentry', 'read', db)) {
+    if (!await hasPermission(user, 'time_entry', 'read', db)) {
       throw new Error('Permission denied: Cannot read tax rate info for time entries');
     }
 
@@ -190,7 +190,7 @@ export const fetchServicesForTimeEntry = withAuth(async (
     const scopedDb = tenantDb(db, tenant) as any;
 
     // Check permission for time entry reading (reading services for time entries)
-    if (!await hasPermission(user, 'timeentry', 'read', db)) {
+    if (!await hasPermission(user, 'time_entry', 'read', db)) {
       throw new Error('Permission denied: Cannot read services for time entries');
     }
 
@@ -236,7 +236,7 @@ export const fetchScheduleEntryForWorkItem = withAuth(async (
     const scopedDb = tenantDb(knex, tenant) as any;
 
     // Check permission for time entry reading (reading schedule entries for time entries)
-    if (!await hasPermission(user, 'timeentry', 'read', knex)) {
+    if (!await hasPermission(user, 'time_entry', 'read', knex)) {
       throw new Error('Permission denied: Cannot read schedule entries for time entries');
     }
 

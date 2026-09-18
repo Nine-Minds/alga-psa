@@ -1,4 +1,5 @@
 import { JobService, JobStepResult } from 'server/src/services/job.service';
+import { runAsJobActingUser } from './jobActingUser';
 import { PDFGenerationService, createPDFGenerationService, publishGeneratedDocumentsToClient } from '@alga-psa/billing/services';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
 import { getEmailService } from 'server/src/services/emailService';
@@ -85,9 +86,23 @@ export class InvoiceEmailHandler {
     if (!data.jobServiceId) {
       throw new Error('jobServiceId is required in job data');
     }
+    if (!data.tenantId) throw new Error('Tenant ID is required');
 
+    // Background execution has no session; act as the user who enqueued the
+    // job so the withAuth actions below (invoice rendering, client lookup)
+    // resolve an identity and permissions.
+    return runAsJobActingUser(
+      {
+        jobName: 'invoice_email',
+        tenantId: data.tenantId,
+        userId: (data as { user_id?: string }).user_id ?? data.metadata?.user_id,
+      },
+      () => InvoiceEmailHandler.execute(pgBossJobId, data)
+    );
+  }
+
+  private static async execute(pgBossJobId: string, data: InvoiceEmailJobData) {
     const { tenantId, jobServiceId, invoiceIds, steps } = data;
-    if (!tenantId) throw new Error('Tenant ID is required');
     if (!invoiceIds || !invoiceIds.length) throw new Error('No invoice IDs provided');
     
     console.log(`Starting invoice email job: Processing ${invoiceIds.length} invoice(s) for tenant ${tenantId}`);

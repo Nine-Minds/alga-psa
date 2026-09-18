@@ -1512,7 +1512,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 <div className="flex items-start justify-between gap-2">
                                   <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
                                   {phaseTaskCounts[phase.template_phase_id] !== undefined && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-500)/0.2)] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))] shrink-0">
+                                  <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0">
                                       {phaseTaskCounts[phase.template_phase_id]} {t(phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks.title', phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks')}
                                     </span>
                                   )}
@@ -2171,7 +2171,7 @@ function TaskCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={() => onEdit(task)}
-      className={`${styles.taskCard} relative bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-sm transition-all duration-200 flex flex-col cursor-pointer hover:shadow-md ${zoomScales.cardPadding} ${zoomScales.cardGap} ${
+      className={`${styles.taskCard} relative bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg card-elevated card-elevated-hover transition-all duration-200 flex flex-col cursor-pointer ${zoomScales.cardPadding} ${zoomScales.cardGap} ${
         isDragging ? styles.dragging : ''
       }`}
     >

@@ -34,12 +34,14 @@ export interface QuickAddClientCallbacks {
   renderQuickAddClient: (props: QuickAddClientRenderProps) => ReactNode;
   renderQuickAddContact: (props: QuickAddContactRenderProps) => ReactNode;
   renderQuickAddInteraction: (props: QuickAddInteractionRenderProps) => ReactNode;
+  openInteractionDetails: (interactionId: string, onChanged?: () => void) => Promise<void>;
 }
 
 const defaultCallbacks: QuickAddClientCallbacks = {
   renderQuickAddClient: () => null,
   renderQuickAddContact: () => null,
   renderQuickAddInteraction: () => null,
+  openInteractionDetails: async () => undefined,
 };
 
 const QuickAddClientContext = createContext<QuickAddClientCallbacks>(defaultCallbacks);

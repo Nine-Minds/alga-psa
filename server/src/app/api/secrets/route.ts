@@ -28,7 +28,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const includeUsage = searchParams.get('includeUsage') === 'true';
 
-    const secrets = await listTenantSecrets();
+    const result = await listTenantSecrets();
+    if (result.permissionDenied) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+    const { secrets } = result;
 
     if (includeUsage) {
       const usageMap = await getSecretUsage();

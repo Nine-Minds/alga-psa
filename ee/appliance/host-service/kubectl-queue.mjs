@@ -1,7 +1,10 @@
 import { spawn } from 'node:child_process';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_BYTES = 256 * 1024;
+// `kubectl get ... -o json` includes annotations and status for every object.
+// A modest appliance can exceed 256 KiB with its normal pod list, so retain
+// enough output for API consumers to parse structured Kubernetes responses.
+const MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
 
 function truncateOutput(value) {
   const text = value || '';

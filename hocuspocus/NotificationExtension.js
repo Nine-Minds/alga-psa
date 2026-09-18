@@ -127,6 +127,14 @@ export class NotificationExtension {
           }))
           notificationsMap.set('data', updatedNotifications)
           unreadCountMap.set('count', 0)
+        } else if (event.type === 'telephony.incoming_call') {
+          // Transient signal for the incoming-call card; never touches the
+          // notifications maps. The client clears its own state on connected/ended.
+          doc.getMap('incomingCall').set('data', {
+            event: event.event,
+            call: event.call,
+            receivedAt: event.timestamp || new Date().toISOString()
+          })
         }
       } catch (error) {
         console.error('[NotificationExtension] Error handling message:', error)

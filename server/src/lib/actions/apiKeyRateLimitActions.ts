@@ -40,7 +40,7 @@ type ApiRateLimitActionError = ActionMessageError | ActionPermissionError;
  */
 function clientUserPermissionError(user: { user_type?: string }): ActionPermissionError | null {
   if (user.user_type === 'client') {
-    return permissionError('Permission denied: API key configuration is restricted to internal users');
+    return permissionError('Permission denied: API key configuration is restricted to internal users', 'msp/profile:errors.apiKeys.configInternalOnly');
   }
   return null;
 }
@@ -70,7 +70,7 @@ async function getTenantAdminError(userId: string): Promise<ActionPermissionErro
     return null;
   }
 
-  return permissionError('Permission denied: Admin access required');
+  return permissionError('Permission denied: Admin access required', 'msp/profile:errors.permissions.adminRequired');
 }
 
 async function getApiKeyExistsError(tenant: string, apiKeyId: string): Promise<ActionMessageError | null> {
@@ -84,7 +84,7 @@ async function getApiKeyExistsError(tenant: string, apiKeyId: string): Promise<A
     return null;
   }
 
-  return actionError('API key not found.');
+  return actionError('API key not found.', 'msp/profile:errors.apiKeys.notFound');
 }
 
 function mapSettingsRow(row: ApiRateLimitSettingsRow | null): ApiRateLimitSettingsValue | null {
@@ -236,7 +236,7 @@ export const setApiRateLimitForKey = withAuth(
 
     const parsed = apiRateLimitInputSchema.safeParse(input);
     if (!parsed.success) {
-      return actionError('API rate limits must be positive whole numbers.');
+      return actionError('API rate limits must be positive whole numbers.', 'msp/profile:errors.apiKeys.rateLimitsPositive');
     }
 
     await upsertForKey(tenant, apiKeyId, parsed.data);
@@ -259,7 +259,7 @@ export const setTenantDefaultApiRateLimit = withAuth(
 
     const parsed = apiRateLimitInputSchema.safeParse(input);
     if (!parsed.success) {
-      return actionError('API rate limits must be positive whole numbers.');
+      return actionError('API rate limits must be positive whole numbers.', 'msp/profile:errors.apiKeys.rateLimitsPositive');
     }
 
     const row = await upsertForTenant(tenant, parsed.data);

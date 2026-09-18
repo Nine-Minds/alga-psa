@@ -5,6 +5,11 @@
 import type { Knex } from 'knex';
 import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import {
+  permissionError,
+  type ActionMessageErrorShape,
+  type ActionPermissionErrorShape,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { BillingProfileSource } from '@alga-psa/types';
 import { listClientBillingProfiles } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
@@ -37,8 +42,8 @@ import {
  */
 
 export type PortalSegmentActionError =
-  | { readonly actionError: string }
-  | { readonly permissionError: string };
+  | ActionMessageErrorShape
+  | ActionPermissionErrorShape;
 
 export type PortalSegmentResult<T> = T | PortalSegmentActionError;
 
@@ -77,10 +82,6 @@ export interface PortalSegmentChargeRow {
   billingProfileSource: BillingProfileSource | null;
 }
 
-function permissionError(message: string): PortalSegmentActionError {
-  return { permissionError: message };
-}
-
 function isSegmentActionError(value: unknown): value is PortalSegmentActionError {
   const candidate = value as Record<string, unknown> | null;
   return Boolean(
@@ -105,10 +106,10 @@ async function resolvePortalClient(
 ): Promise<string | PortalSegmentActionError> {
   const clientId = await getClientIdFromPortalUser(trx, user, tenant);
   if (!clientId) {
-    return permissionError('Unauthorized');
+    return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
   }
   if (!(await hasClientBillingReadPermission(trx, user, tenant))) {
-    return permissionError('Unauthorized to access billing data');
+    return permissionError('Unauthorized to access billing data', 'client-portal:errors.access.billingData');
   }
   return clientId;
 }
@@ -233,7 +234,7 @@ export const getPortalChargesForBillingProfile = withAuth(async (
       permitted,
     );
     if (!profiles.some((profile) => profile.billing_profile_id === input.billingProfileId)) {
-      return permissionError('Unauthorized to access that billing segment');
+      return permissionError('Unauthorized to access that billing segment', 'client-portal:errors.access.billingSegment');
     }
 
     const db = tenantDb(trx, tenant);
@@ -296,7 +297,7 @@ export const getPortalInvoiceIdsForBillingProfile = withAuth(async (
       permitted,
     );
     if (!profiles.some((profile) => profile.billing_profile_id === input.billingProfileId)) {
-      return permissionError('Unauthorized to access that billing segment');
+      return permissionError('Unauthorized to access that billing segment', 'client-portal:errors.access.billingSegment');
     }
 
     const db = tenantDb(trx, tenant);
@@ -329,7 +330,7 @@ export const getPortalTicketIdsForBillingProfile = withAuth(async (
       permitted,
     );
     if (!profiles.some((profile) => profile.billing_profile_id === input.billingProfileId)) {
-      return permissionError('Unauthorized to access that billing segment');
+      return permissionError('Unauthorized to access that billing segment', 'client-portal:errors.access.billingSegment');
     }
 
     const rows = await tenantDb(trx, tenant)
@@ -362,7 +363,7 @@ export const getPortalContractIdsForBillingProfile = withAuth(async (
       permitted,
     );
     if (!profiles.some((profile) => profile.billing_profile_id === input.billingProfileId)) {
-      return permissionError('Unauthorized to access that billing segment');
+      return permissionError('Unauthorized to access that billing segment', 'client-portal:errors.access.billingSegment');
     }
 
     const db = tenantDb(trx, tenant);

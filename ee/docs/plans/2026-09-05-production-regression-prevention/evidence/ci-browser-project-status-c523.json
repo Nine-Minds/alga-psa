@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "scope": "completed-ci-browser-api-and-project-status-evidence",
+  "observedAt": "2026-09-09T07:42:13.395083+00:00",
+  "repository": "Nine-Minds/alga-psa",
+  "runId": "34320694357",
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34320694357",
+  "testedRevision": "cec08351189624fb4db8db7ec453e788157fbdad",
+  "observations": [
+    {
+      "kind": "community-browser",
+      "artifactId": 10093192689,
+      "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+      "status": "passed",
+      "counts": {
+        "passed": 42,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "source": {
+        "before": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "failures": [],
+      "sha256": {
+        "evidence.json": "285c4e41ef9c275a33638049a0eae83da212912c01bc56c1cbd390813912b84b",
+        "results.json": "6a3d4476201da306f66a4d8d97556a975543f7799a1bdcfd37353652048ec589"
+      },
+      "caseCount": 42,
+      "nonFirstAttemptPasses": []
+    },
+    {
+      "kind": "enterprise-browser",
+      "artifactId": 10093296439,
+      "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+      "status": "failed",
+      "counts": {
+        "passed": 45,
+        "failed": 0,
+        "flaky": 2,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "source": {
+        "before": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "failures": [
+        "Browser runner exited with 1",
+        "Required browser case did not pass on its first attempt: [\"e2e-tests/tests/microsoft-calendar.spec.ts\",\"enterprise-chromium\",\"enterprise-chromium\",[\"Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from throttling without losing remote linkage\"]] (flaky)",
+        "Required browser case did not pass on its first attempt: [\"e2e-tests/tests/microsoft-calendar.spec.ts\",\"enterprise-chromium\",\"enterprise-chromium\",[\"Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from all-day throttling without losing remote linkage\"]] (flaky)",
+        "Browser report contains failed, flaky or skipped cases"
+      ],
+      "sha256": {
+        "evidence.json": "beee1e1ee2a23d486c2bfdb0745fd2352b7304ea57e7eabb06dbe68d45457a39",
+        "results.json": "86fdbd743e2db88669dfc213d719085150e834f95abbf5d5e81781fa46c27ae8"
+      },
+      "caseCount": 47,
+      "nonFirstAttemptPasses": [
+        {
+          "file": "microsoft-calendar.spec.ts",
+          "title": "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from throttling without losing remote linkage",
+          "projectId": "enterprise-chromium",
+          "status": "flaky",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "failed"
+            },
+            {
+              "retry": 1,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "microsoft-calendar.spec.ts",
+          "title": "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from all-day throttling without losing remote linkage",
+          "projectId": "enterprise-chromium",
+          "status": "flaky",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "failed"
+            },
+            {
+              "retry": 1,
+              "status": "passed"
+            }
+          ]
+        }
+      ],
+      "failureBoundary": {
+        "file": "e2e-tests/tests/microsoft-calendar.spec.ts",
+        "line": 104,
+        "observed": "Both timed and all-day recovery cases retained one synced to_external calendar_event_mappings row after the schedule entry and emulator event were observed absent. Both passed retry 1.",
+        "classification": "First-attempt readiness failed; retry success does not make this artifact green."
+      }
+    },
+    {
+      "kind": "integration-shard-2",
+      "artifactId": 10092788826,
+      "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+      "status": "passed",
+      "counts": {
+        "passed": 476,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "source": {
+        "before": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "failures": [],
+      "sha256": {
+        "evidence.json": "b4d57029575d5d8f91efb74d2e9fcedba751a3c2bd81a4f43c0ced9fd263feb1",
+        "results.json": "a4f82062d71d9c49a56ee7fb98da51384b62bac94c5509db2fc2af4cd5eabfdf"
+      },
+      "executedFileCount": 73,
+      "projectStatusCases": [
+        {
+          "file": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+          "title": "project service status lookup integration creates a project when project statuses only populate status_type",
+          "status": "passed"
+        },
+        {
+          "file": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+          "title": "project service status lookup integration creates usable task mappings, preferring tenant statuses when present (false)",
+          "status": "passed"
+        },
+        {
+          "file": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+          "title": "project service status lookup integration creates usable task mappings, preferring tenant statuses when present (true)",
+          "status": "passed"
+        },
+        {
+          "file": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+          "title": "project service status lookup integration returns 409 for project task time entries and preserves the project graph",
+          "status": "passed"
+        },
+        {
+          "file": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+          "title": "project service status lookup integration rolls project creation and numbering back if status initialization fails",
+          "status": "passed"
+        },
+        {
+          "file": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+          "title": "project service status lookup integration publishes persisted status identity while preserving in_progress response compatibility",
+          "status": "passed"
+        },
+        {
+          "file": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+          "title": "project service status lookup integration publishes persisted status identity while preserving uuid response compatibility",
+          "status": "passed"
+        },
+        {
+          "file": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+          "title": "project service status lookup integration resolves named project statuses from status_type rows during create",
+          "status": "passed"
+        },
+        {
+          "file": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+          "title": "project service status lookup integration creates a phase with the default planning status when status is omitted",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "kind": "community-api",
+      "artifactId": 10093385067,
+      "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+      "status": "passed",
+      "counts": {
+        "passed": 349,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "source": {
+        "before": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "failures": [],
+      "sha256": {
+        "evidence.json": "105253b6c400091fd1f6f7e2d27d1eb2fde544cebf52dd75e275c8b3d2b0cfa2",
+        "results.json": "e9de54c9e9fed1a06b6fcc86fcf1395886f0fe8b249355f34b0ee58eab2ac45a"
+      },
+      "executedFileCount": 21
+    }
+  ],
+  "limits": [
+    "Enterprise browser evidence is failed because two of 47 cases required retries; this is not a green candidate or full regression-run verdict.",
+    "CE API evidence contains 349 passing actual tests; no EE API evidence was included in this bounded audit.",
+    "Project status assertions are the nine cases actually present at the tested merge, not later unpublished source.",
+    "No local Docker execution, remote reruns, production mutations, or source changes were performed."
+  ]
+}

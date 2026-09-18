@@ -1,6 +1,6 @@
 // BillingDashboard.tsx
 'use client'
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { IClient, IService } from '@alga-psa/types';
@@ -13,7 +13,6 @@ import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';
 import RecurringServicePeriodsTab from './RecurringServicePeriodsTab';
-import TaxRates from './TaxRates';
 import UsageTracking from './UsageTracking';
 import TemplatesTab from './contracts/TemplatesTab';
 import ClientContractsTab from './contracts/ClientContractsTab';
@@ -26,11 +25,16 @@ import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
 import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
-import AccountingExportsTab from './accounting/AccountingExportsTab';
+import ServiceCategoriesSettings from '../settings/billing/ServiceCategoriesSettings';
+import { TaxSourceSettings } from '../settings/tax/TaxSourceSettings';
+import { TaxRegionsAndRates } from '../settings/tax/TaxRegionsAndRates';
+import TaxDelegationBanner from '../tax/TaxDelegationBanner';
+import AccountingExportsTab, { AccountingExportsAccessDenied } from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
 import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
 import QuoteTemplatesList from './quotes/QuoteTemplatesList';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -56,13 +60,25 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const liveSearchParams = useSearchParams();
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
+  const accountingCapabilities = useAccountingCapabilities();
+
+  // The tax hub's sibling components each fetch their own copy of tax state.
+  // This revision counter is the shared invalidation channel: a component that
+  // mutates the tax source settings bumps it, and the siblings that read those
+  // settings refetch when their prop changes.
+  const [taxSettingsRevision, setTaxSettingsRevision] = useState(0);
+  const invalidateTaxSettings = useCallback(() => {
+    setTaxSettingsRevision((revision) => revision + 1);
+  }, []);
 
   const tabDefinitions = useMemo(() => {
-    return billingTabDefinitions.map((tab) => ({
-      ...tab,
-      label: t(tab.labelKey, { defaultValue: tab.label }),
-    }));
-  }, [t]);
+    return billingTabDefinitions
+      .filter((tab) => !tab.requiredPermission || accountingCapabilities.exportsExecute)
+      .map((tab) => ({
+        ...tab,
+        label: t(tab.labelKey, { defaultValue: tab.label }),
+      }));
+  }, [accountingCapabilities.exportsExecute, t]);
 
   const initialSearchParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -112,6 +128,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const currentTab = availableValues.includes(requestedTab as BillingTabValue)
     ? (requestedTab as BillingTabValue)
     : tabDefinitions[0]?.value ?? 'client-contracts';
+  const accountingExportsBlocked = requestedTab === 'accounting-exports'
+    && accountingCapabilities.loaded
+    && !accountingCapabilities.exportsExecute;
+  const accountingExportsCapabilityLoading = requestedTab === 'accounting-exports'
+    && !accountingCapabilities.loaded;
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -129,11 +150,18 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           </AlertDescription>
         </Alert>
       )}
-      <Tabs.Root
-        value={currentTab}
-        onValueChange={handleTabChange}
-        className="w-full"
-      >
+      {accountingExportsCapabilityLoading ? (
+        <div className="text-sm text-muted-foreground" role="status">
+          {t('accountingExports.states.checkingAccess', { defaultValue: 'Checking access...' })}
+        </div>
+      ) : accountingExportsBlocked ? (
+        <AccountingExportsAccessDenied />
+      ) : (
+        <Tabs.Root
+          value={currentTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
         <Tabs.Content value="contract-templates">
           {searchParams?.has('contractId') ? (
             <ContractDetailSwitcher renderClientDetails={renderClientDetails} />
@@ -173,7 +201,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
               </h2>
               <QuoteTemplatesList
                 onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
-                onCreateFromTemplate={(id) => router.push(`/msp/billing?tab=quotes&quoteId=new&templateId=${id}`)}
+                onCreateFromTemplate={(id) => router.push(`/msp/billing?tab=quotes&quoteId=new&sourceTemplateId=${id}`)}
                 onNewTemplate={() => router.push('/msp/billing?tab=quotes&quoteId=new&isTemplate=true')}
               />
             </div>
@@ -196,7 +224,17 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="tax-rates">
-          <TaxRates />
+          <div className="space-y-6">
+            <TaxDelegationBanner
+              settingsRevision={taxSettingsRevision}
+              onSettingsChanged={invalidateTaxSettings}
+            />
+            <TaxSourceSettings
+              settingsRevision={taxSettingsRevision}
+              onSettingsChanged={invalidateTaxSettings}
+            />
+            <TaxRegionsAndRates />
+          </div>
         </Tabs.Content>
 
         <Tabs.Content value="contract-lines">
@@ -222,11 +260,24 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="usage-tracking">
-          <UsageTracking initialServices={initialServices} />
+          <UsageTracking
+            initialServices={initialServices}
+            initialClientId={searchParams?.get('clientId') ?? null}
+            initialServiceId={searchParams?.get('serviceId') ?? null}
+            initialContractLineId={searchParams?.get('contractLineId') ?? null}
+            initialConfigId={searchParams?.get('configId') ?? null}
+            returnToPreview={searchParams?.get('returnToPreview') === '1'}
+            initialPeriodStart={searchParams?.get('periodStart') ?? null}
+            initialPeriodEnd={searchParams?.get('periodEnd') ?? null}
+          />
         </Tabs.Content>
 
         <Tabs.Content value="service-types">
           <ServiceTypeSettings />
+        </Tabs.Content>
+
+        <Tabs.Content value="service-categories">
+          <ServiceCategoriesSettings />
         </Tabs.Content>
 
         <Tabs.Content value="service-catalog">
@@ -237,7 +288,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <ProductsManager />
         </Tabs.Content>
 
-      </Tabs.Root>
+        </Tabs.Root>
+      )}
     </div>
   );
 };

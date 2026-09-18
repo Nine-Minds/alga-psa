@@ -98,7 +98,7 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-[rgb(var(--color-primary-500))]" />
           <span className="font-medium">{t('assetSoftwareInventory.heading')}</span>
-          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
+          <span className="chip-primary inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full">
             {t('assetSoftwareInventory.appsCount', { count: allSoftware.length })}
           </span>
         </div>

@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -92,13 +93,18 @@ describe('ticketing dashboard i18n wiring contract', () => {
 
     for (const key of pseudoKeys) {
       expect(source).toContain(`t('${key}'`);
-      expect(getLeaf(pseudo, key)).toBe('11111');
+      expect(getLeaf(pseudo, key)).toMatch(pseudoPattern('xx'));
     }
 
-    expect(getLeaf(pseudo, 'bulk.move.success_one')).toBe('11111 {{count}} 11111');
-    expect(getLeaf(pseudo, 'bulk.move.success_other')).toBe('11111 {{count}} 11111');
-    expect(getLeaf(pseudo, 'bulk.delete.success_one')).toBe('11111 {{count}} 11111');
-    expect(getLeaf(pseudo, 'bulk.delete.success_other')).toBe('11111 {{count}} 11111');
+    expect(getLeaf(pseudo, 'bulk.move.success_one')).toMatch(pseudoPattern('xx'));
+
+    expect(getLeaf(pseudo, 'bulk.move.success_one')).toContain('{{count}}');
+    expect(getLeaf(pseudo, 'bulk.move.success_other')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'bulk.move.success_other')).toContain('{{count}}');
+    expect(getLeaf(pseudo, 'bulk.delete.success_one')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'bulk.delete.success_one')).toContain('{{count}}');
+    expect(getLeaf(pseudo, 'bulk.delete.success_other')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'bulk.delete.success_other')).toContain('{{count}}');
   });
 
   it('T012: uses count interpolation for bulk move/delete success toasts', () => {

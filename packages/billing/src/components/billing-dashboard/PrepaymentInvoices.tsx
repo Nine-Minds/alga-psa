@@ -4,24 +4,18 @@ import React, { useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { createPrepaymentInvoice } from '@alga-psa/billing/actions/creditActions';
 import type { IClient } from '@alga-psa/types';
+import { toMinorUnits } from '@alga-psa/core';
 import { useTranslation } from 'react-i18next';
-
-interface SelectOption {
-  value: string;
-  label: string;
-}
 
 interface PrepaymentInvoicesProps {
   clients: IClient[];
   onGenerateSuccess: () => void;
 }
-
-const CREDIT_MEMOS_UNSUPPORTED_ERROR = 'credit_memos_unsupported';
 
 function getReturnedActionError(value: unknown): string | null {
   if (typeof value !== 'object' || value === null) {
@@ -36,25 +30,25 @@ function getReturnedActionError(value: unknown): string | null {
 }
 
 const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGenerateSuccess }) => {
-  const { t } = useTranslation('msp/invoicing');
+  const { t, i18n } = useTranslation('msp/invoicing');
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
-  const [amount, setAmount] = useState<string>('');
+  const [amount, setAmount] = useState<number | undefined>();
   const [description, setDescription] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [type, setType] = useState<'prepayment' | 'credit_memo'>('prepayment');
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const selectedClientRecord = clients.find((client) => client.client_id === selectedClient);
+  const currencyCode = selectedClientRecord?.default_currency_code || 'USD';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedClient === null || !amount || !description) {
+    if (selectedClient === null || amount === undefined) {
       setError(t('prepayment.errors.allFieldsRequired', { defaultValue: 'Please fill in all fields' }));
       return;
     }
 
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       setError(t('prepayment.errors.validAmount', { defaultValue: 'Please enter a valid amount' }));
       return;
     }
@@ -63,11 +57,13 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
     setError(null);
 
     try {
-      if (type === 'credit_memo') {
-        throw new Error(CREDIT_MEMOS_UNSUPPORTED_ERROR);
-      }
-
-      const result = await createPrepaymentInvoice(selectedClient || '', numericAmount);
+      const result = await createPrepaymentInvoice(
+        selectedClient,
+        toMinorUnits(amount, i18n.language, currencyCode),
+        undefined,
+        undefined,
+        description.trim() || undefined,
+      );
       const returnedError = getReturnedActionError(result);
       if (returnedError) {
         setError(returnedError);
@@ -76,52 +72,28 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
       
       // Clear form
       setSelectedClient(null);
-      setAmount('');
+      setAmount(undefined);
       setDescription('');
-      setType('prepayment');
       
       onGenerateSuccess();
     } catch (err) {
-      if (err instanceof Error && err.message === CREDIT_MEMOS_UNSUPPORTED_ERROR) {
-        setError(t('prepayment.errors.creditMemosUnsupported', {
-          defaultValue: 'Credit memos are not yet supported',
-        }));
-      } else {
-        setError(t('prepayment.errors.generateFailed', { defaultValue: 'Error generating invoice' }));
-      }
+      setError(t('prepayment.errors.generateFailed', { defaultValue: 'Error generating invoice' }));
       console.error('Error generating invoice:', err);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const typeOptions: SelectOption[] = [
-    {
-      value: 'prepayment',
-      label: t('prepayment.types.prepaymentInvoice', { defaultValue: 'Prepayment Invoice' }),
-    },
-    {
-      value: 'credit_memo',
-      label: t('prepayment.types.creditMemo', { defaultValue: 'Credit Memo' }),
-    }
-  ];
-
   return (
     <Card>
       <div className="p-6">
         <h2 className="text-lg font-semibold mb-4">
-          {type === 'prepayment'
-            ? t('prepayment.titles.prepayment', { defaultValue: 'Generate Prepayment Invoice' })
-            : t('prepayment.titles.creditMemo', { defaultValue: 'Generate Credit Memo' })}
+          {t('prepayment.titles.prepayment', { defaultValue: 'Generate Prepayment Invoice' })}
         </h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          {type === 'prepayment'
-            ? t('prepayment.descriptions.prepayment', {
-                defaultValue: 'Prepayment invoices create client credit for future value. They do not create recurring service periods; later recurring invoices keep their own service-period coverage.',
-              })
-            : t('prepayment.descriptions.creditMemo', {
-                defaultValue: 'Credit memos adjust financial balances without redefining recurring service-period coverage on the source invoice.',
-              })}
+          {t('prepayment.descriptions.prepayment', {
+            defaultValue: 'Prepayment invoices create client credit for future value. They do not create recurring service periods; later recurring invoices keep their own service-period coverage.',
+          })}
         </p>
 
         {error && (
@@ -133,25 +105,16 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-              {t('prepayment.fields.type', { defaultValue: 'Type' })}
-            </label>
-            <CustomSelect
-              value={type}
-              onValueChange={(value: string) => setType(value as 'prepayment' | 'credit_memo')}
-              options={typeOptions}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
               {t('prepayment.fields.client', { defaultValue: 'Client' })}
             </label>
             <ClientPicker
               id='client-picker'
               clients={clients}
               selectedClientId={selectedClient}
-              onSelect={setSelectedClient}
+              onSelect={(clientId) => {
+                setSelectedClient(clientId);
+                setAmount(undefined);
+              }}
               filterState={filterState}
               onFilterStateChange={setFilterState}
               clientTypeFilter={clientTypeFilter}
@@ -163,12 +126,11 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
               {t('prepayment.fields.amount', { defaultValue: 'Amount' })}
             </label>
-            <Input
-              type="number"
-              min="0.01"
-              step="0.01"
+            <CurrencyInput
+              id="prepayment-amount-input"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
+              currencyCode={currencyCode}
               placeholder={t('prepayment.placeholders.amount', { defaultValue: 'Enter amount' })}
               className="w-full"
             />
@@ -176,19 +138,15 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
 
           <div>
             <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-              {t('prepayment.fields.description', { defaultValue: 'Description' })}
+              {t('prepayment.fields.descriptionOptional', { defaultValue: 'Description (optional)' })}
             </label>
             <Input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={type === 'prepayment'
-                ? t('prepayment.placeholders.prepaymentDescription', {
-                    defaultValue: 'Prepayment for future services',
-                  })
-                : t('prepayment.placeholders.creditMemoDescription', {
-                    defaultValue: 'Reason for credit memo',
-                  })}
+              placeholder={t('prepayment.placeholders.prepaymentDescription', {
+                defaultValue: 'Prepayment for future services',
+              })}
               className="w-full"
             />
           </div>
@@ -196,18 +154,14 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
           <Button
             id='generate-button'
             type="submit"
-            disabled={isGenerating || !selectedClient || !amount || !description}
+            disabled={isGenerating || !selectedClient || amount === undefined || amount <= 0}
             className="w-full"
           >
             {isGenerating
               ? t('prepayment.actions.generating', { defaultValue: 'Generating...' })
-              : type === 'prepayment'
-                ? t('prepayment.actions.generatePrepayment', {
-                    defaultValue: 'Generate Prepayment Invoice',
-                  })
-                : t('prepayment.actions.generateCreditMemo', {
-                    defaultValue: 'Generate Credit Memo',
-                  })}
+              : t('prepayment.actions.generatePrepayment', {
+                  defaultValue: 'Generate Prepayment Invoice',
+                })}
           </Button>
         </form>
       </div>

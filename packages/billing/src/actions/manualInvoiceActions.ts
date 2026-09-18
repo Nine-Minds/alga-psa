@@ -3,7 +3,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
-import { InvoiceViewModel, DiscountType } from '@alga-psa/types';
+import { InvoiceViewModel, DiscountType, ManualInvoiceSourceLink } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import * as invoiceService from '../services/invoiceService';
@@ -38,14 +38,19 @@ export interface ManualInvoiceItem { // Add export
   so_line_id?: string | null;
   /** Per-line tax override (SO lines carry their own tax_rate_id — F045). */
   tax_rate_id?: string | null;
+  /** Ticket source record this line claims (quick-invoice-a-ticket). */
+  source_link?: ManualInvoiceSourceLink;
 }
 
 interface ManualInvoiceRequest {
   clientId: string;
+  invoiceNumber?: string;
   items: ManualInvoiceItem[];
   expirationDate?: string; // Add expiration date for prepayments
   isPrepayment?: boolean;
   currency_code?: string;
+  /** Support ticket this manual invoice is raised from (quick-invoice-a-ticket). */
+  ticket_id?: string;
 }
 
 export type ManualInvoiceResult =
@@ -178,7 +183,7 @@ export const generateManualInvoice = withAuth(async (
       throw new Error(getErrorMessage(dueDate));
     }
 
-    const invoiceNumber = await generateInvoiceNumber();
+    const invoiceNumber = request.invoiceNumber?.trim() || await generateInvoiceNumber();
     const invoiceId = uuidv4();
     const taxSource = await getInitialInvoiceTaxSource(clientId);
     if (isActionMessageError(taxSource) || isActionPermissionError(taxSource)) {
@@ -206,6 +211,7 @@ export const generateManualInvoice = withAuth(async (
         ? new Date(expirationDate).toISOString()
         : null,
       tax_source: taxSource,
+      ticket_id: request.ticket_id ?? null,
     };
 
     return await knex.transaction(async (trx) => {

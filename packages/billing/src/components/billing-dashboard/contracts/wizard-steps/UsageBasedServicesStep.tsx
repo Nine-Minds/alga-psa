@@ -4,16 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
-import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
+import { ContractWizardData } from '../ContractWizard';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import { Plus, X, Activity, Coins } from 'lucide-react';
 import { getCurrencySymbol } from '@alga-psa/core';
-import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
-import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import { BucketPoolDraftEditor } from './BucketPoolDraftEditor';
 
@@ -24,9 +21,6 @@ interface UsageBasedServicesStepProps {
 
 export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
-  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
   const [bucketSchedules, setBucketSchedules] = React.useState<Array<{
     schedule_id: string;
     schedule_name: string;
@@ -34,7 +28,6 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
   }>>([]);
 
   React.useEffect(() => {
-    if (!bucketPoolEditorEnabled) return;
     let isActive = true;
     void (async () => {
       try {
@@ -54,7 +47,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
     return () => {
       isActive = false;
     };
-  }, [bucketPoolEditorEnabled]);
+  }, []);
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
   // Legacy default_rate (untagged), shown as a hint when no service_prices row exists for the contract currency.
   const [legacyDefaultRates, setLegacyDefaultRates] = useState<Record<number, number | null>>({});
@@ -79,7 +72,6 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
           service_name: '',
           unit_rate: undefined,
           unit_of_measure: 'unit',
-          bucket_overlay: undefined,
         },
       ],
     });
@@ -122,34 +114,6 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
   const handleUnitChange = (index: number, unit: string) => {
     const next = [...(data.usage_services ?? [])];
     next[index] = { ...next[index], unit_of_measure: unit };
-    updateData({ usage_services: next });
-  };
-
-  const defaultOverlay = (billingFrequency: string): BucketOverlayInput => ({
-    total_minutes: undefined,
-    overage_rate: undefined,
-    allow_rollover: false,
-    billing_period: billingFrequency as 'monthly' | 'weekly',
-  });
-
-  const toggleBucketOverlay = (index: number, enabled: boolean) => {
-    const next = [...(data.usage_services ?? [])];
-    if (enabled) {
-      const existing = next[index]?.bucket_overlay;
-      const effectiveBillingFrequency = data.usage_billing_frequency ?? data.billing_frequency;
-      next[index] = {
-        ...next[index],
-        bucket_overlay: existing ? { ...existing } : defaultOverlay(effectiveBillingFrequency),
-      };
-    } else {
-      next[index] = { ...next[index], bucket_overlay: undefined };
-    }
-    updateData({ usage_services: next });
-  };
-
-  const updateBucketOverlay = (index: number, overlay: BucketOverlayInput) => {
-    const next = [...(data.usage_services ?? [])];
-    next[index] = { ...next[index], bucket_overlay: { ...overlay } };
     updateData({ usage_services: next });
   };
 
@@ -298,25 +262,6 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                 </div>
               </div>
 
-              {!bucketPoolEditorEnabled && (
-                <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
-                  <SwitchWithLabel
-                    label={t('wizardUsage.labels.setBucketAllocation', { defaultValue: 'Set bucket allocation' })}
-                    checked={Boolean(service.bucket_overlay)}
-                    onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
-                  />
-                  {service.bucket_overlay && (
-                    <BucketOverlayFields
-                      mode="usage"
-                      unitLabel={service.unit_of_measure}
-                      value={service.bucket_overlay ?? defaultOverlay(data.usage_billing_frequency ?? data.billing_frequency)}
-                      onChange={(next) => updateBucketOverlay(index, next)}
-                      automationId={`usage-bucket-${index}`}
-                      billingFrequency={data.usage_billing_frequency ?? data.billing_frequency}
-                    />
-                  )}
-                </div>
-              )}
             </div>
 
             <Button
@@ -354,29 +299,27 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
         </div>
       )}
 
-      {bucketPoolEditorEnabled && (
-        <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
-          <BucketPoolDraftEditor
-            pools={(data.bucket_pools ?? []).filter((pool) => (pool.line_key ?? 'hourly') === 'usage')}
-            lineServices={(data.usage_services ?? [])
-              .filter((service) => service.service_id)
-              .map((service) => ({
-                service_id: service.service_id,
-                service_name: service.service_name || service.service_id,
-              }))}
-            schedules={bucketSchedules}
-            lineKey="usage"
-            onChange={(pools) => {
-              updateData({
-                bucket_pools: [
-                  ...(data.bucket_pools ?? []).filter((pool) => (pool.line_key ?? 'hourly') !== 'usage'),
-                  ...pools,
-                ],
-              });
-            }}
-          />
-        </div>
-      )}
+      <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
+        <BucketPoolDraftEditor
+          pools={(data.bucket_pools ?? []).filter((pool) => (pool.line_key ?? 'hourly') === 'usage')}
+          lineServices={(data.usage_services ?? [])
+            .filter((service) => service.service_id)
+            .map((service) => ({
+              service_id: service.service_id,
+              service_name: service.service_name || service.service_id,
+            }))}
+          schedules={bucketSchedules}
+          lineKey="usage"
+          onChange={(pools) => {
+            updateData({
+              bucket_pools: [
+                ...(data.bucket_pools ?? []).filter((pool) => (pool.line_key ?? 'hourly') !== 'usage'),
+                ...pools,
+              ],
+            });
+          }}
+        />
+      </div>
 
       {(data.usage_services?.length ?? 0) > 0 && (
         <Alert variant="info" className="mt-6">

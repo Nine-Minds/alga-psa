@@ -85,6 +85,9 @@ export {
 } from './lib/withAuth';
 export type { AuthContext, WithAuthOptions } from './lib/withAuth';
 
+// Localization boundary for action errors — for actions that return outside withAuth.
+export { localizeActionError } from './lib/localizeActionError';
+
 // UI components (used by Next.js route shims)
 export { AppSessionProvider } from './components/AppSessionProvider';
 export { default as Alert } from './components/Alert';
@@ -100,7 +103,7 @@ export { default as TwoFactorInput } from './components/TwoFA';
 
 // Services
 export { PasswordResetService } from './services/PasswordResetService';
-export { ApiKeyService } from './services/apiKeyService';
+export { ApiKeyService, shouldTouchApiKeyLastUsed, API_KEY_LAST_USED_WRITE_INTERVAL_MS } from './services/apiKeyService';
 
 // Rate limiting
 export * from './lib/security/rateLimiting';

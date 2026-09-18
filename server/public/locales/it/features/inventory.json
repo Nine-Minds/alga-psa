@@ -411,6 +411,273 @@
       "valuationReport": "Report di valorizzazione"
     }
   },
+  "errors": {
+    "cycleCounts": {
+      "approvedCannotCancel": "Una sessione di conteggio approvata non può essere annullata.",
+      "conflict": "Questo aggiornamento del conteggio è in conflitto con un record esistente. Aggiorna la pagina e riprova.",
+      "countNonNegative": "Il conteggio deve essere un numero intero non negativo.",
+      "locationRequired": "Scegli un'ubicazione da conteggiare.",
+      "productNotInSession": "Questo prodotto non fa parte della sessione di conteggio. Aggiorna la sessione e riprova.",
+      "recordInvalid": "Uno dei record di conteggio selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "separateApproverRequired": "L'approvazione deve essere data da un'altra persona perché hai conteggiato in questa sessione.",
+      "sessionAlreadyOpen": "Questa ubicazione ha già una sessione di conteggio aperta.",
+      "sessionNotFound": "Sessione di conteggio non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova.",
+      "stockLocationNotFound": "Ubicazione di giacenza non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova."
+    },
+    "dropShip": {
+      "conflict": "Questa spedizione drop-ship è in conflitto con un record esistente. Aggiorna la pagina e riprova.",
+      "lineNotDropShip": "Questa riga dell'ordine di vendita non è configurata per l'evasione in drop-ship.",
+      "lineRequired": "Seleziona una riga drop-ship prima di confermare la spedizione del fornitore.",
+      "poLineNotLinked": "Questa riga dell'ordine di acquisto non è collegata a una riga dell'ordine di vendita.",
+      "purchaseOrderNotDropShip": "Questo ordine di acquisto non è configurato per l'evasione in drop-ship.",
+      "purchaseOrderNotFound": "Ordine di acquisto non trovato. Potrebbe essere stato eliminato. Aggiorna la pagina e riprova.",
+      "purchaseOrderRequired": "Crea l'ordine di acquisto drop-ship prima di confermare la spedizione del fornitore.",
+      "recordInvalid": "Uno dei record drop-ship selezionati non esiste più. Aggiorna la pagina e riprova.",
+      "salesOrderLineNotFound": "Riga dell'ordine di vendita non trovata. Potrebbe essere stata eliminata. Aggiorna la pagina e riprova.",
+      "salesOrderNotFound": "Ordine di vendita non trovato. Potrebbe essere stato eliminato. Aggiorna la pagina e riprova.",
+      "serialsRequired": "Inserisci almeno un numero di serie per questa spedizione drop-ship serializzata.",
+      "vendorRequired": "Seleziona un fornitore prima di creare l'ordine di acquisto drop-ship."
+    },
+    "fulfillment": {
+      "conflict": "Questa evasione è in conflitto con un record esistente. Aggiorna la pagina e riprova.",
+      "exceedsOrdered": "L'evasione supererebbe la quantità ordinata. Aggiorna l'ordine e riprova.",
+      "noSerializedUnits": "Non ci sono unità serializzate disponibili per evadere questa riga.",
+      "quantityRequired": "Inserisci una quantità per evadere questa riga non serializzata.",
+      "recordInvalid": "Uno dei record di evasione selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "sourceLocationRequired": "Scegli un'ubicazione di origine prima di evadere questa riga.",
+      "trackingDisabled": "Il tracciamento della giacenza non è abilitato per questo prodotto.",
+      "useDropShipFlow": "Usa il flusso di ricezione drop-ship per evadere questa riga."
+    },
+    "ghostUsage": {
+      "aiRequiresEe": "La selezione tramite IA richiede la Enterprise Edition e il componente aggiuntivo Assistente IA.",
+      "reviewNotFound": "Verifica non trovata. Potrebbe essere già stata aggiornata. Aggiorna la pagina e riprova."
+    },
+    "kits": {
+      "componentNotFound": "Prodotto componente non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiorna la pagina e riprova.",
+      "componentQuantityPositive": "La quantità del componente deve essere un numero intero positivo.",
+      "componentsRequired": "Aggiungi almeno un componente a questo kit prima di inserirlo in un ordine di vendita.",
+      "currencyCodeInvalid": "La valuta deve essere un codice di tre lettere come USD.",
+      "duplicateComponent": "Questo componente del kit esiste già. Aggiorna invece la sua quantità.",
+      "duplicateSku": "Esiste già un prodotto con questo SKU. Usa uno SKU diverso oppure modifica il prodotto esistente.",
+      "enableInventoryAndKitFirst": "Abilita il tracciamento della giacenza e contrassegna questo prodotto come kit prima di gestire i componenti.",
+      "fixedPriceRequired": "Imposta un prezzo fisso del kit maggiore di 0 oppure passa questo kit al prezzo come somma dei componenti.",
+      "markAsKitFirst": "Contrassegna questo prodotto come kit prima di gestire o prezzare i componenti del kit.",
+      "nameRequired": "Inserisci un nome per questo kit.",
+      "nestedKit": "Un kit non può contenere un altro kit. Scegli come componente un prodotto che non sia un kit.",
+      "notFound": "Kit non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiorna la pagina e riprova.",
+      "pricingModeInvalid": "La modalità di prezzo del kit deve essere la somma dei componenti oppure un prezzo fisso.",
+      "productTypeNotFound": "Il tipo di prodotto selezionato non esiste più. Aggiorna la pagina e scegline un altro.",
+      "productTypeRequired": "Scegli un tipo di prodotto per questo kit.",
+      "recordInvalid": "Uno dei record di kit selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "savedButNotReloaded": "Il kit è stato salvato ma non è stato possibile ricaricarlo. Aggiorna la pagina per vedere lo stato più recente.",
+      "selfComponent": "Un kit non può contenere sé stesso come componente.",
+      "updateParentLine": "Aggiorna la riga del kit principale anziché una singola riga di componente."
+    },
+    "landedCost": {
+      "amountPositive": "L'importo del costo accessorio deve essere maggiore di zero.",
+      "appliedCannotRemove": "Le voci di costo accessorio applicate non possono essere rimosse.",
+      "conflict": "Questo aggiornamento del costo accessorio è in conflitto con un record esistente. Aggiorna la pagina e riprova.",
+      "orderCancelled": "Il costo accessorio non può essere aggiunto a un ordine di acquisto annullato.",
+      "receiveLineFirst": "Ricevi almeno una riga dell'ordine di acquisto prima di applicare il costo accessorio.",
+      "recordInvalid": "Uno dei record di costo accessorio selezionati non è più valido. Aggiorna la pagina e riprova."
+    },
+    "loaners": {
+      "cannotLoanOut": "Questa unità non può essere data in prestito.",
+      "cannotLoanOutStatus": {
+        "allocated": "Questa unità non può essere data in prestito: attualmente è allocata.",
+        "delivered": "Questa unità non può essere data in prestito: attualmente è consegnata.",
+        "in_rma": "Questa unità non può essere data in prestito: attualmente è in RMA.",
+        "in_stock": "Questa unità non può essere data in prestito: attualmente è in giacenza.",
+        "in_transit": "Questa unità non può essere data in prestito: attualmente è in transito.",
+        "on_loan": "Questa unità non può essere data in prestito: attualmente è in prestito.",
+        "retired": "Questa unità non può essere data in prestito: attualmente è dismessa.",
+        "returned": "Questa unità non può essere data in prestito: attualmente è resa."
+      },
+      "clientRequired": "Scegli un cliente prima di dare in prestito l'unità.",
+      "conflict": "Questo aggiornamento del prestito è in conflitto con un record esistente. Aggiorna la pagina e riprova.",
+      "dueDateInvalid": "Scegli una data di scadenza valida.",
+      "invalidReferenceUnitClient": "Questo non sembra un riferimento a record valido. Scegli l'unità e il cliente dagli elenchi.",
+      "notOnLoan": "Questa unità non è in prestito.",
+      "notOnLoanStatus": {
+        "allocated": "Questa unità non è in prestito: attualmente è allocata.",
+        "delivered": "Questa unità non è in prestito: attualmente è consegnata.",
+        "in_rma": "Questa unità non è in prestito: attualmente è in RMA.",
+        "in_stock": "Questa unità non è in prestito: attualmente è in giacenza.",
+        "in_transit": "Questa unità non è in prestito: attualmente è in transito.",
+        "on_loan": "Questa unità non è in prestito: attualmente è in prestito.",
+        "retired": "Questa unità non è in prestito: attualmente è dismessa.",
+        "returned": "Questa unità non è in prestito: attualmente è resa."
+      },
+      "recordInvalid": "Uno dei record di prestito selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "returnLocationRequired": "Scegli un'ubicazione di reso."
+    },
+    "openingBalance": {
+      "conflict": "L'importazione è in conflitto con record di giacenza esistenti. Valida di nuovo il file e riprova.",
+      "recordInvalid": "Uno dei record di giacenza iniziale selezionati non è più valido. Valida di nuovo il file e riprova."
+    },
+    "permissions": {
+      "inventoryRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la giacenza",
+      "inventoryUpdate": "Autorizzazione negata: è richiesta l'autorizzazione di aggiornamento per la giacenza",
+      "settingsUpdate": "Autorizzazione negata: è richiesta l'autorizzazione di aggiornamento per le impostazioni",
+      "vendorCreate": "Autorizzazione negata: è richiesta l'autorizzazione di creazione per i fornitori",
+      "vendorUpdate": "Autorizzazione negata: è richiesta l'autorizzazione di aggiornamento per i fornitori"
+    },
+    "productSettings": {
+      "alreadyExists": "Esistono già impostazioni di giacenza per questo prodotto. Aggiorna la pagina e riprova.",
+      "invalidKitPricingMode": "Scegli una modalità di prezzo del kit valida.",
+      "productNotFound": "Prodotto non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiorna la pagina e riprova.",
+      "productsOnly": "La gestione della giacenza può essere abilitata solo sui prodotti.",
+      "removeComponentsFirst": "Rimuovi tutti i componenti del kit prima di togliere il contrassegno di kit.",
+      "serializedUnitsExist": "Questo prodotto ha unità serializzate. Sposta, dismetti o rimuovi tali unità prima di disabilitare la serializzazione."
+    },
+    "purchaseOrders": {
+      "cancelledCannotEdit": "Questo ordine di acquisto è annullato e non può essere modificato.",
+      "cancelledCannotReceive": "Questo ordine di acquisto è annullato e non può ricevere giacenza.",
+      "currencyRequired": "Seleziona una valuta prima di creare l'ordine di acquisto.",
+      "fullyReceivedCannotCancel": "Questo ordine di acquisto è già stato ricevuto completamente e non può essere annullato.",
+      "lineNotFound": "Riga dell'ordine di acquisto non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova.",
+      "lineReceivedCannotRemove": "Questa riga ha già ricevuto giacenza e non può essere rimossa.",
+      "lineRequired": "Aggiungi almeno una riga prima di inviare questo ordine di acquisto.",
+      "onlyDraftDeletable": "È possibile eliminare solo gli ordini di acquisto in bozza. Annulla invece gli ordini inviati.",
+      "quantityPositive": "La quantità deve essere maggiore di 0.",
+      "receivedStockCannotCancel": "Questo ordine di acquisto ha già ricevuto giacenza e non può essere annullato.",
+      "recordInvalid": "Uno dei record dell'ordine di acquisto selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "stockLocationNotFound": "Ubicazione di giacenza non trovata. Potrebbe essere stata eliminata. Scegli un'altra ubicazione.",
+      "submitBeforeReceiving": "Invia questo ordine di acquisto prima di ricevere giacenza su di esso.",
+      "trackingDisabled": "Il tracciamento della giacenza è disabilitato per questo prodotto.",
+      "vendorRequired": "Seleziona un fornitore prima di creare l'ordine di acquisto."
+    },
+    "reorder": {
+      "destinationAndSourceRequired": "Scegli sia una destinazione di carico sia uno scaffale di origine.",
+      "recordInvalid": "Uno dei record dell'elenco di carico selezionati non è più valido. Aggiorna la pagina e riprova."
+    },
+    "reporting": {
+      "invalidDateRange": "Scegli un intervallo di date del report valido."
+    },
+    "restock": {
+      "cannotRestock": "Questa unità non può essere riassortita. Solo le unità consegnate o rese possono essere riassortite.",
+      "cannotRestockStatus": {
+        "allocated": "Questa unità non può essere riassortita: attualmente è allocata. Solo le unità consegnate o rese possono essere riassortite.",
+        "delivered": "Questa unità non può essere riassortita: attualmente è consegnata. Solo le unità consegnate o rese possono essere riassortite.",
+        "in_rma": "Questa unità non può essere riassortita: attualmente è in RMA. Solo le unità consegnate o rese possono essere riassortite.",
+        "in_stock": "Questa unità non può essere riassortita: attualmente è in giacenza. Solo le unità consegnate o rese possono essere riassortite.",
+        "in_transit": "Questa unità non può essere riassortita: attualmente è in transito. Solo le unità consegnate o rese possono essere riassortite.",
+        "on_loan": "Questa unità non può essere riassortita: attualmente è in prestito. Solo le unità consegnate o rese possono essere riassortite.",
+        "retired": "Questa unità non può essere riassortita: attualmente è dismessa. Solo le unità consegnate o rese possono essere riassortite.",
+        "returned": "Questa unità non può essere riassortita: attualmente è resa. Solo le unità consegnate o rese possono essere riassortite."
+      },
+      "conflict": "Questo riassortimento è in conflitto con un record esistente. Aggiorna la pagina e riprova.",
+      "feeNonNegative": "La commissione di riassortimento non può essere negativa.",
+      "invalidReferenceUnitLocation": "Questo non sembra un riferimento a record valido. Scegli l'unità e l'ubicazione dagli elenchi.",
+      "locationRequired": "Scegli un'ubicazione per riassortire questa unità.",
+      "productAndLocationRequired": "Scegli un prodotto e un'ubicazione prima di riassortire la giacenza non serializzata.",
+      "quantityPositive": "La quantità di riassortimento deve essere maggiore di zero.",
+      "recordInvalid": "Uno dei record selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "serializedUnitRequired": "Questo prodotto è serializzato. Scegli l'unità specifica da riassortire."
+    },
+    "rma": {
+      "caseNotFound": "Pratica RMA non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova.",
+      "deadUnitDueDateRequired": "Scegli una data di scadenza per l'unità guasta resa.",
+      "duplicateStockUnit": "Esiste già un'unità di giacenza con quel numero di serie o indirizzo MAC.",
+      "missingProductDetails": "A questo RMA mancano i dettagli del prodotto. Aggiorna la pagina e riprova.",
+      "noReplacementUnit": "Per questo RMA non è registrata alcuna unità sostitutiva. Aggiorna la pagina e riprova.",
+      "noReturnedUnit": "Per questo RMA non è registrata alcuna unità resa. Aggiorna la pagina e riprova.",
+      "recordInvalid": "Uno dei record RMA selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "replacementLocationRequired": "Seleziona l'ubicazione di ricezione per l'unità sostitutiva.",
+      "replacementSerialRequired": "Inserisci il numero di serie dell'unità sostitutiva.",
+      "returnLocationRequired": "Seleziona un'ubicazione prima di ricevere il reso.",
+      "returnedUnitNotFound": "Unità di giacenza resa non trovata. Aggiorna la pagina e scegli un'altra unità.",
+      "returnedUnitRequired": "L'ID dell'unità resa è obbligatorio.",
+      "vendorRequired": "Seleziona un fornitore prima di inviare l'RMA."
+    },
+    "salesOrders": {
+      "clientRequired": "Seleziona un cliente prima di creare l'ordine di vendita.",
+      "conflict": "Questo aggiornamento dell'ordine di vendita è in conflitto con un record esistente. Aggiorna la pagina e riprova.",
+      "currencyRequired": "Seleziona una valuta prima di creare l'ordine di vendita.",
+      "fulfilledCannotCancel": "Questo ordine di vendita ha righe evase e non può essere annullato.",
+      "fulfilledCannotReopen": "Questo ordine di vendita ha righe evase e non può essere riaperto.",
+      "invalidDate": "Scegli una data dell'ordine di vendita valida.",
+      "invalidValue": "Uno dei valori selezionati dell'ordine di vendita non è valido. Aggiorna la pagina e riprova.",
+      "invoicedCannotCancel": "Questo ordine di vendita ha righe fatturate e non può essere annullato.",
+      "invoicedCannotReopen": "Questo ordine di vendita ha righe fatturate e non può essere riaperto.",
+      "missingData": "Mancano dati obbligatori dell'ordine di vendita. Controlla il modulo e riprova.",
+      "onlyDraftDeletable": "È possibile eliminare solo gli ordini di vendita in bozza. Annulla invece gli ordini confermati.",
+      "recordInvalid": "Uno dei record dell'ordine di vendita selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "valueNotAllowed": "Uno dei valori dell'ordine di vendita non è consentito. Controlla il modulo e riprova."
+    },
+    "shared": {
+      "duplicateStockUnit": "Esiste già un'unità di giacenza con lo stesso numero di serie o indirizzo MAC.",
+      "inventoryNotEnabledForProduct": "La gestione della giacenza non è abilitata per questo prodotto.",
+      "inventoryRecordInvalid": "Uno dei record di giacenza selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "inventorySettingsDisabled": "Le impostazioni di giacenza non sono abilitate per questo prodotto. Abilita prima il tracciamento della giacenza.",
+      "lineQuantityPositive": "La quantità di ogni riga deve essere maggiore di 0.",
+      "locationRequiredForReceipt": "Seleziona un'ubicazione prima di ricevere la giacenza.",
+      "purchaseOrderNotFound": "Ordine di acquisto non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiorna la pagina e riprova.",
+      "salesOrderLineAlreadyFulfilled": "Questa riga dell'ordine di vendita è già stata evasa completamente.",
+      "salesOrderLineNotFound": "Riga dell'ordine di vendita non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova.",
+      "salesOrderNotFound": "Ordine di vendita non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiorna la pagina e riprova.",
+      "sameSourceAndDestination": "Scegli ubicazioni di origine e destinazione diverse.",
+      "serialNumberRequired": "Ogni unità serializzata deve avere un numero di serie.",
+      "stockUnitNotFound": "Unità di giacenza non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova.",
+      "vendorNotFoundChooseAnother": "Fornitore non trovato. Potrebbe essere stato eliminato. Scegli un altro fornitore."
+    },
+    "stockLedger": {
+      "productRequired": "Seleziona un prodotto prima di ricevere la giacenza.",
+      "quantityPositiveInteger": "La quantità deve essere un numero intero positivo.",
+      "recordInvalid": "Il prodotto o l'ubicazione selezionati non sono più validi. Aggiorna la pagina e riprova.",
+      "trackingDisabled": "Il tracciamento della giacenza è disabilitato per questo prodotto.",
+      "unitCostNonNegative": "Il costo unitario non può essere negativo."
+    },
+    "stockLocations": {
+      "duplicate": "Esiste già un'ubicazione con questi dati.",
+      "invalidType": "Scegli un tipo di ubicazione valido.",
+      "moveStockBeforeDeactivate": "Sposta tutta la giacenza fuori da questa ubicazione prima di disattivarla.",
+      "moveUnitsBeforeDeactivate": "Sposta o dismetti tutte le unità di questa ubicazione prima di disattivarla.",
+      "nameRequired": "Il nome dell'ubicazione è obbligatorio.",
+      "notFound": "Ubicazione non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova.",
+      "recordInvalid": "Uno dei record di ubicazione selezionati non è più valido. Aggiorna la pagina e riprova."
+    },
+    "stockUnits": {
+      "conflict": "Questa ricerca di unità di giacenza è in conflitto con un record esistente. Aggiorna la pagina e riprova.",
+      "invalidDateRange": "Scegli un intervallo di date dei movimenti di giacenza valido.",
+      "invalidValue": "Uno dei valori selezionati dell'unità di giacenza non è valido. Aggiorna la pagina e riprova.",
+      "recordInvalid": "Uno dei record di unità di giacenza selezionati non è più valido. Aggiorna la pagina e riprova."
+    },
+    "transfers": {
+      "conflict": "Questo trasferimento è in conflitto con un record esistente. Aggiorna la pagina e riprova.",
+      "lineRequired": "Aggiungi almeno una riga di trasferimento.",
+      "locationsRequired": "Scegli sia un'ubicazione di origine sia un'ubicazione di destinazione.",
+      "notFound": "Trasferimento non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiorna la pagina e riprova.",
+      "productRequired": "Ogni riga di trasferimento deve avere un prodotto o un servizio.",
+      "quantityPositive": "La quantità della riga di trasferimento deve essere maggiore di zero.",
+      "recordInvalid": "Uno dei record di trasferimento selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "unitNotAtSource": "L'unità di giacenza selezionata non si trova nell'ubicazione di origine.",
+      "unitNotInStock": "Possono essere trasferite solo le unità attualmente in giacenza.",
+      "unitProductMismatch": "L'unità di giacenza selezionata non corrisponde al prodotto della riga di trasferimento."
+    },
+    "vendorBills": {
+      "duplicateNumber": "Esiste già una fattura con questo numero per il fornitore selezionato.",
+      "lineQuantityPositive": "La quantità della riga deve essere un numero intero positivo.",
+      "lineUnitCostNonNegative": "Il costo unitario della riga non può essere negativo.",
+      "notFound": "Fattura fornitore non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova.",
+      "numberRequired": "Inserisci il numero di fattura del fornitore.",
+      "receiveStockFirst": "Ricevi la giacenza su questo ordine di acquisto prima di creare una fattura fornitore da esso.",
+      "recordInvalid": "Uno dei record di fattura fornitore selezionati non è più valido. Aggiorna la pagina e riprova.",
+      "vendorRequired": "Seleziona un fornitore prima di creare la fattura."
+    },
+    "vendorProducts": {
+      "costNonNegative": "Il costo del fornitore non può essere negativo.",
+      "duplicate": "Questa offerta del fornitore esiste già. Aggiorna la pagina e modifica l'offerta esistente.",
+      "recordInvalid": "Il fornitore o il prodotto selezionati non sono più validi. Aggiorna la pagina e riprova.",
+      "vendorAndProductRequired": "Scegli sia un fornitore sia un prodotto prima di salvare l'offerta."
+    },
+    "vendors": {
+      "duplicateName": "Esiste già un fornitore denominato «{{name}}»",
+      "hasOpenPurchaseOrders": "Non è possibile disattivare un fornitore con ordini di acquisto aperti",
+      "nameRequired": "Il nome del fornitore è obbligatorio",
+      "notFound": "Fornitore non trovato"
+    }
+  },
   "ghostUsage": {
     "actions": {
       "dismiss": "Ignora",

@@ -323,6 +323,13 @@ describe('journey: inbound email → ticket → threaded reply → agent reply o
       from: { email: contactEmail, name: 'Pat Customer' },
       to: [{ email: providerMailbox, name: 'Support' }],
       attachments: [],
+      // Real provider-fetched mail carries the receiving MTA's
+      // Authentication-Results; exact-contact attribution now requires an
+      // aligned SPF/DKIM pass (sender-forgery gate). DKIM header.d is aligned
+      // to the contact's From domain.
+      headers: {
+        'Authentication-Results': `mx.google.com; dkim=pass header.d=${contactEmail.split('@')[1]}; spf=pass smtp.mailfrom=${contactEmail}`,
+      },
       ...overrides,
     });
 

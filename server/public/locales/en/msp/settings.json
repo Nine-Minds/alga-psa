@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "You do not have permission to view secrets.",
       "success": {
         "tenantNameUpdated": "Tenant name updated successfully",
         "timezoneUpdated": "Default timezone updated successfully",
@@ -267,7 +268,9 @@
         "licenseLimitReached": "You've reached your MSP user license limit.",
         "soloPlanLimit": "Solo plan is limited to 1 user. Upgrade to Pro to add more users.",
         "revokeInvitation": "Failed to revoke invitation",
-        "invitationNotFound": "Invitation not found or already used"
+        "invitationNotFound": "Invitation not found or already used",
+        "createContact": "Failed to create contact: {{reason}}",
+        "unknown": "Unknown error"
       }
     },
     "invitations": {
@@ -438,7 +441,8 @@
       "boards": "Boards",
       "priorities": "Priorities",
       "categories": "Categories",
-      "checklistTemplates": "Checklist Templates"
+      "checklistTemplates": "Checklist Templates",
+      "externalSystems": "External systems"
     },
     "numbering": {
       "title": "Number Format",
@@ -546,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Active",
-        "inactive": "Inactive"
+        "inactive": "Inactive",
+        "hiddenFromPortal": "Hidden from portal"
       },
       "actions": {
         "addBoard": "Add Board",
@@ -626,7 +631,8 @@
           "loading": "Loading board ticket statuses…",
           "statusName": "Status name",
           "closed": "Closed",
-          "default": "Default"
+          "default": "Default",
+          "portalSelectable": "Client portal users can select this status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reopen closed tickets on inbound replies",
@@ -642,6 +648,10 @@
         "liveTimer": {
           "label": "Enable live ticket timer",
           "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+        },
+        "clientPortalVisible": {
+          "label": "Visible in client portal",
+          "help": "When off, this board and its tickets are hidden from every client portal user, regardless of visibility groups."
         },
         "defaultBoard": {
           "label": "Default board for client portal tickets",
@@ -984,6 +994,47 @@
           "ruleSaveFailed": "Failed to save auto-apply rule"
         }
       }
+    },
+    "externalSystems": {
+      "title": "External systems",
+      "subtitle": "Add custom external systems so tickets can link to records outside the built-in catalog.",
+      "addButton": "Add system",
+      "builtInTitle": "Built-in systems",
+      "builtInSubtitle": "Available to every tenant; their URLs are rendered from the system template.",
+      "table": {
+        "label": "Label",
+        "key": "Key",
+        "urlTemplate": "URL template",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "fields": {
+        "key": "Key",
+        "keyHint": "Must match custom:<slug> using lowercase letters, digits, or underscores.",
+        "label": "Label",
+        "urlTemplate": "URL template",
+        "urlTemplateHint": "Optional. Use {realm} and {external_id} placeholders."
+      },
+      "dialog": {
+        "addTitle": "Add external system",
+        "editTitle": "Edit external system"
+      },
+      "deleteDialog": {
+        "title": "Delete external system",
+        "message": "Delete \"{{label}}\"? Systems still used by links cannot be deleted."
+      },
+      "messages": {
+        "success": {
+          "created": "External system created.",
+          "updated": "External system updated.",
+          "deleted": "External system deleted."
+        }
+      }
     }
   },
   "interactions": {
@@ -1048,7 +1099,8 @@
         "name": "Name",
         "status": "Status",
         "order": "Order",
-        "actions": "Actions"
+        "actions": "Actions",
+        "default": "Default"
       },
       "statusLabels": {
         "closedHelp": "Interactions with this status will be marked as closed",
@@ -1064,14 +1116,21 @@
         "success": {
           "updated": "Status updated successfully",
           "deleted": "Status deleted successfully",
-          "imported": "Successfully imported {{count}} statuses"
+          "imported": "Successfully imported {{count}} statuses",
+          "defaultUpdated": "Default interaction status updated"
         },
         "error": {
           "lastClosed": "At least one status must remain marked as closed",
           "deleteLastClosed": "Cannot delete the last closed status for this type.",
           "skipped": "Skipped {{count}} statuses ({{reason}})",
-          "importFailed": "Failed to import statuses"
+          "importFailed": "Failed to import statuses",
+          "defaultRequired": "One status must stay the default — set another status as default instead.",
+          "closedCannotBeDefault": "A closed status cannot be the default for new interactions."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Default for new interactions",
+        "setDefault": "Use as default"
       }
     },
     "quickAdd": {
@@ -1129,6 +1188,8 @@
         "companyName": "Company Name",
         "companyLogo": "Company Logo",
         "companyLogoDark": "Logo for dark backgrounds",
+        "companyLogoWide": "Wide logo (optional)",
+        "companyLogoWideDark": "Wide logo for dark backgrounds (optional)",
         "colorPalette": "Color Palette",
         "primaryColor": "Primary Color",
         "secondaryColor": "Secondary Color",
@@ -1145,6 +1206,8 @@
         "companyLogo": "Recommended: PNG or SVG, max 2MB, transparent background",
         "companyLogoMsp": "This logo also replaces the Alga mark in the MSP side menu.",
         "companyLogoDark": "Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.",
+        "companyLogoWide": "Shown at the top of the expanded portal side panel, at 32px tall. Include your company name in the image — the panel stops printing it separately.",
+        "companyLogoWideDark": "Optional. Used while the side panel background is dark. Falls back to the wide logo.",
         "primaryColor": "Used for buttons, links, and highlights",
         "secondaryColor": "Used for accents and secondary actions",
         "supportEmail": "Shown to clients in appointment confirmations and other outbound emails as the address to contact for help.",
@@ -1174,7 +1237,11 @@
         "previewSignIn": "Preview Sign-in Page",
         "hideSignIn": "Hide Sign-in Page"
       },
-      "customDomainRequired": "Must have custom domain set up"
+      "customDomainRequired": "Must have custom domain set up",
+      "warnings": {
+        "expectSquare": "That image is much wider than it is tall. This slot fills square spaces — the wide logo slot is probably the one you want.",
+        "expectWide": "That image is close to square. The wide logo slot is for a landscape wordmark — a square mark belongs in the slot above."
+      }
     },
     "dashboardPreview": {
       "title": "Your Client Portal",
@@ -1279,11 +1346,11 @@
         "canonicalHostFallback": "canonical host"
       },
       "appliance": {
-        "helpText": "Point this hostname at your appliance and have your reverse proxy forward the original Host header before saving.",
+        "helpText": "Point this hostname at your server and have your reverse proxy forward the original Host header before saving.",
         "checklistTitle": "Reverse proxy setup",
         "step1Prefix": "Point ",
-        "step1Suffix": " at this appliance (an A record to its address, or a CNAME to your appliance host).",
-        "step2": "On your reverse proxy, terminate TLS for the domain and forward to this appliance on port 3000, preserving the original Host header (e.g. proxy_set_header Host $host) and sending X-Forwarded-Proto: https.",
+        "step1Suffix": " at this server (an A record to its address, or a CNAME to your server's hostname).",
+        "step2": "On your reverse proxy, terminate TLS for the domain and forward to this server on port 3000, preserving the original Host header (e.g. proxy_set_header Host $host) and sending X-Forwarded-Proto: https.",
         "step3": "Obtain and maintain the TLS certificate for the domain on your proxy.",
         "step4": "Save the domain here — it activates immediately. Wire DNS and your proxy first, since portal links switch to this domain right away.",
         "docLinkText": "Reverse proxy setup & troubleshooting guide",
@@ -1420,10 +1487,24 @@
     "whiteLabel": {
       "title": "White-label the MSP app",
       "description": "The logo slots are shared with the client portal, but they only affect the MSP app after MSP UI customization is enabled below.",
-      "logoHelp": "When enabled, the always-dark MSP side menu uses the dark-background logo and falls back to the main logo. Portal uploads alone never change the MSP app.",
+      "logoHelp": "The square mark is used wherever the space is square — the collapsed side menu and circular frames. The optional wide logo replaces the mark and the name in the expanded side menu, so upload one that already contains your company name. The side menu follows its own background: dark-background variants on a dark menu, light ones on a light menu, falling back to whichever variant you uploaded.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo for dark backgrounds"
+        "mark": "Square mark",
+        "markDark": "Square mark for dark backgrounds",
+        "wide": "Wide logo (optional)",
+        "wideDark": "Wide logo for dark backgrounds (optional)",
+        "favicon": "Browser icon (favicon)"
+      },
+      "hints": {
+        "mark": "Used in the collapsed side menu and every circular frame. Square works best.",
+        "markDark": "Optional. Falls back to the square mark.",
+        "wide": "Shown only in the expanded side menu, at 32px tall. Include your company name in the image.",
+        "wideDark": "Optional. Used while the side menu background is dark, which is the case in every built-in theme.",
+        "favicon": "PNG, SVG or ICO. Raster uploads are resized to 32x32. Applies to the MSP app and the client portal for your organization."
+      },
+      "warnings": {
+        "expectSquare": "That image is much wider than it is tall. The square mark slot is used in square spaces — the wide logo slot is probably the one you want.",
+        "expectWide": "That image is nearly square. The wide slot expects a landscape logo — the square mark slot is probably the one you want."
       },
       "colors": {
         "label": "Enable MSP UI customization",
@@ -1440,6 +1521,9 @@
       "notice": "You are previewing an unsaved theme. Everyone else keeps the saved one until you apply this.",
       "save": "Apply to everyone",
       "discard": "Discard"
+    },
+    "upgrade": {
+      "pitch": "Organization-wide theme pairs, a custom palette editor and MSP white-labeling are part of Enterprise Edition."
     }
   },
   "mspLanguage": {
@@ -1467,6 +1551,7 @@
     "emailTabs": {
       "settings": "Settings",
       "emailTemplates": "Email Templates",
+      "emailBranding": "Email Branding",
       "categories": "Categories",
       "telemetry": "Telemetry"
     },
@@ -1523,7 +1608,8 @@
       "preview": {
         "subjectLabel": "Subject Preview",
         "iframeTitle": "Email template preview",
-        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values."
+        "sampleDataNote": "Preview uses sample data. Actual emails will contain real values.",
+        "sourceSyncNote": "Click anything in the preview to select the markup behind it; moving the cursor in the source outlines it here."
       },
       "errors": {
         "loadFailed": "Failed to load templates"
@@ -1572,7 +1658,8 @@
       },
       "tabs": {
         "source": "Source",
-        "preview": "Preview"
+        "preview": "Preview",
+        "variables": "Variables"
       },
       "common": {
         "notAvailable": "N/A"
@@ -1589,6 +1676,110 @@
         "it": "Italian",
         "pl": "Polish",
         "pt": "Portuguese"
+      }
+    },
+    "emailBranding": {
+      "title": "Email branding",
+      "description": "Put your colors on every outbound email. Preview them here, then choose which templates to apply them to.",
+      "unsavedHint": "Save the palette before applying it.",
+      "source": {
+        "saved": "Saved",
+        "custom-theme": "From your custom theme",
+        "theme-pair": "From your theme",
+        "portal-branding": "From your client portal branding",
+        "default": "AlgaPSA default"
+      },
+      "fields": {
+        "primary": "Primary color",
+        "secondary": "Secondary color",
+        "singleColor": "Single color (derive the gradient from the primary color)"
+      },
+      "tokens": {
+        "dark": "Dark accent",
+        "outerBg": "Outer background",
+        "footerBg": "Footer background",
+        "cardBorder": "Card border",
+        "infoBoxBg": "Info box background",
+        "infoBoxBorder": "Info box border"
+      },
+      "preview": {
+        "title": "Preview"
+      },
+      "actions": {
+        "save": "Save palette",
+        "saving": "Saving...",
+        "useSuggested": "Use suggested colors",
+        "adjust": "Adjust derived colors",
+        "apply": "Apply to templates",
+        "applying": "Applying...",
+        "applyCount": "Apply to {{count}} templates",
+        "applyToTemplate": "Apply my palette",
+        "remove": "Remove branding from all templates",
+        "removing": "Removing...",
+        "cancel": "Cancel",
+        "done": "Done"
+      },
+      "apply": {
+        "title": "Apply branding to templates",
+        "languages": "Languages",
+        "selectAll": "Select all",
+        "selectNone": "Select none",
+        "differs": "Differs in {{parts}}",
+        "differsParts": {
+          "colors": "colors",
+          "text": "text",
+          "subject": "subject"
+        },
+        "overwrite": "Overwrite",
+        "overwriteHint": "Overwrite rebuilds a template from the standard one in your palette and discards your edits.",
+        "preview": {
+          "open": "Preview the result",
+          "title": "Preview: {{name}}",
+          "loading": "Building the preview...",
+          "captions": {
+            "create": "A branded copy of the standard template will be created for you.",
+            "update": "Your branded copy will be rebuilt from the standard template with the saved palette.",
+            "customized": "Your edits are kept word for word. Only the stock colors still left in this template are replaced.",
+            "overwrite": "Your edits to this template will be discarded. It will be rebuilt from the standard template in your palette.",
+            "skipped": "Nothing will be written — {{reason}}. This is the template as it stands today."
+          }
+        },
+        "summary": "{{written}} branded, {{skipped}} skipped, {{failed}} failed",
+        "groups": {
+          "system": {
+            "title": "Not customized",
+            "action": "Create branded copy"
+          },
+          "branded": {
+            "title": "Branded by you",
+            "action": "Update colors"
+          },
+          "customized": {
+            "title": "Customized",
+            "action": "Replace remaining stock colors only"
+          },
+          "no-stock-colors": {
+            "title": "No stock colors",
+            "action": "Nothing to replace"
+          }
+        },
+        "skipReasons": {
+          "customized": "Customized — not selected",
+          "nothing-to-replace": "Nothing to replace",
+          "unchanged": "Already up to date"
+        }
+      },
+      "newTemplates": {
+        "message": "{{count}} templates were added since you last applied your palette.",
+        "action": "Apply palette to new templates",
+        "dismiss": "Dismiss"
+      },
+      "enterprise": {
+        "useLogo": "Use my logo in the email header",
+        "logoWide": "Wide logo",
+        "logoDefault": "Square logo",
+        "noLogo": "Upload a logo in Settings → Client Portal → Branding to use it here.",
+        "showAttribution": "Show \"Powered by AlgaPSA\" in the footer"
       }
     },
     "categoriesUi": {
@@ -1689,7 +1880,138 @@
   },
   "timeEntry": {
     "title": "Time Entry Settings",
-    "description": "Manage your time entry settings and time periods"
+    "description": "Manage your time entry settings and time periods",
+    "timePeriods": {
+      "title": "Time Period Settings",
+      "description": "Configure billing time period settings",
+      "loading": "Loading time period settings...",
+      "addNew": "Add New Time Period Setting",
+      "help": {
+        "title": "Understanding Time Period Settings",
+        "intro": "You can define multiple active settings to create complex billing cycles. End Day is the last day included in the period.",
+        "exampleIntro": "For example, to set up semi-monthly periods (1st–15th and 16th–End of Month):",
+        "firstSettingLabel": "Setting 1:",
+        "firstSetting": "Start Day: 1, End Day: 15 → Period covers 1st through 15th",
+        "secondSettingLabel": "Setting 2:",
+        "secondSetting": "Start Day: 16, End Day: End of month → Period covers 16th through last day",
+        "outro": "The system uses these settings to suggest and generate time periods. Ensure your settings cover the entire cycle without gaps."
+      },
+      "form": {
+        "requiredFields": "Please fill in the required fields:",
+        "frequency": "Frequency *",
+        "frequencyPlaceholder": "Enter frequency",
+        "frequencyUnit": "Frequency Unit *",
+        "frequencyUnitPlaceholder": "Select frequency unit",
+        "startDay": "Start Day *",
+        "selectDay": "Select day",
+        "startDayPlaceholder": "Enter start day",
+        "endDay": "End Day *",
+        "endDayPlaceholder": "Enter end day",
+        "endOfUnit": "End of {{unit}}",
+        "endOfMonth": "End of month",
+        "startMonth": "Start Month",
+        "endMonth": "End Month",
+        "startDayOfMonth": "Start Day of Month *",
+        "endDayOfMonth": "End Day of Month *",
+        "add": "Add Time Period Setting"
+      },
+      "validation": {
+        "frequencyMin": "Frequency must be at least 1",
+        "startDayRequired": "Start day is required",
+        "endDayRequired": "End day is required",
+        "startDayOfMonthRequired": "Start day of month is required",
+        "endDayOfMonthRequired": "End day of month is required"
+      },
+      "errors": {
+        "fetch": "Failed to fetch time period settings",
+        "overlap": "This time period setting overlaps with an existing active setting.",
+        "add": "Failed to add time period setting. Please check the values and try again.",
+        "update": "Failed to update time period setting",
+        "delete": "Failed to delete time period setting"
+      },
+      "summary": {
+        "frequency": "Frequency: every {{count}} × {{unit}}",
+        "startDay": "Start Day: {{value}}",
+        "endDay": "End Day: {{value}}",
+        "start": "Start: {{value}}",
+        "end": "End: {{value}}",
+        "effectiveFrom": "Effective From: {{value}}",
+        "effectiveTo": "Effective To: {{value}}",
+        "noEnd": "No end",
+        "notSet": "Not set"
+      },
+      "units": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "year": "Year"
+      },
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "weekDays": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
+      }
+    },
+    "periods": {
+      "title": "Time Periods",
+      "description": "View and manage time entry periods for time tracking",
+      "loading": "Loading time periods...",
+      "create": "Create New Time Period",
+      "openMenu": "Open menu",
+      "columns": {
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "actions": "Actions"
+      },
+      "form": {
+        "createTitle": "Create New Time Period",
+        "editTitle": "Edit Time Period",
+        "suggestion": "Based on your settings, the next time period is suggested.",
+        "frequency": "Frequency: every {{value}} × {{unit}}",
+        "overrideDates": "Override suggested dates",
+        "startDate": "Start Date",
+        "startDatePlaceholder": "Select start date",
+        "noEndDate": "No End Date",
+        "endDate": "End Date",
+        "endDatePlaceholder": "Select end date",
+        "deletePeriod": "Delete Period",
+        "confirmDeleteTitle": "Confirm Delete",
+        "confirmDeleteBody": "Are you sure you want to delete this time period? This action cannot be undone.",
+        "checkSettingsLink": "Please check your time period settings."
+      },
+      "errors": {
+        "load": "Failed to load time periods.",
+        "suggest": "Failed to suggest a new time period",
+        "noApplicableSettings": "No applicable time period settings found.",
+        "noSettings": "No time period settings available. Unable to create a new time period.",
+        "settingsRequired": "Cannot manage time period without settings.",
+        "startDateRequired": "Start date must be provided.",
+        "startBeforeEnd": "Start date must be before end date.",
+        "overlap": "The time period overlaps with an existing period.",
+        "overlapRetry": "This time period overlaps with an existing one. Please choose different dates.",
+        "create": "Failed to create time period.",
+        "delete": "Failed to delete time period",
+        "unexpected": "An unexpected error occurred."
+      }
+    }
   },
   "billing": {
     "title": "Billing Settings",
@@ -1769,7 +2091,8 @@
         "valueRequired": "Secret value is required",
         "noChanges": "No changes to save",
         "fixValidation": "Please fix the validation errors"
-      }
+      },
+      "permissionDenied": "You do not have permission to view secrets."
     }
   },
   "importExport": {
@@ -1848,6 +2171,45 @@
     "templates": {
       "comingSoon": "Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs."
     },
+    "migration": {
+      "actions": {
+        "back": "Back to migrations",
+        "upload": "Upload package"
+      },
+      "errors": {
+        "noImportableRecords": "This package contained no importable records.",
+        "permissionDenied": "You do not have permission to import or export data.",
+        "invalidSpreadsheet": "That spreadsheet could not be read. Check that it is a valid CSV or XLSX file and try again.",
+        "notAmpPackage": "That file is not an AMP package. Upload a .amp or .sqlite file.",
+        "tooLarge": "This upload is larger than the maximum allowed size.",
+        "sizeMismatch": "The upload did not complete. Please try again.",
+        "noRecognizedHeaders": "None of the columns in that spreadsheet were recognized. Check the header row and try again.",
+        "storageRejected": "The server rejected this upload. Ask your administrator to check the storage file-type configuration.",
+        "spreadsheetFailed": "The spreadsheet could not be imported. Please try again.",
+        "uploadFailed": "The package could not be uploaded. Please try again.",
+        "unknown": "The upload failed. Please try again."
+      },
+      "preflight": {
+        "title": "Preflight"
+      },
+      "run": {
+        "queued": "Migration queued",
+        "applying": "Migration in progress"
+      },
+      "badges": {
+        "nothingImported": "Nothing imported"
+      },
+      "results": {
+        "skippedSamePackage": "Skipped records were already migrated by an earlier run of the same package.",
+        "skippedOtherPackage": "Skipped records were matched to entities created by an earlier migration of a different package: {{packages}}.",
+        "skippedExistingEntity": "Skipped records were matched to existing entities.",
+        "nothingImportedTitle": "Nothing was imported",
+        "nothingImportedBody": "This run created no new records. Every row matched something that already existed, so nothing was changed.",
+        "claimedBySamePackage": "Already migrated by this package",
+        "claimedByOtherPackage": "Already migrated by {{file}}",
+        "claimedByExistingEntity": "Matched to an existing entity"
+      }
+    },
     "jobDetails": {
       "title": "Import Job Details",
       "stats": {
@@ -1922,6 +2284,50 @@
     "loading": {
       "extensions": "Loading extensions...",
       "installer": "Loading installer..."
+    }
+  },
+  "policyManagement": {
+    "title": "Policy Management",
+    "upgradeDescription": "Policy management is a Pro feature. Please upgrade to access advanced policy controls."
+  },
+  "roleManagement": {
+    "title": "Manage Roles",
+    "description": "Create and manage roles for MSP and Client Portal access",
+    "columns": {
+      "roleNameRequired": "Role Name *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Role Name",
+      "roleNamePlaceholder": "Enter role name",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter role description"
+    },
+    "portal": {
+      "none": "None",
+      "access": "Portal Access",
+      "msp": "MSP Portal",
+      "client": "Client Portal",
+      "mspShort": "MSP",
+      "clientShort": "Client",
+      "required": "A role must have access to at least one portal"
+    },
+    "actions": {
+      "addRole": "Add Role",
+      "createRole": "Create Role"
+    },
+    "createDialog": {
+      "title": "Create New Role"
+    },
+    "deleteDialog": {
+      "entityFallback": "this role"
+    },
+    "adminDeleteDisabled": "Admin roles cannot be deleted because they are system roles",
+    "errors": {
+      "createFailed": "Failed to create role",
+      "updateFailed": "Failed to update role",
+      "validateDeletionFailed": "Failed to validate deletion. Please try again.",
+      "deleteFailed": "Failed to delete role"
     }
   },
   "security": {
@@ -2323,6 +2729,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Accept credit card payments for invoices via Stripe"
+      },
+      "telephony": {
+        "name": "Telephony",
+        "description": "Journal calls as interactions, recognise callers, and turn a call into a ticket"
       }
     }
   },
@@ -2647,7 +3057,8 @@
         "fieldCount": "Fields",
         "order": "Order",
         "actions": "Actions",
-        "openMenu": "Open menu"
+        "openMenu": "Open menu",
+        "searchPlaceholder": "Search asset types…"
       },
       "actions": {
         "addType": "Add Asset Type",
@@ -2875,6 +3286,173 @@
         "confirm": "Disconnect",
         "cancel": "Cancel"
       }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Permission denied: cannot create team.",
+        "update": "Permission denied: cannot update team.",
+        "modify": "Permission denied: cannot modify team.",
+        "modifyMembers": "Permission denied: cannot modify team members.",
+        "view": "Permission denied: cannot view team.",
+        "viewAll": "Permission denied: cannot view teams.",
+        "assignManager": "Permission denied: cannot assign team manager."
+      },
+      "notFoundRefresh": "Team not found. It may have been deleted. Please refresh and try again.",
+      "leadRequired": "A team must have a team lead. Select a team lead and try again.",
+      "inactiveUser": "Inactive users cannot be added to a team.",
+      "cannotRemoveLead": "Cannot remove the team lead. Please assign a new team lead first.",
+      "invalidValue": "One of the selected team values is invalid. Please refresh and try again.",
+      "duplicateMember": "This user is already a member of the team.",
+      "referenceMissing": "The selected team lead or member is no longer valid. Please refresh and try again.",
+      "missingField": "Missing required team field.",
+      "missingFieldNamed": "Missing required team field: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Permission denied: You don't have permission to view SLA policies",
+        "create": "Permission denied: You don't have permission to create SLA policies",
+        "update": "Permission denied: You don't have permission to update SLA policies",
+        "delete": "Permission denied: You don't have permission to delete SLA policies"
+      },
+      "policyNotFound": "SLA policy not found. It may have been deleted. Please refresh and try again.",
+      "targetNotFound": "SLA policy target not found. It may have been deleted. Please refresh and try again.",
+      "priorityNotFound": "Selected priority not found. It may have been deleted. Please refresh and try again.",
+      "clientNotFound": "Selected client not found. It may have been deleted. Please refresh and try again.",
+      "boardNotFound": "Selected board not found. It may have been deleted. Please refresh and try again.",
+      "ticketNotFound": "Ticket not found. It may have been deleted. Please refresh and try again.",
+      "duplicateTarget": "A target for this priority already exists in this policy.",
+      "pauseRequiresBoardStatus": "SLA pause configuration requires a board-owned ticket status.",
+      "invalidValue": "One of the selected SLA values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected SLA record or related value no longer exists. Please refresh and try again.",
+      "conflict": "This SLA change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the SLA values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required SLA field.",
+      "missingFieldNamed": "Missing required SLA field: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Board not found. It may have been deleted. Please refresh and try again.",
+      "userNotFound": "Selected escalation manager user not found. Please refresh and choose another user.",
+      "configNotFound": "Escalation manager configuration not found. It may have already been deleted.",
+      "recordInvalid": "One of the selected escalation manager records is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected board or user no longer exists. Please refresh and try again.",
+      "duplicate": "An escalation manager is already configured for this board and level.",
+      "missingField": "Missing required escalation manager field.",
+      "missingFieldNamed": "Missing required escalation manager field: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status not found. It may have been deleted. Please refresh and try again.",
+      "invalidValue": "One of the selected status values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected related record for this status no longer exists. Please refresh and try again.",
+      "orderInUse": "This order number is already in use. Please choose a different order number.",
+      "duplicateName": "A status with this name already exists.",
+      "notAllowed": "One of the status values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required status field.",
+      "missingFieldNamed": "Missing required status field: {{field}}.",
+      "nameRequired": "Status name is required",
+      "nameEmpty": "Status name cannot be empty",
+      "idRequired": "Status ID is required",
+      "manageFromBoard": "Ticket statuses must be managed from board settings",
+      "closedCannotBeDefault": "A closed status cannot be the default status",
+      "defaultMustStayOpen": "Set another status as the default before closing this one"
+    },
+    "priority": {
+      "notFound": "Priority not found.",
+      "boardMissing": "The selected board no longer exists.",
+      "duplicate": "A priority with these details already exists.",
+      "referenceInvalid": "The selected priority reference is no longer valid. Please refresh and try again.",
+      "invalidData": "Invalid priority data provided. Please check the priority details.",
+      "missingField": "Missing required priority field.",
+      "missingFieldNamed": "Missing required priority field: {{field}}."
+    },
+    "users": {
+      "invalidValue": "One of the selected users is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected users no longer exists. Please refresh and try again.",
+      "readClientInfoPermission": "Permission denied: Cannot read user client info"
+    },
+    "roles": {
+      "userNotFound": "User not found. Refresh the user list and try again.",
+      "roleNotFound": "Role not found. Refresh the role list and try again.",
+      "portalRoleOnMspUser": "Cannot assign a client portal role to an MSP user.",
+      "mspRoleOnPortalUser": "Cannot assign an MSP role to a client portal user.",
+      "invalidValue": "One of the selected user or role values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected user or role no longer exists. Please refresh and try again.",
+      "duplicate": "That user already has the selected role.",
+      "changePermission": "Permission denied: You do not have permission to change user roles.",
+      "missingField": "Missing required user role field.",
+      "missingFieldNamed": "Missing required user role field: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Tenant context is missing. Please refresh and try again.",
+      "notFound": "Secret not found. It may have already been deleted. Please refresh and try again.",
+      "invalidName": "Invalid tenant or secret name.",
+      "readOnly": "Secret storage is read-only in this environment.",
+      "noDurablePath": "Secret storage is not configured for durable writes in this environment.",
+      "recordInvalid": "One of the selected secret records is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected secret records no longer exists. Please refresh and try again.",
+      "duplicate": "A secret with this name already exists.",
+      "missingField": "Missing required secret field.",
+      "missingFieldNamed": "Missing required secret field: {{field}}.",
+      "permissions": {
+        "create": "Permission denied: Cannot create secrets",
+        "update": "Permission denied: Cannot update secrets",
+        "delete": "Permission denied: Cannot delete secrets"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Tenant id is required.",
+      "invalidValue": "One of the selected tenant setting values is invalid. Please refresh and try again.",
+      "missingField": "Missing required tenant settings field.",
+      "missingFieldNamed": "Missing required tenant settings field: {{field}}.",
+      "invalidTimezone": "Invalid timezone: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Permission denied: Only admin users can clear onboarding data.",
+        "update": "Permission denied: Cannot update settings",
+        "enableAiAssistant": "Permission denied: Cannot enable AI Assistant for this tenant"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "System template not found. It may have been deleted. Please refresh and try again.",
+      "templateNotFound": "Notification template not found. It may have been deleted. Please refresh and try again.",
+      "categoryNotFound": "Notification category not found. It may have been deleted. Please refresh and try again.",
+      "subtypeNotFound": "Notification subtype not found. It may have been deleted. Please refresh and try again.",
+      "notificationNotFound": "Notification not found. It may have already been updated or deleted.",
+      "recordInvalid": "One of the selected notification records is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected notification records no longer exists. Please refresh and try again.",
+      "duplicate": "A notification setting with these details already exists.",
+      "missingField": "Missing required notification field.",
+      "missingFieldNamed": "Missing required notification field: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Role or permission not found. Refresh the permissions list and try again.",
+      "ticketNotFound": "Ticket not found. Refresh the ticket and try again.",
+      "policyNotFound": "Policy not found. Refresh the policy list and try again.",
+      "invalidValue": "One of the selected role, permission, or policy values is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected security records no longer exists. Please refresh and try again.",
+      "permissionAlreadyAssigned": "That permission is already assigned to this role.",
+      "duplicate": "A security record with these details already exists.",
+      "missingField": "Missing required security field.",
+      "missingFieldNamed": "Missing required security field: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Permission denied: Client portal admins may only manage client portal roles.",
+        "portalUsersOnly": "Permission denied: Client portal admins may only manage client portal users.",
+        "portalAdminRequired": "Permission denied: Client portal admin access is required.",
+        "otherClientUsers": "Permission denied: Cannot manage users for another client."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Client portal users cannot manage custom domains.",
+      "noPermission": "You do not have permission to manage client portal settings.",
+      "required": "Domain is required.",
+      "length": "Domain must be between 3 and 253 characters.",
+      "charset": "Domain may only include letters, numbers, hyphens, and dots.",
+      "needsDot": "Domain must include at least one dot.",
+      "notCanonicalHost": "Please choose a domain other than the canonical host.",
+      "noLeadingTrailingDot": "Domain cannot start or end with a dot.",
+      "notApplianceHost": "Choose a domain other than this server's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
+      "nothingToRetry": "No failed custom domain registration to retry.",
+      "retryOnlyAfterFailure": "Retry is only available after a failed registration."
     }
   }
 }

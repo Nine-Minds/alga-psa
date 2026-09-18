@@ -10,12 +10,14 @@ import {
 
 const TEST_SECRET = 'test-signing-secret-32-bytes-long!';
 const TENANT_ID = 'tenant-abc-123';
+const USER_ID = 'user-abc-123';
 
 describe('qboOAuthState', () => {
   describe('createQboOAuthState + validateQboOAuthState round-trip', () => {
     it('round-trip: validates successfully and returns payload with matching tenantId/csrf', () => {
       const { stateParam, cookieValue, payload } = createQboOAuthState({
         tenantId: TENANT_ID,
+        userId: USER_ID,
         secret: TEST_SECRET,
       });
 
@@ -29,6 +31,7 @@ describe('qboOAuthState', () => {
 
       expect(result).not.toBeNull();
       expect(result!.tenantId).toBe(TENANT_ID);
+      expect(result!.userId).toBe(USER_ID);
       expect(result!.csrf).toBe(payload.csrf);
       expect(result!.issuedAt).toBe(payload.issuedAt);
       expect(result!.expiresAt).toBe(payload.expiresAt);
@@ -39,6 +42,7 @@ describe('qboOAuthState', () => {
       const TTL = 120;
       const { payload } = createQboOAuthState({
         tenantId: TENANT_ID,
+        userId: USER_ID,
         secret: TEST_SECRET,
         ttlSeconds: TTL,
       });
@@ -51,6 +55,7 @@ describe('qboOAuthState', () => {
     it('tampered cookie signature (flip a char in the signature segment) → null', () => {
       const { stateParam, cookieValue, payload } = createQboOAuthState({
         tenantId: TENANT_ID,
+        userId: USER_ID,
         secret: TEST_SECRET,
       });
 
@@ -74,8 +79,8 @@ describe('qboOAuthState', () => {
     });
 
     it('mismatched stateParam from a different create call (csrf mismatch) → null', () => {
-      const first = createQboOAuthState({ tenantId: TENANT_ID, secret: TEST_SECRET });
-      const second = createQboOAuthState({ tenantId: TENANT_ID, secret: TEST_SECRET });
+      const first = createQboOAuthState({ tenantId: TENANT_ID, userId: USER_ID, secret: TEST_SECRET });
+      const second = createQboOAuthState({ tenantId: TENANT_ID, userId: USER_ID, secret: TEST_SECRET });
 
       // Pair first cookieValue with second stateParam — csrf values will not match
       const result = validateQboOAuthState({
@@ -88,9 +93,31 @@ describe('qboOAuthState', () => {
       expect(result).toBeNull();
     });
 
+    it('stateParam carrying a different userId than the signed cookie → null', () => {
+      const { stateParam, cookieValue, payload } = createQboOAuthState({
+        tenantId: TENANT_ID,
+        userId: USER_ID,
+        secret: TEST_SECRET,
+      });
+
+      const forgedState = Buffer.from(
+        JSON.stringify({ tenantId: TENANT_ID, userId: 'another-user', csrf: payload.csrf })
+      ).toString('base64url');
+
+      const result = validateQboOAuthState({
+        stateParam: forgedState,
+        cookieValue,
+        secret: TEST_SECRET,
+        now: payload.issuedAt + 1,
+      });
+
+      expect(result).toBeNull();
+    });
+
     it('wrong secret → null', () => {
       const { stateParam, cookieValue, payload } = createQboOAuthState({
         tenantId: TENANT_ID,
+        userId: USER_ID,
         secret: TEST_SECRET,
       });
 
@@ -107,6 +134,7 @@ describe('qboOAuthState', () => {
     it('expired: validate with now = payload.expiresAt + 1 → null', () => {
       const { stateParam, cookieValue, payload } = createQboOAuthState({
         tenantId: TENANT_ID,
+        userId: USER_ID,
         secret: TEST_SECRET,
       });
 
@@ -123,6 +151,7 @@ describe('qboOAuthState', () => {
     it('exactly at expiresAt boundary: now = payload.expiresAt → null (expiresAt <= now)', () => {
       const { stateParam, cookieValue, payload } = createQboOAuthState({
         tenantId: TENANT_ID,
+        userId: USER_ID,
         secret: TEST_SECRET,
       });
 
@@ -139,37 +168,37 @@ describe('qboOAuthState', () => {
 
   describe('missing inputs → null', () => {
     it('no cookieValue → null', () => {
-      const { stateParam } = createQboOAuthState({ tenantId: TENANT_ID, secret: TEST_SECRET });
+      const { stateParam } = createQboOAuthState({ tenantId: TENANT_ID, userId: USER_ID, secret: TEST_SECRET });
 
       expect(validateQboOAuthState({ stateParam, cookieValue: undefined, secret: TEST_SECRET })).toBeNull();
     });
 
     it('no stateParam → null', () => {
-      const { cookieValue } = createQboOAuthState({ tenantId: TENANT_ID, secret: TEST_SECRET });
+      const { cookieValue } = createQboOAuthState({ tenantId: TENANT_ID, userId: USER_ID, secret: TEST_SECRET });
 
       expect(validateQboOAuthState({ stateParam: null, cookieValue, secret: TEST_SECRET })).toBeNull();
     });
 
     it('empty stateParam → null', () => {
-      const { cookieValue } = createQboOAuthState({ tenantId: TENANT_ID, secret: TEST_SECRET });
+      const { cookieValue } = createQboOAuthState({ tenantId: TENANT_ID, userId: USER_ID, secret: TEST_SECRET });
 
       expect(validateQboOAuthState({ stateParam: '', cookieValue, secret: TEST_SECRET })).toBeNull();
     });
 
     it('no secret → null', () => {
-      const { stateParam, cookieValue } = createQboOAuthState({ tenantId: TENANT_ID, secret: TEST_SECRET });
+      const { stateParam, cookieValue } = createQboOAuthState({ tenantId: TENANT_ID, userId: USER_ID, secret: TEST_SECRET });
 
       expect(validateQboOAuthState({ stateParam, cookieValue, secret: undefined })).toBeNull();
     });
 
     it('empty secret → null', () => {
-      const { stateParam, cookieValue } = createQboOAuthState({ tenantId: TENANT_ID, secret: TEST_SECRET });
+      const { stateParam, cookieValue } = createQboOAuthState({ tenantId: TENANT_ID, userId: USER_ID, secret: TEST_SECRET });
 
       expect(validateQboOAuthState({ stateParam, cookieValue, secret: '' })).toBeNull();
     });
 
     it('cookie value without dot separator → null', () => {
-      const { stateParam } = createQboOAuthState({ tenantId: TENANT_ID, secret: TEST_SECRET });
+      const { stateParam } = createQboOAuthState({ tenantId: TENANT_ID, userId: USER_ID, secret: TEST_SECRET });
 
       expect(validateQboOAuthState({ stateParam, cookieValue: 'nodothere', secret: TEST_SECRET })).toBeNull();
     });

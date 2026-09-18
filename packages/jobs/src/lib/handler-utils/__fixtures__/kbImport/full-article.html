@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Printer Troubleshooting</title>
+  <style>body { color: red; }</style>
+</head>
+<body>
+  <h1>Printer Troubleshooting</h1>
+  <p>Restart the <strong>spooler</strong> service, then <em>retry</em> the job.
+     Run <code>net stop spooler</code> and read the
+     <a href="https://example.com/printers">vendor guide</a> before escalating.</p>
+
+  <h2>Symptoms</h2>
+  <ul>
+    <li>Jobs stay queued</li>
+    <li>Status shows <i>offline</i></li>
+    <li>Driver reports <code>0x0000011b</code></li>
+  </ul>
+
+  <h3>Fix order</h3>
+  <ol>
+    <li>Restart the spooler</li>
+    <li>Clear the spool folder</li>
+    <li>Reinstall the driver</li>
+  </ol>
+
+  <blockquote>Escalate to the vendor when the queue clears but printing still fails.</blockquote>
+
+  <pre><code class="language-powershell">Restart-Service -Name Spooler</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Model</th><th>Firmware</th><th>Supported</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>LX-100</td><td>2.4.1</td><td><b>yes</b></td></tr>
+      <tr><td>LX-200</td><td>3.0.0</td><td>no</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <p>Contact <del>the helpdesk</del> the vendor for &quot;RMA&quot; numbers &amp; parts.<br />Ask for a case ID.</p>
+
+  <p><img src="https://example.com/img/spooler.png" alt="Spooler service dialog" /></p>
+  <p>Compare <img src="https://example.com/img/queue.png" alt="the queue" /> with the driver log.</p>
+  <script>console.log('ignored');</script>
+</body>
+</html>

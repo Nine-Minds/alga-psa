@@ -281,7 +281,10 @@ describe('retryVendorBillExport', () => {
     // Expected failures return typed errors since 4af6e76070 (#2892).
     await expect(
       (retryVendorBillExport as any)(USER, { tenant: TENANT }, 'bill-1')
-    ).resolves.toEqual({ permissionError: 'Permission denied: billing update required' });
+    ).resolves.toEqual({
+      permissionError: 'Permission denied: billing update required',
+      messageKey: 'msp/billing:errors.permissions.billingUpdate',
+    });
     expect(enqueueVendorBillExportRetry).not.toHaveBeenCalled();
   });
 
@@ -333,6 +336,7 @@ describe('retryVendorBillExport', () => {
     ).resolves.toEqual({
       actionError:
         'Vendor bill not found. It may have been updated or deleted. Please refresh and try again.',
+      messageKey: 'msp/billing:errors.vendorBill.notFoundRefresh',
     });
     expect(enqueueVendorBillExportRetry).not.toHaveBeenCalled();
   });

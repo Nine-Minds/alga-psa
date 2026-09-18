@@ -355,5 +355,9 @@
       "startTrial": "Impossibile avviare il periodo di prova.",
       "refreshLicense": "Impossibile aggiornare la licenza."
     }
+  },
+  "errors": {
+    "notSignedIn": "Non autorizzato. Accedi per gestire le licenze.",
+    "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
   }
 }

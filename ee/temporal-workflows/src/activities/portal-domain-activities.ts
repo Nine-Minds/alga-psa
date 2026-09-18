@@ -1,4 +1,5 @@
 import { promises as dns } from "dns";
+import { createSign } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { join as joinPath, dirname } from "node:path";
 import { setTimeout as delay } from "timers/promises";
@@ -338,7 +339,7 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
 
   let gitConfig: GitConfiguration;
   try {
-    gitConfig = resolveGitConfiguration();
+    gitConfig = await resolveGitConfiguration();
   } catch (error) {
     const message = formatErrorMessage(
       error,
@@ -881,8 +882,13 @@ interface GitConfiguration {
   relativePathSegments: string[];
   authorName: string;
   authorEmail: string;
-  token: string;
   maskValues: string[];
+}
+
+interface GitHubAppCredentials {
+  appId: string;
+  installationId: string;
+  privateKey: string;
 }
 
 interface CommandOptions extends ExecFileOptions {
@@ -890,7 +896,118 @@ interface CommandOptions extends ExecFileOptions {
   suppressOutput?: boolean;
 }
 
-export function resolveGitConfiguration(): GitConfiguration {
+function encodeJwtSegment(value: Record<string, unknown>): string {
+  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+}
+
+function createGitHubAppJwt(appId: string, privateKey: string): string {
+  const now = Math.floor(Date.now() / 1000);
+  const header = encodeJwtSegment({ alg: "RS256", typ: "JWT" });
+  const payload = encodeJwtSegment({
+    iat: now - 60,
+    exp: now + 9 * 60,
+    iss: appId,
+  });
+  const unsignedToken = `${header}.${payload}`;
+  const signer = createSign("RSA-SHA256");
+  signer.update(unsignedToken);
+  signer.end();
+  const signature = signer.sign(privateKey).toString("base64url");
+  return `${unsignedToken}.${signature}`;
+}
+
+async function resolveGitHubAppCredentials(): Promise<GitHubAppCredentials | null> {
+  const appId = process.env.GITHUB_APP_ID?.trim() ?? "";
+  const installationId =
+    process.env.GITHUB_APP_INSTALLATION_ID?.trim() ?? "";
+  const inlinePrivateKey = process.env.GITHUB_APP_PRIVATE_KEY ?? "";
+  const privateKeyPath = process.env.GITHUB_APP_PRIVATE_KEY_PATH?.trim() ?? "";
+  const appAuthenticationConfigured = Boolean(
+    appId || installationId || inlinePrivateKey || privateKeyPath,
+  );
+
+  if (!appAuthenticationConfigured) {
+    return null;
+  }
+
+  if (!appId || !installationId || (!inlinePrivateKey && !privateKeyPath)) {
+    throw new Error(
+      "GitHub App authentication is incomplete. Configure GITHUB_APP_ID, " +
+        "GITHUB_APP_INSTALLATION_ID, and either GITHUB_APP_PRIVATE_KEY or " +
+        "GITHUB_APP_PRIVATE_KEY_PATH.",
+    );
+  }
+
+  const privateKey = inlinePrivateKey
+    ? inlinePrivateKey.replace(/\\n/g, "\n")
+    : await fs.readFile(privateKeyPath, "utf8");
+
+  return { appId, installationId, privateKey };
+}
+
+async function createGitHubInstallationToken(
+  credentials: GitHubAppCredentials,
+): Promise<string> {
+  const jwt = createGitHubAppJwt(credentials.appId, credentials.privateKey);
+  const response = await fetch(
+    `https://api.github.com/app/installations/${encodeURIComponent(credentials.installationId)}/access_tokens`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${jwt}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    },
+  );
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  const token =
+    payload && typeof payload === "object" && "token" in payload
+      ? (payload as { token?: unknown }).token
+      : null;
+
+  if (!response.ok || typeof token !== "string" || token.length === 0) {
+    const apiMessage =
+      payload && typeof payload === "object" && "message" in payload
+        ? (payload as { message?: unknown }).message
+        : null;
+    const detail =
+      typeof apiMessage === "string" && apiMessage.length > 0
+        ? `: ${apiMessage}`
+        : "";
+    throw new Error(
+      `GitHub App installation token request failed with status ${response.status}${detail}`,
+    );
+  }
+
+  return token;
+}
+
+async function resolveGitAccessToken(): Promise<string> {
+  const appCredentials = await resolveGitHubAppCredentials();
+  if (appCredentials) {
+    return createGitHubInstallationToken(appCredentials);
+  }
+
+  const accessToken = process.env.GITHUB_ACCESS_TOKEN?.trim();
+  if (accessToken) {
+    return accessToken;
+  }
+
+  throw new Error(
+    "GitHub credentials are required for portal domain resource application. " +
+      "Configure GitHub App credentials or GITHUB_ACCESS_TOKEN.",
+  );
+}
+
+export async function resolveGitConfiguration(): Promise<GitConfiguration> {
   const repoUrl = process.env.PORTAL_DOMAIN_GIT_REPO;
   const branch = process.env.PORTAL_DOMAIN_GIT_BRANCH || "main";
   const workspaceDir =
@@ -901,19 +1018,16 @@ export function resolveGitConfiguration(): GitConfiguration {
     process.env.PORTAL_DOMAIN_GIT_AUTHOR_NAME || "Portal Domains Bot";
   const authorEmail =
     process.env.PORTAL_DOMAIN_GIT_AUTHOR_EMAIL || "platform@nineminds.ai";
-  const token = process.env.GITHUB_ACCESS_TOKEN;
-
-  if (!token) {
-    throw new Error('GITHUB_ACCESS_TOKEN environment variable is required for portal domain resource application.');
-  }
 
   if (!repoUrl) {
     throw new Error('PORTAL_DOMAIN_GIT_REPO environment variable is required for portal domain resource application.');
   }
 
+  const token = await resolveGitAccessToken();
+
   const url = new URL(repoUrl);
-  url.username = token;
-  url.password = "";
+  url.username = "x-access-token";
+  url.password = token;
 
   const repoDir = joinPath(workspaceDir, "nm-kube-config");
   const relativePathSegments = relativePathPosix.split("/").filter(Boolean);
@@ -928,7 +1042,6 @@ export function resolveGitConfiguration(): GitConfiguration {
     relativePathSegments,
     authorName,
     authorEmail,
-    token,
     maskValues: [token, url.toString()],
   };
 }

@@ -418,10 +418,17 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
  * This eliminates multiple connection acquisitions during import.
  */
 export const getImportReferenceData = withAuth(async (
-  _user,
+  user,
   { tenant },
   projectId?: string
 ): Promise<IImportReferenceData> => {
+  // Returns the tenant's active internal users with their email addresses, plus
+  // priorities, services, phases and statuses. It needs the same read gate as the
+  // projects it feeds — being authenticated is not enough to enumerate staff.
+  if (!await hasPermission(user, 'project', 'read')) {
+    throw new Error('Permission denied: Cannot read project import reference data');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -847,7 +854,7 @@ export const importPhasesAndTasks = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(user, 'project', 'update')) {
+      if (!await hasPermission(user, 'project', 'update', trx)) {
         throw new Error('Permission denied: Cannot update projects');
       }
 

@@ -12,9 +12,9 @@ describe('document content authorization contracts', () => {
   it('T013: document content helpers require document permissions and authorized parent-document checks', () => {
     expect(contentActionsSource).toContain("import { withAuth, hasPermission } from '@alga-psa/auth';");
     expect(contentActionsSource).toContain('getAuthorizedDocumentById');
-    expect(contentActionsSource).toContain("return permissionError('Permission denied: Cannot read documents');");
-    expect(contentActionsSource).toContain("return permissionError('Permission denied: Cannot update documents');");
-    expect(contentActionsSource).toContain("return permissionError('Permission denied: Cannot delete documents');");
+    expect(contentActionsSource).toContain("return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');");
+    expect(contentActionsSource).toContain("return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');");
+    expect(contentActionsSource).toContain("return permissionError('Permission denied: Cannot delete documents', 'documents:errors.permissions.delete');");
     expect(contentActionsSource).toContain('export const getDocumentContent = withAuth(async');
     expect(contentActionsSource).toContain('export const updateDocumentContent = withAuth(async');
     expect(contentActionsSource).toContain('export const deleteDocumentContent = withAuth(async');
@@ -23,9 +23,9 @@ describe('document content authorization contracts', () => {
   it('T013: document block-content helpers require document permissions and authorized parent-document checks', () => {
     expect(blockContentActionsSource).toContain("import { withAuth, hasPermission } from '@alga-psa/auth';");
     expect(blockContentActionsSource).toContain('getAuthorizedDocumentById');
-    expect(blockContentActionsSource).toContain("return permissionError('Permission denied: Cannot read documents');");
-    expect(blockContentActionsSource).toContain("return permissionError('Permission denied: Cannot update documents');");
-    expect(blockContentActionsSource).toContain("return permissionError('Permission denied: Cannot delete documents');");
+    expect(blockContentActionsSource).toContain("return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');");
+    expect(blockContentActionsSource).toContain("return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');");
+    expect(blockContentActionsSource).toContain("return permissionError('Permission denied: Cannot delete documents', 'documents:errors.permissions.delete');");
     expect(blockContentActionsSource).toContain('export const getBlockContent = withAuth(async');
     expect(blockContentActionsSource).toContain('export const updateBlockContent = withAuth(async');
     expect(blockContentActionsSource).toContain('export const deleteBlockContent = withAuth(async');

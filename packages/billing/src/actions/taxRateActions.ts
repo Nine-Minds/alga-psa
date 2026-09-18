@@ -2,7 +2,7 @@
 
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { ITaxRate, DeletionValidationResult } from '@alga-psa/types';
-import { TaxService } from '../services/taxService';
+import { TaxService, normalizeTaxCapAmount } from '../services/taxService';
 import { v4 as uuid4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -27,42 +27,53 @@ type TaxRateActionError = ActionMessageError | ActionPermissionError;
 
 function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
   if (error instanceof ProductAccessError) {
-    return permissionError('Permission denied: Billing tax rates are not available for this tenant.');
+    return permissionError('Permission denied: Billing tax rates are not available for this tenant.', 'msp/billing-settings:errors.taxRate.notAvailableForTenant');
   }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
     }
     if (error.message.includes('Tax rate date range overlaps')) {
-      return actionError('Tax rate date range overlaps with an existing rate for this region.');
+      return actionError('Tax rate date range overlaps with an existing rate for this region.', 'msp/billing-settings:errors.taxRate.overlap');
     }
     switch (error.message) {
       case 'Region is required':
-        return actionError('Region is required.');
+        return actionError('Region is required.', 'msp/billing-settings:errors.taxRate.regionRequired');
       case 'Tax rate ID is required for updates':
-        return actionError('Tax rate ID is required for updates.');
+        return actionError('Tax rate ID is required for updates.', 'msp/billing-settings:errors.taxRate.idRequired');
       case 'Tax rate not found':
-        return actionError('Tax rate not found.');
+        return actionError('Tax rate not found.', 'msp/billing-settings:errors.taxRate.notFound');
+      case 'Tax rate cap amount must be a non-negative whole number.':
+        return actionError('Tax rate cap amount must be a non-negative whole number.');
       // Thrown by deleteTaxRate's in-transaction guards; intentionally
       // user-visible, so keep the wording rather than degrading to the
       // generic delete fallback.
       case 'Tax rate not found or already deleted.':
-        return actionError('Tax rate not found or already deleted.');
+        return actionError(
+          'Tax rate not found or already deleted.',
+          'msp/billing-settings:errors.taxRate.notFoundOrAlreadyDeleted'
+        );
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected tax rate or region is invalid. Please refresh and try again.');
+    return actionError('The selected tax rate or region is invalid. Please refresh and try again.', 'msp/billing-settings:errors.taxRate.invalid');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required tax rate field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required tax rate field: ${dbError.column}.`,
+          'msp/billing-settings:errors.taxRate.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required tax rate field.', 'msp/billing-settings:errors.taxRate.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected tax region is no longer valid. Please refresh and choose another region.');
+    return actionError('The selected tax region is no longer valid. Please refresh and choose another region.', 'msp/billing-settings:errors.taxRate.regionInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A tax rate already exists for this region and date range.');
+    return actionError('A tax rate already exists for this region and date range.', 'msp/billing-settings:errors.taxRate.duplicate');
   }
 
   return null;
@@ -72,7 +83,7 @@ export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'read')) {
-      return permissionError('Permission denied: Cannot read tax rates');
+      return permissionError('Permission denied: Cannot read tax rates', 'msp/billing-settings:errors.permissions.readTaxRates');
     }
 
     const { knex: db } = await createTenantKnex();
@@ -99,11 +110,11 @@ export const addTaxRate = withAuth(async (
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'create')) {
-      return permissionError('Permission denied: Cannot create tax rates');
+      return permissionError('Permission denied: Cannot create tax rates', 'msp/billing-settings:errors.permissions.createTaxRates');
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
 
       if (!taxRateData.region_code) {
@@ -119,9 +130,12 @@ export const addTaxRate = withAuth(async (
 
       // Generate a UUID for the tax_rate_id
       const tax_rate_id = uuid4();
+      // Validate the cap before it reaches the database; throws the mapped
+      // "cap amount" action error for negative/fractional/non-numeric values.
+      const cap_amount = normalizeTaxCapAmount(taxRateData.cap_amount);
 
       const [newTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-        .insert({ ...taxRateData, tax_rate_id, tenant: tenant! })
+        .insert({ ...taxRateData, cap_amount, tax_rate_id, tenant: tenant! })
         .returning('*');
       return newTaxRate;
     });
@@ -143,11 +157,11 @@ export const updateTaxRate = withAuth(async (
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'update')) {
-      return permissionError('Permission denied: Cannot update tax rates');
+      return permissionError('Permission denied: Cannot update tax rates', 'msp/billing-settings:errors.permissions.updateTaxRates');
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
 
       if (!taxRateData.tax_rate_id) {
@@ -183,6 +197,11 @@ export const updateTaxRate = withAuth(async (
       const { tenant: _, ...updateData } = { ...taxRateData };
       if (updateData.end_date === '') {
         updateData.end_date = null;
+      }
+      // Validate only when the caller supplied a cap; an update that omits it
+      // must not silently clear an existing cap.
+      if (Object.prototype.hasOwnProperty.call(taxRateData, 'cap_amount')) {
+        updateData.cap_amount = normalizeTaxCapAmount(taxRateData.cap_amount);
       }
 
       const [updatedTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')

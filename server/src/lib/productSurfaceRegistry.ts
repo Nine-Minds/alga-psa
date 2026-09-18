@@ -53,7 +53,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
   },
   {
     group: 'msp_core_helpdesk',
-    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
+    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/interactions', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
   },
   {
@@ -129,11 +129,22 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: true, algadesk: false },
   },
   {
+    // Notification settings are PSA-only in the UI (/msp/settings/notifications),
+    // so editing the same templates over the API follows them.
+    group: 'api_email_templates_psa_only',
+    staticPrefixes: [
+      '/api/v1/email/templates',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: true, algadesk: false },
+  },
+  {
     group: 'api_helpdesk_allowed',
     staticPrefixes: [
       '/api/v1/meta',
       '/api/v1/tickets',
       '/api/v1/comments',
+      '/api/ticket-comment-attachments',
       '/api/v1/clients',
       '/api/v1/contacts',
       '/api/v1/boards',
@@ -149,6 +160,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/teams',
       '/api/v1/interactions',
       '/api/v1/interaction-types',
+      '/api/v1/interaction-statuses',
       '/api/v1/mobile/me/capabilities',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
@@ -207,6 +219,18 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: false, algadesk: false },
   },
   {
+    // Alga Migration Package (AMP) import workspace: tenant-scoped upload,
+    // spreadsheet conversion, dry-run reporting and export endpoints, gated
+    // by the import_export permission. Administrative onboarding surface, not
+    // v1 API, so it never appears in /api/v1/meta metadata. PSA-only.
+    group: 'api_amp_migrations',
+    staticPrefixes: [
+      '/api/migrations',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
     // SCIM 2.0 service provider for directory-driven user lifecycle. Entra
     // authenticates with a tenant-scoped bearer token, so these endpoints are
     // not v1 API surface and never appear in /api/v1/meta metadata. PSA-only,
@@ -214,6 +238,18 @@ export const API_RULES: readonly ApiRule[] = [
     group: 'api_scim_provisioning',
     staticPrefixes: [
       '/api/scim',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
+    // Telephony provider webhooks (Microsoft Graph callRecords notifications).
+    // Graph authenticates with the per-subscription clientState secret the
+    // route verifies, so these are not v1 API surface and never appear in
+    // /api/v1/meta metadata. PSA-only, matching the Microsoft Teams integration.
+    group: 'api_telephony_webhooks',
+    staticPrefixes: [
+      '/api/telephony',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: false, algadesk: false },

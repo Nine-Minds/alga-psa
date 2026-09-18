@@ -2155,6 +2155,11 @@ async function seedFinalizedInvoice(
     client_id: clientId,
     invoice_number: `INV-${invoiceId.slice(0, 8).toUpperCase()}`,
     total_amount: totalAmountCents,
+    // The credit engine caps an application at subtotal + tax, not total_amount,
+    // so an invoice seeded without them accepts no credit at all and the apply
+    // call succeeds having done nothing. Keep the three consistent.
+    subtotal: totalAmountCents,
+    tax: 0,
     credit_applied: 0,
     currency_code: 'USD',
     status: 'sent',
@@ -2162,6 +2167,26 @@ async function seedFinalizedInvoice(
     invoice_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     due_date: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(),
     finalized_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  // A finalized invoice always carries its charges, and the credit engine caps
+  // an application at the eligible charge total rather than at total_amount.
+  // Without a charge row the invoice accepts no credit and applyCreditToInvoice
+  // succeeds having applied nothing.
+  await tenantTable(db, tenantId, 'invoice_charges').insert({
+    tenant: tenantId,
+    item_id: uuidv4(),
+    invoice_id: invoiceId,
+    description: 'Seeded charge for payment-link reconciliation',
+    quantity: 1,
+    unit_price: totalAmountCents,
+    total_price: totalAmountCents,
+    net_amount: totalAmountCents,
+    tax_rate: 0,
+    tax_amount: 0,
+    is_manual: false,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });

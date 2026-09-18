@@ -43,6 +43,10 @@ describe('email action tenant-scoped query contract', () => {
     expect(text).toContain("tenantDb(trx, tenant).table('inbound_ticket_defaults')");
     expect(text).toContain(".table<{ addon_key: string; expires_at: string | Date | null }>('tenant_addons')");
     expect(text).toContain("tenantDb(trx, tenant)\n        .table('clients')");
+    expect(text).toContain("'msp/email-providers:errors.inboundRules.permissionDenied'");
+    expect(text).toContain("'msp/email-providers:errors.inboundRules.orderingMismatch'");
+    expect(text).not.toContain('permissionError(error.message)');
+    expect(text).not.toContain('actionError(error.message)');
   });
 
   it('uses tenantDb for tenant email settings upsert roots', () => {

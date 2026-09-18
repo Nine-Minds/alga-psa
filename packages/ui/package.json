@@ -56,6 +56,14 @@
       "types": "./src/lib/i18n/config.ts",
       "import": "./dist/lib/i18n/config.mjs"
     },
+    "./lib/i18n/serverOnly": {
+      "types": "./src/lib/i18n/serverOnly.ts",
+      "import": "./dist/lib/i18n/serverOnly.mjs"
+    },
+    "./lib/i18n/interpolateFallback": {
+      "types": "./src/lib/i18n/interpolateFallback.ts",
+      "import": "./dist/lib/i18n/interpolateFallback.mjs"
+    },
     "./lib/i18n/client": {
       "types": "./src/lib/i18n/client.tsx",
       "import": "./dist/lib/i18n/client.mjs"
@@ -129,7 +137,7 @@
     "i18next-browser-languagedetector": "^8.2.0",
     "i18next-fs-backend": "^2.6.1",
     "i18next-http-backend": "^3.0.6",
-    "jsondiffpatch": "^0.7.3",
+    "jsondiffpatch": "^0.7.6",
     "lucide-react": "^0.428.0",
     "react-day-picker": "^9.5.0",
     "react-hot-toast": "^2.5.1",

@@ -9,12 +9,14 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListItem, PaginatedResult, QuoteConversionPreview } from '@alga-psa/types';
+import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListItem, PaginatedResult, QuoteConversionPreview, QuoteViewModel } from '@alga-psa/types';
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
+import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
+import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
@@ -71,7 +73,7 @@ interface SendQuoteInput {
 
 const requireBillingCreatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'create')) {
-    return permissionError('Permission denied: Cannot create quotes');
+    return permissionError('Permission denied: Cannot create quotes', 'msp/quotes:errors.permissions.create');
   }
 
   return null;
@@ -79,7 +81,7 @@ const requireBillingCreatePermission = async (user: unknown): Promise<ActionPerm
 
 const requireBillingUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    return permissionError('Permission denied: Cannot update quotes');
+    return permissionError('Permission denied: Cannot update quotes', 'msp/quotes:errors.permissions.update');
   }
 
   return null;
@@ -87,7 +89,7 @@ const requireBillingUpdatePermission = async (user: unknown): Promise<ActionPerm
 
 const requireBillingReadPermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot read quotes');
+    return permissionError('Permission denied: Cannot read quotes', 'msp/quotes:errors.permissions.read');
   }
 
   return null;
@@ -95,7 +97,7 @@ const requireBillingReadPermission = async (user: unknown): Promise<ActionPermis
 
 const requireBillingDeletePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'delete')) {
-    return permissionError('Permission denied: Cannot delete quotes');
+    return permissionError('Permission denied: Cannot delete quotes', 'msp/quotes:errors.permissions.delete');
   }
 
   return null;
@@ -103,7 +105,7 @@ const requireBillingDeletePermission = async (user: unknown): Promise<ActionPerm
 
 const requireSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'settings', 'update')) {
-    return permissionError('Permission denied: Cannot update quote approval settings');
+    return permissionError('Permission denied: Cannot update quote approval settings', 'msp/quotes:errors.permissions.updateApprovalSettings');
   }
 
   return null;
@@ -111,7 +113,7 @@ const requireSettingsUpdatePermission = async (user: unknown): Promise<ActionPer
 
 const requireQuoteApprovePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'quotes', 'approve')) {
-    return permissionError('Permission denied: Cannot approve quotes');
+    return permissionError('Permission denied: Cannot approve quotes', 'msp/quotes:errors.permissions.approve');
   }
 
   return null;
@@ -125,16 +127,16 @@ function quoteActionErrorFrom(error: unknown): QuoteActionError | null {
       return permissionError(error.message);
     }
     if (error.name === 'ZodError') {
-      return actionError('Quote form contains invalid values. Please review and try again.');
+      return actionError('Quote form contains invalid values. Please review and try again.', 'msp/quotes:errors.quote.formInvalid');
     }
     if (error.message.startsWith('Quote item ') && error.message.includes(' not found in tenant ')) {
-      return actionError('Quote item not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Quote item not found. It may have been updated or deleted. Please refresh and try again.', 'msp/quotes:errors.quote.itemNotFoundRefresh');
     }
     if (error.message.startsWith('Quote template ') && error.message.includes(' not found in tenant ')) {
-      return actionError('Quote template not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Quote template not found. It may have been updated or deleted. Please refresh and try again.', 'msp/quotes:errors.quote.templateNotFoundRefresh');
     }
     if (error.message.startsWith('Quote ') && error.message.includes(' not found in tenant ')) {
-      return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.', 'msp/quotes:errors.quote.notFoundRefresh');
     }
 
     const expectedMessages = new Set([
@@ -162,19 +164,25 @@ function quoteActionErrorFrom(error: unknown): QuoteActionError | null {
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected quote values is invalid. Please refresh and try again.');
+    return actionError('One of the selected quote values is invalid. Please refresh and try again.', 'msp/quotes:errors.quote.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required quote field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required quote field: ${dbError.column}.`,
+          'msp/quotes:errors.quote.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required quote field.', 'msp/quotes:errors.quote.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected quote, client, contact, or service no longer exists. Please refresh and try again.');
+    return actionError('The selected quote, client, contact, or service no longer exists. Please refresh and try again.', 'msp/quotes:errors.quote.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('This quote change conflicts with an existing record. Please refresh and try again.');
+    return actionError('This quote change conflicts with an existing record. Please refresh and try again.', 'msp/quotes:errors.quote.conflict');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the quote values is not allowed. Please review the form and try again.');
+    return actionError('One of the quote values is not allowed. Please review the form and try again.', 'msp/quotes:errors.quote.notAllowed');
   }
 
   return null;
@@ -741,6 +749,27 @@ export const getQuote = withAuth(async (
   return quote;
 });
 
+/**
+ * The quote's document render model — the same view model the PDF/email render uses, so a layout
+ * preview of an existing quote matches what the client receives. Read-authorized per record.
+ */
+export const getQuoteForRendering = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<QuoteViewModel | null | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
+  if (!quote) return null;
+
+  return mapLoadedQuoteToViewModel(knex, tenant, quote);
+});
+
 export const listQuotes = withAuth(async (
   user,
   { tenant },
@@ -965,6 +994,84 @@ export const reorderQuoteItems = withAuth(async (
   });
 });
 
+/**
+ * Copy source quote items into a target quote, remapping item-targeted
+ * discount references (applies_to_item_id) onto the newly created rows.
+ *
+ * Discount targets are base items, so all non-discount rows are created first
+ * while their new ids are recorded; discounts are created afterwards with
+ * applies_to_item_id pointing at the copied target. This keeps item-targeted
+ * discounts resolvable even when a discount is stored ahead of its target in
+ * the source list, and regardless of creation-time cadence flags.
+ *
+ * Every caller (create-from-template / duplicate / save-as-template) is one of
+ * the server-internal copy flows allowed to replay a catalog-description
+ * snapshot verbatim, so each row's stored snapshot is passed through
+ * QuoteItem.create's internal channel rather than being re-derived from the
+ * live catalog — including `null`, which records "no description captured".
+ */
+export async function copyQuoteItemsToQuote(
+  trx: Knex.Transaction,
+  tenant: string,
+  targetQuoteId: string,
+  sourceItems: IQuoteItem[],
+  options: { forceSelected?: boolean; createdBy?: string | null } = {}
+): Promise<void> {
+  const baseItems = sourceItems.filter((item) => !item.is_discount);
+  const discountItems = sourceItems.filter((item) => item.is_discount);
+  const oldToNew = new Map<string, string>();
+
+  const createItem = async (sourceItem: IQuoteItem, appliesToItemId: string | null): Promise<IQuoteItem> => {
+    return QuoteItem.create(trx, tenant, {
+      quote_id: targetQuoteId,
+      service_id: sourceItem.service_id ?? null,
+      service_item_kind: sourceItem.service_item_kind ?? null,
+      service_name: sourceItem.service_name ?? null,
+      service_sku: sourceItem.service_sku ?? null,
+      billing_method: sourceItem.billing_method ?? null,
+      description: sourceItem.description,
+      quantity: sourceItem.quantity,
+      unit_price: sourceItem.unit_price,
+      unit_of_measure: sourceItem.unit_of_measure ?? null,
+      display_order: sourceItem.display_order,
+      phase: sourceItem.phase ?? null,
+      is_optional: sourceItem.is_optional,
+      is_selected: options.forceSelected === true ? true : (sourceItem.is_selected ?? true),
+      is_recurring: sourceItem.is_recurring,
+      billing_frequency: sourceItem.billing_frequency ?? null,
+      is_discount: sourceItem.is_discount ?? false,
+      discount_type: sourceItem.discount_type ?? null,
+      discount_percentage: sourceItem.discount_percentage ?? null,
+      applies_to_item_id: appliesToItemId,
+      applies_to_service_id: sourceItem.applies_to_service_id ?? null,
+      is_taxable: sourceItem.is_taxable ?? true,
+      tax_region: sourceItem.tax_region ?? null,
+      tax_rate: sourceItem.tax_rate ?? null,
+      cost: sourceItem.cost ?? null,
+      cost_currency: sourceItem.cost_currency ?? null,
+      location_id: sourceItem.location_id ?? null,
+      created_by: options.createdBy,
+    }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
+  };
+
+  for (const item of baseItems) {
+    const createdItem = await createItem(item, null);
+    oldToNew.set(item.quote_item_id, createdItem.quote_item_id);
+  }
+
+  for (const item of discountItems) {
+    // Preserve unmatched scope: when the discount's item target is not among
+    // the copied base rows (it was already dangling/removed in the source),
+    // keep the original target id so the copied discount stays item-scoped and
+    // resolves to zero. Replacing it with null would turn the discount into a
+    // whole-quote discount and broaden what it reduces.
+    const remappedTarget = item.applies_to_item_id
+      ? (oldToNew.get(item.applies_to_item_id) ?? item.applies_to_item_id)
+      : null;
+    await createItem(item, remappedTarget);
+  }
+}
+
 export const createQuoteFromTemplate = withAuth(async (
   user,
   { tenant },
@@ -996,6 +1103,21 @@ export const createQuoteFromTemplate = withAuth(async (
     }
 
     const actorUserId = getActorUserId(user);
+
+    // Resolve the two terms fields together. `undefined` means "not supplied"
+    // (inherit from the template); `null` means an explicit clear. Resolving
+    // them independently would let a plain-text override silently inherit the
+    // template's block (which then wins during normalization), and would turn
+    // an explicit clear back into the template's terms.
+    const termsSupplied =
+      input.terms_and_conditions !== undefined || input.terms_and_conditions_block !== undefined;
+    const resolvedTermsAndConditions = termsSupplied
+      ? (input.terms_and_conditions !== undefined ? (input.terms_and_conditions ?? null) : null)
+      : (template.terms_and_conditions ?? null);
+    const resolvedTermsAndConditionsBlock = termsSupplied
+      ? (input.terms_and_conditions_block !== undefined ? (input.terms_and_conditions_block ?? null) : null)
+      : (template.terms_and_conditions_block ?? null);
+
     const parsedQuote = normalizeQuoteDates(createQuoteSchema.parse({
       client_id: input.client_id,
       contact_id: input.contact_id ?? null,
@@ -1007,7 +1129,8 @@ export const createQuoteFromTemplate = withAuth(async (
       opportunity_id: input.opportunity_id ?? null,
       internal_notes: input.internal_notes ?? template.internal_notes ?? null,
       client_notes: input.client_notes ?? template.client_notes ?? null,
-      terms_and_conditions: input.terms_and_conditions ?? template.terms_and_conditions ?? null,
+      terms_and_conditions: resolvedTermsAndConditions,
+      terms_and_conditions_block: resolvedTermsAndConditionsBlock,
       currency_code: input.currency_code ?? template.currency_code,
       is_template: false,
       created_by: input.created_by ?? actorUserId,
@@ -1021,36 +1144,11 @@ export const createQuoteFromTemplate = withAuth(async (
       total_amount: input.total_amount ?? 0,
     } as any);
 
-    for (const templateItem of template.quote_items ?? []) {
-      await QuoteItem.create(trx, tenant, {
-        quote_id: createdQuote.quote_id,
-        service_id: templateItem.service_id ?? null,
-        service_item_kind: templateItem.service_item_kind ?? null,
-        service_name: templateItem.service_name ?? null,
-        service_sku: templateItem.service_sku ?? null,
-        billing_method: templateItem.billing_method ?? null,
-        description: templateItem.description,
-        quantity: templateItem.quantity,
-        unit_price: templateItem.unit_price,
-        unit_of_measure: templateItem.unit_of_measure ?? null,
-        display_order: templateItem.display_order,
-        phase: templateItem.phase ?? null,
-        is_optional: templateItem.is_optional,
-        is_selected: templateItem.is_selected,
-        is_recurring: templateItem.is_recurring,
-        billing_frequency: templateItem.billing_frequency ?? null,
-        is_discount: templateItem.is_discount ?? false,
-        discount_type: templateItem.discount_type ?? null,
-        discount_percentage: templateItem.discount_percentage ?? null,
-        applies_to_item_id: templateItem.applies_to_item_id ?? null,
-        applies_to_service_id: templateItem.applies_to_service_id ?? null,
-        is_taxable: templateItem.is_taxable ?? true,
-        cost: templateItem.cost ?? null,
-        cost_currency: templateItem.cost_currency ?? null,
-        location_id: templateItem.location_id ?? null,
-        created_by: actorUserId,
-      });
-    }
+    await copyQuoteItemsToQuote(trx, tenant, createdQuote.quote_id, template.quote_items ?? [], {
+      createdBy: actorUserId,
+    });
+
+    await recalculateQuoteFinancials(trx, tenant, createdQuote.quote_id);
 
     return await Quote.getById(trx, tenant, createdQuote.quote_id) as IQuote;
   });
@@ -1095,6 +1193,7 @@ export const duplicateQuote = withAuth(async (
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+      terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
       currency_code: sourceQuote.currency_code,
       tax_source: sourceQuote.tax_source ?? 'internal',
       is_template: false,
@@ -1106,38 +1205,11 @@ export const duplicateQuote = withAuth(async (
       total_amount: 0,
     } as any);
 
-    for (const sourceItem of sourceQuote.quote_items ?? []) {
-      await QuoteItem.create(trx, tenant, {
-        quote_id: duplicatedQuote.quote_id,
-        service_id: sourceItem.service_id ?? null,
-        service_item_kind: sourceItem.service_item_kind ?? null,
-        service_name: sourceItem.service_name ?? null,
-        service_sku: sourceItem.service_sku ?? null,
-        billing_method: sourceItem.billing_method ?? null,
-        description: sourceItem.description,
-        quantity: sourceItem.quantity,
-        unit_price: sourceItem.unit_price,
-        unit_of_measure: sourceItem.unit_of_measure ?? null,
-        display_order: sourceItem.display_order,
-        phase: sourceItem.phase ?? null,
-        is_optional: sourceItem.is_optional,
-        is_selected: sourceItem.is_selected,
-        is_recurring: sourceItem.is_recurring,
-        billing_frequency: sourceItem.billing_frequency ?? null,
-        is_discount: sourceItem.is_discount ?? false,
-        discount_type: sourceItem.discount_type ?? null,
-        discount_percentage: sourceItem.discount_percentage ?? null,
-        applies_to_item_id: sourceItem.applies_to_item_id ?? null,
-        applies_to_service_id: sourceItem.applies_to_service_id ?? null,
-        is_taxable: sourceItem.is_taxable ?? true,
-        tax_region: sourceItem.tax_region ?? null,
-        tax_rate: sourceItem.tax_rate ?? null,
-        cost: sourceItem.cost ?? null,
-        cost_currency: sourceItem.cost_currency ?? null,
-        location_id: sourceItem.location_id ?? null,
-        created_by: actorUserId,
-      });
-    }
+    await copyQuoteItemsToQuote(trx, tenant, duplicatedQuote.quote_id, sourceQuote.quote_items ?? [], {
+      createdBy: actorUserId,
+    });
+
+    await recalculateQuoteFinancials(trx, tenant, duplicatedQuote.quote_id);
 
     await QuoteActivity.create(trx, tenant, {
       quote_id: duplicatedQuote.quote_id,
@@ -1194,6 +1266,7 @@ export const saveQuoteAsTemplate = withAuth(async (
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+      terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
       currency_code: sourceQuote.currency_code,
       tax_source: sourceQuote.tax_source ?? 'internal',
       is_template: true,
@@ -1205,38 +1278,12 @@ export const saveQuoteAsTemplate = withAuth(async (
       total_amount: 0,
     } as any);
 
-    for (const sourceItem of sourceQuote.quote_items ?? []) {
-      await QuoteItem.create(trx, tenant, {
-        quote_id: templateQuote.quote_id,
-        service_id: sourceItem.service_id ?? null,
-        service_item_kind: sourceItem.service_item_kind ?? null,
-        service_name: sourceItem.service_name ?? null,
-        service_sku: sourceItem.service_sku ?? null,
-        billing_method: sourceItem.billing_method ?? null,
-        description: sourceItem.description,
-        quantity: sourceItem.quantity,
-        unit_price: sourceItem.unit_price,
-        unit_of_measure: sourceItem.unit_of_measure ?? null,
-        display_order: sourceItem.display_order,
-        phase: sourceItem.phase ?? null,
-        is_optional: sourceItem.is_optional,
-        is_selected: true,
-        is_recurring: sourceItem.is_recurring,
-        billing_frequency: sourceItem.billing_frequency ?? null,
-        is_discount: sourceItem.is_discount ?? false,
-        discount_type: sourceItem.discount_type ?? null,
-        discount_percentage: sourceItem.discount_percentage ?? null,
-        applies_to_item_id: sourceItem.applies_to_item_id ?? null,
-        applies_to_service_id: sourceItem.applies_to_service_id ?? null,
-        is_taxable: sourceItem.is_taxable ?? true,
-        tax_region: sourceItem.tax_region ?? null,
-        tax_rate: sourceItem.tax_rate ?? null,
-        cost: sourceItem.cost ?? null,
-        cost_currency: sourceItem.cost_currency ?? null,
-        location_id: sourceItem.location_id ?? null,
-        created_by: actorUserId,
-      });
-    }
+    await copyQuoteItemsToQuote(trx, tenant, templateQuote.quote_id, sourceQuote.quote_items ?? [], {
+      forceSelected: true,
+      createdBy: actorUserId,
+    });
+
+    await recalculateQuoteFinancials(trx, tenant, templateQuote.quote_id);
 
     await QuoteActivity.create(trx, tenant, {
       quote_id: templateQuote.quote_id,
@@ -1326,7 +1373,7 @@ export const listQuoteVersions = withAuth(async (
   const { knex } = await createTenantKnex();
   const readableQuote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
   if (!readableQuote) {
-    return permissionError('Permission denied: Cannot read quote');
+    return permissionError('Permission denied: Cannot read quote', 'msp/quotes:errors.permissions.readOne');
   }
   return await Quote.listVersions(knex, tenant, quoteId);
 });
@@ -1355,7 +1402,7 @@ export const updateQuoteApprovalSettings = withAuth(async (
   }
 
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    return permissionError('Permission denied: Cannot update quote approval settings');
+    return permissionError('Permission denied: Cannot update quote approval settings', 'msp/quotes:errors.permissions.updateApprovalSettings');
   }
 
   const { knex } = await createTenantKnex();
@@ -1800,7 +1847,7 @@ function quoteConversionActionErrorFrom(error: unknown): QuoteConversionActionEr
   }
 
   if (error.message.startsWith('Quote ') && error.message.includes(' not found in tenant ')) {
-    return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.');
+    return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.', 'msp/quotes:errors.quote.notFoundRefresh');
   }
 
   if (
@@ -1835,7 +1882,7 @@ export const convertQuoteToContract = withAuth(async (
   quoteId: string,
 ): Promise<{ quote: IQuote; contract: IContract } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    return permissionError('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal', 'msp/billing:errors.permissions.clientPortalUnavailable');
   }
 
   return withQuoteConversionActionErrors(async () => {
@@ -1876,7 +1923,7 @@ export const convertQuoteToSalesOrder = withAuth(async (
   quoteId: string,
 ): Promise<{ quote: IQuote; so_id: string; so_number: string } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    return permissionError('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal', 'msp/billing:errors.permissions.clientPortalUnavailable');
   }
 
   return withQuoteConversionActionErrors(async () => {
@@ -1916,7 +1963,7 @@ export const convertQuoteToInvoice = withAuth(async (
   quoteId: string,
 ): Promise<{ quote: IQuote; invoice: IInvoice } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    return permissionError('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal', 'msp/billing:errors.permissions.clientPortalUnavailable');
   }
 
   return withQuoteConversionActionErrors(async () => {
@@ -1951,7 +1998,7 @@ export const convertQuoteToBoth = withAuth(async (
   quoteId: string,
 ): Promise<{ quote: IQuote; contract: IContract; invoice: IInvoice } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    return permissionError('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal', 'msp/billing:errors.permissions.clientPortalUnavailable');
   }
 
   return withQuoteConversionActionErrors(async () => {

@@ -33,4 +33,16 @@ if (typeof window !== 'undefined') {
     configurable: true,
     value: localStorageMock,
   });
+
+  // jsdom ships no ResizeObserver, and cmdk (the combobox behind every
+  // client/invoice picker) constructs one on mount. server/src/test/setup.ts
+  // polyfills it, so suites only crashed here when run through this package's
+  // own vitest target.
+  if (typeof globalThis.ResizeObserver === 'undefined') {
+    globalThis.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
 }

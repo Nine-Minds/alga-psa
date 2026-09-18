@@ -47,10 +47,16 @@ function projectMaterialActionErrorFrom(error: unknown): ProjectMaterialActionEr
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '23502') {
-    return actionError(`Missing required material field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required material field: ${dbError.column}.`,
+          'projects:errors.material.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required material field.', 'projects:errors.material.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected project, client, product, or stock unit is no longer valid. Please refresh and try again.');
+    return actionError('The selected project, client, product, or stock unit is no longer valid. Please refresh and try again.', 'projects:errors.material.referenceMissing');
   }
 
   return null;
@@ -87,7 +93,7 @@ export const getProjectMaterialBillingOptions = withAuth(async (
   projectId: string,
 ): Promise<{ project_currency: string | null; entries: ProjectMaterialBillingOption[] } | ProjectMaterialActionError> => {
   if (!await hasPermission(user, 'project', 'read')) {
-    return permissionError('Permission denied: project read required');
+    return permissionError('Permission denied: project read required', 'projects:errors.permissions.materialRead');
   }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx) => {
@@ -143,7 +149,7 @@ export const listProjectMaterials = withAuth(async (
 ): Promise<IProjectMaterial[] | ProjectMaterialActionError> => {
   try {
     if (!await hasPermission(user, 'project', 'read')) {
-      return permissionError('Permission denied: project read required');
+      return permissionError('Permission denied: project read required', 'projects:errors.permissions.materialRead');
     }
     const { knex: db } = await createTenantKnex();
     return (await listMaterials(db, tenant, 'project', projectId)) as IProjectMaterial[];
@@ -174,7 +180,7 @@ export const addProjectMaterial = withAuth(async (
 ): Promise<IProjectMaterial | ProjectMaterialActionError> => {
   try {
     if (!await hasPermission(user, 'project', 'update')) {
-      return permissionError('Permission denied: project update required');
+      return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
     }
     const { knex: db } = await createTenantKnex();
     return (await addMaterial(
@@ -204,7 +210,7 @@ export const updateProjectMaterial = withAuth(async (
 ): Promise<IProjectMaterial | ProjectMaterialActionError> => {
   try {
     if (!await hasPermission(user, 'project', 'update')) {
-      return permissionError('Permission denied: project update required');
+      return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
     }
     const { knex: db } = await createTenantKnex();
     return await updateProjectMaterialBilling(db, tenant, projectMaterialId, input) as IProjectMaterial;
@@ -235,7 +241,7 @@ export const deleteProjectMaterial = withAuth(async (
 ): Promise<void | ProjectMaterialActionError> => {
   try {
     if (!await hasPermission(user, 'project', 'update')) {
-      return permissionError('Permission denied: project update required');
+      return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
     }
     const { knex: db } = await createTenantKnex();
     await deleteMaterial(db, tenant, 'project', projectMaterialId, (user as any)?.user_id ?? null);

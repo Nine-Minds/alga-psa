@@ -65,7 +65,8 @@ describe('FinalizedTab i18n wiring contract', () => {
     );
 
     const sourceKeyChecks = [
-      'finalizedTab.bulkActions',
+      'finalizedTab.bulk.actionBar.selectedCount',
+      'finalizedTab.bulk.actionBar.clear',
       'finalizedTab.actions.downloadPdfs',
       'finalizedTab.actions.sendEmails',
       'finalizedTab.actions.unfinalizeSelected',
@@ -74,8 +75,8 @@ describe('FinalizedTab i18n wiring contract', () => {
       'finalizedTab.empty.viewDrafts',
     ];
     const localeKeyChecks = [
-      'finalizedTab.bulkActions_one',
-      'finalizedTab.bulkActions_other',
+      'finalizedTab.bulk.actionBar.selectedCount',
+      'finalizedTab.bulk.actionBar.clear',
       'finalizedTab.actions.downloadPdfs',
       'finalizedTab.actions.sendEmails',
       'finalizedTab.actions.unfinalizeSelected',
@@ -84,7 +85,7 @@ describe('FinalizedTab i18n wiring contract', () => {
       'finalizedTab.empty.viewDrafts',
     ];
 
-    expect(source).toContain("t('finalizedTab.bulkActions'");
+    expect(source).toContain("t('finalizedTab.bulk.actionBar.selectedCount'");
 
     for (const key of sourceKeyChecks) {
       expect(source).toContain(key);

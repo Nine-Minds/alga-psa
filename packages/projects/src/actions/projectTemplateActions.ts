@@ -74,16 +74,16 @@ function projectTemplateActionErrorFrom(error: unknown): ProjectTemplateActionEr
 
   const issues = (error as { issues?: unknown })?.issues;
   if (Array.isArray(issues) && issues.length > 0) {
-    return actionError('Template validation failed. Please review the template details and try again.');
+    return actionError('Template validation failed. Please review the template details and try again.', 'projects:errors.template.validationFailed');
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError('Template request contains an invalid UUID');
+    return actionError('Template request contains an invalid UUID', 'projects:errors.template.invalidUuid');
   }
   if (dbError?.code === '23503') {
     console.error('[templateAction] Foreign key violation while applying template:', dbError);
-    return actionError('This template references statuses that no longer exist. Please repair its status columns and try again.');
+    return actionError('This template references statuses that no longer exist. Please repair its status columns and try again.', 'projects:errors.template.missingStatuses');
   }
 
   if (error instanceof Error) {

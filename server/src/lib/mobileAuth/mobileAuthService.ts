@@ -351,6 +351,8 @@ async function assertMobileAccess(tenantId: string): Promise<void> {
   }
 }
 
+const ROTATED_ACCESS_KEY_GRACE_MS = 30_000;
+
 export type RefreshSessionResult = {
   accessToken: string;
   refreshToken: string;
@@ -410,10 +412,12 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
   });
 
   // Best-effort cleanup and audit logging outside the transaction to minimize lock duration.
-  // Run deactivation + audit in parallel since they're independent.
+  // The old key keeps a short grace window rather than dying at once: the app
+  // fires its resume fetches and the refresh together, so an immediate
+  // deactivation turned every in-flight request into a 401 plus a retry.
   const [deactivateResult, auditResult] = await Promise.allSettled([
     result.existing.api_key_id
-      ? ApiKeyService.deactivateApiKey(result.existing.api_key_id, result.existing.tenant)
+      ? ApiKeyService.expireApiKeyAfter(result.existing.api_key_id, ROTATED_ACCESS_KEY_GRACE_MS, result.existing.tenant)
       : Promise.resolve(),
     safeAuditLog({
       tenantId: result.existing.tenant,
@@ -431,7 +435,7 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
   ]);
 
   if (deactivateResult.status === 'rejected') {
-    console.warn('[mobileAuth] failed to deactivate old API key', {
+    console.warn('[mobileAuth] failed to expire old API key', {
       apiKeyId: result.existing.api_key_id,
       error: deactivateResult.reason,
     });

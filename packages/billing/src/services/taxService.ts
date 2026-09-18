@@ -3,6 +3,8 @@ import type {
   ITaxCalculationResult,
   ITaxComponent,
   ITaxHoliday,
+  ITaxPeriodCalculationResult,
+  ITaxPeriodSegment,
   ITaxRateDetails as ITaxRate,
   ITaxRateThreshold,
   ISO8601String,
@@ -12,6 +14,300 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import { v4 as uuid4 } from 'uuid';
 import { ManualInvoiceError } from '../errors/manualInvoiceErrors';
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * UTC midnight for a calendar day. `Date.UTC` maps years 0-99 to 1900-1999, so
+ * build the date first and set the full year explicitly; otherwise SQL dates
+ * (which use the normalized `YYYY-MM-DD` string) and segmentation (which uses
+ * this Date) would disagree for years below 100.
+ */
+function utcDateFromCalendar(year: number, month: number, day: number): Date {
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return utcDateFromCalendar(year, month + 1, 0).getUTCDate();
+}
+
+function isValidTimeOfDay(time: string): boolean {
+  const match = time.match(/^(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})?$/);
+  if (!match) return false;
+  if (Number(match[1]) > 23 || Number(match[2]) > 59) return false;
+  if (match[3] !== undefined && Number(match[3]) > 59) return false;
+  if (match[4] && match[4] !== 'Z') {
+    const [offsetHours, offsetMinutes] = match[4].slice(1).split(':').map(Number);
+    if (offsetHours > 23 || offsetMinutes > 59) return false;
+  }
+  return true;
+}
+
+/**
+ * Supported date inputs for tax calculations:
+ * - `YYYY-MM-DD` calendar days.
+ * - ISO 8601 timestamps: `YYYY-MM-DD`, optional `THH:mm[:ss[.sss]]`, optional
+ *   `Z` or `±HH:mm` offset. The calendar day is the one the timestamp spells
+ *   out in its own offset (its leading date), not the UTC instant, so an
+ *   offset never shifts the day count.
+ * - `Date` objects, interpreted by their local calendar components because
+ *   PostgreSQL `date` columns hydrate as local midnight.
+ *
+ * Anything else — `2026-02-30`, `2026-06-15junk`, `2026-01-01T25:00` — throws.
+ */
+function parseCalendarDay(value: ISO8601String | Date): { year: number; month: number; day: number } {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      throw new Error('Invalid tax calculation date: Invalid Date');
+    }
+    return { year: value.getFullYear(), month: value.getMonth() + 1, day: value.getDate() };
+  }
+
+  const text = String(value).trim();
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](.+))?$/);
+  if (!match) {
+    throw new Error(`Invalid tax calculation date: ${text}`);
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) {
+    throw new Error(`Invalid tax calculation date: ${text}`);
+  }
+  if (match[4] !== undefined && !isValidTimeOfDay(match[4])) {
+    throw new Error(`Invalid tax calculation date: ${text}`);
+  }
+  return { year, month, day };
+}
+
+/** Normalize any supported input to a `YYYY-MM-DD` calendar day. */
+function normalizeCalendarDay(value: ISO8601String | Date): ISO8601String {
+  const { year, month, day } = parseCalendarDay(value);
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** UTC midnight for a calendar day, used only for inclusive/exclusive day math. */
+function calendarDayToUtc(value: ISO8601String | Date): Date {
+  const { year, month, day } = parseCalendarDay(value);
+  return utcDateFromCalendar(year, month, day);
+}
+
+function daysBetween(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY);
+}
+
+function formatDay(date: Date): ISO8601String {
+  return date.toISOString().slice(0, 10);
+}
+
+/** PostgreSQL numeric columns hydrate as strings; keep percentage math numeric. */
+function normalizePercentage(value: number | string): number {
+  const percentage = typeof value === 'string' ? parseFloat(value) : value;
+  return Number.isNaN(percentage) ? 0 : percentage;
+}
+
+/**
+ * Exact non-negative rational used for money math. Tax percentages, caps, and
+ * net amounts are finite decimals, but floating-point sums of per-rate
+ * contributions drift (325 * 1.1% + 325 * 2.9% lands on 13.000000000000002).
+ * Rational arithmetic keeps capped sums and period proration exact; the
+ * uncapped regional path still uses the original combined-rate expression so
+ * its results stay bit-identical.
+ */
+interface Rational {
+  n: bigint;
+  d: bigint;
+}
+
+function toRational(value: number | string): Rational {
+  const text = (typeof value === 'number' ? value.toString() : value).trim();
+  const match = text.match(/^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
+  if (!match) {
+    throw new Error(`Tax calculation cannot represent ${text} exactly`);
+  }
+  const sign = match[1] === '-' ? -1n : 1n;
+  const fraction = match[3] ?? '';
+  let numerator = BigInt(match[2] + fraction) * sign;
+  let scale = fraction.length - (match[4] ? Number(match[4]) : 0);
+  if (scale < 0) {
+    numerator *= 10n ** BigInt(-scale);
+    scale = 0;
+  }
+  return { n: numerator, d: 10n ** BigInt(scale) };
+}
+
+function rationalInteger(value: number): Rational {
+  return { n: BigInt(value), d: 1n };
+}
+
+function multiplyRational(a: Rational, b: Rational): Rational {
+  return { n: a.n * b.n, d: a.d * b.d };
+}
+
+function divideRational(a: Rational, b: Rational): Rational {
+  return { n: a.n * b.d, d: a.d * b.n };
+}
+
+function addRational(a: Rational, b: Rational): Rational {
+  return { n: a.n * b.d + b.n * a.d, d: a.d * b.d };
+}
+
+/** Compares a/b. Denominators are positive. */
+function compareRational(a: Rational, b: Rational): number {
+  const left = a.n * b.d;
+  const right = b.n * a.d;
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** Ceiling of a rational with a positive denominator. */
+function ceilRational(value: Rational): number {
+  const quotient = value.n / value.d;
+  const remainder = value.n % value.d;
+  return Number(remainder > 0n ? quotient + 1n : quotient);
+}
+
+/** Exact `value * percentage / 100`. */
+function percentageOf(value: Rational, percentage: number | string): Rational {
+  return divideRational(multiplyRational(value, toRational(percentage)), rationalInteger(100));
+}
+
+/**
+ * Combined regional tax for one amount. With no binding cap it returns the
+ * original `ceil(amount * combinedRate / 100)` expression (bit-identical to
+ * the previous implementation); when a cap binds it sums the exact capped
+ * contributions instead of relying on floating point or an epsilon.
+ */
+function regionalTaxAmount(
+  amount: number,
+  amountRational: Rational,
+  rates: { percentage: number; cap: number | null }[],
+  combinedTaxRate: number,
+): number {
+  if (amount <= 0) return 0;
+  const contributions = rates.map(({ percentage, cap }) => ({
+    contribution: percentageOf(amountRational, percentage),
+    cap: cap === null ? null : rationalInteger(cap),
+  }));
+  const anyCapBinds = contributions.some(
+    ({ contribution, cap }) => cap !== null && compareRational(contribution, cap) > 0,
+  );
+  if (!anyCapBinds) {
+    return Math.ceil((amount * combinedTaxRate) / 100);
+  }
+  const total = contributions.reduce((sum, { contribution, cap }) => {
+    const bounded = cap !== null && compareRational(contribution, cap) > 0 ? cap : contribution;
+    return addRational(sum, bounded);
+  }, { n: 0n, d: 1n });
+  return ceilRational(total);
+}
+
+/**
+ * Validate a stored/supplied cap. `null`/`undefined` means uncapped; otherwise
+ * the value must be a non-negative, finite, safely representable whole number
+ * (numeric strings are accepted because PostgreSQL bigint hydrates as a
+ * string). Malformed or negative values throw instead of silently disabling
+ * the cap or producing negative tax.
+ */
+export function normalizeTaxCapAmount(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string' && value.trim() === '') {
+    throw new Error('Tax rate cap amount must be a non-negative whole number.');
+  }
+  const cap = typeof value === 'number' ? value : Number(value);
+  if (!Number.isSafeInteger(cap) || cap < 0) {
+    throw new Error('Tax rate cap amount must be a non-negative whole number.');
+  }
+  return cap;
+}
+
+/** A rate applies to a day when start_date <= day < end_date (end null = open). */
+function isRateActiveOn(rate: Pick<ITaxRate, 'start_date' | 'end_date'>, day: Date): boolean {
+  if (calendarDayToUtc(rate.start_date).getTime() > day.getTime()) return false;
+  if (rate.end_date && calendarDayToUtc(rate.end_date).getTime() <= day.getTime()) return false;
+  return true;
+}
+
+/**
+ * Split [periodStart, periodEnd) at every rate start/end that falls strictly
+ * inside the period, returning a sorted, de-duplicated list of boundaries that
+ * always begins at periodStart and ends at periodEnd.
+ */
+function collectBoundaries(
+  periodStart: Date,
+  periodEnd: Date,
+  rates: Pick<ITaxRate, 'start_date' | 'end_date'>[],
+): Date[] {
+  const boundaries: Date[] = [periodStart];
+  for (const rate of rates) {
+    for (const value of [rate.start_date, rate.end_date]) {
+      if (!value) continue;
+      const day = calendarDayToUtc(value);
+      if (day.getTime() > periodStart.getTime() && day.getTime() < periodEnd.getTime()) {
+        boundaries.push(day);
+      }
+    }
+  }
+  boundaries.push(periodEnd);
+  boundaries.sort((a, b) => a.getTime() - b.getTime());
+  return boundaries.filter((day, index) => index === 0 || day.getTime() !== boundaries[index - 1].getTime());
+}
+
+function segmentsFromBoundaries(boundaries: Date[]): { start: Date; end: Date; days: number }[] {
+  const segments: { start: Date; end: Date; days: number }[] = [];
+  for (let index = 0; index < boundaries.length - 1; index += 1) {
+    const start = boundaries[index];
+    const end = boundaries[index + 1];
+    const days = daysBetween(start, end);
+    if (days > 0) segments.push({ start, end, days });
+  }
+  return segments;
+}
+
+interface BuiltPeriodSegment extends ITaxPeriodSegment {
+  covered: boolean;
+}
+
+/**
+ * Fail when any part of the period has no applicable rate. Reports the first
+ * contiguous uncovered interval so the caller knows what to configure; the
+ * default path cannot invent a successor rate, and silently charging zero would
+ * understate the invoice.
+ */
+function assertFullCoverage(segments: BuiltPeriodSegment[], regionCode?: string): void {
+  let gapStart: ISO8601String | null = null;
+  let gapEnd: ISO8601String | null = null;
+  for (const segment of segments) {
+    if (!segment.covered) {
+      if (gapStart === null) gapStart = segment.start_date;
+      gapEnd = segment.end_date;
+      continue;
+    }
+    if (gapStart !== null) break;
+  }
+  if (gapStart !== null) {
+    throw new ManualInvoiceError(
+      'TAX_RATE_COVERAGE_GAP',
+      `No active tax rate covers ${gapStart} to ${gapEnd}${regionCode ? ` for region ${regionCode}` : ''}`,
+      { region: regionCode ?? '', startDate: gapStart, endDate: gapEnd ?? gapStart },
+    );
+  }
+}
+
+function emptyPeriodResult(): ITaxPeriodCalculationResult {
+  return { taxAmount: 0, taxRate: 0, segments: [] };
+}
+
+function aggregatePeriodResult(segments: ITaxPeriodSegment[], netAmount: number): ITaxPeriodCalculationResult {
+  const taxAmount = segments.reduce((sum, segment) => sum + segment.taxAmount, 0);
+  return {
+    taxAmount,
+    taxRate: netAmount > 0 ? (taxAmount / netAmount) * 100 : 0,
+    segments,
+  };
+}
 
 export class TaxService {
   constructor() {
@@ -24,21 +320,16 @@ export class TaxService {
       throw new Error('Tenant context is required for tax rate validation');
     }
 
-    // Check for overlapping date ranges in the same region
+    // Half-open intervals overlap when each starts before the other's end.
+    // A missing end is unbounded, so it must not become the proposed start.
     const query = tenantDb(knex, tenant).table('tax_rates')
       .where({
         region_code: regionCode
       })
       .andWhere(function() {
-        this.where(function() {
-          this.whereNull('end_date')
-            .andWhere('start_date', '<', endDate || startDate);
-        }).orWhere(function() {
-          this.whereNotNull('end_date')
-            .andWhere('start_date', '<', endDate || startDate)
-            .andWhere('end_date', '>', startDate);
-        });
+        this.whereNull('end_date').orWhere('end_date', '>', startDate);
       });
+    if (endDate) query.andWhere('start_date', '<', endDate);
 
     // Only add the excludeTaxRateId condition if it's provided
     if (excludeTaxRateId) {
@@ -91,7 +382,7 @@ export class TaxService {
       console.log(`Calculating tax directly for regionCode: ${regionCode}, amount: ${netAmount}, date: ${date}`);
       
       // Explicitly type the result array
-      const applicableRates: Pick<ITaxRate, 'tax_percentage'>[] = await tenantDb(knex, tenant).table('tax_rates')
+      const applicableRates: Pick<ITaxRate, 'tax_percentage' | 'cap_amount'>[] = await tenantDb(knex, tenant).table('tax_rates')
         .where({
           region_code: regionCode,
           is_active: true
@@ -108,7 +399,7 @@ export class TaxService {
             this.orWhere('currency_code', currencyCode);
           }
         })
-        .select('tax_percentage'); // Select only the percentage
+        .select('tax_percentage', 'cap_amount');
 
       if (!applicableRates || applicableRates.length === 0) {
         console.error(`No active tax rate(s) found for regionCode ${regionCode} on date ${date}`);
@@ -125,22 +416,27 @@ export class TaxService {
       console.log('Applicable rates:', applicableRates);
       console.log(`Found ${applicableRates.length} applicable rate(s) for regionCode ${regionCode}`);
 
-      // Sum percentages for composite tax
-      // Handle potential string values from DB while satisfying TS type (number)
-      const combinedTaxRate = applicableRates.reduce((sum, rate) => {
-        const percentage = typeof rate.tax_percentage === 'string'
-          ? parseFloat(rate.tax_percentage)
-          : rate.tax_percentage;
-        return sum + (isNaN(percentage) ? 0 : percentage); // Add parsed/original number, default to 0 if NaN
-      }, 0);
+      // Sum percentages for the reported combined rate
+      const combinedTaxRate = applicableRates.reduce(
+        (sum, rate) => sum + normalizePercentage(rate.tax_percentage),
+        0,
+      );
+
+      // Cap each rate's contribution; no binding cap keeps the original
+      // combined-rate expression, and capped sums use exact rational math.
+      const taxAmount = regionalTaxAmount(
+        netAmount,
+        toRational(netAmount),
+        applicableRates.map(rate => ({
+          percentage: normalizePercentage(rate.tax_percentage),
+          cap: normalizeTaxCapAmount(rate.cap_amount),
+        })),
+        combinedTaxRate,
+      );
 
       console.log(`Found ${applicableRates.length} applicable rate(s) for regionCode ${regionCode}. Combined rate: ${combinedTaxRate}%`);
-      
-      // Calculate tax based on the combined rate
-      // Ensure tax is not applied if netAmount is zero or negative
-      const taxAmount = netAmount > 0 ? Math.ceil((netAmount * combinedTaxRate) / 100) : 0;
       console.log(`Calculated tax amount: ${taxAmount} for net amount: ${netAmount} using combined rate ${combinedTaxRate}%`);
-      
+
       return {
         taxAmount,
         taxRate: combinedTaxRate // Return the combined rate
@@ -213,24 +509,253 @@ export class TaxService {
     console.log(`Tax calculation result for client ${clientId}:`, result);
     return result;
   }
-  
+
+  /**
+   * Calculate tax for a period that may span several rate-validity windows.
+   *
+   * Semantics (the approved design left these under-specified; this is the
+   * draft's contract, and domain review may change them):
+   *
+   * - Period is [startDate, endDate): the start day is charged, the end day is
+   *   not. Inputs are strictly validated and normalized to a `YYYY-MM-DD`
+   *   calendar day (see `parseCalendarDay`); the same normalized days are used
+   *   for the SQL overlap filters and for segmentation.
+   * - Every rate `start_date`/`end_date` strictly inside the period splits it
+   *   into constant-rate segments. Each segment's net amount is its day-share
+   *   of the requested net amount; tax is `ceil`-rounded per segment, not once
+   *   for the whole period. `netAmount` may be fractional; only tax is rounded.
+   * - Coverage is mandatory: every taxable day must have an applicable rate.
+   *   An uncovered interval throws `TAX_RATE_COVERAGE_GAP` naming the interval;
+   *   a period with no rate at all throws `NO_TAX_RATE`. The default path knows
+   *   only the client's one default rate, so a period extending past that
+   *   rate's validity fails rather than understating tax or guessing a
+   *   successor rate from the region. An empty or reversed period
+   *   (`end <= start`) throws.
+   * - Exemption, reverse charge and currency filtering are evaluated once for
+   *   the whole period, exactly as the single-date `calculateTax` does, and
+   *   short-circuit before any coverage check.
+   * - Caps are per rate. On the default-rate path the rate must cover the
+   *   whole period (one segment), so the cap applies once. On the regional
+   *   path each rate's unrounded contribution is capped before the segment sum
+   *   is ceiled, so a period crossing capped rate boundaries charges the
+   *   per-rate caps of every segment it touches. Progressive thresholds on the
+   *   default path apply to the whole covered amount; they reset per segment
+   *   only if a caller ever supplies a multi-segment default path (it cannot
+   *   today, because partial coverage fails).
+   */
+  async calculateTaxForPeriod(
+    clientId: string,
+    netAmount: number,
+    startDate: ISO8601String,
+    endDate: ISO8601String,
+    regionCode?: string,
+    is_taxable: boolean = true,
+    currencyCode?: string,
+  ): Promise<ITaxPeriodCalculationResult> {
+    const { knex, tenant } = await createTenantKnex();
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for tax calculation');
+    }
+
+    // Validate and normalize both ends first; the same calendar days are used
+    // for the SQL overlap filters and for segmentation.
+    const periodStart = calendarDayToUtc(startDate);
+    const periodEnd = calendarDayToUtc(endDate);
+    const normalizedStart = normalizeCalendarDay(startDate);
+    const normalizedEnd = normalizeCalendarDay(endDate);
+    const totalDays = daysBetween(periodStart, periodEnd);
+    if (totalDays <= 0) {
+      throw new Error('Tax period end date must be after start date');
+    }
+
+    console.log(`Calculating tax for client ${clientId} over period ${normalizedStart} - ${normalizedEnd} (${totalDays} days), regionCode ${regionCode}, currency ${currencyCode}`);
+
+    // Client-level decisions are evaluated once for the whole period.
+    const client = await tenantDb(knex, tenant).table('clients')
+      .where({
+        client_id: clientId
+      })
+      .select('is_tax_exempt')
+      .first();
+
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
+    }
+
+    if (client.is_tax_exempt || !is_taxable) {
+      console.log(`No period tax applied: client ${clientId} is tax exempt or item is not taxable`);
+      return emptyPeriodResult();
+    }
+
+    const taxSettings = await this.getClientTaxSettings(clientId);
+    if (taxSettings.is_reverse_charge_applicable) {
+      console.log(`Reverse charge is applicable for client ${clientId}. Returning zero period tax.`);
+      return emptyPeriodResult();
+    }
+
+    if (regionCode) {
+      const applicableRates: Pick<ITaxRate, 'tax_rate_id' | 'tax_percentage' | 'cap_amount' | 'start_date' | 'end_date'>[] =
+        await tenantDb(knex, tenant).table('tax_rates')
+          .where({
+            region_code: regionCode,
+            is_active: true
+          })
+          .andWhere('start_date', '<', normalizedEnd)
+          .andWhere(function() {
+            this.whereNull('end_date')
+              .orWhere('end_date', '>', normalizedStart);
+          })
+          .andWhere(function() {
+            this.whereNull('currency_code');
+            if (currencyCode) {
+              this.orWhere('currency_code', currencyCode);
+            }
+          })
+          .select('tax_rate_id', 'tax_percentage', 'cap_amount', 'start_date', 'end_date');
+
+      if (!applicableRates || applicableRates.length === 0) {
+        console.error(`No active tax rate(s) found for regionCode ${regionCode} in period ${normalizedStart} - ${normalizedEnd}`);
+        throw new ManualInvoiceError(
+          'NO_TAX_RATE',
+          `No active tax rate(s) found for region ${regionCode} in period ${normalizedStart} - ${normalizedEnd}`,
+          { region: regionCode, startDate: normalizedStart, endDate: normalizedEnd },
+        );
+      }
+
+      const netRational = toRational(netAmount);
+      const boundaries = collectBoundaries(periodStart, periodEnd, applicableRates);
+      const built: BuiltPeriodSegment[] = segmentsFromBoundaries(boundaries).map(({ start, end, days }) => {
+        const segmentNet = netAmount * (days / totalDays);
+        // Exact day-share for capped contributions; the reported/uncapped value
+        // keeps the original float expression.
+        const segmentNetRational = divideRational(
+          multiplyRational(netRational, rationalInteger(days)),
+          rationalInteger(totalDays),
+        );
+        const ratesForSegment = applicableRates.filter(rate => isRateActiveOn(rate, start));
+        const combinedTaxRate = ratesForSegment.reduce(
+          (sum, rate) => sum + normalizePercentage(rate.tax_percentage),
+          0,
+        );
+        // No binding cap keeps the original combined-rate expression; a binding
+        // cap sums exact capped contributions per segment.
+        const taxAmount = regionalTaxAmount(
+          segmentNet,
+          segmentNetRational,
+          ratesForSegment.map(rate => ({
+            percentage: normalizePercentage(rate.tax_percentage),
+            cap: normalizeTaxCapAmount(rate.cap_amount),
+          })),
+          combinedTaxRate,
+        );
+        return {
+          start_date: formatDay(start),
+          end_date: formatDay(end),
+          days,
+          netAmount: segmentNet,
+          taxAmount,
+          taxRate: combinedTaxRate,
+          covered: ratesForSegment.length > 0,
+        };
+      });
+
+      assertFullCoverage(built, regionCode);
+      return aggregatePeriodResult(built.map(({ covered, ...segment }) => segment), netAmount);
+    }
+
+    // Default-rate fallback, mirroring calculateTax's precedence.
+    const defaultRateAssoc = await tenantDb(knex, tenant).table('client_tax_rates')
+      .where({
+        client_id: clientId,
+        is_default: true,
+      })
+      .whereNull('location_id')
+      .select('tax_rate_id')
+      .first();
+
+    if (!defaultRateAssoc) {
+      console.error(`No default tax rate configured for client ${clientId} in tenant ${tenant}`);
+      throw new ManualInvoiceError(
+        'NO_TAX_RATE',
+        `No default tax rate configured for client ${clientId} in period ${normalizedStart} - ${normalizedEnd}`,
+        { clientId, startDate: normalizedStart, endDate: normalizedEnd },
+      );
+    }
+
+    const taxRate = await tenantDb(knex, tenant).table<ITaxRate>('tax_rates')
+      .where({
+        tax_rate_id: defaultRateAssoc.tax_rate_id,
+        is_active: true
+      })
+      .andWhere('start_date', '<', normalizedEnd)
+      .andWhere(function() {
+        this.whereNull('end_date')
+          .orWhere('end_date', '>', normalizedStart);
+      })
+      .andWhere(function() {
+        this.whereNull('currency_code');
+        if (currencyCode) {
+          this.orWhere('currency_code', currencyCode);
+        }
+      })
+      .first();
+
+    if (!taxRate) {
+      console.error(`Default tax rate (ID: ${defaultRateAssoc.tax_rate_id}) is inactive or does not overlap period ${normalizedStart} - ${normalizedEnd}`);
+      throw new ManualInvoiceError(
+        'NO_TAX_RATE',
+        `Default tax rate (ID: ${defaultRateAssoc.tax_rate_id}) is inactive or does not cover period ${normalizedStart} - ${normalizedEnd}`,
+        { clientId, startDate: normalizedStart, endDate: normalizedEnd },
+      );
+    }
+
+    const boundaries = collectBoundaries(periodStart, periodEnd, [taxRate]);
+    const built: BuiltPeriodSegment[] = [];
+    for (const { start, end, days } of segmentsFromBoundaries(boundaries)) {
+      const segmentNet = netAmount * (days / totalDays);
+      const covered = isRateActiveOn(taxRate, start);
+      let taxAmount = 0;
+      let segmentTaxRate = 0;
+
+      if (covered) {
+        const segmentDate = formatDay(start);
+        const result = taxRate.is_composite
+          ? await this.calculateCompositeTax(taxRate, segmentNet, segmentDate)
+          : await this.calculateSimpleTax(taxRate, segmentNet, segmentDate);
+        taxAmount = result.taxAmount;
+        segmentTaxRate = result.taxRate;
+      }
+
+      built.push({
+        start_date: formatDay(start),
+        end_date: formatDay(end),
+        days,
+        netAmount: segmentNet,
+        taxAmount,
+        taxRate: segmentTaxRate,
+        covered,
+      });
+    }
+
+    assertFullCoverage(built);
+    return aggregatePeriodResult(built.map(({ covered, ...segment }) => segment), netAmount);
+  }
+
   private async calculateCompositeTax(taxRate: ITaxRate, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
     const { knex } = await createTenantKnex();
     const components = await ClientTaxSettings.getCompositeTaxComponents(taxRate.tax_rate_id);
+    if (netAmount <= 0) return { taxAmount: 0, taxRate: 0, taxComponents: [] };
     let totalTaxAmount = 0;
-    let taxableAmount = netAmount;
     const appliedComponents: ITaxComponent[] = [];
 
     for (const component of components) {
       if (!this.isComponentApplicable(component, date)) continue;
 
+      const taxableAmount = component.is_compound ? netAmount + totalTaxAmount : netAmount;
       const componentTax = await this.calculateComponentTax(component, taxableAmount, date);
       totalTaxAmount += componentTax;
       appliedComponents.push(component);
-
-      if (component.is_compound) {
-        taxableAmount += componentTax;
-      }
     }
 
     const effectiveTaxRate = (totalTaxAmount / netAmount) * 100;
@@ -247,36 +772,36 @@ export class TaxService {
     const thresholds = await ClientTaxSettings.getTaxRateThresholds(taxRate.tax_rate_id);
     
     if (thresholds.length > 0) {
-      return this.calculateThresholdBasedTax(thresholds, netAmount);
+      return this.calculateThresholdBasedTax(thresholds, netAmount, taxRate.cap_amount);
     }
 
+    // PostgreSQL numeric columns hydrate as strings even though the domain
+    // interface declares a number. Keep the result contract numeric on every path.
+    const taxPercentage = Number(taxRate.tax_percentage);
     // For negative or zero net amounts, no tax should be applied
     if (netAmount <= 0) {
-      return { taxAmount: 0, taxRate: taxRate.tax_percentage };
+      return { taxAmount: 0, taxRate: taxPercentage };
     }
 
-    const taxAmount = Math.ceil((netAmount * taxRate.tax_percentage) / 100);
-    return { taxAmount, taxRate: taxRate.tax_percentage };
+    const taxAmount = Math.ceil((netAmount * taxPercentage) / 100);
+    return { taxAmount: this.applyCap(taxAmount, taxRate.cap_amount), taxRate: taxPercentage };
   }
 
-  private calculateThresholdBasedTax(thresholds: ITaxRateThreshold[], netAmount: number): ITaxCalculationResult {
+  private calculateThresholdBasedTax(thresholds: ITaxRateThreshold[], netAmount: number, capAmount?: number | null): ITaxCalculationResult {
     console.log(`Calculating threshold-based tax for net amount: ${netAmount}`);
     console.log(`Number of thresholds: ${thresholds.length}`);
 
+    if (netAmount <= 0) return { taxAmount: 0, taxRate: 0, appliedThresholds: [] };
     let taxAmount = 0;
-    let remainingAmount = netAmount;
     const appliedThresholds: ITaxRateThreshold[] = [];
 
     for (const threshold of thresholds) {
       console.log(`Processing threshold: ${JSON.stringify(threshold)}`);
-      if (remainingAmount <= 0) {
-        console.log('Remaining amount is 0 or less. Breaking out of threshold loop.');
-        break;
-      }
-
-      const taxableAmount = threshold.max_amount
-        ? Math.min(remainingAmount, threshold.max_amount - threshold.min_amount)
-        : remainingAmount;
+      // Bounds refer to the original base, not the remainder after earlier
+      // brackets. A nonzero first minimum or a gap must stay untaxed.
+      const taxableAmount = Math.max(0,
+        Math.min(netAmount, threshold.max_amount ?? netAmount) - threshold.min_amount);
+      if (taxableAmount === 0) continue;
 
       console.log(`Taxable amount for this threshold: ${taxableAmount}`);
 
@@ -284,24 +809,34 @@ export class TaxService {
       console.log(`Tax amount for this threshold: ${thresholdTax}`);
 
       taxAmount += thresholdTax;
-      remainingAmount -= taxableAmount;
       appliedThresholds.push(threshold);
 
       console.log(`Cumulative tax amount: ${taxAmount}`);
-      console.log(`Remaining amount: ${remainingAmount}`);
     }
 
-    const effectiveTaxRate = (taxAmount / netAmount) * 100;
+    const cappedTaxAmount = this.applyCap(taxAmount, capAmount);
+    const effectiveTaxRate = (cappedTaxAmount / netAmount) * 100;
     console.log(`Effective tax rate: ${effectiveTaxRate}%`);
 
     const result = {
-      taxAmount,
+      taxAmount: cappedTaxAmount,
       taxRate: effectiveTaxRate,
       appliedThresholds
     };
 
     console.log(`Final tax calculation result: ${JSON.stringify(result)}`);
     return result;
+  }
+
+  /**
+   * Clamp an amount to a rate's cap. `null`/`undefined` means uncapped; a
+   * stored 0 is a supplied cap. Negative, fractional, unsafe, or non-numeric
+   * values throw (see `normalizeTaxCapAmount`) rather than silently disabling
+   * the cap or producing negative tax.
+   */
+  private applyCap(taxAmount: number, capAmount?: number | null): number {
+    const cap = normalizeTaxCapAmount(capAmount);
+    return cap === null ? taxAmount : Math.min(taxAmount, cap);
   }
 
   private async calculateComponentTax(component: ITaxComponent, amount: number, date: ISO8601String): Promise<number> {

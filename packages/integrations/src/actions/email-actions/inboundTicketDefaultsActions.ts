@@ -153,10 +153,10 @@ export const createInboundTicketDefaults = withAuth(async (
       return actionError(error.message);
     }
     if (error instanceof Error && error.message.includes('unique')) {
-      return actionError('A configuration with this short name already exists');
+      return actionError('A configuration with this short name already exists', 'msp/email-providers:errors.inboundDefaults.duplicateShortName');
     }
     console.error('Unexpected failure while creating inbound ticket defaults:', error);
-    return actionError('Failed to create inbound ticket defaults. Please try again.');
+    return actionError('Failed to create inbound ticket defaults. Please try again.', 'msp/email-providers:errors.inboundDefaults.createFailed');
   }
 });
 
@@ -192,7 +192,7 @@ export const updateInboundTicketDefaults = withAuth(async (
         .first();
 
       if (!current) {
-        return actionError('Defaults configuration not found');
+        return actionError('Defaults configuration not found', 'msp/email-providers:errors.inboundDefaults.notFound');
       }
       
       const finalBoardId = data.board_id !== undefined ? data.board_id : current?.board_id;
@@ -246,7 +246,7 @@ export const updateInboundTicketDefaults = withAuth(async (
       ]);
 
     if (!defaults) {
-      return actionError('Defaults configuration not found');
+      return actionError('Defaults configuration not found', 'msp/email-providers:errors.inboundDefaults.notFound');
     }
 
     return { defaults };
@@ -255,10 +255,10 @@ export const updateInboundTicketDefaults = withAuth(async (
       return actionError(error.message);
     }
     if (error instanceof Error && error.message.includes('unique')) {
-      return actionError('A configuration with this short name already exists');
+      return actionError('A configuration with this short name already exists', 'msp/email-providers:errors.inboundDefaults.duplicateShortName');
     }
     console.error('Unexpected failure while updating inbound ticket defaults:', error);
-    return actionError('Failed to update inbound ticket defaults. Please try again.');
+    return actionError('Failed to update inbound ticket defaults. Please try again.', 'msp/email-providers:errors.inboundDefaults.updateFailed');
   }
 });
 
@@ -301,7 +301,7 @@ export const deleteInboundTicketDefaults = withAuth(async (
   });
 
   if (deletedCount === 0) {
-    return actionError('Defaults configuration not found');
+    return actionError('Defaults configuration not found', 'msp/email-providers:errors.inboundDefaults.notFound');
   }
 
   return { success: true };

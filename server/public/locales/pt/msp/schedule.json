@@ -26,7 +26,17 @@
     "loading": "Carregando...",
     "errors": {
       "loadPermissions": "Falha ao carregar as permissões do usuário",
-      "forbidden": "Você não tem permissão para visualizar esta programação."
+      "forbidden": "Você não tem permissão para visualizar esta programação.",
+      "moveFailed": "Não foi possível mover a entrada de agenda"
+    },
+    "schedulingFor": "Agendando",
+    "selectSlotHint": "Arraste para criar, mover ou redimensionar entradas. Clique numa entrada para editá-la.",
+    "readOnlyHint": "Você pode ver esta agenda, mas precisa da permissão de atualização de agenda para adicionar ou alterar entradas.",
+    "workItemLegend": "Este item de trabalho",
+    "schedulingForAgent": "Agendando para {{name}}",
+    "otherWorkLegend": "Outro trabalho",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -279,8 +289,9 @@
         "placeholder": "Selecione aprovadores"
       },
       "teamSelect": {
-        "label": "Selecione a equipe",
-        "placeholder": "Selecione uma equipe"
+        "label": "Filtrar técnicos por equipe",
+        "placeholder": "Todos os técnicos autorizados",
+        "help": "Isso filtra apenas a lista de técnicos; a disponibilidade de reserva pertence ao técnico em todas as equipes."
       }
     },
     "feedback": {
@@ -319,16 +330,16 @@
     "userHours": {
       "roleManager": {
         "label": "Gerente de equipe:",
-        "description": "Você pode definir configurações de disponibilidade para membros de sua(s) equipe(s). A tabela \"Usuários configurados\" abaixo mostra todos os usuários com configurações de disponibilidade no sistema."
+        "description": "Você pode configurar a disponibilidade de reserva apenas para membros autorizados da equipe e subordinados diretos. A tabela abaixo segue o filtro de equipe atual."
       },
       "roleAdmin": {
         "label": "Administrador:",
-        "description": "Você pode definir configurações de disponibilidade para qualquer usuário no sistema. A tabela \"Usuários configurados\" abaixo mostra todos os usuários com configurações de disponibilidade."
+        "description": "Você pode configurar a disponibilidade geral de reserva de qualquer técnico autorizado. A tabela abaixo segue o filtro de equipe atual."
       },
       "userSelect": {
-        "label": "Selecione o usuário para configurar",
+        "label": "Técnico",
         "placeholderSelectTeamFirst": "Selecione uma equipe primeiro",
-        "placeholder": "Selecione um usuário para configurar"
+        "placeholder": "Selecione um técnico para configurar"
       },
       "appointmentSettings": {
         "title": "Configurações de compromisso",
@@ -357,22 +368,31 @@
           "available": "Disponível",
           "startTime": "Hora de início",
           "endTime": "Hora de término"
-        }
+        },
+        "availableFor": "{{day}} disponível",
+        "startTimeFor": "Hora de início de {{day}}",
+        "endTimeFor": "Hora de término de {{day}}"
       },
       "configuredUsers": {
         "title": "Usuários configurados",
-        "description": "Usuários com configurações de disponibilidade definidas",
-        "empty": "Nenhum usuário configurado ainda",
+        "description": "Técnicos com disponibilidade de reserva salva no filtro atual",
+        "empty": "Nenhum técnico neste filtro tem disponibilidade de reserva salva ainda",
         "columns": {
           "userName": "Nome de usuário",
           "status": "Status"
         },
         "status": {
           "configured": "Configurado"
+        },
+        "actions": {
+          "edit": "Editar as horas de reserva de {{name}}",
+          "delete": "Excluir as horas de reserva de {{name}}"
         }
       },
       "actions": {
-        "save": "Economize horas do usuário"
+        "save": "Economize horas do usuário",
+        "retry": "Tentar novamente",
+        "saving": "Salvando..."
       },
       "feedback": {
         "selectUserError": "Selecione um usuário",
@@ -384,7 +404,19 @@
       "deleteDialog": {
         "title": "Excluir disponibilidade do usuário",
         "message": "Tem certeza de que deseja excluir as configurações de disponibilidade de {{userName}}? Isso removerá todos os horários de trabalho configurados. Esta ação não pode ser desfeita."
-      }
+      },
+      "scope": {
+        "team": "Filtro de equipe:",
+        "allTeams": "Todos os técnicos autorizados",
+        "technician": "Técnico:",
+        "schedule": "Horário:",
+        "loading": "Verificando horas de reserva salvas",
+        "saved": "Horas de reserva salvas",
+        "partial": "Horas de reserva salvas com padrões não salvos para os dias ausentes",
+        "draft": "Modelo não salvo de segunda a sexta, das 09:00 às 17:00",
+        "explanation": "Essas horas de reserva valem para o usuário em todas as equipes. Elas não são herdadas do horário de trabalho separado."
+      },
+      "loading": "Carregando horas do técnico..."
     },
     "serviceRules": {
       "serviceSelect": {
@@ -531,7 +563,8 @@
       "appointmentRequest": "Solicitação de agendamento",
       "view": "Ver entrada",
       "edit": "Editar entrada",
-      "new": "Nova entrada"
+      "new": "Nova entrada",
+      "newForWorkItem": "Agendar {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Esta é uma entrada privada. Somente o criador pode visualizar ou editar detalhes."
@@ -556,7 +589,9 @@
       "privateEntry": "Entrada privada (não visível para outros usuários)",
       "start": "Começar *",
       "end": "Fim *",
-      "notes": "Notas"
+      "notes": "Notas",
+      "technician": "Técnico",
+      "notesPlaceholder": "Tudo o que o técnico deve saber antes de começar"
     },
     "actions": {
       "cancel": "Cancelar",
@@ -566,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Entrada ad hoc (sem item de trabalho)",
-      "openDetails": "Detalhes"
+      "openDetails": "Detalhes",
+      "loading": "Carregando item de trabalho…",
+      "openTicket": "Abrir ticket",
+      "openTask": "Abrir tarefa",
+      "openInteraction": "Abrir interação"
     },
     "appointmentRequest": {
       "approved": {
@@ -661,6 +700,19 @@
     },
     "errors": {
       "loadWorkItem": "Falha ao carregar o item de trabalho."
+    },
+    "teamsMeeting": {
+      "create": "Criar reunião do Teams",
+      "creating": "Criando reunião do Teams…",
+      "join": "Entrar na reunião do Teams",
+      "created": "Reunião do Microsoft Teams criada",
+      "createFailed": "Falha ao criar a reunião do Teams",
+      "recurringUnsupported": "Reuniões do Teams só podem ser adicionadas a entradas avulsas, não a séries recorrentes."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {
@@ -685,5 +737,44 @@
     "notAvailable": "N / D",
     "title": "Detalhes da interação",
     "unknownUser": "Desconhecido"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Item da agenda não encontrado.",
+      "invalid": "O item da agenda selecionado é inválido. Atualize a página e tente novamente.",
+      "assigneesMissing": "Não foi possível encontrar um ou mais usuários atribuídos."
+    },
+    "activities": {
+      "otherUserForbidden": "Permissão negada: não é possível ver as atividades de agenda de outro usuário"
+    },
+    "workItem": {
+      "adHocTimesRequired": "A hora de início e a hora de término são obrigatórias para itens avulsos.",
+      "typeUnsupported": "Esse tipo de item de trabalho não é compatível com a agenda.",
+      "entryOrUserUnavailable": "O item da agenda ou o usuário selecionado não está mais disponível. Atualize a página e tente novamente.",
+      "invalid": "O item de trabalho selecionado é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O item de trabalho, item da agenda ou responsável selecionado não é mais válido. Atualize a página e tente novamente.",
+      "duplicateEntry": "Esse item da agenda já existe. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da agenda.",
+      "missingFieldNamed": "Falta um campo obrigatório da agenda: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "O ID da reunião é obrigatório",
+      "refreshPermission": "Permissão negada: não é possível atualizar as gravações de reuniões.",
+      "refreshFailed": "Falha ao atualizar as gravações de reuniões. Tente novamente.",
+      "graphForbidden": "O Microsoft Graph negou acesso à gravação do Teams. Verifique as permissões de gravação e tente novamente.",
+      "graphNotFound": "A gravação do Teams não está mais disponível no Microsoft Graph.",
+      "graphThrottled": "O Microsoft Graph está limitando a taxa de downloads de gravações. Tente novamente em instantes.",
+      "graphHttpStatus": "O Microsoft Graph retornou HTTP {{status}} ao baixar a gravação do Teams."
+    }
+  },
+  "workItemEditor": {
+    "created": "{{title}} agendado",
+    "updated": "Entrada de agenda atualizada",
+    "deleted": "Entrada de agenda excluída",
+    "createFailed": "Não foi possível agendar este trabalho",
+    "updateFailed": "Não foi possível atualizar a entrada de agenda",
+    "deleteFailed": "Não foi possível excluir a entrada de agenda",
+    "loadFailed": "Não foi possível carregar a entrada de agenda",
+    "noPermission": "Você precisa da permissão de atualização de agenda para agendar trabalho."
   }
 }

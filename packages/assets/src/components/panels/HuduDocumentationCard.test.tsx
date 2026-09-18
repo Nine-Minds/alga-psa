@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { ContentCardVariantProvider } from '@alga-psa/ui/components/ContentCard';
 import { HuduDocumentationCard } from './HuduDocumentationCard';
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
@@ -53,6 +54,7 @@ describe('HuduDocumentationCard (T255)', () => {
     );
 
     expect(html).toContain('id="hudu-doc-card"');
+    expect(html).toContain('class="bg-white"');
     expect(html).toContain('Hudu Documentation');
     expect(html).toContain('id="hudu-doc-field-0"');
     expect(html).toContain('id="hudu-doc-field-1"');
@@ -75,6 +77,20 @@ describe('HuduDocumentationCard (T255)', () => {
 
     expect(html).toContain('2027-01-31');
     expect(html).not.toContain('Last synced from Hudu');
+  });
+
+  it('uses a compact bento shell under the bento variant provider', () => {
+    const html = renderToStaticMarkup(
+      <ContentCardVariantProvider variant="bento">
+        <HuduDocumentationCard
+          asset={baseAsset({ hudu_fields: [{ label: 'Hostname', value: 'EC-WS-001' }] })}
+        />
+      </ContentCardVariantProvider>
+    );
+
+    expect(html).toContain('<section id="hudu-doc-card"');
+    expect(html).toContain('p-4');
+    expect(html).not.toContain('class="bg-white"');
   });
 
   it('renders nothing when hudu_fields is missing, empty, malformed, or attributes is absent', () => {

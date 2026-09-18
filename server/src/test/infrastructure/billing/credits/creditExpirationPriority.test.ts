@@ -15,6 +15,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import { ClientContractLine } from '@alga-psa/billing/models';
+import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
@@ -193,12 +194,9 @@ async function applyCreditsManually(
 
   const totalApplied = appliedCredits.reduce((sum, entry) => sum + entry.amount, 0);
 
-  const clientRow = await tenantTable(context, 'clients')
-    .where({ client_id: clientId, tenant: context.tenantId })
-    .first();
-
-  const currentBalance = Number(clientRow?.credit_balance ?? 0);
-  const newBalance = currentBalance - totalApplied;
+  // Balance is derived from the credit_tracking remainders the loop above just
+  // drew down, so reading it here already nets out what was applied.
+  const newBalance = await getAvailableCredit(context.db, context.tenantId, clientId);
 
   const creditApplicationTransactionId = uuidv4();
 
@@ -236,18 +234,13 @@ async function applyCreditsManually(
     tenant: context.tenantId
   });
 
-  await tenantTable(context, 'clients')
-    .where({ client_id: clientId, tenant: context.tenantId })
-    .update({
-      credit_balance: newBalance,
-      updated_at: nowIso
-    });
-
+  // Invoice totals are immutable after finalization: applied credit lives in
+  // credit_applied and the balance due is derived, so total_amount stays gross
+  // here exactly as the real finalize path leaves it.
   await tenantTable(context, 'invoices')
     .where({ invoice_id: invoiceId })
     .update({
       credit_applied: totalApplied,
-      total_amount: totalBeforeCredit - totalApplied,
       updated_at: nowIso
     });
 
@@ -349,7 +342,6 @@ describe('Credit Expiration Prioritization Tests', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     await setupClientTaxConfiguration(context, {
@@ -572,8 +564,9 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(updatedInvoice.subtotal)).toBe(subtotal);
     expect(Number(updatedInvoice.tax)).toBe(tax);
     expect(Number(updatedInvoice.credit_applied)).toBe(expectedAppliedCredit);
-    expect(Number(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
-    
+    expect(Number(updatedInvoice.total_amount)).toBe(totalBeforeCredit);
+    expect(Number(updatedInvoice.total_amount) - Number(updatedInvoice.credit_applied)).toBe(expectedRemainingTotal);
+
     // Step 11: Verify credit application transaction
     const creditApplicationTx = await tenantTable(context, 'transactions')
       .where({
@@ -786,7 +779,8 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Verify invoice values
     console.log(`First invoice - Subtotal: ${subtotal1}, Tax: ${tax1}, Total: ${totalBeforeCredit1}`);
     expect(Number(updatedInvoice1.credit_applied)).toBe(expectedAppliedCredit1);
-    expect(Number(updatedInvoice1.total_amount)).toBe(expectedRemainingTotal1);
+    expect(Number(updatedInvoice1.total_amount)).toBe(totalBeforeCredit1);
+    expect(Number(updatedInvoice1.total_amount) - Number(updatedInvoice1.credit_applied)).toBe(expectedRemainingTotal1);
     
     // Step 9: Verify credit application transaction for first invoice
     const creditApplicationTx1 = await tenantTable(context, 'transactions')
@@ -856,8 +850,9 @@ describe('Credit Expiration Prioritization Tests', () => {
     const expectedRemainingTotal2 = totalBeforeCredit2 - actualAppliedCredit2;
 
     // Verify second invoice values
-    // The remaining amount should be the difference between the total and the applied credit
-    expect(Number(updatedInvoice2.total_amount)).toBe(expectedRemainingTotal2);
+    // The remaining amount is derived: gross total minus applied credit.
+    expect(Number(updatedInvoice2.total_amount)).toBe(totalBeforeCredit2);
+    expect(Number(updatedInvoice2.total_amount) - actualAppliedCredit2).toBe(expectedRemainingTotal2);
     
     // Step 15: Verify credit application transaction for second invoice
     const creditApplicationTx2 = await tenantTable(context, 'transactions')
@@ -1066,14 +1061,9 @@ describe('Credit Expiration Prioritization Tests', () => {
       related_transaction_id: expiringCreditTx.transaction_id
     });
     
-    // Update client credit balance
-    await tenantTable(context, 'clients')
-      .where({ client_id: client_id, tenant: context.tenantId })
-      .update({
-        credit_balance: activeCreditAmount, // Only the active credit remains
-        updated_at: new Date().toISOString()
-      });
-    
+    // No cached balance to update: zeroing the expired tracking row above is
+    // what leaves only the active credit spendable.
+
     // Step 7: Verify credit balance after expiration
     const creditAfterExpiration = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterExpiration).toBe(activeCreditAmount);
@@ -1105,8 +1095,9 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(updatedInvoice.subtotal)).toBe(subtotal);
     expect(Number(updatedInvoice.tax)).toBe(tax);
     expect(Number(updatedInvoice.credit_applied)).toBe(expectedAppliedCredit);
-    expect(Number(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
-    
+    expect(Number(updatedInvoice.total_amount)).toBe(totalBeforeCredit);
+    expect(Number(updatedInvoice.total_amount) - Number(updatedInvoice.credit_applied)).toBe(expectedRemainingTotal);
+
     // Step 11: Verify credit application transaction
     const creditApplicationTx = await tenantTable(context, 'transactions')
       .where({

@@ -24,6 +24,8 @@ vi.mock("../api", () => ({
 
 vi.mock("../api/tickets", () => ({
   addTicketComment: vi.fn(),
+  cancelScheduledTicketComment: vi.fn(),
+  isScheduledComment: (c: { publish_state?: string | null }) => c.publish_state === "scheduled",
   getTicketById: vi.fn(),
   getTicketComments: vi.fn(),
   getTicketPriorities: vi.fn(),
@@ -194,6 +196,41 @@ describe("TicketDetailScreen rich text sections", () => {
 
     const richEditor = findMockRichTextEditor(renderer);
     expect(richEditor.props.content).toBe(richDescription);
+    expect(richEditor.props.editable).toBe(false);
+  });
+
+  it("renders structured rich description content returned by the ticket API", () => {
+    const structuredDescription = [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "API-created description" }],
+      },
+    ];
+    const renderer = render(
+      React.createElement(DescriptionSection, {
+        ticket: {
+          ticket_id: "ticket-1",
+          ticket_number: "T-1",
+          title: "Example",
+          attributes: {
+            description: structuredDescription,
+          },
+        },
+        isEditing: false,
+        draftContent: "",
+        draftPlainText: "",
+        saving: false,
+        error: null,
+        editorRef: createRef<TicketRichTextEditorRef>(),
+        onStartEditing: () => undefined,
+        onCancelEditing: () => undefined,
+        onSave: () => undefined,
+        onDraftChange: () => undefined,
+      }),
+    );
+
+    const richEditor = findMockRichTextEditor(renderer);
+    expect(richEditor.props.content).toBe(JSON.stringify(structuredDescription));
     expect(richEditor.props.editable).toBe(false);
   });
 

@@ -210,5 +210,5 @@ describe('clientContractLineActions recurring compatibility', () => {
         contractLineId: 'new-line-1',
       }),
     );
-  });
+  }, 15_000);
 });

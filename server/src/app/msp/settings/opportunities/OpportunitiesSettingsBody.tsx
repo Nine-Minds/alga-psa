@@ -86,12 +86,27 @@ const resolveSection = (section: string | null | undefined): string => {
   return SECTION_ALIASES[requested] ?? requested;
 };
 
-function SectionHeading({ title, description }: { title: string; description: string }) {
+/**
+ * The surface every other settings tab uses: one card per subject, heading and
+ * help text inside it rather than floating on the shell ground.
+ */
+function SettingsCard({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="mb-4">
-      <h2 className="mb-1 text-base font-semibold text-[rgb(var(--color-text-900))]">{title}</h2>
-      <p className="text-sm text-[rgb(var(--color-text-500))]">{description}</p>
-    </div>
+    <section id={id} className="rounded-lg bg-[rgb(var(--color-card))] p-6 card-elevated">
+      <h3 className="mb-2 text-lg font-semibold text-[rgb(var(--color-text-900))]">{title}</h3>
+      <p className="mb-4 text-sm text-[rgb(var(--color-text-500))]">{description}</p>
+      {children}
+    </section>
   );
 }
 
@@ -146,7 +161,7 @@ export default function OpportunitiesSettingsBody() {
   );
 
   if (!settings) {
-    return <Skeleton className="h-48 w-full" />;
+    return <Skeleton className="h-64 w-full rounded-lg" />;
   }
 
   const patch = (partial: Partial<IOpportunitySettings>) => setSettings({ ...settings, ...partial });
@@ -205,23 +220,25 @@ export default function OpportunitiesSettingsBody() {
       id: 'stages-and-steps',
       label: t('opportunities.settings.tabs.stagesAndSteps', 'Stages and Steps'),
       content: (
-        <div className="max-w-2xl space-y-5">
-          <SectionHeading
+        <div className="space-y-6">
+          <SettingsCard
+            id="opportunities-settings-step-templates-card"
             title={t('opportunities.settings.stepTemplates', 'Stages and steps')}
             description={t(
               'opportunities.settings.stepTemplatesHelp',
               'Set the steps your team works through at each stage. Every opportunity offers these steps when its plan is filled in, so deals follow the same process.'
             )}
-          />
-          <OpportunityStepTemplatesSettings />
-          <div className="border-t border-[rgb(var(--color-border-200))] pt-5">
-            <SectionHeading
-              title={t('opportunities.settings.discipline', 'Follow-up reminders')}
-              description={t(
-                'opportunities.settings.disciplineHelp',
-                'How long an opportunity can go without contact before the owner is reminded, and what happens if it stays quiet.'
-              )}
-            />
+          >
+            <OpportunityStepTemplatesSettings />
+          </SettingsCard>
+          <SettingsCard
+            id="opportunities-settings-discipline-card"
+            title={t('opportunities.settings.discipline', 'Follow-up reminders')}
+            description={t(
+              'opportunities.settings.disciplineHelp',
+              'How long an opportunity can go without contact before the owner is reminded, and what happens if it stays quiet.'
+            )}
+          >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Input
                 id="opportunities-settings-nudge-days"
@@ -252,8 +269,8 @@ export default function OpportunitiesSettingsBody() {
                 />
               </div>
             </div>
-            <div className="mt-4">{saveRow}</div>
-          </div>
+            <div className="mt-6">{saveRow}</div>
+          </SettingsCard>
         </div>
       ),
     },
@@ -261,106 +278,97 @@ export default function OpportunitiesSettingsBody() {
       id: 'suggestions',
       label: t('opportunities.settings.tabs.suggestions', 'Suggestions'),
       content: (
-        <div className="max-w-2xl space-y-5">
-          <SectionHeading
+        <div className="space-y-6">
+          <SettingsCard
+            id="opportunities-settings-generators-card"
             title={t('opportunities.settings.generators', 'Suggestion sources')}
             description={t(
               'opportunities.settings.generatorsHelp',
               'Suggested opportunities are drawn from your contracts, billing history, and assets, with the supporting numbers attached. These thresholds decide what qualifies.'
             )}
-          />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Input
-              id="opportunities-settings-renewal-lead"
-              type="number"
-              label={t('opportunities.settings.renewalLead', 'Renewal lead time (days)')}
-              value={String(settings.renewal_lead_days)}
-              onChange={numberField(settings.renewal_lead_days, (n) => patch({ renewal_lead_days: n }))}
-            />
-            <CurrencyInput
-              id="opportunities-settings-tm-threshold"
-              label={t('opportunities.settings.tmThreshold', 'T&M conversion threshold (monthly)')}
-              currencyCode={currencyCode}
-              value={settings.tm_threshold_cents / fractionFactor}
-              onChange={(value?: number) =>
-                patch({ tm_threshold_cents: value == null ? 0 : toMinorUnits(value, undefined, currencyCode) })
-              }
-            />
-            <Input
-              id="opportunities-settings-asset-age"
-              type="number"
-              label={t('opportunities.settings.assetAge', 'Asset refresh age (years)')}
-              value={String(settings.asset_age_years)}
-              onChange={numberField(settings.asset_age_years, (n) => patch({ asset_age_years: n }))}
-            />
-          </div>
-          <div className="divide-y divide-[rgb(var(--color-border-100))] rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4">
-            {GENERATORS.map((generator) => {
-              const summary = generatorSummaries[generator.key];
-              const running = runningGenerator === generator.key;
-              return (
-                <div
-                  key={generator.key}
-                  className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
-                      {t(generator.labelKey, generator.labelFallback)}
-                    </div>
-                    <div className="text-xs text-[rgb(var(--color-text-500))]">
-                      {t(generator.descriptionKey, generator.descriptionFallback)}
-                    </div>
-                    {summary ? (
-                      <div
-                        id={`opportunities-settings-generator-${generator.key}-summary`}
-                        className="mt-1 text-xs font-medium text-[rgb(var(--color-primary-600))]"
-                      >
-                        {t(
-                          'opportunities.settings.generatorSummary',
-                          '{{created}} created · {{reopened}} reopened · {{deduped}} already known',
-                          {
-                            created: summary.created,
-                            reopened: summary.reopened,
-                            deduped: summary.deduped,
-                          }
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                  <Button
-                    id={`opportunities-settings-generator-${generator.key}-run`}
-                    size="xs"
-                    variant="outline"
-                    disabled={runningGenerator !== null}
-                    onClick={() => void runGenerator(generator.key)}
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Input
+                id="opportunities-settings-renewal-lead"
+                type="number"
+                label={t('opportunities.settings.renewalLead', 'Renewal lead time (days)')}
+                value={String(settings.renewal_lead_days)}
+                onChange={numberField(settings.renewal_lead_days, (n) => patch({ renewal_lead_days: n }))}
+              />
+              <CurrencyInput
+                id="opportunities-settings-tm-threshold"
+                label={t('opportunities.settings.tmThreshold', 'T&M conversion threshold (monthly)')}
+                currencyCode={currencyCode}
+                value={settings.tm_threshold_cents / fractionFactor}
+                onChange={(value?: number) =>
+                  patch({ tm_threshold_cents: value == null ? 0 : toMinorUnits(value, undefined, currencyCode) })
+                }
+              />
+              <Input
+                id="opportunities-settings-asset-age"
+                type="number"
+                label={t('opportunities.settings.assetAge', 'Asset refresh age (years)')}
+                value={String(settings.asset_age_years)}
+                onChange={numberField(settings.asset_age_years, (n) => patch({ asset_age_years: n }))}
+              />
+            </div>
+            <div className="mt-6 divide-y divide-[rgb(var(--color-border-100))] rounded-lg border border-[rgb(var(--color-border-200))] px-4">
+              {GENERATORS.map((generator) => {
+                const summary = generatorSummaries[generator.key];
+                const running = runningGenerator === generator.key;
+                return (
+                  <div
+                    key={generator.key}
+                    className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    {running
-                      ? t('opportunities.settings.generatorRunning', 'Running…')
-                      : t('opportunities.settings.generatorRun', 'Run now')}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-          {saveRow}
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
+                        {t(generator.labelKey, generator.labelFallback)}
+                      </div>
+                      <div className="text-xs text-[rgb(var(--color-text-500))]">
+                        {t(generator.descriptionKey, generator.descriptionFallback)}
+                      </div>
+                      {summary ? (
+                        <div
+                          id={`opportunities-settings-generator-${generator.key}-summary`}
+                          className="mt-1 text-xs font-medium text-[rgb(var(--color-primary-600))]"
+                        >
+                          {t(
+                            'opportunities.settings.generatorSummary',
+                            '{{created}} created · {{reopened}} reopened · {{deduped}} already known',
+                            {
+                              created: summary.created,
+                              reopened: summary.reopened,
+                              deduped: summary.deduped,
+                            }
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                    <Button
+                      id={`opportunities-settings-generator-${generator.key}-run`}
+                      size="xs"
+                      variant="outline"
+                      disabled={runningGenerator !== null}
+                      onClick={() => void runGenerator(generator.key)}
+                    >
+                      {running
+                        ? t('opportunities.settings.generatorRunning', 'Running…')
+                        : t('opportunities.settings.generatorRun', 'Run now')}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-6">{saveRow}</div>
+          </SettingsCard>
         </div>
       ),
     },
     {
       id: 'opportunity-numbering',
       label: t('opportunities.settings.tabs.numbering', 'Opportunity Numbering'),
-      content: (
-        <div className="max-w-2xl space-y-5">
-          <SectionHeading
-            title={t('opportunities.settings.numbering', 'Opportunity numbering')}
-            description={t(
-              'opportunities.settings.numberingHelp',
-              'Set the prefix and the next number used when an opportunity is created.'
-            )}
-          />
-          <NumberingSettings entityType="OPPORTUNITY" />
-        </div>
-      ),
+      content: <NumberingSettings entityType="OPPORTUNITY" />,
     },
   ];
 
@@ -369,64 +377,66 @@ export default function OpportunitiesSettingsBody() {
       id: 'email-drafting',
       label: t('opportunities.settings.tabs.drafting', 'Email Drafting'),
       content: (
-        <div className="max-w-2xl space-y-5">
-          <SectionHeading
+        <div className="space-y-6">
+          <SettingsCard
+            id="opportunities-settings-voice-card"
             title={t('opportunities.settings.voice', 'Email drafting')}
             description={t(
               'opportunities.settings.voiceHelp',
               'Follow-up drafts are written in your team’s style. Paste a few real emails and describe the tone you want.'
             )}
-          />
-          <div className="space-y-4">
-            <TextArea
-              id="opportunities-settings-voice-samples"
-              label={t('opportunities.settings.voiceSamples', 'Sample emails (one per block, separated by a blank line)')}
-              rows={7}
-              value={voice.sample_emails.join('\n\n')}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setVoice({
-                  ...voice,
-                  sample_emails: e.target.value
-                    .split(/\n\s*\n/)
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                })
-              }
-            />
-            <TextArea
-              id="opportunities-settings-voice-steering"
-              label={t('opportunities.settings.voiceSteering', 'Tone and style')}
-              placeholder={t(
-                'opportunities.settings.voiceSteeringPlaceholder',
-                'e.g. Plain and short. No exclamation points. One recommendation, not a menu.'
-              )}
-              rows={3}
-              value={voice.steering_instructions}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setVoice({ ...voice, steering_instructions: e.target.value })
-              }
-            />
-            <div className="flex justify-end">
-              <Button
-                id="opportunities-settings-voice-save"
-                size="sm"
-                disabled={savingVoice}
-                onClick={async () => {
-                  setSavingVoice(true);
-                  try {
-                    await saveOpportunityVoiceProfile(voice);
-                    toast.success(t('opportunities.settings.voiceSaved', 'Drafting style saved'));
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : String(err));
-                  } finally {
-                    setSavingVoice(false);
-                  }
-                }}
-              >
-                {t('common.saveChanges', 'Save changes')}
-              </Button>
+          >
+            <div className="space-y-4">
+              <TextArea
+                id="opportunities-settings-voice-samples"
+                label={t('opportunities.settings.voiceSamples', 'Sample emails (one per block, separated by a blank line)')}
+                rows={7}
+                value={voice.sample_emails.join('\n\n')}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setVoice({
+                    ...voice,
+                    sample_emails: e.target.value
+                      .split(/\n\s*\n/)
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+              <TextArea
+                id="opportunities-settings-voice-steering"
+                label={t('opportunities.settings.voiceSteering', 'Tone and style')}
+                placeholder={t(
+                  'opportunities.settings.voiceSteeringPlaceholder',
+                  'e.g. Plain and short. No exclamation points. One recommendation, not a menu.'
+                )}
+                rows={3}
+                value={voice.steering_instructions}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setVoice({ ...voice, steering_instructions: e.target.value })
+                }
+              />
+              <div className="flex justify-end">
+                <Button
+                  id="opportunities-settings-voice-save"
+                  size="sm"
+                  disabled={savingVoice}
+                  onClick={async () => {
+                    setSavingVoice(true);
+                    try {
+                      await saveOpportunityVoiceProfile(voice);
+                      toast.success(t('opportunities.settings.voiceSaved', 'Drafting style saved'));
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : String(err));
+                    } finally {
+                      setSavingVoice(false);
+                    }
+                  }}
+                >
+                  {t('common.saveChanges', 'Save changes')}
+                </Button>
+              </div>
             </div>
-          </div>
+          </SettingsCard>
         </div>
       ),
     });

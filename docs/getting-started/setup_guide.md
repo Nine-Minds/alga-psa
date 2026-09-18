@@ -47,6 +47,17 @@ If you want a turnkey on-premise install instead of running Docker Compose yours
 
 1. Create secret files in the `secrets/` directory:
 
+   The fastest option is the idempotent bootstrap script. On a fresh checkout it
+   generates every required secret (including `credential_encryption_key`, the
+   EE credentials-vault encryption key) with cryptographically random values; on
+   an existing install it preserves every established value, adds only the new
+   `credential_encryption_key`, and fails loudly instead of regenerating any
+   other missing secret. It never overwrites existing files:
+   ```bash
+   ./scripts/generate-secrets.sh
+   ```
+   The manual steps below remain for operators who want to pin specific values.
+
    Use single quotes around secret values to prevent shell expansion of special characters (for example `$`, `!`, `*`, and backticks).
    If a secret contains a single quote (`'`), use a quoted heredoc instead:
    ```bash
@@ -77,6 +88,7 @@ Security Secrets:
 echo 'your-32-char-min-key' > secrets/crypto_key
 echo 'your-32-char-min-key' > secrets/token_secret_key
 echo 'your-32-char-min-key' > secrets/nextauth_secret
+echo "$(openssl rand -base64 32)" > secrets/credential_encryption_key
 ```
 
 Email & OAuth Secrets:

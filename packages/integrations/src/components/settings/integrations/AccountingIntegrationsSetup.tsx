@@ -11,6 +11,7 @@ import XeroIntegrationSettings from './XeroIntegrationSettings';
 import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 type AccountingIntegrationId = 'quickbooks_online' | 'xero' | 'quickbooks_csv' | 'xero_csv';
 
@@ -42,7 +43,7 @@ function BannerIcon({
   );
 }
 
-function IntegrationBanner({ option }: { option: AccountingIntegrationOption }) {
+function IntegrationMark({ option }: { option: AccountingIntegrationOption }) {
   const icon =
     option.id === 'quickbooks_online' ? (
       <BannerIcon className="bg-green-500 text-xl font-bold text-white">Q</BannerIcon>
@@ -58,25 +59,18 @@ function IntegrationBanner({ option }: { option: AccountingIntegrationOption }) 
       </BannerIcon>
     );
 
-  return (
-    <div className="relative flex h-24 w-full items-center justify-center rounded-lg bg-muted/40">
-      {option.badge ? (
-        <div className="absolute right-3 top-3">
-          <Badge variant={option.badge.variant}>{option.badge.label}</Badge>
-        </div>
-      ) : null}
-      {icon}
-    </div>
-  );
+  return icon;
 }
 
 interface AccountingIntegrationsSetupProps {
   qboSyncHealthSlot?: React.ReactNode;
+  xeroSyncHealthSlot?: React.ReactNode;
   qboOnboardingSlot?: React.ReactNode;
 }
 
-export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnboardingSlot }: AccountingIntegrationsSetupProps = {}) {
+export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, xeroSyncHealthSlot, qboOnboardingSlot }: AccountingIntegrationsSetupProps = {}) {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
   const searchParams = useSearchParams();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
@@ -88,7 +82,7 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
         next.push({
           id: 'quickbooks_online',
           title: 'QuickBooks Online',
-          description: t('integrations.accounting.setup.options.qbo.description', { defaultValue: 'Connect your realm to sync invoices and manage mappings.' }),
+          description: t('integrations.accounting.setup.options.qbo.description', { defaultValue: 'Keep invoices, payments, and customers in sync.' }),
           badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Pro' }), variant: 'secondary' },
           highlights: [
             { label: t('integrations.accounting.setup.highlights.sync', { defaultValue: 'Sync' }), value: t('integrations.accounting.setup.highlightValues.twoWay', { defaultValue: '2-way' }) },
@@ -99,7 +93,7 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
         next.push({
           id: 'xero',
           title: 'Xero',
-          description: t('integrations.accounting.setup.options.xero.description', { defaultValue: 'Connect your organisation with tenant-owned OAuth credentials for live accounting exports and mappings.' }),
+          description: t('integrations.accounting.setup.options.xero.description', { defaultValue: 'Keep invoices, payments, and contacts in sync.' }),
           badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Pro' }), variant: 'secondary' },
           highlights: [
             { label: t('integrations.accounting.setup.highlights.sync', { defaultValue: 'Sync' }), value: t('integrations.accounting.setup.highlightValues.twoWay', { defaultValue: '2-way' }) },
@@ -112,7 +106,7 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
         {
           id: 'quickbooks_csv',
           title: 'QuickBooks CSV',
-          description: t('integrations.accounting.setup.options.qboCsv.description', { defaultValue: 'Export invoices to CSV for manual import into QuickBooks and import tax data from reports.' }),
+          description: t('integrations.accounting.setup.options.qboCsv.description', { defaultValue: 'Export invoices for manual import into QuickBooks.' }),
           highlights: [
             { label: t('integrations.accounting.setup.highlights.export', { defaultValue: 'Export' }), value: t('integrations.accounting.setup.highlightValues.manual', { defaultValue: 'Manual' }) },
             { label: t('integrations.accounting.setup.highlights.format', { defaultValue: 'Format' }), value: t('integrations.accounting.setup.highlightValues.csv', { defaultValue: 'CSV' }) }
@@ -121,7 +115,7 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
         {
           id: 'xero_csv',
           title: 'Xero CSV',
-          description: t('integrations.accounting.setup.options.xeroCsv.description', { defaultValue: 'Export invoices to CSV for manual import into Xero and import tax data from Xero reports.' }),
+          description: t('integrations.accounting.setup.options.xeroCsv.description', { defaultValue: 'Export invoices and import Xero tax reports.' }),
           highlights: [
             { label: t('integrations.accounting.setup.highlights.export', { defaultValue: 'Export' }), value: t('integrations.accounting.setup.highlightValues.manual', { defaultValue: 'Manual' }) },
             { label: t('integrations.accounting.setup.highlights.format', { defaultValue: 'Format' }), value: t('integrations.accounting.setup.highlightValues.csv', { defaultValue: 'CSV' }) }
@@ -165,11 +159,23 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
   const [selected, setSelected] = useState<AccountingIntegrationId>(
     () => resolveRequestedSelection() ?? 'quickbooks_csv'
   );
+  const [showProviderChooser, setShowProviderChooser] = useState(() => resolveRequestedSelection() === null);
+  const [xeroReconnectRequired, setXeroReconnectRequired] = useState(false);
+
+  useEffect(() => {
+    const handleXeroStatus = (event: Event) => {
+      const detail = (event as CustomEvent<{ reconnectRequired?: boolean }>).detail;
+      setXeroReconnectRequired(Boolean(detail?.reconnectRequired));
+    };
+    window.addEventListener('xero-connection-status-changed', handleXeroStatus);
+    return () => window.removeEventListener('xero-connection-status-changed', handleXeroStatus);
+  }, []);
 
   useEffect(() => {
     const requested = resolveRequestedSelection();
     if (requested) {
       setSelected(requested);
+      setShowProviderChooser(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEEAvailable, qboOauthStatus, xeroOauthStatus, requestedIntegration]);
@@ -192,9 +198,32 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
     window.history.pushState({}, '', newUrl);
   };
 
+  // Permission-aware navigation: the accounting integration screens are an
+  // Admin/Finance surface. Until the capability check resolves, keep showing
+  // the setup grid (no flicker); once resolved, a user with none of the five
+  // accounting capabilities sees a notice instead of an actionable configure
+  // surface. Users holding at least one capability keep every card — the
+  // per-panel controls are gated individually inside each settings panel.
+  if (caps.loaded && !caps.hasAny) {
+    return (
+      <div className="space-y-6" id="accounting-integrations-setup">
+        <Card id="accounting-integrations-no-permission-card">
+          <CardHeader>
+            <CardTitle>
+              {t('integrations.accounting.setup.noPermission.title', { defaultValue: 'No access to accounting integrations' })}
+            </CardTitle>
+            <CardDescription>
+              {t('integrations.accounting.setup.noPermission.description', { defaultValue: 'You do not have permission to view or configure accounting integrations. Ask an administrator for access.' })}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" id="accounting-integrations-setup">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {showProviderChooser ? <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {options.map((option) => {
           const isSelected = option.id === selected;
           const isDisabled = Boolean(option.disabled);
@@ -205,30 +234,32 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
               className={[
                 'relative overflow-hidden transition-shadow hover:shadow-md',
                 isSelected ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : '',
-                isDisabled ? 'opacity-70' : 'cursor-pointer'
+                isDisabled ? 'opacity-70' : ''
               ].join(' ')}
               id={`accounting-integration-card-${option.id}`}
             >
-              <CardHeader className="space-y-4 pb-3">
-                <IntegrationBanner option={option} />
+              <CardHeader className="space-y-3 p-4 pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <IntegrationMark option={option} />
+                  {option.badge ? <Badge variant={option.badge.variant}>{option.badge.label}</Badge> : null}
+                </div>
                 <div className="space-y-1">
-                  <CardTitle className="text-base">{option.title}</CardTitle>
-                  <CardDescription className="text-sm">{option.description}</CardDescription>
+                  <CardTitle className="text-base leading-tight">{option.title}</CardTitle>
+                  <CardDescription className="min-h-10 text-sm leading-5">{option.description}</CardDescription>
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-4 pt-0">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <CardContent className="space-y-3 px-4 pb-3 pt-0">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   {option.highlights.map((h) => (
-                    <div key={`${option.id}-${h.label}`} className="flex items-center gap-1">
-                      <span className="font-medium text-foreground/80">{h.label}</span>
-                      <span>{h.value}</span>
-                    </div>
+                    <Badge key={`${option.id}-${h.label}`} variant="secondary">
+                      {h.label}: {h.value}
+                    </Badge>
                   ))}
                 </div>
               </CardContent>
 
-              <CardFooter className="pt-0">
+              <CardFooter className="px-4 pb-4 pt-0">
                 <Button
                   className="w-full"
                   variant={isSelected ? 'default' : 'outline'}
@@ -236,13 +267,16 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
                   onClick={() => {
                     if (isDisabled) return;
                     setSelected(option.id);
+                    setShowProviderChooser(false);
                     updateUrlSelection(option.id);
                   }}
                   id={`accounting-integration-configure-${option.id}`}
                 >
                   {isDisabled
                     ? t('integrations.accounting.setup.comingSoon', { defaultValue: 'Coming Soon' })
-                    : t('integrations.accounting.setup.configure', { defaultValue: 'Configure Integration' })}
+                    : isSelected
+                      ? t('integrations.accounting.setup.selectedAction', { defaultValue: 'Selected' })
+                      : t('integrations.accounting.setup.configure', { defaultValue: 'Configure' })}
                 </Button>
               </CardFooter>
 
@@ -252,22 +286,45 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
             </Card>
           );
         })}
-      </div>
+      </div> : selectedOption ? (
+        <Card id="accounting-integration-current-provider">
+          <div className="flex flex-wrap items-center gap-4 px-6 py-4">
+            <IntegrationMark option={selectedOption} />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t('integrations.accounting.setup.currentIntegration', { defaultValue: 'Accounting integration' })}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-lg font-semibold text-foreground">{selectedOption.title}</p>
+                {selected === 'xero' && xeroReconnectRequired ? (
+                  <Badge variant="error">
+                    {t('integrations.accounting.setup.reconnectRequired', { defaultValue: 'Reconnect required' })}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowProviderChooser(true)} id="accounting-integration-change-provider">
+              {t('integrations.accounting.setup.changeIntegration', { defaultValue: 'Choose another' })}
+            </Button>
+          </div>
+        </Card>
+      ) : null}
 
-      <div className="border-t pt-6" id="accounting-integrations-active-config">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold">{t('integrations.accounting.setup.activeConfiguration', { defaultValue: 'Active Configuration' })}</h3>
-          <span className="text-xs text-muted-foreground">
-            {selectedOption ? t('integrations.accounting.setup.selected', { defaultValue: '{{title}} selected', title: selectedOption.title }) : null}
-          </span>
-        </div>
+      <div className={showProviderChooser ? 'border-t pt-6' : ''} id="accounting-integrations-active-config">
+        {showProviderChooser ? <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="text-base font-semibold">
+            {selectedOption
+              ? t('integrations.accounting.setup.settingsTitle', { defaultValue: '{{title}} settings', title: selectedOption.title })
+              : t('integrations.accounting.setup.activeConfiguration', { defaultValue: 'Integration settings' })}
+          </h3>
+        </div> : null}
 
         {selected === 'quickbooks_csv' ? (
           <CSVIntegrationSettings />
         ) : selected === 'quickbooks_online' ? (
           <QboIntegrationSettings syncHealthSlot={qboSyncHealthSlot} onboardingSlot={qboOnboardingSlot} />
         ) : selected === 'xero' ? (
-          <XeroIntegrationSettings />
+          <XeroIntegrationSettings syncHealthSlot={xeroSyncHealthSlot} />
         ) : selected === 'xero_csv' ? (
           <XeroCsvIntegrationSettings />
         ) : (

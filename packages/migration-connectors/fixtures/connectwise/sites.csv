@@ -1,0 +1,5 @@
+Site_RecID,Company_RecID,Site_Name,Address_Line1,Address_Line2,City,State_ID,Zip,Country
+201,101,Main,100 Main Street,Suite 4,Springfield,IL,62701,US
+202,101,Annex,102 Main Street,,Springfield,IL,62701,US
+203,102,Lakeside,200 Lake Road,,Madison,WI,53703,US
+204,103,Roastery,300 Harbor Way,,Portland,OR,97209,US

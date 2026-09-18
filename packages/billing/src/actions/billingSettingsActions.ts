@@ -31,7 +31,7 @@ const DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE: RecurringCadenceRolloutState = 'm
 type BillingSettingsActionError = ActionMessageError | ActionPermissionError;
 const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing_settings', 'update')) {
-    return permissionError('Permission denied: Cannot update billing settings');
+    return permissionError('Permission denied: Cannot update billing settings', 'msp/billing-settings:errors.permissions.updateSettings');
   }
   return null;
 };
@@ -72,7 +72,7 @@ export const getDefaultBillingSettings = withAuth(async (
   { tenant }
 ): Promise<BillingSettings | BillingSettingsActionError> => {
   if (!await hasPermission(user as any, 'billing_settings', 'read')) {
-    return permissionError('Permission denied: Cannot read billing settings');
+    return permissionError('Permission denied: Cannot read billing settings', 'msp/billing-settings:errors.permissions.readSettings');
   }
   const { knex } = await createTenantKnex();
 
@@ -277,7 +277,7 @@ export const getClientContractLineSettings = withAuth(async (
   clientId: string
 ): Promise<BillingSettings | null | BillingSettingsActionError> => {
   if (!await hasPermission(user as any, 'billing_settings', 'read')) {
-    return permissionError('Permission denied: Cannot read client billing settings');
+    return permissionError('Permission denied: Cannot read client billing settings', 'msp/billing-settings:errors.permissions.readClientSettings');
   }
   const { knex } = await createTenantKnex();
 
@@ -320,7 +320,7 @@ export const updateClientContractLineSettings = withAuth(async (
   data: BillingSettings | null // null to remove override
 ): Promise<{ success: boolean } | BillingSettingsActionError> => {
   if (!await hasPermission(user as any, 'billing_settings', 'update')) {
-    return permissionError('Permission denied: Cannot update client billing settings');
+    return permissionError('Permission denied: Cannot update client billing settings', 'msp/billing-settings:errors.permissions.updateClientSettings');
   }
   const { knex } = await createTenantKnex();
 

@@ -9,6 +9,7 @@ import { persistIngressPointer } from './inboundEmailProducer';
 import { getInboundDurableMode } from './inboundEmailDurableStore';
 import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
 import { classifyInboundAuthFailure } from './InboundEmailAuthFailurePolicy';
+import { randomBytes } from 'crypto';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -101,6 +102,7 @@ export class EmailWebhookMaintenanceService {
 
     try {
       const candidates = await this.findActiveMicrosoftProviders(tenantId, providerId);
+      await this.backfillMicrosoftWebhookVerificationTokens(options, candidates);
       logger.info(`Found ${candidates.length} active Microsoft email providers`);
 
       const results: RenewalResult[] = [];
@@ -125,6 +127,42 @@ export class EmailWebhookMaintenanceService {
     } catch (error: any) {
       logger.error('Failed to execute renewal cycle', error);
       throw error;
+    }
+  }
+
+  /**
+   * Rotate legacy/missing Graph clientState values before the webhook handler
+   * enforces them. Recreating the subscription is required because Graph's
+   * clientState is fixed at subscription creation.
+   */
+  async backfillMicrosoftWebhookVerificationTokens(
+    options: Pick<RenewalOptions, 'tenantId' | 'providerId'> = {},
+    candidates?: EmailProviderConfig[],
+  ): Promise<void> {
+    const providers = candidates || await this.findActiveMicrosoftProviders(options.tenantId, options.providerId);
+    for (const config of providers) {
+      const token = config.webhook_verification_token;
+      if (token && token !== 'email-webhook-verification' && token !== config.tenant) continue;
+
+      const replacement = randomBytes(32).toString('hex');
+      const knex = await getAdminConnection();
+      const updated = await tenantDb(knex, config.tenant)
+        .table('microsoft_email_provider_config')
+        .where({ email_provider_id: config.id })
+        .update({ webhook_verification_token: replacement, updated_at: new Date().toISOString() });
+      if (!updated) {
+        throw new Error(`Unable to backfill Microsoft webhook token for provider ${config.id}`);
+      }
+
+      config.webhook_verification_token = replacement;
+      const resolved = await buildMicrosoftEmailProviderConfig(config);
+      const adapter = new MicrosoftGraphAdapter(resolved);
+      await adapter.connect();
+      await adapter.registerWebhookSubscription();
+      logger.info('Backfilled Microsoft webhook verification token and recreated Graph subscription', {
+        providerId: config.id,
+        tenant: config.tenant,
+      });
     }
   }
 
@@ -1142,7 +1180,9 @@ export class EmailWebhookMaintenanceService {
       name: row.provider_name,
       provider_type: row.provider_type || 'microsoft',
       mailbox: row.mailbox,
-      folder_to_monitor: 'Inbox', // Default
+      folder_to_monitor: Array.isArray(row.folder_filters)
+        ? row.folder_filters[0] || 'Inbox'
+        : (() => { try { return JSON.parse(row.folder_filters || '[]')[0] || 'Inbox'; } catch { return 'Inbox'; } })(),
       active: row.is_active,
       webhook_notification_url: `${baseUrl}${webhookPath}`,
       webhook_subscription_id: row.webhook_subscription_id,

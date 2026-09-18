@@ -5,6 +5,7 @@ import { Lock } from 'lucide-react';
 import { Dialog, DialogContent, Input } from '@alga-psa/ui/components';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection';
 import type { FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TwoFactorInputProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface TwoFactorInputProps {
 }
 
 const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComplete }) => {
+  const { t } = useTranslation('common');
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -21,7 +23,7 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
     id: '2fa-input',
     type: 'formField',
     fieldType: 'textField',
-    label: '2FA Code',
+    label: t('auth.twoFactor.codeLabel'),
     parentId: 'signin-2fa',
     required: true
   });
@@ -30,7 +32,7 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
   const updateSubmitButton = useRegisterUIComponent<ButtonComponent>({
     id: '2fa-submit-button',
     type: 'button',
-    label: 'Verify',
+    label: t('auth.twoFactor.verify'),
     parentId: 'signin-2fa',
   });
 
@@ -41,17 +43,17 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
 
       // Update component states with empty code
       updateInput({
-        label: '2FA Code',
+        label: t('auth.twoFactor.codeLabel'),
         disabled: !isOpen,
         required: true,
         value: ''
       });
       updateSubmitButton({
-        label: 'Verify',
+        label: t('auth.twoFactor.verify'),
         disabled: !isOpen
       });
     }
-  }, [isOpen, updateInput, updateSubmitButton]);
+  }, [isOpen, t, updateInput, updateSubmitButton]);
 
   const handleChange = (index: number, value: string) => {
     if (value.length <= 1 && /^\d*$/.test(value)) {
@@ -99,9 +101,11 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
                 <Lock className="h-6 w-6 text-[rgb(var(--color-primary-500))]" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-center mb-2">Easy peasy</h2>
+            <h2 className="text-2xl font-bold text-center mb-2">
+              {t('auth.twoFactor.title')}
+            </h2>
             <p className="text-sm text-[rgb(var(--color-text-500))] text-center mb-6">
-              Enter 6-digit code from your two factor authenticator APP.
+              {t('auth.twoFactor.instructions')}
             </p>
             <div className="flex justify-between mb-4">
               {code.map((digit, index): React.JSX.Element => (
@@ -124,7 +128,9 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
               ))}
             </div>
             <div className="text-center text-sm text-[rgb(var(--color-text-500))]">
-              {6 - code.filter(d => d !== '').length} digits left
+              {t('auth.twoFactor.digitsLeft', {
+                count: 6 - code.filter(d => d !== '').length,
+              })}
             </div>
         </div>
       </DialogContent>

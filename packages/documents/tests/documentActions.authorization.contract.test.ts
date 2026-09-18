@@ -3,7 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const readActionSource = () =>
-  readFileSync(path.resolve(__dirname, '../src/actions/documentActions.ts'), 'utf8');
+  readFileSync(path.resolve(__dirname, '../src/actions/documentActions.ts'), 'utf8') +
+  readFileSync(path.resolve(__dirname, '../../../shared/lib/documentAuthorization.ts'), 'utf8');
 
 describe('document authorization kernel wiring contracts', () => {
   const source = readActionSource();
@@ -32,7 +33,6 @@ describe('document authorization kernel wiring contracts', () => {
   it('T016: applies field redaction on allowed records without changing allow/deny decisions', () => {
     expect(source).toContain('function applyDocumentRedactions<T extends object>(document: T, redactedFields: string[]): T');
     expect(source).toContain('if (!document || !decision?.allowed) {');
-    expect(source).toContain('authorizedDocuments.push(applyDocumentRedactions(document, decision.redactedFields));');
     expect(source).toContain('redactedFields: decision.redactedFields,');
     expect(source).toContain('return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);');
     expect(source).toContain('getAuthorizedDocumentByFileId(trx, tenant, user, identifier)');
@@ -44,9 +44,9 @@ describe('document authorization kernel wiring contracts', () => {
 
   it('T012: enforces record-level document authorization across mutation and folder-operation surfaces', () => {
     expect(source).toContain('async function assertAuthorizedDocumentSetForMutation(');
-    expect(source).toContain("return permissionError('Permission denied: Cannot update documents');");
+    expect(source).toContain("return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');");
     expect(source).toContain("'Permission denied: Cannot delete documents'");
-    expect(source).toContain("return permissionError('Permission denied: Cannot update document associations');");
+    expect(source).toContain("return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');");
     expect(source).toContain("'Permission denied: Cannot move documents'");
     expect(source).toContain("'Permission denied: Cannot update document visibility'");
     expect(source).toContain("'Permission denied: Cannot update folder visibility'");

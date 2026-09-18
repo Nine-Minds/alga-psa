@@ -88,11 +88,21 @@ function resolvesKey(obj, dotted) {
   return PLURAL_SUFFIXES.some((s) => hasKey(obj, `${dotted}_${s}`));
 }
 
-const RE_USE_TRANSLATION = /useTranslation\(\s*['"`]([^'"`]+)['"`]/g;
+// Both helpers take a single namespace or an array of them. Matching only a
+// quote right after `(` skipped the array form outright, so a file that also
+// held a string-form call was checked against that one pack alone — which is how
+// RegisterForm's 22 client-portal keys were reported missing from common.
+const RE_USE_TRANSLATION = /useTranslation\(\s*(?:undefined\s*,\s*)?(\[[^\]]*\]|['"`][^'"`]+['"`])/g;
 // Server components declare their namespace through getServerTranslation(locale, ns)
 // instead of the hook. Without this they looked namespace-less, so a route that
 // only ever calls the server helper was skipped entirely.
-const RE_SERVER_TRANSLATION = /getServerTranslation\(\s*[^,)]*,\s*['"`]([^'"`]+)['"`]/g;
+const RE_SERVER_TRANSLATION = /getServerTranslation\(\s*[^,)]*,\s*(\[[^\]]*\]|['"`][^'"`]+['"`])/g;
+const RE_QUOTED = /['"`]([^'"`]+)['"`]/g;
+
+// One match yields either a lone quoted namespace or a whole array literal.
+function namespacesIn(fragment) {
+  return [...fragment.matchAll(RE_QUOTED)].map((m) => m[1]);
+}
 
 // Comments are not code. A prose reference to `useTranslation('msp/auth')`
 // explaining what a child component does was being read as a declaration on the
@@ -149,9 +159,9 @@ for (const root of SCAN_ROOTS) {
     const nsList = [];
     let m;
     RE_USE_TRANSLATION.lastIndex = 0;
-    while ((m = RE_USE_TRANSLATION.exec(src))) nsList.push(m[1]);
+    while ((m = RE_USE_TRANSLATION.exec(src))) nsList.push(...namespacesIn(m[1]));
     RE_SERVER_TRANSLATION.lastIndex = 0;
-    while ((m = RE_SERVER_TRANSLATION.exec(src))) nsList.push(m[1]);
+    while ((m = RE_SERVER_TRANSLATION.exec(src))) nsList.push(...namespacesIn(m[1]));
     if (!nsList.length) continue;
 
     // Collect t() keys with line numbers.
@@ -164,6 +174,19 @@ for (const root of SCAN_ROOTS) {
       if (key.endsWith('.')) continue;
       const before = src.slice(0, m.index);
       const line = before.split('\n').length;
+
+      // A prefixed key names its own pack (msp/clients:errors.x), so it resolves
+      // there and not against whatever the file happens to bind. Split at the
+      // last colon, the same way the server boundary does.
+      const sep = key.lastIndexOf(':');
+      if (sep > 0) {
+        const pack = loadLocale(key.slice(0, sep));
+        // An unnamed pack is a runtime disk read this check cannot follow.
+        if (pack && !resolvesKey(pack, key.slice(sep + 1))) {
+          findings.push({ file: path.relative(REPO, file), line, key, namespaces: [key.slice(0, sep)] });
+        }
+        continue;
+      }
 
       // Try every namespace declared in the file; pass if any resolves.
       const resolved = nsList.some((ns) => resolvesKey(loadLocale(ns), key));

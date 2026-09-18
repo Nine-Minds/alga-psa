@@ -1,13 +1,15 @@
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+const execFileAsync = promisify(execFile);
 const nxBin = path.resolve(process.cwd(), 'node_modules/.bin/nx');
 
-function runNx(args: string[]) {
-  return execFileSync(nxBin, args, {
+async function runNx(args: string[]) {
+  const { stdout } = await execFileAsync(nxBin, args, {
     cwd: process.cwd(),
     env: {
       ...process.env,
@@ -21,8 +23,10 @@ function runNx(args: string[]) {
       PLAYWRIGHT_APP_PORT_LOCKED: 'true',
     },
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 180_000,
+    maxBuffer: 8 * 1024 * 1024,
   });
+  return stdout;
 }
 
 function parseTrailingJsonArray(output: string): string[] {
@@ -38,8 +42,8 @@ function parseTrailingJsonArray(output: string): string[] {
 }
 
 describe('nx workspace', () => {
-  it('initializes and lists projects', { timeout: 120_000 }, () => {
-    const output = runNx(['show', 'projects', '--json']);
+  it('initializes and lists projects', { timeout: 120_000 }, async () => {
+    const output = await runNx(['show', 'projects', '--json']);
     const projects = parseTrailingJsonArray(output);
 
     expect(projects).toContain('server');
@@ -48,18 +52,39 @@ describe('nx workspace', () => {
     expect(projects).toContain('@alga-psa/db');
   });
 
-  it('can generate an nx graph html file', { timeout: 180_000 }, () => {
+  it('can generate an nx graph html file', { timeout: 180_000 }, async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-graph-'));
     const outFile = path.join(tmpDir, 'graph.html');
 
-    runNx(['graph', '--file', outFile, '--focus', 'server']);
+    await runNx(['graph', '--file', outFile, '--focus', 'server']);
 
     const stat = fs.statSync(outFile);
     expect(stat.size).toBeGreaterThan(0);
   });
 
-  it('runs the alga-module generator in dry-run mode', { timeout: 120_000 }, () => {
-    const output = runNx([
+  it('plans dependency builds without prematurely building the server', { timeout: 180_000 }, async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-build-deps-'));
+    try {
+      const outFile = path.join(tmpDir, 'tasks.json');
+      await runNx(['build-deps', 'server', '--graph', outFile]);
+      const graph = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+      const targets = Object.values(graph.tasks.tasks).map((task: any) => task.target);
+      // Package-to-server cycles previously scheduled the application while
+      // its dependency outputs were still absent, breaking both image builds.
+      expect(targets).toEqual(expect.arrayContaining([
+        expect.objectContaining({ project: '@alga-psa/billing', target: 'build' }),
+        expect.objectContaining({ project: '@alga-psa/opportunities', target: 'build' }),
+      ]));
+      expect(targets.filter(target => target.project === 'server')).toEqual([
+        expect.objectContaining({ project: 'server', target: 'build-deps' }),
+      ]);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('runs the alga-module generator in dry-run mode', { timeout: 120_000 }, async () => {
+    const output = await runNx([
       'g',
       '@alga-psa/generators:alga-module',
       '--name',

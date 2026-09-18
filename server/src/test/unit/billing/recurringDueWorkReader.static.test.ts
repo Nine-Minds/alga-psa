@@ -19,7 +19,10 @@ describe('recurring due-work reader source', () => {
     expect(billingAndTaxSource).toContain(
       'const visibleInvoiceCandidates = warnedInvoiceCandidates.slice(offset, offset + pageSize)',
     );
-    expect(billingAndTaxSource).toContain('invoiceCandidates: visibleInvoiceCandidates,');
+    expect(billingAndTaxSource).toContain('invoiceCandidates: canonicalizedInvoiceCandidates,');
+    expect(billingAndTaxSource).toMatch(
+      /const canonicalizedInvoiceCandidates =\s*await revalidateMonthEndCloseEligibilityAgainstCanonicalWindow\(\s*knex,\s*tenant,\s*visibleInvoiceCandidates,/,
+    );
     // The paginated list must still derive from the approval-blocked set (the
     // stale-ready warning pass wraps it without changing membership).
     expect(billingAndTaxSource).toContain(

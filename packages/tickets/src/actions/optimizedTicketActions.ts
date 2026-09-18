@@ -1,5 +1,9 @@
-'use server'
+'use server';
 
+import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+
+import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type {
   ITicket,
   ITicketListItem,
@@ -84,8 +88,9 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
-import { actionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
+import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 type ScheduledCommentPublication = { publishAt: string; timeZone: string };
@@ -105,7 +110,7 @@ function isTicketActionError(value: unknown): value is TicketActionError {
 function ticketListActionErrorFrom(error: unknown): TicketActionError | null {
   const issues = (error as { issues?: unknown })?.issues;
   if (Array.isArray(issues) && issues.length > 0) {
-    return actionError('Ticket list filters are no longer valid. Refresh the page and try again.');
+    return actionError('Ticket list filters are no longer valid. Refresh the page and try again.', 'features/tickets:errors.list.filtersInvalid');
   }
 
   return ticketActionErrorFrom(error);
@@ -210,28 +215,23 @@ function toTicketAuthorizationRecord(
     assignedUserIds: Array.from(assignees),
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
+    contactId: ticket.contact_name_id ?? null,
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
 
-async function resolveClientSelectedBoardIds(
+async function resolveClientVisibility(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles
-): Promise<string[] | undefined> {
-  if (user.user_type !== 'client') {
-    return undefined;
-  }
-
-  if (!user.contact_id) {
-    return [];
-  }
-
+): Promise<ContactVisibilityContext | null | undefined> {
+  if (user.user_type !== 'client') return undefined;
+  if (!user.contact_id) return null;
   try {
-    const visibilityContext = await getClientContactVisibilityContext(trx, tenant, user.contact_id);
-    return visibilityContext.visibleBoardIds ?? undefined;
+    return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
   } catch {
-    return [];
+    // A failed resolution is distinct from an internal user: deny all.
+    return null;
   }
 }
 
@@ -243,13 +243,15 @@ async function createTicketAuthorizationContext(
   authorizationSubject: AuthorizationSubject;
   authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
   selectedBoardIds: string[] | undefined;
+  contactVisibility: ContactVisibilityContext | null | undefined;
   requestCache: RequestLocalAuthorizationCache;
   ticketReadBundleNarrowingRules: Awaited<ReturnType<typeof resolveBundleNarrowingRulesForEvaluation>>;
 }> {
   const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-  const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user);
+  const contactVisibility = await resolveClientVisibility(trx, tenant, user);
+  const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
   const relationshipRules =
-    selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+    contactVisibility === undefined ? [] : [{ template: 'contact_visibility' as const }];
   const requestCache = new RequestLocalAuthorizationCache();
   const ticketReadBundleNarrowingRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
     subject: authorizationSubject,
@@ -258,6 +260,7 @@ async function createTicketAuthorizationContext(
       action: 'read',
     },
     selectedBoardIds,
+    contactVisibility,
     requestCache,
     knex: trx,
   });
@@ -288,6 +291,7 @@ async function createTicketAuthorizationContext(
       rbacEvaluator: async () => true,
     }),
     selectedBoardIds,
+    contactVisibility,
     requestCache,
     ticketReadBundleNarrowingRules,
   };
@@ -314,6 +318,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
         },
         record: toTicketAuthorizationRecord(ticket),
         selectedBoardIds: context.selectedBoardIds,
+        contactVisibility: context.contactVisibility,
         requestCache: context.requestCache,
         knex: trx,
       });
@@ -333,7 +338,7 @@ function applyTicketReadAuthorizationSql(
 ): RelationshipSqlCompileResult {
   // Built-in narrowing for client-portal users mirrors createTicketAuthorizationContext.
   const builtinRules: RelationshipRule[] =
-    context.selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' }];
+    context.contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }];
 
   return compileTenantScopedResourceReadAuthorizationSql(query, {
     resourceType: 'ticket',
@@ -343,6 +348,7 @@ function applyTicketReadAuthorizationSql(
     ctx: {
       subject: context.authorizationSubject,
       selectedBoardIds: context.selectedBoardIds,
+      contactVisibility: context.contactVisibility,
       adapter: createTicketRelationshipSqlAdapter(trx, tenant),
     },
   });
@@ -487,7 +493,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // Fetch all related data in parallel
     const [
       comments,
-      documents,
+      documentRows,
       clients,
       resources,
       users,
@@ -609,6 +615,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           .orderBy('category_name', 'asc');
       })()
     ]);
+
+    // Use the same document policy as subsequent fetches before returning rows
+    // or deriving counts. This also annotates effective comment visibility.
+    const documents = await hasPermission(user, 'document', 'read', trx)
+      ? await authorizeAndRedactDocuments(trx, tenant, user, documentRows as IDocument[])
+      : [];
 
     // --- Add Logo URL Processing for the fetched 'clients' list ---
     const clientsData = clients as (IClient & { document_id?: string })[];
@@ -735,20 +747,66 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       board.enable_live_ticket_timer = true;
     }
 
+    // The `users` fetch above is deliberately narrowed to internal active users so
+    // the agent pickers only offer assignable agents. Comment authors are not
+    // bound by that: client-portal repliers and deactivated agents also write
+    // comments, so fetch the missing authors separately for display purposes only.
+    const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
+    const extraAuthorIds = Array.from(
+      new Set(
+        (comments as Array<{ user_id?: string | null }>)
+          .map((comment) => comment.user_id)
+          .filter((userId): userId is string => Boolean(userId))
+      )
+    ).filter((userId) => !pickerUserIds.has(userId));
+
+    const extraCommentAuthors: Array<{ user_id: string; user_type?: string | null; contact_id?: string | null }> =
+      extraAuthorIds.length > 0
+        ? await tenantScopedTable(trx, 'users', tenant).whereIn('user_id', extraAuthorIds)
+        : [];
+
+    // Client-portal authors carry their avatar on the linked contact, not the user
+    // record — mirror the client-portal conversation view here.
+    const authorContactIds = Array.from(
+      new Set(
+        extraCommentAuthors
+          .filter((author) => author.user_type === 'client' && author.contact_id)
+          .map((author) => author.contact_id as string)
+      )
+    );
+
     // Resolve avatar URLs in one batch (2 queries) instead of a DB transaction per
     // tenant user — the per-user path scaled O(users) and dominated ticket-open latency.
-    const userAvatarUrls = await getEntityImageUrlsBatch(
-      'user',
-      users.map((user: any) => user.user_id),
-      tenant,
-    ).catch((imgError) => {
-      console.error('Error batch-fetching user avatar URLs:', imgError);
-      return new Map<string, string | null>();
-    });
-    const usersWithAvatars = users.map((user: any) => ({
-      ...user,
-      avatarUrl: userAvatarUrls.get(user.user_id) ?? null,
-    }));
+    const [userAvatarUrls, authorContactAvatarUrls] = await Promise.all([
+      getEntityImageUrlsBatch(
+        'user',
+        [...users.map((user: any) => user.user_id), ...extraAuthorIds],
+        tenant,
+      ).catch((imgError) => {
+        console.error('Error batch-fetching user avatar URLs:', imgError);
+        return new Map<string, string | null>();
+      }),
+      authorContactIds.length > 0
+        ? getEntityImageUrlsBatch('contact', authorContactIds, tenant).catch((imgError) => {
+            console.error('Error batch-fetching comment author contact avatar URLs:', imgError);
+            return new Map<string, string | null>();
+          })
+        : Promise.resolve(new Map<string, string | null>()),
+    ]);
+    // Comment authors are merged into the display map below only — availableAgents
+    // and agentOptions keep deriving from the internal active `users` list.
+    const usersWithAvatars = [
+      ...users.map((user: any) => ({
+        ...user,
+        avatarUrl: userAvatarUrls.get(user.user_id) ?? null,
+      })),
+      ...extraCommentAuthors.map((author: any) => ({
+        ...author,
+        avatarUrl: (author.user_type === 'client' && author.contact_id
+          ? authorContactAvatarUrls.get(author.contact_id)
+          : userAvatarUrls.get(author.user_id)) ?? null,
+      })),
+    ];
 
     const userMap = usersWithAvatars.reduce((acc: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>, user: { user_id: string; first_name?: string | null; last_name?: string | null; email?: string; user_type: string; avatarUrl: string | null }) => {
       acc[user.user_id] = {
@@ -917,6 +975,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.ticket_number',
         'ct.title',
         'ct.client_id',
+        'ct.contact_name_id',
         'comp.client_name',
         'ct.status_id',
         'ct.entered_at',
@@ -939,6 +998,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'mt.ticket_number',
           'mt.title',
           'mt.client_id',
+          'mt.contact_name_id',
           'comp.client_name',
           'mt.status_id',
           'mt.entered_at',
@@ -2150,7 +2210,7 @@ export const getAllMatchingTicketIds = withAuth(async (
               .clone()
               .clearSelect()
               .clearOrder()
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
           );
 
       const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
@@ -2212,7 +2272,7 @@ export const getTicketBoardIds = withAuth(async (
             authorizationContext,
             await tenantScopedTable(trx, 'tickets as t', tenant)
               .whereIn('t.ticket_id', uniqueIds)
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
           );
 
       return rows
@@ -3025,16 +3085,24 @@ export async function updateTicketInTransaction(
           propagateFields[key] = (updateData as any)[key];
         }
       }
+      // Live updates diff the user-facing fields only; is_closed mirrors
+      // status_id and is added to the write below, not to the diff.
+      const liveUpdateFields = { ...propagateFields };
+      // is_closed is written to the master outside updateData (see above);
+      // children need the same denormalized flag or they read as open.
+      if (Object.prototype.hasOwnProperty.call(propagateFields, 'status_id')) {
+        propagateFields.is_closed = !!newStatus?.is_closed;
+      }
 
       if (Object.keys(propagateFields).length > 0) {
         const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ master_ticket_id: id })
-          .select(['ticket_id', ...Object.keys(propagateFields)]);
+          .select(['ticket_id', ...Object.keys(liveUpdateFields)]);
 
         const childPublishes = childTickets
           .map((childTicket: Record<string, unknown>) => ({
             ticketId: childTicket.ticket_id as string,
-            updatedFields: diffTicketFields(childTicket, propagateFields),
+            updatedFields: diffTicketFields(childTicket, liveUpdateFields),
           }))
           .filter((childPublish: { ticketId: string; updatedFields: ReturnType<typeof diffTicketFields> }) =>
             childPublish.updatedFields.length > 0);
@@ -3097,6 +3165,12 @@ export const updateTicketWithCache = withAuth(async (
   >,
 ): Promise<'success' | TicketActionError> => {
   try {
+    // MSP cached ticket write surface. A client-portal session must not reach it;
+    // reject before the permission lookup or any ticket mutation.
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
+    }
+
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx) => {
@@ -3259,6 +3333,8 @@ export const addTicketCommentWithCache = withAuth(async (
       ...(effectiveClosesTicket ? { metadata: { closes_ticket: true } } : {}),
     }).returning('*');
 
+      await reconcileCommentAttachments(trx, tenant, newComment.comment_id!, user.user_id);
+
     // Update ticket response state based on comment visibility and author (F005-F008)
     if (!isScheduled) {
       await updateTicketResponseStateFromComment(
@@ -3355,8 +3431,7 @@ export const addTicketCommentWithCache = withAuth(async (
     }
 
     // Publish comment added event after the comment transaction commits.
-    if (!isScheduled) registerAfterCommit(trx, () =>
-      publishEvent({
+    if (!isScheduled) await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -3374,9 +3449,7 @@ export const addTicketCommentWithCache = withAuth(async (
           suppressContactNotifications,
           suppressInternalNotifications,
         }
-      }),
-      `TICKET_COMMENT_ADDED ticket=${ticketId}`
-    );
+      }, publishEvent);
 
     // Publish workflow v2 ticket message events (additive).
     if (!isScheduled) try {
@@ -3839,7 +3912,7 @@ export const getAdjacentTicketIds = withAuth(async (
     }
 
     const orderedRows = await applyTicketListSort(
-      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id'),
+      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id'),
       validatedFilters
     );
     const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, orderedRows);

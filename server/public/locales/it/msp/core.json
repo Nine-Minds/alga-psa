@@ -11,10 +11,13 @@
     "clients": "Clienti",
     "opportunities": "Opportunità",
     "contacts": "Contatti",
+    "interactions": "Interazioni",
     "documents": "Documenti",
     "documentsAll": "Tutti i documenti",
     "knowledgeBase": "Base di conoscenza",
     "assets": "Asset",
+    "assetsAll": "Tutti gli asset",
+    "assetsMaintenance": "Manutenzione",
     "inventory": {
       "label": "Inventario",
       "sections": {
@@ -66,9 +69,10 @@
       "servicePeriods": "Periodi di servizio",
       "credits": "Crediti",
       "serviceTypes": "Tipi di servizio",
+      "serviceCategories": "Categorie di servizio",
       "serviceCatalog": "Servizi",
       "products": "Prodotti",
-      "taxRates": "Aliquote fiscali",
+      "taxRates": "Imposte",
       "usageTracking": "Monitoraggio utilizzo",
       "reports": "Report",
       "accountingExports": "Esportazioni contabili"
@@ -111,7 +115,8 @@
     "collapseSidebar": "Comprimi barra laterale",
     "collapseSection": "Comprimi {{section}}",
     "expandSection": "Espandi {{section}}",
-    "appLogoAlt": "Logo {{appName}}"
+    "appLogoAlt": "Logo {{appName}}",
+    "poweredBy": "Basato su"
   },
   "settings": {
     "sections": {
@@ -133,6 +138,7 @@
       "ticketing": "Gestione ticket",
       "sla": "SLA",
       "projects": "Progetti",
+      "assets": "Asset",
       "interactions": "Interazioni",
       "opportunities": "Opportunità",
       "notifications": "Notifiche",
@@ -195,6 +201,12 @@
           "description": "Aggiungi un nuovo prodotto al catalogo"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Risorse e aiuto",
+      "title": "Risorse",
+      "documentation": "Documentazione",
+      "support": "Contatta l'assistenza"
     },
     "jobs": {
       "ariaLabel": "Visualizza l'attività dei job in background",

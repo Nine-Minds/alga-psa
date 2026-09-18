@@ -27,10 +27,10 @@ function clientContractLineActionErrorFrom(error: unknown): ActionMessageError |
       return permissionError(message);
     }
     if (/unauthorized|not authenticated|must sign in/i.test(message)) {
-      return permissionError('You must be signed in to manage client contract lines.');
+      return permissionError('You must be signed in to manage client contract lines.', 'msp/clients:errors.contractLine.signInRequired');
     }
     if (message.includes('Assignment-scoped client contract line identity is required')) {
-      return actionError('Please refresh the contract assignment and try again.');
+      return actionError('Please refresh the contract assignment and try again.', 'msp/clients:errors.contractLine.refreshAssignment');
     }
     if (
       message.includes('Cannot replace contract line assignment after it has authoritative recurring detail periods') ||
@@ -40,7 +40,7 @@ function clientContractLineActionErrorFrom(error: unknown): ActionMessageError |
       return actionError(message);
     }
     if (message.includes('Contract line mutation is ambiguous for assignment')) {
-      return actionError('This contract line is shared by multiple active assignments. Edit the specific contract assignment before changing its lines.');
+      return actionError('This contract line is shared by multiple active assignments. Edit the specific contract assignment before changing its lines.', 'msp/clients:errors.contractLine.sharedByAssignments');
     }
     if (
       message.includes('not found') ||
@@ -56,16 +56,22 @@ function clientContractLineActionErrorFrom(error: unknown): ActionMessageError |
 
   const dbError = error as { code?: string; constraint?: string; column?: string };
   if (dbError?.code === '23505') {
-    return actionError('A contract line with these details already exists for this client.');
+    return actionError('A contract line with these details already exists for this client.', 'msp/clients:errors.contractLine.duplicate');
   }
   if (dbError?.code === '22P02') {
-    return actionError('The selected client or contract line is invalid. Please refresh and try again.');
+    return actionError('The selected client or contract line is invalid. Please refresh and try again.', 'msp/clients:errors.contractLine.invalidReference');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required contract line field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required contract line field: ${dbError.column}.`,
+          'msp/clients:errors.contractLine.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required contract line field.', 'msp/clients:errors.contractLine.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected contract line reference is no longer valid. Please refresh and try again.');
+    return actionError('The selected contract line reference is no longer valid. Please refresh and try again.', 'msp/clients:errors.contractLine.referenceInvalid');
   }
 
   return null;
@@ -509,11 +515,11 @@ export const addClientContractLine = withAuth(async (
     const expected = clientContractLineActionErrorFrom(error);
     if (expected) return expected;
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      return actionError('Client contract line storage is unavailable. Please try again later.');
+      return actionError('Client contract line storage is unavailable. Please try again later.', 'msp/clients:errors.contractLine.storageUnavailable');
     } else if (error.code === 'ER_BAD_FIELD_ERROR') {
-      return actionError('Client contract line data is invalid. Please refresh and try again.');
+      return actionError('Client contract line data is invalid. Please refresh and try again.', 'msp/clients:errors.contractLine.invalidData');
     } else {
-      return actionError('Failed to add client contract line.');
+      return actionError('Failed to add client contract line.', 'msp/clients:errors.contractLine.addFailed');
     }
   }
 });

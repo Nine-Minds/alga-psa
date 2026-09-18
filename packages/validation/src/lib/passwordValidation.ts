@@ -6,7 +6,15 @@
  * and by the server-side Zod `passwordSchema`. Kept separate from the form-field
  * validators (name/email/address/postal/etc.) because passwords are an auth concern,
  * not a client/contact form concern.
+ *
+ * Messages resolve through the shared {@link Translator}; omitting it yields English, so
+ * `passwordSchema` and other non-request callers keep working unchanged. Keys are fully
+ * namespaced (`common:…`) so a caller bound to any namespace still resolves them.
  */
+
+import type { Translator } from './fieldValidation';
+
+const englishFallback: Translator = (_key, options) => String(options?.defaultValue ?? '');
 
 // Common base words that stay weak even when decorated with numbers/symbols
 // (e.g. "Welcome1!", "Password123"). Compared against a normalized core, not verbatim.
@@ -60,39 +68,42 @@ function hasLongSequentialRun(password: string): boolean {
 }
 
 // Password validation with enterprise security standards
-export function validatePassword(password: string): string | null {
+export function validatePassword(
+  password: string,
+  t: Translator = englishFallback,
+): string | null {
   if (!password) {
-    return 'Password is required';
+    return t('common:auth.validation.password.required', { defaultValue: 'Password is required' });
   }
 
   // Check minimum length (8 characters)
   if (password.length < 8) {
-    return 'Password must be at least 8 characters long';
+    return t('common:auth.validation.password.tooShort', { defaultValue: 'Password must be at least 8 characters long' });
   }
 
   // Check maximum length (to prevent DoS attacks)
   if (password.length > 128) {
-    return 'Password must be 128 characters or less';
+    return t('common:auth.validation.password.tooLong', { defaultValue: 'Password must be 128 characters or less' });
   }
 
   // Check for uppercase letter
   if (!/[A-Z]/.test(password)) {
-    return 'Password must contain at least one uppercase letter';
+    return t('common:auth.validation.password.missingUppercase', { defaultValue: 'Password must contain at least one uppercase letter' });
   }
 
   // Check for lowercase letter
   if (!/[a-z]/.test(password)) {
-    return 'Password must contain at least one lowercase letter';
+    return t('common:auth.validation.password.missingLowercase', { defaultValue: 'Password must contain at least one lowercase letter' });
   }
 
   // Check for number
   if (!/\d/.test(password)) {
-    return 'Password must contain at least one number';
+    return t('common:auth.validation.password.missingNumber', { defaultValue: 'Password must contain at least one number' });
   }
 
   // Check for special character
   if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-    return 'Password must contain at least one special character';
+    return t('common:auth.validation.password.missingSpecialCharacter', { defaultValue: 'Password must contain at least one special character' });
   }
 
   // Reject common base words even when decorated with numbers/symbols
@@ -101,13 +112,13 @@ export function validatePassword(password: string): string | null {
   // as "P@ssw0rd"; that is a known follow-up.)
   const normalizedCore = password.toLowerCase().replace(/^[^a-z]+/, '').replace(/[^a-z]+$/, '');
   if (COMMON_PASSWORD_BASES.includes(normalizedCore)) {
-    return 'Password is too common. Please choose a stronger password';
+    return t('common:auth.validation.password.tooCommon', { defaultValue: 'Password is too common. Please choose a stronger password' });
   }
 
   // Reject only sequences long enough to dominate the password (e.g. "123456",
   // "qwerty", "abcdef"); an incidental tail like "...1234" is allowed.
   if (hasLongSequentialRun(password)) {
-    return 'Password cannot contain sequential characters';
+    return t('common:auth.validation.password.sequentialCharacters', { defaultValue: 'Password cannot contain sequential characters' });
   }
 
   return null;

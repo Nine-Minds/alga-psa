@@ -974,7 +974,7 @@ export const upsertEmailProvider = withAuth(async (
       return emailProviderActionError(error.message, error.code);
     }
     console.error('Unexpected failure while upserting email provider:', error);
-    return actionError('Failed to save email provider. Please review the settings and try again.');
+    return actionError('Failed to save email provider. Please review the settings and try again.', 'msp/email-providers:errors.provider.saveFailed');
   }
 });
 
@@ -1316,7 +1316,7 @@ export const updateEmailProvider = withAuth(async (
       return emailProviderActionError(error.message, error.code);
     }
     console.error('Unexpected failure while updating email provider:', error);
-    return actionError('Failed to update email provider. Please review the settings and try again.');
+    return actionError('Failed to update email provider. Please review the settings and try again.', 'msp/email-providers:errors.provider.updateFailed');
   }
 });
 
@@ -1330,10 +1330,10 @@ export const deleteEmailProvider = withAuth(async (
     return { success: true };
   } catch (error) {
     if (error instanceof Error && error.message === 'Provider not found') {
-      return actionError('Email provider not found');
+      return actionError('Email provider not found', 'msp/email-providers:errors.provider.notFound');
     }
     console.error('Failed to delete email provider:', error);
-    return actionError('Failed to delete email provider');
+    return actionError('Failed to delete email provider', 'msp/email-providers:errors.provider.deleteFailed');
   }
 });
 

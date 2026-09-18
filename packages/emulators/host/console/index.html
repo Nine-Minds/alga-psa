@@ -51,12 +51,23 @@
   pre.out { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
     font-size: 12px; overflow-x: auto; max-height: 340px; margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; }
   pre.out.error { border-color: var(--bad); color: var(--bad); }
+  .outwrap { position: relative; }
+  .outwrap .copybtn { position: absolute; top: 14px; right: 6px; background: var(--panel-2); color: var(--dim);
+    border: 1px solid var(--line); border-radius: 5px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-family: var(--mono); }
+  .outwrap .copybtn:hover { color: var(--text); border-color: var(--accent); }
+  .outwrap .copybtn.done { color: var(--ok); border-color: var(--ok); }
   .tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
   .tabs button { background: var(--panel-2); border: 1px solid var(--line); color: var(--dim);
     border-radius: 5px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: var(--mono); }
   .tabs button.active { color: var(--text); border-color: var(--accent); }
   .muted { color: var(--dim); font-size: 12px; }
   .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.adaptive-card { border:1px solid #2a3350; border-radius:8px; padding:10px; margin-top:8px; background:#131a2b }
+.ac-text { margin:2px 0 } .ac-text.bold { font-weight:700 }
+.ac-facts { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; margin:6px 0 }
+.ac-fact { display:contents } .ac-fact-title { color:#8fa0c4 }
+.ac-container { border-left:2px solid #2a3350; padding-left:8px; margin:4px 0 }
+.ac-input { color:#8fa0c4; font-style:italic; margin:2px 0 }
 </style>
 </head>
 <body>
@@ -110,10 +121,62 @@ function el(tag, attrs, ...children) {
   return node;
 }
 
+/** Wrap an output <pre> with a copy-to-clipboard button. */
+function copyable(pre) {
+  const btn = el('button', { class: 'copybtn', type: 'button', title: 'Copy to clipboard', onclick: async () => {
+    const text = pre.textContent;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const scratch = el('textarea', { style: 'position:fixed;opacity:0' });
+      scratch.value = text;
+      document.body.append(scratch);
+      scratch.select();
+      document.execCommand('copy');
+      scratch.remove();
+    }
+    btn.textContent = 'copied ✓'; btn.classList.add('done');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('done'); }, 1200);
+  } }, 'copy');
+  return el('div', { class: 'outwrap' }, btn, pre);
+}
+
 // ---- schema-driven forms -------------------------------------------------
 
 function isSimpleProp(prop) {
   return prop && ['string', 'number', 'integer', 'boolean'].includes(prop.type);
+}
+
+/** Read a params form exactly as typed. Throws on malformed JSON fields. */
+function collectParams(form) {
+  let params = {};
+  for (const input of form.querySelectorAll('input,select,textarea')) {
+    const value = input.value.trim();
+    if (!value) continue;
+    if (input.name === '__raw') return JSON.parse(value);
+    if (input.dataset.json) params[input.name] = JSON.parse(value);
+    else if (input.dataset.type === 'number' || input.dataset.type === 'integer') params[input.name] = Number(value);
+    else if (input.dataset.type === 'boolean') params[input.name] = value === 'true';
+    else params[input.name] = value;
+  }
+  return params;
+}
+
+/** Inverse of collectParams: put a saved payload back into the form. */
+function fillParams(form, params) {
+  const leftovers = { ...(params || {}) };
+  for (const input of form.querySelectorAll('input,select,textarea')) {
+    if (!input.name || input.name === '__raw') continue;
+    const value = leftovers[input.name];
+    delete leftovers[input.name];
+    if (value === undefined || value === null) { input.value = ''; continue; }
+    input.value = input.dataset.json ? JSON.stringify(value) : String(value);
+  }
+  // Anything the schema does not expose as a field goes to the raw box, so a
+  // preset saved against a richer payload still round-trips.
+  const raw = form.querySelector('[name="__raw"]');
+  if (raw && Object.keys(leftovers).length) raw.value = JSON.stringify(params);
 }
 
 function buildForm(schema, submitLabel, onSubmit, danger, rerenderOnSuccess) {
@@ -149,39 +212,101 @@ function buildForm(schema, submitLabel, onSubmit, danger, rerenderOnSuccess) {
     }
   }
 
-  const out = el('pre', { class: 'out', style: 'display:none' });
+  const out = el('pre', { class: 'out' });
+  const outWrap = copyable(out);
+  outWrap.style.display = 'none';
   const button = el('button', { class: 'go' + (danger ? ' danger' : ''), type: 'submit' }, submitLabel);
   form.append(button);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     let params = {};
     try {
-      for (const input of form.querySelectorAll('input,select,textarea')) {
-        const value = input.value.trim();
-        if (!value) continue;
-        if (input.name === '__raw') { params = JSON.parse(value); break; }
-        if (input.dataset.json) params[input.name] = JSON.parse(value);
-        else if (input.dataset.type === 'number' || input.dataset.type === 'integer') params[input.name] = Number(value);
-        else if (input.dataset.type === 'boolean') params[input.name] = value === 'true';
-        else params[input.name] = value;
-      }
+      params = collectParams(form);
     } catch (err) {
-      out.style.display = ''; out.className = 'out error'; out.textContent = 'Bad JSON: ' + err.message;
+      outWrap.style.display = ''; out.className = 'out error'; out.textContent = 'Bad JSON: ' + err.message;
       return;
     }
     try {
       const result = await onSubmit(params);
       if (rerenderOnSuccess) { await loadCatalog(true); return; }
-      out.className = 'out'; out.style.display = '';
+      out.className = 'out'; outWrap.style.display = '';
       out.textContent = result === null ? 'ok' : JSON.stringify(result, null, 2);
       await loadCatalog(false);
     } catch (err) {
-      out.className = 'out error'; out.style.display = ''; out.textContent = err.message;
+      out.className = 'out error'; outWrap.style.display = ''; out.textContent = err.message;
     }
   });
   const wrap = el('div', {});
-  wrap.append(form, out);
+  wrap.append(form, outWrap);
+  wrap.paramsForm = form;
   return wrap;
+}
+
+/**
+ * Seed-preset round trip (F060). Replaying a seed used to mean copying JSON out
+ * of the state view by hand; here the form itself is the preset. Rendered only
+ * for emulators that expose save-seed-preset, so the console stays
+ * vendor-neutral.
+ */
+function seedPresetControls(emu, seeder, formWrap) {
+  if (!emu.actions.some((action) => action.name === 'save-seed-preset')) return null;
+  const form = formWrap.paramsForm;
+  const picker = el('select', { name: '__preset', title: 'Saved payloads for this seeder' });
+  const nameInput = el('input', { name: '__presetname', placeholder: seeder.name, style: 'width:150px' });
+  const status = el('span', { class: 'muted' });
+  let presets = [];
+
+  const say = (text, bad) => { status.textContent = text; status.style.color = bad ? 'var(--bad)' : ''; };
+
+  const refresh = async () => {
+    try {
+      const all = await api('GET', '/control/' + emu.id + '/state/seed-presets');
+      presets = (all || []).filter((preset) => preset.seeder === seeder.name);
+    } catch { presets = []; }
+    picker.replaceChildren(el('option', { value: '' }, presets.length ? 'preset…' : 'no presets'));
+    for (const preset of presets) picker.append(el('option', { value: preset.name }, preset.name));
+  };
+
+  const selected = () => presets.find((preset) => preset.name === picker.value);
+
+  const load = () => {
+    const preset = selected();
+    if (!preset) { say('Pick a preset first.', true); return null; }
+    fillParams(form, preset.payload);
+    nameInput.value = preset.name;
+    say('loaded "' + preset.name + '"');
+    return preset;
+  };
+
+  const row = el('div', { class: 'row', style: 'margin-top:6px' },
+    picker,
+    el('button', { class: 'go subtle', type: 'button', onclick: load }, 'load'),
+    el('button', { class: 'go subtle', type: 'button', onclick: () => { if (load()) form.requestSubmit(); } }, 'load & seed'),
+    nameInput,
+    el('button', { class: 'go subtle', type: 'button', onclick: async () => {
+      let payload;
+      try { payload = collectParams(form); } catch (err) { say('Bad JSON: ' + err.message, true); return; }
+      const name = (nameInput.value.trim() || seeder.name);
+      try {
+        await api('POST', '/control/' + emu.id + '/actions/save-seed-preset', { name, seeder: seeder.name, payload });
+        await refresh();
+        picker.value = name;
+        say('saved "' + name + '"');
+      } catch (err) { say(err.message, true); }
+    } }, 'save form'),
+    el('button', { class: 'go subtle', type: 'button', onclick: async () => {
+      const preset = selected();
+      if (!preset) { say('Pick a preset first.', true); return; }
+      try {
+        await api('POST', '/control/' + emu.id + '/actions/delete-seed-preset', { name: preset.name });
+        await refresh();
+        say('deleted "' + preset.name + '"');
+      } catch (err) { say(err.message, true); }
+    } }, 'delete'),
+    status);
+
+  refresh();
+  return row;
 }
 
 // ---- rendering -------------------------------------------------------------
@@ -215,14 +340,21 @@ function renderEmulator(emu) {
       el('button', { class: view.name === active ? 'active' : '',
         onclick: () => { activeView[emu.id] = view.name; renderEmulator(emu); } }, view.name)));
     const pre = el('pre', { class: 'out', id: 'stateview' }, 'loading…');
-    sections.push(el('section', { class: 'card' }, el('h3', {}, 'State'), tabs, pre));
+    const cards = el('div', { id: 'cardpreview' });
+    sections.push(el('section', { class: 'card' }, el('h3', {}, 'State'), tabs, copyable(pre), cards));
     refreshState(emu.id, active);
   }
 
   if (emu.seeders.length) {
     sections.push(el('section', { class: 'card' }, el('h3', {}, 'Seed'),
-      ...emu.seeders.map((def) => controlBlock(emu, 'seed', def,
-        buildForm(def.paramsSchema, 'seed', (params) => api('POST', '/control/' + emu.id + '/seed/' + def.name, params))))));
+      ...emu.seeders.map((def) => {
+        const formWrap = buildForm(def.paramsSchema, 'seed',
+          (params) => api('POST', '/control/' + emu.id + '/seed/' + def.name, params));
+        const presets = seedPresetControls(emu, def, formWrap);
+        // Above the output pane, so the preset row sits with the fields it edits.
+        if (presets) formWrap.insertBefore(presets, formWrap.lastChild);
+        return controlBlock(emu, 'seed', def, formWrap);
+      })));
   }
 
   if (emu.actions.length) {
@@ -263,7 +395,9 @@ function renderEmulator(emu) {
 async function renderScenarios() {
   const content = document.getElementById('content');
   const scenarios = await api('GET', '/control/scenarios');
-  const out = el('pre', { class: 'out', style: 'display:none' });
+  const out = el('pre', { class: 'out' });
+  const outWrap = copyable(out);
+  outWrap.style.display = 'none';
   const rows = scenarios.length
     ? scenarios.map((scenario) => el('div', { class: 'control' },
         el('div', { class: 'head' },
@@ -271,14 +405,14 @@ async function renderScenarios() {
           el('span', { class: 'desc' }, (scenario.description || '') + ' · ' + scenario.stepCount + ' steps'),
           el('button', { class: 'go', onclick: async () => {
             try {
-              out.className = 'out'; out.style.display = '';
+              out.className = 'out'; outWrap.style.display = '';
               out.textContent = JSON.stringify(await api('POST', '/control/scenarios/' + scenario.name + '/run'), null, 2);
-            } catch (err) { out.className = 'out error'; out.style.display = ''; out.textContent = err.message; }
+            } catch (err) { out.className = 'out error'; outWrap.style.display = ''; out.textContent = err.message; }
           } }, 'run'))))
     : [el('p', { class: 'muted' }, 'No scenarios loaded. Start the host with --scenarios <dir>, or run files from the CLI: algasim scenario run <file>.')];
   content.replaceChildren(
     el('h2', { style: 'margin:0 0 12px;font-size:18px' }, 'Scenarios'),
-    el('section', { class: 'card' }, ...rows, out));
+    el('section', { class: 'card' }, ...rows, outWrap));
 }
 
 async function refreshState(emuId, view) {
@@ -287,9 +421,78 @@ async function refreshState(emuId, view) {
   try {
     const result = await api('GET', '/control/' + emuId + '/state/' + view);
     pre.textContent = JSON.stringify(result, null, 2);
+    renderCardPreviews(result);
   } catch (err) {
     pre.textContent = err.message;
   }
+}
+
+/**
+ * Adaptive Card preview.
+ *
+ * Deliberately a tiny local renderer rather than the official SDK from a CDN:
+ * the console is served under a strict CSP with no external origins, and
+ * reading a card as raw JSON was one of the sharper edges of the Teams work.
+ * It covers the subset the bot actually sends — TextBlock, FactSet,
+ * Input.Text/ChoiceSet, ActionSet — and falls back to JSON for anything else.
+ */
+function renderAdaptiveCard(card) {
+  const body = el('div', { class: 'adaptive-card' });
+  const walk = (items, into) => {
+    for (const item of items || []) {
+      if (item.type === 'TextBlock') {
+        into.append(el('div', { class: item.weight === 'Bolder' ? 'ac-text bold' : 'ac-text' }, String(item.text ?? '')));
+      } else if (item.type === 'FactSet') {
+        const facts = el('div', { class: 'ac-facts' });
+        for (const fact of item.facts || []) {
+          facts.append(el('div', { class: 'ac-fact' },
+            el('span', { class: 'ac-fact-title' }, String(fact.title ?? '')),
+            el('span', {}, String(fact.value ?? ''))));
+        }
+        into.append(facts);
+      } else if (item.type === 'Container' || item.type === 'ColumnSet') {
+        const box = el('div', { class: 'ac-container' });
+        walk(item.items || (item.columns || []).flatMap((column) => column.items || []), box);
+        into.append(box);
+      } else if (String(item.type || '').startsWith('Input.')) {
+        into.append(el('div', { class: 'ac-input' }, (item.label || item.placeholder || item.id || item.type) + ' [' + item.type + ']'));
+      } else if (item.type === 'ActionSet') {
+        const row = el('div', { class: 'row' });
+        for (const action of item.actions || []) row.append(el('span', { class: 'badge' }, String(action.title ?? action.type)));
+        into.append(row);
+      } else {
+        into.append(el('pre', { class: 'out' }, JSON.stringify(item, null, 2)));
+      }
+    }
+  };
+  walk(card.body, body);
+  if (card.actions?.length) {
+    const row = el('div', { class: 'row' });
+    for (const action of card.actions) row.append(el('span', { class: 'badge' }, String(action.title ?? action.type)));
+    body.append(row);
+  }
+  return body;
+}
+
+function renderCardPreviews(result) {
+  const host = document.getElementById('cardpreview');
+  if (!host) return;
+  const cards = [];
+  const collect = (node) => {
+    if (Array.isArray(node)) { node.forEach(collect); return; }
+    if (!node || typeof node !== 'object') return;
+    if (node.contentType === 'application/vnd.microsoft.card.adaptive' && node.content) {
+      cards.push(node.content);
+      return;
+    }
+    Object.values(node).forEach(collect);
+  };
+  collect(result);
+  if (cards.length === 0) { host.replaceChildren(); return; }
+  host.replaceChildren(
+    el('h3', {}, 'Adaptive Cards (' + cards.length + ')'),
+    ...cards.map(renderAdaptiveCard),
+  );
 }
 
 function select(id) {

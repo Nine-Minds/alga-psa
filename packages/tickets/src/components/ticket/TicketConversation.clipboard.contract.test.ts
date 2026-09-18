@@ -15,9 +15,15 @@ describe('TicketConversation clipboard upload wiring', () => {
     expect(source).toContain('const handleSubmitComment = async () =>');
     expect(source).toContain("import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';");
     expect(source).toContain('const composeUploadSession = useTicketRichTextUploadSession({');
-    expect(source).toContain('trackDraftUploads: true');
+    // Both sessions track draft uploads so cancelling withdraws server-owned
+    // attachment drafts for new comments and for reply/edit uploads alike.
+    const sessionBlocks = source.match(/useTicketRichTextUploadSession\(\{[\s\S]*?\n  \}\);/g) ?? [];
+    expect(sessionBlocks).toHaveLength(2);
+    for (const block of sessionBlocks) {
+      expect(block).toContain('commentAttachments: true');
+      expect(block).toContain('trackDraftUploads: true');
+    }
     expect(source).toContain('const existingCommentUploadSession = useTicketRichTextUploadSession({');
-    expect(source).toContain('trackDraftUploads: false');
     expect(source).toContain('uploadFile={composeUploadSession.uploadFile}');
     expect(source).toContain('uploadFile={existingCommentUploadSession.uploadFile}');
 

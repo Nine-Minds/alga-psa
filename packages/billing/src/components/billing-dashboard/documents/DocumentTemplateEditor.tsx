@@ -8,6 +8,8 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
+import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { LOCALE_CONFIG, normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
@@ -19,6 +21,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import type { TemplateAst } from '@alga-psa/types';
 import {
+  listExistingDocumentsForPreview,
   runAuthoritativeTemplatePreview,
   saveDocumentTemplate,
 } from '../../../actions/documentTemplateActions';
@@ -37,6 +40,7 @@ import {
 import {
   createInitialPreviewSessionState,
   previewSessionReducer,
+  type PreviewSourceKind,
 } from '../../invoice-designer/preview/previewSessionState';
 
 /**
@@ -80,6 +84,13 @@ const useDebouncedValue = <T,>(value: T, delayMs: number) => {
   return debounced;
 };
 
+const buildPreviewSourceOptions = (
+  t: (key: string, options?: Record<string, unknown>) => string,
+): { value: PreviewSourceKind; label: string }[] => [
+  { value: 'sample', label: t('designer.workspace.preview.source.sample', { defaultValue: 'Sample' }) },
+  { value: 'existing', label: t('designer.workspace.preview.source.existing', { defaultValue: 'Existing' }) },
+];
+
 const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   documentType,
   template: initialTemplate,
@@ -113,7 +124,8 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const [designerHydrated, setDesignerHydrated] = useState(false);
 
   // Transforms workspace shares the quote editor's preview-session reducer for its source/sample
-  // controls. The generic preview itself is driven by the server action, not these scenarios.
+  // controls. The generic preview itself is driven by the server action, not these scenarios — the
+  // session only tracks which source (sample vs an existing document) the author is previewing.
   const [previewState, dispatch] = useReducer(previewSessionReducer, undefined, createInitialPreviewSessionState);
 
   // Generic authoritative preview ({ html }, rendered server-side against the type's sample model).
@@ -127,6 +139,25 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     () => normalizeLocale(i18n.language) ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale),
   );
   const debouncedNodes = useDebouncedValue(designerNodes, 200);
+
+  const existingDocumentId = previewState.sourceKind === 'existing' ? previewState.selectedInvoiceId : null;
+  const isAwaitingExistingSelection = previewState.sourceKind === 'existing' && !existingDocumentId;
+
+  const loadExistingDocumentOptions = async ({
+    search,
+    page,
+    limit,
+  }: {
+    search: string;
+    page: number;
+    limit: number;
+  }) => {
+    const result = await listExistingDocumentsForPreview(documentType, { search, page, pageSize: limit });
+    if (isDocumentTemplateActionError(result)) {
+      throw new Error(getErrorMessage(result));
+    }
+    return result;
+  };
 
   const generatedCodeViewSource = useMemo(() => {
     try {
@@ -184,13 +215,21 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       return;
     }
 
+    // Nothing to render until the author picks the existing document to preview against.
+    if (isAwaitingExistingSelection) {
+      setPreviewHtml(null);
+      setPreviewError(null);
+      setPreviewLoading(false);
+      return;
+    }
+
     let cancelled = false;
     const run = async () => {
       setPreviewLoading(true);
       setPreviewError(null);
       try {
         const ast = exportWorkspaceToTemplateAst(designerExportWorkspace());
-        const result = await runAuthoritativeTemplatePreview(documentType, ast, previewLocale);
+        const result = await runAuthoritativeTemplatePreview(documentType, ast, previewLocale, existingDocumentId);
         if (cancelled) return;
         if (isDocumentTemplateActionError(result)) {
           setPreviewHtml(null);
@@ -218,6 +257,8 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     designerExportWorkspace,
     documentType,
     editorTab,
+    existingDocumentId,
+    isAwaitingExistingSelection,
     visualWorkspaceTab,
     previewNonce,
     previewLocale,
@@ -421,23 +462,79 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                   activeSample={null}
                   onSourceKindChange={(source) => dispatch({ type: 'set-source', source })}
                   onSampleChange={(sampleId) => dispatch({ type: 'set-sample', sampleId })}
-                  onExistingInvoiceChange={() => {}}
-                  onClearExistingInvoice={() => {}}
-                  loadExistingInvoiceOptions={async () => ({ options: [], total: 0 })}
+                  onExistingInvoiceChange={(soId) => dispatch({ type: 'select-existing-invoice', invoiceId: soId })}
+                  onClearExistingInvoice={() => dispatch({ type: 'clear-existing-invoice' })}
+                  loadExistingInvoiceOptions={loadExistingDocumentOptions}
                 />
               </TabsContent>
 
               <TabsContent value="preview" className="pt-3 space-y-3">
+                <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <ViewSwitcher
+                      currentView={previewState.sourceKind}
+                      onChange={(source: PreviewSourceKind) => dispatch({ type: 'set-source', source })}
+                      options={buildPreviewSourceOptions(t)}
+                    />
+                  </div>
+
+                  {previewState.sourceKind === 'existing' && (
+                    <div className="w-72">
+                      <AsyncSearchableSelect
+                        id="document-designer-preview-existing-select"
+                        value={previewState.selectedInvoiceId ?? ''}
+                        onChange={(value: string) => {
+                          if (!value) {
+                            dispatch({ type: 'clear-existing-invoice' });
+                            return;
+                          }
+                          dispatch({ type: 'select-existing-invoice', invoiceId: value });
+                        }}
+                        loadOptions={loadExistingDocumentOptions}
+                        placeholder={t('documentTemplates.editor.preview.searchDocuments', {
+                          defaultValue: 'Search sales orders...',
+                        })}
+                        searchPlaceholder={t('documentTemplates.editor.preview.searchDocumentsHint', {
+                          defaultValue: 'Search by number or client...',
+                        })}
+                        emptyMessage={t('documentTemplates.editor.preview.noDocumentsFound', {
+                          defaultValue: 'No sales orders found.',
+                        })}
+                        dropdownMode="overlay"
+                        label={t('documentTemplates.editor.preview.selectDocument', {
+                          defaultValue: 'Select Sales Order',
+                        })}
+                      />
+                    </div>
+                  )}
+
+                  {isAwaitingExistingSelection && (
+                    <p
+                      className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400"
+                      data-automation-id="document-designer-preview-existing-empty"
+                    >
+                      {t('documentTemplates.editor.preview.selectDocumentHint', {
+                        defaultValue: 'Select a sales order to preview data-bound output.',
+                      })}
+                    </p>
+                  )}
+                </div>
+
                 <div
                   className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2"
                   data-automation-id="document-designer-preview-status"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-slate-600 dark:text-slate-400">
-                      {t('documentTemplates.editor.preview.sampleNote', {
-                        defaultValue: 'Rendered against representative {{type}} sample data.',
-                        type: typeLabel,
-                      })}
+                      {previewState.sourceKind === 'existing'
+                        // Every registered type renders from sales order data, so the source is the order.
+                        ? t('documentTemplates.editor.preview.existingNote', {
+                          defaultValue: 'Rendered against the selected sales order.',
+                        })
+                        : t('documentTemplates.editor.preview.sampleNote', {
+                          defaultValue: 'Rendered against representative {{type}} sample data.',
+                          type: typeLabel,
+                        })}
                     </p>
                     <div className="flex items-center gap-2">
                       <PreviewLocaleSelect
@@ -486,9 +583,13 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
 
                   {!previewLoading && !previewError && !previewHtml && (
                     <div className="p-4 text-sm text-slate-500">
-                      {t('documentTemplates.editor.preview.empty', {
-                        defaultValue: 'Open this tab to generate an authoritative preview.',
-                      })}
+                      {isAwaitingExistingSelection
+                        ? t('documentTemplates.editor.preview.selectDocumentHint', {
+                          defaultValue: 'Select a sales order to preview data-bound output.',
+                        })
+                        : t('documentTemplates.editor.preview.empty', {
+                          defaultValue: 'Open this tab to generate an authoritative preview.',
+                        })}
                     </div>
                   )}
                 </div>

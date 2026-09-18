@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import { IPurchaseOrder } from '@alga-psa/types';
 import {
   actionError,
@@ -29,15 +30,15 @@ function reorderActionErrorFrom(error: unknown): ReorderActionError | null {
 
     switch (error.message) {
       case 'Load list source and destination are required':
-        return actionError('Choose both a load destination and a source shelf.');
+        return actionError('Choose both a load destination and a source shelf.', 'features/inventory:errors.reorder.destinationAndSourceRequired');
       case 'Load list source and destination must differ':
-        return actionError('Choose different source and destination locations.');
+        return actionError('Choose different source and destination locations.', 'features/inventory:errors.shared.sameSourceAndDestination');
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected load-list records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected load-list records is no longer valid. Please refresh and try again.', 'features/inventory:errors.reorder.recordInvalid');
   }
 
   return null;
@@ -258,8 +259,7 @@ export const createPoFromLowStock = withAuth(async (user, { tenant }): Promise<C
       const vendor = await trx('vendors').where({ tenant, vendor_id: vendorId }).first();
       if (!vendor) continue;
 
-      const numRes = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
-      const poNumber = numRes.rows[0].number;
+      const poNumber = await SharedNumberingService.getNextNumber('PURCHASE_ORDER', { knex: trx, tenant });
 
       const [po] = await trx('purchase_orders')
         .insert({

@@ -13,6 +13,7 @@ import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHan
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { initializeJobRunner, stopJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
+import { registerContractCadenceReplenishmentSchedule } from 'server/src/lib/jobs/scheduleContractCadenceReplenishment';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
@@ -29,7 +30,7 @@ import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
 import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
 import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
-import { registerQboConnectionChangeHandler } from '@alga-psa/integrations/lib/qbo/qboConnectionChangeProvider';
+import { registerAccountingConnectionChangeHandler } from '@alga-psa/integrations/lib/accountingConnectionChangeProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -153,16 +154,26 @@ export async function initializeApp() {
       EmailProviderManager: EmailProviderManager as any,
     });
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
-    // Let vertical packages (billing, client-portal) enqueue jobs without
-    // importing @alga-psa/jobs (which would create a vertical -> jobs cycle).
+    // Let vertical packages (billing, client-portal, documents) enqueue jobs
+    // without importing @alga-psa/jobs (which would create a vertical -> jobs
+    // cycle). Goes through the runner seam — Temporal on EE, pg-boss on CE —
+    // not the pg-boss-only JobScheduler: on EE nothing calls boss.work(), so
+    // jobs sent straight to pg-boss sat queued forever.
     registerJobEnqueuer(async (jobName, data) => {
-      const jobService = await JobService.create();
-      const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob(
+      const runner = await initializeJobRunner();
+      const payload = data as Record<string, unknown>;
+      const userId =
+        typeof payload.user_id === 'string'
+          ? payload.user_id
+          : typeof payload.userId === 'string'
+            ? payload.userId
+            : undefined;
+      const result = await runner.scheduleJob(
         jobName,
-        data as Parameters<typeof jobService.createAndScheduleJob>[1],
-        'immediate',
+        data as never,
+        userId ? { userId } : undefined,
       );
-      return { jobId: jobRecord.id as string, scheduledJobId };
+      return { jobId: result.jobId, scheduledJobId: result.externalId ?? null };
     });
     // Same seam for future-dated jobs (e.g. scheduled client-visible comment
     // publication): the tickets package schedules/cancels without importing
@@ -179,9 +190,9 @@ export async function initializeApp() {
       return runner.cancelJob(jobId, tenantId);
     });
     // Converge the accounting-sync schedule the moment a tenant connects or
-    // disconnects QuickBooks, so connected-only scheduling doesn't wait for the
-    // next startup reconcile.
-    registerQboConnectionChangeHandler(async (tenantId) => {
+    // disconnects either provider, so connected-only scheduling doesn't wait
+    // for the next startup reconcile.
+    registerAccountingConnectionChangeHandler(async (tenantId) => {
       const { scheduleAccountingSyncCycleJob } = await import('./jobs/handlers/accountingSyncCycleHandler');
       await scheduleAccountingSyncCycleJob(tenantId);
     });
@@ -335,6 +346,23 @@ export async function initializeApp() {
     // Initialize enterprise features
     if (isEnterprise) {
 
+      // The credentials vault (EE, Pro tier) must be encryptable at boot, not
+      // on the user's first save: a non-empty password save throws today when
+      // the credential encryption key is missing. Fail loud & early here so a
+      // misconfigured vault is caught at startup with an actionable message
+      // instead of surfacing as a vague save error to the first technician
+      // who tries to store a password.
+      try {
+        const { assertCredentialEncryptionConfigured } = await import(
+          '@enterprise/lib/credentials/encryption'
+        );
+        await assertCredentialEncryptionConfigured();
+        logger.info('Credential vault encryption configuration validated');
+      } catch (error) {
+        logger.error('Credential vault encryption configuration failed:', error);
+        throw error;
+      }
+
       // Register EE implementations for the auth package's SSO registry
       // (NextAuth provider callbacks call into @alga-psa/auth's registry; EE must register the real implementations)
       try {
@@ -462,6 +490,9 @@ function logConfiguration() {
 
 // Helper function to initialize job scheduler
 async function initializeJobScheduler(storageService: StorageService) {
+  const { startCommentRecoveryScheduleDiscovery } = await import('./jobs/commentRecoveryScheduleDiscovery');
+  // The discovery timer survives failed initialization and sees tenants created later.
+  await startCommentRecoveryScheduleDiscovery(initializeJobRunner);
   // Initialize the new job runner abstraction (handles all core handler registration)
   try {
     const jobRunner = await initializeJobRunner();
@@ -538,6 +569,13 @@ async function initializeJobScheduler(storageService: StorageService) {
       { tenantId: 'system' }
     );
   }
+
+  // Ensure the nightly contract-cadence service-period replenishment schedule
+  // exists. This is independent of client billing-cycle creation: it enumerates
+  // contract-cadence lines directly and advances their rolling coverage,
+  // including recovering already-missing periods. Enterprise schedules the same
+  // sweep on the durable Temporal maintenance fan-out instead.
+  await registerContractCadenceReplenishmentSchedule({ isEnterprise });
 
   // Register the nightly time period creation job per tenant
   jobScheduler.registerJobHandler<{ tenantId: string }>('createNextTimePeriods', async (job) => {

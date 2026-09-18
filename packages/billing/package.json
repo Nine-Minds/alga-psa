@@ -56,6 +56,7 @@
     "@alga-psa/storage": "*",
     "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/validation": "*",
@@ -69,6 +70,7 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
+    "fast-check": "4.9.0",
     "typescript": "^5.3.0",
     "tsup": "^8.0.0"
   }

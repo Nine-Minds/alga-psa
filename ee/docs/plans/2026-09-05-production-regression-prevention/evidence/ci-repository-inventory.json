@@ -1,0 +1,22 @@
+{
+  "runId": 34287571495,
+  "jobId": 102286982139,
+  "artifactId": 10082495179,
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34287571495",
+  "revision": "3c046458a0fca6cc43c63f9ac791154410a8a1e3",
+  "artifactSha256": "35615c26229ba3ac6a0149d94765d9406e6b67c9319007001338ae418fdeba48",
+  "status": "passed",
+  "runnerCount": 35,
+  "unmatched": [],
+  "failures": [],
+  "executionVerified": false,
+  "mandatoryRunnerFiles": 4046,
+  "manualOnlyFiles": 5,
+  "explicitExcludedFiles": 1,
+  "behavioralValidation": {
+    "testsPassed": 9,
+    "cases": "Disposable runner additions/moves; missing, empty, stale collection artifacts and expired exclusions."
+  },
+  "limitation": "Proves runner-derived collection coverage for this candidate. Does not establish complete test execution, current-source green CI, or release readiness.",
+  "candidateFileCount": 4052
+}

@@ -173,4 +173,16 @@ describe('prepayment invoice service-period policy', () => {
     expect(mocks.buildCreditNoteCreatedPayload).not.toHaveBeenCalled();
     expect(mocks.publishWorkflowEvent).not.toHaveBeenCalled();
   });
+
+  it('rejects fractional prepayment amounts and preserves an optional credit description', async () => {
+    await expect(createPrepaymentInvoice('client-1', 50.5)).rejects.toThrow(
+      'Prepayment amount must be a positive integer in minor units',
+    );
+
+    await createPrepaymentInvoice('client-1', 5000, undefined, undefined, 'Annual prepayment');
+
+    expect(mocks.db.tables.invoices[0]).toMatchObject({
+      prepayment_description: 'Annual prepayment',
+    });
+  });
 });

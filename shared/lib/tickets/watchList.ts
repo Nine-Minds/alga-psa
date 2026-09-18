@@ -288,7 +288,16 @@ export function buildInboundWatchListRecipients(params: {
   senderEmail?: string | null;
   providerMailboxEmail?: string | null;
   excludedEmails?: Array<string | null | undefined>;
+  /**
+   * Thread-header correlation is not sender-authenticated. Callers must opt in
+   * only after independently verifying every recipient; otherwise do not turn
+   * To/Cc addresses into active ticket watchers.
+   */
+  requireMatchedContact?: boolean;
 }): TicketWatchListRecipientInput[] {
+  if (params.requireMatchedContact) {
+    return [];
+  }
   const excluded = new Set<string>();
   const addExcluded = (email: string | null | undefined) => {
     const normalized = normalizeEmailAddress(email);

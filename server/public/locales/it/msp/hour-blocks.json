@@ -137,5 +137,22 @@
     "remaining": "{{hours}} ore non utilizzate andranno perse.",
     "submit": "Fai scadere il blocco",
     "title": "Far scadere il blocco ore"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "Blocco ore non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "serviceNotFound": "Servizio non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "hoursPositive": "Le ore del blocco devono essere maggiori di zero.",
+      "ratePositive": "La tariffa oraria deve essere pari o superiore a zero.",
+      "reasonRequired": "Per questa operazione è necessario un motivo.",
+      "adjustExpiredOrVoided": "Non è possibile modificare un blocco ore scaduto o annullato.",
+      "usedCannotVoid": "Questo blocco ore è stato utilizzato e non può essere annullato. Farlo invece scadere.",
+      "onlyPendingOrActiveVoid": "Solo i blocchi ore in attesa o attivi possono essere annullati.",
+      "expireVoided": "Non è possibile far scadere un blocco ore annullato.",
+      "updateExpirationVoided": "Non è possibile aggiornare la scadenza di un blocco ore annullato.",
+      "invalidValue": "Uno dei valori selezionati del blocco ore non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del blocco ore. Controllare il modulo e riprovare.",
+      "referenceMissing": "Il cliente, il servizio o la fattura selezionata non esiste più. Aggiornare la pagina e riprovare."
+    }
   }
 }

@@ -23,6 +23,7 @@ export * from './ColorPicker';
 export { default as ColorPicker } from './ColorPicker';
 // CommentThreadDrawer pulls the BlockNote editor (via InlineReplyComposer). Not re-exported
 // from the barrel — import directly from '@alga-psa/ui/components/CommentThreadDrawer'.
+export * from './ClampedContent';
 export * from './CommentThreadList';
 export { default as CommentThreadList } from './CommentThreadList';
 export * from './CollapseToggleButton';
@@ -44,6 +45,8 @@ export { default as CountryPicker } from './CountryPicker';
 export * from './CreditExpirationBadge';
 export { default as CreditExpirationBadge } from './CreditExpirationBadge';
 export * from './CurrencyInput';
+export type { CurrencyPickerOption } from './CurrencyPicker';
+export { default as CurrencyPicker } from './CurrencyPicker';
 export type {
   SelectOption as CustomSelectOption,
   StyleProps as CustomSelectStyleProps,
@@ -78,6 +81,7 @@ export { default as HybridThreadNode } from './HybridThreadNode';
 export * from './IconPicker';
 export * from './FieldWarnings';
 export * from './Input';
+export * from './NumericInput';
 export * from './InteractionIcon';
 export { default as InteractionIcon } from './InteractionIcon';
 // InlineReplyComposer pulls the BlockNote editor. Not re-exported from the barrel —

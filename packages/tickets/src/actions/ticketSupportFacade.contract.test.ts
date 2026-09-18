@@ -13,7 +13,7 @@ function readRepoFile(relativePath: string): string {
 const sources = {
   resourceActions: readRepoFile('packages/tickets/src/actions/ticketResourceActions.ts'),
   resourceCore: readRepoFile('packages/tickets/src/lib/ticketResourceCore.ts'),
-  reassignTicketResources: readRepoFile('packages/tickets/src/lib/reassignTicketResources.ts'),
+  reassignTicketResources: readRepoFile('packages/db/src/lib/reassignTicketResources.ts'),
   teamAssignmentCore: readRepoFile('packages/tickets/src/lib/teamAssignmentCore.ts'),
   ticketBundleUtils: readRepoFile('packages/tickets/src/actions/ticketBundleUtils.ts'),
   ticketActivityActions: readRepoFile('packages/tickets/src/actions/ticketActivityActions.ts'),

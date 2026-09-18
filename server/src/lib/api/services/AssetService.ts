@@ -711,6 +711,10 @@ export class AssetService extends BaseService<any> {
     const db = tenantDb(knex, context.tenant);
     const query = db.table('document_associations');
     db.tenantJoin(query, 'documents', 'document_associations.document_id', 'documents.document_id');
+    // documents has no original_filename/uploaded_at: the upload name and time
+    // live on external_files (absent for in-app documents), so fall back to the
+    // document's own name and timestamps.
+    db.tenantJoin(query, 'external_files', 'documents.file_id', 'external_files.file_id', { type: 'left' });
     return query
       .where({
         'document_associations.entity_type': 'asset',
@@ -718,10 +722,10 @@ export class AssetService extends BaseService<any> {
       })
       .select(
         'document_associations.*',
-        'documents.original_filename',
+        knex.raw('COALESCE(external_files.original_name, documents.document_name) AS original_filename'),
         'documents.file_size',
         'documents.mime_type',
-        'documents.uploaded_at'
+        knex.raw('COALESCE(external_files.created_at, documents.entered_at, documents.updated_at) AS uploaded_at')
       );
   }
 
@@ -802,6 +806,13 @@ export class AssetService extends BaseService<any> {
       .insert(scheduleData)
       .returning('*');
 
+    if (schedule.is_active !== false) {
+      await scopedTable(knex, context.tenant, 'asset_maintenance_occurrences').insert({
+        tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId,
+        due_date: schedule.next_maintenance, status: 'open'
+      });
+    }
+
     return schedule;
   }
 
@@ -844,6 +855,12 @@ export class AssetService extends BaseService<any> {
       .where({ schedule_id: scheduleId })
       .first();
 
+    if ((updateData as any).next_maintenance) {
+      await scopedTable(knex, context.tenant, 'asset_maintenance_occurrences')
+        .where({ schedule_id: scheduleId, status: 'open' })
+        .update({ due_date: (updateData as any).next_maintenance, updated_at: new Date() });
+    }
+
     if (!schedule) {
       throw new NotFoundError('Maintenance schedule not found');
     }
@@ -878,25 +895,42 @@ export class AssetService extends BaseService<any> {
     if (data.notes !== undefined) extras.notes = data.notes;
     if (data.parts_used !== undefined) extras.parts_used = data.parts_used;
 
-    const row = {
-      tenant: context.tenant,
-      asset_id: assetId,
-      schedule_id: data.schedule_id,
-      maintenance_type: data.maintenance_type,
-      description: data.description ?? data.notes ?? `${data.maintenance_type} maintenance performed`,
-      maintenance_data: JSON.stringify(extras),
-      performed_at: performedAt,
-      performed_by: performedBy,
-      created_at: new Date()
-    };
-
-    const [maintenance] = await tenantDb(knex, context.tenant).table('asset_maintenance_history')
-      .insert(row)
-      .returning('*');
-
-    await this.updateScheduleAfterMaintenance(data.schedule_id, performedAt, context);
-
-    return maintenance;
+    // Supplying occurrence_id gives REST clients the same double-tap semantics
+    // as the desktop completion action: retries address the original row and
+    // fail once it has closed. Older clients still select the current open
+    // occurrence by schedule for backwards compatibility.
+    return knex.transaction(async (trx) => {
+      const schedule = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: data.schedule_id, asset_id: assetId, is_active: true })
+        .forUpdate()
+        .first();
+      if (!schedule || schedule.archived_at) throw new ConflictError('Maintenance schedule is inactive');
+      if (schedule.frequency === 'custom') throw new ValidationError('Custom maintenance frequency cannot be completed until its recurrence is configured');
+      const occurrenceQuery = scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+        .where({ schedule_id: data.schedule_id, asset_id: assetId });
+      if (data.occurrence_id) {
+        occurrenceQuery.where({ occurrence_id: data.occurrence_id });
+      } else {
+        occurrenceQuery.where({ status: 'open' });
+      }
+      const occurrence = await occurrenceQuery.forUpdate().first();
+      if (!occurrence || occurrence.status !== 'open') {
+        throw new ConflictError('Maintenance occurrence has already been closed');
+      }
+      const row = {
+        tenant: context.tenant, asset_id: assetId, schedule_id: data.schedule_id,
+        maintenance_type: data.maintenance_type,
+        description: data.description ?? data.notes ?? `${data.maintenance_type} maintenance performed`,
+        maintenance_data: JSON.stringify(extras), performed_at: performedAt,
+        performed_by: performedBy, created_at: new Date()
+      };
+      const [maintenance] = await scopedTable(trx, context.tenant, 'asset_maintenance_history').insert(row).returning('*');
+      const nextMaintenance = this.calculateNextMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
+      await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences').where({ occurrence_id: occurrence.occurrence_id, status: 'open' }).update({ status: 'completed', history_id: maintenance.history_id, closed_at: new Date(), closed_by: performedBy, updated_at: new Date() });
+      await scopedTable(trx, context.tenant, 'asset_maintenance_schedules').where({ schedule_id: data.schedule_id }).update({ last_maintenance: performedAt, next_maintenance: nextMaintenance, updated_at: new Date() });
+      await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences').insert({ tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId, due_date: nextMaintenance, status: 'open' });
+      return maintenance;
+    });
   }
 
   async getMaintenanceHistory(assetId: string, context: ServiceContext): Promise<any[]> {
@@ -1016,20 +1050,15 @@ export class AssetService extends BaseService<any> {
         return new Date(start.getTime() + (intervalValue * 24 * 60 * 60 * 1000));
       case 'weekly':
         return new Date(start.getTime() + (intervalValue * 7 * 24 * 60 * 60 * 1000));
-      case 'monthly':
-        const monthly = new Date(start);
-        monthly.setMonth(monthly.getMonth() + intervalValue);
-        return monthly;
-      case 'quarterly':
-        const quarterly = new Date(start);
-        quarterly.setMonth(quarterly.getMonth() + (intervalValue * 3));
-        return quarterly;
-      case 'yearly':
-        const yearly = new Date(start);
-        yearly.setFullYear(yearly.getFullYear() + intervalValue);
-        return yearly;
-      default:
-        return start;
+      case 'monthly': case 'quarterly': case 'yearly': {
+        const months = frequency === 'monthly' ? intervalValue : frequency === 'quarterly' ? intervalValue * 3 : intervalValue * 12;
+        const originalDay = start.getUTCDate(); const result = new Date(start);
+        result.setUTCDate(1); result.setUTCMonth(result.getUTCMonth() + months);
+        const lastDay = new Date(Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)).getUTCDate();
+        result.setUTCDate(Math.min(originalDay, lastDay)); return result;
+      }
+      case 'custom': throw new ValidationError('Custom maintenance frequency cannot be completed until its recurrence is configured');
+      default: throw new ValidationError(`Unsupported maintenance frequency: ${frequency}`);
     }
   }
 

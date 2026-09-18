@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -47,7 +48,12 @@ describe('ContractLines i18n wiring contract', () => {
       'contractLines.columns.actions',
       'contractLines.serviceCountSingle',
       'contractLines.serviceCountPlural',
-      'contractLines.customRate',
+      'contractLines.rateProvenance.standard',
+      'contractLines.rateProvenance.custom',
+      'contractLines.rateProvenance.unreviewed',
+      'contractLines.actions.resetToStandard',
+      'contractLines.dialogs.confirmResetRate',
+      'contractLines.errors.failedToResetRate',
       'contractLines.empty.noneAdded',
       'contractLines.empty.selectAbove',
       'contractLines.loading.contractLines',
@@ -87,8 +93,8 @@ describe('ContractLines i18n wiring contract', () => {
       'contractLines.services.hourlyRate',
       'contractLines.services.unitRate',
       'contractLines.services.rateTaxAllocation',
-      'contractLines.services.unitOfMeasure',
-      'contractLines.services.unitPlaceholder',
+      // Unit-of-measure editing moved into UsageServiceConfigPanel, which uses the
+      // 'msp/service-catalog' namespace ('usageConfig.*' keys) instead of this component.
       'contractLines.bucket.enableTracking',
       'contractLines.bucket.title',
       'contractLines.bucket.included',
@@ -133,7 +139,7 @@ describe('ContractLines i18n wiring contract', () => {
     for (const key of keys) {
       const value = getLeaf(xx, key);
       expect(typeof value).toBe('string');
-      expect(value).toContain('11111');
+      expect(value).toMatch(pseudoPattern('xx'));
     }
   });
 });

@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -44,7 +45,7 @@ describe('Contracts integration i18n coverage', () => {
       '../../../../server/public/locales/en/msp/contracts.json'
     );
 
-    expect(configSource).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing']");
+    expect(configSource).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing', 'msp/billing-settings']");
 
     expect(contractsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
     expect(clientContractsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
@@ -309,7 +310,7 @@ describe('Contracts integration i18n coverage', () => {
       const xxValue = getLeaf(xx, key);
       expect(typeof deValue).toBe('string');
       expect(typeof xxValue).toBe('string');
-      expect((xxValue as string)).toContain('11111');
+      expect((xxValue as string)).toMatch(pseudoPattern('xx'));
     }
   });
 

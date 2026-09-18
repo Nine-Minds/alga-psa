@@ -42,27 +42,27 @@ function rmaActionErrorFrom(error: unknown): RmaActionError | null {
 
     switch (error.message) {
       case 'returned_unit_id is required':
-        return actionError('Returned unit ID is required.');
+        return actionError('Returned unit ID is required.', 'features/inventory:errors.rma.returnedUnitRequired');
       case 'dead_unit_due_date is required':
-        return actionError('Choose a due date for the returned dead unit.');
+        return actionError('Choose a due date for the returned dead unit.', 'features/inventory:errors.rma.deadUnitDueDateRequired');
       case 'serial_number is required for the replacement unit':
-        return actionError('Enter the replacement unit serial number.');
+        return actionError('Enter the replacement unit serial number.', 'features/inventory:errors.rma.replacementSerialRequired');
       case 'location_id is required for the replacement unit':
-        return actionError('Select the receiving location for the replacement unit.');
+        return actionError('Select the receiving location for the replacement unit.', 'features/inventory:errors.rma.replacementLocationRequired');
       case 'location_id is required':
-        return actionError('Select a location before receiving the return.');
+        return actionError('Select a location before receiving the return.', 'features/inventory:errors.rma.returnLocationRequired');
       case 'vendor_id is required':
-        return actionError('Select a vendor before sending the RMA.');
+        return actionError('Select a vendor before sending the RMA.', 'features/inventory:errors.rma.vendorRequired');
       case 'No replacement unit recorded for this RMA':
-        return actionError('This RMA has no replacement unit recorded. Please refresh and try again.');
+        return actionError('This RMA has no replacement unit recorded. Please refresh and try again.', 'features/inventory:errors.rma.noReplacementUnit');
       case 'RMA case not found':
-        return actionError('RMA case not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('RMA case not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.rma.caseNotFound');
       case 'Stock unit not found':
-        return actionError('Returned stock unit not found. Please refresh and choose another unit.');
+        return actionError('Returned stock unit not found. Please refresh and choose another unit.', 'features/inventory:errors.rma.returnedUnitNotFound');
       case 'RMA case has no associated product service_id':
-        return actionError('This RMA is missing product details. Please refresh and try again.');
+        return actionError('This RMA is missing product details. Please refresh and try again.', 'features/inventory:errors.rma.missingProductDetails');
       case 'RMA case has no returned unit':
-        return actionError('This RMA has no returned unit recorded. Please refresh and try again.');
+        return actionError('This RMA has no returned unit recorded. Please refresh and try again.', 'features/inventory:errors.rma.noReturnedUnit');
     }
 
     if (error.message.startsWith('RMA is in status')) {
@@ -72,10 +72,10 @@ function rmaActionErrorFrom(error: unknown): RmaActionError | null {
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected RMA records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected RMA records is no longer valid. Please refresh and try again.', 'features/inventory:errors.rma.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A stock unit with that serial number or MAC address already exists.');
+    return actionError('A stock unit with that serial number or MAC address already exists.', 'features/inventory:errors.rma.duplicateStockUnit');
   }
 
   return null;

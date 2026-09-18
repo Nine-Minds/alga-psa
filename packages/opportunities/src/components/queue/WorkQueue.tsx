@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, LayoutGrid, List } from 'lucide-react';
-import { Button } from '@alga-psa/ui/components/Button';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IOpportunityDashboardSnapshot, IWorkQueue } from '@alga-psa/types';
 import { QueueGreeting } from './QueueGreeting';
@@ -88,27 +88,26 @@ export function WorkQueue({
       ) : null}
 
       {actionItems.length > 0 ? (
-        <div className="mb-4 flex justify-end gap-1" role="group" aria-label={t('opportunities.queue.viewLabel', 'Queue view')}>
-          <Button
-            id="opportunities-queue-view-cards"
-            size="xs"
-            variant={view === 'cards' ? 'soft' : 'ghost'}
-            aria-pressed={view === 'cards'}
-            onClick={() => changeView('cards')}
-          >
-            <LayoutGrid className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-            {t('opportunities.queue.cardsView', 'Cards')}
-          </Button>
-          <Button
-            id="opportunities-queue-view-table"
-            size="xs"
-            variant={view === 'table' ? 'soft' : 'ghost'}
-            aria-pressed={view === 'table'}
-            onClick={() => changeView('table')}
-          >
-            <List className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-            {t('opportunities.queue.tableView', 'Table')}
-          </Button>
+        <div className="mb-4 flex justify-end">
+          <ViewSwitcher<'cards' | 'table'>
+            currentView={view}
+            onChange={changeView}
+            aria-label={t('opportunities.queue.viewLabel', 'Queue view')}
+            options={[
+              {
+                value: 'cards',
+                label: t('opportunities.queue.cardsView', 'Cards'),
+                icon: LayoutGrid,
+                id: 'opportunities-queue-view-cards',
+              },
+              {
+                value: 'table',
+                label: t('opportunities.queue.tableView', 'Table'),
+                icon: List,
+                id: 'opportunities-queue-view-table',
+              },
+            ]}
+          />
         </div>
       ) : null}
 

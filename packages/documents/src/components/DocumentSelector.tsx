@@ -373,13 +373,13 @@ export default function DocumentSelector({
                                                             <img
                                                                 src={document.thumbnail_file_id
                                                                     ? `/api/documents/${document.document_id}/thumbnail`
-                                                                    : `/api/documents/view/${document.file_id}`
+                                                                    : `/api/documents/view/${document.document_id}`
                                                                 }
                                                                 alt={document.document_name}
                                                                 className="w-full h-full object-cover"
                                                                 onError={(e) => {
                                                                     if (document.file_id && e.currentTarget.src.includes('thumbnail')) {
-                                                                        e.currentTarget.src = `/api/documents/view/${document.file_id}`;
+                                                                        e.currentTarget.src = `/api/documents/view/${document.document_id}`;
                                                                     }
                                                                 }}
                                                             />

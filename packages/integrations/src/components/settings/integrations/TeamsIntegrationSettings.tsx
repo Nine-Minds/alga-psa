@@ -41,8 +41,6 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { TeamsDeliveryLogViewer } from './teams/TeamsDeliveryLogViewer';
 import { TeamsAuditLogViewer } from './teams/TeamsAuditLogViewer';
 import { TeamsTroubleshootingPanel } from './teams/TeamsTroubleshootingPanel';
-import { TeamsPaywallCard } from './teams/TeamsPaywallCard';
-import { TeamsAddonExpiredBanner } from './teams/TeamsAddonExpiredBanner';
 import { TeamsStaleManifestWarning } from './teams/TeamsStaleManifestWarning';
 import { teamsRunbookHref, type TeamsRunbookSection } from './teams/teamsRunbook';
 
@@ -72,7 +70,7 @@ type TeamsFormState = {
 
 type TeamsCheckboxGroupField = 'enabledCapabilities' | 'notificationCategories' | 'allowedActions';
 
-const TEAMS_CAPABILITY_VALUES = ['personal_tab', 'personal_bot', 'group_chat_bot', 'message_extension', 'activity_notifications'] as const;
+const TEAMS_CAPABILITY_VALUES = ['personal_tab', 'personal_bot', 'group_chat_bot', 'channel_bot', 'message_extension', 'activity_notifications', 'guest_ticket_submission'] as const;
 const TEAMS_NOTIFICATION_VALUES = ['assignment', 'customer_reply', 'approval_request', 'escalation', 'sla_risk'] as const;
 const TEAMS_ALLOWED_ACTION_VALUES = ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'] as const;
 
@@ -83,8 +81,10 @@ function getTeamsCapabilityOptions(t: TranslateFn) {
     { value: 'personal_tab', label: t('integrations.teams.settings.capabilities.personalTab.label', { defaultValue: 'Personal tab' }), description: t('integrations.teams.settings.capabilities.personalTab.description', { defaultValue: 'Launch the PSA personal tab entry point.' }) },
     { value: 'personal_bot', label: t('integrations.teams.settings.capabilities.personalBot.label', { defaultValue: 'Personal bot' }), description: t('integrations.teams.settings.capabilities.personalBot.description', { defaultValue: 'Enable personal-scope bot commands for technicians.' }) },
     { value: 'group_chat_bot', label: t('integrations.teams.settings.capabilities.groupChatBot.label', { defaultValue: 'Group chat bot' }), description: t('integrations.teams.settings.capabilities.groupChatBot.description', { defaultValue: 'Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.' }) },
+    { value: 'channel_bot', label: t('integrations.teams.settings.capabilities.channelBot.label', { defaultValue: 'Channel bot' }), description: t('integrations.teams.settings.capabilities.channelBot.description', { defaultValue: 'Allow the bot to respond when @mentioned in team channels. Bot replies (including ticket details) are visible to every channel member.' }) },
     { value: 'message_extension', label: t('integrations.teams.settings.capabilities.messageExtension.label', { defaultValue: 'Message extension' }), description: t('integrations.teams.settings.capabilities.messageExtension.description', { defaultValue: 'Enable lookup and message-driven PSA actions.' }) },
     { value: 'activity_notifications', label: t('integrations.teams.settings.capabilities.activityNotifications.label', { defaultValue: 'Activity notifications' }), description: t('integrations.teams.settings.capabilities.activityNotifications.description', { defaultValue: 'Deliver personal Teams activity-feed notifications.' }) },
+    { value: 'guest_ticket_submission', label: t('integrations.teams.settings.capabilities.guestTicketSubmission.label', { defaultValue: 'Guest ticket submission' }), description: t('integrations.teams.settings.capabilities.guestTicketSubmission.description', { defaultValue: 'Let client contacts who message the bot submit tickets without signing in. Senders are matched to contacts by their verified Microsoft identity; unmatched senders are declined.' }) },
   ];
 }
 
@@ -235,8 +235,6 @@ function getTestMessageResultText(result: TeamsTestMessageResult, t: TranslateFn
   }
 
   switch (result.reason) {
-    case 'addon_inactive':
-      return t('integrations.teams.settings.diagnostics.test.addonInactive', { defaultValue: 'The Teams add-on is not active for this tenant.' });
     case 'integration_inactive':
       return t('integrations.teams.settings.diagnostics.test.integrationInactive', { defaultValue: 'Activate the Teams integration before sending a test message.' });
     case 'capability_disabled':
@@ -254,8 +252,6 @@ function getTestMessageResultText(result: TeamsTestMessageResult, t: TranslateFn
 
 function getDiagnosticsStepTitle(step: TeamsDiagnosticsStep, t: TranslateFn): string {
   switch (step.id) {
-    case 'addon_entitlement':
-      return t('integrations.teams.settings.diagnostics.steps.addonEntitlement', { defaultValue: 'Teams add-on entitlement' });
     case 'integration_status':
       return t('integrations.teams.settings.diagnostics.steps.integrationStatus', { defaultValue: 'Teams integration status' });
     case 'capabilities':
@@ -281,8 +277,6 @@ function getDiagnosticsStepTitle(step: TeamsDiagnosticsStep, t: TranslateFn): st
 
 function getDiagnosticsRecommendationText(recommendation: string, t: TranslateFn): string {
   switch (recommendation) {
-    case 'Enable the Microsoft Teams add-on for this tenant.':
-      return t('integrations.teams.settings.diagnostics.recommendation.addon', { defaultValue: recommendation });
     case 'Activate the Teams integration in settings.':
       return t('integrations.teams.settings.diagnostics.recommendation.activate', { defaultValue: recommendation });
     case 'Enable personal bot and activity notifications for Teams.':
@@ -708,10 +702,6 @@ export function TeamsIntegrationSettings() {
     lastFailure?: { createdAt?: string | null; status?: string | null; errorMessage?: string | null; errorCode?: string | null } | null;
   } | undefined;
 
-  const addOnState = currentIntegration?.addOnState ?? teamsStatus?.addOnState;
-  const isAddonAbsent = Boolean(teamsStatus && !teamsStatus.success && teamsStatus.addOnState === 'absent');
-  const isAddonExpired = addOnState === 'expired';
-
   // F059: client-side stale-manifest detection. The freshly-generated package (this
   // session) wins over the persisted metadata so regeneration clears the warning.
   const persistedPackageMeta = (currentIntegration?.packageMetadata ?? null) as
@@ -755,14 +745,6 @@ export function TeamsIntegrationSettings() {
       <div className="space-y-4">
         <Skeleton className="h-10 w-56" />
         <Skeleton className="h-80 w-full" />
-      </div>
-    );
-  }
-
-  if (isAddonAbsent) {
-    return (
-      <div className="space-y-6">
-        <TeamsPaywallCard />
       </div>
     );
   }
@@ -963,8 +945,6 @@ export function TeamsIntegrationSettings() {
 
   return (
     <div className="space-y-6">
-      {isAddonExpired ? <TeamsAddonExpiredBanner /> : null}
-
       {packageStale ? (
         <TeamsStaleManifestWarning
           onRegenerate={() => void handlePackageRefresh()}

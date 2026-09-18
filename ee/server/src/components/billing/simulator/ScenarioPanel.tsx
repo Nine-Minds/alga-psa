@@ -48,7 +48,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
   Hourly: "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
   Usage: "bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
   Bucket:
-    "bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]",
+    "chip-primary",
 };
 
 const TypeBadge: React.FC<{ type: string }> = ({ type }) => {

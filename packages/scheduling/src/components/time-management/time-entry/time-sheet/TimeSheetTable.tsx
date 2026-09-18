@@ -435,9 +435,9 @@ export function TimeSheetTable({
                                             <div className="flex flex-wrap items-center gap-1 mt-1">
                                                 <span className={`inline-flex w-max items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                                     workItem.type === 'ticket'
-                                                        ? 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]'
+                                                        ? 'chip-primary'
                                                         : workItem.type === 'project_task'
-                                                            ? 'bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-700))]'
+                                                            ? 'chip-secondary'
                                                             : workItem.type === 'interaction'
                                                                 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                                                                 : 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300'
@@ -445,7 +445,7 @@ export function TimeSheetTable({
                                                     {formatWorkItemType(workItem.type)}
                                                 </span>
                                                 {workItem.type === 'ticket' && workItem.master_ticket_id && (
-                                                    <span className="inline-flex w-max items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
+                                                    <span className="chip-primary inline-flex w-max items-center px-2 py-0.5 rounded-full text-xs font-medium">
                                                         {workItem.master_ticket_number ? `Bundled → ${workItem.master_ticket_number}` : 'Bundled'}
                                                     </span>
                                                 )}

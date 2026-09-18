@@ -6,7 +6,6 @@ import type {
   IUserRole,
   IUserWithRoles,
   IRoleWithPermissions,
-  IPermission,
 } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
@@ -24,6 +23,51 @@ const USER_DISCOVERY_BY_EMAIL_REASON = 'user discovery by email before tenant co
 const USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON = 'user discovery by email and type before tenant context exists';
 const USER_PASSWORD_VERIFY_REASON = 'password verification by user id before tenant context exists';
 const USER_REGISTRATION_LOOKUP_REASON = 'registration lookup by user id before tenant context exists';
+
+interface RoleWithPermissionRow {
+  role_id: string;
+  role_name: string;
+  description: string | null;
+  tenant: string;
+  msp: boolean;
+  client: boolean;
+  permission_id: string | null;
+  resource: string | null;
+  action: string | null;
+  permission_tenant: string | null;
+  permission_msp: boolean | null;
+  permission_client: boolean | null;
+}
+
+export function groupRolePermissionRows(rows: RoleWithPermissionRow[]): IRoleWithPermissions[] {
+  const byRole = new Map<string, IRoleWithPermissions>();
+  for (const row of rows) {
+    let role = byRole.get(row.role_id);
+    if (!role) {
+      role = {
+        role_id: row.role_id,
+        role_name: row.role_name,
+        description: row.description ?? undefined,
+        tenant: row.tenant,
+        msp: row.msp,
+        client: row.client,
+        permissions: [],
+      };
+      byRole.set(row.role_id, role);
+    }
+    if (row.permission_id) {
+      role.permissions.push({
+        permission_id: row.permission_id,
+        resource: row.resource as string,
+        action: row.action as string,
+        tenant: row.permission_tenant ?? undefined,
+        msp: Boolean(row.permission_msp),
+        client: Boolean(row.permission_client),
+      });
+    }
+  }
+  return [...byRole.values()];
+}
 
 const User = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, includeInactive = false): Promise<IUser[]> => {
@@ -400,32 +444,31 @@ const User = {
     const tenant = await requireTenantId(knexOrTrx);
     try {
       const db = tenantDb(knexOrTrx, tenant);
+      // One round trip on one connection. The previous per-role fan-out held
+      // a pool connection per role for every permission check, which is what
+      // pushed small appliances past max_connections under a burst of API calls.
       const query = db.table<IRole>('roles')
         .where('user_roles.user_id', user_id);
       db.tenantJoin(query, 'user_roles', 'roles.role_id', 'user_roles.role_id');
+      db.tenantJoin(query, 'role_permissions', 'roles.role_id', 'role_permissions.role_id', { type: 'left' });
+      db.tenantJoin(query, 'permissions', 'role_permissions.permission_id', 'permissions.permission_id', { type: 'left' });
 
-      const roles = await query.select(['roles.role_id', 'roles.role_name', 'roles.description', 'roles.tenant', 'roles.msp', 'roles.client']);
+      const rows: RoleWithPermissionRow[] = await query.select([
+        'roles.role_id',
+        'roles.role_name',
+        'roles.description',
+        'roles.tenant',
+        'roles.msp',
+        'roles.client',
+        'permissions.permission_id',
+        'permissions.resource',
+        'permissions.action',
+        'permissions.tenant as permission_tenant',
+        'permissions.msp as permission_msp',
+        'permissions.client as permission_client',
+      ]);
 
-      const rolesWithPermissions = await Promise.all(
-        roles.map(async (role: any): Promise<IRoleWithPermissions> => {
-          const permissionQuery = db.table<IPermission>('permissions')
-            .where('role_permissions.role_id', role.role_id);
-          db.tenantJoin(permissionQuery, 'role_permissions', 'permissions.permission_id', 'role_permissions.permission_id');
-
-          const permissions = await permissionQuery.select([
-            'permissions.permission_id',
-            'permissions.resource',
-            'permissions.action',
-            'permissions.tenant',
-            'permissions.msp',
-            'permissions.client',
-          ]);
-
-          return { ...role, permissions };
-        })
-      );
-
-      return rolesWithPermissions;
+      return groupRolePermissionRows(rows);
     } catch (error) {
       logger.error(`Error getting roles with permissions for user with id ${user_id}:`, error);
       throw error;

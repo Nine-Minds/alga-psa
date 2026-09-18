@@ -1,0 +1,26 @@
+{
+  "status": "local_behavior_verified_native_pending",
+  "problem": "Successful retry retained previous structured error_json despite SUCCEEDED status",
+  "before": {
+    "log": "/tmp/alga-retry-stale-error-before.log",
+    "passed": 3,
+    "failed": 1,
+    "failure": "Real persisted invocation retained Temporary delivery failure after successful retry"
+  },
+  "after": {
+    "database_passed": 4,
+    "readiness_passed": 71,
+    "readiness_files": 6,
+    "targeted_typescript": "passed",
+    "logs": [
+      "/tmp/alga-retry-stale-error-after.log",
+      "/tmp/alga-retry-stale-error-readiness.log",
+      "/tmp/alga-retry-stale-error-types.log"
+    ]
+  },
+  "compatibility": "Only clears error_json when the previously fetched invocation has a non-null value, avoiding references to the optional column on schemas without it",
+  "limits": [
+    "Local direct-activity tests do not exercise a live Temporal worker",
+    "Existing skipped redaction and email suites still require porting; these remain visible in required integration execution"
+  ]
+}

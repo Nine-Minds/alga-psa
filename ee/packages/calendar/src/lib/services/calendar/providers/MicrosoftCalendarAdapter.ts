@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { resolveMicrosoftConsumerProfileConfig } from '../../../microsoftConsumerProfileResolution';
@@ -12,7 +13,7 @@ import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
  */
 export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
   private httpClient: AxiosInstance;
-  private baseUrl = 'https://graph.microsoft.com/v1.0';
+  private baseUrl = getMicrosoftGraphBaseUrl();
   private authenticatedUserEmail: string | undefined;
   private calendarId: string;
 
@@ -131,7 +132,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       }
 
       // Always use 'common' for multi-tenant Azure AD apps
-      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
+      const tokenUrl = getMicrosoftTokenUrl('common');
 
       const params = new URLSearchParams({
         client_id: clientId,
@@ -224,8 +225,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
           contentType: 'HTML',
           content: event.description || ''
         },
-        start: event.start,
-        end: event.end,
+        start: this.toGraphDateTime(event.start),
+        end: this.toGraphDateTime(event.end),
         location: event.location ? {
           displayName: event.location
         } : undefined,
@@ -309,8 +310,11 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
           content: event.description || ''
         };
       }
-      if (event.start !== undefined) updateData.start = event.start;
-      if (event.end !== undefined) updateData.end = event.end;
+      if (event.start !== undefined) {
+        updateData.start = this.toGraphDateTime(event.start);
+        updateData.isAllDay = !event.start.dateTime && !!event.start.date;
+      }
+      if (event.end !== undefined) updateData.end = this.toGraphDateTime(event.end);
       if (event.location !== undefined) {
         updateData.location = event.location ? {
           displayName: event.location
@@ -580,15 +584,23 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     await this.ensureValidToken();
 
     const changes: Array<{ id: string; changeType: 'updated' | 'deleted' }> = [];
-    const initialUrl = deltaLink ?? `${this.getCalendarBasePath()}/events/delta`;
-    let requestUrl: string | undefined = initialUrl;
+    // Real Graph has no /events/delta — event change tracking is served by
+    // calendarView/delta over an explicit date window, and it returns expanded
+    // occurrences rather than series masters. The window below bounds only the
+    // initial round; every later round replays the stored @odata.deltaLink,
+    // which carries the window inside its token.
+    const DELTA_WINDOW_PAST_MS = 90 * 24 * 60 * 60 * 1000;
+    const DELTA_WINDOW_FUTURE_MS = 365 * 24 * 60 * 60 * 1000;
+    const initialUrl =
+      '/me/calendarView/delta' +
+      `?startDateTime=${encodeURIComponent(new Date(Date.now() - DELTA_WINDOW_PAST_MS).toISOString())}` +
+      `&endDateTime=${encodeURIComponent(new Date(Date.now() + DELTA_WINDOW_FUTURE_MS).toISOString())}`;
+    let requestUrl: string | undefined = deltaLink ?? initialUrl;
     let nextDeltaLink: string | undefined;
 
     try {
       while (requestUrl) {
-        const response: any = await this.httpClient.get(requestUrl, {
-          headers: deltaLink ? {} : { Prefer: 'odata.track-changes' }
-        });
+        const response: any = await this.httpClient.get(requestUrl);
 
         const items = response.data?.value || [];
         for (const item of items) {
@@ -728,16 +740,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       provider: 'microsoft',
       title: event.subject || '',
       description: event.body?.content || '',
-      start: {
-        dateTime: event.start?.dateTime,
-        date: event.start?.date,
-        timeZone: event.start?.timeZone
-      },
-      end: {
-        dateTime: event.end?.dateTime,
-        date: event.end?.date,
-        timeZone: event.end?.timeZone
-      },
+      start: this.fromGraphDateTime(event.start, event.isAllDay),
+      end: this.fromGraphDateTime(event.end, event.isAllDay),
       location: event.location?.displayName || '',
       attendees: event.attendees?.map((a: any) => ({
         email: a.emailAddress?.address || '',
@@ -757,5 +761,20 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       } : undefined,
       visibility: event.sensitivity === 'private' ? 'private' : 'default'
     };
+  }
+
+  private toGraphDateTime(value: ExternalCalendarEvent['start']) {
+    return {
+      dateTime: value.dateTime || `${value.date}T00:00:00`,
+      timeZone: value.timeZone || 'UTC',
+    };
+  }
+
+  private fromGraphDateTime(value: any, isAllDay: boolean) {
+    // Preserve calendar dates and the exclusive end; converting midnight to a
+    // JS instant here would introduce timezone shifts on subsequent edits.
+    return isAllDay
+      ? { date: value?.dateTime?.slice(0, 10), timeZone: value?.timeZone }
+      : { dateTime: value?.dateTime, timeZone: value?.timeZone };
   }
 }

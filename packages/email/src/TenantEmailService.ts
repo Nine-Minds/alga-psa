@@ -22,6 +22,7 @@ import { DelayedEmailQueue } from './DelayedEmailQueue';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 import {
   applyFromNameOverride,
+  parseEmailAddress,
   resolveDefaultFromAddress,
   resolveTenantCompanyName,
 } from './senderIdentity';
@@ -56,6 +57,11 @@ interface TenantProviderSnapshot {
   emailProvider: IEmailProvider | null;
   providerInitError: string | null;
   fromAddress: EmailAddress;
+  systemFallbackFromAddress?: EmailAddress;
+}
+
+function isValidEmailAddress(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 export class TenantEmailService extends BaseEmailService {
@@ -66,6 +72,7 @@ export class TenantEmailService extends BaseEmailService {
   private tenantSettingsLoaded = false;
   private providerSettingsFingerprint: string | null = null;
   private providerStateQueue: Promise<void> = Promise.resolve();
+  private usingSystemProvider = false;
 
   private constructor(tenantId: string) {
     super();
@@ -100,6 +107,12 @@ export class TenantEmailService extends BaseEmailService {
     }
   }
 
+  public async getAttachmentCapabilities() {
+    const knex = await getConnection(this.tenantId);
+    const snapshot = await this.refreshProviderState(knex);
+    return snapshot.emailProvider?.capabilities ?? { supportsAttachments: false, maxAttachmentSize: 0, blockedAttachmentExtensions: [] as string[] };
+  }
+
   protected getServiceName(): string {
     return `TenantEmailService[${this.tenantId}]`;
   }
@@ -130,13 +143,20 @@ export class TenantEmailService extends BaseEmailService {
       });
       return {
         success: false,
-        error: 'Tenant is suspended; outbound email is disabled'
+        error: 'Tenant is suspended; outbound email is disabled',
+        metadata: { definitelyNotSent: true, retryable: false, errorCode: 'TENANT_SUSPENDED' }
       };
     }
 
     // Check rate limits before sending
     const rateLimitResult = await this.checkRateLimits(params);
     if (!rateLimitResult.allowed) {
+      // Event retries must reconstruct comment attachments and recheck visibility.
+      if (params.revalidateCommentOnRetry) return {
+        success: false, error: 'Comment notification rate limited',
+        metadata: { retryable: true, errorCode: 'COMMENT_RATE_LIMITED', definitelyNotSent: true, retryAfterMs: rateLimitResult.retryAfterMs, rateLimitReason: rateLimitResult.reason },
+      };
+
       const retryCount = params._retryCount ?? 0;
 
       // Check if we've exceeded max retries
@@ -208,6 +228,10 @@ export class TenantEmailService extends BaseEmailService {
       resolvedTenantFromAddress: providerSnapshot.fromAddress,
       resolvedEmailProvider: providerSnapshot.emailProvider,
       resolvedProviderInitError: providerSnapshot.providerInitError,
+      ...(providerSnapshot.systemFallbackFromAddress ? {
+        resolvedSystemFallbackFromAddress: providerSnapshot.systemFallbackFromAddress,
+        resolvedSystemFallbackReplyTo: providerSnapshot.fromAddress,
+      } : {}),
     });
   }
 
@@ -284,6 +308,7 @@ export class TenantEmailService extends BaseEmailService {
           try {
             const systemProvider = await SystemEmailProviderFactory.createProvider();
             if (systemProvider) {
+              this.usingSystemProvider = true;
               return systemProvider;
             }
           } catch (fallbackError) {
@@ -313,6 +338,7 @@ export class TenantEmailService extends BaseEmailService {
       logger.info(`[${this.getServiceName()}] No tenant provider configured, using system email provider (Enterprise Edition)`);
       try {
         const systemProvider = await SystemEmailProviderFactory.createProvider();
+        this.usingSystemProvider = Boolean(systemProvider);
         return systemProvider;
       } catch (err) {
         logger.error(`[${this.getServiceName()}] Failed to create system email provider:`, err);
@@ -325,6 +351,10 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   protected getFromAddress(params?: BaseEmailParams): EmailAddress | string {
+    if (params?.resolvedSystemFallbackFromAddress) {
+      return params.resolvedSystemFallbackFromAddress;
+    }
+
     const resolved = params?.from
       ? params.from as EmailAddress | string
       : params?.resolvedTenantFromAddress
@@ -620,6 +650,9 @@ export class TenantEmailService extends BaseEmailService {
           emailProvider: this.emailProvider,
           providerInitError: this.providerInitError,
           fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+          ...(this.usingSystemProvider ? {
+            systemFallbackFromAddress: this.buildSystemFallbackFromAddress(tenantCompanyName),
+          } : {}),
         };
       }
 
@@ -632,6 +665,9 @@ export class TenantEmailService extends BaseEmailService {
         emailProvider: this.emailProvider,
         providerInitError: this.providerInitError,
         fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+        ...(this.usingSystemProvider ? {
+          systemFallbackFromAddress: this.buildSystemFallbackFromAddress(tenantCompanyName),
+        } : {}),
       };
     });
   }
@@ -644,6 +680,7 @@ export class TenantEmailService extends BaseEmailService {
     this.tenantSettings = null;
     this.tenantSettingsLoaded = false;
     this.providerSettingsFingerprint = null;
+    this.usingSystemProvider = false;
   }
 
   private static getProviderSettingsFingerprint(settings: TenantEmailSettings | null): string {
@@ -663,6 +700,18 @@ export class TenantEmailService extends BaseEmailService {
     };
 
     return createHash('sha256').update(JSON.stringify(providerState)).digest('hex');
+  }
+
+  private buildSystemFallbackFromAddress(tenantCompanyName?: string | null): EmailAddress {
+    const systemAddress = parseEmailAddress(process.env.EMAIL_FROM || process.env.SMTP_FROM);
+    if (!systemAddress?.email || !isValidEmailAddress(systemAddress.email)) {
+      throw new Error('System fallback sender is missing or malformed; set EMAIL_FROM to a valid, verified system-domain address');
+    }
+
+    return {
+      email: systemAddress.email,
+      name: this.buildTenantFromAddress(tenantCompanyName).name || systemAddress.name,
+    };
   }
 
   private static async loadTenantEmailSettings(

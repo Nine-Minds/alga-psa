@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { getCurrentUser, getNextAuthSecret, getSessionCookieName } from '@alga-psa/auth';
 import { getUserWithRoles } from '@alga-psa/db';
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
+import { TICKET_NOT_FOUND_MESSAGE_KEY } from '@alga-psa/tickets/actions/ticketActionErrors';
 import { auth } from '../../../auth/[...nextauth]/auth';
 import { getHocuspocusJwtSecret } from '@/lib/hocuspocusJwt';
 
@@ -14,12 +15,14 @@ function getTicketActionError(value: unknown): { message: string; status: 403 | 
   if (typeof value !== 'object' || value === null) {
     return null;
   }
-  const candidate = value as { actionError?: unknown; permissionError?: unknown };
+  const candidate = value as { actionError?: unknown; permissionError?: unknown; messageKey?: unknown };
   if (typeof candidate.permissionError === 'string') {
     return { message: 'Forbidden', status: 403 };
   }
   if (typeof candidate.actionError === 'string') {
-    const status = candidate.actionError.toLowerCase().includes('not found') ? 404 : 400;
+    // Keyed, not sniffed: the message is localized before it gets here, so
+    // `.includes('not found')` would silently turn every 404 into a 400.
+    const status = candidate.messageKey === TICKET_NOT_FOUND_MESSAGE_KEY ? 404 : 400;
     return { message: candidate.actionError, status };
   }
   return null;
@@ -105,6 +108,11 @@ export async function GET(
         sessionTenant: sessionUser?.tenant ?? null,
       });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const principal = await getUserWithRoles(userId, tenantId);
+    if (!principal || principal.user_type !== 'internal') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { id: ticketId } = await params;

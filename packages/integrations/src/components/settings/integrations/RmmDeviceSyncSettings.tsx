@@ -13,8 +13,8 @@ import type { RmmProvider } from '@alga-psa/types';
 import {
   getRmmIntegrationStatuses,
   updateRmmDeviceSyncSettings,
-  type RmmIntegrationStatus,
 } from '../../../actions/integrations/rmmIntegrationStatusActions';
+import type { RmmIntegrationStatus } from '../../../lib/rmm/rmmIntegrationStatus';
 import {
   DEVICE_SYNC_DEFAULT_MINUTES,
   DEVICE_SYNC_MAX_MINUTES,

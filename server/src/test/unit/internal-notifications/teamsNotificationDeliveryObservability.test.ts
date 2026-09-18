@@ -16,7 +16,6 @@ describe('Teams notification delivery observability mapping', () => {
   });
 
   it('maps non-Graph skip reasons to delivery error codes', () => {
-    expect(mapTeamsNotificationSkipReasonToDeliveryErrorCode('addon_inactive')).toBe('addon_inactive');
     expect(mapTeamsNotificationSkipReasonToDeliveryErrorCode('integration_inactive')).toBe('integration_inactive');
     expect(mapTeamsNotificationSkipReasonToDeliveryErrorCode('missing_user_linkage')).toBe('user_not_mapped');
     expect(mapTeamsNotificationSkipReasonToDeliveryErrorCode('delivery_prerequisites_missing')).toBe('package_misconfigured');

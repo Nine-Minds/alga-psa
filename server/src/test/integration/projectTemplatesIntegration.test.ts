@@ -569,6 +569,7 @@ describe('Project Templates Integration Tests', () => {
 
       expect(invalidUpdateResult).toEqual({
         actionError: 'Project validation failed. Please review the project details and try again.',
+        messageKey: 'projects:errors.project.validationFailed',
       });
       const projectAfterInvalidUpdate = await tenantTable('projects')
         .where({ project_id: projectId })

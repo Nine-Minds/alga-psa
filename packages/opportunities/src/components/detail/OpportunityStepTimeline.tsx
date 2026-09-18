@@ -203,21 +203,19 @@ function StageSegment({
   const setStageLabel = t('opportunities.steps.setStageTooltip', 'Move this deal to {{stage}}', { stage: label });
   const canSetStage = Boolean(onStageSelect) && !isCurrentStage;
 
+  // Rung states map onto badge variants: reached = filled primary, current =
+  // outline, pending/skipped = the muted default. No per-state colour of its own.
   const dotFace = (
-    <span
-      className={`grid h-7 w-7 place-items-center rounded-full border-2 text-[10px] font-bold transition-colors ${
-        state === 'reached'
-          ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-500))] text-white'
-          : state === 'skipped'
-            ? 'border-dashed border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-400))]'
-            : isCurrentStage
-              ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-card))] text-[rgb(var(--color-primary-600))]'
-              : 'border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-400))]'
-      }`}
+    <Badge
+      variant={state === 'reached' ? 'primary' : isCurrentStage ? 'outline' : 'default-muted'}
+      size="sm"
+      className={`grid h-7 w-7 place-items-center border-2 p-0 font-bold${
+        state === 'skipped' ? ' border-dashed' : ''
+      }${isCurrentStage ? ' text-[rgb(var(--color-primary-700))]' : ''}`}
       aria-hidden
     >
       {state === 'reached' ? <Check className="h-3.5 w-3.5" /> : state === 'skipped' ? '–' : null}
-    </span>
+    </Badge>
   );
 
   // The circle is the control: clicking a rung moves the deal to that stage.

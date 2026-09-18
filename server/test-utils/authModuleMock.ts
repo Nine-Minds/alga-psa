@@ -72,17 +72,28 @@ export function createAuthModuleMock() {
     if (!user) throw new Error('Authentication required');
     return user;
   };
+  // The real withAuth runs the action inside runWithTenant, and plenty of code
+  // below the action reads the tenant straight off that AsyncLocalStorage store
+  // (requireTenantId in tag cleanup, getTenantContext in scheduling). Calling
+  // the action bare made those throw "tenant context not found". Imported
+  // lazily: this module is loaded from vi.mock factories, and a static import
+  // of a product module is exactly the cycle the header warns about.
+  const runInTenant = async <T>(tenant: string, fn: () => Promise<T>): Promise<T> => {
+    const { runWithTenant } = await import('@alga-psa/db');
+    return runWithTenant(tenant, fn);
+  };
   return {
     getSession,
     getCurrentUser,
     hasPermission,
     withAuth: (action: (...a: any[]) => any) => async (...args: any[]) => {
       const user = await requireUser();
-      return action(user, { tenant: user.tenant }, ...args);
+      return runInTenant(user.tenant, async () => action(user, { tenant: user.tenant }, ...args));
     },
     withOptionalAuth: (action: (...a: any[]) => any) => async (...args: any[]) => {
       const user = await getCurrentUser();
-      return action(user ?? null, user ? { tenant: user.tenant } : null, ...args);
+      if (!user) return action(null, null, ...args);
+      return runInTenant(user.tenant, async () => action(user, { tenant: user.tenant }, ...args));
     },
     withAuthCheck: (action: (...a: any[]) => any) => async (...args: any[]) => {
       const user = await requireUser();

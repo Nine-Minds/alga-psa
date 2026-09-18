@@ -30,6 +30,17 @@ function parseCSVRaw(text: string): string[][] {
   let currentRow: string[] = [];
   let currentValue = '';
   let insideQuotes = false;
+  // Quoting is how a CSV author marks a literal value, so a quoted field keeps
+  // its leading and trailing spaces. Unquoted fields stay trimmed, which is what
+  // hand-edited exports rely on ("name, email" headers, padded columns).
+  let currentFieldQuoted = false;
+
+  const finishField = (): string => {
+    const value = currentFieldQuoted ? currentValue : currentValue.trim();
+    currentValue = '';
+    currentFieldQuoted = false;
+    return value;
+  };
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
@@ -43,22 +54,21 @@ function parseCSVRaw(text: string): string[][] {
       } else {
         // Toggle quote state
         insideQuotes = !insideQuotes;
+        currentFieldQuoted = true;
       }
     } else if (char === ',' && !insideQuotes) {
       // End of field
-      currentRow.push(currentValue.trim());
-      currentValue = '';
+      currentRow.push(finishField());
     } else if (char === '\n' && !insideQuotes) {
       // End of row
-      if (currentValue || currentRow.length > 0) {
-        currentRow.push(currentValue.trim());
+      if (currentValue || currentFieldQuoted || currentRow.length > 0) {
+        currentRow.push(finishField());
         if (currentRow.some(cell => cell)) { // Skip empty rows
           rows.push(currentRow);
         }
         currentRow = [];
-        currentValue = '';
       }
-    } else if (char === '\r') {
+    } else if (char === '\r' && !insideQuotes) {
       // Skip carriage return
       continue;
     } else {
@@ -67,8 +77,8 @@ function parseCSVRaw(text: string): string[][] {
   }
 
   // Handle last row if it doesn't end with newline
-  if (currentValue || currentRow.length > 0) {
-    currentRow.push(currentValue.trim());
+  if (currentValue || currentFieldQuoted || currentRow.length > 0) {
+    currentRow.push(finishField());
     if (currentRow.some(cell => cell)) { // Skip empty rows
       rows.push(currentRow);
     }
@@ -78,8 +88,18 @@ function parseCSVRaw(text: string): string[][] {
 }
 
 export function unparseCSV(data: any[], fields: string[]): string {
-  const escapeField = (field: string): string => {
-    const stringField = String(field);
+  const escapeField = (field: unknown): string => {
+    // Only absent values become blank. `|| ''` would also blank a numeric 0 and a
+    // boolean false, erasing the difference between "zero" and "not recorded".
+    let stringField = field === null || field === undefined ? '' : String(field);
+
+    // Guard against CSV injection: a leading =, +, -, @, tab or CR makes Excel
+    // and Google Sheets evaluate the cell as a formula when the export is opened.
+    // Matches the guard the ticket and project-task exporters already apply.
+    if (/^[=+\-@\t\r]/.test(stringField)) {
+      stringField = `'${stringField}`;
+    }
+
     if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
       return `"${stringField.replace(/"/g, '""')}"`;
     }
@@ -88,8 +108,8 @@ export function unparseCSV(data: any[], fields: string[]): string {
 
   const rows = [
     fields.join(','),
-    ...data.map((row):string => 
-      fields.map((field):string=> escapeField(row[field] || '')).join(',')
+    ...data.map((row):string =>
+      fields.map((field):string=> escapeField(row[field])).join(',')
     )
   ];
 

@@ -1,0 +1,319 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+
+const source = readFileSync(resolve(__dirname, 'kbArticleImportHandler.ts'), 'utf8');
+
+interface FakeRow extends Record<string, any> {}
+
+const tables: Record<string, FakeRow[]> = { kb_import_files: [], jobs: [] };
+const createdArticleIds: string[] = [];
+let failNextImportedUpdate = false;
+
+const matches = (row: FakeRow, filter: Record<string, any>): boolean =>
+  Object.entries(filter).every(([key, value]) => row[key] === value);
+
+const makeQuery = (table: string) => {
+  let filter: Record<string, any> = {};
+  const query: any = {
+    where(criteria: Record<string, any>) {
+      filter = { ...filter, ...criteria };
+      return query;
+    },
+    forUpdate() {
+      return query;
+    },
+    async first() {
+      return tables[table].find((row) => matches(row, filter));
+    },
+    async update(values: Record<string, any>) {
+      if (table === 'kb_import_files' && values.status === 'imported' && failNextImportedUpdate) {
+        failNextImportedUpdate = false;
+        throw new Error('simulated staging update failure');
+      }
+      const rows = tables[table].filter((row) => matches(row, filter));
+      rows.forEach((row) => Object.assign(row, values));
+      return rows.length;
+    },
+  };
+  return query;
+};
+
+const fakeKnex: any = {};
+fakeKnex.transaction = async (callback: (trx: unknown) => Promise<unknown>) => {
+  const articleCount = createdArticleIds.length;
+  try {
+    return await callback(fakeKnex);
+  } catch (error) {
+    createdArticleIds.splice(articleCount);
+    throw error;
+  }
+};
+
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async (tenantId: string) => ({ knex: fakeKnex, tenant: tenantId }),
+  tenantDb: () => ({ table: (name: string) => makeQuery(name) }),
+}));
+
+const createKbArticleMock = vi.fn(async () => {
+  createdArticleIds.push('article-1');
+  return { article_id: 'article-1' };
+});
+
+const publishKbArticleCreatedMock = vi.fn(async () => undefined);
+
+vi.mock('@alga-psa/shared/models/kbArticleModel', () => ({
+  createKbArticle: (...args: unknown[]) => createKbArticleMock(...(args as [])),
+  publishKbArticleCreated: (...args: unknown[]) => publishKbArticleCreatedMock(...(args as [])),
+}));
+
+import { KB_ARTICLE_IMPORT_JOB, kbArticleImportHandler } from './kbArticleImportHandler';
+
+const stageFile = (overrides: Partial<FakeRow> = {}): FakeRow => {
+  const row: FakeRow = {
+    tenant: 'tenant-1',
+    import_file_id: overrides.import_file_id ?? 'file-1',
+    job_id: 'job-1',
+    filename: 'printer-guide.md',
+    content: '# Printer Guide\n\nRestart the spooler.',
+    status: 'pending',
+    error: null,
+    article_id: null,
+    audience: 'internal',
+    article_type: 'reference',
+    category_id: null,
+    ...overrides,
+  };
+  tables.kb_import_files.push(row);
+  return row;
+};
+
+describe('kb-article-import handler tenant-scoped query contract', () => {
+  it('routes every query root through the tenant facade', () => {
+    expect(source).toContain("tenantDb(trx, tenant)\n          .table('kb_import_files')");
+    expect(source).toContain('tenantDb(knex, tenant)');
+    expect(source).toContain("tenantDb(knex, tenant).table('jobs')");
+    expect(source).not.toContain('knex.raw');
+    expect(source).not.toContain('.where({ tenant,');
+    expect(source).toContain('createTenantKnex(data.tenantId)');
+  });
+
+  it('keeps the handler loadable by the plain-Node-ESM temporal worker', () => {
+    expect(source).not.toContain("from 'server/");
+    expect(source).not.toContain('@alga-psa/billing');
+    expect(source).not.toContain('@alga-psa/notifications');
+    expect(source).not.toContain('@alga-psa/storage');
+    expect(source).not.toContain('@alga-psa/tickets');
+    expect(source).toContain("from '@alga-psa/shared/models/kbArticleModel'");
+    expect(source).toContain("from '../handler-utils/kbImportBlocks'");
+  });
+
+  it('exposes the canonical job name and a parse budget', () => {
+    expect(KB_ARTICLE_IMPORT_JOB).toBe('kb-article-import');
+    expect(source).toContain('maxDurationMs: KB_IMPORT_PARSE_BUDGET_MS');
+  });
+
+  it('atomically locks, creates, and consumes each staged row', () => {
+    expect(source).toContain('await knex.transaction(async (trx) =>');
+    expect(source).toContain("tenantDb(trx, tenant)\n          .table('kb_import_files')");
+    expect(source).toContain('.forUpdate()');
+    expect(source).toContain('createKbArticle(\n          trx,');
+    expect(source).toContain(".where({ import_file_id: fileId, status: 'pending' })");
+  });
+
+  it('registers every table it queries in the tenant table metadata', () => {
+    // tenantDb() throws "No tenant table metadata registered for <table>" at
+    // runtime for unknown tables. Every test here mocks @alga-psa/db, so a new
+    // table that never made it into the registry looks perfectly healthy until
+    // the job runs for real against a database.
+    const metadata = readFileSync(
+      resolve(__dirname, '../../../../db/src/lib/tenantTableMetadata.ts'),
+      'utf8',
+    );
+    for (const table of ['kb_import_files', 'kb_articles', 'jobs']) {
+      expect(metadata, `${table} is missing from tenantTableMetadata`).toContain(
+        `${table}: { scope: 'tenant' }`,
+      );
+    }
+  });
+});
+
+describe('kb-article-import handler execution', () => {
+  beforeEach(() => {
+    tables.kb_import_files = [];
+    tables.jobs = [{ tenant: 'tenant-1', job_id: 'job-1', metadata: { user_id: 'user-1' } }];
+    createdArticleIds.length = 0;
+    failNextImportedUpdate = false;
+    createKbArticleMock.mockClear();
+    publishKbArticleCreatedMock.mockClear();
+    createKbArticleMock.mockImplementation(async () => {
+      createdArticleIds.push('article-1');
+      return { article_id: 'article-1' } as any;
+    });
+  });
+
+  const run = (fileIds: string[]) =>
+    kbArticleImportHandler('job-1', {
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      jobServiceId: 'job-1',
+      fileIds,
+    });
+
+  it('rejects incomplete job data', async () => {
+    await expect(kbArticleImportHandler('job-1', {} as any)).rejects.toThrow('Tenant ID is required');
+    await expect(
+      kbArticleImportHandler('job-1', { tenantId: 'tenant-1' } as any),
+    ).rejects.toThrow('User ID is required');
+    await expect(
+      kbArticleImportHandler('job-1', { tenantId: 'tenant-1', userId: 'user-1', fileIds: [] } as any),
+    ).rejects.toThrow('At least one import file is required');
+  });
+
+  it('imports pending rows, records the article and drops the staged content', async () => {
+    const row = stageFile();
+
+    const result = await run(['file-1']);
+
+    expect(result).toEqual({ total: 1, processed: 1, imported: 1, failed: 0 });
+    expect(createKbArticleMock).toHaveBeenCalledTimes(1);
+    const [, context, input] = createKbArticleMock.mock.calls[0] as any[];
+    expect(context).toEqual({ tenant: 'tenant-1', userId: 'user-1' });
+    expect(input.title).toBe('Printer Guide');
+    expect(input.articleType).toBe('reference');
+    expect(input.audience).toBe('internal');
+    expect(input.content[0]).toEqual({
+      type: 'heading',
+      props: { level: 1 },
+      content: [{ type: 'text', text: 'Printer Guide' }],
+    });
+    expect(row.status).toBe('imported');
+    expect(row.article_id).toBe('article-1');
+    expect(row.content).toBeNull();
+    expect(publishKbArticleCreatedMock).toHaveBeenCalledTimes(1);
+    expect(publishKbArticleCreatedMock.mock.calls[0]).toEqual([
+      'tenant-1',
+      { article_id: 'article-1' },
+      'user-1',
+    ]);
+  });
+
+  it('is idempotent across retries: already consumed rows are not re-imported', async () => {
+    stageFile({ import_file_id: 'file-1', status: 'imported' });
+    stageFile({ import_file_id: 'file-2', status: 'failed' });
+
+    const result = await run(['file-1', 'file-2']);
+
+    expect(createKbArticleMock).not.toHaveBeenCalled();
+    expect(publishKbArticleCreatedMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ total: 2, processed: 2, imported: 1, failed: 1 });
+    // A retry that finds every row already consumed must still leave the final
+    // counts on the job row, or the dialog polls a batch that never settles.
+    const metadata = JSON.parse(tables.jobs[0].metadata as string);
+    expect(metadata.kbImport).toEqual({ total: 2, processed: 2, imported: 1, failed: 1 });
+  });
+
+  it('rolls article creation back if consuming the staging row fails', async () => {
+    const row = stageFile();
+    failNextImportedUpdate = true;
+
+    const result = await run(['file-1']);
+
+    expect(result).toEqual({ total: 1, processed: 1, imported: 0, failed: 1 });
+    expect(createdArticleIds).toEqual([]);
+    expect(row.status).toBe('failed');
+    expect(row.error).toBe('Failed to import article');
+    // The article never survived the rollback, so search must not be told
+    // about it — publishing inside the transaction would leak a ghost event.
+    expect(publishKbArticleCreatedMock).not.toHaveBeenCalled();
+  });
+
+  it('maps user-facing failures onto the staged row', async () => {
+    const row = stageFile({ import_file_id: 'file-1' });
+    createKbArticleMock.mockImplementationOnce(async () => {
+      throw new Error('An article with this slug already exists');
+    });
+
+    const result = await run(['file-1']);
+
+    expect(result).toEqual({ total: 1, processed: 1, imported: 0, failed: 1 });
+    expect(row.status).toBe('failed');
+    expect(row.error).toBe('An article with this slug already exists');
+    expect(row.content).toBeNull();
+  });
+
+  it('hides internal failure detail behind a generic message', async () => {
+    const row = stageFile({ import_file_id: 'file-1' });
+    createKbArticleMock.mockImplementationOnce(async () => {
+      throw new Error('insert into "documents" violates foreign key constraint');
+    });
+
+    await run(['file-1']);
+
+    expect(row.error).toBe('Failed to import article');
+  });
+
+  it('publishes progress onto the job row after each file', async () => {
+    stageFile({ import_file_id: 'file-1' });
+    stageFile({ import_file_id: 'file-2', filename: 'vpn-setup.html', content: '<h1>VPN</h1>' });
+
+    await run(['file-1', 'file-2']);
+
+    const job = tables.jobs[0];
+    const metadata = JSON.parse(job.metadata as string);
+    expect(metadata.user_id).toBe('user-1');
+    expect(metadata.kbImport).toEqual({ total: 2, processed: 2, imported: 2, failed: 0 });
+  });
+
+  it('counts missing staged rows as failures instead of throwing', async () => {
+    const result = await run(['missing-file']);
+
+    expect(result).toEqual({ total: 1, processed: 1, imported: 0, failed: 1 });
+  });
+
+  // This handler is what the Temporal activity executes, so whatever it hands
+  // createKbArticle is what lands in document_block_content. Images used to be
+  // flattened to alt text on the way through, which is the loss this asserts is
+  // gone -- from the job path, not just from the parser in isolation.
+  it('carries imported images through to the created article', async () => {
+    stageFile({
+      import_file_id: 'file-1',
+      filename: 'printer-guide.md',
+      content: '# Printer Guide\n\n![Spooler dialog](https://example.com/img/spooler.png)\n',
+    });
+    stageFile({
+      import_file_id: 'file-2',
+      filename: 'vpn-setup.html',
+      content: '<h1>VPN</h1><p><img src="/api/documents/view/abc" alt="VPN client" /></p>',
+    });
+
+    const result = await run(['file-1', 'file-2']);
+
+    expect(result).toEqual({ total: 2, processed: 2, imported: 2, failed: 0 });
+    const [, , markdownInput] = createKbArticleMock.mock.calls[0] as any[];
+    expect(markdownInput.content).toContainEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/spooler.png', caption: 'Spooler dialog' },
+    });
+    const [, , htmlInput] = createKbArticleMock.mock.calls[1] as any[];
+    expect(htmlInput.content).toContainEqual({
+      type: 'image',
+      props: { url: '/api/documents/view/abc', caption: 'VPN client' },
+    });
+  });
+
+  it('imports an article whose unsafe image degraded to alt text', async () => {
+    const row = stageFile({
+      import_file_id: 'file-1',
+      content: '# Printer Guide\n\n![Spooler dialog](javascript:alert(1))\n',
+    });
+
+    const result = await run(['file-1']);
+
+    expect(result).toEqual({ total: 1, processed: 1, imported: 1, failed: 0 });
+    const [, , input] = createKbArticleMock.mock.calls[0] as any[];
+    expect(JSON.stringify(input.content).toLowerCase()).not.toContain('script:');
+    expect(JSON.stringify(input.content)).toContain('Spooler dialog');
+    expect(row.status).toBe('imported');
+  });
+});

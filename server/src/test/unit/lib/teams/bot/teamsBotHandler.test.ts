@@ -342,7 +342,7 @@ describe('teamsBotHandler', () => {
     expect(response.suggestedActions?.actions.map((action) => action.value)).toContain('ticket <number>');
   });
 
-  it('T267/T268: non-personal Teams contexts return a clear personal-scope-only response', async () => {
+  it('T267/T268: channel messages without the channel_bot capability get the enablement card', async () => {
     const response = await handleTeamsBotActivity(
       {
         ...buildPersonalMessageActivity('my tickets'),
@@ -354,8 +354,45 @@ describe('teamsBotHandler', () => {
       { tenantIdHint: 'tenant-1' }
     );
 
-    expect(response.text).toContain('personal and group chats');
-    expect(response.attachments?.[0]?.content.title).toBe('Unsupported conversation type');
+    expect(response.text).toContain('not enabled for team channels');
+    expect(response.attachments?.[0]?.content.title).toBe('Channels not enabled');
+  });
+
+  it('T269: channel messages with the channel_bot capability run commands with the @mention stripped', async () => {
+    resolveTeamsTenantContextMock.mockResolvedValue({
+      status: 'resolved',
+      tenantId: 'tenant-1',
+      installStatus: 'active',
+      enabledCapabilities: ['personal_bot', 'personal_tab', 'message_extension', 'channel_bot'],
+      appId: 'teams-app-1',
+      botId: 'teams-app-1',
+      microsoftTenantId: 'entra-tenant-1',
+    });
+    executeTeamsActionMock.mockResolvedValue({
+      success: true,
+      actionId: 'my_tickets',
+      surface: 'bot',
+      operation: 'lookup',
+      summary: { title: 'My tickets', text: 'Found 1 assigned ticket.' },
+      links: [],
+      items: [],
+    });
+
+    const response = await handleTeamsBotActivity(
+      {
+        ...buildPersonalMessageActivity('<at>AlgaPSA</at> my tickets'),
+        conversation: {
+          id: '19:channel-1@thread.tacv2',
+          conversationType: 'channel',
+        },
+      },
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ actionId: 'my_tickets' })
+    );
+    expect(response.text).toContain('Found 1 assigned ticket');
   });
 
   it('T261/T263/T265: ticket lookups render cards with Teams/PSA buttons and only tenant-allowed follow-up command shortcuts for the resolved ticket', async () => {
@@ -2007,13 +2044,13 @@ describe('teamsBotHandler', () => {
     }
   });
 
-  it('T075: channel-scope messages get the friendly unsupported-scope reply with a docs link', async () => {
+  it('T075: unknown-scope messages get the friendly unsupported-scope reply with a docs link', async () => {
     const response = await handleTeamsBotActivity(
       {
         ...buildPersonalMessageActivity('my tickets'),
         conversation: {
           id: 'conversation-2',
-          conversationType: 'channel',
+          conversationType: 'meeting',
         },
       },
       { tenantIdHint: 'tenant-1' }

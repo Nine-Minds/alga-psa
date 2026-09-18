@@ -216,7 +216,7 @@ export default function FolderSelectorModal({
           type="button"
           onClick={() => setSelectedFolder(folder)}
           className={`block w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${
-            selectedFolder === folder ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))] font-medium border-l-2 border-[rgb(var(--color-primary-500))]' : 'text-gray-700 dark:text-[rgb(var(--color-text-400))]'
+            selectedFolder === folder ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-700))] font-medium border-l-2 border-[rgb(var(--color-primary-500))]' : 'text-gray-700 dark:text-[rgb(var(--color-text-400))]'
           }`}
           style={{ paddingLeft: `${(depth + 1) * 12 + 12}px` }}
         >
@@ -340,7 +340,7 @@ export default function FolderSelectorModal({
                 disabled={loading}
                 className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded transition-colors ${
                   showAllFolders
-                    ? 'text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))] bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-border-100))]'
+                    ? 'text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-700))] bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-border-100))]'
                     : 'text-gray-500 dark:text-[rgb(var(--color-text-400))] hover:text-gray-700 dark:hover:text-[rgb(var(--color-text-600))]'
                 }`}
               >
@@ -380,7 +380,7 @@ export default function FolderSelectorModal({
                   type="button"
                   onClick={() => setSelectedFolder(null)}
                   className={`block w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${
-                    selectedFolder === null ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))] font-medium border-l-2 border-[rgb(var(--color-primary-500))]' : 'text-gray-700 dark:text-[rgb(var(--color-text-400))]'
+                    selectedFolder === null ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-700))] font-medium border-l-2 border-[rgb(var(--color-primary-500))]' : 'text-gray-700 dark:text-[rgb(var(--color-text-400))]'
                   }`}
                 >
                   <div className="flex items-center gap-2">

@@ -32,6 +32,7 @@ export interface AllSessionsResponse {
 
 export interface AuthSessionPermissionError {
   readonly permissionError: string;
+  readonly messageKey?: string;
 }
 
 export interface RevokeSessionResult {
@@ -51,8 +52,8 @@ export interface RevokeAllSessionsResult {
   message: string;
 }
 
-function permissionError(message: string): AuthSessionPermissionError {
-  return { permissionError: message };
+function permissionError(message: string, messageKey?: string): AuthSessionPermissionError {
+  return { permissionError: message, ...(messageKey ? { messageKey } : {}) };
 }
 
 function revokeSessionFailure(message: string): RevokeSessionResult {
@@ -107,7 +108,7 @@ export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Pr
   );
 
   if (!canReadSecuritySettings) {
-    return permissionError('Permission denied: You do not have permission to view all sessions.');
+    return permissionError('Permission denied: You do not have permission to view all sessions.', 'msp/profile:errors.sessions.viewAllPermission');
   }
 
   const knex = await getConnection(tenant);

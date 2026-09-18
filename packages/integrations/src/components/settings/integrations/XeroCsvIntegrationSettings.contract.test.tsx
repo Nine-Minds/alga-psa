@@ -22,9 +22,39 @@ vi.mock('./XeroCsvClientSyncPanel', () => ({
   XeroCsvClientSyncPanel: () => <div data-testid="xero-csv-client-sync-panel">Xero CSV Client Sync</div>
 }));
 
+// The accounting-capability hook is exercised per-test through this mutable
+// state holder; default to a fully-capable user so the panels render their
+// content (an unauthenticated test session would otherwise show the
+// no-permission card).
+const accountingCapsState = vi.hoisted(() => ({
+  current: {
+    catalogRead: true,
+    connectionsManage: true,
+    mappingsManage: true,
+    exportsExecute: true,
+    remoteMutate: true,
+    hasAny: true,
+    loaded: true,
+  },
+}));
+
+vi.mock('./useAccountingCapabilities', () => ({
+  useAccountingCapabilities: () => accountingCapsState.current,
+}));
+
+
 describe('XeroCsvIntegrationSettings contracts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    accountingCapsState.current = {
+      catalogRead: true,
+      connectionsManage: true,
+      mappingsManage: true,
+      exportsExecute: true,
+      remoteMutate: true,
+      hasAny: true,
+      loaded: true,
+    };
     getXeroCsvSettingsMock.mockResolvedValue({
       setupAcknowledged: true,
       dateFormat: 'MM/DD/YYYY',
@@ -56,5 +86,18 @@ describe('XeroCsvIntegrationSettings contracts', () => {
     );
     expect(screen.getByTestId('xero-csv-mapping-manager')).toBeInTheDocument();
     expect(screen.getByTestId('xero-csv-client-sync-panel')).toBeInTheDocument();
+  });
+
+  it('hides the Accounting Exports link without exports_execute', async () => {
+    accountingCapsState.current = {
+      ...accountingCapsState.current,
+      exportsExecute: false,
+    };
+    const { default: XeroCsvIntegrationSettings } = await import('./XeroCsvIntegrationSettings');
+
+    render(<XeroCsvIntegrationSettings />);
+
+    expect(await screen.findByText('Xero CSV Integration')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open Accounting Exports' })).not.toBeInTheDocument();
   });
 });

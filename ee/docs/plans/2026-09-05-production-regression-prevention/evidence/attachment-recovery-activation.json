@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "kind": "local-execution",
+  "revision": "b4f931f24ea1e6409994a7dc2cabf6330134b08a",
+  "dirty": true,
+  "status": "passed",
+  "reports": [
+    {
+      "files": [
+        "server/src/test/integration/commentRecoveryScheduleDiscoveryIntegration.test.ts",
+        "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts"
+      ],
+      "counts": {
+        "passed": 58,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "reportSha256": "0a3e0a7714c868bdb802759c599f8e25ef0e96f490435a674f5e1ef940378358",
+      "limits": [
+        "Real migrated PostgreSQL, PgBoss transport/worker, SMTP provider and received attachment bytes; auth, storage download and publication dispatch seams remain substituted.",
+        "Focused two-file execution; not full integration or built email-service/browser coverage."
+      ]
+    },
+    {
+      "files": [
+        "packages/emulators/smtp-sink/tests/smoke.test.ts"
+      ],
+      "counts": {
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "reportSha256": "84dbc43622d5af3daa47bfcab0a3840c440dc21de3ccb43ec458d8e7f5abb529",
+      "limits": [
+        "SMTP emulator wire behavior using the server Vitest runner; the native workspace Vitest runner also passes four tests."
+      ]
+    }
+  ],
+  "regressionEvidence": {
+    "before": "New SMTP attachment/header assertion failed while the existing three SMTP tests passed; capture omitted received attachments and threading headers.",
+    "after": "All four tests pass, including exact binary PDF/inline-image bytes, threading headers and reset. Attachment order is deliberately unconstrained because MIME nesting determines parse order."
+  },
+  "ciPaths": {
+    "integration": [
+      ".github/workflows/integration-tests.yml"
+    ],
+    "smtp": ".github/workflows/e2e-fresh-install-tests.yaml"
+  },
+  "nativeFollowup": "Pending publication and execution on the next PR revision."
+}

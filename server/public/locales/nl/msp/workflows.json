@@ -60,8 +60,6 @@
       "runNow": "Nu uitvoeren",
       "exportCsv": "CSV exporteren",
       "refresh": "Vernieuwen",
-      "cancelSelected": "Selectie annuleren ({{count}})",
-      "clearSelection": "Selectie wissen",
       "details": "Details",
       "loadMore": "Meer laden",
       "preview": "Voorbeeld"
@@ -92,7 +90,12 @@
       "cancelMessage": "{{count}} geselecteerde uitvoering(en) annuleren? Dit kan niet ongedaan worden gemaakt.",
       "reasonLabel": "Reden",
       "cancelReasonPlaceholder": "Geef een reden voor annulering",
-      "cancelConfirm": "Uitvoeringen annuleren"
+      "cancelConfirm": "Uitvoeringen annuleren",
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "cancel": "Uitvoeringen annuleren",
+        "clear": "Selectie wissen"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Kan uitvoeringen niet laden",
@@ -1502,7 +1505,10 @@
     "start": "Start",
     "insertStepHere": "Stap hier invoegen",
     "emptyDisabled": "Nog geen stappen.",
-    "emptySelectPrompt": "Selecteer een stap in het paneel om te beginnen."
+    "emptySelectPrompt": "Selecteer een stap in het paneel om te beginnen.",
+    "patchSummary": {
+      "unchanged": "overige velden ongewijzigd"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Expressie-editor",
@@ -1618,6 +1624,37 @@
     "softEnumUseCustom": "\"{{value}}\" gebruiken",
     "expression": {
       "placeholder": "bv. payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Te wijzigen velden",
+      "targetFraming": "Deze stap werkt {{target}} bij.",
+      "summaryChanges": "Wijzigt {{list}}",
+      "summaryChangesMore": "Wijzigt {{list}} +{{count}} meer",
+      "unchangedNote": "Alle andere velden behouden hun huidige waarden.",
+      "emptyGuidance": "Voeg minimaal één te wijzigen veld toe.",
+      "editChanges": "Wijzigingen bewerken…",
+      "dialogTitle": "Wijzigingen bewerken",
+      "dialogDescription": "{{target}} wordt bijgewerkt. Alleen de rechts vermelde velden worden gewijzigd; al het andere behoudt de huidige waarde.",
+      "footerSummary": "{{count}} veld(en) worden gewijzigd · al het andere behoudt de huidige waarde",
+      "done": "Klaar",
+      "added": "Toegevoegd ✓",
+      "noChangesYet": "Nog geen wijzigingen. Kies links een veld om te beginnen.",
+      "setFieldTo": "Stel {{field}} in op",
+      "removeChange": "Dit veld niet meer wijzigen (het behoudt de huidige waarde)",
+      "advancedTitle": "Geavanceerd",
+      "group": {
+        "details": "Details",
+        "assignment": "Toewijzing",
+        "datesTags": "Datums en tags",
+        "advanced": "Geavanceerd"
+      },
+      "target": {
+        "genericRecord": "item",
+        "unset": "het hierboven geselecteerde {{record}}",
+        "fromReference": "het {{record}} uit \"{{source}}\"",
+        "fromExpression": "het {{record}} gekozen door een expressie",
+        "fixed": "een specifiek {{record}}"
+      }
     }
   },
   "schemaReference": {

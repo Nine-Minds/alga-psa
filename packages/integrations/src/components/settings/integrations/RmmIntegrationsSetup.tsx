@@ -17,8 +17,8 @@ import {
 } from '../../../lib/rmm/providerRegistry';
 import {
   getRmmIntegrationStatuses,
-  type RmmIntegrationStatus
 } from '../../../actions/integrations/rmmIntegrationStatusActions';
+import type { RmmIntegrationStatus } from '../../../lib/rmm/rmmIntegrationStatus';
 
 import TacticalRmmIntegrationSettings from './TacticalRmmIntegrationSettings';
 

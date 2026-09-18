@@ -1,7 +1,7 @@
 {
   "catalog": {
     "title": "Demandes de service",
-    "description": "Envoyez une demande structurée et nous créerons un ticket automatiquement.",
+    "description": "Envoyez une demande structurée et nous nous occupons du reste.",
     "myRequests": "Mes demandes",
     "empty": "Aucun service de demande n'est actuellement disponible.",
     "fallbackCategory": "Service",
@@ -56,7 +56,16 @@
     "attachmentsTitle": "Pièces jointes",
     "noAttachments": "Aucune pièce jointe incluse.",
     "fileIdLabel": "ID du fichier : {{id}}",
-    "fileTypeLabel": "Type : {{mime}}"
+    "fileTypeLabel": "Type : {{mime}}",
+    "versionLabel": "Version {{version}}",
+    "historyTitle": "Historique",
+    "historyEmpty": "Aucun historique enregistré pour le moment.",
+    "historyActor": "par {{actor}}",
+    "historyOperations": {
+      "service_request_submission_created": "Demande envoyée",
+      "service_request_submission_execution_succeeded": "Traitement terminé",
+      "service_request_submission_execution_failed": "Échec du traitement"
+    }
   },
   "recent": {
     "title": "Vos demandes récentes",

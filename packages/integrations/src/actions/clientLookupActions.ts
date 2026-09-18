@@ -148,9 +148,18 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
 
       if (existingBaseContact.client_id !== input.clientId) {
         if (!existingBaseContact.client_id) {
-          return actionError('A contact with this email address already exists in the system without a client assignment');
+          return actionError('A contact with this email address already exists in the system without a client assignment', 'msp/integrations:errors.clientLookup.contactWithoutClient');
         }
-        return actionError(`This email is already associated with ${existingClientName || 'another client'}`);
+        return existingClientName
+          ? actionError(
+              `This email is already associated with ${existingClientName}`,
+              'msp/integrations:errors.clientLookup.emailOnAnotherClientNamed',
+              { clientName: existingClientName },
+            )
+          : actionError(
+              'This email is already associated with another client',
+              'msp/integrations:errors.clientLookup.emailOnAnotherClient',
+            );
       }
 
       return {

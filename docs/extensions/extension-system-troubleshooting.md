@@ -7,7 +7,7 @@ Guided playbook for diagnosing and fixing AlgaPSA extension UI delivery when the
 `extensions` `runner` `docker` `minio` `ui`
 
 ## When to Use
-- Extension iframe in MSP app stays on “Starting extension / Loading extension UI…”
+- Extension iframe in MSP app stays on "Starting extension / Loading extension UI…"
 - Runner logs show `verify_archive fetch failed`, `strict validation on and tenant resolution failed`, or 404s for bundle assets.
 - After publishing/installing an extension locally and the UI never loads.
 
@@ -30,7 +30,7 @@ RUNNER_BUNDLE_STORE_BASE=http://host.docker.internal:9000/extensions \
 ```
 
 ### 2. Check Bundle Fetch
-- Watch for `verify archive fetch failed` or 404s; if present, the runner can’t locate `bundle.tar.zst`.
+- Watch for `verify archive fetch failed` or 404s; if present, the runner can't locate `bundle.tar.zst`.
 - Ensure MinIO has the tenant-scoped path:
 ```bash
 mc ls local/extensions/tenants/<tenant-id>/extensions/<ext-id>/sha256/<hash>/
@@ -48,7 +48,7 @@ node scripts/dev-install-extension.mjs --info <extension-id>
 - In the MSP app, ensure `buildExtUiSrc(...)` emits both query params (this is handled automatically after commit `HEAD`).
 
 ### 5. Frontend Spinner
-- The Docker iframe uses a hard stop gap: it toggles loading state on iframe `onLoad` or after 1.5 s.
+- The Docker iframe uses a hard stop gap: it toggles loading state on iframe `onLoad` or after 1.5 s.
 - If the spinner persists:
   1. Open Chrome DevTools MCP page list.
   2. Navigate to `http://localhost:8085/ext-ui/<ext-id>/<hash>/index.html?tenant=<tenant>`.
@@ -59,11 +59,35 @@ node scripts/dev-install-extension.mjs --info <extension-id>
 - Environment variable `EXT_STATIC_STRICT_VALIDATION=false` relaxes tenant enforcement for local dev.
 - For CI/production, keep it `true` and ensure host sets `x-tenant-id` before shipping.
 
+### 7. Content Security Policy (CSP) on Extension UI
+
+The Rust runner emits a `Content-Security-Policy` header on every extension HTML document (200, 304, and SPA fallback responses), plus `X-Content-Type-Options: nosniff` on all assets. This covers every extension automatically without per-file `<meta>` tags.
+
+If an extension's iframe is blocked by CSP (check for a CSP violation in the browser console), two environment variables control the policy:
+
+- **`EXT_UI_FRAME_ANCESTORS`** — appends the given value to the policy's `frame-ancestors` directive. Use this when an extension iframe is embedded inside a page served from a different origin:
+  ```
+  EXT_UI_FRAME_ANCESTORS=https://my-portal.example.com
+  ```
+- **`EXT_UI_CONTENT_SECURITY_POLICY`** — provides a complete replacement policy, overriding the runner's default entirely. Use this only when you need full control over the policy for a production deployment:
+  ```
+  EXT_UI_CONTENT_SECURITY_POLICY="default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self' https://trusted.example.com"
+  ```
+
+The legacy `EXT_UI_HOST_MODE=nextjs` path mirrors the same CSP headers.
+
+> **Local dev note**: CSP violations that block extension content are typically resolved by setting `EXT_UI_FRAME_ANCESTORS` rather than replacing the policy wholesale. Reserve `EXT_UI_CONTENT_SECURITY_POLICY` for production deployments with specific security requirements.
+
 ## Quick Reference Commands
 ```bash
 # Restart runner with correct bundle store and strict validation disabled
 RUNNER_BUNDLE_STORE_BASE=http://host.docker.internal:9000/extensions \
 EXT_STATIC_STRICT_VALIDATION=false \
+docker compose -f docker-compose.runner-dev.yml up --build -d extension-runner
+
+# Restart runner with a custom frame-ancestors (e.g. for iframe embedding)
+RUNNER_BUNDLE_STORE_BASE=http://host.docker.internal:9000/extensions \
+EXT_UI_FRAME_ANCESTORS=https://my-portal.example.com \
 docker compose -f docker-compose.runner-dev.yml up --build -d extension-runner
 
 # Tail runner logs
@@ -78,4 +102,3 @@ curl -I "http://localhost:8085/ext-ui/<ext-id>/<hash>/main.js"
 - The iframe URL builder now appends `extensionId` to queries; ensure any custom consumers follow the same pattern.
 - Browser testing via Chrome DevTools MCP requires pointing at the runner port (8085) and supplying the tenant query manually.
 - For persistent issues, re-run `npx vitest run ee/server/src/lib/extensions/__tests__/assets/url.shared.test.ts` to confirm URL builder behaviour.
-

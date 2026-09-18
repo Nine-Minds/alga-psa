@@ -71,6 +71,7 @@ const FEATURE_TRANSLATION_KEYS: Record<TIER_FEATURES, string> = {
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'features.teamsIntegration',
   [TIER_FEATURES.SCIM_PROVISIONING]: 'features.scimProvisioning',
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'features.advancedAuthorizationBundles',
+  [TIER_FEATURES.PBX_TELEPHONY]: 'features.pbxTelephony',
 };
 
 type AccountManagementProps = {
@@ -771,14 +772,6 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
       addBody: t('aiAssistant.addBody'),
       activeTitle: t('aiAssistant.activeTitle'),
       activeBody: t('aiAssistant.activeBody'),
-    },
-    {
-      addOn: ADD_ONS.TEAMS,
-      description: 'Connect AlgaPSA to Microsoft Teams with the personal tab, bot, message extension, quick actions, and activity notifications.',
-      addTitle: 'Add Microsoft Teams',
-      addBody: 'Purchase the Teams add-on to activate Microsoft Teams integration for this tenant.',
-      activeTitle: 'Teams add-on active',
-      activeBody: 'Microsoft Teams integration is available for this tenant.',
     },
     {
       addOn: ADD_ONS.ENTERPRISE,

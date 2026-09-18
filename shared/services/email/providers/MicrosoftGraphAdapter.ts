@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
 import type {
@@ -9,12 +9,21 @@ import type {
   DiagnosticsStepStatus,
 } from '../../../interfaces/microsoft365-diagnostics.interfaces';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
+import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
 import { getAdminConnection } from '../../../db/admin';
 import { tenantDb } from '@alga-psa/db';
 import {
   getMicrosoftGraphBaseUrl,
   getMicrosoftTokenUrl,
 } from '../microsoftGraphEndpoints';
+import {
+  buildTokenFingerprint as buildTokenFingerprintShared,
+  classifyGraphFailure as classifyGraphFailureShared,
+  computeOverallStatus as computeOverallStatusShared,
+  createDiagnosticsRunner,
+  decodeJwtPayload as decodeJwtPayloadShared,
+  extractGraphIds as extractGraphIdsShared,
+} from '../../diagnostics';
 
 export type MicrosoftSubscriptionErrorKind = 'validation' | 'authentication' | 'other';
 
@@ -159,7 +168,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     if (this.authenticatedUserEmail) {
       // Normalize emails for comparison (case-insensitive)
       const normalizedConfigured = configuredMailbox.toLowerCase();
-      const normalizedAuthenticated = this.authenticatedUserEmail.toLowerCase();
+      const normalizedAuthenticated = this.authenticatedUserEmail.trim().toLowerCase();
 
       // If they match, this is the authenticated user's personal mailbox → use /me
       if (normalizedConfigured === normalizedAuthenticated) {
@@ -358,7 +367,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      const isHosted = (process.env.DEPLOYMENT_PROFILE || 'hosted').trim().toLowerCase() !== 'appliance';
+      const isHosted = resolveDeploymentCapabilities().microsoftOAuth.sharedApp;
 
       // Hosted uses Alga's shared multi-tenant Microsoft app, so preserve the
       // tenant-independent authority used when the refresh grant was issued.
@@ -488,7 +497,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       throw new Error('Microsoft sending mailbox is not configured');
     }
 
-    const endpoint = `/users/${encodeURIComponent(mailbox)}/sendMail`;
+    const endpoint = `${this.getMailboxBasePath()}/sendMail`;
     const send = () => payload.kind === 'mime'
       ? this.httpClient.post(endpoint, payload.content, {
           headers: { 'Content-Type': 'text/plain' },
@@ -600,6 +609,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       if (!webhookUrl) {
         throw new Error('Webhook notification URL not configured');
       }
+      const verificationToken = await this.ensurePersistedWebhookVerificationToken();
 
       const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
       const { resource, resolvedFolder } = await this.buildFolderResourcePath(desiredFolder);
@@ -612,7 +622,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         expirationDateTime: new Date(
           Date.now() + MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS
         ).toISOString(),
-        clientState: this.config.webhook_verification_token || 'email-webhook-verification',
+        clientState: verificationToken,
       };
 
       // Log payload with masked clientState for diagnostics
@@ -649,7 +659,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           .update({
             webhook_subscription_id: response.data.id,
             webhook_expires_at: response.data.expirationDateTime,
-            webhook_verification_token: this.config.webhook_verification_token || null,
+            webhook_verification_token: verificationToken,
             delivery_mode: 'webhook',
             webhook_silent_runs: 0,
             next_subscription_probe_at: null,
@@ -683,6 +693,29 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         { cause: error }
       );
     }
+  }
+
+  private async ensurePersistedWebhookVerificationToken(): Promise<string> {
+    const current = this.config.webhook_verification_token;
+    const token = !current || current === 'email-webhook-verification' || current === this.config.tenant
+      ? randomBytes(32).toString('hex')
+      : current;
+    try {
+      const knex = await getAdminConnection();
+      const updated = await tenantDb(knex, this.config.tenant)
+        .table('microsoft_email_provider_config')
+        .where('email_provider_id', this.config.id)
+        .update({ webhook_verification_token: token, updated_at: new Date().toISOString() });
+      if (!updated) {
+        throw new Error(`Microsoft provider config ${this.config.id} was not found while persisting webhook verification token`);
+      }
+    } catch (error: any) {
+      // Preserve the DB error as the subscription error's direct cause so the
+      // caller can compensate any preceding external side effects accurately.
+      throw error;
+    }
+    this.config.webhook_verification_token = token;
+    return token;
   }
 
   /**
@@ -804,7 +837,12 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         inReplyTo: message.internetMessageHeaders?.find((h: any) => h.name === 'In-Reply-To')?.value,
         tenant: this.config.tenant,
         headers: message.internetMessageHeaders?.reduce((acc: any, header: any) => {
-          acc[header.name] = header.value;
+          const headerName = String(header?.name || '');
+          const normalizedHeaderName = headerName.toLowerCase();
+          if (normalizedHeaderName.startsWith('x-resolved-') || normalizedHeaderName.startsWith('x-list-')) {
+            return acc;
+          }
+          acc[headerName] = header.value;
           return acc;
         }, {}),
         messageSize: message.bodyPreview?.length,
@@ -882,6 +920,54 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
   }
 
+  /** Resolve the Graph parent folder for a fetched message. */
+  async getMessageParentFolderId(messageId: string): Promise<string | null> {
+    try {
+      const response = await this.httpClient.get(`${this.getMailboxBasePath()}/messages/${messageId}`, {
+        params: { $select: 'parentFolderId' },
+      });
+      return typeof response.data?.parentFolderId === 'string' && response.data.parentFolderId
+        ? response.data.parentFolderId
+        : null;
+    } catch (error) {
+      throw this.handleError(error, 'getMessageParentFolderId');
+    }
+  }
+
+  /** Resolve configured folder IDs (well-known names, display names, or IDs). */
+  async resolveFolderIds(folderFilters: unknown): Promise<Set<string>> {
+    const rawFilters = Array.isArray(folderFilters)
+      ? folderFilters
+      : typeof folderFilters === 'string'
+        ? (() => { try { return JSON.parse(folderFilters); } catch { return [folderFilters]; } })()
+        : [];
+    const filters = (Array.isArray(rawFilters) ? rawFilters : [])
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .map((value) => value.trim());
+    const requested = filters.length ? filters : ['Inbox'];
+    const mailboxBase = this.getMailboxBasePath();
+    const folders = await this.httpClient.get(`${mailboxBase}/mailFolders`, {
+      params: { $select: 'id,displayName' },
+    });
+    const resolved = new Set<string>();
+    for (const filter of requested) {
+      const normalized = filter.toLowerCase().replace(/\s+/g, '');
+      const wellKnown = normalized === 'inbox' ? 'inbox' : undefined;
+      if (wellKnown) {
+        const response = await this.httpClient.get(`${mailboxBase}/mailFolders/${wellKnown}`, {
+          params: { $select: 'id' },
+        });
+        if (response.data?.id) resolved.add(String(response.data.id));
+        continue;
+      }
+      const match = (folders.data?.value || []).find((folder: any) =>
+        String(folder.id) === filter || String(folder.displayName || '').toLowerCase() === filter.toLowerCase(),
+      );
+      if (match?.id) resolved.add(String(match.id));
+    }
+    return resolved;
+  }
+
   /**
    * Test the connection to Microsoft Graph
    */
@@ -917,30 +1003,19 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
   }
 
+  // These helpers are shared with the Entra diagnostics engine. They are kept
+  // as thin instance methods so existing call sites and the email report
+  // contract are unchanged.
   private buildTokenFingerprint(token?: string): string | undefined {
-    if (!token) return undefined;
-    return `${token.slice(0, 4)}...(${token.length})`;
+    return buildTokenFingerprintShared(token);
   }
 
   private decodeJwtPayload(token: string): Record<string, any> | null {
-    try {
-      const parts = token.split('.');
-      if (parts.length < 2) return null;
-      const payload = parts[1];
-      const padded = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=');
-      const json = Buffer.from(padded, 'base64').toString('utf8');
-      return JSON.parse(json);
-    } catch {
-      return null;
-    }
+    return decodeJwtPayloadShared(token);
   }
 
   private extractGraphIds(headers: any): { requestId?: string; clientRequestId?: string } {
-    const lower = (k: string) => (headers?.[k] ?? headers?.[k.toLowerCase()]);
-    return {
-      requestId: lower('request-id'),
-      clientRequestId: lower('client-request-id'),
-    };
+    return extractGraphIdsShared(headers);
   }
 
   private classifyGraphFailure(error: any): {
@@ -951,26 +1026,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     clientRequestId?: string;
     responseBody?: unknown;
   } {
-    const res = error?.response;
-    // Already-sanitized errors (e.g. from token refresh inside the request
-    // interceptor) carry status/code/responseBody at the top level.
-    const status = res?.status ?? error?.status;
-    const body = res?.data ?? error?.responseBody;
-    const graphErr = body?.error || body;
-    const message =
-      graphErr?.message ||
-      error?.message ||
-      (typeof error === 'string' ? error : 'Unknown error');
-    const code = graphErr?.code || (status ? String(status) : undefined);
-    const ids = this.extractGraphIds(res?.headers);
-    return {
-      status,
-      code,
-      message,
-      requestId: ids.requestId,
-      clientRequestId: ids.clientRequestId,
-      responseBody: body,
-    };
+    return classifyGraphFailureShared(error);
   }
 
   private toSanitizedGraphError(error: unknown, context: string): Error {
@@ -987,6 +1043,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       code: failure.code,
       requestId: failure.requestId,
       responseBody: failure.responseBody,
+      // Keep only the retry header across the sanitization boundary, never the
+      // Axios request/config (which can contain the mailbox access token).
+      retryAfter: (error as any)?.response?.headers?.['retry-after'] ?? (error as any)?.retryAfter,
     });
     return wrapped;
   }
@@ -1034,9 +1093,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   }
 
   private computeOverallStatus(steps: Microsoft365DiagnosticsStep[]): DiagnosticsStepStatus {
-    if (steps.some((s) => s.status === 'fail')) return 'fail';
-    if (steps.some((s) => s.status === 'warn')) return 'warn';
-    return 'pass';
+    return computeOverallStatusShared(steps);
   }
 
   /**
@@ -1047,7 +1104,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   async runMicrosoft365Diagnostics(options: Microsoft365DiagnosticsOptions = {}): Promise<Microsoft365DiagnosticsReport> {
     const startedAt = new Date().toISOString();
-    const steps: Microsoft365DiagnosticsStep[] = [];
     const recommendations = new Set<string>();
 
     const requiredScopes = options.requiredScopes?.length
@@ -1056,43 +1112,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
     const folderListTop = Math.max(1, Math.min(options.folderListTop ?? 100, 250));
 
-    const addStep = (step: Microsoft365DiagnosticsStep) => steps.push(step);
-
-    const runStep = async (id: string, title: string, fn: () => Promise<Omit<Microsoft365DiagnosticsStep, 'id' | 'title' | 'startedAt' | 'durationMs'>>): Promise<void> => {
-      const stepStarted = Date.now();
-      const stepIso = new Date().toISOString();
-      try {
-        const partial = await fn();
-        addStep({
-          id,
-          title,
-          startedAt: stepIso,
-          durationMs: Date.now() - stepStarted,
-          status: partial.status,
-          http: partial.http,
-          data: partial.data,
-          error: partial.error,
-        });
-      } catch (e: any) {
-        const classified = this.classifyGraphFailure(e);
-        this.mapRecommendations({ ...classified, missingScopes: undefined }).forEach((r) => recommendations.add(r));
-        addStep({
-          id,
-          title,
-          startedAt: stepIso,
-          durationMs: Date.now() - stepStarted,
-          status: 'fail',
-          error: {
-            message: classified.message,
-            status: classified.status,
-            code: classified.code,
-            requestId: classified.requestId,
-            clientRequestId: classified.clientRequestId,
-            responseBody: classified.responseBody,
-          },
-        });
-      }
-    };
+    // Generic timed runner shared with the Entra diagnostics engine.
+    const runner = createDiagnosticsRunner({
+      classifyError: (error) => this.classifyGraphFailure(error),
+      onError: (error) => {
+        const classified = this.classifyGraphFailure(error);
+        this.mapRecommendations({ ...classified, missingScopes: undefined }).forEach((r) =>
+          recommendations.add(r)
+        );
+      },
+    });
+    const steps: Microsoft365DiagnosticsStep[] = runner.steps;
+    const runStep = runner.runStep;
 
     // Step: load credentials (tokens present)
     await runStep('tokens_present', 'Load stored OAuth tokens', async () => {

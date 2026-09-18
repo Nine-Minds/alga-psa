@@ -148,6 +148,7 @@ describe('asset type registry action RBAC (T307)', () => {
     h.permissionState.read = false;
     await expect(getAssetTypes()).resolves.toEqual({
       permissionError: 'Permission denied: Cannot read asset types',
+      messageKey: 'msp/assets:errors.permissions.readAssetTypes',
     });
     expect(hasPermissionMock).toHaveBeenCalledWith(h.mockUser, 'asset', 'read');
   });
@@ -156,6 +157,7 @@ describe('asset type registry action RBAC (T307)', () => {
     h.permissionState.read = false;
     await expect(getAssetType('workstation')).resolves.toEqual({
       permissionError: 'Permission denied: Cannot read asset types',
+      messageKey: 'msp/assets:errors.permissions.readAssetTypes',
     });
   });
 
@@ -186,6 +188,7 @@ describe('asset type registry action RBAC (T307)', () => {
     h.permissionState.systemUpdate = false;
     await expect(createAssetTypeAction({ name: 'Door Access' })).resolves.toEqual({
       permissionError: 'Permission denied: Cannot manage asset types',
+      messageKey: 'msp/assets:errors.permissions.manageAssetTypes',
     });
     expect(hasPermissionMock).toHaveBeenCalledWith(h.mockUser, 'system_settings', 'update');
     expect(h.dbState.asset_type_registry).toHaveLength(0);
@@ -195,6 +198,7 @@ describe('asset type registry action RBAC (T307)', () => {
     h.permissionState.systemUpdate = false;
     await expect(updateAssetTypeAction('door_access', { name: 'Doors' })).resolves.toEqual({
       permissionError: 'Permission denied: Cannot manage asset types',
+      messageKey: 'msp/assets:errors.permissions.manageAssetTypes',
     });
   });
 
@@ -202,6 +206,7 @@ describe('asset type registry action RBAC (T307)', () => {
     h.permissionState.systemUpdate = false;
     await expect(deleteAssetTypeAction('door_access')).resolves.toEqual({
       permissionError: 'Permission denied: Cannot manage asset types',
+      messageKey: 'msp/assets:errors.permissions.manageAssetTypes',
     });
   });
 

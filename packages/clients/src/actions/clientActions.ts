@@ -1,13 +1,15 @@
 'use server'
 
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
+import { resolveProductCode } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
-import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
+import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients/taxSettings';
+import { parseClientCsvBoolean } from '../lib/clientCsvFields';
 import { revalidatePath } from 'next/cache';
-import { withAuth } from '@alga-psa/auth';
+import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
   assertMspOrClientPortalOwnClientPermission,
   assertMspPermission,
@@ -42,6 +44,7 @@ import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
+import { resolveTenantDefaultCountry } from '../lib/tenantDefaultCountry';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -85,40 +88,56 @@ function updateClientExpectedErrorFrom(error: unknown, clientName?: string | nul
       return permissionError(error.message);
     }
     if (/unauthorized|not authenticated|must sign in/i.test(error.message)) {
-      return permissionError('You must be signed in to manage clients.');
+      return permissionError('You must be signed in to manage clients.', 'msp/clients:errors.client.signInRequired');
     }
     if (error.message === 'Client not found') {
-      return actionError('Client not found');
+      return actionError('Client not found', 'msp/clients:errors.client.notFound');
     }
   }
 
   const dbError = error as { code?: string; constraint?: string; column?: string; message?: string };
   if (dbError?.code === '23505') {
     if (dbError.constraint?.includes('clients_tenant_client_name_unique')) {
-      return actionError(`A client with the name "${clientName || 'this name'}" already exists. Please choose a different name.`);
+      return actionError(
+        `A client with the name "${clientName || 'this name'}" already exists. Please choose a different name.`,
+        'msp/clients:errors.client.duplicateName',
+        { name: clientName || 'this name' },
+      );
     }
-    return actionError('A client with these details already exists. Please check the client name.');
+    return actionError('A client with these details already exists. Please check the client name.', 'msp/clients:errors.client.duplicate');
   }
   if (dbError?.code === '23503') {
-    return actionError('Referenced data not found. Please check account manager, billing contact, and related client settings.');
+    return actionError('Referenced data not found. Please check account manager, billing contact, and related client settings.', 'msp/clients:errors.client.referencedDataMissing');
   }
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected client values is invalid. Please refresh and try again.');
+    return actionError('One of the selected client values is invalid. Please refresh and try again.', 'msp/clients:errors.client.invalidValue');
   }
   if (dbError?.code === '23514') {
-    return actionError('Invalid client data provided. Please check all fields and try again.');
+    return actionError('Invalid client data provided. Please check all fields and try again.', 'msp/clients:errors.client.invalidData');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required client field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required client field: ${dbError.column}.`,
+          'msp/clients:errors.client.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required client field.', 'msp/clients:errors.client.missingField');
   }
 
   return null;
 }
 
-function clientActionMessageFrom(error: unknown, fallback: string, clientName?: string | null): string {
+// Callers here report failure as a bare string instead of returning the payload,
+// so withAuth's boundary never sees the messageKey. Localize before flattening,
+// otherwise the key travels the whole way and is discarded at the last step.
+async function clientActionMessageFrom(error: unknown, fallback: string, clientName?: string | null): Promise<string> {
   const expected = updateClientExpectedErrorFrom(error, clientName);
   if (expected) {
-    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    const candidate = (await localizeActionError(expected)) as unknown as {
+      actionError?: unknown;
+      permissionError?: unknown;
+    };
     return typeof candidate.actionError === 'string'
       ? candidate.actionError
       : String(candidate.permissionError ?? fallback);
@@ -580,15 +599,20 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
         clientId: created.client_id,
       });
 
+      // Tax initialization must share the client transaction: a failure (for
+      // example, no active tax rate) must not leave a partially created client.
+      // AlgaDesk has no billing tax setup and keeps its existing exemption.
+      const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
+      if (resolveProductCode(tenantRow?.product_code).productCode !== 'algadesk') {
+        await createDefaultTaxSettings(trx, tenant, created.client_id);
+      }
+
       return created;
     });
 
     if (!createdClient) {
       throw new Error('Client insert completed without returning the created record.');
     }
-
-    // Create default tax settings for the new client
-    await createDefaultTaxSettingsAsync(createdClient.client_id);
 
     // Email suffix functionality removed for security
 
@@ -619,7 +643,14 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
 
     const expected = updateClientExpectedErrorFrom(error, client.client_name);
     if (expected) {
-      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+      // This action reports failure as a bare string rather than returning the
+      // payload, so withAuth's boundary never sees a messageKey to act on.
+      // Localize here instead, or the key would be carried all this way and
+      // then thrown away.
+      const candidate = (await localizeActionError(expected)) as unknown as {
+        actionError?: unknown;
+        permissionError?: unknown;
+      };
       return {
         success: false,
         error: typeof candidate.permissionError === 'string'
@@ -1343,7 +1374,7 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: clientActionMessageFrom(error, 'Failed to delete client'),
+      message: await clientActionMessageFrom(error, 'Failed to delete client'),
       dependencies: [],
       alternatives: []
     };
@@ -1645,12 +1676,19 @@ export const importClientsFromCSV = withAuth(async (
     countries.map((country) => [country.name.trim().toLowerCase(), country]),
   );
 
+  // A row that names no country adopts the tenant's own country, and only then US.
+  const tenantDefaultCountry = await resolveTenantDefaultCountry(db, tenant);
+  const fallbackCountry = (tenantDefaultCountry
+    ? countriesByCode.get(tenantDefaultCountry.code.toUpperCase())
+    : undefined)
+    ?? countriesByCode.get('US');
+
   const resolveRowCountry = (row: Record<string, any>): ImportCountry => {
     const rawCode = String(row.country_code ?? '').trim();
     const rawName = String(row.country ?? '').trim();
     const country = (rawCode ? countriesByCode.get(rawCode.toUpperCase()) : undefined)
       ?? (rawName ? countriesByName.get(rawName.toLowerCase()) : undefined)
-      ?? (!rawCode && !rawName ? countriesByCode.get('US') : undefined);
+      ?? (!rawCode && !rawName ? fallbackCountry : undefined);
 
     if (!country) {
       throw new Error(`Unknown country: ${rawCode || rawName}`);
@@ -1659,8 +1697,7 @@ export const importClientsFromCSV = withAuth(async (
     return country;
   };
 
-  const parseCsvBoolean = (value: unknown): boolean =>
-    value === true || value === 'true' || value === 'Yes';
+  const parseCsvBoolean = parseClientCsvBoolean;
 
   const hasLocationData = (row: Record<string, any>): boolean =>
     Boolean(row.email || row.phone_number || row.address_line1 || row.city || row.location_name);
@@ -1969,7 +2006,7 @@ export const uploadClientLogo = withAuth(async (
     return { success: true, logoUrl: result.imageUrl };
   } catch (error) {
     console.error('[uploadClientLogo] Error during upload process:', error);
-    const message = clientActionMessageFrom(error, 'Failed to upload client logo');
+    const message = await clientActionMessageFrom(error, 'Failed to upload client logo');
     return { success: false, message };
   }
 });
@@ -2009,7 +2046,7 @@ export const deleteClientLogo = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error deleting client logo:', error);
-    const message = clientActionMessageFrom(error, 'Failed to delete client logo');
+    const message = await clientActionMessageFrom(error, 'Failed to delete client logo');
     return { success: false, message };
   }
 });
@@ -2063,7 +2100,7 @@ export const deactivateClientContacts = withAuth(async (
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
     console.error('Error deactivating client contacts:', error);
-    const message = clientActionMessageFrom(error, 'Failed to deactivate client contacts');
+    const message = await clientActionMessageFrom(error, 'Failed to deactivate client contacts');
     return { success: false, contactsDeactivated: 0, message };
   }
 });
@@ -2144,7 +2181,7 @@ export const markClientInactiveWithContacts = withAuth(async (
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
     console.error('Error marking client and contacts as inactive:', error);
-    const message = clientActionMessageFrom(error, 'Failed to mark client as inactive');
+    const message = await clientActionMessageFrom(error, 'Failed to mark client as inactive');
     return { success: false, contactsDeactivated: 0, message };
   }
 });
@@ -2213,7 +2250,7 @@ export const markClientActiveWithContacts = withAuth(async (
     return { success: true, contactsReactivated: result.contactsReactivated };
   } catch (error) {
     console.error('Error marking client and contacts as active:', error);
-    const message = clientActionMessageFrom(error, 'Failed to mark client as active');
+    const message = await clientActionMessageFrom(error, 'Failed to mark client as active');
     return { success: false, contactsReactivated: 0, message };
   }
 });
@@ -2267,7 +2304,7 @@ export const reactivateClientContacts = withAuth(async (
     return { success: true, contactsReactivated: result.contactsReactivated };
   } catch (error) {
     console.error('Error reactivating client contacts:', error);
-    const message = clientActionMessageFrom(error, 'Failed to reactivate client contacts');
+    const message = await clientActionMessageFrom(error, 'Failed to reactivate client contacts');
     return { success: false, contactsReactivated: 0, message };
   }
 });

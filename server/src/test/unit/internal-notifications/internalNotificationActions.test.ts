@@ -813,6 +813,7 @@ describe('internalNotificationActions data access', () => {
         })
       ).resolves.toEqual({
         actionError: 'Notification template not found. It may have been deleted. Please refresh and try again.',
+        messageKey: 'msp/settings:errors.notifications.templateNotFound',
       });
       expect(currentDb!.tables.internal_notifications).toHaveLength(0);
       expect(broadcastNotificationMock).not.toHaveBeenCalled();
@@ -1035,6 +1036,7 @@ describe('internalNotificationActions data access', () => {
 
       await expect(markAsReadAction('tenant-1', 'user-1', 'nonexistent-uuid')).resolves.toEqual({
         actionError: 'Notification not found. It may have already been updated or deleted.',
+        messageKey: 'msp/settings:errors.notifications.notificationNotFound',
       });
       expect(broadcastNotificationReadMock).not.toHaveBeenCalled();
     });
@@ -1051,6 +1053,7 @@ describe('internalNotificationActions data access', () => {
       authHoisted.sessionUser.user_id = 'other-user';
       await expect(markAsReadAction('tenant-1', 'other-user', NOTIFICATION_UUID_1)).resolves.toEqual({
         actionError: 'Notification not found. It may have already been updated or deleted.',
+        messageKey: 'msp/settings:errors.notifications.notificationNotFound',
       });
       expect(broadcastNotificationReadMock).not.toHaveBeenCalled();
       const row = currentDb.tables.internal_notifications[0];

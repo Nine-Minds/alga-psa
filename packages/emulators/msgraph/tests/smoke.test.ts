@@ -1,8 +1,10 @@
+import { changeNotifications } from './contracts/notifications';
 import http from 'node:http';
-import { createLocalJWKSet, jwtVerify } from 'jose';
+import { createLocalJWKSet, decodeJwt, jwtVerify } from 'jose';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraphEmulator from '../src/index';
+import { oauthTokenResponse } from './contracts/oauth';
 
 /**
  * Parity port of test-harness/graph-emulator/smoke.test.mjs, driven through
@@ -110,7 +112,8 @@ describe('msgraph emulator', { shuffle: false }, () => {
 
     const redirectUri = 'http://localhost/callback';
     const authorize = new URL(`${base}/common/oauth2/v2.0/authorize`);
-    authorize.search = new URLSearchParams({ client_id: 'premise-app', redirect_uri: redirectUri, state: 'st' }).toString();
+    const scope = 'https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Send offline_access';
+    authorize.search = new URLSearchParams({ client_id: 'premise-app', redirect_uri: redirectUri, state: 'st', scope }).toString();
     const authResponse = await fetch(authorize, { redirect: 'manual' });
     expect(authResponse.status).toBe(302);
     const location = new URL(authResponse.headers.get('location')!);
@@ -123,6 +126,12 @@ describe('msgraph emulator', { shuffle: false }, () => {
     );
     expect(tokenResponse.status).toBe(200);
     const tokens = await tokenResponse.json();
+    expect(oauthTokenResponse.safeParse(tokens).success).toBe(true);
+    // Deliberate wire-response drift must fail even if a token is present.
+    expect(oauthTokenResponse.safeParse({ ...tokens, expires_in: String(tokens.expires_in) }).success).toBe(false);
+    expect(oauthTokenResponse.safeParse({ ...tokens, token_type: 'Basic' }).success).toBe(false);
+    const delegatedScopes = (token: string) => JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).scp;
+    expect(delegatedScopes(tokens.access_token)).toBe('Mail.Read Mail.Send offline_access');
     expect(tokens.refresh_token).toBeTruthy();
 
     const wrongClient = await fetch(
@@ -137,6 +146,8 @@ describe('msgraph emulator', { shuffle: false }, () => {
     );
     expect(refreshed.status).toBe(200);
     const refreshedTokens = await refreshed.json();
+    expect(oauthTokenResponse.safeParse(refreshedTokens).success).toBe(true);
+    expect(delegatedScopes(refreshedTokens.access_token)).toBe('Mail.Read Mail.Send offline_access');
     accessToken = refreshedTokens.access_token;
     refreshToken = refreshedTokens.refresh_token;
   });
@@ -226,6 +237,7 @@ describe('msgraph emulator', { shuffle: false }, () => {
       }),
     });
     expect(subscription.status).toBe(201);
+    const savedSubscription = await subscription.json() as any;
 
     const badSubscription = await fetch(`${base}/v1.0/subscriptions`, {
       method: 'POST',
@@ -251,6 +263,23 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect(raw.headers.get('content-type')).toContain('message/rfc822');
     expect(await raw.text()).toContain('Subject: Backfill me');
 
+    expect(changeNotifications.safeParse(notifications[0]).success).toBe(true);
+    expect(notifications[0].value[0]).toMatchObject({
+      subscriptionId: savedSubscription.id,
+      subscriptionExpirationDateTime: savedSubscription.expirationDateTime,
+      tenantId: decodeJwt(accessToken).tid,
+    });
+    for (const field of ['subscriptionId', 'subscriptionExpirationDateTime', 'tenantId', 'changeType', 'resource']) {
+      const malformed = structuredClone(notifications[0]);
+      delete malformed.value[0][field];
+      expect(changeNotifications.safeParse(malformed).success, field).toBe(false);
+    }
+    for (const [field, value] of Object.entries({ subscriptionId: 'not-a-guid', tenantId: 'not-a-guid',
+      subscriptionExpirationDateTime: 'not-a-date', changeType: 'upserted' })) {
+      const malformed = structuredClone(notifications[0]);
+      malformed.value[0][field] = value;
+      expect(changeNotifications.safeParse(malformed).success, field).toBe(false);
+    }
     expect(notifications[0].value[0].resourceData.id).toBe(message.id);
     expect(notifications[0].value[0].clientState).toBe('secret-state');
   });
@@ -277,6 +306,15 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect(directoryUser.ok).toBe(true);
 
     const headers = { authorization: `Bearer ${accessToken}` };
+    // Graph accepts both the immutable id and userPrincipalName as the user key.
+    // https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0
+    for (const key of ['user-ada', 'ada@contoso.example']) {
+      const response = await fetch(`${base}/v1.0/users/${encodeURIComponent(key)}`, { headers });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ id: 'user-ada', userPrincipalName: 'ada@contoso.example' });
+    }
+    const unknown = await fetch(`${base}/v1.0/users/missing%40contoso.example`, { headers });
+    expect(unknown.status).toBe(404);
     const organizations = await (await fetch(`${base}/v1.0/organization`, { headers })).json();
     expect(organizations.value).toEqual([
       expect.objectContaining({
@@ -392,6 +430,7 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect(tokenResponse.status).toBe(200);
     const tokens = await tokenResponse.json();
     expect(tokens.refresh_token).toBeUndefined();
+    expect(oauthTokenResponse.safeParse(tokens).success).toBe(true);
     botToken = tokens.access_token;
 
     const headers = { authorization: `Bearer ${botToken}`, 'content-type': 'application/json' };
@@ -493,6 +532,110 @@ describe('msgraph emulator', { shuffle: false }, () => {
     // Delegated tokens are the other way round.
     expect(claimsOf(accessToken).scp).toBeTruthy();
     expect(claimsOf(accessToken).roles).toBeUndefined();
+  });
+
+  it('serves the meetings loop: events, join-URL resolution, artifacts, and change notifications', async () => {
+    const headers = { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' };
+    const organizer = encodeURIComponent('organizer@contoso.example');
+
+    // Create an online-meeting event the way createTeamsMeeting does.
+    const eventResponse = await fetch(`${base}/v1.0/users/${organizer}/events`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        subject: 'Kickoff',
+        start: { dateTime: '2026-08-13T10:00:00Z', timeZone: 'UTC' },
+        end: { dateTime: '2026-08-13T10:30:00Z', timeZone: 'UTC' },
+        isOnlineMeeting: true,
+        onlineMeetingProvider: 'teamsForBusiness',
+      }),
+    });
+    expect(eventResponse.status).toBe(201);
+    const event = (await eventResponse.json()) as any;
+    expect(event.onlineMeeting.joinUrl).toContain('meetup-join');
+
+    // Resolve the meeting id from the join URL ($filter), as the app does.
+    const filter = encodeURIComponent(`JoinWebUrl eq '${event.onlineMeeting.joinUrl}'`);
+    const resolved = (await (
+      await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings?%24filter=${filter}`, { headers })
+    ).json()) as any;
+    expect(resolved.value).toHaveLength(1);
+    const meetingId = resolved.value[0].id;
+
+    // Organizer verification probe: create + delete a throwaway meeting.
+    const probe = await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ subject: 'verification', startDateTime: '2026-08-13T11:00:00Z', endDateTime: '2026-08-13T11:15:00Z' }),
+    });
+    expect(probe.status).toBe(201);
+    const probeId = ((await probe.json()) as any).id;
+    expect(
+      (await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings/${probeId}`, { method: 'DELETE', headers })).status,
+    ).toBe(204);
+
+    // Artifact subscription (getAllRecordings), then seed a recording: the
+    // change notification must reach the webhook with the parseable resource.
+    const subscription = await fetch(`${base}/v1.0/subscriptions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        changeType: 'created,updated',
+        notificationUrl: `http://127.0.0.1:${webhookPort}/webhook`,
+        resource: 'communications/onlineMeetings/getAllRecordings',
+        expirationDateTime: new Date(Date.now() + 3_600_000).toISOString(),
+        clientState: 'teams-online-meeting-artifacts:tenant-1:recordings:secret',
+      }),
+    });
+    expect(subscription.status).toBe(201);
+
+    const notificationsBefore = notifications.length;
+    const seeded = await controlPost('/control/msgraph/seed/meeting-recording', { meetingId });
+    expect(seeded.ok).toBe(true);
+    expect(seeded.result.deliveries).toHaveLength(1);
+    expect(seeded.result.deliveries[0].delivered).toBe(true);
+    const artifactNotification = notifications[notificationsBefore];
+    expect(changeNotifications.safeParse(artifactNotification).success).toBe(true);
+    expect(artifactNotification.value[0].resource).toBe(
+      `communications/onlineMeetings('${meetingId}')/recordings('${seeded.result.artifact.id}')`,
+    );
+    expect(artifactNotification.value[0].clientState).toContain('recordings:secret');
+
+    // The artifact lists and content endpoints the fetcher reads.
+    const recordings = (await (
+      await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}/recordings`, { headers })
+    ).json()) as any;
+    expect(recordings.value).toHaveLength(1);
+    const recordingContent = await fetch(
+      `${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}/recordings/${recordings.value[0].id}/content`,
+      { headers },
+    );
+    expect(recordingContent.headers.get('content-type')).toContain('video/mp4');
+
+    await controlPost('/control/msgraph/seed/meeting-transcript', { meetingId, content: 'WEBVTT\n\n00:00.000 --> 00:02.000\nHi' });
+    const transcripts = (await (
+      await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}/transcripts`, { headers })
+    ).json()) as any;
+    const transcriptContent = await fetch(
+      `${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}/transcripts/${transcripts.value[0].id}/content`,
+      { headers },
+    );
+    expect(transcriptContent.headers.get('content-type')).toContain('text/vtt');
+    expect(await transcriptContent.text()).toContain('WEBVTT');
+
+    // Update then delete the event; deletion tears down the meeting too.
+    const patched = await fetch(`${base}/v1.0/users/${organizer}/events/${event.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ subject: 'Kickoff (moved)' }),
+    });
+    expect(((await patched.json()) as any).subject).toBe('Kickoff (moved)');
+    expect(
+      (await fetch(`${base}/v1.0/users/${organizer}/events/${event.id}`, { method: 'DELETE', headers })).status,
+    ).toBe(204);
+    expect(
+      (await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}`, { headers })).status,
+    ).toBe(404);
   });
 
   it('records activity notifications and serves teams, channels, and chats', async () => {

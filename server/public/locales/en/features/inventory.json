@@ -411,6 +411,273 @@
       "valuationReport": "Valuation report"
     }
   },
+  "errors": {
+    "cycleCounts": {
+      "approvedCannotCancel": "An approved count session cannot be cancelled.",
+      "conflict": "This count update conflicts with an existing record. Please refresh and try again.",
+      "countNonNegative": "Count must be a non-negative whole number.",
+      "locationRequired": "Pick a location to count.",
+      "productNotInSession": "This product is not part of the count session. Refresh the session and try again.",
+      "recordInvalid": "One of the selected count records is no longer valid. Please refresh and try again.",
+      "separateApproverRequired": "A different approver must sign off because you counted in this session.",
+      "sessionAlreadyOpen": "This location already has an open count session.",
+      "sessionNotFound": "Count session not found. It may have been updated or deleted. Please refresh and try again.",
+      "stockLocationNotFound": "Stock location not found. It may have been updated or deleted. Please refresh and try again."
+    },
+    "dropShip": {
+      "conflict": "This drop-ship shipment conflicts with an existing record. Please refresh and try again.",
+      "lineNotDropShip": "This sales order line is not configured for drop-ship fulfillment.",
+      "lineRequired": "Select a drop-ship line before confirming the vendor shipment.",
+      "poLineNotLinked": "This purchase order line is not linked to a sales order line.",
+      "purchaseOrderNotDropShip": "This purchase order is not configured for drop-ship fulfillment.",
+      "purchaseOrderNotFound": "Purchase order not found. It may have been deleted. Please refresh and try again.",
+      "purchaseOrderRequired": "Create the drop-ship purchase order before confirming the vendor shipment.",
+      "recordInvalid": "One of the selected drop-ship records no longer exists. Please refresh and try again.",
+      "salesOrderLineNotFound": "Sales order line not found. It may have been deleted. Please refresh and try again.",
+      "salesOrderNotFound": "Sales order not found. It may have been deleted. Please refresh and try again.",
+      "serialsRequired": "Enter at least one serial number for this serialized drop-ship shipment.",
+      "vendorRequired": "Select a vendor before creating the drop-ship purchase order."
+    },
+    "fulfillment": {
+      "conflict": "This fulfillment conflicts with an existing record. Please refresh and try again.",
+      "exceedsOrdered": "Fulfillment would exceed the ordered quantity. Refresh the order and try again.",
+      "noSerializedUnits": "No serialized units are available to fulfill this line.",
+      "quantityRequired": "Enter a quantity to fulfill this non-serialized line.",
+      "recordInvalid": "One of the selected fulfillment records is no longer valid. Please refresh and try again.",
+      "sourceLocationRequired": "Choose a source location before fulfilling this line.",
+      "trackingDisabled": "Inventory tracking is not enabled for this product.",
+      "useDropShipFlow": "Use the drop-ship receipt flow to fulfill this line."
+    },
+    "ghostUsage": {
+      "aiRequiresEe": "AI triage requires Enterprise Edition and the AI Assistant add-on.",
+      "reviewNotFound": "Review not found. It may have already been updated. Refresh and try again."
+    },
+    "kits": {
+      "componentNotFound": "Component product not found. It may have been updated or deleted. Please refresh and try again.",
+      "componentQuantityPositive": "Component quantity must be a positive whole number.",
+      "componentsRequired": "Add at least one component to this kit before adding it to a sales order.",
+      "currencyCodeInvalid": "Currency must be a 3-letter code such as USD.",
+      "duplicateComponent": "This kit component already exists. Update its quantity instead.",
+      "duplicateSku": "A product with this SKU already exists. Use a different SKU or edit the existing product.",
+      "enableInventoryAndKitFirst": "Enable inventory tracking and mark this product as a kit before managing components.",
+      "fixedPriceRequired": "Set a fixed kit price greater than 0, or switch this kit to sum-of-components pricing.",
+      "markAsKitFirst": "Mark this product as a kit before managing or pricing kit components.",
+      "nameRequired": "Enter a name for this kit.",
+      "nestedKit": "A kit cannot contain another kit. Choose a non-kit product as the component.",
+      "notFound": "Kit not found. It may have been updated or deleted. Please refresh and try again.",
+      "pricingModeInvalid": "Kit pricing mode must be either sum-of-components or a fixed price.",
+      "productTypeNotFound": "The selected product type no longer exists. Please refresh and choose another.",
+      "productTypeRequired": "Choose a product type for this kit.",
+      "recordInvalid": "One of the selected kit records is no longer valid. Please refresh and try again.",
+      "savedButNotReloaded": "The kit was saved but could not be reloaded. Please refresh to see the latest state.",
+      "selfComponent": "A kit cannot contain itself as a component.",
+      "updateParentLine": "Update the parent kit line instead of an individual component line."
+    },
+    "landedCost": {
+      "amountPositive": "Landed cost amount must be greater than zero.",
+      "appliedCannotRemove": "Applied landed-cost entries cannot be removed.",
+      "conflict": "This landed-cost update conflicts with an existing record. Please refresh and try again.",
+      "orderCancelled": "Landed cost cannot be added to a cancelled purchase order.",
+      "receiveLineFirst": "Receive at least one purchase order line before applying landed cost.",
+      "recordInvalid": "One of the selected landed-cost records is no longer valid. Please refresh and try again."
+    },
+    "loaners": {
+      "cannotLoanOut": "This unit can't be loaned out.",
+      "cannotLoanOutStatus": {
+        "allocated": "This unit can't be loaned out — it's currently Allocated.",
+        "delivered": "This unit can't be loaned out — it's currently Delivered.",
+        "in_rma": "This unit can't be loaned out — it's currently In RMA.",
+        "in_stock": "This unit can't be loaned out — it's currently In stock.",
+        "in_transit": "This unit can't be loaned out — it's currently In transit.",
+        "on_loan": "This unit can't be loaned out — it's currently On loan.",
+        "retired": "This unit can't be loaned out — it's currently Retired.",
+        "returned": "This unit can't be loaned out — it's currently Returned."
+      },
+      "clientRequired": "Choose a client before loaning out the unit.",
+      "conflict": "This loaner update conflicts with an existing record. Refresh and try again.",
+      "dueDateInvalid": "Choose a valid due date.",
+      "invalidReferenceUnitClient": "That doesn't look like a valid record reference. Pick the unit and client from the lists.",
+      "notOnLoan": "This unit isn't out on loan.",
+      "notOnLoanStatus": {
+        "allocated": "This unit isn't out on loan — it's currently Allocated.",
+        "delivered": "This unit isn't out on loan — it's currently Delivered.",
+        "in_rma": "This unit isn't out on loan — it's currently In RMA.",
+        "in_stock": "This unit isn't out on loan — it's currently In stock.",
+        "in_transit": "This unit isn't out on loan — it's currently In transit.",
+        "on_loan": "This unit isn't out on loan — it's currently On loan.",
+        "retired": "This unit isn't out on loan — it's currently Retired.",
+        "returned": "This unit isn't out on loan — it's currently Returned."
+      },
+      "recordInvalid": "One of the selected loaner records is no longer valid. Refresh and try again.",
+      "returnLocationRequired": "Choose a return location."
+    },
+    "openingBalance": {
+      "conflict": "The import conflicts with existing inventory records. Validate the file again and retry.",
+      "recordInvalid": "One of the selected opening-balance records is no longer valid. Validate the file again and retry."
+    },
+    "permissions": {
+      "inventoryRead": "Permission denied: inventory read required",
+      "inventoryUpdate": "Permission denied: inventory update required",
+      "settingsUpdate": "Permission denied: settings update required",
+      "vendorCreate": "Permission denied: vendor create required",
+      "vendorUpdate": "Permission denied: vendor update required"
+    },
+    "productSettings": {
+      "alreadyExists": "Inventory settings already exist for this product. Please refresh and try again.",
+      "invalidKitPricingMode": "Choose a valid kit pricing mode.",
+      "productNotFound": "Product not found. It may have been updated or deleted. Please refresh and try again.",
+      "productsOnly": "Inventory can only be enabled on products.",
+      "removeComponentsFirst": "Remove all kit components before clearing the kit flag.",
+      "serializedUnitsExist": "This product has serialized units. Move, retire, or remove those units before disabling serialization."
+    },
+    "purchaseOrders": {
+      "cancelledCannotEdit": "This purchase order is cancelled and cannot be edited.",
+      "cancelledCannotReceive": "This purchase order is cancelled and cannot receive stock.",
+      "currencyRequired": "Select a currency before creating the purchase order.",
+      "fullyReceivedCannotCancel": "This purchase order is already fully received and cannot be cancelled.",
+      "lineNotFound": "Purchase order line not found. It may have been updated or deleted. Please refresh and try again.",
+      "lineReceivedCannotRemove": "This line has already received stock and cannot be removed.",
+      "lineRequired": "Add at least one line before submitting this purchase order.",
+      "onlyDraftDeletable": "Only draft purchase orders can be deleted. Cancel submitted orders instead.",
+      "quantityPositive": "Quantity must be greater than 0.",
+      "receivedStockCannotCancel": "This purchase order has already received stock and cannot be cancelled.",
+      "recordInvalid": "One of the selected purchase order records is no longer valid. Please refresh and try again.",
+      "stockLocationNotFound": "Stock location not found. It may have been deleted. Please choose another location.",
+      "submitBeforeReceiving": "Submit this purchase order before receiving stock against it.",
+      "trackingDisabled": "Inventory tracking is disabled for this product.",
+      "vendorRequired": "Select a vendor before creating the purchase order."
+    },
+    "reorder": {
+      "destinationAndSourceRequired": "Choose both a load destination and a source shelf.",
+      "recordInvalid": "One of the selected load-list records is no longer valid. Please refresh and try again."
+    },
+    "reporting": {
+      "invalidDateRange": "Choose a valid report date range."
+    },
+    "restock": {
+      "cannotRestock": "This unit can't be restocked. Only delivered or returned units can be restocked.",
+      "cannotRestockStatus": {
+        "allocated": "This unit can't be restocked — it's currently Allocated. Only delivered or returned units can be restocked.",
+        "delivered": "This unit can't be restocked — it's currently Delivered. Only delivered or returned units can be restocked.",
+        "in_rma": "This unit can't be restocked — it's currently In RMA. Only delivered or returned units can be restocked.",
+        "in_stock": "This unit can't be restocked — it's currently In stock. Only delivered or returned units can be restocked.",
+        "in_transit": "This unit can't be restocked — it's currently In transit. Only delivered or returned units can be restocked.",
+        "on_loan": "This unit can't be restocked — it's currently On loan. Only delivered or returned units can be restocked.",
+        "retired": "This unit can't be restocked — it's currently Retired. Only delivered or returned units can be restocked.",
+        "returned": "This unit can't be restocked — it's currently Returned. Only delivered or returned units can be restocked."
+      },
+      "conflict": "This restock conflicts with an existing record. Refresh and try again.",
+      "feeNonNegative": "Restocking fee must be a non-negative amount.",
+      "invalidReferenceUnitLocation": "That doesn't look like a valid record reference. Pick the unit and location from the lists.",
+      "locationRequired": "Choose a location to restock this unit.",
+      "productAndLocationRequired": "Choose a product and location before restocking non-serialized inventory.",
+      "quantityPositive": "Restock quantity must be greater than zero.",
+      "recordInvalid": "One of the selected records is no longer valid. Refresh and try again.",
+      "serializedUnitRequired": "This product is serialized. Choose the specific unit to restock."
+    },
+    "rma": {
+      "caseNotFound": "RMA case not found. It may have been updated or deleted. Please refresh and try again.",
+      "deadUnitDueDateRequired": "Choose a due date for the returned dead unit.",
+      "duplicateStockUnit": "A stock unit with that serial number or MAC address already exists.",
+      "missingProductDetails": "This RMA is missing product details. Please refresh and try again.",
+      "noReplacementUnit": "This RMA has no replacement unit recorded. Please refresh and try again.",
+      "noReturnedUnit": "This RMA has no returned unit recorded. Please refresh and try again.",
+      "recordInvalid": "One of the selected RMA records is no longer valid. Please refresh and try again.",
+      "replacementLocationRequired": "Select the receiving location for the replacement unit.",
+      "replacementSerialRequired": "Enter the replacement unit serial number.",
+      "returnLocationRequired": "Select a location before receiving the return.",
+      "returnedUnitNotFound": "Returned stock unit not found. Please refresh and choose another unit.",
+      "returnedUnitRequired": "Returned unit ID is required.",
+      "vendorRequired": "Select a vendor before sending the RMA."
+    },
+    "salesOrders": {
+      "clientRequired": "Select a client before creating the sales order.",
+      "conflict": "This sales order update conflicts with an existing record. Please refresh and try again.",
+      "currencyRequired": "Select a currency before creating the sales order.",
+      "fulfilledCannotCancel": "This sales order has fulfilled lines and cannot be cancelled.",
+      "fulfilledCannotReopen": "This sales order has fulfilled lines and cannot be reopened.",
+      "invalidDate": "Choose a valid sales order date.",
+      "invalidValue": "One of the selected sales order values is invalid. Please refresh and try again.",
+      "invoicedCannotCancel": "This sales order has invoiced lines and cannot be cancelled.",
+      "invoicedCannotReopen": "This sales order has invoiced lines and cannot be reopened.",
+      "missingData": "Missing required sales order data. Please review the form and try again.",
+      "onlyDraftDeletable": "Only draft sales orders can be deleted. Cancel confirmed orders instead.",
+      "recordInvalid": "One of the selected sales order records is no longer valid. Please refresh and try again.",
+      "valueNotAllowed": "One of the sales order values is not allowed. Please review the form and try again."
+    },
+    "shared": {
+      "duplicateStockUnit": "A stock unit with the same serial number or MAC address already exists.",
+      "inventoryNotEnabledForProduct": "Inventory is not enabled for this product.",
+      "inventoryRecordInvalid": "One of the selected inventory records is no longer valid. Please refresh and try again.",
+      "inventorySettingsDisabled": "Inventory settings are not enabled for this product. Enable inventory tracking first.",
+      "lineQuantityPositive": "Each line quantity must be greater than 0.",
+      "locationRequiredForReceipt": "Select a location before receiving stock.",
+      "purchaseOrderNotFound": "Purchase order not found. It may have been updated or deleted. Please refresh and try again.",
+      "salesOrderLineAlreadyFulfilled": "This sales order line is already fully fulfilled.",
+      "salesOrderLineNotFound": "Sales order line not found. It may have been updated or deleted. Please refresh and try again.",
+      "salesOrderNotFound": "Sales order not found. It may have been updated or deleted. Please refresh and try again.",
+      "sameSourceAndDestination": "Choose different source and destination locations.",
+      "serialNumberRequired": "Each serialized unit needs a serial number.",
+      "stockUnitNotFound": "Stock unit not found. It may have been updated or deleted. Refresh and try again.",
+      "vendorNotFoundChooseAnother": "Vendor not found. It may have been deleted. Please choose another vendor."
+    },
+    "stockLedger": {
+      "productRequired": "Select a product before receiving stock.",
+      "quantityPositiveInteger": "Quantity must be a positive whole number.",
+      "recordInvalid": "The selected product or location is no longer valid. Please refresh and try again.",
+      "trackingDisabled": "Stock tracking is disabled for this product.",
+      "unitCostNonNegative": "Unit cost can't be negative."
+    },
+    "stockLocations": {
+      "duplicate": "A location with these details already exists.",
+      "invalidType": "Choose a valid location type.",
+      "moveStockBeforeDeactivate": "Move all stock out of this location before deactivating it.",
+      "moveUnitsBeforeDeactivate": "Move or retire all units from this location before deactivating it.",
+      "nameRequired": "Location name is required.",
+      "notFound": "Location not found. It may have been updated or deleted. Please refresh and try again.",
+      "recordInvalid": "One of the selected location records is no longer valid. Please refresh and try again."
+    },
+    "stockUnits": {
+      "conflict": "This stock-unit lookup conflicts with an existing record. Please refresh and try again.",
+      "invalidDateRange": "Choose a valid stock movement date range.",
+      "invalidValue": "One of the selected stock-unit values is invalid. Please refresh and try again.",
+      "recordInvalid": "One of the selected stock-unit records is no longer valid. Please refresh and try again."
+    },
+    "transfers": {
+      "conflict": "This transfer conflicts with an existing record. Please refresh and try again.",
+      "lineRequired": "Add at least one transfer line.",
+      "locationsRequired": "Choose both a source location and a destination location.",
+      "notFound": "Transfer not found. It may have been updated or deleted. Please refresh and try again.",
+      "productRequired": "Each transfer line needs a product or service.",
+      "quantityPositive": "Transfer line quantity must be greater than zero.",
+      "recordInvalid": "One of the selected transfer records is no longer valid. Please refresh and try again.",
+      "unitNotAtSource": "The selected stock unit is not at the source location.",
+      "unitNotInStock": "Only units currently in stock can be transferred.",
+      "unitProductMismatch": "The selected stock unit does not match the transfer line product."
+    },
+    "vendorBills": {
+      "duplicateNumber": "A bill with this number already exists for the selected vendor.",
+      "lineQuantityPositive": "Line quantity must be a positive whole number.",
+      "lineUnitCostNonNegative": "Line unit cost can't be negative.",
+      "notFound": "Vendor bill not found. It may have been updated or deleted. Please refresh and try again.",
+      "numberRequired": "Enter the vendor's bill number.",
+      "receiveStockFirst": "Receive stock on this purchase order before creating a vendor bill from it.",
+      "recordInvalid": "One of the selected vendor bill records is no longer valid. Please refresh and try again.",
+      "vendorRequired": "Select a vendor before creating the bill."
+    },
+    "vendorProducts": {
+      "costNonNegative": "Vendor cost must be a non-negative amount.",
+      "duplicate": "This vendor offer already exists. Refresh and edit the existing offer.",
+      "recordInvalid": "The selected vendor or product is no longer valid. Please refresh and try again.",
+      "vendorAndProductRequired": "Choose both a vendor and a product before saving the offer."
+    },
+    "vendors": {
+      "duplicateName": "A vendor named \"{{name}}\" already exists",
+      "hasOpenPurchaseOrders": "Cannot deactivate a vendor with open purchase orders",
+      "nameRequired": "Vendor name is required",
+      "notFound": "Vendor not found"
+    }
+  },
   "ghostUsage": {
     "actions": {
       "dismiss": "Dismiss",

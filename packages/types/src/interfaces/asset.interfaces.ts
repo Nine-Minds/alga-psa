@@ -319,6 +319,79 @@ export interface AssetMaintenanceSchedule {
   created_by: string;
   created_at: string;
   updated_at: string;
+  archived_at?: string;
+}
+
+export type AssetMaintenanceOccurrenceStatus = 'open' | 'completed' | 'skipped' | 'cancelled';
+
+export interface AssetMaintenanceOccurrence {
+  tenant: string;
+  occurrence_id: string;
+  schedule_id: string;
+  asset_id: string;
+  due_date: string;
+  status: AssetMaintenanceOccurrenceStatus;
+  ticket_id?: string;
+  history_id?: string;
+  skip_reason?: string;
+  closed_at?: string;
+  closed_by?: string;
+  created_at: string;
+  updated_at: string;
+  schedule_name?: string;
+  maintenance_type?: MaintenanceType;
+  frequency?: MaintenanceFrequency;
+  frequency_interval?: number;
+  schedule_config?: Record<string, unknown>;
+  last_maintenance?: string;
+  asset_name?: string;
+  asset_type?: string;
+  asset_tag?: string;
+  asset_location?: string;
+  client_id?: string;
+  client_name?: string;
+  ticket_title?: string;
+  ticket_number?: string;
+  ticket_closed?: boolean;
+  ticket_assigned_to?: string;
+  ticket_assignee_first_name?: string;
+  ticket_assignee_last_name?: string;
+  schedule_created_by_first_name?: string;
+  schedule_created_by_last_name?: string;
+  performed_at?: string;
+  performed_by?: string;
+  performed_by_first_name?: string;
+  performed_by_last_name?: string;
+  completion_notes?: string;
+  maintenance_data?: Record<string, unknown>;
+  closed_by_first_name?: string;
+  closed_by_last_name?: string;
+}
+
+export interface MaintenanceOccurrenceFilters {
+  status?: AssetMaintenanceOccurrenceStatus[];
+  client_id?: string;
+  asset_id?: string;
+  asset_type?: string;
+  maintenance_type?: MaintenanceType;
+  due_from?: string;
+  due_to?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface MaintenanceOccurrenceListResult {
+  occurrences: AssetMaintenanceOccurrence[];
+  total: number;
+}
+
+export interface MaintenanceAggregates {
+  overdue: number;
+  due_today: number;
+  upcoming_7d: number;
+  open_maintenance_tickets: number;
+  compliance_90d: number;
 }
 
 export interface AssetMaintenanceHistory {
@@ -328,6 +401,7 @@ export interface AssetMaintenanceHistory {
   schedule_id: string;
   performed_at: string;
   performed_by: string;
+  performed_by_name?: string;
   notes?: string;
   maintenance_data: Record<string, unknown>;
   created_at: string;

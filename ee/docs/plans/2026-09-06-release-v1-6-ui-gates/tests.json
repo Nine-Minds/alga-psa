@@ -1,0 +1,12 @@
+[
+  {
+    "id": "T001",
+    "description": "Behavioral flag-off/on visibility checks for representative UI boundaries, including preservation of existing state.",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Relevant existing regressions and package typechecks; inspect diff for backend behavior changes.",
+    "implemented": true
+  }
+]

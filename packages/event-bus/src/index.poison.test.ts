@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 
 type FakeRedisClient = EventEmitter & {
+  executeIsolated: <T>(callback: (reader: FakeRedisClient) => Promise<T>) => Promise<T>;
   connect: () => Promise<void>;
   disconnect: () => void;
   quit: () => Promise<void>;
@@ -46,6 +47,7 @@ function mockModules(opts: {
   vi.doMock('redis', () => ({
     createClient: () => {
       const client = new EventEmitter() as FakeRedisClient;
+      client.executeIsolated = async callback => callback(client);
       let round = 0;
 
       client.connect = vi.fn(async () => {

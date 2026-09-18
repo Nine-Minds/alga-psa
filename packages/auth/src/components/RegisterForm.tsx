@@ -10,11 +10,13 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { verifyContactEmail, initiateRegistration } from '../lib/registrationHelpers';
 
 export default function RegisterForm() {
-  // Field messages live under common:clients.validation.*.
+  const { t } = useTranslation(['client-portal', 'common']);
+  // Field messages live under common:clients.validation.*, not this form's namespace.
   const { t: tValidation } = useTranslation('common');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [missingFields, setMissingFields] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState<'checking' | 'valid' | 'invalid' | null>(null);
@@ -107,12 +109,12 @@ export default function RegisterForm() {
 
   const validateForm = () => {
     const validationErrors: string[] = [];
-    if (!email.trim()) validationErrors.push('Email');
-    if (!email.includes('@')) validationErrors.push('Valid email address');
-    if (emailStatus !== 'valid') validationErrors.push('Verified contact email');
+    if (!email.trim()) validationErrors.push(t('auth.register.missing.email'));
+    if (!email.includes('@')) validationErrors.push(t('auth.register.missing.validEmail'));
+    if (emailStatus !== 'valid') validationErrors.push(t('auth.register.missing.verifiedContact'));
 
-    const passwordError = validatePassword(password);
-    if (passwordError) validationErrors.push('Valid password');
+    const passwordError = validatePassword(password, tValidation);
+    if (passwordError) validationErrors.push(t('auth.register.missing.validPassword'));
 
     return validationErrors;
   };
@@ -120,6 +122,7 @@ export default function RegisterForm() {
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setError('');
+      setMissingFields([]);
     }
   };
 
@@ -129,7 +132,11 @@ export default function RegisterForm() {
 
     const validationErrors = validateForm();
     if (validationErrors.length > 0) {
-      setError(`Please complete the following: ${validationErrors.join(', ')}`);
+      // Kept as a list rather than a joined string: a translated field name may
+      // contain a comma, and the render used to split the message back apart on
+      // ', ' to build its bullets.
+      setMissingFields(validationErrors);
+      setError('');
       posthog?.capture('registration_validation_failed', {
         validation_errors: validationErrors,
         form_completion_time: Date.now() - journeyStartTime.current
@@ -137,6 +144,7 @@ export default function RegisterForm() {
       return;
     }
 
+    setMissingFields([]);
     setIsLoading(true);
     const submissionStartTime = Date.now();
 
@@ -154,7 +162,7 @@ export default function RegisterForm() {
       );
 
       if (!result.success) {
-        setError(result.error || 'Registration failed');
+        setError(result.error || t('auth.register.failed'));
         posthog?.capture('registration_failed', {
           error_message: result.error,
           submission_duration: Date.now() - submissionStartTime,
@@ -169,7 +177,7 @@ export default function RegisterForm() {
         router.push('/auth/signin?registered=true&callbackUrl=/client-portal/dashboard');
       }
     } catch (error) {
-      setError('An unexpected error occurred during registration.');
+      setError(t('auth.register.unexpectedError'));
       console.error('Registration error:', error);
       posthog?.capture('registration_error', {
         error_type: 'unexpected_error',
@@ -183,7 +191,7 @@ export default function RegisterForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-2">
-        <Label htmlFor="registration-email-input">Email address *</Label>
+        <Label htmlFor="registration-email-input">{t('auth.register.emailLabel')} *</Label>
         <div className="relative">
           <Input
             id="registration-email-input"
@@ -214,7 +222,7 @@ export default function RegisterForm() {
             className={`mt-1 ${
               hasAttemptedSubmit && (!email.trim() || emailStatus === 'invalid') ? 'border-red-500' : ''
             }`}
-            placeholder="Enter your email"
+            placeholder={t('auth.emailPlaceholder')}
             aria-describedby="email-status"
           />
           {isCheckingEmail && (
@@ -226,23 +234,19 @@ export default function RegisterForm() {
         <FieldWarnings warnings={fieldWarnings.email ?? []} />
         <div id="email-status" className="text-sm mt-1">
           {emailStatus === 'checking' && (
-            <p className="text-gray-500">Checking email...</p>
+            <p className="text-gray-500">{t('auth.register.checkingEmail')}</p>
           )}
           {emailStatus === 'invalid' && (
-            <p className="text-red-500">
-              Registration is only available for existing contacts. Please contact your administrator.
-            </p>
+            <p className="text-red-500">{t('auth.register.existingContactsOnly')}</p>
           )}
           {emailStatus === 'valid' && (
-            <p className="text-green-500">
-              Contact verified. Please create your password.
-            </p>
+            <p className="text-green-500">{t('auth.register.contactVerified')}</p>
           )}
         </div>
       </div>
 
       <div className="space-y-2">
-          <Label htmlFor="registration-password-input">Password *</Label>
+          <Label htmlFor="registration-password-input">{t('auth.password')} *</Label>
           <div className="relative">
             <Input
               id="registration-password-input"
@@ -262,7 +266,7 @@ export default function RegisterForm() {
                 passwordStrength === 'medium' ? 'border-yellow-500' :
                 passwordStrength === 'weak' ? 'border-red-500' : ''
               }`}
-              placeholder="Create a password"
+              placeholder={t('auth.register.passwordPlaceholder')}
               aria-describedby="password-requirements"
             />
             <button
@@ -280,37 +284,43 @@ export default function RegisterForm() {
           </div>
           
         <div id="password-requirements" className="text-sm mt-1">
-          <p className="text-gray-500">Password must contain:</p>
+          <p className="text-gray-500">{t('auth.register.passwordMustContain')}</p>
           <ul className="list-disc list-inside space-y-1">
             <li className={password.length >= 8 ? 'text-green-500' : 'text-gray-500'}>
-              At least 8 characters
+              {t('auth.portalSetup.requirements.minLength')}
             </li>
             <li className={/[A-Z]/.test(password) ? 'text-green-500' : 'text-gray-500'}>
-              One uppercase letter
+              {t('auth.portalSetup.requirements.hasUppercase')}
             </li>
             <li className={/[a-z]/.test(password) ? 'text-green-500' : 'text-gray-500'}>
-              One lowercase letter
+              {t('auth.portalSetup.requirements.hasLowercase')}
             </li>
             <li className={/\d/.test(password) ? 'text-green-500' : 'text-gray-500'}>
-              One number
+              {t('auth.portalSetup.requirements.hasNumber')}
             </li>
             <li className={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-500' : 'text-gray-500'}>
-              One special character
+              {t('auth.portalSetup.requirements.hasSpecialChar')}
             </li>
           </ul>
         </div>
       </div>
 
-      {hasAttemptedSubmit && error && (
+      {hasAttemptedSubmit && missingFields.length > 0 && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <p className="font-medium mb-2">{t('auth.register.completeRequiredFields')}</p>
             <ul className="list-disc list-inside space-y-1">
-              {error.split(', ').map((err, index) => (
-                <li key={index}>{err}</li>
+              {missingFields.map((field, index) => (
+                <li key={index}>{field}</li>
               ))}
             </ul>
           </AlertDescription>
+        </Alert>
+      )}
+
+      {hasAttemptedSubmit && error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
@@ -326,9 +336,9 @@ export default function RegisterForm() {
         {isLoading ? (
           <>
             <span className="animate-spin mr-2">⚬</span>
-            Creating account...
+            {t('auth.register.creatingAccount')}
           </>
-        ) : 'Create account'}
+        ) : t('auth.register.createAccount')}
       </Button>
     </form>
   );

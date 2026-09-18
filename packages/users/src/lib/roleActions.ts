@@ -23,31 +23,37 @@ function userRoleActionErrorFrom(error: unknown): UserRoleActionError | null {
             return permissionError(message);
         }
         if (message === 'User not found') {
-            return actionError('User not found. Refresh the user list and try again.');
+            return actionError('User not found. Refresh the user list and try again.', 'msp/settings:errors.roles.userNotFound');
         }
         if (message === 'Role not found') {
-            return actionError('Role not found. Refresh the role list and try again.');
+            return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
         }
         if (message === 'Cannot assign client portal role to MSP user') {
-            return actionError('Cannot assign a client portal role to an MSP user.');
+            return actionError('Cannot assign a client portal role to an MSP user.', 'msp/settings:errors.roles.portalRoleOnMspUser');
         }
         if (message === 'Cannot assign MSP role to client portal user') {
-            return actionError('Cannot assign an MSP role to a client portal user.');
+            return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
         }
     }
 
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02') {
-        return actionError('One of the selected user or role values is invalid. Please refresh and try again.');
+        return actionError('One of the selected user or role values is invalid. Please refresh and try again.', 'msp/settings:errors.roles.invalidValue');
     }
     if (dbError?.code === '23502') {
-        return actionError(`Missing required user role field${dbError.column ? `: ${dbError.column}` : ''}.`);
+        return dbError.column
+          ? actionError(
+              `Missing required user role field: ${dbError.column}.`,
+              'msp/settings:errors.roles.missingFieldNamed',
+              { field: dbError.column },
+            )
+          : actionError('Missing required user role field.', 'msp/settings:errors.roles.missingField');
     }
     if (dbError?.code === '23503') {
-        return actionError('The selected user or role no longer exists. Please refresh and try again.');
+        return actionError('The selected user or role no longer exists. Please refresh and try again.', 'msp/settings:errors.roles.referenceMissing');
     }
     if (dbError?.code === '23505') {
-        return actionError('That user already has the selected role.');
+        return actionError('That user already has the selected role.', 'msp/settings:errors.roles.duplicate');
     }
 
     return null;
@@ -86,23 +92,23 @@ export const assignRoleToUser = withAuth(async (
                 ? await hasPermission(currentUser, 'client', 'update', trx)
                 : false;
             if (!canUpdateUsers && !canManageClientRole) {
-                return permissionError('Permission denied: You do not have permission to change user roles.');
+                return permissionError('Permission denied: You do not have permission to change user roles.', 'msp/settings:errors.roles.changePermission');
             }
 
             if (!user) {
-                return actionError('User not found. Refresh the user list and try again.');
+                return actionError('User not found. Refresh the user list and try again.', 'msp/settings:errors.roles.userNotFound');
             }
 
             if (!role) {
-                return actionError('Role not found. Refresh the role list and try again.');
+                return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
             }
 
             if (user.user_type === 'internal' && !role.msp) {
-                return actionError('Cannot assign a client portal role to an MSP user.');
+                return actionError('Cannot assign a client portal role to an MSP user.', 'msp/settings:errors.roles.portalRoleOnMspUser');
             }
 
             if (user.user_type === 'client' && !role.client) {
-                return actionError('Cannot assign an MSP role to a client portal user.');
+                return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
             }
 
             const [userRole] = await tenantDb(trx, tenant).table<IUserRole>('user_roles')
@@ -135,11 +141,11 @@ export const removeRoleFromUser = withAuth(async (
                 ? await hasPermission(currentUser, 'client', 'update', trx)
                 : false;
             if (!canUpdateUsers && !canManageClientRole) {
-                return permissionError('Permission denied: You do not have permission to change user roles.');
+                return permissionError('Permission denied: You do not have permission to change user roles.', 'msp/settings:errors.roles.changePermission');
             }
 
             if (!role) {
-                return actionError('Role not found. Refresh the role list and try again.');
+                return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
             }
 
             await tenantDb(trx, tenant).table('user_roles').where({ user_id: userId, role_id: roleId }).del();

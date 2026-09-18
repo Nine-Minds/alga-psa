@@ -67,6 +67,7 @@ x-environment: &shared-environment
   NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
   NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
   AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-false}
+  TRUST_FORWARDED_HOST: ${TRUST_FORWARDED_HOST:-false}
 
   # ---- DEPLOY INFO  ----
   PROJECT_NAME: ${PROJECT_NAME}
@@ -92,6 +93,8 @@ secrets:
     file: ./secrets/token_secret_key
   nextauth_secret:
     file: ./secrets/nextauth_secret
+  credential_encryption_key:
+    file: ./secrets/credential_encryption_key
   google_oauth_client_id:
     file: ./secrets/google_oauth_client_id
   google_oauth_client_secret:

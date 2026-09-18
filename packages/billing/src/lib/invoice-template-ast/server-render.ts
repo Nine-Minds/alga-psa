@@ -94,8 +94,8 @@ export const renderTemplateAstHtmlDocument = async (
   evaluation: TemplateEvaluationResult,
   options: TemplateHtmlDocumentOptions = {}
 ): Promise<string> => {
-  const { ast: localizedAst, locale } = await localizeTemplateAstForLocale(ast, options.locale);
-  const { html, css } = await renderEvaluatedTemplateAst(localizedAst, evaluation, { locale });
+  const { ast: localizedAst, locale, t } = await localizeTemplateAstForLocale(ast, options.locale);
+  const { html, css } = await renderEvaluatedTemplateAst(localizedAst, evaluation, { locale, t });
   const title = escapeHtml(options.title ?? 'Invoice');
   const additionalCss = options.additionalCss ?? '';
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';

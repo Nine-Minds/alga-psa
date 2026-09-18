@@ -1,0 +1,22 @@
+{
+  "scope": "native-concurrent-emulator-fixture-isolation",
+  "status": "passed",
+  "testFile": "packages/emulators/stripe/tests/concurrentIsolation.test.ts",
+  "testFileSha256": "02115485f717c0e467597563929cec44854742151636d61e907a73b50e64f927",
+  "packageSuitePassed": 27,
+  "canonicalFilteredFiles": 1,
+  "canonicalFilteredTests": 1,
+  "canonicalConfig": "server/vitest.config.ts",
+  "packageTypecheck": "passed",
+  "verification": [
+    "Two real EmulatorHost instances use ephemeral ports and identical deterministic entity IDs with different payloads.",
+    "B signed callback remains in flight while A completes a callback and resets.",
+    "B data, configuration, credentials, armed429fault and signed callback destination remain isolated; redelivery reaches only B.",
+    "Canonical server-unit configuration also executes the test using emulator-host source aliases."
+  ],
+  "limits": [
+    "Native HTTP fixture boundary proof; no mocked Alga application or claim of two concurrent full Alga browser stacks.",
+    "Composes with current89production-browser journeys, signed callbacks/vendorDBreadbacks and both-edition process routing evidence.",
+    "Filtered canonical execution is not full unit-suite completeness; new test still awaits published CI execution."
+  ]
+}

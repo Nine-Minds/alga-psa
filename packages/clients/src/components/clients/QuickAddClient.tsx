@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ClientLifecycleStatus, ContactPhoneNumberInput, CreateContactInput, IClient, IClientLocation } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
@@ -21,7 +21,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { createClient } from '@alga-psa/clients/actions/clientActions';
 import { createClientLocation } from '@alga-psa/clients/actions/clientLocationActions';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
+import { getAllCountries, getTenantDefaultCountry, ICountry } from '@alga-psa/clients/actions/countryActions';
 import { listContactPhoneTypeSuggestions, createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -39,12 +39,12 @@ import {
   validateEmailAddressField,
   validatePhoneNumberField,
   validateContactNameField,
-  validatePostalCode, 
-  validateCityName, 
-  validateAddress, 
-  validateStateProvince,
-  validateIndustry,
-  validateNotes,
+  validatePostalCodeField,
+  validateCityNameField,
+  validateAddressField,
+  validateStateProvinceField,
+  validateIndustryField,
+  validateNotesField,
   translateFieldValidation,
   type FieldValidation
 } from '@alga-psa/validation';
@@ -106,6 +106,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     account_manager_id: null
   };
 
+  // The tenant's own country, once resolved. Declared ahead of the initial form
+  // data because every reset seeds the country field from it.
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
+  const hasEditedCountryRef = useRef(false);
+
   const initialLocationData: CreateLocationData = {
     client_id: '',
     location_name: 'Main Office',
@@ -115,8 +120,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     city: '',
     state_province: '',
     postal_code: '',
-    country_code: 'US',
-    country_name: 'United States',
+    country_code: tenantDefaultCountry?.code ?? 'US',
+    country_name: tenantDefaultCountry?.name ?? 'United States',
     region_code: null,
     is_billing_address: true,
     is_shipping_address: true,
@@ -203,8 +208,21 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         if (isLoadingCountries || countries.length > 0) return;
         setIsLoadingCountries(true);
         try {
-          const countriesData = await getAllCountries();
+          // A missing tenant default must not empty the picker, so it fails soft.
+          const [countriesData, tenantCountry] = await Promise.all([
+            getAllCountries(),
+            getTenantDefaultCountry().catch(() => null),
+          ]);
           setCountries(countriesData);
+          if (tenantCountry) {
+            setTenantDefaultCountry(tenantCountry);
+            // An in-progress selection outranks the default that arrives after it.
+            setLocationData(prev => hasEditedCountryRef.current ? prev : {
+              ...prev,
+              country_code: tenantCountry.code,
+              country_name: tenantCountry.name,
+            });
+          }
         } catch (error: any) {
           handleError(error, t('quickAddClient.countriesLoadError', {
             defaultValue: 'Failed to load countries.',
@@ -233,6 +251,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       setFormData(initialFormData);
       setLocationData(initialLocationData);
       setContactData(initialContactData);
+      hasEditedCountryRef.current = false;
       setContactPhoneValidationErrors([]);
       setContactEmailValidationErrors([]);
       setIsSubmitting(false);
@@ -292,7 +311,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       clearWarnings();
       // Only client name is required, all other fields are optional
       if (fieldName === 'client_name' && isSubmitting) {
-        error = 'Client name is required';
+        error = tValidation('clients.validation.clientName.required', { defaultValue: 'Client name is required' });
       }
       // For optional fields, clear any existing errors when empty
       setFieldErrors(prev => ({
@@ -310,11 +329,14 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         error = applyField(validateWebsiteUrlField(value));
         break;
       case 'industry':
-        error = validateIndustry(value);
+        error = applyField(validateIndustryField(value));
         break;
       case 'location_email':
         error = applyField(validateEmailAddressField(value));
         break;
+      // Both phone fields defer entirely to the shared validator. The inline copies
+      // that used to run first duplicated its length and fake-pattern rules in
+      // untranslatable English, so the user's language decided which message they saw.
       case 'location_phone':
         // A bare dial prefix means the user has not started typing yet.
         if (trimmedValue && !/^\+\d{1,4}\s*$/.test(trimmedValue)) {
@@ -331,16 +353,16 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         }
         break;
       case 'postal_code':
-        error = validatePostalCode(value, additionalData?.countryCode);
+        error = applyField(validatePostalCodeField(value, additionalData?.countryCode));
         break;
       case 'city':
-        error = validateCityName(value);
+        error = applyField(validateCityNameField(value));
         break;
       case 'state_province':
-        error = validateStateProvince(value);
+        error = applyField(validateStateProvinceField(value));
         break;
       case 'address_line1':
-        error = validateAddress(value);
+        error = applyField(validateAddressField(value));
         break;
       case 'contact_name':
         error = applyField(validateContactNameField(value));
@@ -349,7 +371,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         error = applyField(validateEmailAddressField(value));
         break;
       case 'notes':
-        error = validateNotes(value);
+        error = applyField(validateNotesField(value));
         break;
     }
     
@@ -383,7 +405,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       contactEmail: contactData.email ?? '',
       contactPhone: getPrimaryContactPhone(contactData.phone_numbers),
       notes: formData.notes
-    });
+    }, tValidation);
 
     // Cross-field validation: if any contact field is filled, require name and email
     if (hasAnyContactData(contactData)) {
@@ -399,7 +421,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       }
     }
 
-    const currentContactPhoneErrors = validateContactPhoneNumbers(contactData.phone_numbers);
+    const currentContactPhoneErrors = validateContactPhoneNumbers(contactData.phone_numbers, { t });
     setContactPhoneValidationErrors(currentContactPhoneErrors);
     if (currentContactPhoneErrors.length > 0) {
       validationResult.isValid = false;
@@ -509,6 +531,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         setFormData(initialFormData);
         setLocationData(initialLocationData);
         setContactData(initialContactData);
+        hasEditedCountryRef.current = false;
         setContactPhoneValidationErrors([]);
         setContactEmailValidationErrors([]);
         setIsSubmitting(false);
@@ -620,6 +643,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   };
 
   const handleCountryChange = (countryCode: string, countryName: string) => {
+    hasEditedCountryRef.current = true;
     setLocationData(prev => ({
       ...prev,
       country_code: countryCode,

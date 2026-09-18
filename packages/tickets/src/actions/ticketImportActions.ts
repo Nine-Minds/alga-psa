@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth';
+import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
@@ -54,27 +54,38 @@ function ticketImportActionErrorFrom(error: unknown): TicketImportActionError | 
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the imported ticket values is invalid. Please refresh reference data and try again.');
+    return actionError('One of the imported ticket values is invalid. Please refresh reference data and try again.', 'features/tickets:errors.import.invalidValue');
   }
   if (dbError?.code === '23505') {
-    return actionError('A ticket import record conflicts with an existing record. Review duplicate clients, contacts, statuses, priorities, categories, or tags.');
+    return actionError('A ticket import record conflicts with an existing record. Review duplicate clients, contacts, statuses, priorities, categories, or tags.', 'features/tickets:errors.import.conflict');
   }
   if (dbError?.code === '23503') {
-    return actionError('A referenced client, contact, board, status, priority, category, team, or user was not found. Refresh reference data and try again.');
+    return actionError('A referenced client, contact, board, status, priority, category, team, or user was not found. Refresh reference data and try again.', 'features/tickets:errors.import.referenceMissing');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required import value${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required import value: ${dbError.column}.`,
+          'features/tickets:errors.import.missingValueNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required import value.', 'features/tickets:errors.import.missingValue');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the imported values is invalid for this field.');
+    return actionError('One of the imported values is invalid for this field.', 'features/tickets:errors.import.invalidForField');
   }
   return null;
 }
 
-function ticketImportRowErrorMessage(error: unknown): string {
+// Reported as a bare string rather than returned as a payload, so withAuth's
+// boundary never sees the messageKey. Localize before flattening.
+async function ticketImportRowErrorMessage(error: unknown): Promise<string> {
   const expected = ticketImportActionErrorFrom(error);
   if (expected) {
-    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    const candidate = (await localizeActionError(expected)) as unknown as {
+      actionError?: unknown;
+      permissionError?: unknown;
+    };
     return typeof candidate.actionError === 'string'
       ? candidate.actionError
       : String(candidate.permissionError ?? 'Ticket import failed');
@@ -241,10 +252,17 @@ export const generateTicketCSVTemplate = withAuth(async (_user, _ctx): Promise<s
 // ---------------------------------------------------------------------------
 
 export const getTicketImportReferenceData = withAuth(async (
-  _user,
+  user,
   { tenant },
   defaultBoardId?: string
 ): Promise<ITicketImportReferenceData> => {
+  // This returns the tenant's internal user directory (names and email addresses)
+  // alongside every board, client and contact, so it needs the same read gate as
+  // the tickets it feeds — being authenticated is not enough.
+  if (!await hasPermission(user, 'ticket', 'read')) {
+    throw new Error('Permission denied: Cannot read ticket import reference data');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -421,30 +439,30 @@ export const importTickets = withAuth(async (
     return await withTransaction(db, async (trx: Knex.Transaction) => {
     const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
-    if (!await hasPermission(user, 'ticket', 'create')) {
+    if (!await hasPermission(user, 'ticket', 'create', trx)) {
       throw new Error('Permission denied: Cannot create tickets');
     }
 
     // Check entity-creation permissions for each resolution type that has 'create' actions
     const hasClientCreates = clientResolutions.some(r => r.action === 'create');
-    if (hasClientCreates && !await hasPermission(user, 'client', 'create')) {
+    if (hasClientCreates && !await hasPermission(user, 'client', 'create', trx)) {
       throw new Error('Permission denied: Cannot create clients. Change unmatched clients to "Map to existing" or "Skip".');
     }
 
     const hasPriorityCreates = priorityResolutions.some(r => r.action === 'create');
-    if (hasPriorityCreates && !await hasPermission(user, 'priority', 'create')) {
+    if (hasPriorityCreates && !await hasPermission(user, 'priority', 'create', trx)) {
       throw new Error('Permission denied: Cannot create priorities. Change unmatched priorities to "Map to existing" or "Use default".');
     }
 
     const hasContactCreates = contactResolutions.some(r => r.action === 'create');
-    if (hasContactCreates && !await hasPermission(user, 'contact', 'create')) {
+    if (hasContactCreates && !await hasPermission(user, 'contact', 'create', trx)) {
       throw new Error('Permission denied: Cannot create contacts. Change unmatched contacts to "Map to existing" or "Skip".');
     }
 
     // Statuses and categories are board configuration — gated by ticket_settings:update
     const hasStatusCreates = statusResolutions.some(r => r.action === 'create');
     const hasCategoryCreates = categoryResolutions.some(r => r.action === 'create');
-    if ((hasStatusCreates || hasCategoryCreates) && !await hasPermission(user, 'ticket_settings', 'update')) {
+    if ((hasStatusCreates || hasCategoryCreates) && !await hasPermission(user, 'ticket_settings', 'update', trx)) {
       const entities = [hasStatusCreates && 'statuses', hasCategoryCreates && 'categories'].filter(Boolean).join(' and ');
       throw new Error(`Permission denied: Cannot create ${entities}. Change unmatched items to "Map to existing" or use defaults.`);
     }
@@ -476,7 +494,7 @@ export const importTickets = withAuth(async (
         return result;
       } catch (err) {
         await trx.raw(`ROLLBACK TO SAVEPOINT ${sp}`);
-        const msg = ticketImportRowErrorMessage(err);
+        const msg = await ticketImportRowErrorMessage(err);
         errors.push(`${label}: ${msg}`);
         return null;
       }

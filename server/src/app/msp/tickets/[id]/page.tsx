@@ -19,6 +19,7 @@ import {
 } from '@alga-psa/tickets/actions/ticketBentoActions';
 import { getTicketLayoutPreference } from '@alga-psa/tickets/actions/ticketLayoutPreference';
 import { getTicketChecklistItems } from '@alga-psa/tickets/actions/checklists/ticketChecklistActions';
+import { getTicketExternalLinks } from '@alga-psa/tickets/actions/externalLinks/externalLinkActions';
 import { getTicketAutoCloseState } from '@alga-psa/tickets/actions/close-rules/closeRuleActions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { listTicketMaterials } from '@alga-psa/tickets/actions/materialCatalogActions';
@@ -110,6 +111,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       surveySummary,
       layoutPreference,
       checklistItems,
+      externalLinks,
       autoCloseState,
       permissions,
       teams,
@@ -123,6 +125,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       }),
       getTicketLayoutPreference().catch(() => null),
       getTicketChecklistItems(id).catch(() => null),
+      getTicketExternalLinks(id).catch(() => null),
       getTicketAutoCloseState(id).catch(() => null),
       getCurrentUserPermissions().catch(() => null),
       getTeams().catch(() => null),
@@ -151,6 +154,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     const bootstrap: TicketScreenBootstrap = {
       layoutPreference: safeLayoutPreference,
       checklistItems,
+      externalLinks: isReturnedActionError(externalLinks) ? null : externalLinks,
       autoCloseState,
       canViewCommentMetadataDebug: permissions ? hasAdminSettingsViewAccess(permissions) : null,
       teams: safeTeams,
@@ -209,7 +213,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       ) : null;
     
     const detailsContent = (
-      <div id="ticket-details-container" className="bg-gray-100">
+      <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
         <Suspense fallback={<TicketDetailsSkeleton />}>
           <MspTicketDetailsContainerClient
             ticketData={ticketData as any}

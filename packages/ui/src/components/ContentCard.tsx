@@ -62,7 +62,7 @@ interface ContentCardProps {
   variant?: ContentCardVariant;
 }
 
-const BENTO_SHELL = 'rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 space-y-3 min-w-0';
+const BENTO_SHELL = 'rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated p-4 space-y-3 min-w-0';
 const BENTO_HEADER = 'text-sm font-semibold text-[rgb(var(--color-text-800))] flex items-center min-w-0';
 
 interface ContentCardHeaderProps {

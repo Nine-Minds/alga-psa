@@ -16,11 +16,11 @@ import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useToast } from '@alga-psa/ui';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
+import { getAllCountries, getTenantDefaultCountry, ICountry } from '@alga-psa/clients/actions/countryActions';
 import {
   validateContactNameField,
   validateEmailAddressField,
-  validateNotes,
+  validateNotesField,
   translateFieldValidation,
   type FieldValidation
 } from '@alga-psa/validation';
@@ -29,9 +29,9 @@ import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { parseContactActionError } from '../../lib/contactActionErrorCodes';
 import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
-  translateContactPhoneValidationErrors,
   validateContactPhoneNumbers,
 } from './ContactPhoneNumbersEditor';
 import ContactEmailAddressesEditor, {
@@ -52,6 +52,8 @@ interface QuickAddContactProps {
   onContactAdded: (newContact: IContact) => void;
   clients: IClient[];
   selectedClientId?: string | null;
+  /** Seeds the first phone row (e.g. the caller ID of an unmatched incoming call). */
+  initialPhoneNumber?: string | null;
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
@@ -86,7 +88,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   onClose,
   onContactAdded,
   clients,
-  selectedClientId = null
+  selectedClientId = null,
+  initialPhoneNumber = null,
 }) => {
   const { toast } = useToast();
   const { t } = useTranslation('msp/contacts');
@@ -117,6 +120,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   // Plausibility warnings. Rendered beneath the field; never gate the save.
   const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [localClients, setLocalClients] = useState<IClient[]>([]);
@@ -131,12 +135,14 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       const fetchFormMetadata = async () => {
         try {
-          const [countriesData, suggestionLabels] = await Promise.all([
+          const [countriesData, suggestionLabels, tenantCountry] = await Promise.all([
             countries.length > 0 ? Promise.resolve(countries) : getAllCountries(),
             listContactPhoneTypeSuggestions(),
+            getTenantDefaultCountry(),
           ]);
           setCountries(countriesData);
           setCustomPhoneTypeSuggestions(suggestionLabels);
+          setTenantDefaultCountry(tenantCountry);
         } catch (fetchError: any) {
           console.error('Error fetching contact form metadata:', fetchError);
         }
@@ -149,6 +155,9 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       if (selectedClientId) {
         setClientId(selectedClientId);
+      }
+      if (initialPhoneNumber) {
+        setPhoneNumbers([{ phone_number: initialPhoneNumber, canonical_type: 'work', is_default: true }]);
       }
       setError(null);
     } else {
@@ -174,7 +183,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setFieldErrors({});
       setPendingTags([]);
     }
-  }, [isOpen, selectedClientId]);
+  }, [isOpen, selectedClientId, initialPhoneNumber]);
 
   const mergedClients = React.useMemo(() => {
     const clientIds = new Set(clients.map(c => c.client_id));
@@ -245,7 +254,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           if (/^\s+$/.test(value)) {
             nextError = t('quickAddContact.validation.notesSpaces', { defaultValue: 'Notes cannot contain only spaces' });
           } else {
-            nextError = validateNotes(trimmedValue);
+            nextError = applyField(validateNotesField(trimmedValue));
           }
         }
         break;
@@ -287,10 +296,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       validationMessages.push(...currentEmailErrors);
     }
 
-    const currentPhoneErrors = translateContactPhoneValidationErrors(
-      validateContactPhoneNumbers(phoneNumbers),
-      t
-    );
+    const currentPhoneErrors = validateContactPhoneNumbers(phoneNumbers, { t });
     setPhoneValidationErrors(currentPhoneErrors);
     if (currentPhoneErrors.length > 0) {
       fieldValidationErrors.contact_phone = currentPhoneErrors[0];
@@ -343,24 +349,25 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           defaultValue: 'An unexpected error occurred. Please try again.'
         });
 
-        if (submitError.message.includes('VALIDATION_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.validationTitle', { defaultValue: 'Validation Error' });
-          errorDescription = submitError.message.replace('VALIDATION_ERROR:', '').trim();
-        } else if (submitError.message.includes('EMAIL_EXISTS:')) {
-          errorTitle = t('quickAddContact.errors.emailExistsTitle', { defaultValue: 'Email Already Exists' });
-          errorDescription = submitError.message.replace('EMAIL_EXISTS:', '').trim();
-        } else if (submitError.message.includes('FOREIGN_KEY_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.invalidReferenceTitle', { defaultValue: 'Invalid Reference' });
-          errorDescription = submitError.message.replace('FOREIGN_KEY_ERROR:', '').trim();
-        } else if (submitError.message.includes('SYSTEM_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
-          errorDescription = t('quickAddContact.errors.unexpected', {
-            defaultValue: 'An unexpected error occurred. Please try again.'
-          });
-        } else {
-          errorDescription = t('quickAddContact.errors.unexpected', {
-            defaultValue: 'An unexpected error occurred. Please try again.'
-          });
+        const { code, detail } = parseContactActionError(submitError.message);
+        switch (code) {
+          case 'VALIDATION_ERROR':
+            errorTitle = t('quickAddContact.errors.validationTitle', { defaultValue: 'Validation Error' });
+            errorDescription = detail;
+            break;
+          case 'EMAIL_EXISTS':
+            errorTitle = t('quickAddContact.errors.emailExistsTitle', { defaultValue: 'Email Already Exists' });
+            errorDescription = detail;
+            break;
+          case 'FOREIGN_KEY_ERROR':
+            errorTitle = t('quickAddContact.errors.invalidReferenceTitle', { defaultValue: 'Invalid Reference' });
+            errorDescription = detail;
+            break;
+          case 'SYSTEM_ERROR':
+            errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
+            break;
+          default:
+            break;
         }
 
         toast({
@@ -416,24 +423,25 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           defaultValue: 'An unexpected error occurred. Please try again.'
         });
 
-        if (submitError.message.includes('VALIDATION_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.validationTitle', { defaultValue: 'Validation Error' });
-          errorDescription = submitError.message.replace('VALIDATION_ERROR:', '').trim();
-        } else if (submitError.message.includes('EMAIL_EXISTS:')) {
-          errorTitle = t('quickAddContact.errors.emailExistsTitle', { defaultValue: 'Email Already Exists' });
-          errorDescription = submitError.message.replace('EMAIL_EXISTS:', '').trim();
-        } else if (submitError.message.includes('FOREIGN_KEY_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.invalidReferenceTitle', { defaultValue: 'Invalid Reference' });
-          errorDescription = submitError.message.replace('FOREIGN_KEY_ERROR:', '').trim();
-        } else if (submitError.message.includes('SYSTEM_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
-          errorDescription = t('quickAddContact.errors.unexpected', {
-            defaultValue: 'An unexpected error occurred. Please try again.'
-          });
-        } else {
-          errorDescription = t('quickAddContact.errors.unexpected', {
-            defaultValue: 'An unexpected error occurred. Please try again.'
-          });
+        const { code, detail } = parseContactActionError(submitError.message);
+        switch (code) {
+          case 'VALIDATION_ERROR':
+            errorTitle = t('quickAddContact.errors.validationTitle', { defaultValue: 'Validation Error' });
+            errorDescription = detail;
+            break;
+          case 'EMAIL_EXISTS':
+            errorTitle = t('quickAddContact.errors.emailExistsTitle', { defaultValue: 'Email Already Exists' });
+            errorDescription = detail;
+            break;
+          case 'FOREIGN_KEY_ERROR':
+            errorTitle = t('quickAddContact.errors.invalidReferenceTitle', { defaultValue: 'Invalid Reference' });
+            errorDescription = detail;
+            break;
+          case 'SYSTEM_ERROR':
+            errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
+            break;
+          default:
+            break;
         }
 
         toast({
@@ -523,29 +531,17 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               </h4>
               <div className="text-sm">
                 {error.split('\n').map((line, index) => {
-                  let displayMessage = line;
-                  if (line.includes('VALIDATION_ERROR:')) {
-                    displayMessage = line.replace(
-                      'VALIDATION_ERROR:',
-                      `${t('quickAddContact.errors.validationPrefix', { defaultValue: 'Please fix the following:' })} `
-                    );
-                  } else if (line.includes('EMAIL_EXISTS:')) {
-                    displayMessage = line.replace(
-                      'EMAIL_EXISTS:',
-                      `${t('quickAddContact.errors.emailExistsPrefix', { defaultValue: 'Email already exists:' })} `
-                    );
-                  } else if (line.includes('FOREIGN_KEY_ERROR:')) {
-                    displayMessage = line.replace(
-                      'FOREIGN_KEY_ERROR:',
-                      `${t('quickAddContact.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })} `
-                    );
-                  } else if (line.includes('SYSTEM_ERROR:')) {
-                    displayMessage = line.replace(
-                      'SYSTEM_ERROR:',
-                      `${t('quickAddContact.errors.systemPrefix', { defaultValue: 'System error:' })} `
-                    );
-                  }
-                  return <p key={index} className="mb-1">{displayMessage}</p>;
+                  const { code, detail } = parseContactActionError(line);
+                  const prefix = code === 'VALIDATION_ERROR'
+                    ? t('quickAddContact.errors.validationPrefix', { defaultValue: 'Please fix the following:' })
+                    : code === 'EMAIL_EXISTS'
+                      ? t('quickAddContact.errors.emailExistsPrefix', { defaultValue: 'Email already exists:' })
+                      : code === 'FOREIGN_KEY_ERROR'
+                        ? t('quickAddContact.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })
+                        : code === 'SYSTEM_ERROR'
+                          ? t('quickAddContact.errors.systemPrefix', { defaultValue: 'System error:' })
+                          : null;
+                  return <p key={index} className="mb-1">{prefix ? `${prefix} ${detail}` : detail}</p>;
                 })}
               </div>
             </AlertDescription>
@@ -614,6 +610,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                   }
                 }}
                 countries={countries}
+                defaultCountryCode={tenantDefaultCountry?.code}
                 customTypeSuggestions={customPhoneTypeSuggestions}
                 allowEmpty={false}
                 errorMessages={hasAttemptedSubmit ? phoneValidationErrors : undefined}

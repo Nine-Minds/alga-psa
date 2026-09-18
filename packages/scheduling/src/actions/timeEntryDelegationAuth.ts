@@ -86,12 +86,12 @@ export async function assertCanActOnBehalf(
     return 'self';
   }
 
-  const canApprove = await hasPermission(actor, 'timesheet', 'approve', db);
+  const canApprove = await hasPermission(actor, 'time_sheet', 'approve', db);
   if (!canApprove) {
     throw new Error('Permission denied: Cannot access other users time sheets');
   }
 
-  const canReadAll = await hasPermission(actor, 'timesheet', 'read_all', db);
+  const canReadAll = await hasPermission(actor, 'time_sheet', 'read_all', db);
   const managedUserIds = canReadAll ? [] : await resolveManagedSubjectUserIds(db, tenant, actor);
   const authorizationSubject: AuthorizationSubject = {
     tenant,

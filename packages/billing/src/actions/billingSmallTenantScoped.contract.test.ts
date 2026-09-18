@@ -64,6 +64,10 @@ describe('low-risk billing tenant-scoped query contract', () => {
     // Sender-name lookup moved to the tenant_companies party adapter
     // (179f5e1da0); the adapter carries the facade scoping.
     expect(invoiceJob).toContain('const tenantParty = await fetchTenantParty(knex, tenant);');
+    expect(invoiceJob).toContain("actionError(INVOICE_ZIP_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.schedulePdfFailed')");
+    expect(invoiceJob).toContain("actionError(INVOICE_EMAIL_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.scheduleEmailFailed')");
+    expect(invoiceJob).toContain("messageKey: 'msp/invoicing:errors.jobs.recipientFailed'");
+    expect(invoiceJob).toContain("messageKey: 'msp/invoicing:errors.jobs.sendFailed'");
     // Billing-recipient resolution (billing contact + billing/default location
     // reads) moved to the shared tenant-scoped resolver; every read there is
     // scoped through a single tenantDb handle.

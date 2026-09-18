@@ -431,4 +431,74 @@ describe('detectBlockContentFormat', () => {
     expect(result.content[0].type).toBe('bulletList');
     expect(result.content[1].type).toBe('orderedList');
   });
+
+  it('converts image blocks into ProseMirror image nodes with their props', () => {
+    const blocknote = [
+      {
+        type: 'image',
+        props: {
+          url: 'https://example.com/img/spooler.png',
+          caption: 'Spooler service dialog',
+          previewWidth: 512,
+        },
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'image',
+          attrs: {
+            src: 'https://example.com/img/spooler.png',
+            alt: 'Spooler service dialog',
+            title: 'Spooler service dialog',
+            width: 512,
+          },
+        },
+      ],
+    });
+  });
+
+  it('keeps data-URI images and captionless images', () => {
+    const blocknote = [
+      { type: 'image', props: { url: 'data:image/png;base64,AAAA', caption: '' } },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [{ type: 'image', attrs: { src: 'data:image/png;base64,AAAA' } }],
+    });
+  });
+
+  it('degrades an image block with no url to its caption', () => {
+    const blocknote = [{ type: 'image', props: { caption: 'Missing picture' } }];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Missing picture' }] }],
+    });
+  });
+
+  it('degrades unknown block types to text instead of discarding them', () => {
+    const blocknote = [
+      { type: 'paragraph', props: {}, content: [{ type: 'text', text: 'Before', styles: {} }] },
+      { type: 'audio', props: {}, content: [{ type: 'text', text: 'Recorded call', styles: {} }] },
+      { type: 'paragraph', props: {}, content: [{ type: 'text', text: 'After', styles: {} }] },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'Before' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: 'Recorded call' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: 'After' }] },
+      ],
+    });
+  });
+
+  it('never drops a textless unknown block', () => {
+    const result = blockNoteJsonToProsemirrorJson([{ type: 'pageBreak', props: {} }]);
+    expect(result.content).toEqual([{ type: 'paragraph' }]);
+  });
 });

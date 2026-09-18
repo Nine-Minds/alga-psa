@@ -5,9 +5,12 @@ export const TEAMS_CAPABILITIES = [
   'personal_tab',
   'personal_bot',
   'group_chat_bot',
+  'channel_bot',
   'message_extension',
   'activity_notifications',
+  'guest_ticket_submission',
 ] as const;
+// LEVERAGE: pattern teams-capability-list — third copy of this list (ee-microsoft-teams teamsShared, the settings UI value array); a drifted copy silently drops a capability from its surface.
 export type TeamsCapability = typeof TEAMS_CAPABILITIES[number];
 
 export const TEAMS_NOTIFICATION_CATEGORIES = [

@@ -4,6 +4,7 @@ import { describe, expect, it, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInstance, type i18n } from 'i18next';
+import { pseudoPattern } from '../../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 const LOCALES = resolve(__dirname, '../../../../../server/public/locales');
 const load = (loc: string, ns: string) =>
@@ -73,7 +74,7 @@ describe('migrated plural keys resolve via i18next v4 count selection', () => {
   it('T056: pseudo-locale files carry plural-suffixed keys with variables intact', () => {
     const xx = load('xx', 'msp/settings');
     expect(xx.teams.details.memberCount_one).toContain('{{count}}');
-    expect(xx.teams.details.memberCount_one).toContain('11111');
+    expect(xx.teams.details.memberCount_one).toMatch(pseudoPattern('xx'));
     expect(xx.teams.details.memberCount_other).toContain('{{count}}');
     expect(load('yy', 'msp/profile').security.sessions.subtitle_other).toContain('{{sessionCount}}');
   });

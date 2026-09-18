@@ -41,19 +41,19 @@ function stockLedgerActionErrorFrom(error: unknown): StockLedgerActionError | nu
     }
     switch (error.message) {
       case 'service_id is required':
-        return actionError('Select a product before receiving stock.');
+        return actionError('Select a product before receiving stock.', 'features/inventory:errors.stockLedger.productRequired');
       case 'location_id is required':
-        return actionError('Select a location before receiving stock.');
+        return actionError('Select a location before receiving stock.', 'features/inventory:errors.shared.locationRequiredForReceipt');
       case 'quantity must be a positive integer':
-        return actionError('Quantity must be a positive whole number.');
+        return actionError('Quantity must be a positive whole number.', 'features/inventory:errors.stockLedger.quantityPositiveInteger');
       case 'unit_cost must be a non-negative integer (cents)':
-        return actionError("Unit cost can't be negative.");
+        return actionError("Unit cost can't be negative.", 'features/inventory:errors.stockLedger.unitCostNonNegative');
       case 'Inventory not enabled for this product':
-        return actionError('Inventory is not enabled for this product.');
+        return actionError('Inventory is not enabled for this product.', 'features/inventory:errors.shared.inventoryNotEnabledForProduct');
       case 'Stock tracking is disabled for this product':
-        return actionError('Stock tracking is disabled for this product.');
+        return actionError('Stock tracking is disabled for this product.', 'features/inventory:errors.stockLedger.trackingDisabled');
       case 'Each serialized unit requires a serial_number':
-        return actionError('Each serialized unit needs a serial number.');
+        return actionError('Each serialized unit needs a serial number.', 'features/inventory:errors.shared.serialNumberRequired');
     }
     if (
       error.message.startsWith('Currency mismatch:') ||
@@ -68,10 +68,10 @@ function stockLedgerActionErrorFrom(error: unknown): StockLedgerActionError | nu
   }
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('The selected product or location is no longer valid. Please refresh and try again.');
+    return actionError('The selected product or location is no longer valid. Please refresh and try again.', 'features/inventory:errors.stockLedger.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A stock unit with the same serial number or MAC address already exists.');
+    return actionError('A stock unit with the same serial number or MAC address already exists.', 'features/inventory:errors.shared.duplicateStockUnit');
   }
   return null;
 }

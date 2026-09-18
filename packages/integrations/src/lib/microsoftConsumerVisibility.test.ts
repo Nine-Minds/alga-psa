@@ -43,13 +43,16 @@ describe('microsoftConsumerVisibility', () => {
     expect(isVisibleMicrosoftConsumerType('email', false)).toBe(true);
     expect(isVisibleMicrosoftConsumerType('calendar', false)).toBe(false);
     expect(isVisibleMicrosoftConsumerType('teams', false)).toBe(false);
+    // CE does not ship the Entra integration, so the consumer never surfaces there.
+    expect(isVisibleMicrosoftConsumerType('entra', false)).toBe(false);
   });
 
   it('returns every supported Microsoft consumer in enterprise edition', () => {
-    expect(getVisibleMicrosoftConsumerTypes(true)).toEqual(['msp_sso', 'email', 'calendar', 'teams']);
+    expect(getVisibleMicrosoftConsumerTypes(true)).toEqual(['msp_sso', 'email', 'calendar', 'teams', 'entra']);
     expect(isVisibleMicrosoftConsumerType('msp_sso', true)).toBe(true);
     expect(isVisibleMicrosoftConsumerType('email', true)).toBe(true);
     expect(isVisibleMicrosoftConsumerType('calendar', true)).toBe(true);
     expect(isVisibleMicrosoftConsumerType('teams', true)).toBe(true);
+    expect(isVisibleMicrosoftConsumerType('entra', true)).toBe(true);
   });
 });

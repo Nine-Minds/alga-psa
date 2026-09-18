@@ -46,6 +46,70 @@ function getVisibleCommentLength(value: string): number {
 // Ticket attributes schema (flexible JSON object)
 const ticketAttributesSchema = z.record(z.unknown()).optional();
 
+// External system links. `url` is constrained to http(s) so javascript:/data:
+// links can never be persisted; the action layer revalidates.
+const httpUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => /^https?:\/\//i.test(value), 'URL must use http or https');
+
+export const externalLinkRelationshipSchema = z.enum(['origin', 'mirror', 'reference']);
+
+export const externalLinkActorSchema = z.object({
+  id: z.string().nullable().optional(),
+  handle: z.string().nullable().optional(),
+  display_name: z.string().nullable().optional(),
+  url: httpUrlSchema.nullable().optional(),
+});
+
+export const createExternalLinkSchema = z.object({
+  entity_type: z.enum(['ticket', 'comment']).optional(),
+  comment_id: uuidSchema.optional(),
+  system: z.string().trim().min(1, 'System is required'),
+  external_id: z.string().trim().min(1, 'External ID is required'),
+  external_parent_id: z.string().nullable().optional(),
+  realm: z.string().nullable().optional(),
+  url: httpUrlSchema.nullable().optional(),
+  relationship: externalLinkRelationshipSchema.optional(),
+  actor: externalLinkActorSchema.nullable().optional(),
+  external_status: z.string().nullable().optional(),
+  external_updated_at: z.string().datetime().nullable().optional(),
+  metadata: z.record(z.unknown()).nullable().optional(),
+}).strict();
+
+/**
+ * Ticket-level link shape for inline `external_links` arrays on ticket create.
+ * The POST /tickets/{id}/external-links endpoint uses the full
+ * `createExternalLinkSchema` so integrations can also attach comment-level
+ * references by supplying `entity_type`/`comment_id`.
+ */
+export const createTicketExternalLinkSchema = createExternalLinkSchema.omit({
+  entity_type: true,
+  comment_id: true,
+});
+
+export const updateExternalLinkSchema = z.object({
+  relationship: externalLinkRelationshipSchema.optional(),
+  url: httpUrlSchema.nullable().optional(),
+  actor: externalLinkActorSchema.nullable().optional(),
+  external_status: z.string().nullable().optional(),
+  external_updated_at: z.string().datetime().nullable().optional(),
+  last_synced_at: z.string().datetime().nullable().optional(),
+  metadata: z.record(z.unknown()).nullable().optional(),
+}).strict();
+
+export const externalLinkLookupQuerySchema = z.object({
+  system: z.string().trim().min(1, 'system is required'),
+  external_id: z.string().trim().min(1, 'external_id is required'),
+  external_parent_id: z.string().optional(),
+});
+
+/** Ticket-level links accepted inline on ticket create. */
+export const inlineTicketExternalLinksSchema = z.array(createTicketExternalLinkSchema).optional();
+
+export type CreateExternalLinkData = z.infer<typeof createExternalLinkSchema>;
+export type UpdateExternalLinkData = z.infer<typeof updateExternalLinkSchema>;
+
 // Create ticket schema
 export const createTicketSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
@@ -60,11 +124,15 @@ export const createTicketSchema = z.object({
   assigned_to: uuidSchema.optional(),
   priority_id: uuidSchema,
   attributes: ticketAttributesSchema,
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  external_links: inlineTicketExternalLinksSchema,
 });
 
-// Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared)
-export const updateTicketSchema = createUpdateSchema(createTicketSchema).extend({
+// Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared).
+// `external_links` is create-only: it is written through the dedicated
+// external-links endpoints, never as part of an ordinary ticket update, so it is
+// omitted here and defensively stripped by the service.
+export const updateTicketSchema = createUpdateSchema(createTicketSchema.omit({ external_links: true })).extend({
   contact_name_id: uuidSchema.nullable().optional(),
   ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
@@ -143,6 +211,12 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   priority_name: z.string().optional(),
   category_name: z.string().optional(),
   board_name: z.string().optional(),
+  external_system: z.string().optional(),
+  external_id: z.string().optional(),
+  // 'bundled' collapses bundle children under their master (the web list's
+  // default); 'individual' lists every ticket. Omitted = individual, which
+  // keeps existing API consumers' result sets unchanged.
+  bundle_view: z.enum(['bundled', 'individual']).optional(),
   tags: z.union([
     z.array(z.string()),
     arrayTransform(z.string())
@@ -234,6 +308,39 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
   description_html: z.string().optional()
 });
 
+export function isValidIanaTimeZone(timeZone: string): boolean {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Scheduled publication mirrors the web composer rules: only client-visible
+// comments can be withheld, the instant must be in the future, and the IANA
+// zone the author scheduled in is stored alongside it.
+function validateScheduledCommentPublication(
+  data: { scheduled_publish_at?: string; scheduled_publish_tz?: string; is_internal?: boolean },
+  ctx: z.RefinementCtx
+): void {
+  if (!data.scheduled_publish_at) {
+    if (data.scheduled_publish_tz) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduled_publish_at'], message: 'scheduled_publish_at is required when scheduled_publish_tz is set' });
+    }
+    return;
+  }
+  if (new Date(data.scheduled_publish_at).getTime() <= Date.now()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduled_publish_at'], message: 'Scheduled publication time must be in the future' });
+  }
+  if (data.is_internal) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduled_publish_at'], message: 'Only client-visible comments can be scheduled' });
+  }
+  if (!data.scheduled_publish_tz || !isValidIanaTimeZone(data.scheduled_publish_tz)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduled_publish_tz'], message: 'A valid IANA time zone is required for scheduled comments' });
+  }
+}
+
 // Ticket comment schemas
 export const createTicketCommentSchema = z.object({
   comment_text: z.string()
@@ -248,8 +355,11 @@ export const createTicketCommentSchema = z.object({
   time_spent: z.number().min(0).optional(),
   metadata: z.record(z.unknown()).optional(),
   parent_comment_id: uuidSchema.optional(),
+  external_links: inlineTicketExternalLinksSchema,
+  scheduled_publish_at: z.string().datetime({ offset: true }).optional(),
+  scheduled_publish_tz: z.string().min(1).max(64).optional(),
   ...ticketNotificationSuppressionSchema,
-}).superRefine(validateTicketNotificationSuppression);
+}).superRefine(validateTicketNotificationSuppression).superRefine(validateScheduledCommentPublication);
 
 export const updateTicketCommentSchema = z.object({
   comment_text: z.string()

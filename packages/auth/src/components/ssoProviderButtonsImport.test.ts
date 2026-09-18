@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import SsoProviderButtons from './SsoProviderButtons';
 
@@ -28,9 +28,15 @@ const localStorageMock = {
   },
 };
 
-function mockDiscover(providers: Array<'google' | 'azure-ad'>) {
+function mockDiscover(providers: Array<'google' | 'azure-ad' | 'keycloak'>) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
+    if (url === '/api/auth/providers') {
+      return {
+        ok: true,
+        json: async () => ({ google: { id: 'google' }, 'azure-ad': { id: 'azure-ad' }, keycloak: { id: 'keycloak' } }),
+      };
+    }
     if (url === '/api/auth/msp/sso/discover') {
       return {
         ok: true,
@@ -49,8 +55,16 @@ function mockDiscover(providers: Array<'google' | 'azure-ad'>) {
   });
 }
 
+const savedEdition = process.env.NEXT_PUBLIC_EDITION;
+
 describe('SsoProviderButtons runtime DOM behavior', () => {
+  afterAll(() => {
+    if (savedEdition === undefined) delete process.env.NEXT_PUBLIC_EDITION;
+    else process.env.NEXT_PUBLIC_EDITION = savedEdition;
+  });
+
   beforeEach(() => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     vi.clearAllMocks();
     localStorageMock.clear();
     Object.defineProperty(window, 'localStorage', {
@@ -59,8 +73,8 @@ describe('SsoProviderButtons runtime DOM behavior', () => {
     });
   });
 
-  it('renders both provider buttons with icon SVGs', async () => {
-    const fetchMock = mockDiscover(['google', 'azure-ad']);
+  it('renders all provider buttons with icon SVGs', async () => {
+    const fetchMock = mockDiscover(['google', 'azure-ad', 'keycloak']);
     vi.stubGlobal('fetch', fetchMock as any);
 
     render(
@@ -73,12 +87,15 @@ describe('SsoProviderButtons runtime DOM behavior', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Sign in with Keycloak' })).toBeTruthy();
     });
 
     const googleButton = screen.getByRole('button', { name: 'Sign in with Google' });
     const microsoftButton = screen.getByRole('button', { name: 'Sign in with Microsoft' });
+    const keycloakButton = screen.getByRole('button', { name: 'Sign in with Keycloak' });
     expect(googleButton?.querySelector('svg')).toBeTruthy();
     expect(microsoftButton?.querySelector('svg')).toBeTruthy();
+    expect(keycloakButton?.querySelector('svg')).toBeTruthy();
   });
 
   it('enables only discovered provider after valid-email lookup', async () => {

@@ -43,7 +43,7 @@ const RichTextEditorSkeleton = ({
 
             {/* Text style dropdown */}
             <div className="ml-auto">
-              <div className="h-6 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-20"></div>
+              <div className="h-6 skeleton-fill rounded w-20"></div>
             </div>
           </div>
         </div>
@@ -54,41 +54,41 @@ const RichTextEditorSkeleton = ({
         <div className="p-4 space-y-4">
           {/* Simulated text blocks */}
           <div className="space-y-2">
-            <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-3/4"></div>
-            <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-full"></div>
-            <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-5/6"></div>
+            <div className="h-4 skeleton-fill rounded w-3/4"></div>
+            <div className="h-4 skeleton-fill rounded w-full"></div>
+            <div className="h-4 skeleton-fill rounded w-5/6"></div>
           </div>
 
           <div className="space-y-2">
-            <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-2/3"></div>
-            <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-4/5"></div>
+            <div className="h-4 skeleton-fill rounded w-2/3"></div>
+            <div className="h-4 skeleton-fill rounded w-4/5"></div>
           </div>
 
           {/* Simulated list */}
           <div className="space-y-2 ml-4">
             <div className="flex items-center space-x-2">
               <div className="h-2 w-2 skeleton-fill-strong rounded-full"></div>
-              <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-1/2"></div>
+              <div className="h-4 skeleton-fill rounded w-1/2"></div>
             </div>
             <div className="flex items-center space-x-2">
               <div className="h-2 w-2 skeleton-fill-strong rounded-full"></div>
-              <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-2/3"></div>
+              <div className="h-4 skeleton-fill rounded w-2/3"></div>
             </div>
             <div className="flex items-center space-x-2">
               <div className="h-2 w-2 skeleton-fill-strong rounded-full"></div>
-              <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-1/3"></div>
+              <div className="h-4 skeleton-fill rounded w-1/3"></div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-full"></div>
-            <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-3/4"></div>
+            <div className="h-4 skeleton-fill rounded w-full"></div>
+            <div className="h-4 skeleton-fill rounded w-3/4"></div>
           </div>
 
           {/* Simulated quote block */}
           <div className="border-l-4 border-[rgb(var(--color-border-300))] dark:border-[rgb(var(--color-border-100))] pl-4 space-y-2">
-            <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-4/5"></div>
-            <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-2/3"></div>
+            <div className="h-4 skeleton-fill rounded w-4/5"></div>
+            <div className="h-4 skeleton-fill rounded w-2/3"></div>
           </div>
         </div>
         
@@ -107,14 +107,14 @@ const RichTextEditorSkeleton = ({
       </div>
       
       {/* Footer/Status Bar */}
-      <div className="border-t bg-[rgb(var(--color-border-50))] px-4 py-2 flex items-center justify-between text-xs text-gray-500 dark:text-[rgb(var(--color-text-400))]">
+      <div className="border-t bg-[rgb(var(--color-border-50))] px-4 py-2 flex items-center justify-between text-xs text-gray-500 dark:text-[rgb(var(--color-text-600))]">
         <div className="flex items-center space-x-4">
-          <div className="h-3 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-16"></div>
-          <div className="h-3 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-12"></div>
+          <div className="h-3 skeleton-fill rounded w-16"></div>
+          <div className="h-3 skeleton-fill rounded w-12"></div>
         </div>
         <div className="flex items-center space-x-2">
           <Type className="h-3 w-3 text-gray-300 dark:text-[rgb(var(--color-text-200))]" />
-          <div className="h-3 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-8"></div>
+          <div className="h-3 skeleton-fill rounded w-8"></div>
         </div>
       </div>
     </div>

@@ -39,10 +39,10 @@ export const getCreditExpirationSettings = withAuth(async (
   clientId: string | null
 ): Promise<CreditExpirationSettingsResult> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
-  if (!tenant) return actionError('Tenant context not found');
+  if (!tenant) return actionError('Tenant context not found', 'msp/billing:errors.context.tenantContextNotFound');
 
   const db = tenantDb(knex, tenant);
   // A null clientId asks for the tenant defaults directly.
@@ -94,11 +94,11 @@ export const updateCreditExpirationSettings = withAuth(async (
   settings: ICreditExpirationSettings
 ): Promise<CreditExpirationMutationResult> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   try {
     const { knex } = await createTenantKnex();
-    if (!tenant) return actionError('Tenant context not found');
+    if (!tenant) return actionError('Tenant context not found', 'msp/billing:errors.context.tenantContextNotFound');
 
     await knex.transaction(async (trx) => {
       await updateClientBillingSettingsShared(trx, tenant, clientId, {

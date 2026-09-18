@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -33,9 +34,9 @@ describe('Template + small components i18n wiring contract', () => {
     expect(source).toContain("t('templateRenderer.errorPrefix', { defaultValue: 'Error:' })");
     expect(source).toContain("t('templateRenderer.empty', { defaultValue: 'Please select an invoice and a template to preview.' })");
 
-    expect(getLeaf(pseudo, 'templateRenderer.loading')).toBe('11111');
-    expect(getLeaf(pseudo, 'templateRenderer.errorPrefix')).toBe('11111');
-    expect(getLeaf(pseudo, 'templateRenderer.empty')).toBe('11111');
+    expect(getLeaf(pseudo, 'templateRenderer.loading')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'templateRenderer.errorPrefix')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'templateRenderer.empty')).toMatch(pseudoPattern('xx'));
   });
 
   it('T034: PropertyEditor wires the inspector field labels through msp/billing translations', () => {
@@ -63,7 +64,7 @@ describe('Template + small components i18n wiring contract', () => {
       'templateDesigner.propertyEditor.color',
     ];
     for (const key of pseudoKeys) {
-      expect(getLeaf(pseudo, key)).toBe('11111');
+      expect(getLeaf(pseudo, key)).toMatch(pseudoPattern('xx'));
     }
   });
 
@@ -94,7 +95,7 @@ describe('Template + small components i18n wiring contract', () => {
       'templateDesigner.conditionalRules.addRule',
     ];
     for (const key of pseudoKeys) {
-      expect(getLeaf(pseudo, key)).toBe('11111');
+      expect(getLeaf(pseudo, key)).toMatch(pseudoPattern('xx'));
     }
   });
 
@@ -109,9 +110,9 @@ describe('Template + small components i18n wiring contract', () => {
     expect(source).toContain("t('contractsHub.tabs.templates', { defaultValue: 'Templates' })");
     expect(source).toContain("t('contractsHub.tabs.clientContracts', { defaultValue: 'Client Contracts' })");
 
-    expect(getLeaf(pseudo, 'contractsHub.title')).toBe('11111');
-    expect(getLeaf(pseudo, 'contractsHub.tabs.templates')).toBe('11111');
-    expect(getLeaf(pseudo, 'contractsHub.tabs.clientContracts')).toBe('11111');
+    expect(getLeaf(pseudo, 'contractsHub.title')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'contractsHub.tabs.templates')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'contractsHub.tabs.clientContracts')).toMatch(pseudoPattern('xx'));
   });
 
   it('T037: TemplateRendererCore fallback strings are documented as generated-invoice output rather than dashboard chrome', () => {

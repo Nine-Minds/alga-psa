@@ -19,7 +19,7 @@ export async function listPendingApprovalsForTeams(params: {
 }): Promise<TeamsPendingApprovalRecord[]> {
   const { knex } = await createTenantKnex(params.tenantId);
   const db = tenantDb(knex, params.tenantId);
-  const canReadAll = await hasPermission(params.user, 'timesheet', 'read_all', knex);
+  const canReadAll = await hasPermission(params.user, 'time_sheet', 'read_all', knex);
   const normalizedQuery = params.query?.trim();
 
   let query = db.table('time_sheets')

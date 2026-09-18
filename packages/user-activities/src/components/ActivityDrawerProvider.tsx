@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: invalidateCache property missing from hook return type
 'use client';
 
 
@@ -45,8 +43,12 @@ export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
   const handleActionComplete = useCallback(() => {
     // Handle action completion (e.g., refresh data)
     if (selectedActivity) {
-      // Invalidate cache for this activity type to ensure fresh data
-      invalidateCache({ activityType: selectedActivity.type });
+      // Invalidate cache for this activity type to ensure fresh data.
+      // invalidateCache takes a key substring, not an options object — passing
+      // one stringified to "[object Object]", matched no cache key, and left the
+      // dashboard showing stale data after an action completed. Every other call
+      // site passes the bare ActivityType.
+      invalidateCache(selectedActivity.type);
     }
     setSelectedActivity(null);
     closeDrawer();

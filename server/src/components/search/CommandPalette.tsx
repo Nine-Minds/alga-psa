@@ -226,7 +226,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
               onClick={() => setMode('navigation')}
               className={`flex items-center gap-1 rounded px-2 py-1 transition-colors ${
                 mode === 'navigation'
-                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
+                  ? 'chip-primary'
                   : 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]'
               }`}
             >
@@ -241,7 +241,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
               onClick={() => setMode('fulltext')}
               className={`flex items-center gap-1 rounded px-2 py-1 transition-colors ${
                 mode === 'fulltext'
-                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
+                  ? 'chip-primary'
                   : 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]'
               }`}
             >

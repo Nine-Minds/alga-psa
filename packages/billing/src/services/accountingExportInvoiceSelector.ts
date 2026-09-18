@@ -7,11 +7,23 @@ import { AppError } from '@alga-psa/core';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
-import { getDefaultXeroTenantId } from '@alga-psa/integrations/lib/xero/xeroClientService';
+import { getXeroDefaultSelection } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { satisfyExportOpsForManualBatch } from './accountingSync/syncProducers';
+import { resolveConnectedAccountingIntegration } from './accountingSync/connectedAccountingIntegration';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
 
 type Nullable<T> = T | null | undefined;
+
+/** Adapters that route through a live, connected accounting organisation. */
+type LiveAccountingAdapterType = 'quickbooks_online' | 'xero';
+
+function isLiveAccountingAdapter(adapterType: string): adapterType is LiveAccountingAdapterType {
+  return adapterType === 'quickbooks_online' || adapterType === 'xero';
+}
+
+function accountingTargetLabel(adapterType: LiveAccountingAdapterType): string {
+  return adapterType === 'xero' ? 'Xero organisation' : 'QuickBooks company';
+}
 
 export interface InvoiceSelectionFilters {
   startDate?: Nullable<string>;
@@ -156,11 +168,21 @@ export class AccountingExportInvoiceSelector {
       ]);
 
     if (filters.startDate) {
-      query.andWhere('inv.invoice_date', '>=', filters.startDate);
+      const start = /^\d{4}-\d{2}-\d{2}$/.test(filters.startDate)
+        ? `${filters.startDate}T00:00:00.000Z` : filters.startDate;
+      query.andWhere('inv.invoice_date', '>=', start);
     }
 
     if (filters.endDate) {
-      query.andWhere('inv.invoice_date', '<=', filters.endDate);
+      // Legacy invoice dates are timestamps. A calendar end date includes the
+      // whole UTC day; explicit timestamp filters retain their exact boundary.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(filters.endDate)) {
+        query.andWhere('inv.invoice_date', '<', this.knex.raw(
+          "(?::date + 1)::timestamp AT TIME ZONE 'UTC'", [filters.endDate]
+        ));
+      } else {
+        query.andWhere('inv.invoice_date', '<=', filters.endDate);
+      }
     }
 
     if (invoiceStatusesForQuery && invoiceStatusesForQuery.length > 0) {
@@ -198,15 +220,32 @@ export class AccountingExportInvoiceSelector {
         .andWhere('map.alga_entity_type', 'invoice')
         .andWhereRaw('map.alga_entity_id = inv.invoice_id::text');
 
+      // Realm-scoped selection is realm-exact: only a mapping in the target
+      // realm proves the invoice was synced there. Legacy realm-less rows are
+      // handled by the quarantine below, never treated as synced-to-this-realm.
       if (targetRealm) {
-        mappingExists.andWhere(function () {
-          this.where('map.external_realm_id', targetRealm).orWhereNull('map.external_realm_id');
-        });
+        mappingExists.andWhere('map.external_realm_id', targetRealm);
       } else {
         mappingExists.whereNull('map.external_realm_id');
       }
 
       query.whereNotExists(mappingExists);
+    }
+
+    // Quarantine: an invoice carrying a legacy realm-less mapping for this
+    // adapter has ambiguous remote ownership. It must never be selected for a
+    // realm-scoped export (including deliberate re-exports) until the mapping
+    // is reconciled to a realm — exporting would guess and could double-post
+    // into the wrong company.
+    if (adapterType && targetRealm) {
+      const realmlessMapping = db.table('tenant_external_entity_mappings as qmap')
+        .select(this.knex.raw('1'))
+        .where('qmap.integration_type', adapterType)
+        .andWhere('qmap.alga_entity_type', 'invoice')
+        .andWhereRaw('qmap.alga_entity_id = inv.invoice_id::text')
+        .whereNull('qmap.external_realm_id');
+
+      query.whereNotExists(realmlessMapping);
     }
 
     const rows = (await query.orderBy('inv.invoice_date', 'asc').orderBy('inv.invoice_number', 'asc')) as InvoicePreviewSelectionRow[];
@@ -325,15 +364,75 @@ export class AccountingExportInvoiceSelector {
     });
   }
 
+  /**
+   * Prove an explicitly requested live target is connected for this tenant and
+   * belongs to the selected provider. Reuses the same provider-selection
+   * resolver as sync routing and health, so manual exports cannot diverge from
+   * the rest of the accounting surface. Returns the connection id/realm to
+   * stamp on the batch; throws when the target is not a valid pairing.
+   */
+  private async assertExplicitTargetRealm(
+    adapterType: LiveAccountingAdapterType,
+    targetRealm: string
+  ): Promise<string> {
+    const resolved = await resolveConnectedAccountingIntegration(this.knex, this.tenantId, {
+      preferredAdapterType: adapterType,
+      preferredTargetRealm: targetRealm
+    });
+
+    if (!resolved || resolved.adapterType !== adapterType || resolved.targetRealm !== targetRealm) {
+      throw new AppError(
+        'ACCOUNTING_EXPORT_TARGET_UNAVAILABLE',
+        `The selected ${accountingTargetLabel(adapterType)} (${targetRealm}) is not connected for this tenant. Reconnect it or choose another.`,
+        { adapterType, targetRealm }
+      );
+    }
+
+    return resolved.targetRealm;
+  }
+
   async createBatchFromFilters(options: CreateBatchOptions): Promise<{ batch: AccountingExportBatch; lines: InvoicePreviewLine[] }> {
     let targetRealm = options.targetRealm ?? null;
-    if (!targetRealm && options.adapterType === 'quickbooks_online') {
+
+    if (!isLiveAccountingAdapter(options.adapterType)) {
+      // File-based adapters (CSV/desktop) have no connected accounting realm;
+      // discard any stale realm the caller carried over so a manual CSV export
+      // is never blocked or mis-stamped by a previously selected provider.
+      targetRealm = null;
+    } else if (targetRealm) {
+      // An explicitly supplied target is authoritative and must be validated
+      // before any persistence. Unknown, disconnected, cross-provider and
+      // cross-tenant targets are rejected here rather than silently falling
+      // back to another connection, so a stale browser picker can never stamp
+      // a mismatched adapter/target pair on a batch.
+      targetRealm = await this.assertExplicitTargetRealm(options.adapterType, targetRealm);
+    } else if (options.adapterType === 'quickbooks_online') {
       // Live QBO mappings are realm-scoped, so a batch without a realm cannot
       // resolve them; default to the tenant's connected company.
       targetRealm = await getDefaultQboRealmId(this.tenantId).catch(() => null);
-    } else if (!targetRealm && options.adapterType === 'xero') {
-      // Live Xero mappings use the Xero organisation tenant id as their realm.
-      targetRealm = await getDefaultXeroTenantId(this.tenantId).catch(() => null);
+    } else {
+      // Live Xero mappings are keyed by the connection id (the persisted
+      // provider-scoped selection), not the organisation tenant id. An
+      // ambiguous persisted organisation fails closed with an actionable
+      // error instead of stamping another connection's realm on the batch.
+      const selection = await getXeroDefaultSelection(this.tenantId).catch(
+        () => ({ status: 'unknown' as const, persistedRealm: '' })
+      );
+      if (selection.status === 'ambiguous') {
+        throw new AppError(
+          'ACCOUNTING_EXPORT_XERO_SELECTION_AMBIGUOUS',
+          'The saved default Xero organisation is owned by more than one connection. Choose which connection is the default in the accounting settings before exporting.',
+          { adapterType: 'xero', organisationId: selection.organisationId }
+        );
+      }
+      if (selection.status !== 'resolved') {
+        throw new AppError(
+          'ACCOUNTING_EXPORT_XERO_CONNECTION_REQUIRED',
+          'No Xero connection could be selected. Connect Xero in the accounting settings before exporting.',
+          { adapterType: 'xero' }
+        );
+      }
+      targetRealm = selection.connectionId;
     }
 
     const preview = await this.previewInvoiceLines({
@@ -368,7 +467,8 @@ export class AccountingExportInvoiceSelector {
         this.knex,
         this.tenantId,
         options.adapterType,
-        Array.from(new Set(preview.map((line) => line.invoiceId)))
+        Array.from(new Set(preview.map((line) => line.invoiceId))),
+        targetRealm ?? null
       );
     }
 

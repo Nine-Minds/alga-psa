@@ -18,7 +18,9 @@ import {
   AccountingExportFileAttachment,
   PendingTaxImportRecord
 } from '@alga-psa/types';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { AppError } from '@alga-psa/core';
+import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { unparseCSV } from '@alga-psa/core';
@@ -347,7 +349,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     }
 
     const { knex } = await createTenantKnex();
-    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
     const deliveredAt = new Date().toISOString();
 
     logger.info('[QuickBooksCSVAdapter] Starting delivery (file generation)', {
@@ -358,19 +359,10 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
     // Collect all CSV rows from all documents
     const allRows: QuickBooksCSVRow[] = [];
-    const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
 
     for (const document of transformResult.documents) {
       const payload = document.payload as unknown as InvoiceDocumentPayload;
       allRows.push(...payload.csvRows);
-
-      // Mark lines as delivered with the invoice number as reference
-      for (const lineId of document.lineIds) {
-        deliveredLines.push({
-          lineId,
-          externalDocumentRef: `csv:${payload.invoiceNumber}`
-        });
-      }
     }
 
     if (allRows.length === 0) {
@@ -384,21 +376,61 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const filename = `quickbooks-invoices-${timestamp}.csv`;
 
+    // Mark an invoice exported only after confirming it is not cancelled. The
+    // mapping insert takes the same invoice row lock the void path holds
+    // (invoiceExternalSyncLock.ts), so a concurrent void either commits first
+    // and refuses the export of its invoice, or waits until these mappings
+    // commit and then re-reads the mapping under its own lock.
+    const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
+    const failedDocuments: Array<{
+      documentId: string;
+      lineIds: string[];
+      code: string;
+      message: string;
+    }> = [];
+
     for (const document of transformResult.documents) {
       const payload = document.payload as unknown as InvoiceDocumentPayload;
       const externalRef = `csv:${payload.invoiceNumber}`;
-      await invoiceMappingRepository.upsertInvoiceMapping({
-        tenantId,
-        adapterType: this.type,
-        invoiceId: document.documentId,
-        externalInvoiceId: externalRef,
-        targetRealm: context.batch.target_realm ?? null,
-        metadata: {
-          last_exported_at: deliveredAt,
-          filename,
-          invoiceNumber: payload.invoiceNumber
+      try {
+        await withTransaction(knex, async (trx) => {
+          await lockInvoiceForExternalSync(trx, tenantId, document.documentId);
+          const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
+          await invoiceMappingRepository.upsertInvoiceMapping({
+            tenantId,
+            adapterType: this.type,
+            invoiceId: document.documentId,
+            externalInvoiceId: externalRef,
+            targetRealm: context.batch.target_realm ?? null,
+            metadata: {
+              last_exported_at: deliveredAt,
+              filename,
+              invoiceNumber: payload.invoiceNumber
+            }
+          });
+        });
+
+        for (const lineId of document.lineIds) {
+          deliveredLines.push({
+            lineId,
+            externalDocumentRef: externalRef
+          });
         }
-      });
+      } catch (error) {
+        const code = error instanceof AppError ? error.code : 'QBO_CSV_DELIVERY_ERROR';
+        const message = error instanceof Error ? error.message : 'Unknown QuickBooks CSV delivery error';
+        logger.warn('[QuickBooksCSVAdapter] Skipping mapping for invoice delivery failure', {
+          invoiceId: document.documentId,
+          code,
+          error: message
+        });
+        failedDocuments.push({
+          documentId: document.documentId,
+          lineIds: document.lineIds,
+          code,
+          message
+        });
+      }
     }
 
     // Create file attachment
@@ -417,6 +449,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
     return {
       deliveredLines,
+      failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
       artifacts: {
         filename,
         rowCount: allRows.length,
@@ -424,7 +457,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       },
       metadata: {
         adapter: this.type,
-        deliveredInvoices: transformResult.documents.length,
+        deliveredInvoices: transformResult.documents.length - failedDocuments.length,
         files
       }
     };

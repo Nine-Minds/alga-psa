@@ -1,0 +1,6 @@
+# build-image.sh stages the complete runtime. Exclude source, local dependencies,
+# test output and other workspace files from the image build context.
+*
+!.stage
+!.stage/**
+!Dockerfile

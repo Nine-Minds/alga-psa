@@ -118,8 +118,6 @@ function createService(state: FakeDbState) {
     proAnnualPriceId: 'price_pro_seat_year',
     aiAddOnPriceId: 'price_ai_addon',
     aiAddOnAnnualPriceId: 'price_ai_addon_year',
-    teamsAddOnPriceId: 'price_teams_addon',
-    teamsAddOnAnnualPriceId: 'price_teams_addon_year',
     enterpriseAddOnPriceId: 'price_enterprise_addon',
     enterpriseAddOnAnnualPriceId: 'price_enterprise_addon_year',
     earlyAdoptersBasePriceId: null,

@@ -24,7 +24,7 @@ type SetupStep = 'choose' | 'platform' | 'automated' | 'manual' | 'complete';
 
 // The setup callback route reports failures as stable codes (never prose), so
 // the popup's English payload never reaches the user. Keys live in
-// msp/email-providers alongside the rest of the Microsoft mailbox setup copy.
+// msp/integrations alongside the rest of the Microsoft mailbox setup copy.
 const CALLBACK_ERROR_TEXT: Record<string, { key: string; defaultValue: string }> = {
   invalid_state: {
     key: 'integrations.microsoft.emailSetup.errors.invalidState',
@@ -105,7 +105,14 @@ export function MicrosoftEmailSetupDialog({
     void getMicrosoftEmailSetupOptions()
       .then((result) => {
         setOptions(result);
-        if (!result.success) setError(result.error || 'Failed to load Microsoft Email setup options.');
+        if (!result.success) {
+          setError(
+            result.error ||
+              t('integrations.microsoft.emailSetup.errors.optionsLoadFailed', {
+                defaultValue: 'Failed to load Microsoft Email setup options.',
+              }),
+          );
+        }
       })
       .finally(() => setLoading(false));
   }, [isOpen]);

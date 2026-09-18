@@ -167,7 +167,7 @@ function PortalSetupContent() {
     if (!isPasswordValid()) {
       // Surface the specific policy error (e.g. too common / sequential) when present,
       // otherwise fall back to the generic requirements message (e.g. passwords mismatch).
-      const policyError = validatePasswordPolicy(formData.password);
+      const policyError = validatePasswordPolicy(formData.password, t);
       toast.error(policyError ?? t('auth.portalSetup.requirementsNotMet', 'Please ensure all password requirements are met'));
       return;
     }

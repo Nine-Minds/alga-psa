@@ -32,6 +32,7 @@ const SUBTYPES = [
   { category: 'Tickets', name: 'Ticket Updated Client', description: 'When a ticket is modified (client-facing)' },
   { category: 'Tickets', name: 'Ticket Auto-Close Warning', description: 'When a ticket is about to be closed automatically due to inactivity' },
   // Surveys
+  { category: 'Surveys', name: 'survey-project-closed', description: 'When a customer satisfaction survey invitation is sent after a project is completed' },
   { category: 'Surveys', name: 'survey-ticket-closed', description: 'When a customer satisfaction survey invitation is sent after a ticket is closed' },
   // Invoices
   { category: 'Invoices', name: 'Invoice Generated', description: 'When a new invoice is generated' },
@@ -54,6 +55,7 @@ const SUBTYPES = [
   { category: 'Projects', name: 'Project Milestone Ready', description: 'When a project billing schedule entry becomes ready for review' },
   { category: 'Projects', name: 'Project Budget Threshold Reached', description: 'When project billing crosses a configured budget threshold' },
   { category: 'Projects', name: 'Project Budget Exceeded', description: 'When billable project work first exceeds a hard budget cap' },
+  { category: 'Projects', name: 'Project Status Update', description: 'Status update sent to the client contact for a project' },
   // Time Entries
   { category: 'Time Entries', name: 'Time Entry Submitted', description: 'When time entries are submitted for approval' },
   { category: 'Time Entries', name: 'Time Entry Approved', description: 'When time entries are approved' },

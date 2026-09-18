@@ -39,7 +39,6 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
-  buildInvoiceExpressionPathOptions,
   insertTextIntoDomControl,
   insertTextIntoValue,
   validateSourcePaths,
@@ -84,10 +83,10 @@ import {
 } from './utils/sizeModes';
 import { resolveDesignerDocumentKind } from './utils/documentKind';
 import {
-  getTemplateFieldDefinition,
-  getTemplateFieldDisplayFormats,
-  resolveTemplateFieldLabel,
-} from './fields/fieldCatalog';
+  buildDocumentExpressionPathOptions,
+  resolveDocumentFieldLabel,
+} from './fields/documentBindingCatalog';
+import { getTemplateFieldDefinition, getTemplateFieldDisplayFormats } from './fields/fieldCatalog';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -492,7 +491,7 @@ const resolveFieldTypeLabel = (bindingKey: string): string => {
   if (!normalized) {
     return 'Unbound';
   }
-  return resolveTemplateFieldLabel(normalized);
+  return resolveDocumentFieldLabel(normalized);
 };
 
 const resolveSelectedFieldType = (selectedNode: DesignerNode | null): { label: string; bindingKey: string } | null => {
@@ -602,7 +601,7 @@ export const DesignerShell: React.FC = () => {
   const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const invoicePathOptions = useMemo(
     () =>
-      buildInvoiceExpressionPathOptions({
+      buildDocumentExpressionPathOptions({
         includeRootPaths: false,
         documentKind,
       }),

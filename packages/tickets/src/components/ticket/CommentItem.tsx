@@ -11,6 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
+import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
@@ -20,6 +21,7 @@ import { getCommentResponseSource } from '../../lib/responseSource';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
+import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
@@ -65,6 +67,12 @@ interface CommentItemProps {
    * 1px border width and radius — only the color changes.
    */
   accentBorderClassName?: string;
+  /**
+   * Read-only external-system references attached to this comment (comment-level
+   * links). Rendered as link-out chips; the manual writer only creates
+   * ticket-level links, so these come from the API/integration path.
+   */
+  externalLinks?: ITicketExternalLinkView[];
 }
 
 function getInboundSenderIdentity(
@@ -168,6 +176,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   canViewCommentMetadataDebug = false,
   variant = 'default',
   accentBorderClassName,
+  externalLinks = [],
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
@@ -223,6 +232,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
     }
     return resolvedAuthor.displayName;
   };
+
+  // An unmatched inbound email still names its sender, so the avatar shows those
+  // initials; the Unknown User placeholder is kept only when nothing identifies
+  // the author.
+  const inboundSenderLabel = inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
+  const unknownAuthorAvatarName =
+    !conversation.is_system_generated && inboundSenderLabel
+      ? inboundSenderLabel
+      : t('conversation.unknownUser');
 
   const getAuthorEmail = () => {
     if (conversation.is_system_generated) return null;
@@ -348,6 +366,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           </div>
         </div>
         <TextEditor
+            allowFileAttachments
           {...withDataAutomationId({ id: `${commentId}-text-editor` })}
           roomName={`ticket-${ticketId}-comment-${currentComment.comment_id}`}
           initialContent={editedContent}
@@ -457,7 +476,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId=""
-              userName={t('conversation.unknownUser')}
+              userName={unknownAuthorAvatarName}
               avatarUrl={null}
               size={isCompact ? 'sm' : 'md'}
             />
@@ -535,6 +554,29 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     }}
                   />
                 )}
+                {externalLinks.map((link) => (
+                  <span
+                    key={link.link_id}
+                    id={`${commentId}-external-link-${link.link_id}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs text-[rgb(var(--color-text-600))]"
+                    title={link.display.label}
+                  >
+                    {link.display.href ? (
+                      <a
+                        href={link.display.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {link.display.label} · {link.external_id}
+                      </a>
+                    ) : (
+                      <span>
+                        {link.display.label} · {link.external_id}
+                      </span>
+                    )}
+                  </span>
+                ))}
                 {canViewCommentMetadataDebug && isNonEmptyCommentMetadata(conversation.metadata) && (
                   <>
                     <Tooltip content={t('conversation.metadataDebug', 'View metadata (debug)')}>
@@ -689,11 +731,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   }`}
                   style={{ overflowWrap: 'anywhere' }}
                 >
-                  <RichTextViewer
-                    key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
-                    content={displayContent as any}
-                    className="w-full min-w-0 max-w-full"
-                  />
+                  <ClampedContent
+                    id={`${commentId}-clamp`}
+                    maxHeight={240}
+                    showMoreLabel={t('conversation.showMore', 'Show more')}
+                    showLessLabel={t('conversation.showLess', 'Show less')}
+                  >
+                    <RichTextViewer
+                      key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
+                      content={displayContent as any}
+                      className="w-full min-w-0 max-w-full"
+                    />
+                  </ClampedContent>
               </div>
           )}
           {reactions && onToggleReaction && (

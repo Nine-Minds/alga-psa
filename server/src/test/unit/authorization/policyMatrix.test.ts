@@ -112,14 +112,14 @@ const roleStore: Record<string, FixtureRole[]> = {
     },
   ],
   [`${TENANT_A}:frank`]: [],
-  // tina's grants use legacy resource spellings to exercise canonicalization.
+  // tina holds the time permissions the kernel's resource types name directly.
   [`${TENANT_A}:tina`]: [
     {
       role_id: 'role-time',
       role_name: 'Time Admin',
       msp: true,
       client: false,
-      permissions: [perm('timeentry', 'read'), perm('time_sheet', 'submit')],
+      permissions: [perm('time_entry', 'read'), perm('time_sheet', 'submit')],
     },
   ],
 };
@@ -215,16 +215,19 @@ describe('authorization policy matrix (role x resource x action)', () => {
     }
   });
 
-  const canonicalizationMatrix: Array<{ resource: string; action: string; expected: boolean }> = [
+  // The kernel's resource types and the stored permission resources are one
+  // vocabulary: no alias table translates between them, so a legacy spelling
+  // must be denied rather than quietly resolved.
+  const resourceVocabularyMatrix: Array<{ resource: string; action: string; expected: boolean }> = [
     { resource: 'time_entry', action: 'read', expected: true },
-    { resource: 'timeentry', action: 'read', expected: true },
     { resource: 'time_sheet', action: 'submit', expected: true },
-    { resource: 'timesheet', action: 'submit', expected: true },
+    { resource: 'timeentry', action: 'read', expected: false },
+    { resource: 'timesheet', action: 'submit', expected: false },
     { resource: 'time_entry', action: 'delete', expected: false },
   ];
 
-  it.each(canonicalizationMatrix)(
-    'canonicalizes legacy resource spellings: $resource:$action -> $expected',
+  it.each(resourceVocabularyMatrix)(
+    'matches resource names verbatim: $resource:$action -> $expected',
     async ({ resource, action, expected }) => {
       const decision = await authorize('tina', 'internal', resource, action);
       expect(decision.allowed).toBe(expected);

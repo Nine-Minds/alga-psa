@@ -85,10 +85,10 @@ export const createVendor = withAuth(
     },
   ): Promise<IVendor | VendorActionError> => {
     if (!(await hasPermission(user, 'vendor', 'create'))) {
-      return permissionError('Permission denied: vendor create required');
+      return permissionError('Permission denied: vendor create required', 'features/inventory:errors.permissions.vendorCreate');
     }
     const vendorName = (input.vendor_name ?? '').trim();
-    if (!vendorName) return actionError('Vendor name is required');
+    if (!vendorName) return actionError('Vendor name is required', 'features/inventory:errors.vendors.nameRequired');
 
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -97,7 +97,7 @@ export const createVendor = withAuth(
         .where({ tenant })
         .whereRaw('LOWER(vendor_name) = LOWER(?)', [vendorName])
         .first();
-      if (existing) return actionError(`A vendor named "${vendorName}" already exists`);
+      if (existing) return actionError(`A vendor named "${vendorName}" already exists`, 'features/inventory:errors.vendors.duplicateName', { name: vendorName });
 
       const [row] = await trx('vendors')
         .insert({
@@ -139,19 +139,19 @@ export const updateVendor = withAuth(
     >,
   ): Promise<IVendor | VendorActionError> => {
     if (!(await hasPermission(user, 'vendor', 'update'))) {
-      return permissionError('Permission denied: vendor update required');
+      return permissionError('Permission denied: vendor update required', 'features/inventory:errors.permissions.vendorUpdate');
     }
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       if (typeof patch.vendor_name === 'string') {
         const vendorName = patch.vendor_name.trim();
-        if (!vendorName) return actionError('Vendor name is required');
+        if (!vendorName) return actionError('Vendor name is required', 'features/inventory:errors.vendors.nameRequired');
         const conflict = await trx('vendors')
           .where({ tenant })
           .whereRaw('LOWER(vendor_name) = LOWER(?)', [vendorName])
           .andWhereNot({ vendor_id: vendorId })
           .first();
-        if (conflict) return actionError(`A vendor named "${vendorName}" already exists`);
+        if (conflict) return actionError(`A vendor named "${vendorName}" already exists`, 'features/inventory:errors.vendors.duplicateName', { name: vendorName });
       }
 
       const update: Record<string, unknown> = { updated_at: trx.fn.now() };
@@ -171,7 +171,7 @@ export const updateVendor = withAuth(
       if (typeof update.vendor_name === 'string') update.vendor_name = (update.vendor_name as string).trim();
 
       const [row] = await trx('vendors').where({ tenant, vendor_id: vendorId }).update(update).returning('*');
-      if (!row) return actionError('Vendor not found');
+      if (!row) return actionError('Vendor not found', 'features/inventory:errors.vendors.notFound');
       return row as IVendor;
     });
   },
@@ -184,7 +184,7 @@ export const updateVendor = withAuth(
 export const deactivateVendor = withAuth(
   async (user, { tenant }, vendorId: string): Promise<IVendor | VendorActionError> => {
     if (!(await hasPermission(user, 'vendor', 'update'))) {
-      return permissionError('Permission denied: vendor update required');
+      return permissionError('Permission denied: vendor update required', 'features/inventory:errors.permissions.vendorUpdate');
     }
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -192,13 +192,13 @@ export const deactivateVendor = withAuth(
         .where({ tenant, vendor_id: vendorId })
         .whereIn('status', OPEN_PO_STATUSES)
         .first();
-      if (openPo) return actionError('Cannot deactivate a vendor with open purchase orders');
+      if (openPo) return actionError('Cannot deactivate a vendor with open purchase orders', 'features/inventory:errors.vendors.hasOpenPurchaseOrders');
 
       const [row] = await trx('vendors')
         .where({ tenant, vendor_id: vendorId })
         .update({ is_active: false, updated_at: trx.fn.now() })
         .returning('*');
-      if (!row) return actionError('Vendor not found');
+      if (!row) return actionError('Vendor not found', 'features/inventory:errors.vendors.notFound');
       return row as IVendor;
     });
   },

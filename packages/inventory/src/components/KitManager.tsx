@@ -481,7 +481,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                   }`}
                 >
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="mt-0.5 rounded-md bg-[rgb(var(--color-border-100))] p-2 text-[rgb(var(--color-primary-600))]">
+                    <div className="chip-primary mt-0.5 rounded-md p-2">
                       <Boxes className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -641,7 +641,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
 
                   {detail.components.length > 0 && (
                     <div className="overflow-hidden rounded-md border border-[rgb(var(--color-border-100))]" id="kit-components-table">
-                      <div className="hidden grid-cols-[minmax(0,1.4fr)_80px_80px_100px_100px_130px_80px] gap-2 border-b border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] md:grid">
+                      <div className="hidden grid-cols-[minmax(0,1.4fr)_80px_80px_100px_100px_130px_80px] gap-2 border-b border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-500))] md:grid">
                         <span>{t('kits.columns.component', { defaultValue: 'Component' })}</span>
                         <span>{t('kits.bom.qtyPerKit', { defaultValue: 'Qty per kit' })}</span>
                         <span>{t('kits.stock.available', { defaultValue: 'Available' })}</span>

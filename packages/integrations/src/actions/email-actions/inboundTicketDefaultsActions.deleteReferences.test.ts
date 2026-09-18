@@ -127,6 +127,7 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
     const { deleteInboundTicketDefaults } = await import('./inboundTicketDefaultsActions');
     await expect(deleteInboundTicketDefaults('missing-defaults')).resolves.toEqual({
       actionError: 'Defaults configuration not found',
+      messageKey: 'msp/email-providers:errors.inboundDefaults.notFound',
     });
   });
 });

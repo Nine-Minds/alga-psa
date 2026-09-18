@@ -59,11 +59,11 @@ export const getClientBillingCycleAnchor = withAuth(async (
   clientId: string
 ): Promise<ClientBillingCycleAnchorConfig | BillingCycleAnchorActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
   if (!tenant) {
-    return actionError('No tenant context. Please refresh and try again.');
+    return actionError('No tenant context. Please refresh and try again.', 'msp/billing:errors.context.noTenantContext');
   }
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -72,7 +72,7 @@ export const getClientBillingCycleAnchor = withAuth(async (
       .first()
       .select('billing_cycle');
     if (!client) {
-      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.client.notFoundRefresh');
     }
 
     const settings = await tenantDb(trx, tenant).table('client_billing_settings')
@@ -117,11 +117,11 @@ export const updateClientBillingCycleAnchor = withAuth(async (
   input: UpdateClientBillingCycleAnchorInput
 ): Promise<{ success: true } | BillingCycleAnchorActionError> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   const { knex } = await createTenantKnex();
   if (!tenant) {
-    return actionError('No tenant context. Please refresh and try again.');
+    return actionError('No tenant context. Please refresh and try again.', 'msp/billing:errors.context.noTenantContext');
   }
 
   try {
@@ -136,7 +136,7 @@ export const updateClientBillingCycleAnchor = withAuth(async (
     });
   } catch (error) {
     if (error instanceof Error && /client.*not found/i.test(error.message)) {
-      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.client.notFoundRefresh');
     }
     throw error;
   }
@@ -201,11 +201,11 @@ export const previewClientBillingPeriods = withAuth(async (
   options: { count?: number; referenceDate?: ISO8601String } = {}
 ): Promise<BillingCyclePeriodPreviewResult | BillingCycleAnchorActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
   if (!tenant) {
-    return actionError('No tenant context. Please refresh and try again.');
+    return actionError('No tenant context. Please refresh and try again.', 'msp/billing:errors.context.noTenantContext');
   }
 
   const count = Math.max(1, Math.min(options.count ?? 3, 12));
@@ -219,7 +219,7 @@ export const previewClientBillingPeriods = withAuth(async (
       .first()
       .select('billing_cycle');
     if (!client) {
-      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.client.notFoundRefresh');
     }
 
     const settings = await tenantDb(trx, tenant).table('client_billing_settings')

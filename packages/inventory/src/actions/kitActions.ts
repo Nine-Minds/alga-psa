@@ -609,8 +609,9 @@ export const createKitProduct = withAuth(
             service_id: service.service_id,
             currency_code: currency,
             rate: catalogProjection,
+            effective_date: '1970-01-01',
           })
-          .onConflict(['tenant', 'service_id', 'currency_code'])
+          .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
           .merge({ rate: catalogProjection, updated_at: new Date().toISOString() });
 
         await trx('product_inventory_settings')
@@ -702,8 +703,9 @@ export const updateKitProduct = withAuth(
             service_id: kitServiceId,
             currency_code: currency,
             rate: catalogProjection,
+            effective_date: '1970-01-01',
           })
-          .onConflict(['tenant', 'service_id', 'currency_code'])
+          .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
           .merge({ rate: catalogProjection, updated_at: new Date().toISOString() });
 
         await trx('product_inventory_settings')
