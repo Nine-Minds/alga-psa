@@ -766,8 +766,11 @@ export class PDFGenerationService {
         throw new Error('No invoice template AST available');
       }
 
+      const renderLocale = await this.resolveRenderLocale({ invoiceId: options.invoiceId });
       const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
-      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData);
+      // The service-period label is built here, in named months, so the mapper
+      // needs the recipient's language too.
+      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, renderLocale);
       if (!invoiceViewModel) {
         throw new Error(`Failed to map invoice ${options.invoiceId} to view model`);
       }
@@ -777,10 +780,7 @@ export class PDFGenerationService {
         invoiceViewModel as unknown as Record<string, unknown>,
         { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
-      const localized = await localizeTemplateAstForLocale(
-        templateAst,
-        await this.resolveRenderLocale({ invoiceId: options.invoiceId })
-      );
+      const localized = await localizeTemplateAstForLocale(templateAst, renderLocale);
       const dateFormat = await this.resolveRenderCountry({ invoiceId: options.invoiceId });
       const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
         locale: localized.locale,
@@ -892,7 +892,8 @@ export class PDFGenerationService {
       }
 
       const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
-      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData);
+      // Named-month service periods follow the recipient's language.
+      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, locale);
 
       if (!invoiceViewModel) {
         throw new Error(`Failed to map invoice ${invoiceId} to view model`);
