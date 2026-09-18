@@ -715,6 +715,29 @@ describe('Ticket bundling integration', () => {
     return { masterId, childIds };
   }
 
+  // A second, distinct open ticket status lets a test drive an open -> open
+  // master change (same status would be a no-op and never reach the mirror).
+  async function createOpenStatus(): Promise<string> {
+    const statusId = uuidv4();
+    const maxOrder = await tenantDb(db, tenantId).table('statuses')
+      .where({ board_id: boardId, status_type: 'ticket' })
+      .max('order_number as max')
+      .first();
+    await tenantDb(db, tenantId).table('statuses').insert({
+      tenant: tenantId,
+      status_id: statusId,
+      name: `In Progress ${uuidv4().slice(0, 4)}`,
+      status_type: 'ticket',
+      board_id: boardId,
+      order_number: (Number(maxOrder?.max) || 0) + 1,
+      created_by: internalUser.user_id,
+      created_at: db.fn.now(),
+      is_closed: false,
+      is_default: false,
+    });
+    return statusId;
+  }
+
   it('previews a sync-master close: open children affected, already-closed unaffected', async () => {
     const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId, statusClosedId] });
 
@@ -903,6 +926,79 @@ describe('Ticket bundling integration', () => {
     const child = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
     expect(child?.status_id).toBe(statusClosedId);
     expect(child?.master_ticket_id).toBeNull();
+  });
+
+  it('non-boundary master status change leaves an independently closed child status untouched', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const service = new TicketService();
+    const openStatus2Id = await createOpenStatus();
+
+    // Close the child independently through the REST path (the UI locks child
+    // workflow fields, but an integrator/automation can still close it).
+    await runWithTenant(tenantId, async () => {
+      await service.update(childIds[0], { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id });
+    });
+    const closedChild = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(closedChild?.status_id).toBe(statusClosedId);
+    expect(closedChild?.is_closed).toBe(true);
+
+    // Master open -> open (non-boundary) must not stamp the new open status
+    // onto the independently closed child.
+    await runWithTenant(tenantId, async () => {
+      await updateTicketWithCache(masterId, { status_id: openStatus2Id });
+    });
+
+    const childAfter = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(childAfter?.status_id).toBe(statusClosedId);
+    expect(childAfter?.is_closed).toBe(true);
+  });
+
+  it('close preview reports an independently closed child as unaffected after a non-boundary master change', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const service = new TicketService();
+    const openStatus2Id = await createOpenStatus();
+
+    await runWithTenant(tenantId, async () => {
+      await service.update(childIds[0], { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id });
+      await updateTicketWithCache(masterId, { status_id: openStatus2Id });
+    });
+
+    const preview = await runWithTenant(tenantId, async () =>
+      previewBundleStatusPropagationAction({ masterTicketId: masterId, newStatusId: statusClosedId }, internalUser as any));
+
+    expect(preview.crossesBoundary).toBe('close');
+    expect(preview.affectedChildren).toEqual([]);
+    // A close preview reports a child already closed as `already_closed` (see
+    // F005); the point is that it is unaffected, not silently dragged open.
+    expect(preview.unaffectedChildren).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ticket_id: childIds[0], reason: 'already_closed' }),
+    ]));
+  });
+
+  it('propagated reopen leaves an independently closed child closed after a non-boundary master change', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const { masterId, childIds } = await setupSyncBundle({ childStatusIds: [statusOpenId] });
+    const service = new TicketService();
+    const openStatus2Id = await createOpenStatus();
+
+    await runWithTenant(tenantId, async () => {
+      await service.update(childIds[0], { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id });
+      await updateTicketWithCache(masterId, { status_id: openStatus2Id });
+      await updateTicketWithCache(masterId, { status_id: statusClosedId }, { propagateToChildren: true } as any);
+      await updateTicketWithCache(masterId, { status_id: statusOpenId }, { propagateToChildren: true } as any);
+    });
+
+    const childAfter = await scopedDb.table('tickets').where({ ticket_id: childIds[0] }).first();
+    expect(childAfter?.status_id).toBe(statusClosedId);
+    expect(childAfter?.is_closed).toBe(true);
+
+    // The independently closed child was never part of a propagated close, so
+    // the reopen has no active ledger row to reverse.
+    const propagationRows = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ child_ticket_id: childIds[0] });
+    expect(propagationRows.length).toBe(0);
   });
 
   it('bulk preview returns only sync masters whose change crosses the boundary', async () => {

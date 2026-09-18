@@ -173,9 +173,13 @@ async function readStatusIsClosed(
 }
 
 /**
- * One tenant-scoped read of the master's children, joining each child's status
- * (`is_closed`) and left-joining the child's active propagation row from this
- * master. The affected/unaffected split is derived from this in memory.
+ * One tenant-scoped read of the master's children, left-joining each child's
+ * active propagation row from this master. "Child is closed" is read from the
+ * denormalized `tickets.is_closed` column (the authoritative close state the
+ * write paths maintain) rather than the board status's `is_closed` flag, so an
+ * independently closed child is never dragged back into the affected set by a
+ * non-boundary master status stamp. The affected/unaffected split is derived
+ * from this in memory.
  */
 async function deriveBundleChildren(
   trx: Knex.Transaction,
@@ -183,15 +187,8 @@ async function deriveBundleChildren(
   masterId: string
 ): Promise<DerivedBundleChildRow[]> {
   const db = tenantDb(trx, tenant);
-  const withStatus = db.tenantJoin(
-    tenantScopedTable(trx, 'tickets as t', tenant),
-    'statuses as s',
-    't.status_id',
-    's.status_id',
-    { type: 'left' }
-  );
   const withPropagation = db.tenantJoin(
-    withStatus,
+    tenantScopedTable(trx, 'tickets as t', tenant),
     'ticket_bundle_status_propagations as p',
     'p.child_ticket_id',
     't.ticket_id',
@@ -214,7 +211,7 @@ async function deriveBundleChildren(
       't.priority_id',
       't.closed_at',
       't.closed_by',
-      's.is_closed',
+      't.is_closed',
       'p.propagation_id'
     )
     .where({ 't.master_ticket_id': masterId });
@@ -402,19 +399,45 @@ export async function propagateBundleMasterStatus(
 
     const childRows = await tenantScopedTable(trx, 'tickets', ctx.tenant)
       .where({ master_ticket_id: masterId })
-      .select(['ticket_id', 'status_id', 'assigned_to', 'priority_id', 'closed_at', 'closed_by']);
+      .select(['ticket_id', 'status_id', 'assigned_to', 'priority_id', 'closed_at', 'closed_by', 'is_closed']);
+
+    // `tickets.is_closed` is authoritative. A closed child keeps its status on
+    // a non-boundary master change; stamping the master's (open) status onto it
+    // would make the next close preview classify it as open, so a later
+    // propagated reopen would reopen a ticket closed independently.
+    const fieldsForChild = (child: Record<string, unknown>): Record<string, unknown> => {
+      if (!child.is_closed) return propagateFields;
+      const fields = { ...propagateFields };
+      delete fields.status_id;
+      return fields;
+    };
+    const closedFields = fieldsForChild({ is_closed: true });
 
     const childPublishes = childRows
       .map((child: Record<string, unknown>) => ({
         ticketId: child.ticket_id as string,
-        updatedFields: diffTicketFields(child, propagateFields),
+        updatedFields: diffTicketFields(child, fieldsForChild(child)),
       }))
       .filter((publish: { ticketId: string; updatedFields: string[] }) => publish.updatedFields.length > 0);
 
-    const propagate = { ...propagateFields, updated_by: ctx.user.user_id, updated_at: nowIso() };
-    await tenantScopedTable(trx, 'tickets', ctx.tenant)
-      .where({ master_ticket_id: masterId })
-      .update(propagate);
+    const updatedAt = nowIso();
+    const openChildIds = childRows
+      .filter((child: Record<string, unknown>) => !child.is_closed)
+      .map((child: Record<string, unknown>) => child.ticket_id as string);
+    const closedChildIds = childRows
+      .filter((child: Record<string, unknown>) => Boolean(child.is_closed))
+      .map((child: Record<string, unknown>) => child.ticket_id as string);
+
+    if (openChildIds.length > 0) {
+      await tenantScopedTable(trx, 'tickets', ctx.tenant)
+        .whereIn('ticket_id', openChildIds)
+        .update({ ...propagateFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
+    }
+    if (closedChildIds.length > 0 && Object.keys(closedFields).length > 0) {
+      await tenantScopedTable(trx, 'tickets', ctx.tenant)
+        .whereIn('ticket_id', closedChildIds)
+        .update({ ...closedFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
+    }
 
     for (const publish of childPublishes) {
       registerAfterCommit(
@@ -425,7 +448,7 @@ export async function propagateBundleMasterStatus(
             ticketId: publish.ticketId,
             updatedFields: publish.updatedFields,
             updatedBy: { userId: ctx.user.user_id, displayName: propagationDisplayName(ctx.user) },
-            updatedAt: propagate.updated_at,
+            updatedAt,
           }),
         `ticket-live-update ticket=${publish.ticketId}`
       );
