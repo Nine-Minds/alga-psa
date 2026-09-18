@@ -408,6 +408,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // caller on a promise until the operator chooses propagate / master-only /
     // cancel. This keeps the choice in one place for all four status-change sites.
     const [bundlePropagationPreview, setBundlePropagationPreview] = useState<BundleStatusPropagationPreview | null>(null);
+    // Separate from the resolve/close-override dialogs' busy flags: the
+    // propagation confirm button must be enabled while the operator chooses, so
+    // this is armed only once a decision has resolved and the write is in flight.
+    const [isSubmittingBundlePropagation, setIsSubmittingBundlePropagation] = useState(false);
     const bundleDecisionResolverRef = useRef<
         ((decision: { proceed: boolean; propagateToChildren?: boolean }) => void) | null
     >(null);
@@ -514,6 +518,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (!propagationDecision.proceed) {
                 return;
             }
+            setIsSubmittingBundlePropagation(true);
             const result = await updateTicketWithCache(ticket.ticket_id, { status_id: closeBlockedDialog.statusId }, {
                 overrideCloseRules: true,
                 overrideCloseRulesReason: closeOverrideReason.trim() || null,
@@ -536,6 +541,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
         } finally {
             setIsSubmittingCloseOverride(false);
+            setIsSubmittingBundlePropagation(false);
         }
     };
     const [ticketDeleteValidation, setTicketDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -2888,6 +2894,7 @@ const handleClose = () => {
             if (!propagationDecision.proceed) {
                 return resolutionSaved;
             }
+            setIsSubmittingBundlePropagation(true);
 
             const result = await runWithPendingLiveFields(
                 ['status_id', 'response_state'],
@@ -2918,6 +2925,7 @@ const handleClose = () => {
             return resolutionSaved;
         } finally {
             setIsSubmittingResolutionClose(false);
+            setIsSubmittingBundlePropagation(false);
         }
     }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, runWithPendingLiveFields, t, ticket.ticket_id]);
 
@@ -3670,7 +3678,7 @@ const handleClose = () => {
                 <BundleStatusPropagationDialog
                     isOpen={bundlePropagationPreview !== null}
                     preview={bundlePropagationPreview}
-                    isSubmitting={isSubmittingCloseOverride || isSubmittingResolutionClose}
+                    isSubmitting={isSubmittingBundlePropagation}
                     onCancel={() => resolveBundlePropagationDecision({ proceed: false })}
                     onMasterOnly={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: false })}
                     onPropagate={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: true })}
