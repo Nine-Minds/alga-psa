@@ -53,6 +53,8 @@ export interface ITicket extends TenantEntity, ITaggable {
   entered_at: string | null; // Changed from Date to string
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
+  /** Denormalized close flag kept in sync with the selected status. */
+  is_closed?: boolean;
   due_date?: string;         // Optional due date for the ticket
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id?: string; // Used for both custom and ITIL priorities (unified system)
@@ -101,6 +103,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   additional_agents?: { user_id: string; name: string }[];  // Additional agents for tooltip display with avatars
   assigned_team_name?: string | null;
   bundle_child_count?: number;
+  bundle_open_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;
 }

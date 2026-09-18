@@ -1374,7 +1374,13 @@
       "alreadyBundled": "Il ticket è già raggruppato: {{ticket}}",
       "masterAsChild": "Il ticket principale non può essere anche un ticket figlio.",
       "noChildren": "Nessun ticket figlio fornito.",
-      "childrenOnBundledChild": "Non è possibile aggiungere ticket figlio a un ticket figlio già raggruppato."
+      "childrenOnBundledChild": "Non è possibile aggiungere ticket figlio a un ticket figlio già raggruppato.",
+      "concurrent": "One or more selected tickets were bundled concurrently. Please refresh and try again.",
+      "closedMasterChoiceRequired": "This bundle's master is closed. Choose how to add the child: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "That choice is not allowed for this master. Choose one of: {{choices}}.",
+      "choiceOnOpenMaster": "That choice only applies when the bundle master is closed.",
+      "closeRuleFailed": "This ticket cannot be closed yet: {{reason}}",
+      "reopenUnavailable": "The master cannot be reopened because no open ticket status is configured."
     },
     "ticket": {
       "validationDetails": "Correggere i dati del ticket: {{details}}",
@@ -1481,7 +1487,21 @@
       "remove": "Rimuovi",
       "noChildren": "Nessun figlio in questo gruppo.",
       "addChildMultiClientMessage": "Verrà aggiunto {{ticket}} di un cliente diverso al gruppo. Conferma di voler procedere.",
-      "thisTicket": "questo ticket"
+      "thisTicket": "questo ticket",
+      "openChildrenBadge": "{{count}} open children",
+      "openChildrenBadgeShort": "{{count}} open",
+      "childOpenStatus": "Open",
+      "childClosedStatus": "Closed",
+      "closedMasterDialogTitle": "This bundle's master is closed",
+      "closedMasterDialogIntro": "The master is closed. Choose what should happen to the child when it is added.",
+      "keepClosedLabel": "Add and keep master closed",
+      "keepClosedHelp": "The child stays open with its own SLA clock. The bundle will show as inconsistent until the child is resolved.",
+      "applyResolutionLabel": "Add and apply the master's resolution to this child",
+      "applyResolutionHelp": "Closes the child with status {{status}} and posts the master's resolution to the child as a public comment.",
+      "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterLabel": "Add and reopen master",
+      "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
     },
     "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
     "autoCloseWarned": "Il cliente è stato avvisato."
@@ -1787,7 +1807,8 @@
         "checklist_template_applied": "modello di checklist applicato",
         "close_rules_overridden": "regole di chiusura sovrascritte",
         "close_rules_bypassed": "regole di chiusura ignorate",
-        "auto_close_warning_sent": "avviso di chiusura automatica inviato"
+        "auto_close_warning_sent": "avviso di chiusura automatica inviato",
+        "bundle_child_added": "bundle child added"
       },
       "closeStatus": "Stato di chiusura",
       "noStatusChange": "Non modificare lo stato",

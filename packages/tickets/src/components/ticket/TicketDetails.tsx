@@ -111,13 +111,17 @@ import {
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
+    getBundleMasterClosedContextAction,
     promoteBundleMasterAction,
     removeChildFromBundleAction,
     unbundleMasterTicketAction,
     updateBundleSettingsAction,
     searchEligibleChildTicketsAction,
+    type BundleMasterClosedContextActionResult,
     type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
+import { ClosedMasterChoiceFields } from './ClosedMasterChoiceFields';
+import type { ClosedMasterChoice } from '../../lib/ticketBundlePolicy';
 import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
 import {
     resolveCommentReferencedImageDocuments,
@@ -554,6 +558,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isUpdatingBundleSettings, setIsUpdatingBundleSettings] = useState(false);
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
+    const [isClosedMasterChoiceOpen, setIsClosedMasterChoiceOpen] = useState(false);
+    const [closedMasterContext, setClosedMasterContext] = useState<BundleMasterClosedContextActionResult | null>(null);
+    const [closedMasterChoice, setClosedMasterChoice] = useState<ClosedMasterChoice | null>(null);
+    const [pendingClosedMasterChildId, setPendingClosedMasterChildId] = useState<string | null>(null);
+    const [isLoadingClosedMasterContext, setIsLoadingClosedMasterContext] = useState(false);
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
     const [allContactsForWatchListLoading, setAllContactsForWatchListLoading] = useState(false);
@@ -3004,9 +3013,13 @@ const handleClose = () => {
         }
     }, [ticket.ticket_id, router]);
 
-    const performAddChildToBundle = useCallback(async (childTicketId: string) => {
+    const performAddChildToBundle = useCallback(async (childTicketId: string, onClosedMaster?: ClosedMasterChoice) => {
         if (!ticket.ticket_id) return;
-        const result = await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] });
+        const result = await addChildrenToBundleAction({
+            masterTicketId: ticket.ticket_id,
+            childTicketIds: [childTicketId],
+            ...(onClosedMaster ? { onClosedMaster } : {}),
+        });
         if (isReturnedActionError(result)) {
             toast.error(getErrorMessage(result));
             return;
@@ -3015,7 +3028,38 @@ const handleClose = () => {
         setAddChildTicketNumber('');
         resetChildTicketPickerState();
         router.refresh();
-    }, [ticket.ticket_id, router, resetChildTicketPickerState]);
+    }, [ticket.ticket_id, t, router, resetChildTicketPickerState]);
+
+    // Fetch the master's closed context before linking. An open master links
+    // straight away; a closed master must go through the explicit choice
+    // dialog so the link never silently succeeds.
+    const beginAddChildToBundle = useCallback(async (childTicketId: string) => {
+        if (!ticket.ticket_id) return;
+        setIsLoadingClosedMasterContext(true);
+        try {
+            const context = await getBundleMasterClosedContextAction({ masterTicketId: ticket.ticket_id });
+            if (isReturnedActionError(context)) {
+                toast.error(getErrorMessage(context));
+                return;
+            }
+            if (!context.isClosed) {
+                await performAddChildToBundle(childTicketId);
+                return;
+            }
+            setClosedMasterContext(context);
+            setClosedMasterChoice(
+                context.allowedChoices.includes('keep_closed')
+                    ? 'keep_closed'
+                    : (context.allowedChoices[0] ?? null)
+            );
+            setPendingClosedMasterChildId(childTicketId);
+            setIsClosedMasterChoiceOpen(true);
+        } catch (error) {
+            handleTicketActionError(error, t('messages.addToBundleFailed'));
+        } finally {
+            setIsLoadingClosedMasterContext(false);
+        }
+    }, [ticket.ticket_id, t, performAddChildToBundle]);
 
     const handleAddChildToBundle = useCallback(async () => {
         if (!ticket.ticket_id) return;
@@ -3034,7 +3078,7 @@ const handleClose = () => {
                 setIsAddChildMultiClientConfirmOpen(true);
                 return;
             }
-            await performAddChildToBundle(selectedChildTicket.ticket_id);
+            await beginAddChildToBundle(selectedChildTicket.ticket_id);
             return;
         }
 
@@ -3064,11 +3108,11 @@ const handleClose = () => {
                 return;
             }
 
-            await performAddChildToBundle(found.ticket_id);
+            await beginAddChildToBundle(found.ticket_id);
         } catch (error) {
             handleTicketActionError(error, t('messages.addToBundleFailed'));
         }
-    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, performAddChildToBundle]);
+    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, beginAddChildToBundle]);
 
     const bundleHasMultipleClients = useMemo(() => {
         if (!bundle?.isBundleMaster || !Array.isArray(bundle.children)) return false;
@@ -3258,6 +3302,14 @@ const handleClose = () => {
                                                 {t('details.bundle.multipleClients', 'Multiple clients')}
                                             </span>
                                         ) : null}
+                                        {ticket.is_closed && (bundle?.openChildrenCount ?? 0) > 0 ? (
+                                            <span
+                                                id="ticket-bundle-master-open-children-badge"
+                                                className="ml-2 inline-flex items-center rounded bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:text-amber-200"
+                                            >
+                                                {t('details.bundle.openChildrenBadge', '{{count}} open children', { count: bundle?.openChildrenCount ?? 0 })}
+                                            </span>
+                                        ) : null}
                                     </div>
                                 ) : null}
 
@@ -3339,7 +3391,7 @@ const handleClose = () => {
                                                 id="ticket-bundle-add-child-button"
                                                 size="sm"
                                                 onClick={handleAddChildToBundle}
-                                                disabled={!addChildTicketNumber.trim()}
+                                                disabled={!addChildTicketNumber.trim() || isLoadingClosedMasterContext}
                                             >
                                                 {t('details.bundle.add', 'Add')}
                                             </Button>
@@ -3353,6 +3405,17 @@ const handleClose = () => {
                                                                 <a className="text-sm text-blue-600 hover:underline" href={`/msp/tickets/${child.ticket_id}`}>
                                                                     {child.ticket_number}
                                                                 </a>
+                                                                <span
+                                                                    className={`ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                                                                        child.closed_at || child.is_closed
+                                                                            ? 'bg-gray-100 text-gray-600'
+                                                                            : 'bg-emerald-100 text-emerald-700'
+                                                                    }`}
+                                                                >
+                                                                    {child.closed_at || child.is_closed
+                                                                        ? t('details.bundle.childClosedStatus', 'Closed')
+                                                                        : t('details.bundle.childOpenStatus', 'Open')}
+                                                                </span>
                                                                 <div className="text-xs text-gray-500 truncate">
                                                                     {(child.client_name ? `${child.client_name} · ` : '')}{child.title}
                                                                 </div>
@@ -3684,7 +3747,7 @@ const handleClose = () => {
                             return;
                         }
                         try {
-                            await performAddChildToBundle(pendingChildToAdd.ticket_id);
+                            await beginAddChildToBundle(pendingChildToAdd.ticket_id);
                         } catch (error) {
                             handleTicketActionError(error, t('messages.addToBundleFailed'));
                         } finally {
@@ -3697,6 +3760,65 @@ const handleClose = () => {
                     confirmLabel={t('actions.proceed', 'Proceed')}
                     cancelLabel={t('actions.cancel', 'Cancel')}
                 />
+
+                <Dialog
+                    id={`${id}-bundle-closed-master-choice-dialog`}
+                    isOpen={isClosedMasterChoiceOpen}
+                    onClose={() => {
+                        setIsClosedMasterChoiceOpen(false);
+                        setPendingClosedMasterChildId(null);
+                    }}
+                    className="max-w-lg"
+                >
+                    <DialogContent>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                            {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
+                        </h2>
+                        <p className="mt-1 text-sm text-gray-500">
+                            {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
+                        </p>
+                        {closedMasterContext && (
+                            <div className="mt-4">
+                                <ClosedMasterChoiceFields
+                                    idPrefix={`${id}-bundle-closed-master`}
+                                    allowedChoices={closedMasterContext.allowedChoices}
+                                    value={closedMasterChoice}
+                                    onChange={setClosedMasterChoice}
+                                    hasResolutionComment={closedMasterContext.hasResolutionComment}
+                                    masterStatusName={closedMasterContext.masterStatusName}
+                                />
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-bundle-closed-master-cancel`}
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setIsClosedMasterChoiceOpen(false);
+                                    setPendingClosedMasterChildId(null);
+                                }}
+                            >
+                                {t('actions.cancel', 'Cancel')}
+                            </Button>
+                            <Button
+                                id={`${id}-bundle-closed-master-confirm`}
+                                type="button"
+                                disabled={!closedMasterChoice || !pendingClosedMasterChildId}
+                                onClick={async () => {
+                                    if (!pendingClosedMasterChildId || !closedMasterChoice) return;
+                                    const childId = pendingClosedMasterChildId;
+                                    const choice = closedMasterChoice;
+                                    setIsClosedMasterChoiceOpen(false);
+                                    setPendingClosedMasterChildId(null);
+                                    await performAddChildToBundle(childId, choice);
+                                }}
+                            >
+                                {t('details.bundle.add', 'Add')}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 <ConfirmationDialog
                     id={`${id}-time-period-dialog`}

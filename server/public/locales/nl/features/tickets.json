@@ -1374,7 +1374,13 @@
       "alreadyBundled": "Ticket is al gebundeld: {{ticket}}",
       "masterAsChild": "Het hoofdticket kan niet ook een onderliggend ticket zijn.",
       "noChildren": "Geen onderliggende tickets opgegeven.",
-      "childrenOnBundledChild": "Er kunnen geen onderliggende tickets worden toegevoegd aan een gebundeld onderliggend ticket."
+      "childrenOnBundledChild": "Er kunnen geen onderliggende tickets worden toegevoegd aan een gebundeld onderliggend ticket.",
+      "concurrent": "One or more selected tickets were bundled concurrently. Please refresh and try again.",
+      "closedMasterChoiceRequired": "This bundle's master is closed. Choose how to add the child: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "That choice is not allowed for this master. Choose one of: {{choices}}.",
+      "choiceOnOpenMaster": "That choice only applies when the bundle master is closed.",
+      "closeRuleFailed": "This ticket cannot be closed yet: {{reason}}",
+      "reopenUnavailable": "The master cannot be reopened because no open ticket status is configured."
     },
     "ticket": {
       "validationDetails": "Corrigeer de ticketgegevens: {{details}}",
@@ -1481,7 +1487,21 @@
       "remove": "Verwijderen",
       "noChildren": "Geen onderliggende tickets in deze bundel.",
       "addChildMultiClientMessage": "Hiermee wordt {{ticket}} van een andere klant aan de bundel toegevoegd. Bevestig dat u wilt doorgaan.",
-      "thisTicket": "dit ticket"
+      "thisTicket": "dit ticket",
+      "openChildrenBadge": "{{count}} open children",
+      "openChildrenBadgeShort": "{{count}} open",
+      "childOpenStatus": "Open",
+      "childClosedStatus": "Closed",
+      "closedMasterDialogTitle": "This bundle's master is closed",
+      "closedMasterDialogIntro": "The master is closed. Choose what should happen to the child when it is added.",
+      "keepClosedLabel": "Add and keep master closed",
+      "keepClosedHelp": "The child stays open with its own SLA clock. The bundle will show as inconsistent until the child is resolved.",
+      "applyResolutionLabel": "Add and apply the master's resolution to this child",
+      "applyResolutionHelp": "Closes the child with status {{status}} and posts the master's resolution to the child as a public comment.",
+      "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterLabel": "Add and reopen master",
+      "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
     },
     "autoClose": "Wordt automatisch gesloten op {{date}}, tenzij er nieuwe activiteit is.",
     "autoCloseWarned": "De klant is gewaarschuwd."
@@ -1787,7 +1807,8 @@
         "checklist_template_applied": "checklistsjabloon toegepast",
         "close_rules_overridden": "afsluitregels overschreven",
         "close_rules_bypassed": "afsluitregels omzeild",
-        "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden"
+        "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden",
+        "bundle_child_added": "bundle child added"
       },
       "closeStatus": "Sluitstatus",
       "noStatusChange": "Status niet wijzigen",

@@ -1382,7 +1382,13 @@
       "alreadyBundled": "〖Ŧīƈķḗŧ īş ȧŀřḗȧḓẏ ƀŭƞḓŀḗḓ: {{ticket}} ···············〗",
       "masterAsChild": "〖Ḿȧşŧḗř ŧīƈķḗŧ ƈȧƞƞȯŧ ȧŀşȯ ƀḗ ȧ ƈħīŀḓ ŧīƈķḗŧ. ··················〗",
       "noChildren": "〖Ƞȯ ƈħīŀḓ ŧīƈķḗŧş ƥřȯṽīḓḗḓ. ···········〗",
-      "childrenOnBundledChild": "〖Ƈȧƞƞȯŧ ȧḓḓ ƈħīŀḓřḗƞ ŧȯ ȧ ƀŭƞḓŀḗḓ ƈħīŀḓ ŧīƈķḗŧ. ···················〗"
+      "childrenOnBundledChild": "〖Ƈȧƞƞȯŧ ȧḓḓ ƈħīŀḓřḗƞ ŧȯ ȧ ƀŭƞḓŀḗḓ ƈħīŀḓ ŧīƈķḗŧ. ···················〗",
+      "concurrent": "One or more selected tickets were bundled concurrently. Please refresh and try again.",
+      "closedMasterChoiceRequired": "This bundle's master is closed. Choose how to add the child: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "That choice is not allowed for this master. Choose one of: {{choices}}.",
+      "choiceOnOpenMaster": "That choice only applies when the bundle master is closed.",
+      "closeRuleFailed": "This ticket cannot be closed yet: {{reason}}",
+      "reopenUnavailable": "The master cannot be reopened because no open ticket status is configured."
     },
     "ticket": {
       "validationDetails": "〖Ƥŀḗȧşḗ ƒīẋ ŧħḗ ŧīƈķḗŧ ḓḗŧȧīŀş: {{details}} ·················〗",
@@ -1489,7 +1495,21 @@
       "remove": "〖Řḗḿȯṽḗ ···〗",
       "noChildren": "〖Ƞȯ ƈħīŀḓřḗƞ īƞ ŧħīş ƀŭƞḓŀḗ. ···········〗",
       "addChildMultiClientMessage": "〖Ŧħīş ẇīŀŀ ȧḓḓ {{ticket}} ƒřȯḿ ȧ ḓīƒƒḗřḗƞŧ ƈŀīḗƞŧ īƞŧȯ ŧħḗ ƀŭƞḓŀḗ. Ƈȯƞƒīřḿ ẏȯŭ ẇȧƞŧ ŧȯ ƥřȯƈḗḗḓ. ······································〗",
-      "thisTicket": "〖ŧħīş ŧīƈķḗŧ ·····〗"
+      "thisTicket": "〖ŧħīş ŧīƈķḗŧ ·····〗",
+      "openChildrenBadge": "{{count}} open children",
+      "openChildrenBadgeShort": "{{count}} open",
+      "childOpenStatus": "Open",
+      "childClosedStatus": "Closed",
+      "closedMasterDialogTitle": "This bundle's master is closed",
+      "closedMasterDialogIntro": "The master is closed. Choose what should happen to the child when it is added.",
+      "keepClosedLabel": "Add and keep master closed",
+      "keepClosedHelp": "The child stays open with its own SLA clock. The bundle will show as inconsistent until the child is resolved.",
+      "applyResolutionLabel": "Add and apply the master's resolution to this child",
+      "applyResolutionHelp": "Closes the child with status {{status}} and posts the master's resolution to the child as a public comment.",
+      "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterLabel": "Add and reopen master",
+      "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
     },
     "autoClose": "〖Ẇīŀŀ ƈŀȯşḗ ȧŭŧȯḿȧŧīƈȧŀŀẏ ȯƞ {{date}} ŭƞŀḗşş ŧħḗřḗ'ş ƞḗẇ ȧƈŧīṽīŧẏ. ··························〗",
     "autoCloseWarned": "〖Ŧħḗ ƈŭşŧȯḿḗř ħȧş ƀḗḗƞ ẇȧřƞḗḓ. ············〗"
@@ -1760,7 +1780,8 @@
         "checklist_template_applied": "〖ƈħḗƈķŀīşŧ ŧḗḿƥŀȧŧḗ ȧƥƥŀīḗḓ ···········〗",
         "close_rules_overridden": "〖ƈŀȯşḗ řŭŀḗş ȯṽḗřřīḓḓḗƞ ·········〗",
         "close_rules_bypassed": "〖ƈŀȯşḗ řŭŀḗş ƀẏƥȧşşḗḓ ········〗",
-        "auto_close_warning_sent": "〖ȧŭŧȯ-ƈŀȯşḗ ẇȧřƞīƞɠ şḗƞŧ ··········〗"
+        "auto_close_warning_sent": "〖ȧŭŧȯ-ƈŀȯşḗ ẇȧřƞīƞɠ şḗƞŧ ··········〗",
+        "bundle_child_added": "bundle child added"
       },
       "filterEverything": "〖Ḗṽḗřẏŧħīƞɠ ····〗",
       "filterReplies": "〖Řḗƥŀīḗş ···〗",
