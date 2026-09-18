@@ -5,11 +5,11 @@ import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 import { appendUpdateHistory, readJsonFile, writeSecureJsonFileAtomic } from './update-state.mjs';
 import {
   APPLIANCE_HELM_RELEASES,
-  BOOTSTRAP_HOOK_JOB,
-  clearBootstrapHookJob,
+  BOOTSTRAP_JOB,
+  clearBootstrapJob,
   expectedChartVersions,
   forceHelmReleaseReconcile,
-  isBootstrapHookCollision,
+  isBootstrapJobCollision,
   nudgeChildKustomizations,
   readHelmRelease,
   setHelmReleasesSuspended
@@ -177,11 +177,11 @@ async function waitForChartPins({ runKubectl, sleep, expected, timeoutMs, pollMs
 
 // Poll the appliance HelmReleases until each is Ready for its current spec at
 // the expected chart version. Returns { converged } | { pending } |
-// { failed, name, summary }. A stall caused by the bootstrap hook Job
+// { failed, name, summary }. A stall caused by the bootstrap Job
 // collision is cleared and retried once (clear Job, force + reset reconcile).
 async function waitForAppReleasesConverged({ runKubectl, sleep, expected, names, timeoutMs, pollMs, onProgress }) {
   const deadline = Date.now() + timeoutMs;
-  let hookRetryDone = false;
+  let jobRetryDone = false;
   let lastProgress = '';
   for (;;) {
     const waiting = [];
@@ -197,14 +197,14 @@ async function waitForAppReleasesConverged({ runKubectl, sleep, expected, names,
       const atVersion = !expected[name] || hr.lastAttemptedRevision === expected[name];
       if (hr.observedCurrent && hr.ready && atVersion && !hr.suspended) continue;
       if (hr.hardFailed) {
-        if (name === names[0] && !hookRetryDone && isBootstrapHookCollision(hr.message)) {
-          hookRetryDone = true;
-          onProgress?.(`Clearing the leftover ${BOOTSTRAP_HOOK_JOB.name} Job and retrying the ${name} upgrade.`);
-          const cleared = await clearBootstrapHookJob({ runKubectl, sleep, waitForActiveMs: 0 });
+        if (name === names[0] && !jobRetryDone && isBootstrapJobCollision(hr.message)) {
+          jobRetryDone = true;
+          onProgress?.(`Clearing the leftover ${BOOTSTRAP_JOB.name} Job and retrying the ${name} upgrade.`);
+          const cleared = await clearBootstrapJob({ runKubectl, sleep, waitForActiveMs: 0 });
           if (!cleared.ok) return { failed: true, name, summary: { message: cleared.error, reason: 'HookJobCleanupFailed' } };
           const forced = await forceHelmReleaseReconcile({ runKubectl, name });
           if (!forced.ok) return { failed: true, name, summary: { message: forced.error, reason: 'ForceReconcileFailed' } };
-          waiting.push(`${name} (retrying after hook Job collision)`);
+          waiting.push(`${name} (retrying after bootstrap Job collision)`);
           continue;
         }
         return { failed: true, name, summary: hr };
@@ -223,7 +223,7 @@ async function waitForAppReleasesConverged({ runKubectl, sleep, expected, names,
 }
 
 // Bring the update live: reconcile the OCI source and the Kustomization (chart
-// pins), verify the pins landed, make sure no stale bootstrap hook Job can
+// pins), verify the pins landed, make sure no stale bootstrap Job can
 // collide with the coming upgrade, resume the releases, and wait for all of
 // them to reach Ready at the new chart version.
 export async function reconcileFluxAndHelm(options = {}, context = {}) {
@@ -283,13 +283,13 @@ export async function reconcileFluxAndHelm(options = {}, context = {}) {
     );
   }
 
-  const hookJob = await clearBootstrapHookJob({ runKubectl, sleep, waitForActiveMs: options.hookJobWaitMs ?? 10 * 60_000, pollMs: options.convergePollMs ?? 5000 });
-  if (!hookJob.ok) {
+  const bootstrapJob = await clearBootstrapJob({ runKubectl, sleep, waitForActiveMs: options.bootstrapJobWaitMs ?? 10 * 60_000, pollMs: options.convergePollMs ?? 5000 });
+  if (!bootstrapJob.ok) {
     return fluxFailure(
-      `Could not clear the previous ${BOOTSTRAP_HOOK_JOB.name} Job before upgrading.`,
-      hookJob.error,
-      `Delete the Job (kubectl -n ${BOOTSTRAP_HOOK_JOB.namespace} delete job ${BOOTSTRAP_HOOK_JOB.name}) or use Recover, then retry.`,
-      { step: 'clear-bootstrap-hook-job' }
+      `Could not clear the previous ${BOOTSTRAP_JOB.name} Job before upgrading.`,
+      bootstrapJob.error,
+      `Delete the Job (kubectl -n ${BOOTSTRAP_JOB.namespace} delete job ${BOOTSTRAP_JOB.name}) or use Recover, then retry.`,
+      { step: 'clear-bootstrap-job' }
     );
   }
 
@@ -541,7 +541,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       pid: process.pid,
       startedAt: args.startedAt || nowIso()
     };
-    const writeInterruptedState = (signal) => {
+    const writeInterruptedState = async (signal) => {
+      // The engine may be holding the HelmReleases suspended; give them back
+      // to Flux before recording the interruption (best effort — the control
+      // plane also resumes them when it finds a dead update owner).
+      try { await resumeAppReleases({ kubeconfigPath: args.kubeconfigPath }); } catch { /* best effort */ }
       const failure = {
         ok: false,
         code: 'update_interrupted',

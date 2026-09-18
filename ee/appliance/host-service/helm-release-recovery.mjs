@@ -5,11 +5,12 @@
 // to change the alga-core HelmRelease twice in quick succession — first the
 // appliance-values-* ConfigMaps (valuesFrom), then, once the new config bundle
 // landed, spec.chart.spec.version via the Flux Kustomization. helm-controller
-// ran two back-to-back upgrades. The first one's post-upgrade hook Job
-// (alga-core-sebastian-bootstrap, ttlSecondsAfterFinished 300) still existed
-// when the second upgrade tried to create it again, so the server-side apply
-// failed on the Job's immutable spec.template, and with upgrade.remediation
-// retries 0 the release stalled (RetriesExceeded). Every dependent release
+// ran two back-to-back upgrades. On the appliance the bootstrap Job
+// (alga-core-sebastian-bootstrap, ttlSecondsAfterFinished 300) is a regular
+// chart resource, not a Helm hook, so Helm server-side-applies it on every
+// upgrade; the second upgrade's template differed while the first upgrade's
+// Job still existed, the apply failed on the Job's immutable spec.template,
+// and with upgrade.remediation retries 0 the release stalled (RetriesExceeded). Every dependent release
 // (email-service, pgbouncer, temporal, temporal-worker, workflow-worker) then
 // waited on "dependency not ready" forever while the engine reported success.
 //
@@ -29,17 +30,17 @@ export const APPLIANCE_HELM_RELEASES = Object.freeze([
   { name: 'email-service', chart: 'email-service' }
 ]);
 
-export const BOOTSTRAP_HOOK_JOB = Object.freeze({ namespace: 'msp', name: 'alga-core-sebastian-bootstrap' });
+export const BOOTSTRAP_JOB = Object.freeze({ namespace: 'msp', name: 'alga-core-sebastian-bootstrap' });
 
 // helm-controller terminal Ready reasons; anything else is still converging.
 const TERMINAL_REASON_RE = /Failed|RetriesExceeded|Stalled|Exhausted/i;
 
-// The signature of a Helm upgrade colliding with the previous upgrade's hook
-// Job (see header). Narrow on purpose: this is the one failure we know is
+// The signature of a Helm upgrade colliding with the previous upgrade's
+// bootstrap Job (see header). Narrow on purpose: this is the one failure we know is
 // self-inflicted by ordering and safe to retry after clearing the Job.
-export function isBootstrapHookCollision(message) {
+export function isBootstrapJobCollision(message) {
   const text = String(message || '');
-  return /field is immutable/i.test(text) && new RegExp(BOOTSTRAP_HOOK_JOB.name).test(text);
+  return /field is immutable/i.test(text) && new RegExp(BOOTSTRAP_JOB.name).test(text);
 }
 
 function q(value) {
@@ -132,11 +133,11 @@ export async function nudgeChildKustomizations({ runKubectl, parentName, parentN
   return { ok: true, nudged };
 }
 
-// Remove the alga-core bootstrap hook Job if one is still around. A Job that
+// Remove the alga-core bootstrap Job if one is still around. A Job that
 // is still running is given `waitForActiveMs` to finish first (an update
 // should not kill an in-flight migration); the delete then waits until the
 // object is actually gone so the next hook creation cannot collide with it.
-export async function clearBootstrapHookJob({ runKubectl, sleep, waitForActiveMs = 0, pollMs = 5000, job = BOOTSTRAP_HOOK_JOB }) {
+export async function clearBootstrapJob({ runKubectl, sleep, waitForActiveMs = 0, pollMs = 5000, job = BOOTSTRAP_JOB }) {
   const deadline = Date.now() + waitForActiveMs;
   let waitedForActive = false;
   for (;;) {
@@ -190,15 +191,15 @@ export function expectedChartVersions(manifest, releases = APPLIANCE_HELM_RELEAS
 
 // Full recovery of a stalled app release, as exposed by /api/recover:
 // resume anything an interrupted update left suspended, clear a leftover
-// bootstrap hook Job, then force + reset the alga-core reconcile.
+// bootstrap Job, then force + reset the alga-core reconcile.
 export async function recoverAppRelease({ runKubectl, sleep, releases = APPLIANCE_HELM_RELEASES, namespace = APPLIANCE_HELM_RELEASE_NAMESPACE, waitForActiveMs = 0, at = new Date().toISOString() }) {
   const resumed = await setHelmReleasesSuspended({ runKubectl, names: releases.map((r) => r.name), namespace, suspended: false });
   if (!resumed.ok) {
     return { ok: false, step: 'resume-helmreleases', error: resumed.failures.map((f) => `${f.name}: ${f.error}`).join('; ') };
   }
-  const job = await clearBootstrapHookJob({ runKubectl, sleep, waitForActiveMs });
-  if (!job.ok) return { ok: false, step: 'clear-bootstrap-hook-job', error: job.error };
+  const job = await clearBootstrapJob({ runKubectl, sleep, waitForActiveMs });
+  if (!job.ok) return { ok: false, step: 'clear-bootstrap-job', error: job.error };
   const forced = await forceHelmReleaseReconcile({ runKubectl, name: releases[0].name, namespace, at });
   if (!forced.ok) return { ok: false, step: 'force-reconcile', error: forced.error };
-  return { ok: true, at, clearedHookJob: job.deleted };
+  return { ok: true, at, clearedBootstrapJob: job.deleted };
 }

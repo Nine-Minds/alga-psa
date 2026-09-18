@@ -28,7 +28,7 @@ import {
 import { SupportControlClient } from './support-control-client.mjs';
 import { SupportSessionError, SupportSessionManager } from './support-session-manager.mjs';
 import { supportErrorPayload } from './support-api-errors.mjs';
-import { APPLIANCE_HELM_RELEASES, APPLIANCE_HELM_RELEASE_NAMESPACE, recoverAppRelease } from './helm-release-recovery.mjs';
+import { APPLIANCE_HELM_RELEASES, APPLIANCE_HELM_RELEASE_NAMESPACE, recoverAppRelease, setHelmReleasesSuspended } from './helm-release-recovery.mjs';
 import {
   readInitialAdminIdentity,
   runInitialAdminPasswordReset,
@@ -624,7 +624,19 @@ const updateCoordinator = createUpdateCoordinator({
   stateFile,
   historyFile: updateHistoryFile,
   maxAgeMs: UPDATE_OWNER_MAX_AGE_MS,
-  spawnUpdate: queueUpdateWorkflow
+  spawnUpdate: queueUpdateWorkflow,
+  // A hard-killed update engine leaves the application HelmReleases suspended
+  // (see helm-release-recovery.mjs); resume them whenever an update is found
+  // dead so the box never sits frozen waiting for a manual Recover.
+  onInterrupted: async () => {
+    const resumed = await setHelmReleasesSuspended({
+      runKubectl: (args) => runQueuedKubectl(kubectlCommand(args, KUBECTL_API_TIMEOUT_MS), { timeoutMs: KUBECTL_API_TIMEOUT_MS }),
+      names: APPLIANCE_HELM_RELEASES.map((r) => r.name),
+      suspended: false
+    });
+    if (!resumed.ok) console.warn(`Could not resume HelmReleases after an interrupted update: ${resumed.failures.map((f) => `${f.name}: ${f.error}`).join('; ')}`);
+    else console.warn('Resumed the application HelmReleases after an interrupted update.');
+  }
 });
 updateCoordinator.reconcile();
 
@@ -1342,8 +1354,8 @@ const server = http.createServer(async (req, res) => {
     // Recover the application release without SSH. Equivalent to
     // `flux resume hr --all && kubectl delete job alga-core-sebastian-bootstrap
     // && flux reconcile helmrelease alga-core --force --reset`: resume anything
-    // an interrupted update left suspended, remove a leftover bootstrap hook
-    // Job (its immutable spec makes the next upgrade's hook creation fail),
+    // an interrupted update left suspended, remove a leftover bootstrap Job
+    // (its immutable spec makes the next upgrade's apply of it fail),
     // then force + reset the reconcile so even a Stalled/RetriesExceeded
     // release runs a fresh upgrade. That upgrade's bootstrap Job re-runs
     // migrations, onboarding seeds, and creates the initial tenant/admin if no
@@ -1361,8 +1373,8 @@ const server = http.createServer(async (req, res) => {
       ok: true,
       helmRelease,
       requestedAt: result.at,
-      clearedHookJob: result.clearedHookJob,
-      message: 'Forced a Flux reconcile of alga-core (reset + force). A fresh bootstrap job will run migrations and onboarding seeds, and create the initial tenant/admin if it is missing. This usually takes a few minutes.'
+      clearedBootstrapJob: result.clearedBootstrapJob,
+      message: 'Forced a Flux reconcile of alga-core (reset + force). A fresh bootstrap Job will run migrations and onboarding seeds, and create the initial tenant/admin if it is missing. This usually takes a few minutes.'
     });
     return;
   }

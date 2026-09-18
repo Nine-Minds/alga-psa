@@ -19,7 +19,7 @@ const RELEASES = ['alga-core', 'pgbouncer', 'temporal', 'temporal-worker', 'work
 //  - `delete job NAME` removes that file
 //  - `annotate helmrelease alga-core ... resetAt=...` swaps in
 //    $tmp/hr/alga-core.after-reset.json when present (simulates the forced
-//    upgrade succeeding after the hook Job was cleared)
+//    upgrade succeeding after the bootstrap Job was cleared)
 //  - everything else swallows stdin and exits 0
 // Every invocation is appended to $tmp/kubectl.log so tests can assert order.
 function writeFakeKubectl(tmp) {
@@ -135,7 +135,7 @@ function makeUpdateFixture() {
     sleep: async () => {},
     convergeTimeoutMs: 0,
     chartPinTimeoutMs: 0,
-    hookJobWaitMs: 0,
+    bootstrapJobWaitMs: 0,
     metadataFile,
     osReleaseFile: path.join(tmp, 'os-release'),
     k3sVersionCommand: "printf 'k3s version v1.31.4+k3s1'"
@@ -179,7 +179,7 @@ test('runAppChannelUpdate applies channel update and persists history without OS
 
 // The 2026-09-18 race: values ConfigMaps and the chart pin used to reach the
 // HelmRelease in two separate reconciles, so helm-controller ran two upgrades
-// back to back and the second collided with the first one's hook Job. The
+// back to back and the second collided with the first one's bootstrap Job. The
 // engine now suspends every appliance HelmRelease before touching any input
 // and resumes only once the config bundle (chart pins) has been applied.
 test('app update suspends all HelmReleases before values are applied and resumes only after the chart pins landed', async () => {
@@ -257,13 +257,13 @@ test('app update resumes the HelmReleases when a step fails while they are suspe
   assert.equal(log.filter((l) => /"suspend":null/.test(l)).length, RELEASES.length);
 });
 
-test('app update waits for a still-running bootstrap hook Job and deletes it before resuming', async () => {
+test('app update waits for a still-running bootstrap bootstrap Job and deletes it before resuming', async () => {
   const fixture = makeUpdateFixture();
   const jobFile = path.join(fixture.tmp, 'job', 'alga-core-sebastian-bootstrap.json');
   fs.writeFileSync(jobFile, JSON.stringify({ status: { active: 1 } }));
   let polls = 0;
   const { result, log } = await runUpdate(fixture, {
-    hookJobWaitMs: 60_000,
+    bootstrapJobWaitMs: 60_000,
     sleep: async () => {
       polls += 1;
       // The Job finishes on the second poll.
@@ -337,7 +337,7 @@ test('app update: HelmRelease unreadable -> blocked (conservative)', async () =>
 // Belt and braces for the hook-Job collision: if it still happens (e.g. an
 // operator-triggered upgrade racing the update), the engine clears the Job and
 // forces a reset reconcile once instead of leaving the release Stalled.
-test('app update recovers once from the bootstrap hook Job collision by clearing the Job and resetting the release', async () => {
+test('app update recovers once from the bootstrap bootstrap Job collision by clearing the Job and resetting the release', async () => {
   const fixture = makeUpdateFixture();
   const collision = 'server-side apply failed for object msp/alga-core-sebastian-bootstrap batch/v1, Kind=Job: Job.batch "alga-core-sebastian-bootstrap" is invalid: spec.template: Invalid value: ...: field is immutable';
   writeHelmReleases(fixture.tmp, { 'alga-core': { ready: 'False', reason: 'UpgradeFailed', message: collision, stalled: true } });
@@ -354,7 +354,7 @@ test('app update recovers once from the bootstrap hook Job collision by clearing
   assert.match(reset, /reconcile\.fluxcd\.io\/requestedAt=/);
 });
 
-test('app update does not retry a second hook Job collision', async () => {
+test('app update does not retry a second bootstrap Job collision', async () => {
   const fixture = makeUpdateFixture();
   const collision = 'msp/alga-core-sebastian-bootstrap batch/v1, Kind=Job ... field is immutable';
   writeHelmReleases(fixture.tmp, { 'alga-core': { ready: 'False', reason: 'UpgradeFailed', message: collision } });
