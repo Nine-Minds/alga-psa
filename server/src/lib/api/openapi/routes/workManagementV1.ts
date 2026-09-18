@@ -115,6 +115,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       tags: zOpenApi.array(zOpenApi.string()).optional(),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
+      propagateToChildren: zOpenApi.boolean().optional().describe(
+        'Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Ticket fields to update. Notification suppression applies only to this operation.'),
   );
@@ -127,6 +130,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       closed_by: zOpenApi.string().uuid().optional(),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
+      propagateToChildren: zOpenApi.boolean().optional().describe(
+        'Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }),
   );
@@ -371,6 +377,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'delete /api/v1/tickets/{id}',
   ]);
 
+  // Status writes that can propagate to bundle children return 409 when the
+  // caller omits `propagateToChildren` on a boundary-crossing sync master.
+  const BUNDLE_PROPAGATION_CONFLICT_OPS = new Set([
+    'put /api/v1/tickets/{id}',
+    'put /api/v1/tickets/{id}/status',
+  ]);
+
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
@@ -439,6 +452,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     if (DEPENDENCY_VALIDATED_DELETES.has(`${def.method} ${def.path}`)) {
       responses[409] = {
         description: 'Deletion blocked: the resource has dependent records that must be removed or reassigned first. The error details list the blocking dependencies.',
+        schema: ApiError,
+      };
+    }
+
+    if (BUNDLE_PROPAGATION_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Confirmation required: the status change would close or reopen child tickets of a sync-mode bundle master. Retry with propagateToChildren=true or false. The error details carry crossesBoundary and the affected/unaffected children.',
         schema: ApiError,
       };
     }

@@ -15480,6 +15480,12 @@ components:
           type:
             - string
             - "null"
+        propagateToChildren:
+          type: boolean
+          description: Sync-mode bundle masters only. When a status change would close or
+            reopen child tickets, true propagates to the affected children and
+            false changes the master only. Omit to receive 409 with the affected
+            children.
         suppressContactNotifications:
           type: boolean
           description: When true, suppresses customer-facing email and portal
@@ -15508,6 +15514,12 @@ components:
           type:
             - string
             - "null"
+        propagateToChildren:
+          type: boolean
+          description: Sync-mode bundle masters only. When a status change would close or
+            reopen child tickets, true propagates to the affected children and
+            false changes the master only. Omit to receive 409 with the affected
+            children.
         suppressContactNotifications:
           type: boolean
           description: When true, suppresses customer-facing email and portal
@@ -60963,6 +60975,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: "Confirmation required: the status change would close or reopen
+            child tickets of a sync-mode bundle master. Retry with
+            propagateToChildren=true or false. The error details carry
+            crossesBoundary and the affected/unaffected children."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
         "500":
           description: Unexpected controller/service failure.
           content:
@@ -61309,6 +61330,15 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
         "404":
           description: Target resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: "Confirmation required: the status change would close or reopen
+            child tickets of a sync-mode bundle master. Retry with
+            propagateToChildren=true or false. The error details carry
+            crossesBoundary and the affected/unaffected children."
           content:
             application/json:
               schema:

@@ -139,6 +139,8 @@ export const updateTicketSchema = createUpdateSchema(createTicketSchema.omit({ e
   // ticket:close_override. Stripped before the row update.
   override_close_rules: z.boolean().optional(),
   override_close_rules_reason: z.string().nullable().optional(),
+  // Sync-mode bundle master boundary changes require an explicit choice.
+  propagateToChildren: z.boolean().optional(),
 }).superRefine(validateTicketNotificationSuppression);
 
 // Ticket status update schema
@@ -148,7 +150,9 @@ export const updateTicketStatusSchema = z.object({
   closed_by: uuidSchema.optional(),
   ...ticketNotificationSuppressionSchema,
   override_close_rules: z.boolean().optional(),
-  override_close_rules_reason: z.string().nullable().optional()
+  override_close_rules_reason: z.string().nullable().optional(),
+  // Sync-mode bundle master boundary changes require an explicit choice.
+  propagateToChildren: z.boolean().optional()
 }).superRefine(validateTicketNotificationSuppression);
 
 // Ticket assignment schema

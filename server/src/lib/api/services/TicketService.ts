@@ -16,7 +16,14 @@ import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interf
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
-import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import {
+  maybeReopenBundleMasterFromChildReply,
+  previewBundleStatusPropagation,
+  propagateBundleMasterStatus,
+  revertBundlePropagationForChild,
+  revertBundlePropagationsForMaster,
+} from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
@@ -1747,6 +1754,13 @@ export class TicketService extends BaseService<ITicket> {
       // UPDATE statement. Inline links are written by the create paths only.
       delete (cleanedData as any).external_links;
 
+      // Sync-mode bundle propagation choice: a request option, not a column.
+      const propagateToChildren =
+        typeof (cleanedData as any).propagateToChildren === 'boolean'
+          ? ((cleanedData as any).propagateToChildren as boolean)
+          : undefined;
+      delete (cleanedData as any).propagateToChildren;
+
       const isBoardChange =
         cleanedData.board_id !== undefined &&
         cleanedData.board_id !== currentTicket.board_id;
@@ -1840,6 +1854,24 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
+      // Sync-mode bundle masters require an explicit propagation choice before a
+      // boundary-crossing status write. Nothing is written when we bail here.
+      if (statusChanged && cleanedData.status_id) {
+        const propagationPreview = await previewBundleStatusPropagation(
+          trx,
+          context.tenant,
+          id,
+          cleanedData.status_id as string
+        );
+        if (
+          propagationPreview.crossesBoundary !== null &&
+          propagationPreview.affectedChildren.length > 0 &&
+          propagateToChildren === undefined
+        ) {
+          throw new BundlePropagationConfirmationRequiredError(propagationPreview);
+        }
+      }
+
       const updateData: Record<string, unknown> = {
         ...cleanedData,
         updated_by: context.userId,
@@ -1898,6 +1930,21 @@ export class TicketService extends BaseService<ITicket> {
       if (data.tags) {
         await this.handleTags(id, data.tags, context, trx);
       }
+
+      // Sync-mode bundle propagation (FR5): REST now shares the same engine as
+      // the server-action path. Boundary-crossing choices were gated above.
+      await propagateBundleMasterStatus(
+        trx,
+        {
+          tenant: context.tenant,
+          user: { user_id: context.userId },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          previousMasterStatusId: currentTicket.status_id,
+        },
+        id,
+        cleanedData as Record<string, unknown>,
+        { propagateToChildren }
+      );
 
       // Publish appropriate events
       if (statusChanged) {
@@ -3328,6 +3375,8 @@ export class TicketService extends BaseService<ITicket> {
         .where({ ticket_id: params.childTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
 
+      await revertBundlePropagationForChild(trx, context.tenant, params.childTicketId, context.userId);
+
       const [{ count }] = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ master_ticket_id: masterTicketId })
         .count('ticket_id as count');
@@ -3372,6 +3421,8 @@ export class TicketService extends BaseService<ITicket> {
       await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ master_ticket_id: params.masterTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
+
+      await revertBundlePropagationsForMaster(trx, context.tenant, params.masterTicketId, context.userId);
 
       await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
         .where({ master_ticket_id: params.masterTicketId })

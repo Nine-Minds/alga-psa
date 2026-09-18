@@ -45954,6 +45954,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ]
         },
+        "propagateToChildren": {
+          "type": "boolean",
+          "description": "Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children."
+        },
         "suppressContactNotifications": {
           "type": "boolean",
           "description": "When true, suppresses customer-facing email and portal notifications for this operation."
