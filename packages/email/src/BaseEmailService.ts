@@ -9,7 +9,7 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
-import { removeBrandLogo } from './branding';
+import { removeBrandLogo } from './branding/brandAssets';
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';

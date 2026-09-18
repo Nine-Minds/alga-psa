@@ -15,14 +15,23 @@
 import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
-import { FileStoreModel, StorageProviderFactory } from '@alga-psa/storage';
+// Subpaths, not the @alga-psa/storage barrel: the barrel re-exports
+// StorageService, which pulls in @alga-psa/validation — a source-only package
+// Node cannot resolve. The package index is imported by Node consumers such as
+// the Temporal worker, so it must stay resolvable.
+import { FileStoreModel } from '@alga-psa/storage/models/storage';
+import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
 import type { EmailAttachment } from '@alga-psa/types';
+// Imported from the concrete modules rather than ./branding: that barrel also
+// re-exports suggestEmailPalette, whose @alga-psa/tenancy/lib/* deep import is
+// not in tenancy's exports map and would break every Node consumer of the
+// package index (the Temporal worker among them).
 import {
   brandLogoCid,
   parseBrandLogoVariant,
   BRAND_LOGO_MARKER,
-  type EmailBrandingLogoVariant,
-} from './branding';
+} from './branding/brandAssets';
+import type { EmailBrandingLogoVariant } from './branding/types';
 
 /** Graph caps a simple attachment at 3 MB, and the upload UI accepts far more. */
 const MAX_LOGO_BYTES = 1024 * 1024;

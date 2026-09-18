@@ -8,10 +8,13 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (knex: any, tenant: string) => knex.forTenant(tenant),
 }));
 
-vi.mock('@alga-psa/storage', () => ({
+vi.mock('@alga-psa/storage/models/storage', () => ({
   FileStoreModel: {
     findById: vi.fn(async (knex: any, fileId: string) => knex.files[fileId] ?? null),
   },
+}));
+
+vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: {
     createProvider: vi.fn(async () => ({ download })),
   },
