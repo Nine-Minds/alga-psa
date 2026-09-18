@@ -1876,6 +1876,11 @@
         "normal": "Normal",
         "low": "Baixa"
       }
+    },
+    "emailTemplates": {
+      "editor": {
+        "inlineLogoHint": "O seu logótipo é incorporado na mensagem no momento do envio. Mantenha a referência src=\"cid:alga-brand-logo\" como está — substituí-la por um URL obriga os destinatários a autorizar primeiro a transferência da imagem."
+      }
     }
   },
   "timeEntry": {

@@ -1876,6 +1876,11 @@
         "normal": "Normal",
         "low": "Low"
       }
+    },
+    "emailTemplates": {
+      "editor": {
+        "inlineLogoHint": "Your logo is embedded in the message when it is sent. Keep the src=\"cid:alga-brand-logo\" reference as it is — replacing it with a URL makes recipients approve an image download first."
+      }
     }
   },
   "timeEntry": {

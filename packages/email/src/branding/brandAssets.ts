@@ -6,9 +6,35 @@
  * leaves exactly one logo and one footer.
  */
 
+import type { EmailBrandingLogoVariant } from './types';
+
 export const BRAND_LOGO_MARKER = 'data-alga-brand-logo';
 
+/**
+ * Content-IDs the logo travels under. The variant lives in the cid, so the HTML
+ * alone says which file the send-time pass has to attach.
+ */
+export const BRAND_LOGO_CIDS = {
+  default: 'alga-brand-logo',
+  wide: 'alga-brand-logo-wide',
+} as const satisfies Record<EmailBrandingLogoVariant, string>;
+
+export function brandLogoCid(variant: EmailBrandingLogoVariant = 'default'): string {
+  return BRAND_LOGO_CIDS[variant] ?? BRAND_LOGO_CIDS.default;
+}
+
+/** The reverse of brandLogoCid, over a `cid:...` src or a bare content-id. */
+export function parseBrandLogoVariant(value: string | null | undefined): EmailBrandingLogoVariant | null {
+  if (!value) return null;
+  const cid = value.trim().replace(/^cid:/i, '').replace(/^<(.*)>$/, '$1');
+  const match = (Object.keys(BRAND_LOGO_CIDS) as EmailBrandingLogoVariant[])
+    .find((variant) => BRAND_LOGO_CIDS[variant] === cid);
+  return match ?? null;
+}
+
 const EXISTING_LOGO = new RegExp(`<img\\b[^>]*${BRAND_LOGO_MARKER}[^>]*>\\s*`, 'gi');
+const MARKER_TAG = new RegExp(`<img\\b[^>]*${BRAND_LOGO_MARKER}[^>]*>`, 'gi');
+const SRC_ATTRIBUTE = /\ssrc="([^"]*)"/i;
 
 /** The gradient header cell of the shared layout. */
 const LAYOUT_HEADER_CELL = /<td\b[^>]*linear-gradient\([^>]*>/i;
@@ -23,7 +49,7 @@ const escapeAttribute = (value: string): string =>
     .replace(/>/g, '&gt;');
 
 export interface BrandLogo {
-  url: string;
+  variant: EmailBrandingLogoVariant;
   alt?: string;
 }
 
@@ -32,8 +58,13 @@ export interface BrandDecorationOptions {
   hideAttribution?: boolean;
 }
 
+/**
+ * The stored row references the logo by content-id, never by URL: a mail client
+ * has no origin to resolve a path against, and any remote URL is held behind
+ * "download images". The bytes are attached at send time.
+ */
 function logoTag(logo: BrandLogo): string {
-  return `<img ${BRAND_LOGO_MARKER} src="${escapeAttribute(logo.url)}" alt="${escapeAttribute(logo.alt ?? '')}" style="max-height:40px;margin-bottom:12px"/>`;
+  return `<img ${BRAND_LOGO_MARKER} src="cid:${brandLogoCid(logo.variant)}" alt="${escapeAttribute(logo.alt ?? '')}" style="max-height:40px;margin-bottom:12px"/>`;
 }
 
 /**
@@ -42,7 +73,7 @@ function logoTag(logo: BrandLogo): string {
  * templates that bring their own structure.
  */
 export function applyBrandLogo(html: string, logo: BrandLogo): string {
-  if (!html || !logo?.url) return html;
+  if (!html || !logo?.variant) return html;
 
   const withoutExisting = html.replace(EXISTING_LOGO, '');
   const tag = logoTag(logo);
@@ -69,6 +100,32 @@ export function applyBrandLogo(html: string, logo: BrandLogo): string {
 
 export function removeBrandLogo(html: string): string {
   return html ? html.replace(EXISTING_LOGO, '') : html;
+}
+
+export interface BrandLogoPreviewUrls {
+  logoUrl?: string;
+  logoWideUrl?: string;
+}
+
+/**
+ * Previews render in an iframe that resolves `/api/documents/view/...` against
+ * the app origin, so the `cid:` the row carries is swapped back to the branding
+ * URL there. Nothing is embedded in a preview. Pure string work: no DOM, so the
+ * settings panel and the template editor share it.
+ */
+export function resolveBrandLogoForPreview(html: string, urls: BrandLogoPreviewUrls): string {
+  if (!html || !html.includes(BRAND_LOGO_MARKER)) return html;
+
+  return html.replace(MARKER_TAG, (tag) => {
+    const src = SRC_ATTRIBUTE.exec(tag)?.[1];
+    const variant = parseBrandLogoVariant(src);
+    if (!variant) return tag;
+
+    const url = variant === 'wide' ? urls.logoWideUrl || urls.logoUrl : urls.logoUrl;
+    if (!url) return tag;
+
+    return tag.replace(SRC_ATTRIBUTE, () => ` src="${escapeAttribute(url)}"`);
+  });
 }
 
 const ATTRIBUTION = 'Powered by AlgaPSA';

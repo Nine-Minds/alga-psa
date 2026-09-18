@@ -101,7 +101,7 @@ describe('classifyTenantTemplate', () => {
 });
 
 describe('classifyTenantTemplate with enterprise brand assets', () => {
-  const logo = { url: 'https://cdn.example.com/logo.png', alt: 'Acme' };
+  const logo = { variant: 'default' as const, alt: 'Acme' };
 
   it('recognizes a row it wrote with a logo and no attribution as branded', () => {
     const decorated = decorateBrandedHtml(brandedRow.html_content, { logo, hideAttribution: true });

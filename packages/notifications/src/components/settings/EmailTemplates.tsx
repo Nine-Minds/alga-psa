@@ -27,7 +27,13 @@ import {
   SystemEmailTemplate,
   TenantEmailTemplate
 } from "../../types/notification";
-import { applyEmailPalette, STOCK_EMAIL_PALETTE, type EmailPaletteTokens } from "@alga-psa/email/branding";
+import {
+  applyEmailPalette,
+  BRAND_LOGO_MARKER,
+  STOCK_EMAIL_PALETTE,
+  type BrandLogoPreviewUrls,
+  type EmailPaletteTokens,
+} from "@alga-psa/email/branding";
 import { EmailTemplatePreview } from "./EmailTemplatePreview";
 import type { EmailBrandingStatus } from "../../lib/emailBranding";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
@@ -594,6 +600,7 @@ export function EmailTemplates() {
       <ViewTemplateDialog
         template={viewingTemplate}
         onClose={() => setViewingTemplate(null)}
+        brandLogoUrls={brandingStatus?.logoOptions}
       />
 
       <EditTemplateDialog
@@ -604,6 +611,7 @@ export function EmailTemplates() {
         onTemplatesChange={setTemplates}
         brandingPalette={brandingTarget}
         appliedPalette={brandingStatus?.palette?.appliedPalette ?? null}
+        brandLogoUrls={brandingStatus?.logoOptions}
       />
 
       <VariableReferenceDialog
@@ -617,9 +625,12 @@ export function EmailTemplates() {
 function ViewTemplateDialog({
   template,
   onClose,
+  brandLogoUrls,
 }: {
   template: SystemEmailTemplate | null;
   onClose: () => void;
+  /** Resolves the embedded-logo reference for the preview iframe. */
+  brandLogoUrls?: BrandLogoPreviewUrls;
 }) {
   const { t } = useTranslation('msp/settings');
   const [htmlTab, setHtmlTab] = useState<string>('preview');
@@ -713,6 +724,7 @@ function ViewTemplateDialog({
               <div className="mt-2">
                 <EmailTemplatePreview
                   htmlContent={template.html_content}
+                  brandLogoUrls={brandLogoUrls}
                   templateName={template.name}
                   subject={template.subject}
                 />
@@ -761,6 +773,7 @@ function EditTemplateDialog({
   onTemplatesChange,
   brandingPalette,
   appliedPalette,
+  brandLogoUrls,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -771,6 +784,8 @@ function EditTemplateDialog({
   brandingPalette: EmailPaletteTokens | null;
   /** What the last apply wrote, so its tokens are recognized too. */
   appliedPalette: EmailPaletteTokens | null;
+  /** Resolves the embedded-logo reference for the live preview. */
+  brandLogoUrls?: BrandLogoPreviewUrls;
 }) {
   type EditableField = 'subject' | 'html_content' | 'text_content';
   const { t } = useTranslation('msp/settings');
@@ -1099,6 +1114,14 @@ function EditTemplateDialog({
               className="mt-2 font-mono text-xs"
             />
             {autocompleteMenu('html_content')}
+            {formData.html_content?.includes(BRAND_LOGO_MARKER) && (
+              <p id="inline-logo-hint" className="mt-1 text-xs text-gray-400">
+                {t(
+                  'notifications.emailTemplates.editor.inlineLogoHint',
+                  'Your logo is embedded in the message when it is sent. Keep the src="cid:alga-brand-logo" reference as it is — replacing it with a URL makes recipients approve an image download first.',
+                )}
+              </p>
+            )}
           </div>
 
           <div>
@@ -1140,6 +1163,7 @@ function EditTemplateDialog({
                     <EmailTemplatePreview
                       id="edit-template-preview"
                       htmlContent={previewHtml}
+                      brandLogoUrls={brandLogoUrls}
                       templateName={template?.name ?? ''}
                       subject={previewSubject}
                       sourceMap

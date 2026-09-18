@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label } from "@alga-psa/ui/components/Label";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { resolveBrandLogoForPreview, type BrandLogoPreviewUrls } from "@alga-psa/email/branding";
 import { getSampleDataForPreview } from "../../lib/templateSampleData";
 import {
   annotateHtmlSource,
@@ -63,6 +64,7 @@ export function EmailTemplatePreview({
   templateName,
   subject,
   id,
+  brandLogoUrls,
   sourceMap,
   highlightOffset,
   onSelectSource,
@@ -71,6 +73,12 @@ export function EmailTemplatePreview({
   templateName: string;
   subject?: string;
   id?: string;
+  /**
+   * Branding URLs for the embedded logo. A stored row references it as
+   * `cid:alga-brand-logo`, which only a mail client resolves; here the iframe
+   * loads the URL instead.
+   */
+  brandLogoUrls?: BrandLogoPreviewUrls;
   /** Links what is rendered back to the HTML source, for the side-by-side editor. */
   sourceMap?: boolean;
   /** Caret offset in the source; the element around it is outlined. */
@@ -90,8 +98,14 @@ export function EmailTemplatePreview({
   );
 
   const renderedHtml = useMemo(
-    () => replaceTemplateVariables(sourceMap ? annotateHtmlSource(htmlContent) : htmlContent, sampleData),
-    [htmlContent, sampleData, sourceMap]
+    () => {
+      const annotated = sourceMap ? annotateHtmlSource(htmlContent) : htmlContent;
+      // After the annotation, never before: swapping the cid for a URL changes
+      // the length, and the stamped offsets describe the source being edited.
+      const resolved = brandLogoUrls ? resolveBrandLogoForPreview(annotated, brandLogoUrls) : annotated;
+      return replaceTemplateVariables(resolved, sampleData);
+    },
+    [htmlContent, sampleData, sourceMap, brandLogoUrls]
   );
 
   const renderedSubject = useMemo(
