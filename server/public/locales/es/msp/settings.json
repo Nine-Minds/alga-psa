@@ -1879,7 +1879,7 @@
     },
     "emailTemplates": {
       "editor": {
-        "inlineLogoHint": "Tu logotipo se incrusta en el mensaje al enviarlo. Conserva la referencia src=\"cid:alga-brand-logo\" tal cual: si la sustituyes por una URL, los destinatarios tendrán que autorizar la descarga de la imagen."
+        "inlineLogoHint": "Su logotipo se incrusta en el mensaje al enviarlo. Conserve la referencia src=\"cid:alga-brand-logo\" tal cual: si la sustituye por una URL, los destinatarios tendrán que autorizar la descarga de la imagen."
       }
     }
   },
