@@ -94,7 +94,16 @@ const TICKET_MOBILE_LIST_FIELDS = [
   'entered_at',
   'closed_at',
   'tags',
+  'master_ticket_id',
+  'bundle_master_ticket_number',
+  'bundle_child_count',
 ];
+
+// Shared with packages/tickets/src/actions/optimizedTicketActions.ts: the
+// fields a bundled child cannot change directly, and the fields a
+// sync_updates master pushes down to its children.
+const BUNDLE_CHILD_LOCKED_FIELDS = ['status_id', 'assigned_to', 'priority_id'] as const;
+const BUNDLE_SYNCED_FIELDS = ['status_id', 'assigned_to', 'priority_id', 'is_closed', 'closed_by', 'closed_at'] as const;
 
 const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   ...TICKET_MOBILE_LIST_FIELDS,
@@ -445,6 +454,17 @@ export class TicketService extends BaseService<ITicket> {
     const needsStatuses = !selectedFields || wants('status_name') || wants('status_is_closed') || mappedSortField === 'status_name';
     const needsPriorities = !selectedFields || wants('priority_name') || mappedSortField === 'priority_name';
     const needsAssignedUser = !selectedFields || wants('assigned_to_name');
+    const needsBundleMaster = !selectedFields || wants('bundle_master_ticket_number');
+    const needsBundleChildCount = !selectedFields || wants('bundle_child_count');
+
+    // Correlated on t.tenant so the count stays inside the ticket's shard.
+    const bundleChildCountSelect = knex.raw(
+      '(SELECT COUNT(*)::int FROM tickets tc WHERE tc.tenant = t.tenant AND tc.master_ticket_id = t.ticket_id) AS bundle_child_count'
+    );
+
+    if (needsBundleMaster) {
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+    }
 
     if (needsClients) {
       dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
@@ -499,6 +519,8 @@ export class TicketService extends BaseService<ITicket> {
           'cat.category_name',
           'subcat.category_name as subcategory_name',
           'board.board_name as board_name',
+          'mt.ticket_number as bundle_master_ticket_number',
+          bundleChildCountSelect,
           knex.raw(`CASE 
             WHEN entered_user.first_name IS NOT NULL AND entered_user.last_name IS NOT NULL 
             THEN CONCAT(entered_user.first_name, ' ', entered_user.last_name) 
@@ -525,6 +547,9 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('updated_at')) selectParts.push('t.updated_at');
       if (selectedFields.includes('entered_at')) selectParts.push('t.entered_at');
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
+      if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
+      if (needsBundleMaster) selectParts.push('mt.ticket_number as bundle_master_ticket_number');
+      if (needsBundleChildCount) selectParts.push(bundleChildCountSelect);
 
       if (selectedFields.includes('assigned_to_name')) {
         selectParts.push(
@@ -658,9 +683,14 @@ export class TicketService extends BaseService<ITicket> {
     scopedDb.tenantJoin(ticketQuery, 'priorities as pri', 't.priority_id', 'pri.priority_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
     const ticket = await ticketQuery
       .select(
         't.*',
+        'mt.ticket_number as bundle_master_ticket_number',
+        knex.raw(
+          '(SELECT COUNT(*)::int FROM tickets tc WHERE tc.tenant = t.tenant AND tc.master_ticket_id = t.ticket_id) AS bundle_child_count'
+        ),
         'comp.client_name',
         'cl.location_name as location_name',
         'cl.email as client_email',
@@ -1747,6 +1777,22 @@ export class TicketService extends BaseService<ITicket> {
       // UPDATE statement. Inline links are written by the create paths only.
       delete (cleanedData as any).external_links;
 
+      // Bundled child tickets lock workflow fields, same as the in-app
+      // update action: status, assignment and priority flow down from the
+      // master (sync_updates) or are managed there (link_only).
+      if (currentTicket.master_ticket_id) {
+        const attempted = BUNDLE_CHILD_LOCKED_FIELDS.filter(
+          (field) => (cleanedData as Record<string, unknown>)[field] !== undefined
+            && (cleanedData as Record<string, unknown>)[field] !== (currentTicket as Record<string, unknown>)[field]
+        );
+        if (attempted.length > 0) {
+          throw new ValidationError('Validation failed', attempted.map((field) => ({
+            path: [field],
+            message: `This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`,
+          })));
+        }
+      }
+
       const isBoardChange =
         cleanedData.board_id !== undefined &&
         cleanedData.board_id !== currentTicket.board_id;
@@ -1894,6 +1940,8 @@ export class TicketService extends BaseService<ITicket> {
         await finalizeResourceReassignment();
       }
 
+      await this.propagateBundleMasterUpdate(trx, context, id, updateData);
+
       // Handle tags if provided
       if (data.tags) {
         await this.handleTags(id, data.tags, context, trx);
@@ -1985,6 +2033,41 @@ export class TicketService extends BaseService<ITicket> {
 
       return this.withDescriptionHtml(ticket as ITicket);
     });
+  }
+
+  /**
+   * Bundle masters in sync_updates mode push workflow changes to their
+   * children. Mirrors the in-app update action so a master closed from the
+   * mobile app or the public API cascades exactly like one closed on the web.
+   * Children publish no events of their own; the master's carry the change.
+   */
+  private async propagateBundleMasterUpdate(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    masterTicketId: string,
+    updateData: Record<string, unknown>
+  ): Promise<void> {
+    const propagate: Record<string, unknown> = {};
+    for (const field of BUNDLE_SYNCED_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(updateData, field)) {
+        propagate[field] = updateData[field];
+      }
+    }
+    if (Object.keys(propagate).length === 0) return;
+
+    const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+      .select('mode')
+      .where({ master_ticket_id: masterTicketId })
+      .first();
+    if (settings?.mode !== 'sync_updates') return;
+
+    await tenantScopedTable(trx, 'tickets', context.tenant)
+      .where({ master_ticket_id: masterTicketId })
+      .update({
+        ...propagate,
+        updated_by: context.userId,
+        updated_at: new Date().toISOString(),
+      });
   }
 
   private withDescriptionHtml<T extends ITicket>(ticket: T): T & { description_html: string } {
@@ -2986,6 +3069,11 @@ export class TicketService extends BaseService<ITicket> {
           break;
         case 'created_to':
           query.where('t.entered_at', '<=', value);
+          break;
+        case 'bundle_view':
+          if (value === 'bundled') {
+            query.whereNull('t.master_ticket_id');
+          }
           break;
       }
     });

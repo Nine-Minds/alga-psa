@@ -22,7 +22,10 @@
     "overdueCount": "Overdue {{count}}",
     "assignedTo": "Assigned to {{name}}",
     "ticketAccessibility": "Ticket {{number}}: {{title}}",
-    "createTicket": "New ticket"
+    "createTicket": "New ticket",
+    "bundledUnder": "Bundled → {{number}}",
+    "bundleMaster": "master",
+    "bundleCount": "Bundle · {{count}}"
   },
   "filters": {
     "title": "Filters",
@@ -72,7 +75,12 @@
     "pickAgent": "Pick specific agent…",
     "option24h": "24h",
     "option7d": "7d",
-    "option30d": "30d"
+    "option30d": "30d",
+    "bundles": "Bundles",
+    "bundled": "Bundled",
+    "individual": "Individual",
+    "bundledHint": "Bundled hides child tickets under their master, like the web list.",
+    "bundleIndividualLabel": "Bundles: Individual"
   },
   "quickFilters": {
     "myTickets": "My tickets",
@@ -160,6 +168,19 @@
       "contactPermission": "You don't have permission to update this ticket's contact.",
       "contactValidation": "Contact change was rejected by the server.",
       "contactGeneric": "Unable to update contact. Please try again."
+    },
+    "bundle": {
+      "master": "master",
+      "childBanner": "This ticket is bundled under {{number}}.",
+      "locked": "Status, priority and assignee are locked; work from the master ticket.",
+      "openMaster": "Open master ticket {{number}}",
+      "masterBanner": "Master of a bundle ({{count}} children).",
+      "mode": "Mode: {{mode}}",
+      "modes": {
+        "sync_updates": "Sync updates",
+        "link_only": "Link only"
+      },
+      "syncHint": "Status, priority and assignee changes flow to the children."
     }
   },
   "description": {

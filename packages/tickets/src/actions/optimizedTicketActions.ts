@@ -3085,16 +3085,24 @@ export async function updateTicketInTransaction(
           propagateFields[key] = (updateData as any)[key];
         }
       }
+      // Live updates diff the user-facing fields only; is_closed mirrors
+      // status_id and is added to the write below, not to the diff.
+      const liveUpdateFields = { ...propagateFields };
+      // is_closed is written to the master outside updateData (see above);
+      // children need the same denormalized flag or they read as open.
+      if (Object.prototype.hasOwnProperty.call(propagateFields, 'status_id')) {
+        propagateFields.is_closed = !!newStatus?.is_closed;
+      }
 
       if (Object.keys(propagateFields).length > 0) {
         const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ master_ticket_id: id })
-          .select(['ticket_id', ...Object.keys(propagateFields)]);
+          .select(['ticket_id', ...Object.keys(liveUpdateFields)]);
 
         const childPublishes = childTickets
           .map((childTicket: Record<string, unknown>) => ({
             ticketId: childTicket.ticket_id as string,
-            updatedFields: diffTicketFields(childTicket, propagateFields),
+            updatedFields: diffTicketFields(childTicket, liveUpdateFields),
           }))
           .filter((childPublish: { ticketId: string; updatedFields: ReturnType<typeof diffTicketFields> }) =>
             childPublish.updatedFields.length > 0);
