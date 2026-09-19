@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeTable, type FakeTenantDbOptions } from '@alga-psa/db/testing';
 import { getClientContactVisibilityContext } from '../../../../tickets/src/lib/clientPortalVisibility.server';
 
 // Integration-style flow tests: comfortably sub-second locally, but loaded CI
@@ -66,80 +67,30 @@ type VisibilityState = {
   }>;
 };
 
-function pickFields<T extends Record<string, any>>(row: T | undefined, columns?: string[]) {
-  if (!row) {
-    return undefined;
-  }
-
-  if (!columns?.length) {
-    return row;
-  }
-
-  return columns.reduce<Record<string, any>>((acc, column) => {
-    const key = column.includes('.') ? column.split('.').pop()! : column;
-    acc[key] = row[key];
-    return acc;
-  }, {});
-}
-
-function matchesFilters(row: Record<string, any>, filters: Record<string, any>) {
-  return Object.entries(filters).every(([key, value]) => row[key] === value);
-}
-
 function createVisibilityTrx(state: VisibilityState) {
-  return ((table: string) => {
-    if (table === 'boards') {
-      return { select: async () => [] };
-    }
-
-    if (table === 'contacts') {
-      return {
-        where: (filters: Record<string, any>) => {
-          const matches = state.contacts.filter((row) => matchesFilters(row, filters));
-          return {
-            first: async (...columns: string[]) => pickFields(matches[0], columns),
-            update: async (updates: Record<string, any>) => {
-              matches.forEach((row) => Object.assign(row, updates));
-              return matches.length;
-            },
-          };
+  const tables: FakeTenantDbOptions = {
+    tables: {
+      contacts: state.contacts,
+      client_portal_visibility_groups: state.groups,
+      boards: state.boards,
+      client_portal_visibility_group_boards: state.groupBoards,
+    },
+    perTable: {
+      contacts: {
+        // The reassignment has to be visible to the next read on the same
+        // transaction, which is the whole point of this test.
+        onUpdate: (patch, selected) => {
+          selected.forEach((row) => Object.assign(row, patch));
+          return selected.length;
         },
-      };
-    }
+      },
+    },
+  };
 
-    if (table === 'client_portal_visibility_groups') {
-      return {
-        where: (filters: Record<string, any>) => {
-          const matches = state.groups.filter((row) => matchesFilters(row, filters));
-          return {
-            first: async (...columns: string[]) => pickFields(matches[0], columns),
-          };
-        },
-      };
-    }
-
-    if (table === 'client_portal_visibility_group_boards as cvgb') {
-      return {
-        join: () => ({
-          where: (filters: Record<string, any>) => ({
-            select: async () =>
-              state.groupBoards
-                .filter((row) => {
-                  const board = state.boards.find((candidate) => candidate.board_id === row.board_id);
-                  return (
-                    (!filters['cvgb.tenant'] || row.tenant === filters['cvgb.tenant']) &&
-                    row.group_id === filters['cvgb.group_id'] &&
-                    (!filters['cvgb.tenant'] || board?.tenant === filters['cvgb.tenant'])
-                  );
-                })
-                .map((row) => ({ board_id: row.board_id })),
-          }),
-        }),
-      };
-    }
-
-    throw new Error(`Unexpected table: ${table}`);
-  }) as any;
+  const trx = ((table: string) => fakeTable(tables, 'tenant-1', table.split(' ')[0])) as any;
+  trx.isTransaction = true;
+  trx.fn = { now: () => 'now()' };
+  return trx;
 }
 
 describe('contactActions visibility group integration', () => {

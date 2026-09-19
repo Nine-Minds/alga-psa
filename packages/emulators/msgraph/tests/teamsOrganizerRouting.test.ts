@@ -31,6 +31,15 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: () => {
 vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: async () => ({
   getTenantSecret: async (tenant: string, key: string) => hoisted.secrets.get(`${tenant}:${key}`) ?? null,
 }) }));
+// Teams settings are gated by the product-access guard, which reads the
+// tenant's product from the ADMIN pool -- a different module than the tenant
+// connection mocked below, and one that would otherwise open a real Postgres
+// pool. This workspace is a plain PSA tenant.
+vi.mock('@alga-psa/db/admin', () => ({
+  getAdminConnection: async () => (table: string) => ({
+    where: () => ({ select: () => ({ first: async () => (table === 'tenants' ? { product_code: 'psa' } : undefined) }) }),
+  }),
+}));
 vi.mock('@alga-psa/db', () => {
   const knex = Object.assign((table: string) => {
     const filters: Record<string, any>[] = [];

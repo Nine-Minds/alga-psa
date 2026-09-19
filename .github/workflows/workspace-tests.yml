@@ -53,6 +53,18 @@ jobs:
           cache: npm
       - run: npm install -g npm@11
       - run: npm ci
+      # Same build set as the other workspace lanes below, which this job was
+      # missing entirely. @alga-psa/co-managed maps its subpaths to dist, and
+      # packages/tickets/src/lib/scheduledCommentCommands.ts imports
+      # `@alga-psa/co-managed/nativeConversationEvents` through plain Node
+      # resolution -- with no build step that is an unresolvable package and it
+      # took out the EE ticket-response-state suite. Fixed in the lane; the
+      # exports map is correct and must not be changed for this.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/co-managed --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
       - name: Collect and execute EE integration tests against combined migrations
         run: node scripts/run-additional-workspace-tests.mjs enterprise-integration
       - uses: actions/upload-artifact@v4

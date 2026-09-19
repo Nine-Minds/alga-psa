@@ -2,6 +2,7 @@
 // TODO: Comment model method signature changes
 'use server'
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 import { admitScheduledCommentCommand } from '../../lib/scheduledCommentCommands';
 import Comment from '../../models/comment';
@@ -11,7 +12,7 @@ import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../../lib/nativeConversationEvents';
+import { retainNativeConversationEvent, publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../../lib/nativeConversationEvents';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -367,9 +368,10 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         // Durable intent failures roll back the comment; transport runs after commit.
         {
           const eventComment = await Comment.get(trx, commentTenant, commentId);
-          await publishNativeCommentEvent(trx, { tenant: commentTenant, ticketId: comment.ticket_id!, commentId }, {
-            eventType: 'TICKET_COMMENT_ADDED',
-            payload: {
+          // Retention reports whether the co-managed conversation owns delivery;
+          // when it does not, the durable publication intent delivers it, so the
+          // two never both publish.
+          const commentEventPayload = {
               tenantId: commentTenant,
               occurredAt: new Date().toISOString(),
               ticketId: comment.ticket_id!,
@@ -388,8 +390,14 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
                 parent_comment_id: eventComment?.parent_comment_id ?? null,
                 is_reply: Boolean(eventComment?.parent_comment_id)
               }
-            }
-          });
+          };
+          const retainedByConversation = await retainNativeConversationEvent(trx,
+            { tenant: commentTenant, ticketId: comment.ticket_id!, commentId },
+            { kind: 'event', eventType: 'TICKET_COMMENT_ADDED', payload: commentEventPayload },
+            { legacyPublish: async () => {} });
+          if (!retainedByConversation) {
+            await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: commentEventPayload }, publishEvent);
+          }
           console.log(`[createComment] Published TICKET_COMMENT_ADDED event for comment:`, commentId);
         }
 

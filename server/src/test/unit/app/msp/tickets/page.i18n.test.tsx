@@ -291,7 +291,8 @@ vi.mock('@alga-psa/tickets/actions/ticketDisplaySettings', () => ({
   getTicketingDisplaySettings: (...args: unknown[]) => getTicketingDisplaySettingsMock(...args),
 }));
 
-vi.mock('@alga-psa/tickets/lib', () => ({
+vi.mock('@alga-psa/tickets/lib', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   isTicketStatusOpenFilter: (value: unknown) => value === 'open',
   TICKET_STATUS_FILTER_OPEN: 'open',
 }));

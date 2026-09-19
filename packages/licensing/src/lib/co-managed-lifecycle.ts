@@ -31,6 +31,16 @@ export function isCoManagedLifecycleError(error: unknown): error is CoManagedLif
     candidate.code === (state.state === 'pending_acceptance' ? 'CO_MANAGED_NOT_ACTIVE' : 'CO_MANAGED_READ_ONLY'));
 }
 
+/** Lifecycle admission ran against a tenant that has no workspace row. Nothing
+ * exists to admit, so callers with an HTTP contract answer "not found" rather
+ * than reporting a server fault. */
+export class CoManagedWorkspaceNotFoundError extends Error {
+  constructor() {
+    super('The workspace does not exist');
+    this.name = 'CoManagedWorkspaceNotFoundError';
+  }
+}
+
 /** Read under the same lock order as acceptance, allocation, and termination:
  * sponsor entitlement, sponsor tenant, customer relationship, customer tenant.
  * The caller retains these locks until its operational write commits. This is
@@ -39,7 +49,7 @@ async function readState(trx: Knex.Transaction, tenant: string): Promise<CoManag
   if (!tenant) throw new Error('A tenant is required for lifecycle admission');
   const customer = tenantDb(trx, tenant);
   const workspace = await customer.table('tenants').first('product_code');
-  if (!workspace) throw new Error('The workspace does not exist');
+  if (!workspace) throw new CoManagedWorkspaceNotFoundError();
   if (workspace.product_code !== 'co_managed') return { state: 'independent', canWrite: true, graceEndsAt: null };
 
   // A terminated relationship is retained for export and historical identity.
@@ -55,7 +65,7 @@ async function readState(trx: Knex.Transaction, tenant: string): Promise<CoManag
   // An independent upgrade can win while we wait. Its complete transaction
   // must detach the relationship before the product becomes writable as PSA.
   if (current?.product_code !== 'co_managed') {
-    if (!current) throw new Error('The workspace does not exist');
+    if (!current) throw new CoManagedWorkspaceNotFoundError();
     if (relationship && !relationship.ended_at) throw new Error('The workspace upgrade has not detached co-management');
     return { state: 'independent', canWrite: true, graceEndsAt: null };
   }

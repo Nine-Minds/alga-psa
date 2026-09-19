@@ -3,7 +3,7 @@
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication, reconcileCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
-import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
+import { retainNativeConversationEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
@@ -3521,9 +3521,17 @@ export const addTicketCommentWithCache = withAuth(async (
     }
 
     // Publish comment added event after the comment transaction commits.
-    if (!isScheduled) await publishNativeCommentEvent(trx, { tenant, ticketId, commentId: newCommentId }, {
-        eventType: 'TICKET_COMMENT_ADDED',
-        payload: {
+    //
+    // Retention runs first and reports whether the co-managed conversation took
+    // ownership of delivery. When it did not, this tenant has no co-managed
+    // conversation and the DURABLE publication intent is what delivers the event
+    // -- an outbox row with an idempotent event id and recovery -- so the two
+    // never both publish. `legacyPublish` is a no-op for exactly that reason.
+    // Without this fallback the MSP composer silently downgraded to a
+    // best-effort after-commit publish while the API path (TicketService) kept
+    // the durable one. See the same shape in
+    // server/src/lib/api/services/TicketService.ts.
+    const commentEventPayload = {
           tenantId: tenant,
           occurredAt: newComment.created_at ?? new Date().toISOString(),
           ticketId: ticketId,
@@ -3538,8 +3546,16 @@ export const addTicketCommentWithCache = withAuth(async (
           },
           suppressContactNotifications,
           suppressInternalNotifications,
-        }
-      });
+    };
+    if (!isScheduled) {
+      const retainedByConversation = await retainNativeConversationEvent(trx,
+        { tenant, ticketId, commentId: newCommentId },
+        { kind: 'event', eventType: 'TICKET_COMMENT_ADDED', payload: commentEventPayload },
+        { legacyPublish: async () => {} });
+      if (!retainedByConversation) {
+        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: commentEventPayload }, publishEvent);
+      }
+    }
 
     // Publish workflow v2 ticket message events (additive).
     if (!isScheduled) {

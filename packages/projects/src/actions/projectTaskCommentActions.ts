@@ -360,8 +360,10 @@ export const getTaskComments = withAuth(async (
       parentCommentId: comment.parent_comment_id,
       userId: authorHidden ? null : comment.user_id,
       authorType: comment.author_type,
-      note: comment.deleted_at ? '' : comment.note,
-      markdownContent: comment.deleted_at ? '' : comment.markdown_content,
+      // A soft-deleted comment already stores its tombstone body; blanking it here
+      // would drop the "[deleted]" marker the thread renders in place of the comment.
+      note: comment.note,
+      markdownContent: comment.markdown_content,
       createdAt: comment.created_at,
       updatedAt: comment.updated_at,
       editedAt: comment.edited_at,

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeTable, fakeTransaction, type FakeTenantDbOptions } from '@alga-psa/db/testing';
 
 let currentUser: any;
 
@@ -29,74 +30,20 @@ vi.mock('next/headers.js', () => ({
   headers: vi.fn(),
 }));
 
-function buildChain(result: any) {
-  const builder: any = {};
-  builder.select = vi.fn(() => builder);
-  builder.leftJoin = vi.fn(() => builder);
-  builder.join = vi.fn(() => builder);
-  builder.where = vi.fn(() => builder);
-  builder.whereIn = vi.fn(() => builder);
-  builder.whereNotNull = vi.fn(() => builder);
-  builder.modify = vi.fn((callback: (query: any) => void) => {
-    callback(builder);
-    return builder;
-  });
-  builder.groupBy = vi.fn(() => builder);
-  builder.orderBy = vi.fn(() => builder);
-  builder.limit = vi.fn().mockResolvedValue(result);
-  builder.first = vi.fn().mockResolvedValue(result);
-  return builder;
-}
-
 function buildTrx(invoiceRows: any[]) {
+  const tables: FakeTenantDbOptions = {
+    tables: {
+      contacts: [{ contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: null }],
+      boards: [],
+      tickets: [],
+      // The feed only shows finalized invoices belonging to the requester's client.
+      invoices: invoiceRows.map((row) => ({ finalized_at: row.timestamp, client_id: 'client-1', ...row })),
+    },
+  };
+
   return Object.assign(
-    ((table: string) => {
-      if (table === 'boards') {
-        return { select: async () => [] };
-      }
-
-      if (table === 'contacts') {
-        const contactRow = {
-          contact_name_id: 'contact-1',
-          client_id: 'client-1',
-          portal_visibility_group_id: null,
-        };
-        return {
-          where: vi.fn(() => ({
-            select: vi.fn(() => ({
-              first: vi.fn().mockResolvedValue(contactRow),
-            })),
-            first: vi.fn().mockResolvedValue(contactRow),
-          })),
-        };
-      }
-
-      if (table === 'tickets') {
-        return buildChain([]);
-      }
-
-      if (table === 'invoices as inv') {
-        return buildChain(invoiceRows);
-      }
-
-      if (table === 'asset_maintenance_history') {
-        return buildChain([]);
-      }
-
-      if (
-        table === 'quotes' ||
-        table === 'projects' ||
-        table === 'service_request_submissions' ||
-        table === 'appointment_requests as ar'
-      ) {
-        return buildChain([]);
-      }
-
-      throw new Error(`Unexpected table: ${table}`);
-    }) as any,
-    {
-      raw: vi.fn((sql: string) => sql),
-    }
+    ((table: string) => fakeTable(tables, currentUser.tenant, table.split(' ')[0])) as any,
+    fakeTransaction({ raw: vi.fn((sql: string) => sql) }),
   );
 }
 

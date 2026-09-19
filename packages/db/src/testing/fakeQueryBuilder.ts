@@ -84,7 +84,7 @@ export function fakeQueryBuilder(options: FakeQueryBuilderOptions = {}): FakeQue
       predicates.push(row => matches(row, field, value));
       return proxy;
     },
-    andWhere(...args: any[]) { return impl.where(...args); },
+    andWhere(field: any, value?: unknown) { return impl.where(field, value); },
     whereIn(column: string, values: unknown[]) {
       const key = column.split('.').at(-1)!;
       predicates.push(row => values.includes(row[key]));
@@ -119,7 +119,7 @@ export function fakeQueryBuilder(options: FakeQueryBuilderOptions = {}): FakeQue
       return proxy;
     },
     /** knex's conditional-clause escape hatch; the callback gets this builder. */
-    modify(callback: (builder: any) => void, ...args: any[]) { callback(proxy, ...args); return proxy; },
+    modify(callback: (builder: any, ...rest: any[]) => void, ...args: any[]) { callback(proxy, ...args); return proxy; },
     forShare() { options.onLock?.('forShare'); return proxy; },
     forUpdate() { options.onLock?.('forUpdate'); return proxy; },
 

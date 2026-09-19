@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Co-managed interaction admission rejects a tenant that is not a uuid before
+// it reads anything; hoisted because the mock factories below are too.
+const { TENANT } = vi.hoisted(() => ({ TENANT: '00000000-0000-4000-8000-000000000001' }));
+
 const hoisted = vi.hoisted(() => ({
   assertMspPermissionMock: vi.fn(),
   hasPermissionAsyncMock: vi.fn(),
@@ -9,14 +13,21 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) =>
-    fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
+    fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: TENANT }, ...args),
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async () => ({ knex: {} as any }),
-  tenantDb: () => ({ table: vi.fn() }),
-  withTransaction: async (_db: any, fn: any) => fn({} as any),
-}));
+vi.mock('@alga-psa/db', async () => {
+  // The factory is hoisted above the imports, so the shared doubles are pulled
+  // in here rather than referenced from module scope. Every table this suite
+  // does not model is read by co-managed lifecycle admission, which an
+  // independent PSA workspace answers with "not mine".
+  const { INDEPENDENT_TENANT_ROW, fakeTenantDb, fakeTransaction } = await import('@alga-psa/db/testing');
+  return {
+    createTenantKnex: async () => ({ knex: {} as any }),
+    tenantDb: fakeTenantDb({ tenantRow: { ...INDEPENDENT_TENANT_ROW, tenant: TENANT } }),
+    withTransaction: async (_db: any, fn: any) => fn(fakeTransaction()),
+  };
+});
 
 vi.mock('@alga-psa/storage/StorageService', () => ({
   StorageService: { deleteFile: vi.fn() },
@@ -66,7 +77,7 @@ function interactionInput() {
     title: 'Follow-up call',
     user_id: 'user-1',
     client_id: 'client-1',
-    tenant: 'tenant-1',
+    tenant: TENANT,
   } as any;
 }
 

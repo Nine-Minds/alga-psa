@@ -3,7 +3,7 @@
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication, reconcileCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
-import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
+import { retainNativeConversationEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { retainCoManagedConversationBeforeSourceChange, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
@@ -1575,10 +1575,10 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
 
       await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);
 
-      // Publish comment added event
-      await publishNativeCommentEvent(trx, { tenant, ticketId, commentId: newComment.comment_id }, {
-        eventType: 'TICKET_COMMENT_ADDED',
-        payload: {
+      // Publish comment added event. Retention reports whether the co-managed
+      // conversation owns delivery; when it does not, the durable publication
+      // intent delivers it, so the two never both publish.
+      const commentEventPayload = {
           tenantId: tenant,
           occurredAt: (newComment as any).created_at ?? new Date().toISOString(),
           ticketId: ticketId,
@@ -1590,8 +1590,14 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
             author: `${user.first_name} ${user.last_name}`,
             isInternal
           }
-        }
-      });
+      };
+      const retainedByConversation = await retainNativeConversationEvent(trx,
+        { tenant, ticketId, commentId: newComment.comment_id },
+        { kind: 'event', eventType: 'TICKET_COMMENT_ADDED', payload: commentEventPayload },
+        { legacyPublish: async () => {} });
+      if (!retainedByConversation) {
+        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: commentEventPayload }, publishEvent);
+      }
 
       // Publish workflow v2 ticket message events (additive).
       {
