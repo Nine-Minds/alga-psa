@@ -161,6 +161,8 @@ export interface TicketBentoLayoutProps {
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   /** Threaded reply pipeline (same handler the conversation view gets). */
   onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
+  /** Bundle master reference for mirrored child comments (MSP portal only). */
+  bundleMaster?: { ticketId: string; ticketNumber: string | null };
   /**
    * Server-started data promises from the RSC page. Tiles resolve them via
    * React use() behind <Suspense> skeletons — zero fetch-on-mount requests.
@@ -197,7 +199,7 @@ export interface TicketBentoLayoutProps {
   onStop: () => void;
   onAddTimeEntry: () => void;
   userId?: string;
-  dateTimeFormat?: string;
+  showWeekday?: boolean;
   timeEntriesRefreshKey?: number;
   onEditTimeEntry?: (entry: any) => void;
   onDeleteTimeEntry?: (entry: any) => void;
@@ -695,7 +697,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             id={`${id}-time-entries`}
             ticketId={ticketId}
             currentUserId={props.userId}
-            dateTimeFormat={props.dateTimeFormat}
+            showWeekday={props.showWeekday}
             refreshKey={props.timeEntriesRefreshKey}
             onEditEntry={props.onEditTimeEntry}
             onDeleteEntry={props.onDeleteTimeEntry}
@@ -965,6 +967,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             resolveTicketAttachmentViewUrl={props.resolveTicketAttachmentViewUrl}
             initialEntries={props.bentoStreams?.timelineEntries}
             initialReactions={props.bentoStreams?.commentReactions}
+            bundleMaster={props.bundleMaster}
           />
           </Suspense>
         </div>

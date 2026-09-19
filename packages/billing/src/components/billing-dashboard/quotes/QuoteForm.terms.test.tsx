@@ -213,8 +213,9 @@ describe('QuoteForm terms authoring', () => {
     );
 
     await waitFor(() => expect(document.getElementById('quote-form-template-picker')).toBeTruthy());
-    // The editor mounted once with the empty default before a template is chosen.
-    expect(editorMounts.length).toBe(1);
+    // The editor mounts once with the empty default before a template is
+    // chosen, but it mounts after the picker appears, so wait for it.
+    await waitFor(() => expect(editorMounts.length).toBe(1));
 
     fireEvent.change(document.getElementById('quote-form-template-picker') as HTMLSelectElement, {
       target: { value: 'template-1' },

@@ -3094,16 +3094,24 @@ export async function updateTicketInTransaction(
           propagateFields[key] = (updateData as any)[key];
         }
       }
+      // Live updates diff the user-facing fields only; is_closed mirrors
+      // status_id and is added to the write below, not to the diff.
+      const liveUpdateFields = { ...propagateFields };
+      // is_closed is written to the master outside updateData (see above);
+      // children need the same denormalized flag or they read as open.
+      if (Object.prototype.hasOwnProperty.call(propagateFields, 'status_id')) {
+        propagateFields.is_closed = !!newStatus?.is_closed;
+      }
 
       if (Object.keys(propagateFields).length > 0) {
         const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ master_ticket_id: id })
-          .select(['ticket_id', ...Object.keys(propagateFields)]);
+          .select(['ticket_id', ...Object.keys(liveUpdateFields)]);
 
         const childPublishes = childTickets
           .map((childTicket: Record<string, unknown>) => ({
             ticketId: childTicket.ticket_id as string,
-            updatedFields: diffTicketFields(childTicket, propagateFields),
+            updatedFields: diffTicketFields(childTicket, liveUpdateFields),
           }))
           .filter((childPublish: { ticketId: string; updatedFields: ReturnType<typeof diffTicketFields> }) =>
             childPublish.updatedFields.length > 0);
@@ -3317,6 +3325,10 @@ export const addTicketCommentWithCache = withAuth(async (
       thread_id: threadId,
       ticket_id: ticketId,
       user_id: user.user_id,
+      // Record the author's linked contact when present so the row is a
+      // faithful source for downstream copies (bundle mirrors) and author
+      // resolution can fall back to the contact map.
+      contact_id: user.contact_id ?? null,
       author_type: authorType,
       note: content,
       is_internal: effectiveIsInternal,
@@ -3368,11 +3380,18 @@ export const addTicketCommentWithCache = withAuth(async (
           .where({ master_ticket_id: ticketId });
 
         for (const child of children) {
+          // The mirror write lives in ticketBundleUtils.mirrorCommentToChild so
+          // the sync_updates shape is defined once. Carry the source author
+          // (user, contact, author_type) so the mirrored child comment resolves
+          // to the real author instead of showing as unknown.
           await mirrorCommentToChild(trx, tenant, {
             sourceComment: {
               comment_id: newCommentId,
               note: content,
               markdown_content: markdownContent,
+              user_id: newComment.user_id ?? null,
+              contact_id: newComment.contact_id ?? null,
+              author_type: newComment.author_type,
             },
             childTicketId: child.ticket_id,
             isResolution,

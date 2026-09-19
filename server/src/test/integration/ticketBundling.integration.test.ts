@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
 import { tenantDb } from '@alga-psa/db';
+import { resolveCommentAuthor } from '@alga-psa/tickets/lib';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 vi.mock('server/src/lib/utils/getSecret', () => ({
   getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
@@ -486,11 +488,14 @@ describe('Ticket bundling integration', () => {
       },
     ]);
 
+    const scopedDb = tenantDb(db, tenantId);
+    const childBefore = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+
+    vi.mocked(publishEvent).mockClear();
     await runWithTenant(tenantId, async () => {
       await addTicketCommentWithCache(masterId, content, false, false, internalUser as any);
     });
 
-    const scopedDb = tenantDb(db, tenantId);
     const mirrored = await scopedDb.table('comments')
       .where({ ticket_id: childId })
       .andWhere({ is_system_generated: true })
@@ -498,6 +503,55 @@ describe('Ticket bundling integration', () => {
 
     expect(mirrored).toBeTruthy();
     expect(mirrored?.is_internal).toBe(false);
+    // The child copy carries the source author so it resolves everywhere
+    // resolveCommentAuthor is used, while remaining a system artifact.
+    expect(mirrored?.is_system_generated).toBe(true);
+    expect(mirrored?.user_id).toBe(internalUser.user_id);
+    expect(mirrored?.author_type).toBe('internal');
+    expect(mirrored?.contact_id ?? null).toBeNull();
+
+    const mirroredThread = await scopedDb.table('comment_threads')
+      .where({ thread_id: mirrored.thread_id })
+      .first();
+    expect(mirroredThread?.created_by).toBe(internalUser.user_id);
+
+    const mirrorLink = await scopedDb.table('ticket_bundle_mirrors')
+      .where({ child_ticket_id: childId, child_comment_id: mirrored.comment_id })
+      .first();
+    expect(mirrorLink?.source_comment_id).toBeTruthy();
+    const sourceComment = await scopedDb.table('comments')
+      .where({ comment_id: mirrorLink.source_comment_id })
+      .first();
+    expect(sourceComment?.ticket_id).toBe(masterId);
+
+    // The child renderer resolves the agent, not Unknown User.
+    const childData = await runWithTenant(tenantId, async () =>
+      getConsolidatedTicketData(childId, internalUser as any)
+    );
+    const resolvedChildAuthor = resolveCommentAuthor(mirrored, {
+      userMap: childData.userMap,
+      contactMap: childData.contactMap,
+    });
+    expect(resolvedChildAuthor.source).toBe('user');
+    expect(resolvedChildAuthor.displayName).toBe(`${internalUser.first_name} ${internalUser.last_name}`);
+
+    // Only the master's TICKET_COMMENT_ADDED is published — the child copy is a
+    // display artifact with no event of its own. (A response-state event may
+    // also fire; only the comment-added count is asserted.)
+    const commentAddedCalls = vi.mocked(publishEvent).mock.calls.filter(
+      ([published]) => published?.eventType === 'TICKET_COMMENT_ADDED'
+    );
+    expect(commentAddedCalls).toHaveLength(1);
+    expect(commentAddedCalls[0][0]).toMatchObject({
+      eventType: 'TICKET_COMMENT_ADDED',
+      payload: { ticketId: masterId, commentId: sourceComment?.comment_id },
+    });
+
+    // Readers key on is_system_generated, not on an author being absent: the
+    // child's workflow/response state is not advanced by the mirrored copy.
+    const childAfter = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+    expect(childAfter?.status_id).toBe(childBefore?.status_id);
+    expect(childAfter?.response_state).toBe(childBefore?.response_state);
 
     const originalNote = mirrored?.note;
     const mirroredUpdateResult = await runWithTenant(tenantId, async () => {
@@ -509,6 +563,79 @@ describe('Ticket bundling integration', () => {
 
     const mirroredAfter = await scopedDb.table('comments').where({ comment_id: mirrored.comment_id }).first();
     expect(mirroredAfter?.note).toBe(originalNote);
+  });
+
+  it('sync_updates copies a contact author onto the mirrored child comment', async () => {
+    const clientA = await createClient(db, tenantId, `Client A ${uuidv4().slice(0, 6)}`);
+    const contactA = await createContact(db, tenantId, clientA, `a-${uuidv4().slice(0, 6)}@example.com`);
+
+    const masterId = uuidv4();
+    const childId = uuidv4();
+
+    await insertTicket(db, { tenant: tenantId, ticketId: masterId, ticketNumber: `CTM-${uuidv4().slice(0, 6)}`, title: 'Master', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+    await insertTicket(db, { tenant: tenantId, ticketId: childId, ticketNumber: `CTM-${uuidv4().slice(0, 6)}`, title: 'Child', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+
+    await runWithTenant(tenantId, async () => {
+      await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'sync_updates' }, internalUser as any);
+    });
+
+    const scopedDb = tenantDb(db, tenantId);
+    const contactAuthorId = await createUser(db, tenantId, {
+      email: `contact-author-${uuidv4().slice(0, 8)}@example.com`,
+      first_name: 'Contact',
+      last_name: 'Author',
+      user_type: 'internal',
+    });
+    await scopedDb.table('users').where({ user_id: contactAuthorId }).update({ contact_id: contactA });
+    await grantUserPermissions(db, tenantId, contactAuthorId, [
+      { resource: 'ticket', action: 'read' },
+      { resource: 'ticket', action: 'update' },
+    ]);
+    const contactAuthor = {
+      user_id: contactAuthorId,
+      tenant: tenantId,
+      email: `contact-author-${uuidv4().slice(0, 8)}@example.com`,
+      first_name: 'Contact',
+      last_name: 'Author',
+      user_type: 'internal' as const,
+      is_inactive: false,
+      contact_id: contactA,
+    };
+
+    const previousUser = mockCurrentUser;
+    mockCurrentUser = contactAuthor;
+    try {
+      await runWithTenant(tenantId, async () => {
+        await addTicketCommentWithCache(
+          masterId,
+          JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Contact update' }] }]),
+          false,
+          false,
+          contactAuthor as any
+        );
+      });
+    } finally {
+      mockCurrentUser = previousUser;
+    }
+
+    const mirrored = await scopedDb.table('comments')
+      .where({ ticket_id: childId, is_system_generated: true })
+      .first();
+    expect(mirrored?.contact_id).toBe(contactA);
+    expect(mirrored?.user_id).toBe(contactAuthorId);
+    expect(mirrored?.author_type).toBe('internal');
+
+    const childData = await runWithTenant(tenantId, async () =>
+      getConsolidatedTicketData(childId, internalUser as any)
+    );
+    // The contact id is carried onto the child; when the user record is not
+    // resolvable it is the contact map that renders the author.
+    const resolvedViaContact = resolveCommentAuthor(mirrored, {
+      userMap: {},
+      contactMap: childData.contactMap,
+    });
+    expect(resolvedViaContact.source).toBe('contact');
+    expect(resolvedViaContact.displayName).toBe('Bundling Contact');
   });
 
   it('reopen-on-reply can reopen the master when a client replies on a child', async () => {

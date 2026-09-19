@@ -120,6 +120,8 @@ interface BentoTimelineTileProps {
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   className?: string;
+  /** Bundle master reference for mirrored child comments (MSP portal only). */
+  bundleMaster?: { ticketId: string; ticketNumber: string | null };
 }
 
 const NO_STATUS_CHANGE = '__no_status_change__';
@@ -129,9 +131,12 @@ const defaultNotificationSuppression = (): TicketNotificationSuppressionValue =>
   suppressInternalNotifications: false,
 });
 
-function formatClock(iso: string, locale: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
+// The clock is 12h or 24h by COUNTRY, not by reading language, so this goes
+// through the central formatter rather than handing the locale tag to Intl.
+function formatClock(iso: string, formatDate: FormatDate): string {
+  return formatDate(new Date(iso), { hour: 'numeric', minute: '2-digit' });
 }
 
 function formatMinutes(minutes: number): string {
@@ -326,6 +331,7 @@ export function BentoTimelineTile({
   deleteDraftTicketAttachmentImagesAction,
   resolveTicketAttachmentViewUrl,
   className,
+  bundleMaster,
 }: BentoTimelineTileProps) {
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
@@ -721,6 +727,7 @@ export function BentoTimelineTile({
           onToggleReaction={handleToggleReaction}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+          bundleMaster={bundleMaster}
         />
       </>
     );
@@ -1078,7 +1085,7 @@ export function BentoTimelineTile({
 // Compact single-line rows for the non-comment lanes. The lane icon is drawn
 // by the spine pin in the gutter, so these render just the text + timestamp.
 function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: Translator }) {
-  const { locale } = useFormatters();
+  const { formatDate } = useFormatters();
   if (node.lane === 'time' && node.entry?.timeEntry) {
     const timeEntry = node.entry.timeEntry;
     return (
@@ -1094,7 +1101,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           {timeEntry.notes ? <> — {timeEntry.notes}</> : null}
         </p>
         <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-          {formatClock(node.occurredAt, locale)}
+          {formatClock(node.occurredAt, formatDate)}
         </span>
       </div>
     );
@@ -1114,7 +1121,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           ) : null}
         </p>
         <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-          {formatClock(node.occurredAt, locale)}
+          {formatClock(node.occurredAt, formatDate)}
         </span>
       </div>
     );
@@ -1127,7 +1134,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
         {node.entry ? describeSystemEntry(node.entry, t) : t('bento.timeline.ticketUpdated', 'Ticket updated')}
       </p>
       <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-        {formatClock(node.occurredAt, locale)}
+        {formatClock(node.occurredAt, formatDate)}
       </span>
     </div>
   );

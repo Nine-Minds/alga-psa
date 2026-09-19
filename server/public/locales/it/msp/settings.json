@@ -1876,6 +1876,11 @@
         "normal": "Normale",
         "low": "Bassa"
       }
+    },
+    "emailTemplates": {
+      "editor": {
+        "inlineLogoHint": "Il tuo logo viene incorporato nel messaggio al momento dell’invio. Lascia invariato il riferimento src=\"cid:{{cid}}\": sostituendolo con un URL, i destinatari dovranno prima autorizzare il download dell’immagine."
+      }
     }
   },
   "timeEntry": {

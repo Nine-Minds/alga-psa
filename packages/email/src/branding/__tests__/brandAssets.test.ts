@@ -3,12 +3,15 @@ import {
   applyBrandLogo,
   containsBrandAttribution,
   decorateBrandedHtml,
+  findBrandLogoCid,
+  resolveBrandLogoForPreview,
   stripBrandAttribution,
+  withImgSrc,
   BRAND_LOGO_MARKER,
 } from '../brandAssets';
 import { loadSystemTemplate } from './systemTemplateFixtures';
 
-const LOGO = { url: 'https://cdn.example.com/logo-wide.png', alt: 'Acme MSP' };
+const LOGO = { variant: 'wide' as const, alt: 'Acme MSP' };
 
 const countLogos = (html: string) => (html.match(new RegExp(BRAND_LOGO_MARKER, 'g')) ?? []).length;
 
@@ -22,6 +25,7 @@ describe('applyBrandLogo', () => {
     expect(headerCell[1].indexOf(BRAND_LOGO_MARKER)).toBeLessThan(headerCell[1].indexOf('text-transform:uppercase'));
     expect(branded).toContain('max-height:40px');
     expect(branded).toContain('alt="Acme MSP"');
+    expect(branded).toContain('src="cid:alga-brand-logo-wide"');
   });
 
   it('puts the logo before the first heading of an auth template', () => {
@@ -36,21 +40,105 @@ describe('applyBrandLogo', () => {
   it('replaces its own image instead of adding a second one', () => {
     const template = loadSystemTemplate('ticket-created');
     const once = applyBrandLogo(template.html, LOGO);
-    const twice = applyBrandLogo(once, { url: 'https://cdn.example.com/logo-square.png', alt: 'Acme MSP' });
+    const twice = applyBrandLogo(once, { variant: 'default', alt: 'Acme MSP' });
 
     expect(countLogos(twice)).toBe(1);
-    expect(twice).toContain('logo-square.png');
-    expect(twice).not.toContain('logo-wide.png');
+    expect(twice).toContain('src="cid:alga-brand-logo"');
+    expect(twice).not.toContain('alga-brand-logo-wide');
   });
 
-  it('escapes the URL and the alt text', () => {
+  it('escapes the alt text', () => {
     const branded = applyBrandLogo('<body><h1>Hi</h1></body>', {
-      url: 'https://cdn.example.com/logo.png?a=1&b=2',
+      variant: 'default',
       alt: 'Acme "MSP" <Ltd>',
     });
 
-    expect(branded).toContain('a=1&amp;b=2');
     expect(branded).toContain('alt="Acme &quot;MSP&quot; &lt;Ltd&gt;"');
+  });
+});
+
+describe('resolveBrandLogoForPreview', () => {
+  const URLS = {
+    logoUrl: '/api/documents/view/square-file?t=1',
+    logoWideUrl: '/api/documents/view/wide-file?t=2',
+  };
+
+  it('points each variant at the branding URL an iframe can resolve', () => {
+    const wide = resolveBrandLogoForPreview(applyBrandLogo('<body><h1>Hi</h1></body>', LOGO), URLS);
+    const square = resolveBrandLogoForPreview(
+      applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' }),
+      URLS,
+    );
+
+    expect(wide).toContain(`src="${URLS.logoWideUrl}"`);
+    expect(square).toContain(`src="${URLS.logoUrl}"`);
+    expect(wide).toContain(BRAND_LOGO_MARKER);
+  });
+
+  it('falls back to the square logo when no wide one is uploaded', () => {
+    const resolved = resolveBrandLogoForPreview(
+      applyBrandLogo('<body><h1>Hi</h1></body>', LOGO),
+      { logoUrl: URLS.logoUrl },
+    );
+
+    expect(resolved).toContain(`src="${URLS.logoUrl}"`);
+  });
+
+  it('leaves the tag alone when neither variant is uploaded', () => {
+    const branded = applyBrandLogo('<body><h1>Hi</h1></body>', LOGO);
+
+    expect(resolveBrandLogoForPreview(branded, {})).toBe(branded);
+  });
+
+  it('leaves a legacy URL tag and other cid images untouched', () => {
+    const legacy = '<img data-alga-brand-logo src="/api/documents/view/old-file?t=3" alt=""/>';
+    const other = '<img src="cid:some-other-image" alt=""/>';
+
+    expect(resolveBrandLogoForPreview(legacy, URLS)).toBe(legacy);
+    expect(resolveBrandLogoForPreview(other, URLS)).toBe(other);
+  });
+
+  it('is idempotent', () => {
+    const once = resolveBrandLogoForPreview(applyBrandLogo('<body><h1>Hi</h1></body>', LOGO), URLS);
+
+    expect(resolveBrandLogoForPreview(once, URLS)).toBe(once);
+  });
+
+  it('resolves a hand-edited tag whose src is single-quoted', () => {
+    const singleQuoted = "<img data-alga-brand-logo src='cid:alga-brand-logo-wide' alt=''/>";
+
+    const resolved = resolveBrandLogoForPreview(singleQuoted, URLS);
+
+    expect(resolved).toContain(`src="${URLS.logoWideUrl}"`);
+    expect(resolved).not.toContain('cid:');
+  });
+});
+
+describe('withImgSrc', () => {
+  it('replaces the src whichever way the tag quotes it', () => {
+    expect(withImgSrc('<img src="cid:old" alt=""/>', 'cid:new')).toBe('<img src="cid:new" alt=""/>');
+    expect(withImgSrc("<img src='cid:old' alt=''/>", 'cid:new')).toBe('<img src="cid:new" alt=\'\'/>');
+    expect(withImgSrc('<img src=cid:old alt=""/>', 'cid:new')).toBe('<img src="cid:new" alt=""/>');
+  });
+
+  it('adds one to a tag that carries none, rather than a second attribute', () => {
+    const added = withImgSrc('<img data-alga-brand-logo alt=""/>', 'cid:alga-brand-logo');
+
+    expect(added).toBe('<img src="cid:alga-brand-logo" data-alga-brand-logo alt=""/>');
+    expect(added.match(/src=/g)).toHaveLength(1);
+  });
+});
+
+describe('findBrandLogoCid', () => {
+  it('names the content-id the template references', () => {
+    expect(findBrandLogoCid(applyBrandLogo('<body><h1>Hi</h1></body>', LOGO))).toBe('alga-brand-logo-wide');
+    expect(findBrandLogoCid(applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' })))
+      .toBe('alga-brand-logo');
+  });
+
+  it('has nothing to name for an unbranded or legacy template', () => {
+    expect(findBrandLogoCid('<body><h1>Hi</h1></body>')).toBeNull();
+    expect(findBrandLogoCid('<img data-alga-brand-logo src="/api/documents/view/old?t=3"/>')).toBeNull();
   });
 });
 

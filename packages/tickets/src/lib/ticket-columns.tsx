@@ -9,6 +9,7 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getUserTimeZone } from '@alga-psa/core';
+import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
 import type { SlaTimerStatus } from '@alga-psa/types';
 import {
@@ -132,7 +133,7 @@ const REORDERABLE_COLUMN_KEYS: ReadonlySet<string> = new Set(
 );
 
 type TicketingDisplaySettings = {
-  dateTimeFormat?: string;
+  showWeekday?: boolean;
   responseStateTrackingEnabled?: boolean;
   list?: TicketListSettings;
 };
@@ -164,6 +165,8 @@ interface CreateTicketColumnsOptions {
   t?: (key: string, fallback: string) => string;
   /** App locale. Without it the Created column formats in the browser's. */
   locale?: string;
+  /** Country date shape. Without it the Created column falls to the system default. */
+  dateFormat?: CountryDateFormat;
   /**
    * On-screen order for the reorderable (optional) columns, resolved through
    * resolveTicketColumnOrder. Absent means catalog declaration order — the
@@ -191,6 +194,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     onToggleBundleExpanded,
     t: _t,
     locale = 'en',
+    dateFormat,
     columnOrder,
   } = options;
 
@@ -202,7 +206,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
   const columnVisibility = resolveTicketColumnVisibility(displaySettings?.list?.columnVisibility);
 
   const showInlineTagsInTitle = columnVisibility.tags && showTags;
-  const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';
+  const showWeekday = displaySettings?.showWeekday ?? false;
 
   // Internal (MSP) response-state wording for the status-cell badge.
   const responseLabels = {
@@ -633,7 +637,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         width: '10%',
         render: (value: string | null) => (
           <div className="text-sm text-gray-500">
-            {value ? formatTicketDateTime(value, dateTimeFormat, locale, getUserTimeZone()) : '-'}
+            {value ? formatTicketDateTime(value, locale, getUserTimeZone(), dateFormat, showWeekday) : '-'}
           </div>
         ),
       }

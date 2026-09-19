@@ -209,17 +209,18 @@ export function EmailBrandingPanel({
   const showNewTemplateBanner = shouldShowNewTemplateBanner(status, dismissedNewCount);
   const hasAnyLogo = !!(status.logoOptions.logoWideUrl || status.logoOptions.logoUrl);
 
-  // Preview exactly what an apply would write, brand assets included.
+  // Preview exactly what an apply would write, brand assets included. The row
+  // references the logo by content-id, so the preview swaps it back for the
+  // branding URL the iframe can actually load.
   const previewHtml = (html: string) => {
     const recolored = applyEmailPalette(html, STOCK_EMAIL_PALETTE, resolved);
     if (!isEnterpriseEdition || !status.isEnterprise) return recolored;
 
-    const logoUrl = draft.logoVariant === 'wide'
-      ? status.logoOptions.logoWideUrl || status.logoOptions.logoUrl
-      : status.logoOptions.logoUrl;
+    const variant = draft.logoVariant === 'wide' && status.logoOptions.logoWideUrl ? 'wide' : 'default';
+    const uploaded = variant === 'wide' ? !!status.logoOptions.logoWideUrl : !!status.logoOptions.logoUrl;
 
     return decorateBrandedHtml(recolored, {
-      logo: draft.logoVariant && logoUrl ? { url: logoUrl, alt: status.logoOptions.clientName ?? '' } : undefined,
+      logo: draft.logoVariant && uploaded ? { variant, alt: status.logoOptions.clientName ?? '' } : undefined,
       hideAttribution: draft.hideAttribution,
     });
   };
@@ -448,6 +449,7 @@ export function EmailBrandingPanel({
                 key={`${previewTemplate.name}-${previewTemplate.language_code}`}
                 id={`email-branding-preview-${previewTemplate.name}`}
                 htmlContent={previewHtml(previewTemplate.html_content)}
+                brandLogoUrls={status.logoOptions}
                 templateName={previewTemplate.name}
               />
             )}

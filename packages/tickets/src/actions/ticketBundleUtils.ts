@@ -64,6 +64,9 @@ export type BundleResolutionComment = {
   markdown_content: string | null;
   created_at: string;
   is_resolution: boolean;
+  user_id?: string | null;
+  contact_id?: string | null;
+  author_type?: string | null;
 };
 
 export type BundleMasterClosedContext = {
@@ -110,7 +113,16 @@ export async function getBundleMasterClosedContext(
   const [openChildren, resolutionComment] = await Promise.all([
     openBundleChildrenCount(trx, tenant, masterTicketId),
     tenantScopedTable(trx, 'comments as c', tenant)
-      .select('c.comment_id', 'c.note', 'c.markdown_content', 'c.created_at', 'c.is_resolution')
+      .select(
+        'c.comment_id',
+        'c.note',
+        'c.markdown_content',
+        'c.created_at',
+        'c.is_resolution',
+        'c.user_id',
+        'c.contact_id',
+        'c.author_type'
+      )
       .where({ 'c.ticket_id': masterTicketId, 'c.is_internal': false })
       .andWhere(function resolutionMarkers() {
         this.where('c.is_resolution', true).orWhereRaw("c.metadata->>'closes_ticket' = 'true'");
@@ -275,6 +287,9 @@ export type MirrorCommentSource = {
   comment_id: string;
   note: string | null;
   markdown_content: string | null;
+  user_id?: string | null;
+  contact_id?: string | null;
+  author_type?: string | null;
 };
 
 /**
@@ -326,7 +341,7 @@ export async function mirrorCommentToChild(
     reply_count: 0,
     last_activity_at: now,
     created_at: now,
-    created_by: null,
+    created_by: sourceComment.user_id ?? null,
   });
 
   await tenantDb(trx, tenant).table('comments').insert({
@@ -334,8 +349,9 @@ export async function mirrorCommentToChild(
     comment_id: childGenerated.comment_id,
     thread_id: childGenerated.thread_id,
     ticket_id: childTicketId,
-    user_id: null,
-    author_type: 'unknown',
+    user_id: sourceComment.user_id ?? null,
+    contact_id: sourceComment.contact_id ?? null,
+    author_type: sourceComment.author_type ?? 'unknown',
     note: sourceComment.note,
     is_internal: false,
     is_resolution: isResolution,

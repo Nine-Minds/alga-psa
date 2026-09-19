@@ -185,7 +185,7 @@ vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
 }));
 
 vi.mock('../../actions/ticketDisplaySettings', () => ({
-  getTicketingDisplaySettings: vi.fn().mockResolvedValue({ dateTimeFormat: 'MMM d, yyyy h:mm a' })
+  getTicketingDisplaySettings: vi.fn().mockResolvedValue({ showWeekday: false })
 }));
 
 vi.mock('@alga-psa/tags/actions', () => ({

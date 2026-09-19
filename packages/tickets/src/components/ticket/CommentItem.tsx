@@ -73,6 +73,12 @@ interface CommentItemProps {
    * ticket-level links, so these come from the API/integration path.
    */
   externalLinks?: ITicketExternalLinkView[];
+  /**
+   * Reference to the bundle master when this comment is a mirrored copy from a
+   * sync-mode bundle. Supplied by the MSP portal only; the client portal omits
+   * it because a bundle may span clients and must not link to the master.
+   */
+  bundleMaster?: { ticketId: string; ticketNumber: string | null };
 }
 
 function getInboundSenderIdentity(
@@ -177,6 +183,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   variant = 'default',
   accentBorderClassName,
   externalLinks = [],
+  bundleMaster,
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
@@ -223,7 +230,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
   );
 
   const getAuthorName = () => {
-    if (conversation.is_system_generated) return t('conversation.bundledUpdate');
+    // Legacy mirrored rows (author not yet backfilled, or source author since
+    // deleted) keep the label-as-name fallback; once the author resolves, the
+    // real name renders and the badge below marks the bundled origin.
+    if (conversation.is_system_generated && resolvedAuthor.source === 'unknown') {
+      return t('conversation.bundledUpdate');
+    }
     if (resolvedAuthor.source === 'user') {
       return `${resolvedAuthor.displayName}${resolvedAuthor.userType === 'client' ? t('conversation.clientSuffix') : ''}`;
     }
@@ -243,7 +255,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       : t('conversation.unknownUser');
 
   const getAuthorEmail = () => {
-    if (conversation.is_system_generated) return null;
+    if (conversation.is_system_generated && resolvedAuthor.source === 'unknown') return null;
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
       return inboundSenderIdentity.fromAddress;
     }
@@ -472,7 +484,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       <div className={`flex items-start min-w-0 max-w-full ${isCompact ? 'mb-0.5' : 'mb-1'}`}>
         <div className={isCompact ? 'mr-2' : 'mr-2'}>
           {/* Conditionally render UserAvatar or ContactAvatar */}
-          {conversation.is_system_generated || resolvedAuthor.source === 'unknown' ? (
+          {resolvedAuthor.source === 'unknown' ? (
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId=""
@@ -513,6 +525,25 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] break-words min-w-0">
                   {getAuthorName()}
                 </p>
+                {conversation.is_system_generated && resolvedAuthor.source !== 'unknown' && (
+                  bundleMaster?.ticketId ? (
+                    <a
+                      {...withDataAutomationId({ id: `${commentId}-bundled-update-badge` })}
+                      href={`/msp/tickets/${bundleMaster.ticketId}`}
+                      title={bundleMaster.ticketNumber ?? undefined}
+                      className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))] hover:underline"
+                    >
+                      {t('conversation.bundledUpdate')}
+                    </a>
+                  ) : (
+                    <span
+                      {...withDataAutomationId({ id: `${commentId}-bundled-update-badge` })}
+                      className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]"
+                    >
+                      {t('conversation.bundledUpdate')}
+                    </span>
+                  )
+                )}
                 {conversation.is_internal && (
                   <Tooltip content={t('conversation.internalCommentTooltip')}>
                     <span {...withDataAutomationId({ id: `${commentId}-internal-badge` })}>

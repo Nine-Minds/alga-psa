@@ -491,7 +491,9 @@ export const upsertTenantExternalSystem = withAuth(
       const [row] = await tenantTable(knex, tenant, 'tenant_external_systems')
         .insert({ tenant, key, label, url_template: urlTemplate })
         .onConflict(['tenant', 'key'])
-        .merge({ label, url_template: urlTemplate, updated_at: knex.fn.now() })
+        // Citus rejects STABLE functions (knex.fn.now() → CURRENT_TIMESTAMP) inside
+        // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
+        .merge({ label, url_template: urlTemplate, updated_at: new Date().toISOString() })
         .returning('*');
       return { key: row.key, label: row.label, url_template: row.url_template ?? null };
     } catch (error) {

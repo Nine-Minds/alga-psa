@@ -230,6 +230,8 @@ const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
 
 // Module scope has no hook to read the app locale from, so the printing helpers
 // take it as an argument rather than defaulting to the browser's.
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
 function formatPrintDate(value: string | null | undefined, locale: string): string {
   if (!value) return '';
   const date = new Date(value);
@@ -237,11 +239,13 @@ function formatPrintDate(value: string | null | undefined, locale: string): stri
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatPrintDateTime(value: string | null | undefined, locale: string): string {
+// Printed timestamps keep a NAMED month (the language's job) but take their
+// 12/24h clock from the country, so they route through the central formatter.
+function formatPrintDateTime(value: string | null | undefined, formatDate: FormatDate): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(locale, {
+  return formatDate(date, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -257,9 +261,17 @@ function getTicketColumnValue(ticket: ITicketListItem, dataIndex: string | strin
   ), ticket);
 }
 
-function formatTicketPrintValue(value: unknown, locale: string): string {
+function formatTicketPrintValue(value: unknown, formatDate: FormatDate): string {
   if (value === null || value === undefined || value === '') return '';
-  if (value instanceof Date) return value.toLocaleString(locale);
+  if (value instanceof Date) {
+    return formatDate(value, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
   if (Array.isArray(value)) return value.filter(Boolean).join(', ');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -307,8 +319,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
   // These followed the browser locale, so a German UI printed American dates.
-  const { formatDate } = useFormatters();
-  const { locale } = useFormatters();
+  const { locale, dateFormat, formatDate } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
 
@@ -1333,6 +1344,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
       t,
       locale,
+      dateFormat,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -1454,6 +1466,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     bundleView,
     densityClasses.tagSize,
     t,
+    locale,
+    dateFormat,
   ]);
 
   const handleBulkDeleteClose = useCallback(() => {
@@ -1851,7 +1865,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         return additionalAgents.length > 0 ? `${primary}; +${additionalAgents.length}: ${additionalAgents.join(', ')}` : primary;
       },
       due_date: (ticket) => formatPrintDate(ticket.due_date, locale) || t('dashboard.print.noDueDate', 'No due date'),
-      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, locale) || t('dashboard.print.emptyValue', '—'),
+      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
       tags: (ticket) => {
         const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
@@ -1878,7 +1892,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (
-          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey), locale)
+          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey), formatDate)
           || t('dashboard.print.emptyValue', '—')
         )),
       };
