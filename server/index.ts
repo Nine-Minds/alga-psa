@@ -9,7 +9,7 @@ import {
   authorizationMiddleware
 } from './src/middleware/express/authMiddleware';
 import { getAppVersion } from './src/lib/utils/version';
-import { attachUpgradeHandler } from './src/lib/http/upgradeHandling';
+import { attachNextUpgradeHandler } from './src/lib/http/upgradeHandling';
 
 const dev = globalThis.process.env.NODE_ENV !== 'production';
 const hostname = globalThis.process.env.HOSTNAME || 'localhost';
@@ -99,8 +99,9 @@ async function createServer() {
     // is proxied when configured, and every other upgrade is rejected promptly.
     // Unanswered upgrade sockets occupy Chromium's per-origin WebSocket slot
     // and stall HMR/hydration, so unmatched requests must always be closed.
-    attachUpgradeHandler(httpServer, {
-      nextUpgradeHandler: dev ? app.getUpgradeHandler() : undefined,
+    // Next would otherwise add its own listener on the first HTTP request.
+    attachNextUpgradeHandler(httpServer, app, {
+      delegateHmrToNext: dev,
       hocuspocusHost: globalThis.process.env.HOCUSPOCUS_HOST,
       hocuspocusPort: globalThis.process.env.HOCUSPOCUS_PORT,
     });

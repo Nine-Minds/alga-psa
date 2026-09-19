@@ -1,5 +1,6 @@
 import http from 'node:http';
 import type { IncomingMessage, Server as HttpServer } from 'node:http';
+import type { Socket } from 'node:net';
 import type { Duplex } from 'node:stream';
 
 /**
@@ -16,8 +17,9 @@ import type { Duplex } from 'node:stream';
  *   - `/hocuspocus` is proxied to the configured Hocuspocus upstream.
  *   - Every other upgrade request is answered with a prompt 404 and closed.
  *
- * The proxy bounds both the upstream TCP connect and the upgrade handshake so a
- * misconfigured or stalled upstream cannot recreate the hanging handshake.
+ * The proxy bounds the upstream TCP connect and the upgrade handshake
+ * separately and cancels the upstream as soon as the downstream goes away, so
+ * a misconfigured or stalled upstream cannot recreate the hanging handshake.
  */
 
 export const HMR_UPGRADE_PATH = '/_next/webpack-hmr';
@@ -26,6 +28,7 @@ export const HOCUSPOCUS_UPGRADE_PATH = '/hocuspocus';
 const NOT_FOUND = 'Not Found';
 const DEFAULT_UPSTREAM_CONNECT_TIMEOUT_MS = 5_000;
 const DEFAULT_UPSTREAM_UPGRADE_TIMEOUT_MS = 5_000;
+const REJECT_FLUSH_TIMEOUT_MS = 1_000;
 
 export type UpgradeListener = (
   req: IncomingMessage,
@@ -50,6 +53,25 @@ export interface UpgradeHandlingOptions {
   logger?: Pick<Console, 'warn' | 'error'>;
 }
 
+/**
+ * The slice of Next's `NextCustomServer` this module needs.
+ *
+ * `NextCustomServer.getRequestHandler()` lazily installs its own `upgrade`
+ * listener on the first ordinary HTTP request (`setupWebSocketHandler()`), which
+ * would make two listeners race on every upgrade. `didWebSocketSetup` is the
+ * one-time guard that call checks (next/dist/server/next.js).
+ */
+export interface NextUpgradeApp {
+  didWebSocketSetup?: boolean;
+  /**
+   * Next's real request-upgrade handler. In NextCustomServer this is the
+   * `upgradeHandler` getter (what `setupWebSocketHandler` itself calls);
+   * `getUpgradeHandler()` is a different, no-op path.
+   */
+  upgradeHandler?: UpgradeListener;
+  getUpgradeHandler?: () => UpgradeListener;
+}
+
 function parsePathname(rawUrl: string | undefined): string {
   if (!rawUrl) return '/';
   const queryIndex = rawUrl.indexOf('?');
@@ -58,23 +80,43 @@ function parsePathname(rawUrl: string | undefined): string {
   return hashIndex === -1 ? withoutQuery : withoutQuery.slice(0, hashIndex);
 }
 
+/**
+ * Flush a complete HTTP response and then destroy the socket.
+ *
+ * `socket.end()` only sends a FIN; with a peer that does not reciprocate (for
+ * example a client opened with `allowHalfOpen`), the server-side socket stays
+ * alive, which is exactly the retained-socket condition being fixed. Destroy
+ * after the response flushes, with a bounded fallback for a peer that stops
+ * reading.
+ */
 function sendUpgradeError(
   socket: Duplex,
   statusCode: number,
   statusMessage: string,
 ): void {
-  if (!socket.destroyed && socket.writable) {
-    // `end(data)` flushes the response and sends a FIN, so the client sees a
-    // complete HTTP response and the socket cannot linger half-open.
-    socket.end(
-      `HTTP/1.1 ${statusCode} ${statusMessage}\r\n` +
-        'Connection: close\r\n' +
-        'Content-Length: 0\r\n' +
-        '\r\n',
-    );
+  if (socket.destroyed) return;
+  if (!socket.writable) {
+    socket.destroy();
     return;
   }
-  socket.destroy();
+
+  let destroyed = false;
+  const destroyOnce = () => {
+    if (destroyed) return;
+    destroyed = true;
+    clearTimeout(flushTimer);
+    socket.destroy();
+  };
+  const flushTimer = setTimeout(destroyOnce, REJECT_FLUSH_TIMEOUT_MS);
+  flushTimer.unref?.();
+  socket.once('close', () => clearTimeout(flushTimer));
+  socket.end(
+    `HTTP/1.1 ${statusCode} ${statusMessage}\r\n` +
+      'Connection: close\r\n' +
+      'Content-Length: 0\r\n' +
+      '\r\n',
+    destroyOnce,
+  );
 }
 
 function buildUpstreamHeaders(
@@ -92,8 +134,8 @@ function buildUpstreamHeaders(
 }
 
 function rawHeadersToLines(rawHeaders: string[] | undefined): string {
+  if (!rawHeaders) return '';
   const lines: string[] = [];
-  if (!rawHeaders) return lines.join('\r\n');
   for (let i = 0; i + 1 < rawHeaders.length; i += 2) {
     lines.push(`${rawHeaders[i]}: ${rawHeaders[i + 1]}`);
   }
@@ -117,26 +159,54 @@ function proxyHocuspocusUpgrade(
   let settled = false;
   let upstreamSocket: Duplex | null = null;
   let connectTimer: NodeJS.Timeout | null = null;
-  let upgradeTimer: NodeJS.Timeout | null = null;
+  let handshakeTimer: NodeJS.Timeout | null = null;
 
-  const cleanupTimers = () => {
+  const clearConnectTimer = () => {
     if (connectTimer) {
       clearTimeout(connectTimer);
       connectTimer = null;
     }
-    if (upgradeTimer) {
-      clearTimeout(upgradeTimer);
-      upgradeTimer = null;
+  };
+  const clearHandshakeTimer = () => {
+    if (handshakeTimer) {
+      clearTimeout(handshakeTimer);
+      handshakeTimer = null;
     }
   };
+  const cleanupTimers = () => {
+    clearConnectTimer();
+    clearHandshakeTimer();
+  };
 
-  const upstreamReq = http.request({
-    host,
-    port: Number(port),
-    method: 'GET',
-    path: req.url || '/',
-    headers: buildUpstreamHeaders(req, host, port),
-  });
+  let upstreamReq: http.ClientRequest;
+  try {
+    upstreamReq = http.request({
+      host,
+      port: Number(port),
+      method: 'GET',
+      path: req.url || '/',
+      headers: buildUpstreamHeaders(req, host, port),
+    });
+  } catch (err) {
+    // Malformed host/port/header values throw synchronously. Never let that
+    // escape the `upgrade` listener and take down the server process.
+    logger.warn?.(
+      `[websocket-upgrade] hocuspocus proxy request could not be built: ${String(err)}`,
+    );
+    sendUpgradeError(socket, 502, 'Bad Gateway');
+    return;
+  }
+
+  // Node pauses the socket when it emits `upgrade`, so without this the server
+  // never notices the client aborting and the timers become the only cleanup.
+  // Read early bytes into a buffer so nothing is lost before the upstream
+  // handshake completes.
+  const earlyChunks: Buffer[] = [];
+  const onDownstreamData = (chunk: Buffer) => {
+    earlyChunks.push(chunk);
+  };
+  socket.on('data', onDownstreamData);
+  socket.resume();
 
   const fail = (
     statusCode: number,
@@ -151,10 +221,47 @@ function proxyHocuspocusUpgrade(
         `[websocket-upgrade] hocuspocus proxy failed: ${String(reason)}`,
       );
     }
+    socket.off('data', onDownstreamData);
     upstreamSocket?.destroy();
     upstreamReq.destroy();
     sendUpgradeError(socket, statusCode, statusMessage);
   };
+
+  // Stop all upstream work the moment the downstream socket goes away; the
+  // bounded timers are a fallback, not the primary cancellation. An upgraded
+  // socket can emit `end` without ever emitting `close`, so listen to both.
+  const onDownstreamGone = () => {
+    if (settled) return;
+    settled = true;
+    cleanupTimers();
+    socket.off('data', onDownstreamData);
+    upstreamReq.destroy();
+    socket.destroy();
+  };
+  socket.once('end', onDownstreamGone);
+  socket.once('close', onDownstreamGone);
+
+  connectTimer = setTimeout(() => {
+    fail(504, 'Gateway Timeout', 'upstream connect timed out');
+  }, connectTimeoutMs);
+
+  upstreamReq.on('socket', (upstreamConn: Socket) => {
+    if (settled) return;
+    // The connect deadline covers only the TCP connection. Once it is
+    // established, hand off to the (separate) upgrade-handshake deadline.
+    const startHandshakeDeadline = () => {
+      clearConnectTimer();
+      if (settled || handshakeTimer) return;
+      handshakeTimer = setTimeout(() => {
+        fail(504, 'Gateway Timeout', 'upstream did not complete the upgrade');
+      }, upgradeTimeoutMs);
+    };
+    if (upstreamConn.connecting) {
+      upstreamConn.once('connect', startHandshakeDeadline);
+    } else {
+      startHandshakeDeadline();
+    }
+  });
 
   upstreamReq.on('upgrade', (upstreamRes, upstreamSocketRaw, upstreamHead) => {
     if (settled) {
@@ -163,6 +270,7 @@ function proxyHocuspocusUpgrade(
     }
     settled = true;
     cleanupTimers();
+    socket.off('data', onDownstreamData);
     upstreamSocket = upstreamSocketRaw;
 
     upstreamSocketRaw.on('error', () => socket.destroy());
@@ -178,6 +286,9 @@ function proxyHocuspocusUpgrade(
     }
     if (head?.length) {
       upstreamSocketRaw.write(head);
+    }
+    for (const chunk of earlyChunks) {
+      upstreamSocketRaw.write(chunk);
     }
 
     upstreamSocketRaw.pipe(socket);
@@ -196,14 +307,6 @@ function proxyHocuspocusUpgrade(
   upstreamReq.on('error', (err: Error) => {
     fail(502, 'Bad Gateway', err.message);
   });
-
-  connectTimer = setTimeout(() => {
-    fail(504, 'Gateway Timeout', 'upstream connect timed out');
-  }, connectTimeoutMs);
-
-  upgradeTimer = setTimeout(() => {
-    fail(504, 'Gateway Timeout', 'upstream did not complete the upgrade');
-  }, connectTimeoutMs + upgradeTimeoutMs);
 
   upstreamReq.end();
 }
@@ -246,4 +349,42 @@ export function attachUpgradeHandler(
   options: UpgradeHandlingOptions = {},
 ): void {
   server.on('upgrade', createUpgradeHandler(options));
+}
+
+export interface AttachNextUpgradeHandlerOptions extends UpgradeHandlingOptions {
+  /**
+   * Delegate `/_next/webpack-hmr` to Next's own upgrade handler. Enabled in
+   * development; production keeps the path rejected.
+   */
+  delegateHmrToNext?: boolean;
+}
+
+/**
+ * Wire upgrade handling against a live Next app.
+ *
+ * Next's `NextCustomServer.getRequestHandler()` installs its own `upgrade`
+ * listener on the first HTTP request. Mark that one-time setup as done first so
+ * our listener is the only one, then (in development) forward HMR to Next's
+ * upgrade handler from inside it. Rejected and proxied paths therefore never
+ * reach Next.
+ */
+export function attachNextUpgradeHandler(
+  server: HttpServer,
+  app: NextUpgradeApp | undefined,
+  options: AttachNextUpgradeHandlerOptions = {},
+): void {
+  const { delegateHmrToNext = false, ...rest } = options;
+  if (app) {
+    app.didWebSocketSetup = true;
+    if (delegateHmrToNext) {
+      // Prefer the getter Next's own setupWebSocketHandler uses; fall back to
+      // the method for older/newer shapes.
+      const nextUpgrade =
+        app.upgradeHandler ?? app.getUpgradeHandler?.();
+      if (nextUpgrade) {
+        rest.nextUpgradeHandler = nextUpgrade;
+      }
+    }
+  }
+  attachUpgradeHandler(server, rest);
 }
