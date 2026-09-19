@@ -13,7 +13,6 @@ test('authenticated invoice generation excludes foreign ticket snapshots from re
   const ids = await createBrowserInvoiceTicketSourceFixture(database, { tenant, userId });
   const key = await createBrowserApiKey(database, userId, tenant);
   const headers = { 'x-api-key': key.api_key, 'x-tenant-id': tenant };
-  let foreignLinkId: string | undefined;
   try {
     await signIn(page, { email: billing.tenant.admin.email, password: credentials.password });
     const period = await database('recurring_service_periods').where({ tenant, obligation_id: ids.lineId, invoice_window_start: '2026-09-01' }).first();
@@ -40,10 +39,18 @@ test('authenticated invoice generation excludes foreign ticket snapshots from re
       return response.json();
     };
     const before = await read();
-    foreignLinkId = randomUUID();
-    await database('invoice_time_entries').insert({ ...links[0], invoice_time_entry_id: foreignLinkId,
+    const foreignLinkId = randomUUID();
+    // reject_operational_invoice_time resolves the referenced effort within the
+    // row's own tenant, so a foreign-tenant link finds no commercial time entry
+    // and is refused on every backend. Prove storage rejects foreign ownership
+    // rather than disabling that protection to manufacture an impossible row;
+    // the read and PDF assertions below then stand on their own. This mirrors
+    // the integration twin, invoiceTicketImmutable.integration.test.ts.
+    await expect(database('invoice_time_entries').insert({ ...links[0], invoice_time_entry_id: foreignLinkId,
       tenant: billing.actors.secondary.tenantId,
-      work_item_snapshot: { ...links[0].work_item_snapshot, title: 'FOREIGN_PRIVATE_SENTINEL' } });
+      work_item_snapshot: { ...links[0].work_item_snapshot, title: 'FOREIGN_PRIVATE_SENTINEL' } }))
+      .rejects.toMatchObject({ code: '23514', constraint: 'operational_time_not_invoiceable' });
+    expect(await database('invoice_time_entries').where({ invoice_time_entry_id: foreignLinkId })).toHaveLength(0);
     const after = await read();
     expect(after).toEqual(before);
     expect(JSON.stringify(after)).not.toContain('PRIVATE');
@@ -70,7 +77,6 @@ test('authenticated invoice generation excludes foreign ticket snapshots from re
     await assertInvoiceDownload(page, testInfo, { number: invoice.invoice_number, clientName: client.client_name,
       serviceName: service.service_name, amountCents: Number(invoice.total_amount), forbiddenText: ['PRIVATE'] });
   } finally {
-    if (foreignLinkId) await database('invoice_time_entries').where({ invoice_time_entry_id: foreignLinkId, tenant: billing.actors.secondary.tenantId }).delete();
     await database('api_keys').where({ tenant, api_key_id: key.api_key_id }).delete();
   }
 });
