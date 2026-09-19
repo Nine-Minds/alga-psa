@@ -173,6 +173,26 @@ jobs:
           echo -n "test_password" > secrets/db_password_server
           chmod 600 secrets/*
 
+      # Build the CE+EE migration overlay this lane's test database is created
+      # from. Same recipe as setup/entrypoint.sh, citus-migration-smoke.yml and
+      # the enterprise-integration suite in run-additional-workspace-tests.mjs:
+      # EE files overlay CE collisions, and the directory stays under server/ so
+      # migration-relative helpers resolve. server/test-utils/dbConfig.ts already
+      # honours TEST_MIGRATIONS_DIR.
+      #
+      # Without it this lane builds test_database from server/migrations only, so
+      # it has no stripe_subscriptions, stripe_products, teams_integrations,
+      # tenant_workflow_schedule or scim_connections -- all EE-only. The
+      # co-managed bootstrap suite pg_dumps this database as its schema source,
+      # so on a CE-only source it fails with ~29 `relation ... does not exist`.
+      - name: Build the CE+EE migration overlay
+        run: |
+          rm -rf server/.ci-combined-migrations
+          mkdir -p server/.ci-combined-migrations
+          cp -r server/migrations/. server/.ci-combined-migrations/
+          cp -r ee/server/migrations/. server/.ci-combined-migrations/
+          echo "Combined migrations: $(ls server/.ci-combined-migrations/*.cjs | wc -l) files"
+
       # Manifest floor + every suite whose import graph reaches the diff
       # (scripts/run-tier1-integration.mjs). Schema/harness changes widen this
       # to the full directory; unavailable change evidence also requires full coverage.
@@ -184,6 +204,7 @@ jobs:
         env:
           TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
+          TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/.ci-combined-migrations
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
 
       - name: Run full integration suite
@@ -196,6 +217,7 @@ jobs:
         env:
           TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
+          TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/.ci-combined-migrations
           TIER1_BASE_SHA: ''
 
       - name: Upload integration execution diagnostics
