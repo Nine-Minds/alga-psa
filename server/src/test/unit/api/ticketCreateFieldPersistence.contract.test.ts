@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 import {
   buildTicketCreateRow,
@@ -157,5 +159,26 @@ describe('REST create/update schema retention', () => {
 
     expect(parsed.url).toBe('https://support.example.com/tickets/updated');
     expect(parsed.severity_id).toBeUndefined();
+  });
+});
+
+describe('REST service forwarding contract', () => {
+  const serviceSource = readFileSync(
+    resolve(__dirname, '../../../lib/api/services/TicketService.ts'),
+    'utf8',
+  );
+
+  it('forwards url and the three classification UUIDs into the shared create input', () => {
+    const start = serviceSource.indexOf('const createTicketInput: CreateTicketInput = {');
+    const end = serviceSource.indexOf('};', start);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+
+    const createInput = serviceSource.slice(start, end);
+    expect(createInput).toContain('url: data.url');
+    expect(createInput).toContain('severity_id: data.severity_id');
+    expect(createInput).toContain('urgency_id: data.urgency_id');
+    expect(createInput).toContain('impact_id: data.impact_id');
   });
 });
