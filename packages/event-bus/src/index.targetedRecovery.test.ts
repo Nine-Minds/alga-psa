@@ -28,7 +28,8 @@ it('replays only the selected subscriber despite processed Redis markers and lea
     { id: '1-0', message: { event: JSON.stringify(input), force: '1', targetSubscriber: 'search-index' } });
   expect(search).toHaveBeenCalledExactlyOnceWith(input); expect(email).not.toHaveBeenCalled();
   expect(redis.sIsMember).not.toHaveBeenCalled(); expect(redis.xAck).toHaveBeenCalledTimes(1);
-  expect(redis.sAdd).toHaveBeenCalledExactlyOnceWith(`processed_event_handlers:${input.payload.tenantId}`, JSON.stringify([input.id, 'global', 'search-index']));
+  // The channel scopes the *set key*; the member identifies event and subscriber.
+  expect(redis.sAdd).toHaveBeenCalledExactlyOnceWith(`processed_event_handlers:${input.payload.tenantId}`, `${input.id}:search-index`);
 });
 it('does not acknowledge targeted work when its subscriber is missing or fails', async () => {
   const bus = EventBus.getInstance() as any, input = event(), sibling = vi.fn(), target = vi.fn().mockRejectedValue(new Error('retry'));
@@ -47,8 +48,11 @@ it.each([{ force: false, eventId: randomUUID(), targetSubscriber: 'search-index'
 
 it('processes the same stable event independently on each channel and deduplicates repeats within that channel', async () => {
   const bus = EventBus.getInstance() as any, input = event(), handler = vi.fn(), processed = new Set<string>();
-  redis.sIsMember.mockImplementation(async (_key: string, member: string) => processed.has(member));
-  redis.sAdd.mockImplementation(async (_key: string, member: string) => { processed.add(member); return 1; });
+  // Channel independence lives in the set key, so a double that ignores the key
+  // conflates the channels and reports a dedupe the product never performed.
+  const marker = (key: string, member: string) => `${key}\u0000${member}`;
+  redis.sIsMember.mockImplementation(async (key: string, member: string) => processed.has(marker(key, member)));
+  redis.sAdd.mockImplementation(async (key: string, member: string) => { processed.add(marker(key, member)); return 1; });
   bus.handlerIds.set(handler, 'same-subscriber');
   for (const channel of ['global', 'internal-notifications', 'global', 'internal-notifications']) {
     await bus.processStreamMessage(redis, getRedisConfig(), channel, { channel, handlers: new Set([handler]) },

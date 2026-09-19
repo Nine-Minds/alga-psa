@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TICKET_ORIGINS } from '@alga-psa/types';
+import { fakeTable, fakeTransaction, type FakeTenantDbOptions } from '@alga-psa/db/testing';
 
 let currentUser: any;
 
@@ -85,87 +86,27 @@ function makeTicket(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// Generic chain-/thenable query-builder stand-in. Every builder method returns the
-// same builder (so the SUT can chain arbitrarily), `modify` invokes its callback, and
-// awaiting the builder resolves to `result`. Used for the ticket_resources/comments/
-// users subqueries the refactored SUT builds via tenantDb(trx, tenant).table(...) and
-// then awaits directly inside Promise.all.
-function makeChainable(result: any = []) {
-  const builder: any = {};
-  for (const method of [
-    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereNull', 'whereIn', 'clone',
-    'orWhereIn', 'join', 'leftJoin', 'innerJoin', 'orderBy', 'as', 'first',
-  ]) {
-    builder[method] = vi.fn(() => builder);
-  }
-  builder.modify = vi.fn((callback: (query: any) => void) => {
-    if (typeof callback === 'function') callback(builder);
-    return builder;
-  });
-  builder.then = (resolve: any, reject?: any) => Promise.resolve(result).then(resolve, reject);
-  return builder;
-}
-
 function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
-  return Object.assign(
-    (table: string) => {
-      if (table === 'users') {
-        return {
-          where: vi.fn().mockReturnValue({
-            first: vi
-              .fn()
-              .mockResolvedValue({ user_id: currentUser.user_id, contact_id: 'contact-1' }),
-          }),
-        };
-      }
-
-      if (table === 'boards') {
-        return { select: vi.fn().mockResolvedValue([]) };
-      }
-
-      if (table === 'contacts') {
-        return {
-          where: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue({ contact_name_id: 'contact-1', client_id: 'client-1' }),
-          }),
-        };
-      }
-
-      if (table === 'tickets as t') {
-        // The SUT builds the ticket query then awaits the builder itself inside
-        // Promise.all (it no longer captures `.first()`), so the builder must be
-        // thenable and resolve to the ticket.
-        const builder = makeChainable();
-        builder.then = (resolve: any, reject?: any) =>
-          Promise.resolve(params.ticket).then(resolve, reject);
-        return builder;
-      }
-
-      if (table === 'comments') {
-        // The conversations query selects/joins/filters before ordering; the
-        // chainable builder is thenable and resolves to no comments.
-        return makeChainable();
-      }
-
-      // Additional-agent / comment / assigned / involved-users subqueries plus the
-      // client-visible documents and linked-assets queries, all awaited directly.
-      if (
-        table === 'ticket_resources as tr' ||
-        table === 'ticket_resources as tr2' ||
-        table === 'comments as c' ||
-        table === 'tickets as assigned_ticket' ||
-        table === 'users as u' ||
-        table === 'documents as d' ||
-        table === 'asset_associations as aa'
-      ) {
-        return makeChainable();
-      }
-
-      throw new Error(`Unexpected table: ${table}`);
+  const tables: FakeTenantDbOptions = {
+    tables: {
+      users: [{ user_id: currentUser.user_id, contact_id: 'contact-1' }],
+      contacts: [{ contact_name_id: 'contact-1', client_id: 'client-1' }],
+      boards: [],
+      tickets: params.ticket ? [params.ticket] : [],
     },
-    {
-      raw: vi.fn().mockResolvedValue({ rows: [] }),
-    }
+    // The correlated subqueries and the comment-audience predicate select from
+    // tables this scenario leaves empty; they are named so an unmodelled raw
+    // predicate on a populated table still fails loudly.
+    rawPredicates: {
+      'tr2.ticket_id = t.ticket_id': () => true,
+      'tr.ticket_id = t.ticket_id': () => true,
+      '? = ?': () => true,
+    },
+  };
+
+  return Object.assign(
+    (table: string) => fakeTable(tables, currentUser.tenant, table.split(' ')[0]),
+    fakeTransaction({ raw: vi.fn().mockResolvedValue({ rows: [] }) }),
   ) as any;
 }
 

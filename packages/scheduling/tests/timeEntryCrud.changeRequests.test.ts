@@ -22,7 +22,8 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   createTenantKnex: createTenantKnexMock,
   resolveUserTimeZone: (...args: any[]) => resolveUserTimeZoneMock(...args),
   computeWorkDateFields: (...args: any[]) => computeWorkDateFieldsMock(...args),
@@ -36,6 +37,24 @@ vi.mock('@alga-psa/db', () => ({
     tenantJoin: (query: any, table: string, _left?: string, _right?: string, opts?: any) =>
       opts?.type === 'left' ? query.leftJoin?.(table) ?? query : query.join?.(table) ?? query,
   }),
+}));
+
+// An independent PSA workspace: the co-managed native-time seam reports "not
+// mine" and billing-mode admission answers with the commercial mode a `psa`
+// product yields. Without this the real guards run against this suite's
+// bespoke connection stub and reject its non-UUID fixture ids.
+vi.mock('@alga-psa/co-managed', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  lockTimeEntryBillingMode: vi.fn(async () => 'commercial'),
+  readCoManagedNativeTimeSheet: vi.fn(async () => ({ handled: false })),
+  readCoManagedNativeTimeEntry: vi.fn(async () => ({ handled: false })),
+  reviewCoManagedNativeTimeEntry: vi.fn(async () => false),
+  deleteCoManagedNativeTimeEntry: vi.fn(async () => false),
+}));
+
+vi.mock('@alga-psa/co-managed/nativeConversationEvents', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  hasCoManagedConversationOwnership: vi.fn(async () => false),
 }));
 
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
@@ -78,8 +97,16 @@ function createDbStub(config: DbStubConfig) {
     const state: { criteria?: Record<string, any>; selectColumns?: string[] } = {};
 
     const builder: any = {
-      where(criteria: Record<string, any>) {
-        state.criteria = criteria;
+      where(criteria: Record<string, any> | string, value?: any) {
+        state.criteria = typeof criteria === 'string' ? { [criteria]: value } : criteria;
+        return builder;
+      },
+      // Row locks are part of every native write path; the stub has a single
+      // in-memory row per table, so holding one is a no-op.
+      forShare() {
+        return builder;
+      },
+      forUpdate() {
         return builder;
       },
       select(...columns: string[]) {
@@ -89,6 +116,12 @@ function createDbStub(config: DbStubConfig) {
       first(...columns: string[]) {
         if (columns.length > 0) {
           state.selectColumns = columns;
+        }
+
+        if (table === 'service_catalog') {
+          // Commercial entries resolve their contract line from a current local
+          // service; every fixture here names one.
+          return Promise.resolve({ service_id: state.criteria?.service_id ?? 'service-1' });
         }
 
         if (table === 'time_entries') {
@@ -135,6 +168,10 @@ function createDbStub(config: DbStubConfig) {
   };
 
   db.transaction = async (callback: (trx: any) => Promise<any>) => callback(db);
+  // The stub is handed to the callback as the transaction, and the write paths
+  // refuse a bare connection ("requires its owning transaction"), so it has to
+  // say so -- same reason `fakeTransaction()` in @alga-psa/db/testing does.
+  db.isTransaction = true;
   db.fn = { now: () => 'NOW' };
   db.raw = (value: string) => value;
 

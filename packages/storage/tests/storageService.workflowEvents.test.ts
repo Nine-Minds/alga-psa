@@ -1,15 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { Readable } from 'node:stream';
+import { coManagedLifecycleMock } from '@alga-psa/db/testing';
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   createTenantKnex: vi.fn(),
-  runWithTenant: (_tenant: string, work: () => Promise<unknown>) => work(),
 }));
 
-vi.mock('@alga-psa/licensing', () => ({
-  CoManagedLifecycleError: class extends Error {},
-  getCoManagedOperationalState: async () => ({ state: 'independent', canWrite: true, graceEndsAt: null }),
-  withCoManagedOperationalTransaction: (db: unknown, _tenant: string, work: (trx: unknown) => Promise<unknown>) => work(db),
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  ...coManagedLifecycleMock({ fn: vi.fn }),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({

@@ -4,6 +4,10 @@ import { resolve } from 'path';
 
 const sourcePath = resolve(__dirname, 'userActions.ts');
 const source = readFileSync(sourcePath, 'utf8');
+// addUser's licence check (the tenants/users seat reads) moved into this
+// shared guard so the invitation path enforces the same admission; the reads
+// themselves are still part of this contract.
+const licenseGuardSource = readFileSync(resolve(__dirname, '../../lib/internalUserLicenseGuard.ts'), 'utf8');
 
 function sectionBetween(startMarker: string, endMarker: string): string {
   const start = source.indexOf(startMarker);
@@ -23,7 +27,10 @@ describe('user actions add-user tenant-scoped query contract', () => {
     expect(helperSection).toContain('tenantDb(trx, ');
     expect(helperSection).toContain(".table('users");
     expect(addUserSection).toContain('tenantDb(trx, ');
-    expect(addUserSection).toContain(".table('tenants");
+    expect(licenseGuardSource).toContain('tenantDb(trx, tenant)');
+    expect(licenseGuardSource).toContain(".table('tenants");
+    expect(licenseGuardSource).toContain(".table('users");
+    expect(licenseGuardSource).not.toMatch(/\btrx\s*\(\s*['"](?:tenants|users)['"]/);
     expect(addUserSection).toContain(".table('roles");
     expect(addUserSection).toContain(".table('users");
     expect(addUserSection).toContain("const [newUser] = await tenantDb(trx, tenant).table('users')");

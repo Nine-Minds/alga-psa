@@ -238,6 +238,10 @@ const expectedEventTypes = [
   'TICKET_COMMENT_UPDATED',
   'TASK_COMMENT_ADDED',
   'TASK_COMMENT_UPDATED',
+  // Co-managed task-comment notifications: handled in
+  // internalNotificationSubscriber.ts, which branches on this event type and
+  // persists cross-organization task-comment notifications.
+  'PROJECT_TASK_COMMENT_CREATED',
   'PROJECT_CREATED',
   'PROJECT_ASSIGNED',
   'PROJECT_TASK_ASSIGNED',

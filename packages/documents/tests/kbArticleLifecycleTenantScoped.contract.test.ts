@@ -26,7 +26,10 @@ describe('KB article lifecycle tenant-scoped query contract', () => {
     );
 
     expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db'");
-    expect(source).toContain('function tenantScopedTable(');
+    // The helper carries a Row type parameter now (91c692e9af); match the
+    // declaration, not the exact signature.
+    expect(source).toMatch(/function tenantScopedTable[<(]/);
+    expect(source).toContain('return tenantDb(conn, tenant).table');
     expect(source).not.toContain('createTenantScopedQuery');
     expect(lifecycleSection).toContain("tenantScopedTable(trx, 'kb_articles', tenant)");
     expect(lifecycleSection).toContain("tenantScopedTable(trx, 'documents', tenant)");

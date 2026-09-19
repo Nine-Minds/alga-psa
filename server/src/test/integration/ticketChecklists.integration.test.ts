@@ -145,6 +145,11 @@ describe('ticket checklists', () => {
     dbRef.tenant = seededUser.tenant;
     userRef.user = {
       user_id: seededUser.user_id,
+      // A real session user always carries its tenant. Without it,
+      // `updateTicketInTransaction`'s foreign-actor guard sees
+      // `undefined !== tenant` and refuses the write -- correctly, since that
+      // guard must fail closed rather than treat an unknown tenant as local.
+      tenant: seededUser.tenant,
       user_type: 'internal',
       first_name: seededUser.first_name ?? 'Test',
       last_name: seededUser.last_name ?? 'User',

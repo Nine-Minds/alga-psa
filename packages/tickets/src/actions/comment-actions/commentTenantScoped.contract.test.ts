@@ -16,7 +16,10 @@ const sources = {
   commentReactionActions: readRepoFile('packages/tickets/src/actions/comment-actions/commentReactionActions.ts'),
   clipboardImageDraftActions: readRepoFile('packages/tickets/src/actions/comment-actions/clipboardImageDraftActions.ts'),
   deleteTicketChildRecords: readRepoFile('packages/tickets/src/lib/deleteTicketChildRecords.ts'),
-  clientPortalVisibilityServer: readRepoFile('packages/tickets/src/lib/clientPortalVisibility.server.ts'),
+  // packages/tickets/src/lib/clientPortalVisibility.server.ts is now a
+  // re-export barrel; the queries this contract guards live in shared/ so the
+  // portal and the co-managed workers can share one implementation.
+  clientPortalVisibilityServer: readRepoFile('shared/lib/tickets/clientPortalVisibility.server.ts'),
 };
 
 const metadataSource = readRepoFile('packages/db/src/lib/tenantTableMetadata.ts');

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Readable } from 'node:stream';
+import { coManagedLifecycleMock } from '@alga-psa/db/testing';
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
@@ -7,8 +8,16 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })),
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   createTenantKnex: vi.fn(),
+}));
+
+// The lifecycle guard StorageService calls would otherwise open a real
+// transaction on the stub connection. Keep the rest of licensing real.
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  ...coManagedLifecycleMock({ fn: vi.fn }),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -61,6 +70,9 @@ describe('StorageService provenance', () => {
     createTenantKnexMock.mockReset();
     createProviderMock.mockReset();
     fileCreateMock.mockReset();
+    // Every upload path resolves a connection for lifecycle admission before it
+    // looks at the MIME type, so even the reject-the-type cases need one.
+    createTenantKnexMock.mockResolvedValue({ knex: {} } as any);
   });
 
   it('applies the allowlist when no provenance option is given (fail-closed default)', async () => {

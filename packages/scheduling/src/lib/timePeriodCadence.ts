@@ -14,12 +14,21 @@ export function endOfConfiguredTimePeriod(start: Temporal.PlainDate, setting: IT
     case 'week': end = start.add({ weeks: frequency }); break;
     case 'month': {
       const month = start.with({ day: 1 }).add({ months: frequency - 1 });
-      end = setting.end_day ? month.with({ day: Math.min(setting.end_day, month.daysInMonth) }) : month.add({ months: 1 });
+      // Exclusive, per this function's contract: a period configured to end on
+      // day N ends at the start of day N+1, which is also what the `end_day`-less
+      // branch below produces (the first of the following month). Clamping to
+      // daysInMonth before the +1 makes an end_day at or past month end roll
+      // into the first of the next month, which is the same instant.
+      end = setting.end_day
+        ? month.with({ day: Math.min(setting.end_day, month.daysInMonth) }).add({ days: 1 })
+        : month.add({ months: 1 });
       break;
     }
     case 'year': {
       const month = Temporal.PlainDate.from({ year: start.year + frequency - 1, month: setting.end_month ?? 12, day: 1 });
-      end = setting.end_day_of_month ? month.with({ day: Math.min(setting.end_day_of_month, month.daysInMonth) }) : month.add({ months: 1 });
+      end = setting.end_day_of_month
+        ? month.with({ day: Math.min(setting.end_day_of_month, month.daysInMonth) }).add({ days: 1 })
+        : month.add({ months: 1 });
       if (Temporal.PlainDate.compare(end, start) <= 0) end = end.add({ years: 1 });
       break;
     }
