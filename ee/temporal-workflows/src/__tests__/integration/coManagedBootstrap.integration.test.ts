@@ -11550,7 +11550,12 @@ it('native task comments retain private audiences, immutable local names, revisi
   await comments.deleteTaskComment(root, 2);
   await expect(comments.createTaskComment({ taskId: resource.id, note: 'Reply through surviving child', parentCommentId: reply })).rejects.toThrow();
   const page = await comments.getTaskComments(resource.id);
-  expect(page.find((item: any) => item.taskCommentId === root)).toMatchObject({ note: '', markdownContent: '', collaborationRevision: 3, canReply: false, canEdit: false });
+  // deleteTaskComment writes the '[deleted]' tombstone itself (see the update in
+  // projectTaskCommentActions.ts), and main's getTaskComments returns comment.note
+  // unchanged. Blanking it again in the read discarded the marker the thread renders,
+  // which projectTaskCommentThreading T026 caught. The content is already destroyed by
+  // the write, so returning the tombstone leaks nothing.
+  expect(page.find((item: any) => item.taskCommentId === root)).toMatchObject({ note: '[deleted]', markdownContent: '[deleted]', collaborationRevision: 3, canReply: false, canEdit: false });
   expect(page.find((item: any) => item.taskCommentId === reply)).toMatchObject({ note: 'Native private reply', canReply: false });
   expect((await read(customerPrincipal)).items.find((item: any) => item.commentId === root)).toMatchObject({ deleted: true, revision: 3 });
   expect(await customer.table('project_task_comments')).toHaveLength(2); expect(publish).toHaveBeenCalled();
