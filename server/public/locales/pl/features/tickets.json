@@ -1509,7 +1509,13 @@
       "alreadyBundled": "Zgłoszenie jest już w pakiecie: {{ticket}}",
       "masterAsChild": "Zgłoszenie nadrzędne nie może być jednocześnie zgłoszeniem podrzędnym.",
       "noChildren": "Nie podano zgłoszeń podrzędnych.",
-      "childrenOnBundledChild": "Nie można dodać zgłoszeń podrzędnych do zgłoszenia podrzędnego należącego już do pakietu."
+      "childrenOnBundledChild": "Nie można dodać zgłoszeń podrzędnych do zgłoszenia podrzędnego należącego już do pakietu.",
+      "concurrent": "Co najmniej jedno z wybranych zgłoszeń zostało w tym samym czasie dodane do pakietu. Odśwież stronę i spróbuj ponownie.",
+      "closedMasterChoiceRequired": "Zgłoszenie nadrzędne tego pakietu jest zamknięte. Wybierz sposób dodania zgłoszenia podrzędnego: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Ta opcja nie jest dozwolona dla tego zgłoszenia nadrzędnego. Wybierz jedną z opcji: {{choices}}.",
+      "choiceOnOpenMaster": "Ta opcja ma zastosowanie tylko wtedy, gdy zgłoszenie nadrzędne pakietu jest zamknięte.",
+      "closeRuleFailed": "Tego zgłoszenia nie można jeszcze zamknąć: {{reason}}",
+      "reopenUnavailable": "Nie można ponownie otworzyć zgłoszenia nadrzędnego, ponieważ nie skonfigurowano żadnego otwartego statusu zgłoszenia."
     },
     "ticket": {
       "validationDetails": "Popraw dane zgłoszenia: {{details}}",
@@ -1616,7 +1622,21 @@
       "remove": "Usuń",
       "noChildren": "Brak podrzędnych w tym pakiecie.",
       "addChildMultiClientMessage": "Spowoduje to dodanie {{ticket}} od innego klienta do pakietu. Potwierdź, że chcesz kontynuować.",
-      "thisTicket": "to zgłoszenie"
+      "thisTicket": "to zgłoszenie",
+      "openChildrenBadge": "{{count}} otwartych podrzędnych",
+      "openChildrenBadgeShort": "{{count}} otwartych",
+      "childOpenStatus": "Otwarte",
+      "childClosedStatus": "Zamknięte",
+      "closedMasterDialogTitle": "Zgłoszenie nadrzędne tego pakietu jest zamknięte",
+      "closedMasterDialogIntro": "Zgłoszenie nadrzędne jest zamknięte. Wybierz, co ma się stać ze zgłoszeniem podrzędnym po dodaniu.",
+      "keepClosedLabel": "Dodaj i pozostaw zgłoszenie nadrzędne zamknięte",
+      "keepClosedHelp": "Zgłoszenie podrzędne pozostaje otwarte z własnym licznikiem SLA. Pakiet będzie oznaczony jako niespójny, dopóki zgłoszenie podrzędne nie zostanie rozwiązane.",
+      "applyResolutionLabel": "Dodaj i zastosuj rozwiązanie zgłoszenia nadrzędnego do tego zgłoszenia podrzędnego",
+      "applyResolutionHelp": "Zamyka zgłoszenie podrzędne ze statusem {{status}} i publikuje rozwiązanie zgłoszenia nadrzędnego w zgłoszeniu podrzędnym jako komentarz publiczny.",
+      "applyResolutionHelpNoComment": "Zamyka zgłoszenie podrzędne ze statusem {{status}}. Zgłoszenie nadrzędne nie ma publicznego komentarza z rozwiązaniem do opublikowania.",
+      "reopenMasterLabel": "Dodaj i otwórz ponownie zgłoszenie nadrzędne",
+      "reopenMasterHelp": "Otwiera ponownie tylko zgłoszenie nadrzędne. Już zamknięte zgłoszenia podrzędne w tym pakiecie pozostają zamknięte; powiadomienia o ponownym otwarciu i SLA dotyczą zgłoszenia nadrzędnego.",
+      "closedMasterGating": "Reguły zamykania tablicy nie zezwalają na otwarte zgłoszenia podrzędne w ramach zamkniętego zgłoszenia nadrzędnego, więc pozostawienie zgłoszenia nadrzędnego zamkniętego nie jest możliwe."
     },
     "autoClose": "Zostanie automatycznie zamknięte {{date}}, jeśli nie pojawi się nowa aktywność.",
     "autoCloseWarned": "Klient został powiadomiony."
@@ -1930,7 +1950,8 @@
         "checklist_template_applied": "zastosowano szablon listy kontrolnej",
         "close_rules_overridden": "nadpisano reguły zamykania",
         "close_rules_bypassed": "pominięto reguły zamykania",
-        "auto_close_warning_sent": "wysłano ostrzeżenie o automatycznym zamknięciu"
+        "auto_close_warning_sent": "wysłano ostrzeżenie o automatycznym zamknięciu",
+        "bundle_child_added": "dodano zgłoszenie podrzędne do pakietu"
       },
       "closeStatus": "Status zamknięcia",
       "noStatusChange": "Nie zmieniaj statusu",

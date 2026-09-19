@@ -222,9 +222,21 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
 
     expect(commentSection).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
     expect(commentSection).toContain("tenantScopedTable(trx, 'tickets', tenant)");
-    expect(commentSection).toContain("tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)");
+    expect(commentSection).toContain('mirrorCommentToChild(trx, tenant');
     expect(commentSection).not.toContain('.where({ tenant, master_ticket_id: ticketId })');
-    expect(commentSection).not.toContain('.where({\n              tenant,\n              source_comment_id');
+
+    // The mirror write moved into ticketBundleUtils.mirrorCommentToChild; the
+    // structural tenant scoping assertions follow it there.
+    const utilsSource = fs.readFileSync(path.resolve(__dirname, './ticketBundleUtils.ts'), 'utf8');
+    const mirrorStart = utilsSource.indexOf('export async function mirrorCommentToChild');
+    const mirrorEnd = utilsSource.indexOf('export type BundleAfterCommitPublication', mirrorStart);
+    expect(mirrorStart).toBeGreaterThanOrEqual(0);
+    expect(mirrorEnd).toBeGreaterThan(mirrorStart);
+    const mirrorSection = utilsSource.slice(mirrorStart, mirrorEnd);
+    expect(mirrorSection).toContain("tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)");
+    expect(mirrorSection).toContain("tenantDb(trx, tenant).table('comment_threads')");
+    expect(mirrorSection).toContain("tenantDb(trx, tenant).table('comments')");
+    expect(mirrorSection).not.toContain('.where({\n              tenant,\n              source_comment_id');
 
     expect(bundleSection).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
     expect(bundleSection).not.toContain("'t.tenant': tenant");
