@@ -4,14 +4,28 @@ import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { IChat } from '../../interfaces/chat.interface';
-import { IMessage } from '../../interfaces/message.interface';
+import { IMessage, pickMessageUpdates } from '../../interfaces/message.interface';
 import Chat, { IChatHistoryItem } from '../../models/chat';
 import Message from '../../models/message';
+import { isChatAccessDeniedError } from './errors';
 import { v4 as uuidv4 } from 'uuid';
 
 const PERSISTENCE_CACHE_WINDOW_MS = 60_000;
 let cachedPersistenceStatus: boolean | null = null;
 let lastPersistenceCheck = 0;
+
+type ChatActionUser = { user_id: string; tenant: string };
+
+async function requireChatUser(): Promise<ChatActionUser> {
+  const user = await getCurrentUser();
+  if (!user?.user_id) {
+    throw new Error('Not authenticated');
+  }
+  if (!user.tenant) {
+    throw new Error('Missing tenant for chat action');
+  }
+  return { user_id: user.user_id, tenant: user.tenant };
+}
 
 const isMissingRelationError = (error: unknown) =>
   typeof error === 'object' &&
@@ -177,18 +191,27 @@ export async function addMessageToChatAction(data: Omit<IMessage, 'tenant'>) {
   }
 }
 
-export async function getChatMessagesAction(chatId: string) {
+export async function getChatMessagesAction(chatId: string): Promise<IMessage[]> {
   if (!chatId) {
     return [];
   }
+
+  // Resolve the caller before touching persistence so an unauthenticated or
+  // tenant-less request is denied rather than reported as empty history.
+  const user = await requireChatUser();
 
   if (!(await isChatPersistenceAvailable())) {
     return [];
   }
 
   try {
-    return await Message.getByChatId(chatId);
+    return await runWithTenant(user.tenant, () =>
+      Message.getByChatIdForUser(chatId, user.user_id)
+    );
   } catch (error) {
+    if (isChatAccessDeniedError(error)) {
+      throw error;
+    }
     if (isExpectedChatPersistenceError(error)) {
       markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(
@@ -277,7 +300,7 @@ export async function renameCurrentUserChatAction(chatId: string, title: string)
   }
 
   const user = await getCurrentUser();
-  if (!user?.user_id) {
+  if (!user?.user_id || !user.tenant) {
     return false;
   }
 
@@ -287,7 +310,9 @@ export async function renameCurrentUserChatAction(chatId: string, title: string)
   }
 
   try {
-    return await Chat.updateTitleForUser(chatId, user.user_id, nextTitle);
+    return await runWithTenant(user.tenant, () =>
+      Chat.updateTitleForUser(chatId, user.user_id, nextTitle)
+    );
   } catch (error) {
     if (isExpectedChatPersistenceError(error)) {
       markPersistenceUnavailableIfSchemaMissing(error);
@@ -312,12 +337,12 @@ export async function deleteCurrentUserChatAction(chatId: string): Promise<boole
   }
 
   const user = await getCurrentUser();
-  if (!user?.user_id) {
+  if (!user?.user_id || !user.tenant) {
     return false;
   }
 
   try {
-    return await Chat.deleteForUser(chatId, user.user_id);
+    return await runWithTenant(user.tenant, () => Chat.deleteForUser(chatId, user.user_id));
   } catch (error) {
     if (isExpectedChatPersistenceError(error)) {
       markPersistenceUnavailableIfSchemaMissing(error);
@@ -332,15 +357,35 @@ export async function deleteCurrentUserChatAction(chatId: string): Promise<boole
   }
 }
 
-export async function updateMessageAction(id: string, data: Partial<IMessage>) {
+export type UpdateMessageResult = 'success' | 'skipped' | 'unauthorized';
+
+export async function updateMessageAction(
+  id: string,
+  data: Partial<IMessage>
+): Promise<UpdateMessageResult> {
+  // Resolve the caller before touching persistence so an unauthenticated or
+  // tenant-less request is denied rather than reported as skipped persistence.
+  const user = await requireChatUser();
+
   if (!(await isChatPersistenceAvailable())) {
     return 'skipped';
   }
 
+  // Defense in depth: only allowlisted mutable columns leave the action.
+  const updates = pickMessageUpdates(data);
+  if (Object.keys(updates).length === 0) {
+    return 'skipped';
+  }
+
   try {
-    await Message.update(id, data);
-    return 'success';
+    const updated = await runWithTenant(user.tenant, () =>
+      Message.update(id, updates, user.user_id)
+    );
+    return updated > 0 ? 'success' : 'unauthorized';
   } catch (error) {
+    if (isChatAccessDeniedError(error)) {
+      return 'unauthorized';
+    }
     if (isExpectedChatPersistenceError(error)) {
       markPersistenceUnavailableIfSchemaMissing(error);
       console.warn(

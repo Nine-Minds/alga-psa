@@ -6,6 +6,7 @@ const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const runWithTenantMock = vi.hoisted(() =>
   vi.fn(async (_tenant: string, fn: () => Promise<unknown>) => fn()),
 );
+const getCurrentUserMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
@@ -23,6 +24,10 @@ vi.mock('@alga-psa/db/tenant', async (importOriginal) => {
     runWithTenant: runWithTenantMock,
   };
 });
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser: getCurrentUserMock,
+}));
 
 const TEST_TENANT = 'chat-persistence-test-tenant';
 
@@ -74,7 +79,9 @@ describe('chat persistence execution flows (db-backed)', () => {
 
   beforeEach(async () => {
     createTenantKnexMock.mockReset();
+    getCurrentUserMock.mockReset();
     createTenantKnexMock.mockResolvedValue({ knex: db, tenant: TEST_TENANT });
+    getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', tenant: TEST_TENANT });
     await db('messages').where({ tenant: TEST_TENANT }).delete();
     await db('chats').where({ tenant: TEST_TENANT }).delete();
   });
@@ -131,6 +138,7 @@ describe('chat persistence execution flows (db-backed)', () => {
   });
 
   it('DB-backed guard path: declined/failed execution does not persist false completion', async () => {
+    getCurrentUserMock.mockResolvedValue({ user_id: 'user-2', tenant: TEST_TENANT });
     const { createNewChatAction, addMessageToChatAction, getChatMessagesAction } =
       await loadChatActions();
 
@@ -163,6 +171,7 @@ describe('chat persistence execution flows (db-backed)', () => {
   });
 
   it('No migration required: existing chat persistence read/write ordering remains functional', async () => {
+    getCurrentUserMock.mockResolvedValue({ user_id: 'user-3', tenant: TEST_TENANT });
     const { createNewChatAction, addMessageToChatAction, getChatMessagesAction } =
       await loadChatActions();
 
