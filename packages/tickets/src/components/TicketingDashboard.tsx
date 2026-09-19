@@ -1725,7 +1725,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
     if (bundleNeedsClosedMasterChoice && !bundleClosedMasterChoice) {
       setBundleError(
-        t('details.bundle.closedMasterChoiceRequired', "This bundle's master is closed. Choose how to add the child: {{choices}}.", {
+        t('errors.bundle.closedMasterChoiceRequired', "This bundle's master is closed. Choose how to add the child: {{choices}}.", {
           choices: (bundleClosedMasterContext?.allowedChoices ?? []).join(', '),
         })
       );
