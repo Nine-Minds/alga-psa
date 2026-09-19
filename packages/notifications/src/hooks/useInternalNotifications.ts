@@ -8,11 +8,21 @@ import type { InternalNotification } from '../types/internalNotification';
 import { getNotificationsAction, markAsReadAction, markAllAsReadAction } from '../actions/internal-notification-actions/internalNotificationActions';
 import { reduceIncomingCall, type IncomingCallEntry } from './incomingCall';
 
-function getHocuspocusUrl(): string | null {
+// Choose the Hocuspocus URL from the build environment, never the hostname, so a
+// dev server reached over a LAN/tailnet address still targets the configured
+// local Hocuspocus instance instead of deriving a same-origin URL.
+// Development: NEXT_PUBLIC_HOCUSPOCUS_URL, defaulting to ws://localhost:1234.
+// Production: NEXT_PUBLIC_HOCUSPOCUS_URL, otherwise ws(s)://{host}/hocuspocus.
+export function getHocuspocusUrl(): string | null {
   const configured = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
-  if (typeof window === 'undefined') return configured || null;
+  if (process.env.NODE_ENV !== 'production') return configured || 'ws://localhost:1234';
+  if (configured) return configured;
+  // This hook can be rendered on the server as part of Client Component SSR.
+  // The connection is only opened from a client effect, so the SSR fallback is
+  // never baked into the HTML.
+  if (typeof window === 'undefined') return null;
   const { protocol, host } = window.location;
-  return !host.includes('localhost') ? `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}/hocuspocus` : configured || null;
+  return `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}/hocuspocus`;
 }
 
 interface UseInternalNotificationsOptions { tenant: string; userId: string; limit?: number; enablePolling?: boolean }

@@ -1,4 +1,9 @@
 import '@testing-library/jest-dom'
+// Next's programmatic entrypoint installs this during app.prepare(), but the
+// single-fork integration worker collects server-action modules before any app
+// is prepared. Ensure those modules snapshot Node's real AsyncLocalStorage
+// instead of permanently caching Next's throwing browser fallback.
+import 'next/dist/server/node-environment-baseline';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
