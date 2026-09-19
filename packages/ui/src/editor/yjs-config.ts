@@ -12,7 +12,7 @@ import { HocuspocusProvider } from '@hocuspocus/provider';
  * Production: NEXT_PUBLIC_HOCUSPOCUS_URL, otherwise the same-origin
  *   ws(s)://{host}/hocuspocus URL (assuming a reverse proxy at /hocuspocus).
  */
-function getHocuspocusUrl(): string {
+export function getHocuspocusUrl(): string {
   // Explicit env var (must be NEXT_PUBLIC_ to reach the client bundle).
   const envUrl = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
 

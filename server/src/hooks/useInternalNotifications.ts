@@ -21,7 +21,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 // local Hocuspocus instance instead of deriving a same-origin URL.
 // Development: NEXT_PUBLIC_HOCUSPOCUS_URL, defaulting to ws://localhost:1234.
 // Production: NEXT_PUBLIC_HOCUSPOCUS_URL, otherwise ws(s)://{host}/hocuspocus.
-const getHocuspocusUrl = () => {
+export const getHocuspocusUrl = () => {
   const configuredUrl = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
 
   if (process.env.NODE_ENV !== 'production') {
