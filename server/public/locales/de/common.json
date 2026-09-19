@@ -1607,6 +1607,14 @@
   },
   "users": {
     "soloLicenseLimit": "Der Solo-Tarif unterstützt einen Techniker. Führen Sie ein Upgrade des Workspaces durch, bevor Sie einen weiteren Benutzer aktivieren.",
+    "coManagedAdmission": {
+      "allocationConflict": "Die Platzzuteilung für diesen Workspace hat sich geändert oder ist nicht mehr verfügbar. Aktualisieren Sie und versuchen Sie es erneut.",
+      "invitationInvalid": "Diese Einladung ist nicht mehr gültig. Fordern Sie eine neue Einladung bei Ihrem Administrator an.",
+      "licenseLapsed": "Die Pro-Lizenz des betreuenden MSP und ihre Co-Managed-Plätze müssen wiederhergestellt werden, bevor Kundentechniker hinzugefügt werden können.",
+      "notActive": "Ein Kundenadministrator muss die Co-Management-Beziehung aktivieren, bevor Techniker hinzugefügt werden können.",
+      "poolLimit": "Der betreuende MSP hat keine freien Co-Managed-Plätze mehr, um diese Zuteilung zu erhöhen.",
+      "seatLimit": "Dieser Workspace hat alle ihm zugeteilten Co-Managed-Technikerplätze belegt. Bitten Sie den betreuenden MSP, weitere Plätze zuzuteilen."
+    },
     "technicianLicenseLimit": "In diesem Workspace kann kein weiterer Techniker aktiviert werden. Prüfen Sie seinen Aktivierungsstatus und die verfügbare Lizenzzuteilung."
   },
   "editor": {

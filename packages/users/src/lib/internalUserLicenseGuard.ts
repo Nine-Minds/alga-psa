@@ -1,7 +1,17 @@
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
-export type InternalUserLicenseLimitCode = 'SOLO_PLAN_LIMIT' | 'LICENSE_LIMIT_REACHED';
+/** A co-managed workspace is refused for one of six distinct reasons, and the
+ * remedy differs for each: the customer's own technician allocation being full
+ * is not the sponsoring MSP's pool being empty, and neither is a lapsed license
+ * or an expired invitation. They travel as their own codes so a screen can
+ * translate the right sentence; collapsing them onto LICENSE_LIMIT_REACHED told
+ * a customer at its technician ceiling to go buy MSP user licenses. */
+export type CoManagedAdmissionLimitCode = 'CO_MANAGED_SEAT_LIMIT' | 'CO_MANAGED_NOT_ACTIVE'
+  | 'CO_MANAGED_LICENSE_LAPSED' | 'CO_MANAGED_INVITATION_INVALID'
+  | 'CO_MANAGED_ALLOCATION_CONFLICT' | 'CO_MANAGED_POOL_LIMIT';
+
+export type InternalUserLicenseLimitCode = 'SOLO_PLAN_LIMIT' | 'LICENSE_LIMIT_REACHED' | CoManagedAdmissionLimitCode;
 
 export type InternalUserLicenseLimitResult =
   | { ok: true }
@@ -50,18 +60,10 @@ export async function checkInternalUserLicenseLimit(
       else await trx.transaction(inner => assertCoManagedSeatAdmission(inner, tenant, options));
       return { ok: true };
     } catch (error) {
-      // LEVERAGE: friction admission-message-catalogue — CoManagedAdmissionError
-      // carries six distinct, user-facing reasons as English strings in
-      // packages/licensing, outside server/public/locales. There is no code here
-      // that a UI dictionary could map to a translated string, so this collapses
-      // all six onto LICENSE_LIMIT_REACHED and every screen prints "You've reached
-      // your MSP user license limit" — the wrong limit and the wrong remedy. The
-      // real message survives in `error` and every call site already passes it as
-      // i18next's defaultValue, but the code decides which key wins. Fixing it
-      // properly means moving those six messages into the locale catalogue across
-      // ten locales; recorded as a value-blocking blocker on PR #3363 rather than
-      // smuggled in here.
-      if (error instanceof CoManagedAdmissionError) return { ok: false, code: 'LICENSE_LIMIT_REACHED', error: error.message };
+      // The admission reason travels as its own code so each screen can print
+      // the refusal that actually applies. The English message still rides along
+      // as i18next's defaultValue for any caller that has no catalogue entry.
+      if (error instanceof CoManagedAdmissionError) return { ok: false, code: error.code, error: error.message };
       throw error;
     }
   }

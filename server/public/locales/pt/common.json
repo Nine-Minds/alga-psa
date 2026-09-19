@@ -1607,6 +1607,14 @@
   },
   "users": {
     "soloLicenseLimit": "O plano Solo permite um técnico. Faça o upgrade do espaço de trabalho antes de ativar outro usuário.",
+    "coManagedAdmission": {
+      "allocationConflict": "A atribuição de licenças deste espaço de trabalho mudou ou já não está disponível. Atualize e tente novamente.",
+      "invitationInvalid": "Este convite já não é válido. Solicite um novo convite ao seu administrador.",
+      "licenseLapsed": "A licença Pro do MSP responsável e as respetivas licenças cogeridas precisam ser restauradas antes de adicionar técnicos do cliente.",
+      "notActive": "Um administrador do cliente precisa ativar a relação de cogestão antes que técnicos possam ser adicionados.",
+      "poolLimit": "O MSP responsável não tem licenças cogeridas livres para aumentar esta atribuição.",
+      "seatLimit": "Este espaço de trabalho ocupou todas as licenças de técnico cogerido que lhe foram atribuídas. Peça ao MSP responsável para atribuir mais licenças."
+    },
     "technicianLicenseLimit": "Este espaço de trabalho não pode ativar outro técnico. Verifique o status de ativação e a alocação de licenças disponível."
   },
   "editor": {

@@ -1641,6 +1641,14 @@
   },
   "users": {
     "soloLicenseLimit": "Plan Solo obsługuje jednego technika. Podnieś plan obszaru roboczego, zanim aktywujesz kolejnego użytkownika.",
+    "coManagedAdmission": {
+      "allocationConflict": "Przydział stanowisk dla tego obszaru roboczego zmienił się lub nie jest już dostępny. Odśwież i spróbuj ponownie.",
+      "invitationInvalid": "To zaproszenie nie jest już ważne. Poproś administratora o nowe zaproszenie.",
+      "licenseLapsed": "Licencja Pro nadzorującego MSP i powiązane stanowiska we współzarządzaniu muszą zostać przywrócone przed dodaniem techników klienta.",
+      "notActive": "Administrator klienta musi aktywować relację współzarządzania, zanim będzie można dodać techników.",
+      "poolLimit": "Nadzorujący MSP nie ma wolnych stanowisk we współzarządzaniu, aby zwiększyć ten przydział.",
+      "seatLimit": "Ten obszar roboczy wykorzystał wszystkie przydzielone mu stanowiska technika we współzarządzaniu. Poproś nadzorującego MSP o przydzielenie kolejnych stanowisk."
+    },
     "technicianLicenseLimit": "W tym obszarze roboczym nie można aktywować kolejnego technika. Sprawdź jego stan aktywacji i dostępny przydział licencji."
   },
   "editor": {

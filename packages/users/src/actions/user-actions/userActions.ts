@@ -1,6 +1,6 @@
 'use server';
 
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected, type CoManagedAdmissionLimitCode } from '../../lib/internalUserLicenseGuard';
 import User from '@alga-psa/db/models/user';
 import { DeletionValidationResult, IUser, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
@@ -52,6 +52,7 @@ export type AddUserErrorCode =
   | 'ROLE_CLIENT_NOT_ALLOWED_FOR_MSP'
   | 'EMAIL_ALREADY_EXISTS'
   | 'LICENSE_LIMIT_REACHED'
+  | CoManagedAdmissionLimitCode
   | 'SOLO_PLAN_LIMIT'
   | 'PERMISSION_DENIED'
   | 'USER_CREATE_FAILED';
@@ -63,6 +64,7 @@ type AddUserResult =
 export type UpdateUserErrorCode =
   | 'SOLO_PLAN_LIMIT'
   | 'LICENSE_LIMIT_REACHED'
+  | CoManagedAdmissionLimitCode
   | 'EMAIL_ALREADY_EXISTS'
   | 'REPORTS_TO_SELF'
   | 'REPORTS_TO_CYCLE'

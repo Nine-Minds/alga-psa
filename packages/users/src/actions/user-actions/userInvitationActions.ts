@@ -8,7 +8,7 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected, type CoManagedAdmissionLimitCode } from '../../lib/internalUserLicenseGuard';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -30,7 +30,8 @@ export type UserInvitationErrorCode =
   | 'INVITATION_NOT_FOUND'
   | 'REVOKE_FAILED'
   | 'SOLO_PLAN_LIMIT'
-  | 'LICENSE_LIMIT_REACHED';
+  | 'LICENSE_LIMIT_REACHED'
+  | CoManagedAdmissionLimitCode;
 
 interface SendUserInvitationParams {
   email: string;

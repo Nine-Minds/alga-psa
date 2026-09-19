@@ -1607,6 +1607,14 @@
   },
   "users": {
     "soloLicenseLimit": "Het Solo-abonnement ondersteunt één technicus. Waardeer de werkruimte op voordat u nog een gebruiker activeert.",
+    "coManagedAdmission": {
+      "allocationConflict": "De licentietoewijzing voor deze werkruimte is gewijzigd of niet langer beschikbaar. Vernieuw en probeer het opnieuw.",
+      "invitationInvalid": "Deze uitnodiging is niet langer geldig. Vraag een nieuwe uitnodiging aan bij uw beheerder.",
+      "licenseLapsed": "De Pro-licentie van de verantwoordelijke MSP en de bijbehorende co-managed licenties moeten worden hersteld voordat klanttechnici kunnen worden toegevoegd.",
+      "notActive": "Een klantbeheerder moet de co-managementrelatie activeren voordat technici kunnen worden toegevoegd.",
+      "poolLimit": "De verantwoordelijke MSP heeft geen vrije co-managed licenties meer om deze toewijzing te verhogen.",
+      "seatLimit": "Deze werkruimte gebruikt alle co-managed technicuslicenties die eraan zijn toegewezen. Vraag de verantwoordelijke MSP om meer licenties toe te wijzen."
+    },
     "technicianLicenseLimit": "Deze werkruimte kan geen extra technicus activeren. Controleer de activeringsstatus en de beschikbare licentietoewijzing."
   },
   "editor": {

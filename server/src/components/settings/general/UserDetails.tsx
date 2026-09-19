@@ -324,6 +324,12 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           const errorKeys: Record<typeof result.code, string> = {
             SOLO_PLAN_LIMIT: 'common:users.soloLicenseLimit',
             LICENSE_LIMIT_REACHED: 'common:users.technicianLicenseLimit',
+            CO_MANAGED_SEAT_LIMIT: 'common:users.coManagedAdmission.seatLimit',
+            CO_MANAGED_POOL_LIMIT: 'common:users.coManagedAdmission.poolLimit',
+            CO_MANAGED_NOT_ACTIVE: 'common:users.coManagedAdmission.notActive',
+            CO_MANAGED_LICENSE_LAPSED: 'common:users.coManagedAdmission.licenseLapsed',
+            CO_MANAGED_INVITATION_INVALID: 'common:users.coManagedAdmission.invitationInvalid',
+            CO_MANAGED_ALLOCATION_CONFLICT: 'common:users.coManagedAdmission.allocationConflict',
             EMAIL_ALREADY_EXISTS: 'userDetails.messages.error.emailAlreadyExists',
             REPORTS_TO_SELF: 'userDetails.messages.error.reportsToSelf',
             REPORTS_TO_CYCLE: 'userDetails.messages.error.reportsToCycle',
