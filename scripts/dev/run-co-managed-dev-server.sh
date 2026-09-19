@@ -96,5 +96,44 @@ echo "  hocuspocus  : $NEXT_PUBLIC_HOCUSPOCUS_URL -> \${HOCUSPOCUS_HOST}:\${HOCU
 echo "  readiness   : curl -s -o /dev/null -w '%{http_code}' $HOST/auth/signin  # expect 200 or 307"
 echo
 
+# `server/.next` is a symlink onto scratch storage outside the repo on this
+# host, which keeps several GB of hot build churn out of the btrfs loopback
+# image whose exhaustion once killed every card service at once (EDQUOT; see
+# scripts/dev/run-card-service.sh, FAILURE MODE 3). Two things about that
+# arrangement do not survive a reboot, and both present as an application
+# fault rather than as missing scratch storage:
+#
+#   1. The link target is gone, and Next -- which mkdirs `.next/dev`
+#      non-recursively -- dies on every launch with
+#      `ENOENT ... mkdir .../server/.next/dev` in a restart loop.
+#
+#   2. Turbopack's externals are RELATIVE symlinks. It writes each one as
+#      `<.next>/dev/node_modules/<pkg>-<hash> -> ../../../../node_modules/<pkg>`,
+#      resolved by the kernel against the link's PHYSICAL path -- that is,
+#      against the scratch root, not against `server/`. So the scratch root
+#      needs its own `node_modules` pointing at the workspace's, or every
+#      externalised package (knex, @aws-sdk/*, @opentelemetry/*, @temporalio/*)
+#      fails at require time and every route 500s with
+#      `Cannot find module 'knex-<hash>'`. The listener answers throughout, so
+#      a port check and even an HTTP status check both pass while the app is
+#      entirely broken.
+#
+# Restore both here so a reboot costs a recompile and nothing else.
+NEXT_DIR="$SERVER_DIR/.next"
+NEXT_TARGET="$NEXT_DIR"
+if [ -L "$NEXT_DIR" ]; then
+  # -m, not -f: after a reboot every component of the target is missing, and
+  # `readlink -f` prints nothing when an intermediate directory does not exist.
+  NEXT_TARGET="$(readlink -m "$NEXT_DIR")"
+  [ -n "$NEXT_TARGET" ] || { echo "cannot resolve $NEXT_DIR" >&2; exit 1; }
+fi
+mkdir -p "$NEXT_TARGET"
+# The directory Turbopack's `../../../../node_modules` lands in.
+SCRATCH_ROOT="$(cd "$NEXT_TARGET/../.." && pwd)"
+if [ "$SCRATCH_ROOT" != "$REPO_ROOT" ] && [ ! -e "$SCRATCH_ROOT/node_modules" ]; then
+  echo "  scratch root : linking $SCRATCH_ROOT/node_modules -> $REPO_ROOT/node_modules"
+  ln -s "$REPO_ROOT/node_modules" "$SCRATCH_ROOT/node_modules"
+fi
+
 cd "$SERVER_DIR"
 exec node "$TSX_BIN" dev-server.ts
