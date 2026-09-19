@@ -115,7 +115,37 @@ needs no `DEV_ALLOWED_ORIGINS`.
 **Do not switch the launch to `npm run dev`.** That goes through nx, whose
 build-deps include `server:build` — a full Next production build that has OOMed
 repeatedly on this host, even at a 32 GB heap. The workspace dists are prebuilt;
-the script invokes `next` directly.
+the script invokes the dev entrypoint directly and skips nx.
+
+## The launcher runs `server/dev-server.ts`, not `next dev`
+
+`npm run dev` and `npm run dev:turbo` both run `server/dev-server.ts`, and
+`server/src/test/unit/devScriptWiring.test.ts` guards that. Development must not
+run Next's built-in dev server: it owns the HTTP `upgrade` event and leaves
+upgrades it does not recognise open, and an unanswered handshake holds one of
+Chromium's per-origin WebSocket slots, stalling HMR and hydration.
+`run-co-managed-dev-server.sh` therefore execs `node node_modules/.bin/tsx
+dev-server.ts` — the same entrypoint, without nx.
+
+Two properties of that entrypoint the launcher has to pin:
+
+- **`HOSTNAME`.** `dev-server.ts` binds `process.env.HOSTNAME ?? '0.0.0.0'`.
+  Interactive bash exports `HOSTNAME` as the machine name, which would bind the
+  listener to that name's single address (127.0.1.1 here) and make the tailnet
+  review URL unreachable while `localhost` still answered. `next dev -p` ignored
+  `HOSTNAME`, so this trap arrives with the custom entrypoint. The launcher
+  exports `HOSTNAME=0.0.0.0`.
+- **`NEXT_PUBLIC_HOCUSPOCUS_URL`.** `server/.env.local` ships
+  `ws://localhost:1235`, which names the *reviewer's own* machine once the app is
+  served over the tailnet. The launcher overrides it to
+  `ws://<advertised-host>:<port>/hocuspocus` so the socket goes through the
+  entrypoint's bounded proxy. With no hocuspocus upstream running, that answers a
+  prompt `502` and the notification hook falls back to its 30s poll.
+
+Verify the upgrade handling with a raw probe rather than trusting the banner:
+unrecognised paths must answer `404`, `/hocuspocus` must answer `502` (or
+upgrade, if an upstream is running), and `/_next/webpack-hmr` must answer
+`101 Switching Protocols`. None of them may hang.
 
 ## A port check is not readiness
 
@@ -200,13 +230,13 @@ curl -s -o /dev/null -w 'guide %{http_code}\n'    http://100.82.172.57:8874/
 
 ## Restarting after editing a workspace package
 
-`next dev` on :3374 does **not** reliably hot-reload edits under `packages/` or
+The dev server on :3374 does **not** reliably hot-reload edits under `packages/` or
 `shared/`, and a compile error becomes sticky — it keeps serving the cached
 error at stale line numbers. After editing any workspace package:
 
 ```bash
 npm run build --workspace=@alga-psa/<pkg>      # required for packages/storage:
-                                               # next dev resolves
+                                               # the dev server resolves
                                                # @alga-psa/storage/StorageService
                                                # from dist, which is gitignored
                                                # and CI-rebuilt
