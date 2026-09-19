@@ -1,9 +1,9 @@
 'use server'
 import { persistCommentPublication, filterReadableCommentAttachments, reconcileCommentAttachments, withdrawCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
-import Comment from '@alga-psa/tickets/models/comment';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
+import Comment from '@alga-psa/tickets/models/comment';
 import { syncCoManagedTicketAwaitingClientSla, recordCoManagedTicketResolution, recordCoManagedTicketReopened } from '@alga-psa/co-managed';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { validateData } from '@alga-psa/validation';

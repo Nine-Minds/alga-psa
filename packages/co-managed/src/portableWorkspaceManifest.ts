@@ -90,7 +90,7 @@ export function validateCoManagedPortableWorkspaceManifest(input: unknown,
     if (!indexes.has(key)) indexes.set(key, new Map(records[table].map(row => [String(row[column]).toLowerCase(), row])));
     return indexes.get(key)!.get(id.toLowerCase()) ?? fail();
   };
-  const use = (id: unknown) => {
+  const markUsed = (id: unknown) => {
     if (typeof id !== 'string' || !registry.has(id.toLowerCase())) fail(); used.add(id.toLowerCase());
   };
   const bindings = new Set<string>();
@@ -101,7 +101,7 @@ export function validateCoManagedPortableWorkspaceManifest(input: unknown,
     const key = `${String(doc.document_id).toLowerCase()}:${binding.field}`;
     if (bindings.has(key)) fail(); bindings.add(key);
     const expected = doc[binding.field] ? `file:${doc[binding.field]}` : binding.field === 'file_id' ? `document:${doc.document_id}` : null;
-    if (!same(binding.blobId, expected)) fail(); use(binding.blobId);
+    if (!same(binding.blobId, expected)) fail(); markUsed(binding.blobId);
   }
   for (const doc of records.documents) for (const field of ['file_id', 'thumbnail_file_id', 'preview_file_id']) {
     if (doc[field] !== null && !bindings.has(`${String(doc.document_id).toLowerCase()}:${field}`)) fail();
@@ -114,7 +114,7 @@ export function validateCoManagedPortableWorkspaceManifest(input: unknown,
       const artifact = find('online_meeting_artifacts', 'artifact_id', binding.recordId), key = String(artifact.artifact_id).toLowerCase();
       if (artifactBindings.has(key) || (field === 'file_id' ? !isCoManagedUuid(artifact.file_id) : artifact.file_id !== null)) fail();
       if (!same(binding.blobId, `${prefix}:${field === 'file_id' ? artifact.file_id : artifact.artifact_id}`)) fail();
-      artifactBindings.add(key); use(binding.blobId);
+      artifactBindings.add(key); markUsed(binding.blobId);
     }
   }
   const documentsWithBlocks = new Set(records.document_block_content.filter(row => row.block_data !== null).map(row => String(row.document_id).toLowerCase()));
@@ -145,7 +145,7 @@ export function validateCoManagedPortableWorkspaceManifest(input: unknown,
         attachment.actorDisplayName !== comment.actor_display_name || attachment.actorOrganizationName !== comment.actor_organization_name) fail();
     if (!isCoManagedUuid(attachment.actorTenant) || !isCoManagedUuid(attachment.actorUserId)) fail();
     if (attachment.actorReferenceId !== null) find('collaboration_actor_references', 'actor_reference_id', attachment.actorReferenceId);
-    use(attachment.blobId);
+    markUsed(attachment.blobId);
   }
   const declared = new Map<string, CoManagedPortableBlobDescriptor>();
   for (const row of rows(manifest.blobs)) {

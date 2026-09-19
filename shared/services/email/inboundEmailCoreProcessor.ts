@@ -83,7 +83,11 @@ export async function processInboundInbox(
   if (existing && TERMINAL_STATUSES.has(existing.status)) return storedOutcomeDisposition(existing);
   if (!existing) return { disposition: 'retry', error: 'inbox_row_unclaimable' };
   const lifecycle = await getCoManagedOperationalState(db, params.tenantId);
-  if (!lifecycle.canWrite) {
+  // Compare against the literal: CoManagedOperationalState is discriminated on
+  // `canWrite`, and TypeScript only narrows the union through an explicit
+  // `=== false`. A truthiness test leaves `state` as the full union and the
+  // non-writable states cannot be passed on.
+  if (lifecycle.canWrite === false) {
     const until = new Date(Date.now() + 60_000);
     await deferInboxForCoManagedLifecycle(db, { tenant: params.tenantId, inboxId: params.inboxId,
       state: lifecycle.state, until });

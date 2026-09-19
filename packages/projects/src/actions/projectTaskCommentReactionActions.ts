@@ -21,12 +21,16 @@ type ReactionUserRow = {
   last_name?: string | null;
 };
 
-function tenantScopedTable(
+// LEVERAGE: pattern tenant-scoped-table -- this generic wrapper over tenantDb().table()
+// is now hand-written in at least five modules (packages/db/src/models/userPreferences.ts,
+// packages/db/src/lib/reassignTicketResources.ts, packages/documents, packages/projects x2).
+// It belongs in @alga-psa/db next to tenantDb.
+function tenantScopedTable<Row extends {} = any>(
   conn: Knex | Knex.Transaction,
   table: string,
   tenant: string,
-): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(table);
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
 }
 
 /**
