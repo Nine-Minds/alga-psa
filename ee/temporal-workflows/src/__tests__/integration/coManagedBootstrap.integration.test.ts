@@ -23,9 +23,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdtempSync, rmSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import knex, { type Knex } from 'knex';
 import { assertCoManagedSeatAdmission, changeCoManagedAllocation, countCoManagedCommittedSeats } from '@alga-psa/licensing';
 import { assertCoManagedOperationalWrite, getCoManagedOperationalState, withCoManagedOperationalTransaction,
@@ -83,11 +80,9 @@ vi.mock('@alga-psa/db/admin.js', () => ({
   withAdminTransactionRetryReadOnly: (work: (trx: Knex.Transaction) => Promise<unknown>) => db.transaction(work),
 }));
 const require = createRequire(import.meta.url);
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..');
 const databaseName = `co_managed_bootstrap_${randomUUID().replaceAll('-', '')}`;
 let admin: Knex, source: Knex, db: Knex;
 let created = false;
-let combinedMigrations: string | null = null;
 const log = { info() {}, warn() {}, error() {} };
 
 // Copy SCHEMA ONLY from the running development database. All writes, fixtures,
@@ -108,44 +103,35 @@ beforeAll(async () => {
     // It is not schema; omit it when replaying against the same older server.
     { env, input: schema.toString().replace(/^SET transaction_timeout = 0;\r?\n/m, ''), maxBuffer: 100 * 1024 * 1024, timeout: 60000 });
   db = knex({ client: 'pg', connection: { ...connection, database: databaseName }, pool: { min: 0, max: 6 } });
-  // pg_dump copies the schema but not the migration ledger, so restore the
-  // ledger the copied schema actually corresponds to. Everything below then
-  // reads as "bring this clone up to the complete installed schema", whichever
-  // database it was cloned from — a current test database, a lagging
-  // development one, or a community one with no enterprise tables at all.
-  const ledger = await source('knex_migrations').select('name', 'batch', 'migration_time');
-  if (ledger.length) await db.batchInsert('knex_migrations', ledger, 100);
-  // Reference defaults first: the chain upserts notification categories over
-  // whatever the source already had, while a copy on top of them would collide.
+  // pg_dump copies the schema, so the clone already contains every step the
+  // source had applied. The chain below is a catch-up for a source that lags
+  // this branch, not a rerun: replaying a step whose name the source ledger
+  // already records fails on the very object that step creates.
+  const alreadyApplied = new Set<string>(await source('knex_migrations').pluck('name'));
+  const replay = async (file: string) => {
+    if (alreadyApplied.has(file)) return;
+    await require('../../../../../server/migrations/' + file).up(db);
+  };
+  for (const file of ['20260906010000_create_co_management_foundation.cjs',
+    '20260906020000_add_co_managed_entitlement_source_version.cjs',
+    '20260906030000_create_co_managed_purchase_operations.cjs', '20260906040000_create_co_managed_provisioning.cjs',
+    '20260906050000_allow_system_seeded_priorities.cjs', '20260906060000_create_co_managed_board_scopes.cjs', '20260906070000_add_co_managed_invitation_delivery.cjs',
+    '20260906080000_create_co_management_relationship_events.cjs',
+    '20260906100000_add_external_file_metadata.cjs',
+    '20260906110000_add_kb_import_batch_identity.cjs',
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908131037_create_tenant_license_state.cjs', '20260908134800_create_co_managed_independent_upgrades.cjs', '20260908143941_retain_stripe_subscription_item_identity.cjs', '20260908150135_create_co_managed_upgrade_purchases.cjs', '20260908152550_retain_co_managed_payment_failure.cjs', '20260908191851_add_portable_restore_suspension.cjs', '20260908194606_retain_portable_workspace_restore_receipts.cjs', '20260908200922_retain_portable_workspace_activation_receipts.cjs', '20260908203743_retain_portable_restore_upload_attempts.cjs', '20260908220024_add_co_managed_task_attachment_parents.cjs', '20260908225004_add_co_managed_delegated_administration.cjs', '20260908230030_add_requester_project_task_comments.cjs', '20260908231657_qualify_requester_task_email_deliveries.cjs', '20260908232516_add_co_managed_task_thread_disclosure.cjs']) {
+    await replay(file);
+  }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
     'notification_subtypes', 'internal_notification_categories', 'internal_notification_subtypes']) {
     const rows = await source(table).select('*');
     if (rows.length) await db.batchInsert(table, rows, 100);
   }
-  // Six enterprise migrations share a filename with a community stub that only
-  // logs and returns. A community-migrated source records those names as done,
-  // so the ledger alone would leave their tables missing and strand every later
-  // enterprise migration that builds on them. Apply the enterprise counterpart
-  // where its objects are absent; the rest are idempotent by construction.
-  for (const [file, probe] of [['202410291100_create_ai_schema.cjs', 'chats'],
-    ['202410291105_create_tickets_by_concept.cjs', null], ['202410291110_create_ai_views.cjs', null],
-    ['202506211000_create_extension_tables.cjs', 'extensions'],
-    ['202506211001_create_extension_storage_tables.cjs', 'extension_storage'],
-    ['20260101120000_create_extension_schedule_tables.cjs', null]] as [string, string | null][]) {
-    if (probe && await db.schema.hasTable(probe)) continue;
-    await require('../../../../../ee/server/migrations/' + file).up(db);
-  }
-  // Enterprise files overlay community collisions, as setup/entrypoint.sh does.
-  // Keep the directory under server/ so migration-relative helpers resolve.
-  combinedMigrations = mkdtempSync(path.join(repoRoot, 'server/.co-managed-combined-migrations-'));
-  cpSync(path.join(repoRoot, 'server/migrations'), combinedMigrations, { recursive: true });
-  cpSync(path.join(repoRoot, 'ee/server/migrations'), combinedMigrations, { recursive: true, force: true });
-  await db.migrate.latest({ directory: combinedMigrations, loadExtensions: ['.cjs'] });
+  await replay('20260908225920_create_co_managed_ticket_routing_notifications.cjs');
 }, 120000);
 
 afterAll(async () => {
   await db?.destroy(); await source?.destroy();
-  if (combinedMigrations) rmSync(combinedMigrations, { recursive: true, force: true });
   if (created) await admin.raw('DROP DATABASE ??', [databaseName]);
   await admin?.destroy();
   vi.unstubAllEnvs();
