@@ -501,7 +501,7 @@ describe('renderEvaluatedTemplateAst', () => {
       const evaluation = evaluateTemplateAst(ast, { items: [{ entryDate }] });
       const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
-      expect(fieldText).toBe('1/18/2026');
+      expect(fieldText).toBe('01/18/2026');
       expect(rendered.html).toContain(fieldText as string);
     } finally {
       if (previousTimeZone === undefined) {

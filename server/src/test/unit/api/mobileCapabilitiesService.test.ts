@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getTenantProduct: vi.fn(),
   hasPermission: vi.fn(),
+  resolveDateFormatCountry: vi.fn(),
   getTenantThemeByTenantId: vi.fn(),
 }));
 
@@ -14,10 +15,15 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: mocks.hasPermission,
 }));
 
+vi.mock('@alga-psa/tenancy/lib/tenantDefaultCountry', () => ({
+  resolveDateFormatCountry: mocks.resolveDateFormatCountry,
+}));
+
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions', () => ({
   getTenantThemeByTenantId: mocks.getTenantThemeByTenantId,
 }));
 
+import { countryDateFormat, SYSTEM_DATE_FORMAT } from '@alga-psa/core/i18n/countryDateFormat';
 import { CUSTOM_THEME_PRESETS, CUSTOM_THEME_TOKEN_KEYS } from '@alga-psa/tenancy/lib/customTheme';
 import { PREDEFINED_THEME_PAIR_IDS, getThemePairMeta } from '@alga-psa/tenancy/lib/themePairs';
 import { MobileCapabilitiesService } from '../../../lib/api/services/MobileCapabilitiesService';
@@ -46,6 +52,7 @@ describe('MobileCapabilitiesService', () => {
     vi.clearAllMocks();
     mocks.getTenantProduct.mockResolvedValue('psa');
     mocks.hasPermission.mockResolvedValue(true);
+    mocks.resolveDateFormatCountry.mockResolvedValue(null);
     mocks.getTenantThemeByTenantId.mockResolvedValue({ pairId: 'alga' });
   });
 
@@ -58,6 +65,7 @@ describe('MobileCapabilitiesService', () => {
       opportunities: true,
       opportunitiesCreate: true,
     });
+    expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'inventory', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'create', db);
@@ -73,6 +81,7 @@ describe('MobileCapabilitiesService', () => {
       opportunities: false,
       opportunitiesCreate: false,
     });
+    expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
     expect(mocks.hasPermission).not.toHaveBeenCalled();
   });
 
@@ -197,7 +206,7 @@ describe('MobileCapabilitiesService', () => {
       const service = new MobileCapabilitiesService();
 
       const result = await service.getMyCapabilities(context);
-      expect(Object.keys(result).sort()).toEqual(['features', 'theme']);
+      expect(Object.keys(result).sort()).toEqual(['features', 'formatting', 'theme']);
       expect(result.features).toEqual({
         inventory: true,
         opportunities: true,
@@ -213,6 +222,26 @@ describe('MobileCapabilitiesService', () => {
       expect(result.features.inventory).toBe(true);
       expect(result.theme.pairId).toBe('alga');
       expect(result.theme.light).toEqual(CUSTOM_THEME_PRESETS.alga.light);
+    });
+  });
+
+  describe('date formatting block', () => {
+    it("answers the resolved country's date shape so the device locale cannot decide it", async () => {
+      mocks.resolveDateFormatCountry.mockResolvedValue({ code: 'AU', name: 'Australia' });
+      const service = new MobileCapabilitiesService();
+
+      const capabilities = await service.getMyCapabilities(context);
+      expect(capabilities.formatting).toEqual(countryDateFormat('AU'));
+      expect(capabilities.formatting.datePattern).toBe('dd/MM/yyyy');
+    });
+
+    it('answers the fixed system default when the country cannot be resolved', async () => {
+      mocks.resolveDateFormatCountry.mockRejectedValue(new Error('no connection'));
+      const service = new MobileCapabilitiesService();
+
+      await expect(service.getMyCapabilities(context)).resolves.toMatchObject({
+        formatting: SYSTEM_DATE_FORMAT,
+      });
     });
   });
 });

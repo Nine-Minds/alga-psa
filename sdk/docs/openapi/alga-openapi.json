@@ -10677,7 +10677,6 @@
             "type": "string",
             "enum": [
               "en",
-              "en-AU",
               "fr",
               "es",
               "de",
@@ -10720,7 +10719,6 @@
             "type": "string",
             "enum": [
               "en",
-              "en-AU",
               "fr",
               "es",
               "de",
@@ -10742,7 +10740,6 @@
             "type": "string",
             "enum": [
               "en",
-              "en-AU",
               "fr",
               "es",
               "de",
@@ -10982,7 +10979,6 @@
             "type": "string",
             "enum": [
               "en",
-              "en-AU",
               "fr",
               "es",
               "de",
@@ -25162,6 +25158,88 @@
           "error"
         ]
       },
+      "MobileThemeSeedTokensV1": {
+        "type": "object",
+        "properties": {
+          "background": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "card": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "surface": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "textPrimary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "textSecondary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "textMuted": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "border": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "borderStrong": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "primary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "secondary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "accent": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "sidebarBg": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "sidebarText": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "sidebarHover": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "headerBg": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          }
+        },
+        "required": [
+          "background",
+          "card",
+          "surface",
+          "textPrimary",
+          "textSecondary",
+          "textMuted",
+          "border",
+          "borderStrong",
+          "primary",
+          "secondary",
+          "accent",
+          "sidebarBg",
+          "sidebarText",
+          "sidebarHover",
+          "headerBg"
+        ]
+      },
       "MobileCapabilitiesSuccessV1": {
         "type": "object",
         "properties": {
@@ -25186,10 +25264,85 @@
                   "opportunities",
                   "opportunitiesCreate"
                 ]
+              },
+              "formatting": {
+                "type": "object",
+                "properties": {
+                  "country": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "order": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "day",
+                        "month",
+                        "year"
+                      ]
+                    }
+                  },
+                  "separator": {
+                    "type": "string"
+                  },
+                  "hour12": {
+                    "type": "boolean"
+                  },
+                  "datePattern": {
+                    "type": "string"
+                  },
+                  "dateTimePattern": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "country",
+                  "order",
+                  "separator",
+                  "hour12",
+                  "datePattern",
+                  "dateTimePattern"
+                ]
+              },
+              "theme": {
+                "type": "object",
+                "properties": {
+                  "pairId": {
+                    "type": "string",
+                    "description": "Tenant theme pair id, e.g. 'forest' or 'custom'."
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "English pair name; 'Custom' for a tenant-authored pair."
+                  },
+                  "light": {
+                    "$ref": "#/components/schemas/MobileThemeSeedTokensV1"
+                  },
+                  "dark": {
+                    "$ref": "#/components/schemas/MobileThemeSeedTokensV1"
+                  },
+                  "version": {
+                    "type": "string",
+                    "description": "Stable hash of pairId plus both token sets."
+                  }
+                },
+                "required": [
+                  "pairId",
+                  "label",
+                  "light",
+                  "dark",
+                  "version"
+                ],
+                "description": "Tenant theme pair the mobile app renders; always present, defaults to Alga."
               }
             },
             "required": [
-              "features"
+              "features",
+              "formatting",
+              "theme"
             ]
           }
         },
@@ -46557,7 +46710,6 @@
               "type": "string",
               "enum": [
                 "en",
-                "en-AU",
                 "fr",
                 "es",
                 "de",
@@ -46693,7 +46845,6 @@
               "type": "string",
               "enum": [
                 "en",
-                "en-AU",
                 "fr",
                 "es",
                 "de",
@@ -46894,7 +47045,6 @@
               "type": "string",
               "enum": [
                 "en",
-                "en-AU",
                 "fr",
                 "es",
                 "de",
@@ -111355,7 +111505,7 @@
     "/api/v1/mobile/me/capabilities": {
       "get": {
         "summary": "Get current mobile feature capabilities",
-        "description": "Returns tenant-product and RBAC-derived mobile feature availability for the authenticated API-key user.",
+        "description": "Returns tenant-product and RBAC-derived mobile feature availability, plus the country-derived date format, for the authenticated API-key user.",
         "tags": [
           "Mobile v1"
         ],

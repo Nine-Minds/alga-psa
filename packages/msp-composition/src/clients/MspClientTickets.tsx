@@ -77,7 +77,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   initialUsers = []
 }) => {
   const { t } = useTranslation('msp/clients');
-  const { locale } = useFormatters();
+  const { locale, dateFormat } = useFormatters();
   const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -317,6 +317,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       onTagsChange: handleTagsChange,
       showClient: false, // Don't show client column since we're already on client page
       locale,
+      dateFormat,
     }).map((column) => {
       const columnId = Array.isArray(column.dataIndex) ? column.dataIndex.join('_') : column.dataIndex;
       // Every shared ticket column declares a percent width, which makes them
@@ -327,7 +328,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       }
       const width = CLIENT_LIST_COLUMN_WIDTHS[columnId];
       return width ? { ...column, width } : column;
-    }), [initialCategories, initialBoards, clientDisplaySettings, handleTicketClick, handleTagsChange, locale]);
+    }), [initialCategories, initialBoards, clientDisplaySettings, handleTicketClick, handleTagsChange, locale, dateFormat]);
 
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {

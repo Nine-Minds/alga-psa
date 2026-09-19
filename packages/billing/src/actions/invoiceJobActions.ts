@@ -281,7 +281,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
       const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date
-        ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.invoice_date).toLocaleDateString(amountLocale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -289,7 +289,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         : null;
 
       const dueDate = invoice.due_date
-        ? dateValueToDate(invoice.due_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.due_date).toLocaleDateString(amountLocale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -524,7 +524,7 @@ export const sendInvoiceEmailAction = withAuth(async (
       const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date
-        ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.invoice_date).toLocaleDateString(amountLocale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -532,7 +532,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         : 'N/A';
 
       const dueDate = invoice.due_date
-        ? dateValueToDate(invoice.due_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.due_date).toLocaleDateString(amountLocale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',

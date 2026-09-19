@@ -7,6 +7,8 @@ import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-ac
 import { MspLayoutClient } from "./MspLayoutClient";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
+import { getDateFormatPreference } from "@alga-psa/clients/actions/countryActions";
+import { SYSTEM_DATE_FORMAT } from "@alga-psa/core/i18n/countryDateFormat";
 import { preloadLocaleResources } from "@/lib/i18n/preloadLocaleResources";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
 import { isEnterprise } from "@alga-psa/core/features";
@@ -113,6 +115,8 @@ export default async function MspLayout({
   // banner here so it never mounts (or calls getLicenseStatus) on hosted/SaaS.
   const selfHostLicensing = await isSelfHostLicensing();
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
+  // Digit order / separator / clock follow the tenant's country, never the language.
+  const dateFormat = await getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT);
 
   const tenantId = session.user.tenant;
   const { mspWhiteLabel, tenantBranding } = tenantId
@@ -125,6 +129,7 @@ export default async function MspLayout({
       mspBranding={mspBranding}
       session={session}
       currencyCode={currencyCode}
+      dateFormat={dateFormat}
       productCode={productCode}
       needsOnboarding={needsOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}

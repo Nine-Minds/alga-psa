@@ -59,6 +59,11 @@ export default defineConfig({
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
+      // Country-driven date shape: a document is dated the way its recipient
+      // writes dates, whatever language it is written in.
+      'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
+      'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
+      'src/services/pdfGenerationService.renderCountry.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
@@ -114,6 +119,13 @@ export default defineConfig({
       {
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
+      },
+      // Same shape as the logger rule: core's i18n exports sit under src/lib, so
+      // the generic @alga-psa/<pkg>/<path> rule below misses them. Reached here
+      // through @alga-psa/ui's date formatter.
+      {
+        find: /^@alga-psa\/core\/i18n\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
       },
       {
         find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,

@@ -220,7 +220,7 @@ vi.mock('@alga-psa/teams/actions', () => ({
 vi.mock('../../../actions/ticketDisplaySettings', () => ({
   getTicketingDisplaySettings: vi
     .fn()
-    .mockResolvedValue({ dateTimeFormat: 'MMM d, yyyy h:mm a', responseStateTrackingEnabled: true }),
+    .mockResolvedValue({ showWeekday: false, responseStateTrackingEnabled: true }),
 }));
 
 vi.mock('../../../actions/clientLookupActions', () => ({

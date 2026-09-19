@@ -325,7 +325,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 }) => {
     const { t } = useTranslation('features/tickets');
     // Hardcoded English, and a date that followed the browser's locale.
-    const { formatDate, locale } = useFormatters();
+    const { formatDate, locale, dateFormat } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -536,7 +536,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
-    const [dateTimeFormat, setDateTimeFormat] = useState<string>(bootstrap?.displaySettings?.dateTimeFormat ?? 'MMM d, yyyy h:mm a');
+    const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
     const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(bootstrap?.displaySettings?.responseStateTrackingEnabled ?? true);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
@@ -1345,9 +1345,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const loadDisplaySettings = async () => {
             try {
                 const settings = await getTicketingDisplaySettings();
-                if (settings?.dateTimeFormat) {
-                    setDateTimeFormat(settings.dateTimeFormat);
-                }
+                setShowWeekday(settings?.showWeekday ?? false);
                 setResponseStateTrackingEnabled(settings?.responseStateTrackingEnabled ?? true);
             } catch (error) {
                 console.error('Failed to load ticketing display settings:', error);
@@ -1361,17 +1359,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const tz = getUserTimeZone();
         
         if (ticket.entered_at) {
-            const formattedDate = formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
+            const formattedDate = formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
             const distance = formatTicketRelativeToNow(ticket.entered_at, locale);
             setCreatedRelativeTime(`${formattedDate} (${distance})`);
         }
 
         if (ticket.updated_at) {
-            const formattedDate = formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
+            const formattedDate = formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
             const distance = formatTicketRelativeToNow(ticket.updated_at, locale);
             setUpdatedRelativeTime(`${formattedDate} (${distance})`);
         }
-    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat, locale]);
+    }, [ticket.entered_at, ticket.updated_at, dateFormat, showWeekday, locale]);
 
     // Fetch tags when component mounts
     useEffect(() => {
@@ -3505,7 +3503,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.created', 'Created')} {createdRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
+                                return formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
                             })()}
                         </p>
                     )}
@@ -3513,7 +3511,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.updated', 'Updated')} {updatedRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
+                                return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
                             })()}
                         </p>
                     )}
@@ -3826,7 +3824,7 @@ const handleClose = () => {
                     onOpenScheduleEntry={handleOpenScheduleEntry}
                     scheduleRefreshKey={scheduleRefreshKey}
                     userId={userId || ''}
-                    dateTimeFormat={dateTimeFormat}
+                    showWeekday={showWeekday}
                     timeEntriesRefreshKey={timeEntriesRefreshKey}
                     onEditTimeEntry={handleEditTimeEntry}
                     onDeleteTimeEntry={handleRequestDeleteTimeEntry}

@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TemplateAst } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
-const { mapDbQuoteToViewModelMock } = vi.hoisted(() => ({
-  mapDbQuoteToViewModelMock: vi.fn(),
-}));
+const { mapDbQuoteToViewModelMock, resolveClientCountryMock, resolveTenantDefaultCountryMock } =
+  vi.hoisted(() => ({
+    mapDbQuoteToViewModelMock: vi.fn(),
+    resolveClientCountryMock: vi.fn(),
+    resolveTenantDefaultCountryMock: vi.fn(),
+  }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: {} }),
@@ -21,6 +24,11 @@ vi.mock('../lib/adapters/quoteAdapters', () => ({
 
 vi.mock('./browserPoolService', () => ({
   browserPoolService: { getBrowser: vi.fn(), releaseBrowser: vi.fn() },
+}));
+
+vi.mock('@alga-psa/tenancy/lib/tenantDefaultCountry', () => ({
+  resolveClientCountry: resolveClientCountryMock,
+  resolveTenantDefaultCountry: resolveTenantDefaultCountryMock,
 }));
 
 import { PDFGenerationService } from './pdfGenerationService';
@@ -72,10 +80,16 @@ const viewModel = {
   items: [{ id: 'a1', description: 'Managed backup', quantity: 1, unitPrice: 123456, total: 123456 }],
 };
 
-const buildService = (locale: string) => {
+/**
+ * Both axes are stubbed at their innermost lookup so the public resolvers the
+ * preview actually calls still run: the language the document is written in,
+ * and the country whose date shape it is dated in.
+ */
+const buildService = (locale: string, country: string | null) => {
   const service = new PDFGenerationService('tenant-1');
   (service as any).resolveRecipientClientId = vi.fn().mockResolvedValue('client-1');
   (service as any).resolveRenderedLocale = vi.fn().mockResolvedValue(locale);
+  resolveClientCountryMock.mockResolvedValue(country ? { code: country, name: country } : null);
   return service;
 };
 
@@ -83,31 +97,37 @@ describe('on-screen previews render in the recipient locale', () => {
   beforeEach(() => {
     mapDbQuoteToViewModelMock.mockReset();
     mapDbQuoteToViewModelMock.mockResolvedValue(viewModel);
+    resolveClientCountryMock.mockReset();
+    resolveTenantDefaultCountryMock.mockReset();
+    resolveTenantDefaultCountryMock.mockResolvedValue(null);
   });
 
   it('renders a quote preview in the client language, labels and formatting alike', async () => {
-    const service = buildService('de');
+    // German language, UK recipient: the language names the labels and groups
+    // the currency, the country numbers the date. They disagree on purpose --
+    // German dots here would mean the language had kept the date.
+    const service = buildService('de', 'GB');
 
     const preview = await service.renderQuotePreview({ quoteId: 'quote-1', templateAst });
 
     expect(preview.html).toContain('Rechnungsdatum');
     expect(preview.html).toContain('Zwischensumme');
-    expect(preview.html).toContain('4.3.2026');
+    expect(preview.html).toContain('04/03/2026');
     expect(preview.html).toContain('1.234,56');
   });
 
   it('keeps the preview English when the recipient resolves to English', async () => {
-    const service = buildService('en');
+    const service = buildService('en', 'US');
 
     const preview = await service.renderQuotePreview({ quoteId: 'quote-2', templateAst });
 
     expect(preview.html).toContain('Issue Date');
     expect(preview.html).toContain('Subtotal');
-    expect(preview.html).toContain('3/4/2026');
+    expect(preview.html).toContain('03/04/2026');
   });
 
   it('renders an invoice preview in the recipient locale too', async () => {
-    const service = buildService('de');
+    const service = buildService('de', 'DE');
     (service as any).getInvoiceForRendering = vi.fn().mockResolvedValue({ client_id: 'client-1' });
     (service as any).enrichWithTenantClient = vi.fn(async (_knex: unknown, data: unknown) => data);
 
@@ -121,7 +141,7 @@ describe('on-screen previews render in the recipient locale', () => {
 
       expect(preview.html).toContain('Rechnungsdatum');
       expect(preview.html).toContain('Zwischensumme');
-      expect(preview.html).toContain('4.3.2026');
+      expect(preview.html).toContain('04.03.2026');
     } finally {
       spy.mockRestore();
     }
