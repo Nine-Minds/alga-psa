@@ -12,6 +12,7 @@ export default defineConfig({
       'tests/**/*.test.ts',
       'tests/**/*.test.tsx',
       'src/actions/projectBillingActions.contract.test.ts',
+      'src/actions/invoiceEmailBrandLogo.contract.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
       'src/lib/taxRateApplicability.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
