@@ -57,12 +57,16 @@ const asUser = (user_id: string, tenant: string) =>
 const messageContent = async (id: string, tenant: string): Promise<string> =>
   (await connectionRef.current('messages').where({ id, tenant }).first())?.content;
 
+const messageRow = async (id: string, tenant: string) =>
+  connectionRef.current('messages').where({ id, tenant }).first();
+
 describe('EE chat message authorization (disposable database, real tenant context)', () => {
-  let disposable: DisposableDatabase;
+  let disposable: DisposableDatabase | undefined;
+  let db: Knex;
 
   beforeAll(async () => {
     disposable = await createDisposableDatabase('ee_chat_authz');
-    const db = disposable.db;
+    db = disposable.db;
     connectionRef.current = db;
 
     // Migration-equivalent EE schema: composite (tenant, id) primary keys and
@@ -106,7 +110,6 @@ describe('EE chat message authorization (disposable database, real tenant contex
   });
 
   beforeEach(async () => {
-    const db = disposable.db;
     getCurrentUserMock.mockReset();
     await db('messages').delete();
     await db('chats').delete();
@@ -128,8 +131,8 @@ describe('EE chat message authorization (disposable database, real tenant contex
     ]);
 
     await db('messages').insert([
-      { tenant: TENANT_A, id: DUP_MESSAGE, chat_id: DUP_CHAT, chat_role: 'bot', content: 'tenant-a', message_order: 1 },
-      { tenant: TENANT_B, id: DUP_MESSAGE, chat_id: DUP_CHAT, chat_role: 'bot', content: 'tenant-b', message_order: 1 },
+      { tenant: TENANT_A, id: DUP_MESSAGE, chat_id: DUP_CHAT, chat_role: 'bot', content: 'tenant-a', thumb: 'up', feedback: 'feedback-a', message_order: 3 },
+      { tenant: TENANT_B, id: DUP_MESSAGE, chat_id: DUP_CHAT, chat_role: 'bot', content: 'tenant-b', thumb: 'up', feedback: 'feedback-b', message_order: 3 },
       { tenant: TENANT_A, id: A_ONLY_MESSAGE, chat_id: A_ONLY_CHAT, chat_role: 'bot', content: 'a-only', message_order: 1 },
       { tenant: TENANT_B, id: B_ONLY_MESSAGE, chat_id: B_ONLY_CHAT, chat_role: 'bot', content: 'b-only', message_order: 1 },
     ]);
@@ -137,7 +140,9 @@ describe('EE chat message authorization (disposable database, real tenant contex
 
   afterAll(async () => {
     connectionRef.current = null as unknown as Knex;
-    await disposable.drop();
+    if (disposable) {
+      await disposable.drop();
+    }
   });
 
   it('authorizes duplicate-id reads and updates in both tenants for the same user id', async () => {
@@ -193,6 +198,115 @@ describe('EE chat message authorization (disposable database, real tenant contex
       runWithTenant(TENANT_A, () => Message.update(B_ONLY_MESSAGE, { content: 'hacked' }, SHARED_USER)),
     ).resolves.toBe(0);
     expect(await messageContent(B_ONLY_MESSAGE, TENANT_B)).toBe('b-only');
+  });
+
+  it('strips forged columns on the action update path and leaves foreign rows untouched', async () => {
+    asUser(SHARED_USER, TENANT_A);
+
+    await expect(
+      updateMessageAction(DUP_MESSAGE, {
+        content: 'action-edited',
+        thumb: 'down',
+        feedback: 'action-feedback',
+        message_order: 7,
+        tenant: TENANT_B,
+        chat_id: B_ONLY_CHAT,
+        chat_role: 'system',
+        id: 'forged-id',
+      } as never),
+    ).resolves.toBe('success');
+
+    expect(await messageRow(DUP_MESSAGE, TENANT_A)).toMatchObject({
+      id: DUP_MESSAGE,
+      tenant: TENANT_A,
+      chat_id: DUP_CHAT,
+      chat_role: 'bot',
+      content: 'action-edited',
+      thumb: 'down',
+      feedback: 'action-feedback',
+      message_order: 7,
+    });
+    // The tenant-B row with the same message id must be untouched.
+    expect(await messageRow(DUP_MESSAGE, TENANT_B)).toMatchObject({
+      id: DUP_MESSAGE,
+      tenant: TENANT_B,
+      chat_id: DUP_CHAT,
+      chat_role: 'bot',
+      content: 'tenant-b',
+      thumb: 'up',
+      feedback: 'feedback-b',
+      message_order: 3,
+    });
+  });
+
+  it('strips forged columns on the direct model update path and leaves foreign rows untouched', async () => {
+    const updated = await runWithTenant(TENANT_A, () =>
+      Message.update(
+        DUP_MESSAGE,
+        {
+          content: 'model-edited',
+          tenant: TENANT_B,
+          chat_id: B_ONLY_CHAT,
+          chat_role: 'system',
+          id: 'forged-id',
+        } as never,
+        SHARED_USER,
+      ),
+    );
+    expect(updated).toBe(1);
+
+    expect(await messageRow(DUP_MESSAGE, TENANT_A)).toMatchObject({
+      id: DUP_MESSAGE,
+      tenant: TENANT_A,
+      chat_id: DUP_CHAT,
+      chat_role: 'bot',
+      content: 'model-edited',
+      thumb: 'up',
+      feedback: 'feedback-a',
+      message_order: 3,
+    });
+    expect(await messageRow(DUP_MESSAGE, TENANT_B)).toMatchObject({
+      id: DUP_MESSAGE,
+      tenant: TENANT_B,
+      chat_id: DUP_CHAT,
+      chat_role: 'bot',
+      content: 'tenant-b',
+    });
+  });
+
+  it('persists partial updates including empty strings, nulls, zero, and omitted fields', async () => {
+    asUser(SHARED_USER, TENANT_A);
+
+    await expect(
+      updateMessageAction(DUP_MESSAGE, { content: '', thumb: null, feedback: null, message_order: 0 }),
+    ).resolves.toBe('success');
+
+    expect(await messageRow(DUP_MESSAGE, TENANT_A)).toMatchObject({
+      id: DUP_MESSAGE,
+      tenant: TENANT_A,
+      chat_id: DUP_CHAT,
+      chat_role: 'bot',
+      content: '',
+      thumb: null,
+      feedback: null,
+      message_order: 0,
+    });
+
+    // Omitted fields keep their stored values; only the supplied field changes.
+    await expect(updateMessageAction(DUP_MESSAGE, { feedback: 'only-feedback' })).resolves.toBe(
+      'success',
+    );
+
+    expect(await messageRow(DUP_MESSAGE, TENANT_A)).toMatchObject({
+      id: DUP_MESSAGE,
+      tenant: TENANT_A,
+      chat_id: DUP_CHAT,
+      chat_role: 'bot',
+      content: '',
+      thumb: null,
+      feedback: 'only-feedback',
+      message_order: 0,
+    });
   });
 
   it('fails model operations closed without tenant context', async () => {

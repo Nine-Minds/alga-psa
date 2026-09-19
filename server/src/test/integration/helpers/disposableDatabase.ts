@@ -19,7 +19,8 @@ export interface DisposableDatabase {
 /**
  * Create a throwaway PostgreSQL database for one suite so it never creates or
  * drops tables in a shared application database. Cleanup drops only the
- * database this helper created.
+ * database this helper created. Both creation and cleanup are exception-safe
+ * so a failed setup never leaks the admin connection or masks the failure.
  */
 export async function createDisposableDatabase(prefix: string): Promise<DisposableDatabase> {
   const admin = createKnex({
@@ -29,22 +30,36 @@ export async function createDisposableDatabase(prefix: string): Promise<Disposab
   });
 
   const databaseName = `${prefix}_${randomUUID().replace(/-/g, '').slice(0, 20)}`;
-  await admin.raw('CREATE DATABASE ??', [databaseName]);
 
-  const db = createKnex({
-    client: 'pg',
-    connection: adminConnection(databaseName),
-    pool: { min: 1, max: 4 },
-  });
+  let db: Knex;
+  try {
+    await admin.raw('CREATE DATABASE ??', [databaseName]);
+    db = createKnex({
+      client: 'pg',
+      connection: adminConnection(databaseName),
+      pool: { min: 1, max: 4 },
+    });
+  } catch (error) {
+    await admin.destroy().catch(() => undefined);
+    throw error;
+  }
 
+  let dropped = false;
   const drop = async () => {
-    await db.destroy();
-    await admin.raw(
-      'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()',
-      [databaseName],
-    );
-    await admin.raw('DROP DATABASE IF EXISTS ??', [databaseName]);
-    await admin.destroy();
+    if (dropped) {
+      return;
+    }
+    dropped = true;
+    await db.destroy().catch(() => undefined);
+    try {
+      await admin.raw(
+        'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()',
+        [databaseName],
+      );
+      await admin.raw('DROP DATABASE IF EXISTS ??', [databaseName]);
+    } finally {
+      await admin.destroy().catch(() => undefined);
+    }
   };
 
   return { db, databaseName, drop };

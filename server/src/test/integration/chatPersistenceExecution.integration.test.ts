@@ -37,7 +37,7 @@ type ChatActionsModule = typeof import('@ee/lib/chat-actions/chatActions');
 
 describe('chat persistence execution flows (db-backed)', () => {
   let db: Knex;
-  let disposable: DisposableDatabase;
+  let disposable: DisposableDatabase | undefined;
 
   const loadChatActions = async (): Promise<ChatActionsModule> => {
     vi.resetModules();
@@ -78,7 +78,9 @@ describe('chat persistence execution flows (db-backed)', () => {
   });
 
   afterAll(async () => {
-    await disposable.drop();
+    if (disposable) {
+      await disposable.drop();
+    }
   });
 
   it('DB-backed happy path: approved execution persists final assistant message', async () => {
