@@ -9257,8 +9257,15 @@ it.each(['sender', 'authentication', 'inactive', 'portal', 'no_role', 'no_update
     if (condition === 'portal') await customer.table('users').where('user_id', recipient.userId).update({ user_type: 'client' });
     if (condition === 'no_role') await customer.table('user_roles').where('user_id', recipient.userId).del();
     if (condition === 'no_update') {
-      const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'update' }).first();
-      await customer.table('role_permissions').where('permission_id', permission.permission_id).del();
+      // Every tenant carries two `ticket:update` rows -- the msp one and the client-portal
+      // one -- and neither `.first()` nor the table has an order, so revoking a single id
+      // left the other row still granting the technician and the reply was admitted. Revoke
+      // every matching grant, the shape lines 3588/3594 already use.
+      // LEVERAGE: pattern permission-revoke-by-capability -- four sites here now hand-expand
+      // "revoke this capability" into select-ids-then-whereIn because the fixtures expose
+      // rows, not capabilities. A revokeCapability(db, resource, action) helper belongs below.
+      const updatePermissions = await customer.table('permissions').where({ resource: 'ticket', action: 'update' }).select('permission_id');
+      await customer.table('role_permissions').whereIn('permission_id', updatePermissions.map(row => row.permission_id)).del();
     }
     if (condition === 'suspended') await customer.table('tenants').update({ suspended_at: new Date() });
     if (condition === 'audience') {
@@ -9507,8 +9514,8 @@ it.each(['sender', 'spf_only', 'missing_auth', 'no_update', 'inactive', 'disclos
     if (condition === 'spf_only') emailData.headers['authentication-results'] = 'mx.example.test; spf=pass smtp.mailfrom=example.test';
     if (condition === 'missing_auth') emailData.headers = {};
     if (condition === 'no_update') {
-      const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'update' }).first();
-      await customer.table('role_permissions').where('permission_id', permission.permission_id).del();
+      const updatePermissions = await customer.table('permissions').where({ resource: 'ticket', action: 'update' }).select('permission_id');
+      await customer.table('role_permissions').whereIn('permission_id', updatePermissions.map(row => row.permission_id)).del();
     }
     if (condition === 'inactive') await customer.table('users').where('user_id', recipient.userId).update({ is_inactive: true });
     if (condition === 'disclosed') {
@@ -9625,8 +9632,8 @@ it.each(['create_permission', 'foreign_client', 'destination_scope'] as const)('
   const priority = await customer.table('priorities').where('item_type', 'ticket').first();
   const defaults = { client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: status.status_id, priority_id: priority.priority_id, entered_by: customerPrincipal.userId };
   if (condition === 'create_permission') {
-    const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'create' }).first();
-    await customer.table('role_permissions').where('permission_id', permission.permission_id).del();
+    const createPermissions = await customer.table('permissions').where({ resource: 'ticket', action: 'create' }).select('permission_id');
+    await customer.table('role_permissions').whereIn('permission_id', createPermissions.map(row => row.permission_id)).del();
   }
   if (condition === 'destination_scope') {
     const board = await customer.table('boards').where('board_id', operation.customer_board_id).first(); defaults.board_id = randomUUID();
@@ -9784,8 +9791,8 @@ it.each(['deleted', 'disclosed', 'inactive', 'no_update', 'missing_receipt', 'ch
   }
   if (condition === 'inactive') await customer.table('users').where('user_id', recipient.userId).update({ is_inactive: true });
   if (condition === 'no_update') {
-    const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'update' }).first();
-    await customer.table('role_permissions').where('permission_id', permission.permission_id).del();
+    const updatePermissions = await customer.table('permissions').where({ resource: 'ticket', action: 'update' }).select('permission_id');
+    await customer.table('role_permissions').whereIn('permission_id', updatePermissions.map(row => row.permission_id)).del();
   }
   if (condition === 'missing_receipt') await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).del();
   if (condition === 'changed_actor') await customer.table('comments').where('comment_id', receipt.comment_id).update({ user_id: fixture.customerPrincipal.userId });
