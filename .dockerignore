@@ -40,6 +40,10 @@ build
 !packages/types/dist/**
 !packages/formatting/dist
 !packages/formatting/dist/**
+# packages/email/dist imports @alga-psa/storage/{models/storage,
+# StorageProviderFactory} to attach the branded header logo inline.
+!packages/storage/dist
+!packages/storage/dist/**
 
 # Environment variables
 .env

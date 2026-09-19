@@ -9,6 +9,7 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
+import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';
 
@@ -574,6 +575,22 @@ export abstract class BaseEmailService {
       const effectiveEntityType = params.entityType ?? (effectiveTicketId ? 'ticket' : undefined);
       const effectiveEntityId = params.entityId ?? effectiveTicketId;
 
+      // Every notification path lands here after its template is rendered, so
+      // this is where the branded header logo becomes an inline attachment.
+      // (The paths that render a tenant template and call a provider directly —
+      // invoice mail, project status updates — run the same pass themselves.)
+      let attachments = params.attachments;
+      if (params.tenantId && params.tenantId !== 'system') {
+        const embedded = await embedBrandLogo(html, {
+          tenantId: params.tenantId,
+          context: { service: this.getServiceName(), subject, notificationSubtypeId: params.notificationSubtypeId },
+        });
+        html = embedded.html;
+        if (embedded.attachments.length > 0) {
+          attachments = [...(attachments ?? []), ...embedded.attachments];
+        }
+      }
+
       // Convert to provider email message format
       emailMessage = {
         from,
@@ -586,7 +603,7 @@ export abstract class BaseEmailService {
         subject,
         html,
         text,
-        attachments: params.attachments,
+        attachments,
         headers
       };
 

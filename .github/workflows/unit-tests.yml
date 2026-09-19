@@ -86,9 +86,11 @@ jobs:
       # `test` target has no `dependsOn: ^build`). Without this their suites die at
       # collection with `Failed to resolve entry for package "@alga-psa/db"`.
       # `dependsOn: ^build` cascades to each lib's own deps, so this set covers the
-      # horizontal libs real-import tests pull in.
+      # horizontal libs real-import tests pull in. @alga-psa/storage joined the
+      # set once sla's email import chain started resolving its `/models/storage`
+      # subpath through the same dist-only "exports" mechanism.
       - name: Build shared libraries
-        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage --parallel=3
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -201,7 +203,7 @@ jobs:
       # resolution (onboarding seeds are .cjs) need the dists on disk; same
       # project set the nx job builds.
       - name: Build shared libraries
-        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage --parallel=3
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'

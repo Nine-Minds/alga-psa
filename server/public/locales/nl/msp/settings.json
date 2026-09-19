@@ -1876,6 +1876,11 @@
         "normal": "Normaal",
         "low": "Laag"
       }
+    },
+    "emailTemplates": {
+      "editor": {
+        "inlineLogoHint": "Uw logo wordt bij verzending in het bericht ingesloten. Laat de verwijzing src=\"cid:{{cid}}\" ongewijzigd — vervangt u die door een URL, dan moeten ontvangers eerst toestemming geven om de afbeelding te downloaden."
+      }
     }
   },
   "timeEntry": {
