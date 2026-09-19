@@ -272,3 +272,6 @@ reports/mutation/
 server/.repro-migrations-*/
 server/.ci-combined-migrations/
 server/knexfile-overlay-probe.cjs
+
+# Card-service logs (see scripts/dev/run-card-service.sh)
+.card-service-logs/
