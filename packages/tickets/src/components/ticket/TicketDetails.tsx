@@ -3771,10 +3771,10 @@ const handleClose = () => {
                     className="max-w-lg"
                 >
                     <DialogContent>
-                        <h2 className="text-lg font-semibold text-gray-900">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                             {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
                         </h2>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                             {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
                         </p>
                         {closedMasterContext && (

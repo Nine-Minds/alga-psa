@@ -42,7 +42,7 @@ export function ClosedMasterChoiceFields({
     <label
       key={choice}
       htmlFor={`${idPrefix}-${choice}`}
-      className="flex cursor-pointer items-start gap-3 rounded-md border border-gray-200 p-3 hover:bg-gray-50"
+      className="flex cursor-pointer items-start gap-3 rounded-md border border-gray-200 p-3 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
     >
       <input
         id={`${idPrefix}-${choice}`}
@@ -55,8 +55,8 @@ export function ClosedMasterChoiceFields({
         disabled={disabled}
       />
       <span className="min-w-0">
-        <span className="block text-sm font-medium text-gray-900">{label}</span>
-        <span className="mt-0.5 block text-xs text-gray-500">{help}</span>
+        <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">{label}</span>
+        <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{help}</span>
       </span>
     </label>
   );
@@ -98,7 +98,7 @@ export function ClosedMasterChoiceFields({
           ),
         )}
       {keepClosedGated && (
-        <p className="text-xs text-amber-700" id={`${idPrefix}-gating`}>
+        <p className="text-xs text-amber-700 dark:text-amber-300" id={`${idPrefix}-gating`}>
           {t(
             'details.bundle.closedMasterGating',
             "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option.",

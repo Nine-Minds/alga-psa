@@ -3020,11 +3020,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             </div>
 
             {bundleNeedsClosedMasterChoice && bundleClosedMasterContext && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3" id={`${id}-bundle-closed-master-section`}>
-                <div className="mb-1 text-sm font-medium text-amber-900">
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/30" id={`${id}-bundle-closed-master-section`}>
+                <div className="mb-1 text-sm font-medium text-amber-900 dark:text-amber-200">
                   {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
                 </div>
-                <p className="mb-2 text-xs text-amber-800">
+                <p className="mb-2 text-xs text-amber-800 dark:text-amber-300">
                   {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
                 </p>
                 <ClosedMasterChoiceFields
