@@ -1,27 +1,32 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { knex as createKnex, type Knex } from 'knex';
+import type { Knex } from 'knex';
 
-const createTenantKnexMock = vi.hoisted(() => vi.fn());
-const runWithTenantMock = vi.hoisted(() =>
-  vi.fn(async (_tenant: string, fn: () => Promise<unknown>) => fn()),
-);
+import { createDisposableDatabase, type DisposableDatabase } from './helpers/disposableDatabase';
+
+const connectionRef = vi.hoisted(() => ({ current: null as unknown as Knex }));
 const getCurrentUserMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/db', () => ({
-  createTenantKnex: createTenantKnexMock,
-  runWithTenant: runWithTenantMock,
-}));
-
-// The EE chat/message models import ee/server/src/lib/db, which re-exports
-// @alga-psa/db/tenant (not @/lib/db) — mock it too so model queries hit the
-// test database instead of the env-configured shared connection.
+// Substitute only the database connection. `runWithTenant` and
+// `getTenantContext` stay the real implementations so tenant context is
+// propagated through AsyncLocalStorage exactly as production does; the
+// context-aware `createTenantKnex` reads the real context store.
 vi.mock('@alga-psa/db/tenant', async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
+  const actual = await importOriginal<typeof import('@alga-psa/db/tenant')>();
   return {
     ...actual,
-    createTenantKnex: createTenantKnexMock,
-    runWithTenant: runWithTenantMock,
+    createTenantKnex: async (tenantId?: string | null) => ({
+      knex: connectionRef.current,
+      tenant: tenantId ?? actual.getTenantContext() ?? null,
+    }),
+  };
+});
+
+vi.mock('@/lib/db', async () => {
+  const tenant = await import('@alga-psa/db/tenant');
+  return {
+    createTenantKnex: tenant.createTenantKnex,
+    runWithTenant: tenant.runWithTenant,
   };
 });
 
@@ -29,274 +34,197 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
 }));
 
+import { runWithTenant } from '@alga-psa/db';
 import Message from '@ee/models/message';
 import Chat from '@ee/models/chat';
+import { getChatMessagesAction, updateMessageAction } from '@ee/lib/chat-actions/chatActions';
 
-const TENANT_A = 'chat-authz-tenant-a';
-const TENANT_B = 'chat-authz-tenant-b';
-const USER_A = 'chat-authz-user-a';
-const USER_B = 'chat-authz-user-b';
+const TENANT_A = '11111111-1111-4111-8111-111111111111';
+const TENANT_B = '22222222-2222-4222-8222-222222222222';
+const SHARED_USER = '33333333-3333-4333-8333-333333333333';
+const OTHER_USER = '66666666-6666-4666-8666-666666666666';
 
-type ChatActionsModule = typeof import('@ee/lib/chat-actions/chatActions');
+const DUP_CHAT = '44444444-4444-4444-8444-444444444444';
+const DUP_MESSAGE = '55555555-5555-4555-8555-555555555555';
+const A_ONLY_CHAT = '77777777-7777-4777-8777-777777777777';
+const A_ONLY_MESSAGE = '88888888-8888-4888-8888-888888888888';
+const B_ONLY_CHAT = '99999999-9999-4999-8999-999999999999';
+const B_ONLY_MESSAGE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
-describe('EE chat message authorization (db-backed)', () => {
-  let db: Knex;
+const asUser = (user_id: string, tenant: string) =>
+  getCurrentUserMock.mockResolvedValue({ user_id, tenant });
 
-  const loadChatActions = async (): Promise<ChatActionsModule> => {
-    vi.resetModules();
-    return import('@ee/lib/chat-actions/chatActions');
-  };
+const messageContent = async (id: string, tenant: string): Promise<string> =>
+  (await connectionRef.current('messages').where({ id, tenant }).first())?.content;
 
-  const seedChat = async (params: {
-    id: string;
-    tenant: string;
-    userId: string;
-    title?: string;
-  }) => {
-    await db('chats').insert({
-      id: params.id,
-      tenant: params.tenant,
-      user_id: params.userId,
-      title_text: params.title ?? 'Chat',
-      title_is_locked: false,
-    });
-  };
-
-  const seedMessage = async (params: {
-    id: string;
-    tenant: string;
-    chatId: string;
-    content: string;
-    order?: number;
-    thumb?: string | null;
-    feedback?: string | null;
-    role?: string;
-  }) => {
-    await db('messages').insert({
-      id: params.id,
-      tenant: params.tenant,
-      chat_id: params.chatId,
-      chat_role: params.role ?? 'bot',
-      content: params.content,
-      thumb: params.thumb ?? 'up',
-      feedback: params.feedback ?? 'original-feedback',
-      message_order: params.order ?? 1,
-    });
-  };
+describe('EE chat message authorization (disposable database, real tenant context)', () => {
+  let disposable: DisposableDatabase;
 
   beforeAll(async () => {
-    db = createKnex({
-      client: 'pg',
-      connection: {
-        host: process.env.DB_HOST ?? 'localhost',
-        port: Number(process.env.DB_PORT ?? 5438),
-        user: process.env.DB_USER_ADMIN ?? 'postgres',
-        password: process.env.DB_PASSWORD_ADMIN ?? 'postpass123',
-        database: 'postgres',
-      },
-      pool: { min: 1, max: 4 },
+    disposable = await createDisposableDatabase('ee_chat_authz');
+    const db = disposable.db;
+    connectionRef.current = db;
+
+    // Migration-equivalent EE schema: composite (tenant, id) primary keys and
+    // composite foreign keys, matching 202410291100_create_ai_schema.cjs.
+    await db.schema.createTable('users', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('user_id').notNullable();
+      table.primary(['tenant', 'user_id']);
     });
 
-    await db.schema.dropTableIfExists('messages');
-    await db.schema.dropTableIfExists('chats');
-
     await db.schema.createTable('chats', (table) => {
-      table.text('id').primary();
-      table.text('tenant').notNullable();
-      table.text('user_id').notNullable();
+      table.uuid('tenant').notNullable();
+      table.uuid('id').notNullable();
+      table.uuid('user_id');
       table.text('title_text');
       table.boolean('title_is_locked');
+      table.timestamp('created_at', { useTz: true }).defaultTo(db.fn.now());
+      table.timestamp('updated_at', { useTz: true }).defaultTo(db.fn.now());
+      table.primary(['tenant', 'id']);
+      table
+        .foreign(['tenant', 'user_id'])
+        .references(['tenant', 'user_id'])
+        .inTable('users');
     });
 
     await db.schema.createTable('messages', (table) => {
-      table.text('id').primary();
-      table.text('tenant').notNullable();
-      table.text('chat_id').notNullable();
-      table.text('chat_role').notNullable();
-      table.text('content').notNullable();
+      table.uuid('tenant').notNullable();
+      table.uuid('id').notNullable();
+      table.uuid('chat_id');
+      table.text('chat_role');
+      table.text('content');
       table.text('thumb');
       table.text('feedback');
-      table.integer('message_order');
+      table.specificType('message_order', 'serial');
+      table.primary(['tenant', 'id']);
+      table
+        .foreign(['tenant', 'chat_id'])
+        .references(['tenant', 'id'])
+        .inTable('chats');
     });
   });
 
   beforeEach(async () => {
-    createTenantKnexMock.mockReset();
+    const db = disposable.db;
     getCurrentUserMock.mockReset();
-    createTenantKnexMock.mockResolvedValue({ knex: db, tenant: TENANT_A });
-    getCurrentUserMock.mockResolvedValue({ user_id: USER_A, tenant: TENANT_A });
-    await db('messages').whereIn('tenant', [TENANT_A, TENANT_B]).delete();
-    await db('chats').whereIn('tenant', [TENANT_A, TENANT_B]).delete();
+    await db('messages').delete();
+    await db('chats').delete();
+    await db('users').delete();
+
+    await db('users').insert([
+      { tenant: TENANT_A, user_id: SHARED_USER },
+      { tenant: TENANT_A, user_id: OTHER_USER },
+      { tenant: TENANT_B, user_id: SHARED_USER },
+    ]);
+
+    // Duplicate chat and message identifiers across tenants, with the same
+    // user id present in both tenants.
+    await db('chats').insert([
+      { tenant: TENANT_A, id: DUP_CHAT, user_id: SHARED_USER, title_text: 'A', title_is_locked: false },
+      { tenant: TENANT_B, id: DUP_CHAT, user_id: SHARED_USER, title_text: 'B', title_is_locked: false },
+      { tenant: TENANT_A, id: A_ONLY_CHAT, user_id: SHARED_USER, title_text: 'A only', title_is_locked: false },
+      { tenant: TENANT_B, id: B_ONLY_CHAT, user_id: SHARED_USER, title_text: 'B only', title_is_locked: false },
+    ]);
+
+    await db('messages').insert([
+      { tenant: TENANT_A, id: DUP_MESSAGE, chat_id: DUP_CHAT, chat_role: 'bot', content: 'tenant-a', message_order: 1 },
+      { tenant: TENANT_B, id: DUP_MESSAGE, chat_id: DUP_CHAT, chat_role: 'bot', content: 'tenant-b', message_order: 1 },
+      { tenant: TENANT_A, id: A_ONLY_MESSAGE, chat_id: A_ONLY_CHAT, chat_role: 'bot', content: 'a-only', message_order: 1 },
+      { tenant: TENANT_B, id: B_ONLY_MESSAGE, chat_id: B_ONLY_CHAT, chat_role: 'bot', content: 'b-only', message_order: 1 },
+    ]);
   });
 
   afterAll(async () => {
-    await db.schema.dropTableIfExists('messages');
-    await db.schema.dropTableIfExists('chats');
-    await db.destroy();
+    connectionRef.current = null as unknown as Knex;
+    await disposable.drop();
   });
 
-  it('allows the owner to read and partially update a message, including falsy/null values', async () => {
-    const chatId = randomUUID();
-    const messageId = randomUUID();
-    await seedChat({ id: chatId, tenant: TENANT_A, userId: USER_A });
-    await seedMessage({ id: messageId, tenant: TENANT_A, chatId, content: 'hello', order: 1 });
+  it('authorizes duplicate-id reads and updates in both tenants for the same user id', async () => {
+    asUser(SHARED_USER, TENANT_A);
+    const tenantARead = await getChatMessagesAction(DUP_CHAT);
+    expect(tenantARead.map((message) => message.content)).toEqual(['tenant-a']);
+    await expect(updateMessageAction(DUP_MESSAGE, { content: 'a-edited' })).resolves.toBe('success');
+    expect(await messageContent(DUP_MESSAGE, TENANT_B)).toBe('tenant-b');
 
-    const { getChatMessagesAction, updateMessageAction } = await loadChatActions();
-
-    const loaded = await getChatMessagesAction(chatId);
-    expect(loaded.map((message) => message.id)).toEqual([messageId]);
-
-    const result = await updateMessageAction(messageId, {
-      thumb: null,
-      feedback: null,
-      message_order: 0,
-    });
-    expect(result).toBe('success');
-
-    const row = await db('messages').where({ id: messageId, tenant: TENANT_A }).first();
-    expect(row).toMatchObject({ thumb: null, feedback: null, message_order: 0 });
+    asUser(SHARED_USER, TENANT_B);
+    const tenantBRead = await getChatMessagesAction(DUP_CHAT);
+    expect(tenantBRead.map((message) => message.content)).toEqual(['tenant-b']);
+    await expect(updateMessageAction(DUP_MESSAGE, { content: 'b-edited' })).resolves.toBe('success');
+    expect(await messageContent(DUP_MESSAGE, TENANT_A)).toBe('a-edited');
   });
 
-  it('denies anonymous and incomplete callers instead of returning empty or skipped', async () => {
-    const chatId = randomUUID();
-    const messageId = randomUUID();
-    await seedChat({ id: chatId, tenant: TENANT_A, userId: USER_A });
-    await seedMessage({ id: messageId, tenant: TENANT_A, chatId, content: 'secret' });
+  it('denies another user in the same tenant and leaves the foreign row unchanged', async () => {
+    asUser(OTHER_USER, TENANT_A);
 
-    const { getChatMessagesAction, updateMessageAction } = await loadChatActions();
+    await expect(getChatMessagesAction(DUP_CHAT)).rejects.toThrow('Chat access denied');
+    await expect(updateMessageAction(DUP_MESSAGE, { content: 'hacked' })).resolves.toBe('unauthorized');
+    expect(await messageContent(DUP_MESSAGE, TENANT_A)).toBe('tenant-a');
+  });
 
+  it('denies cross-tenant access and leaves the foreign row unchanged', async () => {
+    asUser(SHARED_USER, TENANT_B);
+
+    await expect(getChatMessagesAction(A_ONLY_CHAT)).rejects.toThrow('Chat access denied');
+    await expect(updateMessageAction(A_ONLY_MESSAGE, { content: 'hacked' })).resolves.toBe('unauthorized');
+    expect(await messageContent(A_ONLY_MESSAGE, TENANT_A)).toBe('a-only');
+  });
+
+  it('returns the same denial for missing and foreign identifiers', async () => {
+    asUser(SHARED_USER, TENANT_B);
+    const missingId = randomUUID();
+
+    await expect(getChatMessagesAction(A_ONLY_CHAT)).rejects.toThrow('Chat access denied');
+    await expect(getChatMessagesAction(missingId)).rejects.toThrow('Chat access denied');
+    await expect(updateMessageAction(A_ONLY_MESSAGE, { content: 'x' })).resolves.toBe('unauthorized');
+    await expect(updateMessageAction(missingId, { content: 'x' })).resolves.toBe('unauthorized');
+  });
+
+  it('enforces ownership in the models through the real tenant context', async () => {
+    await expect(
+      runWithTenant(TENANT_A, () => Message.getByChatIdForUser(A_ONLY_CHAT, SHARED_USER)),
+    ).resolves.toHaveLength(1);
+
+    await expect(
+      runWithTenant(TENANT_A, () => Message.getByChatIdForUser(B_ONLY_CHAT, SHARED_USER)),
+    ).rejects.toThrow('Chat access denied');
+
+    await expect(
+      runWithTenant(TENANT_A, () => Message.update(B_ONLY_MESSAGE, { content: 'hacked' }, SHARED_USER)),
+    ).resolves.toBe(0);
+    expect(await messageContent(B_ONLY_MESSAGE, TENANT_B)).toBe('b-only');
+  });
+
+  it('fails model operations closed without tenant context', async () => {
+    await expect(Message.getByChatId(DUP_CHAT)).rejects.toThrow('Missing tenant for message model');
+    await expect(Message.update(DUP_MESSAGE, { content: 'x' }, SHARED_USER)).rejects.toThrow(
+      'Missing tenant for message model',
+    );
+    await expect(Chat.getRecentByUser(SHARED_USER, 20)).rejects.toThrow('Missing tenant for chat model');
+  });
+
+  it('enforces the composite message-to-chat foreign key', async () => {
+    await expect(
+      connectionRef.current('messages').insert({
+        tenant: TENANT_A,
+        id: randomUUID(),
+        chat_id: randomUUID(),
+        chat_role: 'bot',
+        content: 'orphan',
+        message_order: 99,
+      }),
+    ).rejects.toThrow();
+
+    const orphanCount = await connectionRef.current('messages')
+      .where({ tenant: TENANT_A, content: 'orphan' })
+      .count<{ count: string }[]>('* as count');
+    expect(Number(orphanCount[0].count)).toBe(0);
+  });
+
+  it('authenticates empty-id requests for both actions before any access', async () => {
     getCurrentUserMock.mockResolvedValue(null);
-    await expect(getChatMessagesAction(chatId)).rejects.toThrow('Not authenticated');
-    await expect(updateMessageAction(messageId, { content: 'hacked' })).rejects.toThrow(
-      'Not authenticated',
-    );
 
-    getCurrentUserMock.mockResolvedValue({ tenant: TENANT_A });
-    await expect(getChatMessagesAction(chatId)).rejects.toThrow('Not authenticated');
-
-    getCurrentUserMock.mockResolvedValue({ user_id: USER_A });
-    await expect(getChatMessagesAction(chatId)).rejects.toThrow('Missing tenant for chat action');
-    await expect(updateMessageAction(messageId, { content: 'hacked' })).rejects.toThrow(
-      'Missing tenant for chat action',
-    );
-
-    const row = await db('messages').where({ id: messageId }).first();
-    expect(row.content).toBe('secret');
-  });
-
-  it('denies another user in the same tenant from reading or updating', async () => {
-    const chatId = randomUUID();
-    const messageId = randomUUID();
-    await seedChat({ id: chatId, tenant: TENANT_A, userId: USER_A });
-    await seedMessage({ id: messageId, tenant: TENANT_A, chatId, content: 'private' });
-
-    getCurrentUserMock.mockResolvedValue({ user_id: USER_B, tenant: TENANT_A });
-
-    const { getChatMessagesAction, updateMessageAction } = await loadChatActions();
-
-    await expect(getChatMessagesAction(chatId)).rejects.toThrow('Chat access denied');
-    await expect(updateMessageAction(messageId, { content: 'hacked' })).resolves.toBe('unauthorized');
-
-    const row = await db('messages').where({ id: messageId }).first();
-    expect(row.content).toBe('private');
-  });
-
-  it('denies cross-tenant reads and writes', async () => {
-    const chatId = randomUUID();
-    const messageId = randomUUID();
-    await seedChat({ id: chatId, tenant: TENANT_B, userId: USER_B });
-    await seedMessage({ id: messageId, tenant: TENANT_B, chatId, content: 'other-tenant' });
-
-    // Caller is authenticated in tenant A; the target rows live in tenant B.
-    getCurrentUserMock.mockResolvedValue({ user_id: USER_A, tenant: TENANT_A });
-
-    const { getChatMessagesAction, updateMessageAction } = await loadChatActions();
-
-    await expect(getChatMessagesAction(chatId)).rejects.toThrow('Chat access denied');
-    await expect(updateMessageAction(messageId, { content: 'hacked' })).resolves.toBe('unauthorized');
-
-    const row = await db('messages').where({ id: messageId }).first();
-    expect(row).toMatchObject({ content: 'other-tenant', tenant: TENANT_B });
-  });
-
-  it('strips non-allowlisted columns on the action update path', async () => {
-    const chatId = randomUUID();
-    const messageId = randomUUID();
-    await seedChat({ id: chatId, tenant: TENANT_A, userId: USER_A });
-    await seedMessage({ id: messageId, tenant: TENANT_A, chatId, content: 'original', role: 'bot' });
-
-    const { updateMessageAction } = await loadChatActions();
-    const result = await updateMessageAction(messageId, {
-      content: 'edited',
-      thumb: 'down',
-      feedback: 'feedback-text',
-      message_order: 7,
-      tenant: 'attacker-tenant',
-      chat_id: 'attacker-chat',
-      chat_role: 'system',
-      id: 'attacker-id',
-    } as never);
-    expect(result).toBe('success');
-
-    const row = await db('messages').where({ id: messageId }).first();
-    expect(row).toMatchObject({
-      id: messageId,
-      tenant: TENANT_A,
-      chat_id: chatId,
-      chat_role: 'bot',
-      content: 'edited',
-      thumb: 'down',
-      feedback: 'feedback-text',
-      message_order: 7,
-    });
-  });
-
-  it('strips non-allowlisted columns on the direct model update path', async () => {
-    const chatId = randomUUID();
-    const messageId = randomUUID();
-    await seedChat({ id: chatId, tenant: TENANT_A, userId: USER_A });
-    await seedMessage({ id: messageId, tenant: TENANT_A, chatId, content: 'original', role: 'bot' });
-
-    await Message.update(
-      messageId,
-      {
-        content: 'direct-edit',
-        tenant: 'attacker-tenant',
-        chat_id: 'attacker-chat',
-        chat_role: 'system',
-        id: 'attacker-id',
-      } as never,
-      USER_A,
-    );
-
-    const row = await db('messages').where({ id: messageId }).first();
-    expect(row).toMatchObject({
-      id: messageId,
-      tenant: TENANT_A,
-      chat_id: chatId,
-      chat_role: 'bot',
-      content: 'direct-edit',
-    });
-  });
-
-  it('fails model reads and writes closed when the tenant context is missing', async () => {
-    const chatId = randomUUID();
-    const messageId = randomUUID();
-    await seedChat({ id: chatId, tenant: TENANT_A, userId: USER_A });
-    await seedMessage({ id: messageId, tenant: TENANT_A, chatId, content: 'original' });
-
-    createTenantKnexMock.mockResolvedValue({ knex: db, tenant: null });
-
-    await expect(Message.getByChatId(chatId)).rejects.toThrow('Missing tenant for message model');
-    await expect(Message.getByChatIdForUser(chatId, USER_A)).rejects.toThrow(
-      'Missing tenant for message model',
-    );
-    await expect(Message.update(messageId, { content: 'hacked' }, USER_A)).rejects.toThrow(
-      'Missing tenant for message model',
-    );
-    await expect(Chat.getRecentByUser(USER_A, 20)).rejects.toThrow('Missing tenant for chat model');
-
-    const row = await db('messages').where({ id: messageId }).first();
-    expect(row.content).toBe('original');
+    await expect(getChatMessagesAction('')).rejects.toThrow('Not authenticated');
+    await expect(updateMessageAction('', { content: 'x' })).rejects.toThrow('Not authenticated');
   });
 });

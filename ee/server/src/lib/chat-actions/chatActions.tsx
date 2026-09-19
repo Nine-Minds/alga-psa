@@ -192,13 +192,14 @@ export async function addMessageToChatAction(data: Omit<IMessage, 'tenant'>) {
 }
 
 export async function getChatMessagesAction(chatId: string): Promise<IMessage[]> {
+  // Resolve the caller before any short circuit or persistence probe so an
+  // unauthenticated or tenant-less request is denied even for an empty id or a
+  // cached unavailable-persistence status.
+  const user = await requireChatUser();
+
   if (!chatId) {
     return [];
   }
-
-  // Resolve the caller before touching persistence so an unauthenticated or
-  // tenant-less request is denied rather than reported as empty history.
-  const user = await requireChatUser();
 
   if (!(await isChatPersistenceAvailable())) {
     return [];

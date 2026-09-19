@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { knex as createKnex, type Knex } from 'knex';
+import type { Knex } from 'knex';
+
+import { createDisposableDatabase, type DisposableDatabase } from './helpers/disposableDatabase';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const runWithTenantMock = vi.hoisted(() =>
@@ -35,6 +37,7 @@ type ChatActionsModule = typeof import('@ee/lib/chat-actions/chatActions');
 
 describe('chat persistence execution flows (db-backed)', () => {
   let db: Knex;
+  let disposable: DisposableDatabase;
 
   const loadChatActions = async (): Promise<ChatActionsModule> => {
     vi.resetModules();
@@ -42,20 +45,8 @@ describe('chat persistence execution flows (db-backed)', () => {
   };
 
   beforeAll(async () => {
-    db = createKnex({
-      client: 'pg',
-      connection: {
-        host: process.env.DB_HOST ?? 'localhost',
-        port: Number(process.env.DB_PORT ?? 5438),
-        user: process.env.DB_USER_ADMIN ?? 'postgres',
-        password: process.env.DB_PASSWORD_ADMIN ?? 'postpass123',
-        database: 'postgres',
-      },
-      pool: { min: 1, max: 4 },
-    });
-
-    await db.schema.dropTableIfExists('messages');
-    await db.schema.dropTableIfExists('chats');
+    disposable = await createDisposableDatabase('ee_chat_persistence');
+    db = disposable.db;
 
     await db.schema.createTable('chats', (table) => {
       table.text('id').primary();
@@ -87,9 +78,7 @@ describe('chat persistence execution flows (db-backed)', () => {
   });
 
   afterAll(async () => {
-    await db.schema.dropTableIfExists('messages');
-    await db.schema.dropTableIfExists('chats');
-    await db.destroy();
+    await disposable.drop();
   });
 
   it('DB-backed happy path: approved execution persists final assistant message', async () => {

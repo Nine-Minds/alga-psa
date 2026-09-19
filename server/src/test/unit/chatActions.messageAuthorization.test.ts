@@ -83,6 +83,16 @@ describe('EE chat action authorization boundary', () => {
       expect(getByChatIdForUserMock).not.toHaveBeenCalled();
     });
 
+    it('denies anonymous empty-id requests before any persistence access', async () => {
+      makePersistenceAvailable();
+      getCurrentUserMock.mockResolvedValue(null);
+
+      const { getChatMessagesAction } = await loadChatActions();
+      await expect(getChatMessagesAction('')).rejects.toThrow('Not authenticated');
+      expect(createTenantKnexMock).not.toHaveBeenCalled();
+      expect(getByChatIdForUserMock).not.toHaveBeenCalled();
+    });
+
     it('reads messages for the authenticated owner inside the tenant context', async () => {
       makePersistenceAvailable();
       getCurrentUserMock.mockResolvedValue(USER);
@@ -133,6 +143,16 @@ describe('EE chat action authorization boundary', () => {
       await expect(updateMessageAction('m-1', { content: 'x' })).rejects.toThrow(
         'Missing tenant for chat action',
       );
+      expect(updateMessageMock).not.toHaveBeenCalled();
+    });
+
+    it('denies anonymous empty-id requests before any persistence access', async () => {
+      makePersistenceAvailable();
+      getCurrentUserMock.mockResolvedValue(null);
+
+      const { updateMessageAction } = await loadChatActions();
+      await expect(updateMessageAction('', { content: 'x' })).rejects.toThrow('Not authenticated');
+      expect(createTenantKnexMock).not.toHaveBeenCalled();
       expect(updateMessageMock).not.toHaveBeenCalled();
     });
 
@@ -191,6 +211,46 @@ describe('EE chat action authorization boundary', () => {
 
       const { updateMessageAction } = await loadChatActions();
       await expect(updateMessageAction('m-1', { content: 'x' })).resolves.toBe('skipped');
+    });
+  });
+
+  describe('authentication precedes cached persistence availability', () => {
+    const makePersistenceUnavailable = () => {
+      createTenantKnexMock.mockResolvedValue({
+        knex: { schema: { hasTable: vi.fn(async () => false) } },
+        tenant: 'tenant-1',
+      });
+    };
+
+    it('denies anonymous reads and updates after the unavailable status is cached', async () => {
+      makePersistenceUnavailable();
+      getCurrentUserMock.mockResolvedValue(USER);
+
+      const { getChatMessagesAction, updateMessageAction } = await loadChatActions();
+      await expect(getChatMessagesAction('chat-1')).resolves.toEqual([]);
+      await expect(updateMessageAction('m-1', { content: 'x' })).resolves.toBe('skipped');
+      const persistenceProbes = createTenantKnexMock.mock.calls.length;
+
+      getCurrentUserMock.mockResolvedValue(null);
+      await expect(getChatMessagesAction('chat-1')).rejects.toThrow('Not authenticated');
+      await expect(updateMessageAction('m-1', { content: 'x' })).rejects.toThrow('Not authenticated');
+
+      expect(createTenantKnexMock.mock.calls.length).toBe(persistenceProbes);
+      expect(getByChatIdForUserMock).not.toHaveBeenCalled();
+      expect(updateMessageMock).not.toHaveBeenCalled();
+    });
+
+    it('denies an empty id even when persistence is known unavailable', async () => {
+      makePersistenceUnavailable();
+      getCurrentUserMock.mockResolvedValue(USER);
+
+      const { getChatMessagesAction, updateMessageAction } = await loadChatActions();
+      await getChatMessagesAction('chat-1');
+      await updateMessageAction('m-1', { content: 'x' });
+
+      getCurrentUserMock.mockResolvedValue(null);
+      await expect(getChatMessagesAction('')).rejects.toThrow('Not authenticated');
+      await expect(updateMessageAction('', { content: 'x' })).rejects.toThrow('Not authenticated');
     });
   });
 });
