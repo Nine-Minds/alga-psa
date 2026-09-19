@@ -272,6 +272,20 @@ pre-existing rows:
 | `co_managed_entitlements.capacity` (Oz) | 3, reference `smoke-fixture-sub-2026-09-09`, valid until 2026-10-09 |
 | White Rabbit allocation seats | 1 |
 
+**The reset has to survive the fixtures being used.** Two tables are written
+by the *application*, not by this script, and both carry a real foreign key
+into rows the reset removes. Signing in writes a `sessions` row and a
+`user_preferences` row against a fixture user, so those are deleted before
+`users`. Merely opening the Oz clients screen lazily writes a system-managed
+default into `client_billing_profiles` against the sponsor-side "Munchkin
+Country" client, whose foreign key has no `ON DELETE CASCADE` — so the reset
+worked right up until anyone had actually used the fixtures once, then failed
+with `23503`. Because `clients` has more than forty referencing constraints,
+enumerating today's blockers would only move the trap: `purgeClient` attempts
+the delete and asks PostgreSQL which constraint stopped it, clearing only that
+one and retrying. A dependent the product starts writing next month needs no
+edit here.
+
 After a reset the database holds three tenants again and `--verify` reports only
 the five pre-existing rows the fixture adopts rather than creates. The
 capability probes go red as well and `--verify` exits non-zero, because the

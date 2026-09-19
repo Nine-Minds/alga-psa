@@ -252,6 +252,78 @@ async function purgeTenant(trx: Knex.Transaction, tenant: string): Promise<void>
   await trx('tenants').where({ tenant }).del();
 }
 
+/**
+ * Delete one client row, and whatever has come to depend on it.
+ *
+ * The fixture creates the sponsor-side "Munchkin Country" client, but the
+ * application keeps adding rows to it after the fact: merely opening the Oz
+ * clients screen lazily writes a system-managed default into
+ * `client_billing_profiles`, whose foreign key carries no ON DELETE CASCADE.
+ * So `--reset` worked right up until the fixtures had been used once — the
+ * same trap already paid for with `sessions` and `user_preferences`.
+ *
+ * `clients` has more than forty referencing constraints, so enumerating the
+ * ones that happen to block today would only move the trap a few months out.
+ * Instead the delete is attempted and PostgreSQL is asked what stopped it:
+ * only a table actually holding the client back is touched, and a dependent
+ * the application starts writing next month needs no edit here.
+ */
+async function purgeClient(trx: Knex.Transaction, tenant: string, clientId: string): Promise<void> {
+  const cleared = new Set<string>();
+  for (;;) {
+    await trx.raw('SAVEPOINT purge_client');
+    try {
+      await trx('clients').where({ tenant, client_id: clientId }).del();
+      await trx.raw('RELEASE SAVEPOINT purge_client');
+      return;
+    } catch (error) {
+      await trx.raw('ROLLBACK TO SAVEPOINT purge_client');
+      const violation = error as { code?: string; table?: string; constraint?: string };
+      if (violation.code !== '23503' || !violation.table || !violation.constraint) throw error;
+      if (cleared.has(violation.constraint)) {
+        throw new Error(`Cannot delete client ${clientId}; ${violation.table} still blocks it via ${violation.constraint}`);
+      }
+      cleared.add(violation.constraint);
+      await deleteClientReferences(trx, tenant, clientId, violation.table, violation.constraint);
+    }
+  }
+}
+
+/** Delete the rows one named foreign key holds against a client. */
+async function deleteClientReferences(trx: Knex.Transaction, tenant: string, clientId: string,
+  table: string, constraint: string): Promise<void> {
+  const { rows } = await trx.raw<{ rows: { child_column: string; parent_column: string }[] }>(`
+    SELECT child.attname AS child_column, parent.attname AS parent_column
+      FROM pg_constraint c
+      JOIN LATERAL unnest(c.conkey, c.confkey) AS pair(child_attnum, parent_attnum) ON TRUE
+      JOIN pg_attribute child ON child.attrelid = c.conrelid AND child.attnum = pair.child_attnum
+      JOIN pg_attribute parent ON parent.attrelid = c.confrelid AND parent.attnum = pair.parent_attnum
+     WHERE c.conname = ? AND c.conrelid = ?::regclass`, [constraint, table]);
+  const match: Record<string, string> = {};
+  for (const { child_column, parent_column } of rows) {
+    if (parent_column === 'client_id') match[child_column] = clientId;
+    else if (parent_column === 'tenant') match[child_column] = tenant;
+  }
+  if (!Object.values(match).includes(clientId)) {
+    throw new Error(`${constraint} on ${table} does not reference clients.client_id`);
+  }
+  // A single-column foreign key to client_id alone would otherwise reach across
+  // tenants; client ids are uuids so it would not match, but the filter makes
+  // the blast radius of this delete explicit rather than incidental.
+  if (!Object.values(match).includes(tenant) && await columnExists(trx, table, 'tenant')) {
+    match.tenant = tenant;
+  }
+  await trx(table).where(match).del();
+}
+
+async function columnExists(trx: Knex.Transaction, table: string, column: string): Promise<boolean> {
+  const { rows } = await trx.raw<{ rows: { exists: boolean }[] }>(`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = ? AND column_name = ?) AS exists`, [table, column]);
+  return rows[0]?.exists === true;
+}
+
 // ---------------------------------------------------------------------------
 // Capability area 1 — Pro sponsor seat pool
 // ---------------------------------------------------------------------------
@@ -1014,7 +1086,7 @@ async function reset(db: Knex): Promise<void> {
 
     if (await trx('tenants').where({ tenant: MUNCHKIN }).first()) await purgeTenant(trx, MUNCHKIN);
     await trx('client_locations').where({ tenant: OZ, client_id: OZ_MUNCHKIN_CLIENT }).del();
-    await trx('clients').where({ tenant: OZ, client_id: OZ_MUNCHKIN_CLIENT }).del();
+    await purgeClient(trx, OZ, OZ_MUNCHKIN_CLIENT);
 
     // Restore the pre-fixture sponsor pool.
     await trx('co_managed_entitlements').where({ tenant: OZ }).update({
