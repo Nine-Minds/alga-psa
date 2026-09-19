@@ -13,6 +13,12 @@ export default defineConfig({
     alias: [
       // Workspace packages whose exports map points "import" to ./dist (unbuilt).
       // Redirect to source so vitest can resolve them before vi.mock kicks in.
+      // LEVERAGE: pattern vitest-workspace-src-aliases — same hand-transcribed
+      // copy of @alga-psa/db's exports map as 18 other vitest configs.
+      // "./admin" lives at src/lib/admin.ts, so it must precede the catch-all
+      // below, which would rewrite it to the nonexistent src/admin. StorageService
+      // reaches it through @alga-psa/licensing's built lib/license-state.js.
+      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
       { find: /^@alga-psa\/db(.*)$/, replacement: path.resolve(__dirname, '../db/src$1') },
       { find: /^@alga-psa\/event-bus(.*)$/, replacement: path.resolve(__dirname, '../event-bus/src$1') },
       { find: /^@alga-psa\/event-schemas(.*)$/, replacement: path.resolve(__dirname, '../event-schemas/src$1') },
