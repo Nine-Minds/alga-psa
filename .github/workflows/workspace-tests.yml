@@ -128,6 +128,18 @@ jobs:
           cache: npm
       - run: npm install -g npm@11
       - run: npm ci
+      # Several workspace packages expose dist-only "exports" subpaths, and these
+      # lanes run vitest straight after `npm ci` with no build. @alga-psa/co-managed
+      # maps ten subpaths to ./dist/*.js on purpose -- built modules import them
+      # under plain Node -- so its dist must exist before collection or vite fails
+      # with "Failed to resolve import @alga-psa/co-managed/nativeConversationEvents".
+      # Same mechanism, and the same project set, as the build step unit-tests.yml
+      # already runs.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/co-managed --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
       - name: Install locked showcase dependencies and build its iframe
         if: matrix.suite == 'ui-kit-showcase'
         run: |
@@ -185,6 +197,18 @@ jobs:
           cache: npm
       - run: npm install -g npm@11
       - run: npm ci
+      # Several workspace packages expose dist-only "exports" subpaths, and these
+      # lanes run vitest straight after `npm ci` with no build. @alga-psa/co-managed
+      # maps ten subpaths to ./dist/*.js on purpose -- built modules import them
+      # under plain Node -- so its dist must exist before collection or vite fails
+      # with "Failed to resolve import @alga-psa/co-managed/nativeConversationEvents".
+      # Same mechanism, and the same project set, as the build step unit-tests.yml
+      # already runs.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/co-managed --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
       - name: Collect, execute and reconcile assigned EE unit tests
         run: node scripts/run-additional-workspace-tests.mjs enterprise-unit
       - name: Retain EE unit execution evidence

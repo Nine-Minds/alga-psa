@@ -37,6 +37,7 @@ describe('product bootstrap resolver', () => {
     const files = await listProductSeedFiles({ onboardingSeedsRoot: root, productCode: 'co_managed' });
     expect(files).toEqual([
       '01_roles.cjs', '02_permissions.cjs', '03_role_permissions.cjs',
+      '05_project_statuses.cjs',
       '06_project_task_statuses.cjs', '07_ad_to_m365_project_template.cjs',
       '08_document_folder_templates.cjs', '09_asset_type_registry.cjs',
     ]);
