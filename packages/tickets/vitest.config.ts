@@ -39,6 +39,10 @@ export default defineConfig({
       { find: /^@alga-psa\/db\/reassignTicketResources$/, replacement: path.resolve(__dirname, '../db/src/lib/reassignTicketResources.ts') },
       { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../db/src/models/index.ts') },
       { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/models/$1') },
+      // db/testing is the shared test-double layer and lives at src/testing, not
+      // src/lib. It must precede the catch-all below, which assumes every other
+      // @alga-psa/db subpath is under src/lib and would rewrite it to a missing file.
+      { find: /^@alga-psa\/db\/testing$/, replacement: path.resolve(__dirname, '../db/src/testing/index.ts') },
       { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/lib/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../formatting/src/$1') },
