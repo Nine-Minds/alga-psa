@@ -417,6 +417,7 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for creating schedule entry');
     }
 
+    validateAllDayInterval(entry);
     if (options.entryId !== undefined && !isUuid(options.entryId)) throw new Error('Invalid reserved schedule entry ID');
     const entry_id = options.entryId ?? uuidv4();
 
@@ -702,6 +703,7 @@ const ScheduleEntry = {
                 work_item_type: entry.work_item_type ?? originalEntry.work_item_type,
                 recurrence_pattern: JSON.stringify(allUpdatePattern),
                 is_recurring: true,
+                is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
                 is_private: entry.is_private ?? originalEntry.is_private,
                 updated_at: new Date(),
               })

@@ -103,6 +103,16 @@ beforeAll(async () => {
     table.uuid('updated_by');
     table.primary(['tenant', 'default_folder_id']);
   });
+  // Provisioning cleanup asks whether the reserved administrator invitation was
+  // already claimed before it erases an unactivated workspace.
+  await db.schema.createTable('user_invitations', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('invitation_id').notNullable();
+    table.text('email');
+    table.timestamp('expires_at', { useTz: true });
+    table.timestamp('used_at', { useTz: true });
+    table.primary(['tenant', 'invitation_id']);
+  });
   await db.schema.createTable('license_state', (table) => {
     table.increments('id').primary();
     table.text('license_token');
@@ -111,7 +121,7 @@ beforeAll(async () => {
   if (process.env.CO_MANAGED_TEST_CITUS === '1') {
     await db.raw("SELECT create_distributed_table('tenants', 'tenant')");
     await db.raw("SELECT create_distributed_table('clients', 'tenant', colocate_with => 'tenants')");
-    for (const table of ['users', 'boards', 'roles', 'permissions', 'role_permissions', 'document_default_folders']) {
+    for (const table of ['users', 'boards', 'roles', 'permissions', 'role_permissions', 'document_default_folders', 'user_invitations']) {
       await db.raw("SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => 'tenants')", [table]);
     }
   }
@@ -668,13 +678,16 @@ describe('co-managed provisioning request and worker lifecycle', () => {
     const input = await requestFixture(), operation = await prepareCoManagedProvisioning(db, input);
     const customer = tenantDb(db, operation.customer_tenant);
     await customer.table('tenants').insert({ tenant: operation.customer_tenant, product_code: 'co_managed' });
-    await customer.table('users').insert({ tenant: operation.customer_tenant, user_id: randomUUID(), user_type: 'internal' });
+    // Residual workspace data, not a user: a customer user row means the
+    // administrator claimed the workspace, and cleanup then refuses outright
+    // with ADMINISTRATOR_CLAIMED in favour of the departure process.
+    await customer.table('clients').insert({ tenant: operation.customer_tenant, client_id: randomUUID() });
     await requestCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
     await expect(runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'seeds', vi.fn())).rejects.toMatchObject({ code: 'OPERATION_CLOSED' });
     await expect(completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId)).rejects.toMatchObject({ code: 'CLEANUP_INCOMPLETE' });
     await customer.table('tenants').del();
     await expect(completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId)).rejects.toMatchObject({ code: 'CLEANUP_INCOMPLETE' });
-    await customer.table('users').del();
+    await customer.table('clients').del();
     await completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
     await completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
     expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations').first()).toMatchObject({ state: 'released' });

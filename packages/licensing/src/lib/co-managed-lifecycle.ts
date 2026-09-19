@@ -41,6 +41,12 @@ export class CoManagedWorkspaceNotFoundError extends Error {
   }
 }
 
+/** Matches the explicit error contract, not a shared JS constructor: worker
+ * adapters and API services can load separately compiled copies of this package. */
+export function isCoManagedWorkspaceNotFoundError(error: unknown): error is CoManagedWorkspaceNotFoundError {
+  return Boolean(error && typeof error === 'object' && (error as Error).name === 'CoManagedWorkspaceNotFoundError');
+}
+
 /** Read under the same lock order as acceptance, allocation, and termination:
  * sponsor entitlement, sponsor tenant, customer relationship, customer tenant.
  * The caller retains these locks until its operational write commits. This is
