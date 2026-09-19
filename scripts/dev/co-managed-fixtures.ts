@@ -1043,9 +1043,18 @@ const FIXTURE_ROWS: { table: string; where: Record<string, unknown> }[] = [
   { table: 'co_management_delegated_grants', where: { tenant: RABBIT, grant_id: id('delegated-grant/rabbit/board-settings') } },
   { table: 'sla_organization_events', where: { tenant: OZ, obligation_id: SLA_OBLIGATION } },
   { table: 'sla_organization_obligations', where: { tenant: OZ, obligation_id: SLA_OBLIGATION } },
-  { table: 'co_managed_ticket_references', where: { tenant: OZ, ticket_id: ESCALATED_TICKET } },
-  { table: 'co_management_ticket_handoffs', where: { tenant: RABBIT, ticket_id: ESCALATED_TICKET } },
-  { table: 'co_management_ticket_work', where: { tenant: RABBIT, ticket_id: ESCALATED_TICKET } },
+  // Both tickets, not just the escalated one. READY_TICKET exists so a reviewer
+  // can perform the escalation themselves, and doing so writes exactly these
+  // three row kinds for it. The sponsor-side reference is the one that bites:
+  // it lives in the OZ tenant with no foreign key to the customer's ticket, so
+  // deleting the ticket does not take it, and `retainedRouting` refuses any
+  // ticket that has a reference without matching work -- leaving the reviewer's
+  // own Journey 2 permanently denied after the documented reset.
+  ...[READY_TICKET, ESCALATED_TICKET].flatMap(ticket => [
+    { table: 'co_managed_ticket_references', where: { tenant: OZ, ticket_id: ticket } },
+    { table: 'co_management_ticket_handoffs', where: { tenant: RABBIT, ticket_id: ticket } },
+    { table: 'co_management_ticket_work', where: { tenant: RABBIT, ticket_id: ticket } },
+  ]),
   { table: 'co_managed_sla_priority_mappings', where: { tenant: OZ, relationship_id: RABBIT_RELATIONSHIP } },
   { table: 'co_management_staff_assignments', where: { tenant: OZ, customer_tenant: RABBIT } },
   { table: 'co_management_staff_assignments', where: { tenant: OZ, customer_tenant: MUNCHKIN } },
@@ -1145,7 +1154,20 @@ async function verify(db: Knex): Promise<void> {
   await add('1 seat pool', 'sponsor entitlement', 'co_managed_entitlements', { tenant: OZ });
   await add('1 seat pool', 'allocation with headroom', 'co_managed_allocations', { tenant: OZ, allocation_id: RABBIT_ALLOCATION });
   await add('1 seat pool', 'allocation at ceiling', 'co_managed_allocations', { tenant: OZ, allocation_id: MUNCHKIN_ALLOCATION });
-  await add('2 escalation', 'ticket ready to escalate', 'tickets', { tenant: RABBIT, ticket_id: READY_TICKET });
+  // Not just "the row exists": *ready to escalate*. A reviewer who performs
+  // Journey 2 leaves shared-work rows on this ticket, and a stale sponsor-side
+  // reference with no matching work row makes `retainedRouting` deny the whole
+  // co-managed panel. The ticket row is still there, so a row-count check
+  // reports the fixture healthy while the journey it exists for cannot be
+  // walked. Assert the absence too.
+  const readyTicket = await db('tickets').where({ tenant: RABBIT, ticket_id: READY_TICKET });
+  const readyWork = await db('co_management_ticket_work').where({ tenant: RABBIT, ticket_id: READY_TICKET });
+  const readyReference = await db('co_managed_ticket_references').where({ tenant: OZ, ticket_id: READY_TICKET });
+  report.push(['2 escalation', readyWork.length || readyReference.length
+    ? `ticket ready to escalate (tickets) -- STALE shared work: ${readyWork.length} work row(s), `
+      + `${readyReference.length} sponsor reference(s); run --reset then re-apply`
+    : 'ticket ready to escalate (tickets)',
+    { matched: readyTicket.length && !readyWork.length && !readyReference.length ? 1 : 0 }]);
   await add('2 escalation', 'escalated ticket work', 'co_management_ticket_work', { tenant: RABBIT, ticket_id: ESCALATED_TICKET });
   await add('2 escalation', 'MSP SLA obligation', 'sla_organization_obligations', { tenant: OZ, obligation_id: SLA_OBLIGATION });
   await add('2 escalation', 'priority mapping', 'co_managed_sla_priority_mappings', { tenant: OZ, relationship_id: RABBIT_RELATIONSHIP });
