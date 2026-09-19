@@ -195,3 +195,49 @@ Worth recording, because it is branch-contract information a reviewer needs:
 The fixture now supplies a real API key, an MSP `Admin` role, and a real
 assigned schedule entry. That is a test correction, not a product concession:
 each of the four gates is reachable only through shapes production cannot produce.
+
+## Three more drops the tool structurally cannot see
+
+`scripts/audit-merge-drops.mjs` compares *what one side added after the fork
+point* against the merge result. Behaviour that existed **before** the fork and
+was later removed by the branch is invisible to it, because neither side "added"
+those lines in the window it examines. Three such drops were found by other
+means in this round, all of the same keep-the-guard-drop-the-effect shape:
+
+| Where | What was dropped | How it was found | Consequence |
+|---|---|---|---|
+| `packages/tickets/src/models/comment.ts` | All three calls to `reconcileCommentAttachments` (insert, note edit) and `withdrawCommentAttachments` (delete). **The imports were kept.** | `ticketCommentAttachmentsIntegration` scored 47/57 here and 56/56 on pristine `origin/main` | Comments created through `commentActions.addCommentToTicket` never claimed the files their note referenced, and deleting a comment never released its claims — leaving a deleted comment's attachments readable. |
+| `server/src/lib/api/services/TimeSheetService.ts` | `is_all_day: data.is_all_day ?? false` on `createScheduleEntry` | Noticed while reconciling the `is_all_day` schema restoration in `timeSheet.ts` | `baseScheduleEntrySchema` accepts `is_all_day`, so the API took the field from the caller and silently created a **timed** entry. The update path still carried it, which is why it was not obvious. |
+| `packages/co-managed/src/nativeScheduleCommand.ts` | Never had `is_all_day` in `writable`, and never called `validateAllDayInterval` | Main's `timeSheetServiceAllDayValidation` was red | On co-managed tenants — the ones this feature is for — the native command claims schedule updates, so all-day entries could not be edited and their boundaries were never validated. |
+
+**The lesson for the next merge on this branch:** the drop audit is necessary
+but not sufficient. It finds what main added and the branch lost. It cannot find
+what the branch quietly stopped calling. The cheap complement is a pristine-tree
+run of the suites that cover the area — `git worktree add <rev>` plus
+`cp -a --reflink=auto node_modules` into it resolves the relative `@alga-psa/*`
+symlinks into that tree and costs about five seconds and no disk, though the
+workspace `dist/` directories are gitignored and must be rebuilt there first.
+
+### One reported row that was a stale assertion, not a drop
+
+`coManagedBootstrap`'s "co-managed admins cannot configure Teams or telephony"
+asserted against provider id `teams_phone`. The registry id is `teams-phone`, on
+both sides. The merge brought main's `requireManageableProvider`, whose registry
+lookup rejects an unknown id **before** the product check, so the test was
+passing on `Unknown telephony provider` and proving nothing about co-managed
+admission. Corrected to the real id; it now fails closed on "not available for
+this product", which is the property it exists to check.
+
+## Measured suite baseline, rather than an assumed one
+
+`coManagedBootstrap` at the pre-round commit `cb65a3444d`, reproduced in a
+worktree as described above:
+
+```
+pre-round  cb65a3444d : 36 failed | 1372 passed (1408)
+after merge + round   : 33 failed | 1375 passed (1408)
+```
+
+Set-differencing the failure names: **zero failures are new** relative to the
+pre-round commit. Four were fixed by the merge and this round, and the telephony
+correction above makes a fifth.

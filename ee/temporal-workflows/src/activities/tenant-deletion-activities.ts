@@ -417,6 +417,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'portable_workspace_activations',
   // Portable upload recovery tombstones outlive tenant deletion: an abandoned
   // provider request can finish late and still needs its destination cleanup.
+  'portable_workspace_restore_uploads',
   'portable_workspace_restores',
   'co_managed_upgrade_purchases',
   'co_management_notification_deliveries',
@@ -425,6 +426,21 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_private_threads',
   'co_management_thread_transfers',
   'co_management_command_receipts',
+  // Seat pool and purchase/provisioning operations. None of these carry a foreign key
+  // (Citus distributed tables drop them), so they are ordered by ownership: the
+  // allocations that spend a pool before the entitlement that holds it, and the
+  // operations that produced them alongside.
+  'co_managed_allocations',
+  'co_managed_entitlements',
+  'co_managed_purchase_operations',
+  'co_managed_provisioning_operations',
+  'co_managed_meeting_creation_operations',
+  // co_management_relationships is the root of the co-managed graph. Every table with a
+  // real FK to it -- co_management_command_receipts, co_management_delegated_grants,
+  // co_management_project_scopes, co_management_ticket_work -- is listed above, so it
+  // must stay after them.
+  'co_management_relationship_events',
+  'co_management_relationships',
   'co_managed_project_task_references',
   // Document-related leaf tables (must come before documents)
   'document_share_access_log', 'document_share_links',
@@ -651,6 +667,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Time period settings (tenant_time_period_settings must come BEFORE time_period_types)
   'tenant_time_period_settings',
+  'time_period_calendar_locks',
   'time_periods', 'time_period_types', 'time_period_settings',
 
   // External entity mappings and tax
