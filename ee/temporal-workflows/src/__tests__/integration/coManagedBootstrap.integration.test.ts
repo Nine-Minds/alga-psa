@@ -17974,7 +17974,17 @@ async function withMspSharedTimerFixture(work: (fixture: any) => Promise<void>) 
     const service = new TimeEntryService();
     const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: context.tenant });
     const today = Date.now();
-    await f.sponsor.table('time_periods').update({ start_date: new Date(today - 7 * 86400_000).toISOString().slice(0, 10), end_date: new Date(today + 7 * 86400_000).toISOString().slice(0, 10) });
+    // Widen the period, never move it. The save fixture this wraps pins its
+    // entries to 2026-09-08 and a running timer needs a period covering *now*,
+    // so overwriting the bounds makes the two stop overlapping the moment the
+    // wall clock leaves that pinned week -- a suite that passed in early
+    // September and then began failing with "No time period found for this
+    // date". Extending in both directions keeps every fixture date inside one
+    // period whenever the suite runs.
+    await f.sponsor.table('time_periods').update({
+      start_date: db.raw('LEAST(start_date, ?::date)', [new Date(today - 7 * 86400_000).toISOString().slice(0, 10)]),
+      end_date: db.raw('GREATEST(end_date, ?::date)', [new Date(today + 7 * 86400_000).toISOString().slice(0, 10)]),
+    });
     const start = (extra: any = {}) => service.startTimeTracking({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId, notes: 'MSP running effort', ...extra }, context);
     const stop = (timer: any, extra: any = {}) => service.stopTimeTracking(timer.session_id, { end_time: new Date(new Date(timer.start_time).getTime() + 30 * 60000).toISOString(), ...extra }, context);
     try { await work({ ...f, apiKeyId, context, service, start, stop }); }

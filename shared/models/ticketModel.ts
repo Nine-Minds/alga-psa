@@ -1418,8 +1418,19 @@ export class TicketModel {
             author: authorName
           }
         };
-        if ((eventPublisher as any).__inboundOutboxPublisher === true) {
-          // The inbound publisher writes its durable outbox in this transaction.
+        // Both markers mean the same thing: this publisher owns the comment
+        // event inside the caller's transaction and must be the one to raise
+        // it. `__inboundOutboxPublisher` writes durable outbox rows for the
+        // inbound-email pipeline; `transactionalCommentEvents` runs the
+        // workflow publisher, whose publishCommentCreated carries the
+        // co-managed retention chain -- licence state, executing run and
+        // version authority, field-redaction policy and actor identity.
+        // Testing only the first marker sent every workflow-authored comment
+        // down persistCommentPublication instead, which stamps the row and
+        // returns: no event, no outbox row, and none of those checks. The
+        // catch below already treats the two markers as equivalent.
+        if ((eventPublisher as any).__inboundOutboxPublisher === true
+          || (eventPublisher as any).transactionalCommentEvents === true) {
           await eventPublisher.publishCommentCreated(event);
         } else {
           await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
