@@ -41,7 +41,14 @@ import {
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
-import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
+import {
+  bundleTicketsAction,
+  getBundleMasterStatusAction,
+  getBundleMasterClosedContextAction,
+  type BundleMasterClosedContextActionResult,
+} from '../actions/ticketBundleActions';
+import { ClosedMasterChoiceFields } from './ticket/ClosedMasterChoiceFields';
+import type { ClosedMasterChoice } from '../lib/ticketBundlePolicy';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
@@ -353,6 +360,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
   const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
   const [bundleError, setBundleError] = useState<string | null>(null);
+  const [bundleClosedMasterContext, setBundleClosedMasterContext] = useState<BundleMasterClosedContextActionResult | null>(null);
+  const [bundleClosedMasterChoice, setBundleClosedMasterChoice] = useState<ClosedMasterChoice | null>(null);
+  const [isLoadingBundleClosedContext, setIsLoadingBundleClosedContext] = useState(false);
   const [bundleExistingMasterIds, setBundleExistingMasterIds] = useState<Set<string>>(new Set());
   const [isLoadingBundleMasterStatus, setIsLoadingBundleMasterStatus] = useState(false);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
@@ -1656,6 +1666,51 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const hasMultipleExistingMasters = bundleExistingMasterIds.size > 1;
 
+  // Load the chosen master's closed context so the dialog can require an
+  // explicit consequence when the master is already closed.
+  useEffect(() => {
+    if (!isBundleDialogOpen || !bundleMasterTicketId) {
+      setBundleClosedMasterContext(null);
+      setBundleClosedMasterChoice(null);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingBundleClosedContext(true);
+    (async () => {
+      try {
+        const context = await getBundleMasterClosedContextAction({ masterTicketId: bundleMasterTicketId });
+        if (cancelled) return;
+        if (isActionMessageError(context) || isActionPermissionError(context)) {
+          setBundleClosedMasterContext(null);
+          setBundleClosedMasterChoice(null);
+          return;
+        }
+        setBundleClosedMasterContext(context);
+        if (context.isClosed) {
+          setBundleClosedMasterChoice(
+            context.allowedChoices.includes('keep_closed') ? 'keep_closed' : (context.allowedChoices[0] ?? null)
+          );
+        } else {
+          setBundleClosedMasterChoice(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load closed-master context', error);
+          setBundleClosedMasterContext(null);
+          setBundleClosedMasterChoice(null);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingBundleClosedContext(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isBundleDialogOpen, bundleMasterTicketId]);
+
+  const bundleNeedsClosedMasterChoice = bundleClosedMasterContext?.isClosed === true;
+  const bundleClosedMasterChoiceReady = !bundleNeedsClosedMasterChoice || Boolean(bundleClosedMasterChoice);
+
   const performBundleTickets = useCallback(async () => {
     if (selectedTicketIdsArray.length < 2) {
       setBundleError(t('bulk.bundle.selectAtLeastTwo', 'Select at least two tickets to bundle.'));
@@ -1668,6 +1723,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (hasMultipleExistingMasters) {
       return;
     }
+    if (bundleNeedsClosedMasterChoice && !bundleClosedMasterChoice) {
+      setBundleError(
+        t('errors.bundle.closedMasterChoiceRequired', "This bundle's master is closed. Choose how to add the child: {{choices}}.", {
+          choices: (bundleClosedMasterContext?.allowedChoices ?? []).join(', '),
+        })
+      );
+      return;
+    }
 
     setBundleError(null);
     try {
@@ -1675,6 +1738,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         masterTicketId: bundleMasterTicketId,
         childTicketIds: selectedTicketIdsArray.filter((id) => id !== bundleMasterTicketId),
         mode: bundleSyncUpdates ? 'sync_updates' : 'link_only',
+        ...(bundleNeedsClosedMasterChoice && bundleClosedMasterChoice
+          ? { onClosedMaster: bundleClosedMasterChoice }
+          : {}),
       });
 
       if (isActionMessageError(result) || isActionPermissionError(result)) {
@@ -1703,6 +1769,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     clearSelection,
     onFilterChange,
     hasMultipleExistingMasters,
+    bundleNeedsClosedMasterChoice,
+    bundleClosedMasterChoice,
+    bundleClosedMasterContext,
     t,
   ]);
 
@@ -2858,6 +2927,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 setIsBundleDialogOpen(false);
                 setBundleError(null);
                 setBundleExistingMasterIds(new Set());
+                setBundleClosedMasterContext(null);
+                setBundleClosedMasterChoice(null);
               }}
             >
               {t('actions.cancel', 'Cancel')}
@@ -2869,6 +2940,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 selectedTicketIdsArray.length < 2 ||
                 !bundleMasterTicketId ||
                 isLoadingBundleMasterStatus ||
+                isLoadingBundleClosedContext ||
+                !bundleClosedMasterChoiceReady ||
                 hasMultipleExistingMasters
               }
             >
@@ -2883,6 +2956,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setIsBundleDialogOpen(false);
           setBundleError(null);
           setBundleExistingMasterIds(new Set());
+          setBundleClosedMasterContext(null);
+          setBundleClosedMasterChoice(null);
         }}
         id={`${id}-bundle-dialog`}
         title={t('bulk.bundle.dialogTitle', 'Bundle Tickets')}
@@ -2957,6 +3032,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             <div className="text-xs text-gray-500">
               {t('bulk.bundle.syncUpdatesHelp', 'Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.')}
             </div>
+
+            {bundleNeedsClosedMasterChoice && bundleClosedMasterContext && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/30" id={`${id}-bundle-closed-master-section`}>
+                <div className="mb-1 text-sm font-medium text-amber-900 dark:text-amber-200">
+                  {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
+                </div>
+                <p className="mb-2 text-xs text-amber-800 dark:text-amber-300">
+                  {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
+                </p>
+                <ClosedMasterChoiceFields
+                  idPrefix={`${id}-bundle-closed-master`}
+                  allowedChoices={bundleClosedMasterContext.allowedChoices}
+                  value={bundleClosedMasterChoice}
+                  onChange={setBundleClosedMasterChoice}
+                  hasResolutionComment={bundleClosedMasterContext.hasResolutionComment}
+                  masterStatusName={bundleClosedMasterContext.masterStatusName}
+                />
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

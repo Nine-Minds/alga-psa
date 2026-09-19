@@ -308,6 +308,17 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   Bundle · {record.bundle_child_count}
                 </span>
               )}
+              {showTicketNumberSubtitle &&
+                isBundleMaster &&
+                record.is_closed &&
+                (record.bundle_open_child_count ?? 0) > 0 && (
+                  <span
+                    id={`ticket-bundle-open-children-badge-${record.ticket_id}`}
+                    className="w-fit rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800"
+                  >
+                    {record.bundle_open_child_count} {t('bundle.openChildrenShort', 'open')}
+                  </span>
+                )}
               {showInlineTagsInTitle && ticketTagsRef && onTagsChange && record.ticket_id && (ticketTagsRef.current[record.ticket_id]?.length ?? 0) > 0 && (
                 <div onClick={(e) => e.stopPropagation()}>
                   <TagManager
