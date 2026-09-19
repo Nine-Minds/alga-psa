@@ -1000,6 +1000,28 @@ jobs:
         timeout-minutes: 10
         run: node scripts/install-api-test-dependencies.mjs
 
+      # xeroCallbackAccessLog.e2e.test.ts is the one API e2e file that spawns
+      # `next dev` out of the raw checkout instead of hitting the prebuilt image on
+      # :3000 (the image build does build dist). @alga-psa/co-managed's exports map
+      # routes ten subpaths' `import` condition at ./dist/*.js, so without a build
+      # step webpack dies with
+      #   Module not found: Can't resolve '@alga-psa/co-managed/nativeConversationEvents'
+      # and every route 500s -- which reads as `expected 500 to be 401`, disguising a
+      # missing dist as an auth failure. Same defect aebf3300b6 fixed for the
+      # workspace lanes; this was the third lane, and it was missed.
+      #
+      # LEVERAGE: friction lane-shared-build-set -- this is now the third workflow
+      # carrying a hand-copied project list because dist-only export subpaths make
+      # `npm ci` insufficient. The set wants to be one reusable action/script, not N
+      # literals that drift independently.
+      - name: Build shared libraries
+        if: ${{ !cancelled() && steps.api_dependencies.outcome == 'success' }}
+        timeout-minutes: 15
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/licensing,@alga-psa/co-managed --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
       - name: Attest ownership of the fresh-install API database
         id: api_database
         if: ${{ !cancelled() && steps.api_dependencies.outcome == 'success' }}
