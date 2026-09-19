@@ -223,6 +223,10 @@ export async function runAppTypeaheadSearch(knex: Knex, tenant: string, user: IU
     const options = { knex, tenant, query: input.query, allowedTypes, cursor: input.cursor, acl, searchIndex };
     const [hits, totalCount] = await Promise.all([runSearchTypeaheadQuery(options), countSearchMatches(options)]);
     const visibleHits = await verifyResultVisibility(knex, acl, hits);
-    return searchTypeaheadResultSchema.parse({ results: visibleHits.slice(0, 5).map(hit => ({ ...toSearchResultRow(hit), snippet: undefined })), totalCount });
+    // Annotate before parsing: zod's inferred output degrades to all-optional
+    // under the enterprise project's non-strict null checks, so the declared
+    // shape is what the literal is checked against (same idiom as above).
+    const result: SearchTypeaheadResult = { results: visibleHits.slice(0, 5).map(hit => ({ ...toSearchResultRow(hit), snippet: undefined })), totalCount };
+    return searchTypeaheadResultSchema.parse(result) as SearchTypeaheadResult;
   });
 }

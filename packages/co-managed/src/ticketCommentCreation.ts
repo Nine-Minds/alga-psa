@@ -12,8 +12,10 @@ import { encodeConversationContent, snapshotConversationContent, type CoManagedC
 import { recordCoManagedTicketFirstResponse, syncCoManagedTicketAwaitingClientSla } from './ticketSla';
 
 export interface CoManagedCommentReference { storeTenant: string; threadId: string; commentId: string }
+// See conversationDrafts.ts: `?: undefined` keeps the absent-member markers
+// narrowable under both strict and non-strict null checking.
 export type CoManagedCommentCreateRequest = { operationId: string } & CoManagedConversationContent & (
-  { audience: CommentAudience; parent?: never; expectedAudience?: never } | { parent: CoManagedCommentReference; audience?: never; expectedAudience?: CommentAudience });
+  { audience: CommentAudience; parent?: undefined; expectedAudience?: undefined } | { parent: CoManagedCommentReference; audience?: undefined; expectedAudience?: CommentAudience });
 export interface CoManagedCommentCreateReceipt extends CoManagedCommentReference { operationId: string; appliedAt: string }
 export interface CoManagedCommentCreateContext extends CoManagedSharedWorkContext {
   actorReferenceId?: string; audience: CommentAudience; canUpdateResponseState: boolean; assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;

@@ -12,6 +12,11 @@ export async function createIndependentPsaStripeReader(): Promise<Stripe> {
 }
 const referenceId = (value: unknown): string | undefined => typeof value === 'string' ? value
   : value && typeof value === 'object' && 'id' in value && typeof value.id === 'string' ? value.id : undefined;
+/** A predicate, not a truthiness test on `deleted`: `Stripe.Customer` declares
+ * `deleted?: void`, which only removes the deleted arm through a type guard. */
+export function isDeletedStripeCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer): customer is Stripe.DeletedCustomer {
+  return customer.deleted === true;
+}
 
 /** Convert freshly retrieved provider objects to an independent paid entitlement.
  * These inputs are produced by the platform Stripe client, never browser data. */
@@ -25,7 +30,7 @@ export function paidPsaUpgradeFromStripe(candidate: HostedPsaUpgradeCandidate, c
   const remoteEnd = typeof period === 'number' ? period * 1000 : NaN;
   const end = Math.min(remoteEnd, new Date(candidate.validUntil).getTime(),
     subscription.cancel_at ? subscription.cancel_at * 1000 : Infinity);
-  if (customer.deleted || customer.id !== candidate.customerId || customer.metadata?.tenant_id !== candidate.tenant ||
+  if (isDeletedStripeCustomer(customer) || customer.id !== candidate.customerId || customer.metadata?.tenant_id !== candidate.tenant ||
       subscription.id !== candidate.subscriptionId || referenceId(subscription.customer) !== candidate.customerId ||
       subscription.metadata?.tenant_id !== candidate.tenant || subscription.metadata?.addon_key ||
       subscription.metadata?.subscription_kind === 'co_managed' || subscription.status !== 'active' || subscription.ended_at ||

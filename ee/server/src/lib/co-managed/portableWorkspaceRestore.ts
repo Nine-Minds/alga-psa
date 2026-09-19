@@ -18,7 +18,9 @@ import { isCoManagedUuid } from '../../../../../packages/co-managed/src/sharedWo
 import { prepareCoManagedPortableWorkspaceVault } from './portableWorkspaceRestoreVault';
 import { insertCoManagedPortableWorkspaceDatabase, resolveCoManagedPortableDestinationCatalogs } from './portableWorkspaceRestoreDatabase';
 
-const fail = (reason: string): never => { throw new Error(`Portable installation restore rejected: ${reason}`); };
+// A declaration, not a `const` arrow: only the former is treated as
+// never-returning by control-flow analysis, so guards above actually narrow.
+function fail(reason: string): never { throw new Error(`Portable installation restore rejected: ${reason}`); }
 const same = (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
 type Provider = Parameters<typeof stageCoManagedPortableWorkspaceFiles>[1] & { getLocationIdentity?(): string };
 import { beginPortableRestoreUpload, commitPortableRestoreUpload, settlePortableRestoreUpload } from './portableWorkspaceRestoreUploads';

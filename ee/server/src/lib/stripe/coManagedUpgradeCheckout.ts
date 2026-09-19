@@ -5,7 +5,7 @@ import { countCoManagedCommittedSeats, retainHostedPsaUpgradeCandidate } from '@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, isCoManagedUuid, snapshotCoManagedSessionActor,
   type CoManagedSessionActor, type CoManagedUpgradePurchase, type CoManagedUpgradePurchaseRequest } from '@alga-psa/co-managed';
-import { paidPsaUpgradeFromStripe } from './coManagedIndependentEntitlement';
+import { isDeletedStripeCustomer, paidPsaUpgradeFromStripe } from './coManagedIndependentEntitlement';
 
 export const INDEPENDENT_UPGRADE_SOURCE = 'co_managed_independent_upgrade';
 const id = (value: any): string | undefined => typeof value === 'string' ? value : value?.id;
@@ -37,7 +37,7 @@ async function retainOperation(trx: Knex.Transaction, tenant: string, operationI
 }
 
 function assertCustomer(customer: Stripe.Customer | Stripe.DeletedCustomer, tenant: string): asserts customer is Stripe.Customer {
-  if (customer.deleted || customer.metadata?.tenant_id !== tenant) throw new Error('Stripe customer does not belong to this workspace');
+  if (isDeletedStripeCustomer(customer) || customer.metadata?.tenant_id !== tenant) throw new Error('Stripe customer does not belong to this workspace');
 }
 
 async function resolveCustomer(stripe: Stripe, purchase: CoManagedUpgradePurchase, info: { name: string; email: string; externalId?: string }) {
@@ -146,7 +146,9 @@ export async function reconcileCoManagedUpgradeCheckout(db: Knex, stripe: Stripe
     invoice.status === 'void' && invoice.amount_paid === 0 && invoice.amount_remaining === 0 &&
     id(invoice.customer) === purchase.customer_id && id((invoice as any).subscription ?? (invoice as any).parent?.subscription_details?.subscription) === subscription?.id;
   const terminal = subscription && ['canceled', 'incomplete_expired'].includes(subscription.status);
-  const kind = paid ? 'paid' : session.status === 'expired' || terminal ? 'expired' : failed ? 'payment_failed'
+  // Annotated so the literals stay literal: a bare `const` holds fresh literal
+  // types that widen to `string` once placed in the returned object literal.
+  const kind: IndependentCheckoutResult['kind'] = paid ? 'paid' : session.status === 'expired' || terminal ? 'expired' : failed ? 'payment_failed'
     : session.status === 'complete' ? 'processing' : 'checkout';
   await db.transaction(async trx => {
     const current = await retainOperation(trx, tenant, operationId), own = tenantDb(trx, tenant);
