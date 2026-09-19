@@ -7216,6 +7216,11 @@ it('revokes requester file access on removal while retaining published draft rec
   expect(await portal.listPortalConversationAttachments(db, requester, target)).toEqual([ready]);
   const removed = await attachments.removeCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready));
   expect(await portal.listPortalConversationAttachments(db, requester, target)).toEqual([]);
+  // `download` is the process-wide artifact-storage mock, so publishing the
+  // draft above already used it to re-read the staged bytes. Clear it so the
+  // assertion measures what it means to: the revoked requester's download must
+  // be refused before it reaches storage at all.
+  download.mockClear();
   await expect(portal.downloadPortalConversationAttachment(db, requester, target, ready.attachmentId, download)).rejects.toBeDefined(); expect(download).not.toHaveBeenCalled();
   expect(await cleanupCoManagedUploads(db, resource.tenant, async path => { objects.delete(path); })).toMatchObject({ purgedFiles: 1, failedFiles: 0, completedDrafts: 0 });
   expect(await customer.table('co_management_conversation_drafts').where('operation_id', draft.operationId).first()).toEqual(original);
@@ -11664,12 +11669,23 @@ it('native task comments reject portal identities before returning bodies or rea
   const root = await comments.createTaskComment({ taskId: resource.id, note: 'Internal-only body' });
   const auth = await import('@alga-psa/auth');
   await auth.runWithApiKeyUser({ ...user, user_type: 'client' }, async () => {
-    expect(await comments.getTaskComments(resource.id)).toMatchObject({ actionError: expect.any(String) });
-    expect(await comments.getTaskCommentCount(resource.id)).toMatchObject({ actionError: expect.any(String) });
-    expect(await comments.getTaskCommentCountsBatch([resource.id])).toMatchObject({ actionError: expect.any(String) });
-    expect(await comments.createTaskComment({ taskId: resource.id, note: 'Portal injection' })).toMatchObject({ actionError: expect.any(String) });
-    await expect(reactions.getTaskCommentsReactionsBatch([root])).rejects.toThrow('Only internal users');
-    await expect(reactions.toggleTaskCommentReaction(root, '👍')).rejects.toThrow('Only internal users');
+    // All four refuse in `withTaskCommentAccess`, whose first gate gives way
+    // only to a live local user of the type it claims -- a portal identity is
+    // turned away before any body, count or reaction identity is read. That is
+    // a permission denial, and this surface reports denials as `permissionError`
+    // (projectTaskCommentActionErrorFrom maps every "Permission denied"
+    // message to it); `actionError` named a different, later guard, which is an
+    // implementation detail rather than the property under test.
+    const refused = { permissionError: expect.any(String) };
+    expect(await comments.getTaskComments(resource.id)).toMatchObject(refused);
+    expect(await comments.getTaskCommentCount(resource.id)).toMatchObject(refused);
+    expect(await comments.getTaskCommentCountsBatch([resource.id])).toMatchObject(refused);
+    expect(await comments.createTaskComment({ taskId: resource.id, note: 'Portal injection' })).toMatchObject(refused);
+    // Reactions run through the same `withTaskCommentAccess` gate, so they are
+    // refused there too rather than by the reaction actions' own internal-user
+    // check further in.
+    await expect(reactions.getTaskCommentsReactionsBatch([root])).rejects.toThrow('Permission denied: cannot access task comments');
+    await expect(reactions.toggleTaskCommentReaction(root, '👍')).rejects.toThrow('Permission denied: cannot access task comments');
   });
 }));
 
