@@ -450,12 +450,13 @@ type TicketCreateFieldHandling =
 /**
  * Exhaustive field-handling declaration for `CreateTicketInput`.
  *
- * The mapped type turns a new input key into a compile error until it is
- * classified, so a supplied value cannot silently fail to reach (or be
- * intentionally kept from) the insert. This declaration drives row
- * construction in `buildTicketCreateRow`; it is not a detached list of names.
+ * The `-?` modifier removes the optionality carried by `CreateTicketInput`'s
+ * optional keys, so every key must have an explicit entry and a newly added
+ * input key is a compile error until it is classified, rather than an entry
+ * that may silently be omitted. This declaration drives row construction in
+ * `buildTicketCreateRow`; it is not a detached list of names.
  */
-const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]: TicketCreateFieldHandling } = {
+const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]-?: TicketCreateFieldHandling } = {
   title: { kind: 'column', column: 'title' },
   description: { kind: 'excluded', reason: 'merged into attributes.description' },
   client_id: { kind: 'column', column: 'client_id' },
@@ -522,7 +523,6 @@ export function buildTicketCreateRow(
 
   for (const key of Object.keys(CREATE_TICKET_FIELD_HANDLING) as (keyof CreateTicketInput)[]) {
     const handling = CREATE_TICKET_FIELD_HANDLING[key];
-    if (!handling) continue;
     switch (handling.kind) {
       case 'column':
         row[handling.column] = ctx.cleanedInput[key] || null;
