@@ -217,25 +217,51 @@ const visibilitySchema = z.enum(['public', 'internal']).describe('Message visibi
 const messageChannelSchema = z.enum(['email', 'portal', 'ui', 'api']).describe('Message channel');
 const authorTypeSchema = z.enum(['user', 'contact', 'collaborator']).describe('Author type');
 
-export const ticketMessageAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+/** Shared by both authorship branches below. */
+const ticketMessageAddedCommonShape = {
   ticketId: ticketIdSchema,
   messageId: messageIdSchema,
   visibility: visibilitySchema,
-  authorId: z.string().uuid().optional().describe('Owner-local author ID (user/contact)'),
-  authorReference: collaborationActorReferenceSchema.optional(),
   audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
-  authorType: authorTypeSchema,
   channel: messageChannelSchema,
   createdAt: z.string().datetime().optional(),
   attachmentsCount: z.number().int().nonnegative().optional(),
-}).superRefine((payload, context) => {
+};
+
+/**
+ * Authorship is a discriminated union, not a flat object with a cross-field
+ * refinement, because the refinement could not be expressed in the published
+ * JSON Schema: a local message requires `authorId`, but `authorId` was declared
+ * optional, so nothing reading the catalog -- including this repo's own example
+ * generator and any external workflow consumer -- could derive a payload that
+ * validates. The union carries the requirement structurally, so the JSON Schema
+ * says it too.
+ */
+const ticketMessageAddedLocalSchema = BaseDomainEventPayloadSchema.extend({
+  ...ticketMessageAddedCommonShape,
+  authorType: z.enum(['user', 'contact']),
+  authorId: z.string().uuid().describe('Owner-local author ID (user/contact)'),
+  authorReference: z.undefined().optional().describe('A local message has no collaboration author'),
+});
+
+const ticketMessageAddedCollaboratorSchema = BaseDomainEventPayloadSchema.extend({
+  ...ticketMessageAddedCommonShape,
+  authorType: z.literal('collaborator'),
+  authorId: z.undefined().optional().describe('A foreign message has no owner-local author'),
+  authorReference: collaborationActorReferenceSchema,
+});
+
+export const ticketMessageAddedEventPayloadSchema = z.discriminatedUnion('authorType', [
+  ticketMessageAddedLocalSchema,
+  ticketMessageAddedCollaboratorSchema,
+]).superRefine((payload, context) => {
   const fail = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
   if (payload.audience && (payload.visibility === 'public') !== (payload.audience === 'requester')) fail('Message visibility must match its audience');
   if (payload.authorType === 'collaborator') {
-    if (payload.authorId || !payload.authorReference || payload.actorType !== 'COLLABORATOR' || !payload.actorReference ||
+    if (payload.actorType !== 'COLLABORATOR' || !payload.actorReference ||
         payload.authorReference.ownerTenantId !== payload.tenantId || !payload.audience || payload.audience === 'organization_private') fail('A foreign message requires qualified shared authorship');
     else if (Object.keys(payload.authorReference).some(key => payload.authorReference![key as keyof typeof payload.authorReference] !== payload.actorReference![key as keyof typeof payload.actorReference])) fail('Message author and actor must agree');
-  } else if (!payload.authorId || payload.authorReference || payload.actorType === 'COLLABORATOR') fail('A local message requires a local author');
+  } else if (payload.actorType === 'COLLABORATOR') fail('A local message requires a local author');
 }).describe('Payload for TICKET_MESSAGE_ADDED');
 
 export type TicketMessageAddedEventPayload = z.infer<typeof ticketMessageAddedEventPayloadSchema>;
