@@ -454,7 +454,15 @@ export class StorageService {
             // Get file record
             const { knex, tenant } = await createTenantKnex();
             if (!tenant) throw new Error('Tenant is required');
-            const { fileRecord, deletedRecord } = await withCoManagedOperationalTransaction(knex, tenant, async trx => {
+            // A caller may already hold operational row locks (e.g. the comment-
+            // attachment sweep locks external_files FOR UPDATE before deleting).
+            // Reuse that transaction rather than opening a second one on a fresh
+            // pool connection, which would block on the caller's own lock and
+            // self-deadlock. withCoManagedOperationalTransaction -> withTransaction
+            // reuses a supplied trx as a nested frame; a bare pool handle owns a
+            // new transaction as before.
+            const db = transaction ?? knex;
+            const { fileRecord, deletedRecord } = await withCoManagedOperationalTransaction(db, tenant, async trx => {
               const fileRecord = await FileStoreModel.findById(trx, file_id);
               if (!fileRecord) throw new Error('File not found');
               const config = await getStorageConfig();
