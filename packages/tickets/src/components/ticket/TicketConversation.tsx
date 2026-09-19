@@ -111,6 +111,12 @@ interface TicketConversationProps {
   reactionRefreshVersion?: number;
   /** Comment-level external links keyed by comment_id (read-only chips). */
   externalLinksByCommentId?: Record<string, ITicketExternalLinkView[]>;
+  /**
+   * Bundle master reference for mirrored child comments, supplied by the MSP
+   * portal. The client portal omits it so mirrored comments render the label
+   * without a link to a possibly cross-client master.
+   */
+  bundleMaster?: { ticketId: string; ticketNumber: string | null };
 }
 
 const ALL_COMMENTS_TAB_ID = 'all-comments';
@@ -158,6 +164,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   canViewCommentMetadataDebug = false,
   reactionRefreshVersion = 0,
   externalLinksByCommentId = {},
+  bundleMaster,
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
@@ -517,6 +524,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
           externalLinks={externalLinksByCommentId[mergedConversation.comment_id || ''] ?? []}
+          bundleMaster={bundleMaster}
         />
         {replyingToCommentId === mergedConversation.comment_id && mergedConversation.comment_id && (
           <InlineReplyComposer
