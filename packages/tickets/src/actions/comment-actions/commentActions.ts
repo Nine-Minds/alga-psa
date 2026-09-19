@@ -777,11 +777,14 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
 
       // Capture the canonical thread before a leaf deletion removes it. Intent
       // and deletion share this transaction; delivery begins only after commit.
+      // The row is gone by the time a later capture could run, so the evidence
+      // writer is told the capture precedes the removal -- without that it
+      // would refuse a deletion carrying no tombstone, and rightly so.
       if (existingComment?.ticket_id) await publishNativeCommentEvent(trx,
         { tenant, ticketId: existingComment.ticket_id, commentId: id }, {
           eventType: 'TICKET_COMMENT_DELETED',
           payload: { tenantId: tenant, ticketId: existingComment.ticket_id, commentId: id, userId: user?.user_id },
-        });
+        }, { precedesSourceRemoval: true });
       await Comment.delete(trx, tenant, id);
 
       if (existingComment?.ticket_id) {

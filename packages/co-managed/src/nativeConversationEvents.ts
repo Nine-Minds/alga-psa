@@ -18,7 +18,7 @@ export async function hasCoManagedConversationOwnership(trx: Knex.Transaction, t
  * canonical source determine ownership/audience, never a supplied internal flag.
  * This adapter is not an independently callable comment-write authorization. */
 export async function retainCoManagedNativeCommentEvent(trx: Knex.Transaction,
-  input: { tenant: string; eventId: string; ticketId: string; commentId: string; publication: CoManagedEventPublication },
+  input: { tenant: string; eventId: string; ticketId: string; commentId: string; publication: CoManagedEventPublication; precedesSourceRemoval?: boolean },
   publish: (event: CoManagedEventPublication, eventId: string) => Promise<void>): Promise<boolean> {
   if (!trx.isTransaction || ![input.tenant, input.eventId, input.ticketId, input.commentId].every(isCoManagedUuid)) throw new Error('Invalid native conversation event scope');
   const owner = tenantDb(trx, input.tenant);
@@ -47,7 +47,7 @@ export async function retainCoManagedNativeCommentEvent(trx: Knex.Transaction,
     userId: publication.payload.userId, isInternal: comment.audience !== 'requester',
     collaborationMutation: { kind: publication.eventType === 'TICKET_COMMENT_UPDATED' ? 'edit' : 'delete', threadId: comment.thread_id, audience: comment.audience } };
   await enqueueCoManagedConversationEvent(trx, { tenant: input.tenant, eventId: input.eventId, ticketId: input.ticketId, commentId: input.commentId,
-    threadId: comment.thread_id, audience: comment.audience, publication });
+    threadId: comment.thread_id, audience: comment.audience, publication }, { precedesSourceRemoval: input.precedesSourceRemoval === true });
   const tenantId = input.tenant, eventId = input.eventId;
   registerAfterCommitWithConnection(trx, root => dispatchCoManagedConversationEvents(root, tenantId, async (event, id) => {
     await publish(event, id);

@@ -10166,16 +10166,41 @@ it.each(['api', 'generic'])('retains native %s edit invalidations without either
   expect(await customer.table('comments').where('comment_id', comment.comment_id).first()).toMatchObject({ note: 'Changed native body' });
 }));
 
-it('retains native deletion invalidation before removing a leaf and recovers it after source removal', async () => withNativeCommentFixture(async ({ customer, resource, publish, actions, run, create }: any) => {
+it('retains native deletion invalidation before removing a leaf and recovers it after source removal', async () => withNativeCommentFixture(async ({ customer, sponsor, resource, publish, actions, run, create }: any) => {
   const comment = await create('api'); publish.mockRejectedValue(new Error('Redis unavailable'));
   await run(() => actions.deleteComment(comment.comment_id));
   expect(await customer.table('comments').where('comment_id', comment.comment_id).first()).toBeUndefined();
   const row = await customer.table('co_management_event_outbox').where({ comment_id: comment.comment_id, event_type: 'TICKET_COMMENT_DELETED' }).first();
   expect(row).toMatchObject({ status: 'pending', publication: { payload: { collaborationMutation: { kind: 'delete' } } } });
+  // The capture ran before the row vanished, so the evidence exists at all; it
+  // records a deletion with its instant and without recovering the lost body.
+  const evidence = await sponsor.table('co_managed_participation_evidence')
+    .where({ customer_tenant: resource.tenant, resource_id: resource.id, event_type: 'TICKET_COMMENT_DELETED' }).first();
+  expect(evidence).toMatchObject({ event_type: 'TICKET_COMMENT_DELETED', payload: { commentId: comment.comment_id, deleted: true } });
+  expect(evidence.payload.deletedAt).toEqual(expect.any(String));
+  expect(evidence.payload).not.toHaveProperty('note');
+  expect(evidence.payload).not.toHaveProperty('markdown');
+  expect(JSON.stringify(evidence)).not.toContain('Native comment body');
   await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
   const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const send = vi.fn(); expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(JSON.stringify(send.mock.calls)).not.toContain('Native comment body');
+}));
+
+it('refuses a native deletion invalidation that neither removes its source nor carries a tombstone', async () => withNativeCommentFixture(async ({ customer, sponsor, resource, publish, create }: any) => {
+  const comment = await create('api'); publish.mockClear();
+  const { publishNativeCommentEvent } = await import('../../../../../packages/tickets/src/lib/nativeConversationEvents');
+  const source = { tenant: resource.tenant, ticketId: resource.id, commentId: comment.comment_id };
+  const event = { eventType: 'TICKET_COMMENT_DELETED' as const,
+    payload: { tenantId: resource.tenant, ticketId: resource.id, commentId: comment.comment_id, userId: null } };
+  const evidenceBefore = await sponsor.table('co_managed_participation_evidence').where('customer_tenant', resource.tenant);
+  await expect(db.transaction((trx: any) => publishNativeCommentEvent(trx, source, event)))
+    .rejects.toMatchObject({ code: 'co_managed_event_retention_failed' });
+  // The live comment, its outbox and the sponsor's evidence are all untouched.
+  expect(await customer.table('comments').where('comment_id', comment.comment_id).first()).toMatchObject({ note: 'Native comment body', deleted_at: null });
+  expect(await customer.table('co_management_event_outbox').where('event_type', 'TICKET_COMMENT_DELETED')).toHaveLength(0);
+  expect(await sponsor.table('co_managed_participation_evidence').where('customer_tenant', resource.tenant)).toEqual(evidenceBefore);
+  expect(publish).not.toHaveBeenCalled();
 }));
 
 it.each(['generic', 'optimized', 'simple'])('rolls back native %s comment and earlier intents if a later workflow intent fails', async writer => withNativeCommentFixture(async ({ customer, resource, publish, workflow, create }: any) => {

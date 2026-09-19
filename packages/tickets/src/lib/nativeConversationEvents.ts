@@ -19,10 +19,11 @@ async function publish(publication: CoManagedEventPublication, eventId: string) 
  * escape legacy best-effort event catches and roll back the write. Ordinary PSA
  * publication remains best effort, but always runs after the owning commit. */
 export async function retainNativeConversationEvent(trx: Knex.Transaction, source: Source, publication: CoManagedEventPublication,
-  options: { eventId?: string; legacyPublish?: () => Promise<unknown> } = {}): Promise<boolean> {
+  options: { eventId?: string; legacyPublish?: () => Promise<unknown>; precedesSourceRemoval?: boolean } = {}): Promise<boolean> {
   const eventId = options.eventId ?? randomUUID();
   try {
-    const retained = await retainCoManagedNativeCommentEvent(trx, { ...source, eventId, publication }, publish);
+    const retained = await retainCoManagedNativeCommentEvent(trx, { ...source, eventId, publication,
+      precedesSourceRemoval: options.precedesSourceRemoval === true }, publish);
     if (retained) return true;
   } catch (cause) {
     throw Object.assign(new Error('Could not retain the comment event with its mutation', { cause }), { code: RETENTION_ERROR });
@@ -38,8 +39,8 @@ export async function retainNativeConversationEvent(trx: Knex.Transaction, sourc
 }
 
 export async function publishNativeCommentEvent(trx: Knex.Transaction, source: Source,
-  event: Pick<CoManagedEventPublication, 'eventType' | 'payload'>) {
-  return retainNativeConversationEvent(trx, source, { ...event, kind: 'event' });
+  event: Pick<CoManagedEventPublication, 'eventType' | 'payload'>, options: { precedesSourceRemoval?: boolean } = {}) {
+  return retainNativeConversationEvent(trx, source, { ...event, kind: 'event' }, options);
 }
 
 export async function publishNativeCommentWorkflowEvent(trx: Knex.Transaction, source: Source,
