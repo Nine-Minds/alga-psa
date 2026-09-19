@@ -1879,7 +1879,7 @@
     },
     "emailTemplates": {
       "editor": {
-        "inlineLogoHint": "Ihr Logo wird beim Versand in die Nachricht eingebettet. Lassen Sie die Referenz src=\"cid:alga-brand-logo\" unverändert — wird sie durch eine URL ersetzt, müssen Empfänger das Herunterladen des Bildes erst bestätigen."
+        "inlineLogoHint": "Ihr Logo wird beim Versand in die Nachricht eingebettet. Lassen Sie die Referenz src=\"cid:{{cid}}\" unverändert — wird sie durch eine URL ersetzt, müssen Empfänger das Herunterladen des Bildes erst bestätigen."
       }
     }
   },

@@ -29,6 +29,8 @@ import {
 } from "../../types/notification";
 import {
   applyEmailPalette,
+  findBrandLogoCid,
+  BRAND_LOGO_CIDS,
   BRAND_LOGO_MARKER,
   STOCK_EMAIL_PALETTE,
   type BrandLogoPreviewUrls,
@@ -1116,10 +1118,12 @@ function EditTemplateDialog({
             {autocompleteMenu('html_content')}
             {formData.html_content?.includes(BRAND_LOGO_MARKER) && (
               <p id="inline-logo-hint" className="mt-1 text-xs text-gray-400">
-                {t(
-                  'notifications.emailTemplates.editor.inlineLogoHint',
-                  'Your logo is embedded in the message when it is sent. Keep the src="cid:alga-brand-logo" reference as it is — replacing it with a URL makes recipients approve an image download first.',
-                )}
+                {t('notifications.emailTemplates.editor.inlineLogoHint', {
+                  defaultValue: 'Your logo is embedded in the message when it is sent. Keep the src="cid:{{cid}}" reference as it is — replacing it with a URL makes recipients approve an image download first.',
+                  // The wide variant travels under its own content-id, so the
+                  // hint quotes whichever one this template carries.
+                  cid: findBrandLogoCid(formData.html_content) ?? BRAND_LOGO_CIDS.default,
+                })}
               </p>
             )}
           </div>

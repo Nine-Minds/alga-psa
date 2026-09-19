@@ -238,11 +238,17 @@ describe('enterprise logo and attribution', () => {
     // substitutes them after the source annotation.
     expect(panelSource).toContain('brandLogoUrls={status.logoOptions}');
     expect(templatesSource).toContain('brandLogoUrls={brandingStatus?.logoOptions}');
-    expect(previewSource).toContain('resolveBrandLogoForPreview(annotated, brandLogoUrls)');
+    expect(previewSource).toContain('resolveBrandLogoForPreview(annotated, { logoUrl, logoWideUrl })');
+    // The two URLs, not the object a parent may rebuild on every render.
+    expect(previewSource).toContain('[htmlContent, sampleData, sourceMap, logoUrl, logoWideUrl]');
   });
 
   it('tells the editor the cid reference is embedded at send time', () => {
     expect(templatesSource).toContain('notifications.emailTemplates.editor.inlineLogoHint');
     expect(templatesSource).toContain('formData.html_content?.includes(BRAND_LOGO_MARKER)');
+    // A wide-variant row travels under its own content-id, so the hint reads
+    // the one this template carries instead of naming the square one.
+    expect(templatesSource).toContain('cid: findBrandLogoCid(formData.html_content) ?? BRAND_LOGO_CIDS.default');
+    expect(templatesSource).toContain('src="cid:{{cid}}"');
   });
 });

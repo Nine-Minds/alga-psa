@@ -97,15 +97,22 @@ export function EmailTemplatePreview({
     [templateName, htmlContent, subject]
   );
 
+  // The two URLs, not the object: callers pass the status field straight
+  // through, and a parent that rebuilds it per render must not re-resolve.
+  const logoUrl = brandLogoUrls?.logoUrl;
+  const logoWideUrl = brandLogoUrls?.logoWideUrl;
+
   const renderedHtml = useMemo(
     () => {
       const annotated = sourceMap ? annotateHtmlSource(htmlContent) : htmlContent;
       // After the annotation, never before: swapping the cid for a URL changes
       // the length, and the stamped offsets describe the source being edited.
-      const resolved = brandLogoUrls ? resolveBrandLogoForPreview(annotated, brandLogoUrls) : annotated;
+      const resolved = logoUrl || logoWideUrl
+        ? resolveBrandLogoForPreview(annotated, { logoUrl, logoWideUrl })
+        : annotated;
       return replaceTemplateVariables(resolved, sampleData);
     },
-    [htmlContent, sampleData, sourceMap, brandLogoUrls]
+    [htmlContent, sampleData, sourceMap, logoUrl, logoWideUrl]
   );
 
   const renderedSubject = useMemo(

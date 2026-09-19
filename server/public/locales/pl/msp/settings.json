@@ -1885,7 +1885,7 @@
     },
     "emailTemplates": {
       "editor": {
-        "inlineLogoHint": "Twoje logo jest osadzane w wiadomości podczas wysyłki. Pozostaw odwołanie src=\"cid:alga-brand-logo\" bez zmian — zastąpienie go adresem URL sprawi, że odbiorcy będą musieli najpierw zezwolić na pobranie obrazu."
+        "inlineLogoHint": "Twoje logo jest osadzane w wiadomości podczas wysyłki. Pozostaw odwołanie src=\"cid:{{cid}}\" bez zmian — zastąpienie go adresem URL sprawi, że odbiorcy będą musieli najpierw zezwolić na pobranie obrazu."
       }
     }
   },
