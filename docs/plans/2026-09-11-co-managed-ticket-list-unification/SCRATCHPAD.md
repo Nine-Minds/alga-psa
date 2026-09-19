@@ -83,7 +83,7 @@ npm run typecheck
 npx vitest run src/test/unit/product/coManagedTicketQueue.test.tsx src/test/unit/product/coManagedTicketQueueActions.test.ts src/test/unit/product/coManagedTicketBulkHandback.test.tsx
 ```
 
-The database harness `server/src/test/integration/coManagedBootstrap.integration.test.ts` clones schema into a disposable database and installs the co-managed migration set. Extend its relevant query/handback cases; do not run new fixtures against application tenant data. Load the integration-testing workflow before implementation of database tests.
+The database harness `ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts` clones schema into a disposable database and installs the co-managed migration set. Extend its relevant query/handback cases; do not run new fixtures against application tenant data. Load the integration-testing workflow before implementation of database tests.
 
 Existing native screenshot is a temporary local artifact at `/tmp/ghostty-pane-ide/screenshots/co-managed-existing-ticket-list.png`. It contains development fixture context and is not copied into the plan. The durable baseline is described in the PRD.
 

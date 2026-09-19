@@ -258,7 +258,7 @@ The test checklist consolidates representative journeys instead of repeating the
 
 - Native: `packages/tickets/src/lib/boardTabs.test.ts`, `ticketViewSettings.test.ts`, `ticketListUrlSync.test.ts`, `components/TicketingDashboardContainer.urlSync.contract.test.tsx`, `components/__tests__/TicketsRouteProvider.selectionPersistence.test.tsx`, and `lib/__tests__/ticketColumns.prefetch.contract.test.ts`.
 - Qualified UI/actions: `server/src/test/unit/product/coManagedTicketQueue.test.tsx`, `coManagedTicketQueueActions.test.ts`, and `coManagedTicketBulkHandback.test.tsx`.
-- Database: extend the relevant queue/handback cases in `server/src/test/integration/coManagedBootstrap.integration.test.ts` or extract a focused registered case module using that migrated disposable-database harness. Include a real happy query and a guard/redaction/revocation query; source-string assertions do not establish data behavior.
+- Database: extend the relevant queue/handback cases in `ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts` or extract a focused registered case module using that migrated disposable-database harness. Include a real happy query and a guard/redaction/revocation query; source-string assertions do not establish data behavior.
 - Shared table: existing `DataTable` interaction and column-fit tests, plus a targeted default-auto versus opt-in-scroll regression.
 - Composition: existing client-integration/boundary tests and new coordinator tests at the app-owned seam.
 

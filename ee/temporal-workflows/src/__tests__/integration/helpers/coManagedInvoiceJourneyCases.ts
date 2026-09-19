@@ -23,22 +23,22 @@ export function registerCoManagedInvoiceJourneyTests(getDb: () => Knex, withTime
     await f.sponsor.table('client_locations').insert({ tenant, location_id: randomUUID(), client_id: clientId, location_name: 'Billing',
       email: 'billing@invoice-journey.test', is_default: true, is_billing_address: true, country_code: 'US', country_name: 'United States',
       address_line1: '1 Test Avenue', city: 'Testville', state_province: 'FL', postal_code: '32003' });
-    const helpers = await import('../../../../test-utils/billingTestHelpers');
+    const helpers = await import('../../../../../../server/test-utils/billingTestHelpers');
     const context = { db, tenantId: tenant, clientId } as any;
     await helpers.ensureDefaultBillingSettings(context, { suppressZeroDollarInvoices: true });
     await helpers.setupClientTaxConfiguration(context, { regionCode: 'US-FL', regionName: 'Invoice test', taxPercentage: 0, startDate: '2026-01-01T00:00:00Z' });
     await f.sponsor.table('service_prices').insert({ tenant, service_id: f.serviceId, currency_code: 'USD', rate: 12000 });
-    const profile = await import('../../../../../packages/co-managed/src/timeBillingProfile');
+    const profile = await import('../../../../../../packages/co-managed/src/timeBillingProfile');
     const state = await profile.getCoManagedTimeBillingProfile(db, f.principal, f.resource), profileId = randomUUID();
     await f.sponsor.table('client_billing_profiles').insert({ tenant, billing_profile_id: profileId, client_id: clientId,
       name: 'Managed support', is_default: false, is_active: true, is_system_managed_default: false });
     await profile.setCoManagedTimeBillingProfile(db, f.principal, f.resource, { expectedProfileId: state.profileId, profileId });
-    const { seedBillingCycle } = await import('../../../../test-utils/billingProfileTestHelpers');
+    const { seedBillingCycle } = await import('../../../../../../server/test-utils/billingProfileTestHelpers');
     const cycleId = randomUUID();
     await seedBillingCycle(db, tenant, { tenant, billing_cycle_id: cycleId, client_id: clientId, billing_profile_id: profileId,
       billing_cycle: 'monthly', effective_date: '2026-09-01T00:00:00Z', period_start_date: '2026-09-01T00:00:00Z', period_end_date: '2026-10-01T00:00:00Z' });
-    const generation = await import('../../../../../packages/billing/src/actions/invoiceGeneration');
-    const { buildClientCadenceDueSelectionInput } = await import('../../../../../shared/billingClients/recurringRunExecutionIdentity');
+    const generation = await import('../../../../../../packages/billing/src/actions/invoiceGeneration');
+    const { buildClientCadenceDueSelectionInput } = await import('../../../../../../shared/billingClients/recurringRunExecutionIdentity');
     const selector = (entryId: string) => buildClientCadenceDueSelectionInput({ clientId,
       scheduleKey: `schedule:${tenant}:unresolved:time:${entryId}`, periodKey: `period:2026-09-01:2026-10-01:unresolved:time:${entryId}`,
       windowStart: '2026-09-01', windowEnd: '2026-10-01' });
@@ -52,7 +52,7 @@ export function registerCoManagedInvoiceJourneyTests(getDb: () => Knex, withTime
 
   async function withBilling(work: (f: any) => Promise<void>) {
     await withTime(async f => {
-      const analytics = await import('../../../../../packages/billing/src/lib/authHelpers');
+      const analytics = await import('../../../../../../packages/billing/src/lib/authHelpers');
       const tracking = vi.spyOn(analytics, 'getAnalyticsAsync').mockResolvedValue({ analytics: { capture: vi.fn() }, AnalyticsEvents: { INVOICE_GENERATED: 'invoice.generated' } } as any);
       const { featureFlags } = await import('@alga-psa/core/server');
       const flags = vi.spyOn(featureFlags, 'isEnabled').mockResolvedValue(false);
@@ -105,24 +105,24 @@ export function registerCoManagedInvoiceJourneyTests(getDb: () => Knex, withTime
     const b = f.billing, shared = await f.save();
     await b.approve(shared.entry_id);
     expect(await f.sponsor.table('time_entries').where('entry_id', shared.entry_id).first('contract_line_id')).toEqual({ contract_line_id: null });
-    const { createClientContractFromWizard } = await import('../../../../../packages/billing/src/actions/contractWizardActions');
+    const { createClientContractFromWizard } = await import('../../../../../../packages/billing/src/actions/contractWizardActions');
     // The wizard imports the real withAuth subpath; the enclosing suite's
     // barrel auth fixture has a separate request-local test adapter.
-    const { runWithApiKeyUser } = await import('../../../../../packages/auth/src/lib/apiKeyUserContext');
+    const { runWithApiKeyUser } = await import('../../../../../../packages/auth/src/lib/apiKeyUserContext');
     const created = await runWithApiKeyUser(f.user, () => createClientContractFromWizard({ contract_name: 'Co-managed support contract', client_id: b.clientId,
       start_date: '2026-08-01', billing_timing: 'advance', currency_code: 'USD', billing_frequency: 'monthly', enable_proration: false,
       fixed_services: [], hourly_services: [{ service_id: f.serviceId, hourly_rate: 12000 }], usage_services: [], po_required: false }));
     expect(created, JSON.stringify(created)).toHaveProperty('contract_line_id');
     const lineId = (created as any).contract_line_id;
     await f.sponsor.table('contract_lines').where('contract_line_id', lineId).update({ billing_profile_id: b.profileId });
-    const { syncRecurringServicePeriodsForContractLine } = await import('../../../../../packages/billing/src/actions/recurringServicePeriodSync');
+    const { syncRecurringServicePeriodsForContractLine } = await import('../../../../../../packages/billing/src/actions/recurringServicePeriodSync');
     await b.db.transaction((trx: Knex.Transaction) => syncRecurringServicePeriodsForContractLine(trx, {
       tenant: b.tenant, contractLineId: lineId, sourceRunPrefix: 'co-managed-invoice-journey' }));
     const period = await f.sponsor.table('recurring_service_periods').where('obligation_id', lineId)
       .where('service_period_start', '<=', '2026-09-08').where('service_period_end', '>', '2026-09-08')
       .whereNotIn('lifecycle_state', ['archived', 'superseded']).orderBy('revision', 'desc').first();
     expect(period).toBeDefined();
-    const { buildClientCadenceDueSelectionInput } = await import('../../../../../shared/billingClients/recurringRunExecutionIdentity');
+    const { buildClientCadenceDueSelectionInput } = await import('../../../../../../shared/billingClients/recurringRunExecutionIdentity');
     const day = (date: Date | string) => new Date(date).toISOString().slice(0, 10);
     const selection = buildClientCadenceDueSelectionInput({ clientId: b.clientId, scheduleKey: period.schedule_key,
       periodKey: period.period_key, windowStart: day(period.invoice_window_start), windowEnd: day(period.invoice_window_end) });
@@ -155,14 +155,14 @@ export function registerCoManagedInvoiceJourneyTests(getDb: () => Knex, withTime
     const { Context } = await import('@temporalio/activity');
     const context = vi.spyOn(Context, 'current').mockReturnValue({ log: { info() {}, warn() {}, error() {}, debug() {} } } as any);
     try {
-      const { closeCoManagedRelationship } = await import('../../../../../packages/co-managed/src/relationshipClosure');
-      const { finalizeCoManagedArchive } = await import('../../../../../packages/co-managed/src/archiveFinalization');
+      const { closeCoManagedRelationship } = await import('../../../../../../packages/co-managed/src/relationshipClosure');
+      const { finalizeCoManagedArchive } = await import('../../../../../../packages/co-managed/src/archiveFinalization');
       const relationship = await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).first();
       await closeCoManagedRelationship(b.db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
         { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, finalizeCoManagedArchive);
       const beforeArchive = await f.sponsor.table('co_managed_participation_evidence').where('customer_tenant', f.resource.tenant);
       expect(beforeArchive.length).toBeGreaterThan(0);
-      const { deleteTenantData } = await import('../../../../../ee/temporal-workflows/src/activities/tenant-deletion-activities');
+      const { deleteTenantData } = await import('../../../activities/tenant-deletion-activities');
       const deletion = await deleteTenantData(f.resource.tenant, randomUUID());
       expect(deletion, JSON.stringify(deletion)).toMatchObject({ success: true });
       expect(await f.customer.table('tenants')).toHaveLength(0);
@@ -171,12 +171,12 @@ export function registerCoManagedInvoiceJourneyTests(getDb: () => Knex, withTime
       expect(await f.sponsor.table('invoice_time_entries').where('invoice_id', invoice.invoice_id)).toEqual(originalLinks);
       expect(await f.sponsor.table('time_entries').where('entry_id', shared.entry_id).first()).toMatchObject({ invoiced: true });
       expect(await f.sponsor.table('co_managed_participation_evidence').where('customer_tenant', f.resource.tenant)).toEqual(beforeArchive);
-      const { getCoManagedArchiveHistory } = await import('../../../../../packages/co-managed/src/archiveReads');
+      const { getCoManagedArchiveHistory } = await import('../../../../../../packages/co-managed/src/archiveReads');
       const archive = await getCoManagedArchiveHistory(b.db, f.principal, f.resource);
       expect(archive.work.title).toBe(sourceTitle);
       expect(archive.entries.length).toBeGreaterThan(0);
-      const { PDFGenerationService } = await import('../../../../../packages/billing/src/services/pdfGenerationService');
-      const { getStandardTemplateAstByCode } = await import('../../../../../packages/billing/src/lib/invoice-template-ast/standardTemplates');
+      const { PDFGenerationService } = await import('../../../../../../packages/billing/src/services/pdfGenerationService');
+      const { getStandardTemplateAstByCode } = await import('../../../../../../packages/billing/src/lib/invoice-template-ast/standardTemplates');
       const preview = await new PDFGenerationService(b.tenant).renderInvoicePreview({ invoiceId: invoice.invoice_id,
         templateAst: getStandardTemplateAstByCode('standard-invoice-by-ticket')! });
       expect(preview.html).toContain(sourceTitle);

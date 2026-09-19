@@ -118,8 +118,8 @@ Every row is **safe**, by one of four routes:
 | 52 | `packages/tickets/src/models/comment.ts:258` | `Comment.update` | `knexOrTrx` | **safe** (pass-through) | `knexOrTrx` required. `mutateCollaboration` additionally asserts `knexOrTrx.isTransaction`. |
 | 53 | `packages/tickets/src/models/comment.ts:331` | `Comment.delete` | `knexOrTrx` | **safe** (pass-through) | `knexOrTrx` required. `mutateCollaboration` additionally asserts `knexOrTrx.isTransaction`. |
 | 54 | `server/src/lib/api/services/KbArticleService.ts:149` | `KbArticleService.withArticleWrite` | `connection` | **safe** (threaded) | `getDbForContext(context)` returns `context.db` when the caller supplied one and falls back to `createTenantKnex()` otherwise — the same rule as `transaction ?? knex`, expressed through the service context. |
-| 55 | `server/src/test/integration/coManagedBootstrap.integration.test.ts:493` | `rename (fixture)` | `db` | **safe** (test fixture) | Suite fixture. Line 593 deliberately passes an open `trx` to assert that nested reuse leaves the caller's transaction intact. |
-| 56 | `server/src/test/integration/coManagedBootstrap.integration.test.ts:593` | `nested-reuse fixture` | `trx` | **safe** (test fixture) | Suite fixture. Line 593 deliberately passes an open `trx` to assert that nested reuse leaves the caller's transaction intact. |
+| 55 | `ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:493` | `rename (fixture)` | `db` | **safe** (test fixture) | Suite fixture. Line 593 deliberately passes an open `trx` to assert that nested reuse leaves the caller's transaction intact. |
+| 56 | `ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:593` | `nested-reuse fixture` | `trx` | **safe** (test fixture) | Suite fixture. Line 593 deliberately passes an open `trx` to assert that nested reuse leaves the caller's transaction intact. |
 | 57 | `shared/models/kbArticleModel.ts:119` | `createKbArticle` | `connection` | **safe** (pass-through) | `connection: Knex | Knex.Transaction` required, passed straight through. |
 
 ## Functions that take a db handle and also call `createTenantKnex()`

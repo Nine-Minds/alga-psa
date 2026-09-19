@@ -294,8 +294,8 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
   // The co-managed shared-work invoice journey asserts that MSP invoices keep
   // covering the customer's persisted service period; it landed after the
-  // pass-0 snapshot.
-  'server/src/test/integration/helpers/coManagedInvoiceJourneyCases.ts',
+  // pass-0 snapshot and lives with the Temporal worker's integration suites.
+  'ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvoiceJourneyCases.ts',
   // Contract-cadence replenishment regression suites landed after the pass-0
   // snapshot and seed persisted service-period columns in their fixtures.
   'server/src/test/infrastructure/billing/invoices/contractCadenceServicePeriodReplenishment.test.ts',
@@ -346,7 +346,11 @@ describe('service-period-first billing plan artifacts', () => {
       'service_period_start|service_period_end|servicePeriodStart|servicePeriodEnd',
       'packages',
       'server',
-      'shared'
+      'shared',
+      // The co-managed shared-work invoice journey reads persisted boundaries
+      // and runs from the Temporal worker's integration directory, which the
+      // server integration runner also collects.
+      'ee/temporal-workflows/src/__tests__/integration'
     ).filter((file) =>
       file !== 'packages/billing/src/lib/billing/billingEngine.ts'
       && !persistedReaderExclusions.has(file)

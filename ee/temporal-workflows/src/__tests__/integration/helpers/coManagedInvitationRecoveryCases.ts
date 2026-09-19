@@ -3,10 +3,10 @@ import type { Knex } from 'knex';
 import { describe, expect, it, vi } from 'vitest';
 import { tenantDb, runWithTenant } from '@alga-psa/db';
 import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
-import { retryCoManagedInitialAdministratorInvitation } from '../../../../../packages/co-managed/src/provisioningInvitation';
-import type { CoManagedProvisioningOperation } from '../../../../../packages/co-managed/src/provisioning';
-import { bootstrapCoManagedWorkspace } from '../../../../../ee/temporal-workflows/src/db/co-managed-provisioning-operations';
-import { deliverCoManagedAdministratorInvitation } from '../../../../../ee/temporal-workflows/src/activities/co-managed-provisioning-activities';
+import { retryCoManagedInitialAdministratorInvitation } from '../../../../../../packages/co-managed/src/provisioningInvitation';
+import type { CoManagedProvisioningOperation } from '../../../../../../packages/co-managed/src/provisioning';
+import { bootstrapCoManagedWorkspace } from '../../../db/co-managed-provisioning-operations';
+import { deliverCoManagedAdministratorInvitation } from '../../../activities/co-managed-provisioning-activities';
 
 export function registerCoManagedInvitationRecoveryTests(getDb: () => Knex,
   prepare: () => Promise<CoManagedProvisioningOperation>, send: ReturnType<typeof vi.fn>) {
@@ -52,7 +52,7 @@ export function registerCoManagedInvitationRecoveryTests(getDb: () => Knex,
       const f = await fixture(); await f.deliver(); const old = await f.invitation();
       await f.customer.table('user_invitations').update({ expires_at: new Date(0) });
       await f.retry(); const renewed = await f.invitation();
-      const { UserService } = await import('../../../../../packages/users/src/services/UserService');
+      const { UserService } = await import('../../../../../../packages/users/src/services/UserService');
       const service = new UserService();
       vi.spyOn(service as any, 'ensurePermission').mockResolvedValue(undefined);
       vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: f.db });

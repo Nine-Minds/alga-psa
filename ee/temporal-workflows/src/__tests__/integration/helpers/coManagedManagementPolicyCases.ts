@@ -6,9 +6,9 @@ import * as bundles from '@alga-psa/authorization';
 import { canManageCoManagedClient, getCoManagedManagementOptions, getCoManagedManagementStatus,
   prepareCoManagedProvisioningForActor, changeCoManagedAllocationForActor, withCoManagedManagementOperation,
   getCoManagedClientManagement, resolveCoManagedManagementTarget, getCoManagedOperationTarget,
-  getCoManagedClientOverview } from '../../../../../packages/co-managed/src/managementPolicy';
-import { prepareCoManagedProvisioning, type CoManagedProvisioningOperation } from '../../../../../packages/co-managed/src/provisioning';
-import { bootstrapCoManagedWorkspace } from '../../../../../ee/temporal-workflows/src/db/co-managed-provisioning-operations';
+  getCoManagedClientOverview } from '../../../../../../packages/co-managed/src/managementPolicy';
+import { prepareCoManagedProvisioning, type CoManagedProvisioningOperation } from '../../../../../../packages/co-managed/src/provisioning';
+import { bootstrapCoManagedWorkspace } from '../../../db/co-managed-provisioning-operations';
 
 export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepare: () => Promise<CoManagedProvisioningOperation>) {
   async function fixture() {

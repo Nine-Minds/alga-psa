@@ -1,22 +1,24 @@
-import { registerCoManagedArchiveBoundaryTests } from './coManagedArchiveBoundaryCases';
-import { registerCoManagedTaskDisclosureCases } from './helpers/coManagedTaskDisclosureCases';
-import { registerCoManagedRequesterTaskEmailCases } from './helpers/coManagedRequesterTaskEmailCases';
+import { registerCoManagedArchiveBoundaryTests } from '../../../../../server/src/test/integration/coManagedArchiveBoundaryCases';
+import { registerCoManagedTaskDisclosureCases } from '../../../../../server/src/test/integration/helpers/coManagedTaskDisclosureCases';
+import { registerCoManagedRequesterTaskEmailCases } from '../../../../../server/src/test/integration/helpers/coManagedRequesterTaskEmailCases';
 import { registerCoManagedProvisioningCleanupTests } from './helpers/coManagedProvisioningCleanupCases';
-import { registerCoManagedDelegatedAdministrationCases } from './helpers/coManagedDelegatedAdministrationCases';
-import { registerCoManagedRequesterTaskCases } from './helpers/coManagedRequesterTaskCases';
-import { registerCoManagedTicketRoutingNotificationTests } from './helpers/coManagedTicketRoutingNotificationCases';
+import { registerCoManagedDirectoryReactivationCases } from '../../../../../server/src/test/integration/helpers/coManagedDirectoryReactivationCases';
+import { importCoManagedPortableWorkspaceExport, importCoManagedPortableWorkspaceRestoreVault, importCoManagedPortableWorkspaceRestoreDatabase, importCoManagedPortableVaultExport, importApplianceLicenseSeatGuard, importCoManagedUpgradeActions, importTenantManagementWorkflowClient, importCoManagedUpgradeCheckout, importStripeService, importCredentialEncryption, importPortableCredentialVault, requireCoManagedProjectStatusSeed } from '../../../../../server/src/test/integration/helpers/coManagedEnterpriseModules';
+import { registerCoManagedDelegatedAdministrationCases } from '../../../../../server/src/test/integration/helpers/coManagedDelegatedAdministrationCases';
+import { registerCoManagedRequesterTaskCases } from '../../../../../server/src/test/integration/helpers/coManagedRequesterTaskCases';
+import { registerCoManagedTicketRoutingNotificationTests } from '../../../../../server/src/test/integration/helpers/coManagedTicketRoutingNotificationCases';
 import { registerCoManagedManagementPolicyTests } from './helpers/coManagedManagementPolicyCases';
 import { registerCoManagedInvoiceJourneyTests } from './helpers/coManagedInvoiceJourneyCases';
 import { registerCoManagedInvitationRecoveryTests } from './helpers/coManagedInvitationRecoveryCases';
-import { registerCoManagedTimeBillingProfileTests } from './helpers/coManagedTimeBillingProfileCases';
-import { registerCoManagedPortableWorkspaceExportTests } from './helpers/coManagedPortableWorkspaceExportCases';
-import { registerCoManagedPortableRemoteMeetingCases } from './coManagedPortableRemoteMeeting.cases';
-import { registerCoManagedPortableSupplementalFileCases } from './coManagedPortableSupplementalFiles.cases';
-import { registerCoManagedPortableEngagementCases } from './coManagedPortableEngagement.cases';
-import { registerCoManagedPortableWorkflowTests } from './helpers/coManagedPortableWorkflowCases';
-import { registerCoManagedPortableAssetTests } from './helpers/coManagedPortableAssetCases';
-import { registerCoManagedPortableOperationalCases } from './coManagedPortableOperational.cases';
-import { retainCoManagedInboundCommentEvent } from '../../../../packages/co-managed/src/inboundConversationEvents';
+import { registerCoManagedTimeBillingProfileTests } from '../../../../../server/src/test/integration/helpers/coManagedTimeBillingProfileCases';
+import { registerCoManagedPortableWorkspaceExportTests } from '../../../../../server/src/test/integration/helpers/coManagedPortableWorkspaceExportCases';
+import { registerCoManagedPortableRemoteMeetingCases } from '../../../../../server/src/test/integration/coManagedPortableRemoteMeeting.cases';
+import { registerCoManagedPortableSupplementalFileCases } from '../../../../../server/src/test/integration/coManagedPortableSupplementalFiles.cases';
+import { registerCoManagedPortableEngagementCases } from '../../../../../server/src/test/integration/coManagedPortableEngagement.cases';
+import { registerCoManagedPortableWorkflowTests } from '../../../../../server/src/test/integration/helpers/coManagedPortableWorkflowCases';
+import { registerCoManagedPortableAssetTests } from '../../../../../server/src/test/integration/helpers/coManagedPortableAssetCases';
+import { registerCoManagedPortableOperationalCases } from '../../../../../server/src/test/integration/coManagedPortableOperational.cases';
+import { retainCoManagedInboundCommentEvent } from '../../../../../packages/co-managed/src/inboundConversationEvents';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
@@ -26,13 +28,13 @@ import { assertCoManagedSeatAdmission, changeCoManagedAllocation, countCoManaged
 import { assertCoManagedOperationalWrite, getCoManagedOperationalState, withCoManagedOperationalTransaction,
   reconcileHostedCoManagedEntitlement } from '@alga-psa/licensing';
 import { tenantDb, runWithTenant, withTransaction } from '@alga-psa/db';
-import { getSecret } from '../../lib/utils/getSecret';
-import { prepareCoManagedProvisioning } from '../../../../packages/co-managed/src/provisioning';
-import { requestCoManagedProvisioningCleanup } from '../../../../packages/co-managed/src/provisioning';
-import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../packages/co-managed/src/acceptance';
-import { bootstrapCoManagedWorkspace } from '../../../../ee/temporal-workflows/src/db/co-managed-provisioning-operations';
-import { deliverCoManagedAdministratorInvitation } from '../../../../ee/temporal-workflows/src/activities/co-managed-provisioning-activities';
-import { createTenantInDB } from '../../../../ee/temporal-workflows/src/db/tenant-operations';
+import { getSecret } from '../../../../../server/src/lib/utils/getSecret';
+import { prepareCoManagedProvisioning } from '../../../../../packages/co-managed/src/provisioning';
+import { requestCoManagedProvisioningCleanup } from '../../../../../packages/co-managed/src/provisioning';
+import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../../packages/co-managed/src/acceptance';
+import { bootstrapCoManagedWorkspace } from '../../db/co-managed-provisioning-operations';
+import { deliverCoManagedAdministratorInvitation } from '../../activities/co-managed-provisioning-activities';
+import { createTenantInDB } from '../../db/tenant-operations';
 
 vi.mock('@alga-psa/event-bus/publishers', async importOriginal => ({
   ...await importOriginal<typeof import('@alga-psa/event-bus/publishers')>(), publishEvent: vi.fn(async () => {}), publishWorkflowEvent: vi.fn(async () => {}),
@@ -55,12 +57,12 @@ vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: { createProvider: async () => artifactStorage },
   generateStoragePath: (tenant: string, _base: string, name: string) => `${tenant}/${randomUUID()}/${name}`,
 }));
-vi.mock('../../../../shared/services/email/unifiedInboundEmailQueueV2', () => ({ enqueueInboundEmailDurableJob: durableTransport.enqueue }));
-vi.mock('../../../../shared/services/email/inboundEmailSourceStager', () => ({
+vi.mock('../../../../../shared/services/email/unifiedInboundEmailQueueV2', () => ({ enqueueInboundEmailDurableJob: durableTransport.enqueue }));
+vi.mock('../../../../../shared/services/email/inboundEmailSourceStager', () => ({
   readStagedSourceMime: intake.read, parseStagedMimeIntoEmailDetails: intake.parse,
   stageInboundSourceMime: intake.stage,
 }));
-vi.mock('../../../../shared/services/email/processInboundEmailInApp', () => ({ processInboundEmailInApp: intake.process }));
+vi.mock('../../../../../shared/services/email/processInboundEmailInApp', () => ({ processInboundEmailInApp: intake.process }));
 vi.mock('@alga-psa/email', () => ({
   sendTeamInvitationEmail: delivery.send,
   SystemEmailProviderFactory: { createProvider: statusEmail.create },
@@ -109,14 +111,14 @@ beforeAll(async () => {
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
     '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908131037_create_tenant_license_state.cjs', '20260908134800_create_co_managed_independent_upgrades.cjs', '20260908143941_retain_stripe_subscription_item_identity.cjs', '20260908150135_create_co_managed_upgrade_purchases.cjs', '20260908152550_retain_co_managed_payment_failure.cjs', '20260908191851_add_portable_restore_suspension.cjs', '20260908194606_retain_portable_workspace_restore_receipts.cjs', '20260908200922_retain_portable_workspace_activation_receipts.cjs', '20260908203743_retain_portable_restore_upload_attempts.cjs', '20260908220024_add_co_managed_task_attachment_parents.cjs', '20260908225004_add_co_managed_delegated_administration.cjs', '20260908230030_add_requester_project_task_comments.cjs', '20260908231657_qualify_requester_task_email_deliveries.cjs', '20260908232516_add_co_managed_task_thread_disclosure.cjs']) {
-    await require('../../../migrations/' + file).up(db);
+    await require('../../../../../server/migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
     'notification_subtypes', 'internal_notification_categories', 'internal_notification_subtypes']) {
     const rows = await source(table).select('*');
     if (rows.length) await db.batchInsert(table, rows, 100);
   }
-  await require('../../../migrations/20260908225920_create_co_managed_ticket_routing_notifications.cjs').up(db);
+  await require('../../../../../server/migrations/20260908225920_create_co_managed_ticket_routing_notifications.cjs').up(db);
 }, 120000);
 
 afterAll(async () => {
@@ -159,7 +161,7 @@ describe('co-managed bootstrap against the complete installed schema', () => {
     const projectStatuses = await customer.table('statuses').where({ status_type: 'project' }).orderBy('order_number');
     expect(projectStatuses).toHaveLength(5);
     expect(projectStatuses.filter(status => status.is_default)).toEqual([expect.objectContaining({ name: 'Not Started' })]);
-    const projectSeed = require('../../../../ee/server/seeds/onboarding/co_managed/05_project_statuses.cjs');
+    const projectSeed = requireCoManagedProjectStatusSeed();
     await customer.table('statuses').where('status_id', projectStatuses[0].status_id).update({ name: 'Customer backlog' });
     await projectSeed.seed(db, operation.customer_tenant);
     expect(await customer.table('statuses').where({ status_type: 'project' }).orderBy('order_number'))
@@ -411,7 +413,7 @@ async function userServiceForTest() {
   // Keep the real admission, transaction, account, role, preferences, and token
   // writes. Only authentication (covered by action tests) and presentation
   // enrichment are replaced; no service connection may reach the source DB.
-  const { UserService } = await import('../../../../packages/users/src/services/UserService');
+  const { UserService } = await import('../../../../../packages/users/src/services/UserService');
   const service = new UserService();
   vi.spyOn(service as any, 'ensurePermission').mockResolvedValue(undefined);
   vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
@@ -459,22 +461,7 @@ describe('real user service with co-managed allocation admission', () => {
   });
 });
 
-describe('co-managed directory reactivation', () => {
-  it('keeps a directory-deactivated user inactive when another technician has taken the available seat', async () => {
-    const { customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
-    const linked = await createCustomerTechnician(actor.tenant, 'directory-tech@example.test');
-    const [connection] = await customer.table('scim_connections').insert({ tenant: actor.tenant, enabled: true,
-      current_token_generation: 1, created_at: new Date(), updated_at: new Date() }).returning('*');
-    const { ScimProvisioningService } = await import('../../../../ee/server/src/lib/scim/service');
-    const service = new ScimProvisioningService(db, connection, 'https://example.test/scim');
-    const resource = await service.createUser({ externalId: randomUUID(), userName: linked.email, primaryEmail: linked.email,
-      active: true, displayName: 'Directory Tech', givenName: 'Directory', familyName: 'Tech', title: null });
-    await service.patchUser(String(resource.id), [{ op: 'replace', path: 'active', value: false }]);
-    await createCustomerTechnician(actor.tenant);
-    await expect(service.patchUser(String(resource.id), [{ op: 'replace', path: 'active', value: true }])).rejects.toThrow('allocation is full');
-    expect(await customer.table('users').where('user_id', linked.user_id).first()).toMatchObject({ is_inactive: true });
-  });
-});
+registerCoManagedDirectoryReactivationCases(() => db, readyForAcceptance, createCustomerTechnician);
 
 it('grows an allocation only from available verified capacity and rejects stale resize attempts', async () => {
   const { operation, customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
@@ -609,7 +596,7 @@ describe('transactional operational lifecycle admission', () => {
 });
 
 async function ticketServiceForTest() {
-  const { TicketService } = await import('../../lib/api/services/TicketService');
+  const { TicketService } = await import('../../../../../server/src/lib/api/services/TicketService');
   const service = new TicketService();
   vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
   const publish = vi.spyOn(service as any, 'safePublishEvent').mockResolvedValue(undefined);
@@ -670,7 +657,7 @@ describe('ticket API lifecycle admission against PostgreSQL', () => {
     const lapse = new Date(Date.now() - 31 * 86_400_000);
     await tenantDb(db, operation.tenant).table('co_managed_entitlements').update({ valid_until: lapse, lapse_started_at: lapse,
       read_only_after: new Date(lapse.getTime() + 30 * 86_400_000) });
-    const { handleApiError } = await import('../../lib/api/middleware/apiMiddleware');
+    const { handleApiError } = await import('../../../../../server/src/lib/api/middleware/apiMiddleware');
     const error = await service.update(ticket.ticket_id, { title: 'Forbidden change' }, context).then(() => null, error => error);
     const response = handleApiError(error);
     expect(response.status).toBe(423);
@@ -681,7 +668,7 @@ describe('ticket API lifecycle admission against PostgreSQL', () => {
 });
 
 async function stagedCoManagedInbox(tenant: string) {
-  const { upsertInbox, upsertIngress } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+  const { upsertInbox, upsertIngress } = await import('../../../../../shared/services/email/inboundEmailDurableStore');
   const provider = randomUUID(), identity = randomUUID();
   await tenantDb(db, tenant).table('email_providers').insert({ tenant, id: provider, provider_type: 'google',
     provider_name: 'Customer Mail', mailbox: 'helpdesk@example.test', is_active: true, status: 'connected' });
@@ -694,7 +681,7 @@ async function stagedCoManagedInbox(tenant: string) {
 }
 
 async function runCoManagedInbox(tenantId: string, inboxId: string) {
-  const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+  const { processInboundInbox } = await import('../../../../../shared/services/email/inboundEmailCoreProcessor');
   return processInboundInbox({ tenantId, inboxId, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce', retainConversationEvent: retainCoManagedInboundCommentEvent });
 }
 
@@ -709,7 +696,7 @@ describe('durable co-managed email intake pauses', () => {
     let row = await customer.table('inbound_email_inbox').first();
     expect(row).toMatchObject({ status: 'received', attempt_count: 0, source_object_key: inbox.source_object_key,
       source_sha256: inbox.source_sha256, completed_at: null, error_details: { co_managed_lifecycle: { state: 'pending_acceptance' } } });
-    const { findDueInbox, claimInbox } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    const { findDueInbox, claimInbox } = await import('../../../../../shared/services/email/inboundEmailDurableStore');
     expect(await findDueInbox(db, { tenant: actor.tenant })).toHaveLength(0);
     expect(await claimInbox(db, { tenant: actor.tenant, inbox_id: inbox.inbox_id, owner: 'not-due', leaseTtlMs: 30_000 }))
       .toEqual({ claimed: false, reason: 'not_due' });
@@ -747,7 +734,7 @@ describe('durable co-managed email intake pauses', () => {
     // transactional outbox, effects, and terminal inbox state all remain real.
     intake.process.mockImplementationOnce(async (_input, options) => {
       const trx = options.durableExecution.trx;
-      const { TicketModel } = await import('../../../../shared/models/ticketModel');
+      const { TicketModel } = await import('../../../../../shared/models/ticketModel');
       const scoped = tenantDb(trx, actor.tenant);
       const status = await scoped.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
       const priority = await scoped.table('priorities').where({ item_type: 'ticket' }).first();
@@ -780,7 +767,7 @@ describe('durable co-managed email intake pauses', () => {
 
   it('does not release another worker lease or refund a reclaimed attempt, and preserves prior error provenance', async () => {
     const { actor, customer } = await readyForAcceptance(), inbox = await stagedCoManagedInbox(actor.tenant);
-    const { claimInbox, reclaimInbox, deferInboxForCoManagedLifecycle } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    const { claimInbox, reclaimInbox, deferInboxForCoManagedLifecycle } = await import('../../../../../shared/services/email/inboundEmailDurableStore');
     const initial = await claimInbox(db, { tenant: actor.tenant, inbox_id: inbox.inbox_id, owner: 'first', leaseTtlMs: 30000 });
     if (!initial.claimed) throw new Error('Expected first claim');
     await customer.table('inbound_email_inbox').update({ lease_expires_at: new Date(0), last_error: 'earlier source failure', error_details: { diagnostic: 'preserve' } });
@@ -809,7 +796,7 @@ async function withInboundMode<T>(mode: string, work: () => Promise<T>): Promise
 describe('co-managed durable intake selection', () => {
   it('requires durable intake across installation modes and retains the choice after independent upgrade', async () => {
     const { operation, actor, customer } = await readyForAcceptance();
-    const { getTenantInboundEmailPolicy } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    const { getTenantInboundEmailPolicy } = await import('../../../../../shared/services/email/inboundEmailDurableStore');
     for (const mode of ['off', 'shadow', 'enforce'] as const) await withInboundMode(mode, async () => {
       expect(await getTenantInboundEmailPolicy(actor.tenant, db)).toEqual({ mode: 'enforce', requiresDurable: true });
       expect(await getTenantInboundEmailPolicy(operation.tenant, db)).toEqual({ mode, requiresDurable: false });
@@ -824,7 +811,7 @@ describe('co-managed durable intake selection', () => {
 
   it('persists Microsoft, Google, and IMAP pointers while rollout is off even when Redis handoff fails', async () => {
     const { actor, customer } = await readyForAcceptance();
-    const { persistIngressPointer } = await import('../../../../shared/services/email/inboundEmailProducer');
+    const { persistIngressPointer } = await import('../../../../../shared/services/email/inboundEmailProducer');
     durableTransport.enqueue.mockReset(); durableTransport.enqueue.mockRejectedValue(new Error('Redis unavailable'));
     const pointers = [
       { providerType: 'microsoft' as const, providerMessageId: 'ms-message', extra: { subscriptionId: 'subscription' } },
@@ -852,7 +839,7 @@ describe('co-managed durable intake selection', () => {
     const providerId = randomUUID();
     await customer.table('email_providers').insert({ tenant: actor.tenant, id: providerId, provider_type: 'google',
       provider_name: 'Old producer', mailbox: 'help@example.test', is_active: true, status: 'connected' });
-    const { processUnifiedInboundEmailQueueJob } = await import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor');
+    const { processUnifiedInboundEmailQueueJob } = await import('../../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor');
     intake.process.mockReset(); durableTransport.enqueue.mockReset(); durableTransport.enqueue.mockRejectedValue(new Error('Redis unavailable'));
     const job = { schemaVersion: 1 as const, provider: 'google' as const, tenantId: actor.tenant, providerId,
       jobId: randomUUID(), enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
@@ -873,7 +860,7 @@ describe('co-managed durable intake selection', () => {
 
   it('dispatches co-managed inboxes to lifecycle deferral while the installation default is off', async () => {
     const { operation, actor } = await readyForAcceptance(), inbox = await stagedCoManagedInbox(actor.tenant);
-    const { processUnifiedInboundEmailDurableJob } = await import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessorV2');
+    const { processUnifiedInboundEmailDurableJob } = await import('../../../../../shared/services/email/unifiedInboundEmailQueueJobProcessorV2');
     const context = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: vi.fn() };
     const job = { schemaVersion: 2 as const, workType: 'process_inbox' as const, tenantId: actor.tenant,
       recordId: inbox.inbox_id, jobId: randomUUID(), enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5 };
@@ -891,7 +878,7 @@ describe('co-managed durable intake selection', () => {
     const { actor, customer } = await readyForAcceptance(), providerId = randomUUID(), messageId = randomUUID();
     await customer.table('email_providers').insert({ tenant: actor.tenant, id: providerId, provider_type: 'imap',
       provider_name: 'IMAP', mailbox: 'help@example.test', is_active: true, status: 'connected' });
-    const { stageReadyInboundSource } = await import('../../../../shared/services/email/inboundEmailProducer');
+    const { stageReadyInboundSource } = await import('../../../../../shared/services/email/inboundEmailProducer');
     intake.parse.mockReset(); intake.stage.mockReset(); durableTransport.enqueue.mockReset();
     intake.parse.mockResolvedValue({ normalizedMessageId: messageId, providerMessageId: messageId,
       rfcMessageId: `<${messageId}@example.test>`, emailData: { id: messageId, subject: 'IMAP source', from: { email: 'user@example.test' }, attachments: [] } });
@@ -911,7 +898,7 @@ describe('co-managed durable intake selection', () => {
     const dbModule = await import('@alga-psa/db');
     const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: actor.tenant });
     try {
-      const { sweepTenantDurableWork } = await import('../../../../shared/services/email/inboundEmailRecovery');
+      const { sweepTenantDurableWork } = await import('../../../../../shared/services/email/inboundEmailRecovery');
       for (const mode of ['off', 'shadow']) await withInboundMode(mode, async () => {
         durableTransport.enqueue.mockReset();
         const result = await sweepTenantDurableWork(actor.tenant);
@@ -924,9 +911,9 @@ describe('co-managed durable intake selection', () => {
 
 it('deduplicates co-managed outbox consumers even with installation rollout off', async () => {
   const { operation, actor, customer } = await readyForAcceptance(), inbox = await stagedCoManagedInbox(actor.tenant);
-  const { insertOutboxRow } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+  const { insertOutboxRow } = await import('../../../../../shared/services/email/inboundEmailDurableStore');
   const { reserveInboundOutboxEventForConsumer, completeInboundOutboxEventForConsumer } =
-    await import('../../../../shared/services/email/inboundEmailConsumerDedupe');
+    await import('../../../../../shared/services/email/inboundEmailConsumerDedupe');
   const id = randomUUID(), event = { id, eventType: 'TICKET_CREATED', payload: { tenantId: actor.tenant } };
   await insertOutboxRow(db, { tenant: actor.tenant, inbox_id: inbox.inbox_id, outbox_id: id,
     event_key: 'ticket-created', event_type: 'TICKET_CREATED', payload: event.payload });
@@ -943,8 +930,8 @@ it('deduplicates co-managed outbox consumers even with installation rollout off'
   expect(await customer.table('inbound_email_event_deliveries')).toEqual([expect.objectContaining({ status: 'delivered' })]);
 });
 
-async function runCoManagedArtifact(tenantId: string, inboxId: string, artifactKey: string, qualifiedReplyArtifacts?: import('../../../../shared/services/email/qualifiedReplyArtifacts').QualifiedReplyArtifactProcessor) {
-  const { processInboundArtifactJob } = await import('../../../../shared/services/email/inboundEmailArtifactWorker');
+async function runCoManagedArtifact(tenantId: string, inboxId: string, artifactKey: string, qualifiedReplyArtifacts?: import('../../../../../shared/services/email/qualifiedReplyArtifacts').QualifiedReplyArtifactProcessor) {
+  const { processInboundArtifactJob } = await import('../../../../../shared/services/email/inboundEmailArtifactWorker');
   return processInboundArtifactJob({ version: 2, jobId: randomUUID(), tenantId, inboxId, recordId: artifactKey,
     workType: 'process_artifact', providerId: '', providerType: 'google', enqueuedAt: new Date().toISOString() } as any,
   { signal: new AbortController().signal, renew: async () => true, registerPostgresLease() {} }, qualifiedReplyArtifacts);
@@ -958,7 +945,7 @@ async function expireCoManagedEntitlement(sponsorTenant: string) {
 describe('durable co-managed attachments', () => {
   it('parks attachments without spending attempts or overwriting failure history and fences reclaimed pause releases', async () => {
     const { actor, customer } = await readyForAcceptance(), inbox = await stagedCoManagedInbox(actor.tenant);
-    const store = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    const store = await import('../../../../../shared/services/email/inboundEmailDurableStore');
     await store.insertArtifacts(db, actor.tenant, ['pending', 'retryable_failed', 'fenced'].map(key => ({ tenant: actor.tenant,
       inbox_id: inbox.inbox_id, artifact_key: key, artifact_type: 'attachment' })));
     await customer.table('inbound_email_artifacts').where('artifact_key', 'retryable_failed')
@@ -1001,7 +988,7 @@ describe('durable co-managed attachments', () => {
     await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id)
       .update({ status: 'succeeded', outcome_kind: 'created', ticket_id: ticket.ticket_id,
         comment_id: comment.comment_id, completed_at: new Date() });
-    const store = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    const store = await import('../../../../../shared/services/email/inboundEmailDurableStore');
     await store.insertArtifacts(db, actor.tenant, [{ tenant: actor.tenant, inbox_id: inbox.inbox_id,
       artifact_key: key, artifact_type: 'attachment', source_attachment_id: key }]);
     intake.read.mockReset().mockResolvedValue(Buffer.from('retained source'));
@@ -1079,7 +1066,7 @@ it('preserves ticket assets and documents after lapse and permits their removal 
 describe('canonical material lifecycle admission', () => {
   it('guards direct ticket/project material mutations and the ticket API before any material or stock access', async () => {
     const { operation, actor, customer, input } = await readyForAcceptance();
-    const { addMaterial, deleteMaterial, updateProjectMaterialBilling } = await import('../../../../packages/inventory/src/lib/materials');
+    const { addMaterial, deleteMaterial, updateProjectMaterialBilling } = await import('../../../../../packages/inventory/src/lib/materials');
     const { service } = await ticketServiceForTest();
     const id = randomUUID(), product = randomUUID();
     const mutations = [
@@ -1114,10 +1101,10 @@ describe('canonical material lifecycle admission', () => {
     await customer.table('stock_locations').insert({ tenant: actor.tenant, location_id: locationId, name: 'Fixture shelf', is_default: true });
     await customer.table('product_inventory_settings').insert({ tenant: actor.tenant, service_id: serviceId, track_stock: true,
       is_serialized: false, cost_currency: 'USD', default_location_id: locationId, average_cost: 0 });
-    const { recordStockMovement } = await import('../../../../packages/inventory/src/lib/movements');
+    const { recordStockMovement } = await import('../../../../../packages/inventory/src/lib/movements');
     await db.transaction(trx => recordStockMovement(trx, actor.tenant, { movement_type: 'receipt', service_id: serviceId,
       quantity: 3, to_location_id: locationId }));
-    const { addMaterial, deleteMaterial, listMaterials } = await import('../../../../packages/inventory/src/lib/materials');
+    const { addMaterial, deleteMaterial, listMaterials } = await import('../../../../../packages/inventory/src/lib/materials');
     const material = await addMaterial(db, actor.tenant, { parent_type: 'ticket', parent_id: ticket.ticket_id,
       service_id: serviceId, quantity: 1, rate: 0, currency_code: 'USD' }, actor.userId) as { ticket_material_id: string };
     const onHand = async () => Number((await customer.table('stock_levels').where({ service_id: serviceId, location_id: locationId }).first()).quantity_on_hand);
@@ -1145,8 +1132,8 @@ describe('canonical material lifecycle admission', () => {
 });
 
 async function withStorageFixture(work: (fixture: Awaited<ReturnType<typeof readyForAcceptance>> & {
-  storage: typeof import('../../../../packages/storage/src/StorageService').StorageService;
-  files: typeof import('../../../../packages/storage/src/models/storage').FileStoreModel;
+  storage: typeof import('../../../../../packages/storage/src/StorageService').StorageService;
+  files: typeof import('../../../../../packages/storage/src/models/storage').FileStoreModel;
   publish: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>) {
   const fixture = await readyForAcceptance();
@@ -1154,8 +1141,8 @@ async function withStorageFixture(work: (fixture: Awaited<ReturnType<typeof read
   const events = await import('@alga-psa/event-bus/publishers');
   const connection = vi.spyOn(database, 'createTenantKnex').mockImplementation(async tenant => ({ knex: db, tenant: tenant ?? fixture.actor.tenant }));
   const publish = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
-  const { StorageService: storage } = await import('../../../../packages/storage/src/StorageService');
-  const { FileStoreModel: files } = await import('../../../../packages/storage/src/models/storage');
+  const { StorageService: storage } = await import('../../../../../packages/storage/src/StorageService');
+  const { FileStoreModel: files } = await import('../../../../../packages/storage/src/models/storage');
   artifactStorage.upload.mockReset().mockImplementation(async (buffer, path) => ({ path, size: buffer.length, mime_type: 'text/plain' }));
   artifactStorage.delete.mockReset().mockResolvedValue(undefined);
   artifactStorage.download.mockReset().mockResolvedValue(Buffer.from('saved'));
@@ -1183,7 +1170,7 @@ describe('co-managed storage lifecycle admission', () => {
     await acceptCoManagedRelationship(db, actor, input);
     const file = await files.create(db, storageFileData(actor.userId));
     await files.updateMetadata(db, file.file_id, { retained: true });
-    const migration = require('../../../migrations/20260906100000_add_external_file_metadata.cjs');
+    const migration = require('../../../../../server/migrations/20260906100000_add_external_file_metadata.cjs');
     await migration.up(db);
     await expect(migration.down(db)).rejects.toThrow('while stored values exist');
     await expireCoManagedEntitlement(operation.tenant);
@@ -1293,7 +1280,7 @@ it('commits ticket upload records together and publishes only after the attachme
 
 async function operationalConfigurationServices() {
   const [{ BoardService }, { StatusService }, { PriorityService }] = await Promise.all([
-    import('../../lib/api/services/BoardService'), import('../../lib/api/services/StatusService'), import('../../lib/api/services/PriorityService'),
+    import('../../../../../server/src/lib/api/services/BoardService'), import('../../../../../server/src/lib/api/services/StatusService'), import('../../../../../server/src/lib/api/services/PriorityService'),
   ]);
   const services = { boards: new BoardService(), statuses: new StatusService(), priorities: new PriorityService() };
   for (const service of Object.values(services)) vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
@@ -1304,7 +1291,7 @@ describe('inherited operational API mutations', () => {
   it('enforces admission on every inherited single and bulk mutation for boards, statuses, and priorities', async () => {
     const { operation, actor, input, customer } = await readyForAcceptance();
     const services = await operationalConfigurationServices(), context = { tenant: actor.tenant, userId: actor.userId }, id = randomUUID();
-    const publisher = await import('../../lib/eventBus/publishers');
+    const publisher = await import('../../../../../server/src/lib/eventBus/publishers');
     const publish = vi.spyOn(publisher, 'publishEvent').mockResolvedValue(undefined);
     try {
       for (const expectedCode of ['CO_MANAGED_NOT_ACTIVE', 'CO_MANAGED_READ_ONLY']) {
@@ -1330,7 +1317,7 @@ describe('inherited operational API mutations', () => {
   it('supports real configuration edits and bulk operations after renewal without writing missing audit columns', async () => {
     const { operation, actor, input, customer } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
     const services = await operationalConfigurationServices(), context = { tenant: actor.tenant, userId: actor.userId };
-    const publisher = await import('../../lib/eventBus/publishers');
+    const publisher = await import('../../../../../server/src/lib/eventBus/publishers');
     const publish = vi.spyOn(publisher, 'publishEvent').mockResolvedValue(undefined);
     try {
       const board = await services.boards.create({ board_name: 'Temporary customer board', is_inactive: false }, context);
@@ -1360,16 +1347,16 @@ describe('inherited operational API mutations', () => {
 });
 
 async function withProjectFixture(work: (fixture: Awaited<ReturnType<typeof readyForAcceptance>> & {
-  service: import('../../lib/api/services/ProjectService').ProjectService;
+  service: import('../../../../../server/src/lib/api/services/ProjectService').ProjectService;
   connection: ReturnType<typeof vi.spyOn>;
   publish: ReturnType<typeof vi.spyOn>;
   workflow: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>) {
   const fixture = await readyForAcceptance();
-  const { ProjectService } = await import('../../lib/api/services/ProjectService');
+  const { ProjectService } = await import('../../../../../server/src/lib/api/services/ProjectService');
   const service = new ProjectService();
   const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
-  const events = await import('../../lib/eventBus/publishers');
+  const events = await import('../../../../../server/src/lib/eventBus/publishers');
   const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
   const workflow = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
   try { await runWithTenant(fixture.actor.tenant, () => work({ ...fixture, service, connection, publish, workflow })); }
@@ -1546,8 +1533,8 @@ describe('co-managed canonical project model lifecycle admission', () => {
 });
 
 async function withProjectActionsFixture(work: (fixture: Awaited<ReturnType<typeof readyForAcceptance>> & {
-  actions: typeof import('../../../../packages/projects/src/actions/projectActions');
-  exports: typeof import('../../../../packages/projects/src/actions/projectTaskExportActions');
+  actions: typeof import('../../../../../packages/projects/src/actions/projectActions');
+  exports: typeof import('../../../../../packages/projects/src/actions/projectTaskExportActions');
   publish: ReturnType<typeof vi.spyOn>;
   workflow: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>) {
@@ -1565,8 +1552,8 @@ async function withProjectActionsFixture(work: (fixture: Awaited<ReturnType<type
   ];
   const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
   try {
-    const actions = await import('../../../../packages/projects/src/actions/projectActions');
-    const exports = await import('../../../../packages/projects/src/actions/projectTaskExportActions');
+    const actions = await import('../../../../../packages/projects/src/actions/projectActions');
+    const exports = await import('../../../../../packages/projects/src/actions/projectTaskExportActions');
     await auth.runWithApiKeyUser(user, () => runWithTenant(fixture.actor.tenant, () => work({ ...fixture, actions, exports, publish, workflow })));
   } finally { publish.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
 }
@@ -1778,7 +1765,7 @@ it('preserves task configuration and dependencies through lapse and caller rollb
 describe('co-managed project ordering recovery', () => {
   it('denies all standalone repair and regeneration services before acceptance and after expiry', async () => {
     const { operation, actor, input } = await readyForAcceptance();
-    const ordering = await import('../../../../packages/projects/src/services/projectOrderingService');
+    const ordering = await import('../../../../../packages/projects/src/services/projectOrderingService');
     const id = randomUUID();
     const mutations = [
       () => ordering.regenerateTaskOrderKeys(db, actor.tenant, id, id),
@@ -1793,10 +1780,10 @@ describe('co-managed project ordering recovery', () => {
 
   it('repairs invalid task and phase keys inside the admitted action transaction without recursive actions', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions }) => {
     await acceptCoManagedRelationship(db, actor, input);
-    const taskActions = await import('../../../../packages/projects/src/actions/projectTaskActions');
+    const taskActions = await import('../../../../../packages/projects/src/actions/projectTaskActions');
     const { ProjectTaskModel } = await import('@alga-psa/projects/models');
     const dbModule = await import('@alga-psa/db');
-    const ordering = await import('../../../../packages/projects/src/services/projectOrderingService');
+    const ordering = await import('../../../../../packages/projects/src/services/projectOrderingService');
     const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
     const project = await actions.createProject({ tenant: actor.tenant, project_name: 'Ordering recovery',
       client_id: operation.customer_client_id, status: status.status_id, description: null, start_date: null,
@@ -1846,7 +1833,7 @@ describe('co-managed project ordering recovery', () => {
 
 describe('co-managed task action lifecycle and publication', () => {
   it('denies task action mutations before acceptance and after expiry without emitting events', async () => withProjectActionsFixture(async ({ operation, actor, input, publish, workflow }) => {
-    const actions = await import('../../../../packages/projects/src/actions/projectTaskActions');
+    const actions = await import('../../../../../packages/projects/src/actions/projectTaskActions');
     const id = randomUUID();
     const checklist = { tenant: actor.tenant, item_name: 'Check', description: null, assigned_to: null, completed: false, due_date: null, order_number: 1 };
     const mutations = [
@@ -1882,7 +1869,7 @@ describe('co-managed task action lifecycle and publication', () => {
 
   it('publishes only committed tasks and checklists, preserves reads during lapse, and resumes edits after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions: projects, publish, workflow }) => {
     await acceptCoManagedRelationship(db, actor, input);
-    const actions = await import('../../../../packages/projects/src/actions/projectTaskActions');
+    const actions = await import('../../../../../packages/projects/src/actions/projectTaskActions');
     const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
     const project = await projects.createProject({ tenant: actor.tenant, project_name: 'Task action rollout',
       client_id: operation.customer_client_id, status: status.status_id, description: null, start_date: null, end_date: null, is_inactive: false }) as any;
@@ -1929,7 +1916,7 @@ describe('co-managed task action lifecycle and publication', () => {
 
 describe('co-managed project status action lifecycle', () => {
   it('denies all status library and mapping mutations before acceptance and after expiry', async () => withProjectActionsFixture(async ({ operation, actor, input }) => {
-    const actions = await import('../../../../packages/projects/src/actions/projectTaskStatusActions');
+    const actions = await import('../../../../../packages/projects/src/actions/projectTaskStatusActions');
     const id = randomUUID();
     const mutations = [
       () => actions.addStatusToProject(id, { status_id: id }),
@@ -1950,7 +1937,7 @@ describe('co-managed project status action lifecycle', () => {
 
   it('preserves mapping reads during expiry and resumes status swaps, phase remapping, and deletion after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions: projects }) => {
     await acceptCoManagedRelationship(db, actor, input);
-    const actions = await import('../../../../packages/projects/src/actions/projectTaskStatusActions');
+    const actions = await import('../../../../../packages/projects/src/actions/projectTaskStatusActions');
     const { ProjectTaskModel } = await import('@alga-psa/projects/models');
     const projectStatus = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
     const project = await projects.createProject({ tenant: actor.tenant, project_name: 'Status rollout', client_id: operation.customer_client_id,
@@ -2002,8 +1989,8 @@ describe('co-managed project status action lifecycle', () => {
 
 describe('co-managed task comments and reactions', () => {
   it('denies comment and reaction mutations before acceptance and after expiry', async () => withProjectActionsFixture(async ({ operation, actor, input, publish }) => {
-    const comments = await import('../../../../packages/projects/src/actions/projectTaskCommentActions');
-    const reactions = await import('../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
+    const comments = await import('../../../../../packages/projects/src/actions/projectTaskCommentActions');
+    const reactions = await import('../../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
     const id = randomUUID();
     const mutations = [
       () => comments.createTaskComment({ taskId: id, note: 'Denied' }),
@@ -2019,8 +2006,8 @@ describe('co-managed task comments and reactions', () => {
 
   it('keeps threaded comments and reactions atomic, publishes after commit, and resumes after renewal', async () => withProjectCommentActionsFixture(async ({ operation, actor, input, customer, actions: projects, publish }) => {
     await acceptCoManagedRelationship(db, actor, input);
-    const comments = await import('../../../../packages/projects/src/actions/projectTaskCommentActions');
-    const reactions = await import('../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
+    const comments = await import('../../../../../packages/projects/src/actions/projectTaskCommentActions');
+    const reactions = await import('../../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
     const dbModule = await import('@alga-psa/db');
     const { ProjectTaskModel } = await import('@alga-psa/projects/models');
     const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
@@ -2083,11 +2070,11 @@ describe('co-managed task comments and reactions', () => {
 
 describe('co-managed project templates and import', () => {
   it('denies every template mutation, the application service, and CSV import while inactive', async () => withProjectActionsFixture(async ({ operation, actor, input, publish, workflow }) => {
-    const templates = await import('../../../../packages/projects/src/actions/projectTemplateActions');
-    const wizard = await import('../../../../packages/projects/src/actions/projectTemplateWizardActions');
-    const importer = await import('../../../../packages/projects/src/actions/phaseTaskImportActions');
-    const { applyProjectTemplate } = await import('../../../../packages/projects/src/services/applyProjectTemplate');
-    const { replaceTemplateStatusMappingCore } = await import('../../../../packages/projects/src/lib/projectTemplateStatusMappingResolution');
+    const templates = await import('../../../../../packages/projects/src/actions/projectTemplateActions');
+    const wizard = await import('../../../../../packages/projects/src/actions/projectTemplateWizardActions');
+    const importer = await import('../../../../../packages/projects/src/actions/phaseTaskImportActions');
+    const { applyProjectTemplate } = await import('../../../../../packages/projects/src/services/applyProjectTemplate');
+    const { replaceTemplateStatusMappingCore } = await import('../../../../../packages/projects/src/lib/projectTemplateStatusMappingResolution');
     const { withTransaction } = await import('@alga-psa/db');
     const id = randomUUID();
     const data = { template_name: 'Denied', phases: [], tasks: [], status_mappings: [], checklist_items: [] };
@@ -2139,9 +2126,9 @@ describe('co-managed project templates and import', () => {
 
   it('creates and applies wizard templates atomically, preserves lapse reads, and resumes imports after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, publish, workflow }) => {
     await acceptCoManagedRelationship(db, actor, input);
-    const templates = await import('../../../../packages/projects/src/actions/projectTemplateActions');
-    const wizard = await import('../../../../packages/projects/src/actions/projectTemplateWizardActions');
-    const importer = await import('../../../../packages/projects/src/actions/phaseTaskImportActions');
+    const templates = await import('../../../../../packages/projects/src/actions/projectTemplateActions');
+    const wizard = await import('../../../../../packages/projects/src/actions/projectTemplateWizardActions');
+    const importer = await import('../../../../../packages/projects/src/actions/phaseTaskImportActions');
     const dbModule = await import('@alga-psa/db');
     const status = await customer.table('statuses').where({ status_type: 'project_task', is_closed: false }).first();
     const data = { template_name: 'Customer rollout',
@@ -2209,7 +2196,7 @@ describe('co-managed project templates and import', () => {
 it('keeps client portal task uploads atomic when expiry wins during transport and preserves document reads', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions: projects, workflow }) => {
   await acceptCoManagedRelationship(db, actor, input);
   const auth = await import('@alga-psa/auth');
-  const portal = await import('../../../../packages/client-portal/src/actions/client-portal-actions/client-project-details');
+  const portal = await import('../../../../../packages/client-portal/src/actions/client-portal-actions/client-project-details');
   const { ProjectTaskModel } = await import('@alga-psa/projects/models');
   const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
   const project = await projects.createProject({ tenant: actor.tenant, project_name: 'Portal upload', client_id: operation.customer_client_id,
@@ -2260,7 +2247,7 @@ it('keeps client portal task uploads atomic when expiry wins during transport an
 }));
 
 it('admits project status email at send time while retaining previews during pending acceptance and lapse', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
-  const actions = await import('../../../../packages/projects/src/actions/projectStatusUpdateActions');
+  const actions = await import('../../../../../packages/projects/src/actions/projectStatusUpdateActions');
   const dbModule = await import('@alga-psa/db');
   const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
   statusEmail.create.mockReset().mockResolvedValue({ sendEmail: statusEmail.send });
@@ -2303,7 +2290,7 @@ it('admits project status email at send time while retaining previews during pen
 describe('co-managed KB article API lifecycle', () => {
   it('denies every article mutation during pending acceptance and lapse while preserving article and content reads', async () => {
     const { operation, actor, input } = await readyForAcceptance();
-    const { KbArticleService } = await import('../../lib/api/services/KbArticleService');
+    const { KbArticleService } = await import('../../../../../server/src/lib/api/services/KbArticleService');
     const service = new KbArticleService();
     vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
     const context = { tenant: actor.tenant, userId: actor.userId };
@@ -2334,7 +2321,7 @@ describe('co-managed KB article API lifecycle', () => {
   it('rolls back failed article/document changes, preserves caller transactions, and synchronizes publication visibility after renewal', async () => {
     const { operation, actor, input, customer } = await readyForAcceptance();
     await acceptCoManagedRelationship(db, actor, input);
-    const { KbArticleService } = await import('../../lib/api/services/KbArticleService');
+    const { KbArticleService } = await import('../../../../../server/src/lib/api/services/KbArticleService');
     const { withTransaction } = await import('@alga-psa/db');
     const service = new KbArticleService();
     vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
@@ -2387,8 +2374,8 @@ describe('co-managed KB article API lifecycle', () => {
 
 describe('co-managed shared KB creation and worker admission', () => {
   it('keeps direct and UI article creation atomic and defers UI events through caller rollback', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, publish }) => {
-    const { createKbArticle } = await import('../../../../shared/models/kbArticleModel');
-    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const { createKbArticle } = await import('../../../../../shared/models/kbArticleModel');
+    const actions = await import('../../../../../packages/documents/src/actions/kbArticleActions');
     const dbModule = await import('@alga-psa/db');
     const context = { tenant: actor.tenant, userId: actor.userId };
     const data = { title: 'UI article', audience: 'client' as const, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Customer content' }] }] };
@@ -2417,7 +2404,7 @@ describe('co-managed shared KB creation and worker admission', () => {
   }));
 
   it('retains pending import content during license pauses and imports the same staged file once after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, publish }) => {
-    const { kbArticleImportHandler } = await import('../../../../packages/jobs/src/lib/handlers/kbArticleImportHandler');
+    const { kbArticleImportHandler } = await import('../../../../../packages/jobs/src/lib/handlers/kbArticleImportHandler');
     const jobId = randomUUID(), fileId = randomUUID();
     const source = '# Customer runbook\n\nPreserved import content';
     await customer.table('kb_import_files').insert({ tenant: actor.tenant, import_file_id: fileId, job_id: jobId,
@@ -2444,7 +2431,7 @@ describe('co-managed shared KB creation and worker admission', () => {
 
 describe('co-managed KB UI mutation lifecycle', () => {
   it('denies edits, publication, deletion, review and feedback while view recording becomes a read-only no-op', async () => withProjectActionsFixture(async ({ operation, actor, input, publish }) => {
-    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const actions = await import('../../../../../packages/documents/src/actions/kbArticleActions');
     const id = randomUUID();
     const mutations = [
       () => actions.updateArticle(id, { title: 'Denied' }),
@@ -2465,7 +2452,7 @@ describe('co-managed KB UI mutation lifecycle', () => {
 
   it('keeps visibility, review cycles, and publication atomic across rollback and renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, publish }) => {
     await acceptCoManagedRelationship(db, actor, input);
-    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const actions = await import('../../../../../packages/documents/src/actions/kbArticleActions');
     const dbModule = await import('@alga-psa/db');
     const article = await actions.createArticle({ title: 'Customer runbook', audience: 'client' }) as any;
     const readDocument = () => customer.table('documents').where('document_id', article.document_id).first();
@@ -2531,7 +2518,7 @@ describe('co-managed KB UI mutation lifecycle', () => {
 
 describe('co-managed KB import staging', () => {
   it('admits staging atomically, retains paused source, and only schedules committed batches with stable polling identities', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
-    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const actions = await import('../../../../../packages/documents/src/actions/kbArticleActions');
     const dbModule = await import('@alga-psa/db');
     const core = await import('@alga-psa/core');
     const enqueue = vi.spyOn(core, 'enqueueImmediateJob');
@@ -2584,7 +2571,7 @@ describe('co-managed KB import staging', () => {
     const uncertain = await actions.startArticleImport(upload) as any;
     expect(await customer.table('kb_import_files').where('batch_id', uncertain.jobId).first()).toMatchObject({ status: 'pending', content: '# New guide' });
     expect(await actions.getArticleImportStatus(uncertain.jobId)).toMatchObject({ total: 1, imported: 0, failed: [] });
-    const migration = require('../../../migrations/20260906110000_add_kb_import_batch_identity.cjs');
+    const migration = require('../../../../../server/migrations/20260906110000_add_kb_import_batch_identity.cjs');
     await migration.up(db);
     await expect(migration.down(db)).rejects.toThrow('while tracked imports exist');
   }));
@@ -2592,7 +2579,7 @@ describe('co-managed KB import staging', () => {
 
 describe('co-managed KB import recovery', () => {
   it('exposes pauses without file failures and resumes the retained identities once after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
-    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const actions = await import('../../../../../packages/documents/src/actions/kbArticleActions');
     const core = await import('@alga-psa/core');
     const dbModule = await import('@alga-psa/db');
     const enqueue = vi.spyOn(core, 'enqueueImmediateJob').mockResolvedValue({ jobId: randomUUID(), scheduledJobId: null });
@@ -2626,7 +2613,7 @@ describe('co-managed KB import recovery', () => {
       tenantId: actor.tenant, userId: actor.userId, fileIds: [fileId],
     })]);
     expect(await customer.table('kb_import_files').first()).toMatchObject({ batch_id: batchId, import_file_id: fileId });
-    const { kbArticleImportHandler } = await import('../../../../packages/jobs/src/lib/handlers/kbArticleImportHandler');
+    const { kbArticleImportHandler } = await import('../../../../../packages/jobs/src/lib/handlers/kbArticleImportHandler');
     const payload = enqueue.mock.calls[0][1] as any;
     await Promise.all([kbArticleImportHandler(randomUUID(), payload), kbArticleImportHandler(randomUUID(), payload)]);
     expect(await customer.table('kb_articles')).toHaveLength(1);
@@ -2638,7 +2625,7 @@ describe('co-managed KB import recovery', () => {
   }));
 
   it('keeps discovery and recovery tenant-qualified and paginates without exposing file content', async () => withProjectActionsFixture(async ({ actor, input, customer }) => {
-    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const actions = await import('../../../../../packages/documents/src/actions/kbArticleActions');
     await acceptCoManagedRelationship(db, actor, input);
     const other = await readyForAcceptance();
     const foreignBatchId = randomUUID();
@@ -2679,7 +2666,7 @@ async function collaborationPolicyFixture() {
 describe('co-managed collaboration policy administration', () => {
   it('keeps customer scope customer-owned, validates local resources, and records idempotent revisioned changes', async () => {
     const { operation, actor, customer, sponsorActor, target } = await collaborationPolicyFixture();
-    const policy = await import('../../../../packages/co-managed/src/policy');
+    const policy = await import('../../../../../packages/co-managed/src/policy');
     const initial = await policy.getCoManagedCollaborationPolicy(db, actor, target);
     expect(initial).toMatchObject({ revision: 2, visibilityMode: 'board_scope', projects: [], assignments: [],
       boards: [{ id: operation.customer_board_id, canCollaborate: true }] });
@@ -2696,7 +2683,7 @@ describe('co-managed collaboration policy administration', () => {
     expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 2, desired)).toBe(3);
     expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 2, desired)).toBe(3);
     expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 3, desired)).toBe(3);
-    const migration = require('../../../migrations/20260906120000_create_co_management_collaboration_policy.cjs');
+    const migration = require('../../../../../server/migrations/20260906120000_create_co_management_collaboration_policy.cjs');
     await expect(migration.down(db)).rejects.toThrow('Cannot remove configured');
     expect(await customer.table('co_management_relationship_events').where('event_type', 'customer_scope_changed')).toEqual([
       expect.objectContaining({ revision: 3, actor_tenant: actor.tenant, actor_user_id: actor.userId, scope: desired }),
@@ -2717,7 +2704,7 @@ describe('co-managed collaboration policy administration', () => {
 
   it('keeps staff assignments in the MSP, rejects foreign and inactive principals, and permits reductions during a pause', async () => {
     const { operation, actor, customer, sponsor, sponsorActor, target, roleId, permissionId } = await collaborationPolicyFixture();
-    const policy = await import('../../../../packages/co-managed/src/policy');
+    const policy = await import('../../../../../packages/co-managed/src/policy');
     const teamId = randomUUID();
     await sponsor.table('teams').insert({ tenant: sponsorActor.tenant, team_id: teamId, team_name: 'Service desk', manager_id: sponsorActor.userId });
     const staff = [{ kind: 'team' as const, principalId: teamId, role: 'viewer' as const },
@@ -2753,7 +2740,7 @@ describe('co-managed collaboration policy administration', () => {
 
   it('serializes competing policy revisions and rejects other tenants without leaking the policy', async () => {
     const { actor, target, operation } = await collaborationPolicyFixture();
-    const policy = await import('../../../../packages/co-managed/src/policy');
+    const policy = await import('../../../../../packages/co-managed/src/policy');
     const other = await collaborationPolicyFixture();
     await expect(policy.getCoManagedCollaborationPolicy(db, other.actor, target)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     await expect(policy.getCoManagedCollaborationPolicy(db, other.sponsorActor, target)).rejects.toMatchObject({ code: 'FORBIDDEN' });
@@ -2765,7 +2752,7 @@ describe('co-managed collaboration policy administration', () => {
     expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
     expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'POLICY_CHANGED' } });
     expect((await policy.getCoManagedCollaborationPolicy(db, actor, target)).revision).toBe(3);
-    const migration = require('../../../migrations/20260906120000_create_co_management_collaboration_policy.cjs');
+    const migration = require('../../../../../server/migrations/20260906120000_create_co_management_collaboration_policy.cjs');
     await migration.up(db);
   });
 });
@@ -2797,8 +2784,8 @@ async function sharedWorkFixture() {
 describe('co-managed shared-work authorization boundary', () => {
   it('intersects live home RBAC, explicit staff assignment, customer scope, and lifecycle without switching identity', async () => {
     const { principal, resource, sponsorActor, actor, target, sponsor, customer, operation, roleId } = await sharedWorkFixture();
-    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
-    const policy = await import('../../../../packages/co-managed/src/policy');
+    const { withCoManagedSharedWork: work } = await import('../../../../../packages/co-managed/src/sharedWork');
+    const policy = await import('../../../../../packages/co-managed/src/policy');
     const command = vi.fn(async () => 'authorized');
     await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
     await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
@@ -2836,8 +2823,8 @@ describe('co-managed shared-work authorization boundary', () => {
 
   it('rejects revoked, expired, inactive, mismatched, foreign, and unsupported principals before executing a command', async () => {
     const { principal, resource, sponsorActor, target, sponsor, customer } = await sharedWorkFixture();
-    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
-    const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+    const { withCoManagedSharedWork: work } = await import('../../../../../packages/co-managed/src/sharedWork');
+    const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
     await replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
     const command = vi.fn(async () => true);
     for (const invalid of [{ ...principal, kind: 'api_key' }, { ...principal, userId: randomUUID() },
@@ -2864,8 +2851,8 @@ describe('co-managed shared-work authorization boundary', () => {
 
   it('requires explicit project grants and current team membership for both projects and their actual tasks', async () => {
     const { principal, sponsorActor, actor, target, sponsor, customer, operation } = await sharedWorkFixture();
-    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
-    const policy = await import('../../../../packages/co-managed/src/policy');
+    const { withCoManagedSharedWork: work } = await import('../../../../../packages/co-managed/src/sharedWork');
+    const policy = await import('../../../../../packages/co-managed/src/policy');
     const { ProjectModel: model } = await import('@alga-psa/projects/models');
     const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
     const project = await model.create(db, actor.tenant, { project_name: 'Shared rollout', project_number: 'SHARED-1',
@@ -2898,8 +2885,8 @@ describe('co-managed shared-work authorization boundary', () => {
 
   it('rechecks customer revocation after waiting for the relationship policy lock', async () => {
     const { principal, resource, sponsorActor, actor, target, operation } = await sharedWorkFixture();
-    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
-    const policy = await import('../../../../packages/co-managed/src/policy');
+    const { withCoManagedSharedWork: work } = await import('../../../../../packages/co-managed/src/sharedWork');
+    const policy = await import('../../../../../packages/co-managed/src/policy');
     await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
     const blocker = await db.transaction();
     await tenantDb(blocker, operation.tenant).table('co_managed_entitlements').forUpdate().first();
@@ -2924,8 +2911,8 @@ describe('co-managed shared-work authorization boundary', () => {
 
   it('applies home bundle restrictions using home IDs and propagates redactions and fail-closed field constraints', async () => {
     const { principal, resource, sponsorActor, target, sponsor, operation } = await sharedWorkFixture();
-    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
-    const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+    const { withCoManagedSharedWork: work } = await import('../../../../../packages/co-managed/src/sharedWork');
+    const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
     await replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
     const bundles = await import('@alga-psa/authorization');
     const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Scoped shared work', actorUserId: principal.userId });
@@ -2962,7 +2949,7 @@ describe('co-managed shared-work authorization boundary', () => {
 });
 
 async function withPolicyActionFixture(work: (fixture: Awaited<ReturnType<typeof collaborationPolicyFixture>> & {
-  actions: typeof import('../../lib/actions/coManagedPolicyActions');
+  actions: typeof import('../../../../../server/src/lib/actions/coManagedPolicyActions');
   asActor: <T>(actor: { tenant: string; userId: string }, callback: () => Promise<T>) => Promise<T>;
 }) => Promise<void>) {
   const fixture = await collaborationPolicyFixture();
@@ -2996,7 +2983,7 @@ async function withPolicyActionFixture(work: (fixture: Awaited<ReturnType<typeof
     }
   };
   try {
-    const actions = await import('../../lib/actions/coManagedPolicyActions');
+    const actions = await import('../../../../../server/src/lib/actions/coManagedPolicyActions');
     await work({ ...fixture, actions, asActor });
   } finally { spy.mockRestore(); }
 }
@@ -3007,11 +2994,11 @@ it('co-managed admins cannot configure Teams or telephony through direct actions
   const secretProvider = vi.spyOn(secrets, 'getSecretProviderInstance');
   const oldEdition = process.env.EDITION; process.env.EDITION = 'ee';
   try {
-    const teams = await import('../../../../packages/integrations/src/actions/integrations/teamsActions');
-    const telephony = await import('../../../../packages/integrations/src/actions/integrations/telephonyActions');
-    const availability = await import('../../../../packages/integrations/src/lib/teamsAvailability');
-    const ee = await import('../../../../ee/packages/microsoft-teams/src/lib/teams/teamsAvailability');
-    const realAuth = await import('../../../../packages/auth/src/lib/apiKeyUserContext');
+    const teams = await import('../../../../../packages/integrations/src/actions/integrations/teamsActions');
+    const telephony = await import('../../../../../packages/integrations/src/actions/integrations/telephonyActions');
+    const availability = await import('../../../../../packages/integrations/src/lib/teamsAvailability');
+    const ee = await import('../../../../packages/microsoft-teams/src/lib/teams/teamsAvailability');
+    const realAuth = await import('../../../../../packages/auth/src/lib/apiKeyUserContext');
     const user = await f.customer.table('users').where('user_id', f.actor.userId).first();
     const expected = { enabled: false, reason: 'product_unavailable' };
     expect(await availability.getTeamsAvailability({ tenantId: f.actor.tenant })).toMatchObject(expected);
@@ -3041,19 +3028,19 @@ it('co-managed admins cannot invoke excluded RMM actions or background engines d
   const secretRead = vi.fn(async () => 'fixture-webhook-secret');
   const secretProvider = vi.spyOn(secrets, 'getSecretProviderInstance').mockResolvedValue({ getTenantSecret: secretRead } as any);
   try {
-    const tactical = await import('../../../../packages/integrations/src/actions/integrations/tacticalRmmActions');
-    const status = await import('../../../../packages/integrations/src/actions/integrations/rmmIntegrationStatusActions');
-    const automation = await import('../../../../packages/integrations/src/actions/integrations/rmmAlertRuleActions');
+    const tactical = await import('../../../../../packages/integrations/src/actions/integrations/tacticalRmmActions');
+    const status = await import('../../../../../packages/integrations/src/actions/integrations/rmmIntegrationStatusActions');
+    const automation = await import('../../../../../packages/integrations/src/actions/integrations/rmmAlertRuleActions');
     const actions = Object.entries({ ...tactical, ...status, ...automation }).filter(([, action]) => typeof action === 'function');
     expect(actions).toHaveLength(28);
     for (const [name, action] of actions) await expect(f.asActor(f.actor, () => (action as any)({})), name)
       .rejects.toMatchObject({ code: 'PRODUCT_ACCESS_DENIED', capability: 'rmm', productCode: 'co_managed' });
-    const { runTacticalRmmDeviceSync } = await import('../../../../packages/integrations/src/lib/rmm/tacticalrmm/deviceSync');
-    const { syncTacticalSingleAgentForTenant } = await import('../../../../packages/integrations/src/lib/rmm/tacticalrmm/syncSingleAgent');
+    const { runTacticalRmmDeviceSync } = await import('../../../../../packages/integrations/src/lib/rmm/tacticalrmm/deviceSync');
+    const { syncTacticalSingleAgentForTenant } = await import('../../../../../packages/integrations/src/lib/rmm/tacticalrmm/syncSingleAgent');
     await expect(runTacticalRmmDeviceSync({ tenant: f.actor.tenant })).rejects.toMatchObject({ code: 'PRODUCT_ACCESS_DENIED' });
     await expect(syncTacticalSingleAgentForTenant({ tenant: f.actor.tenant, agentId: 'fixture-agent' })).rejects.toMatchObject({ code: 'PRODUCT_ACCESS_DENIED' });
     expect(secretProvider).not.toHaveBeenCalled();
-    const { POST } = await import('../../app/api/webhooks/tacticalrmm/route');
+    const { POST } = await import('../../../../../server/src/app/api/webhooks/tacticalrmm/route');
     const response = await POST(new Request(`http://fixture/api/webhooks/tacticalrmm?tenant=${f.actor.tenant}`, {
       method: 'POST', headers: { 'X-Alga-Webhook-Secret': 'fixture-webhook-secret', 'content-type': 'application/json' }, body: JSON.stringify({ agent_id: 'fixture-agent' }),
     }));
@@ -3154,8 +3141,8 @@ describe('authenticated co-managed policy actions', () => {
 describe('co-managed shared metadata reads', () => {
   it('returns an allowlisted canonical ticket with qualified context, stays readable during lapse, and denies revoked scope', async () => {
     const { principal, resource, sponsorActor, target, customer, actor, operation } = await sharedWorkFixture();
-    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
-    const policy = await import('../../../../packages/co-managed/src/policy');
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../../packages/co-managed/src/sharedWorkRead');
+    const policy = await import('../../../../../packages/co-managed/src/policy');
     await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
     await customer.table('tickets').where('ticket_id', resource.id).update({ attributes: { description: 'Private linked image', internal_cost: 987 }, url: 'https://private.example.test' });
     const result = await runWithTenant(principal.tenant, async () => {
@@ -3182,8 +3169,8 @@ describe('co-managed shared metadata reads', () => {
 
   it('redacts canonical source fields and their derived references before returning the response', async () => {
     const { principal, resource, sponsorActor, target, sponsor, operation } = await sharedWorkFixture();
-    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
-    const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../../packages/co-managed/src/sharedWorkRead');
+    const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
     await replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
     const bundles = await import('@alga-psa/authorization');
     const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Redacted shared metadata', actorUserId: principal.userId });
@@ -3203,8 +3190,8 @@ describe('co-managed shared metadata reads', () => {
 
   it('reads granted project/task metadata with the actual parent and canonical custom status while omitting private and effort fields', async () => {
     const { principal, sponsorActor, actor, target, customer, operation } = await sharedWorkFixture();
-    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
-    const policy = await import('../../../../packages/co-managed/src/policy');
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../../packages/co-managed/src/sharedWorkRead');
+    const policy = await import('../../../../../packages/co-managed/src/policy');
     const { ProjectModel: model } = await import('@alga-psa/projects/models');
     const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
     const project = await model.create(db, actor.tenant, { project_name: 'Shared metadata', project_number: 'SUMMARY-1',
@@ -3248,7 +3235,7 @@ async function ticketHandoffFixture() {
   const sessionId = randomUUID();
   await fixture.customer.table('sessions').insert({ tenant: fixture.actor.tenant, session_id: sessionId, user_id: fixture.actor.userId,
     expires_at: new Date(Date.now() + 3600000) });
-  const policy = await import('../../../../packages/co-managed/src/policy');
+  const policy = await import('../../../../../packages/co-managed/src/policy');
   await policy.replaceCoManagedCustomerScope(db, fixture.actor, fixture.target, 2, { visibilityMode: 'escalation_only', boards: [], projects: [] });
   await policy.replaceCoManagedStaffAssignments(db, fixture.sponsorActor, fixture.target, 3,
     [{ kind: 'user', principalId: fixture.principal.userId, role: 'technician' }]);
@@ -3269,8 +3256,8 @@ async function ticketHandoffFixture() {
 describe('co-managed ticket escalation and handback', () => {
   it('atomically escalates one canonical ticket, keeps access on handback, and reuses the original work identity on re-escalation', async () => {
     const { principal, customerPrincipal, resource, customer, sponsor, operation, actor } = await ticketHandoffFixture();
-    const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../../packages/co-managed/src/sharedWorkRead');
     const before = await customer.table('tickets').where('ticket_id', resource.id).first();
     expect((await read(db, customerPrincipal, resource)).fields).toMatchObject({ work_revision: 0, responsibility: 'customer', explicit_grant_active: false });
     await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -3312,7 +3299,7 @@ describe('co-managed ticket escalation and handback', () => {
 
   it('rejects changed requests and concurrent stale revisions and rolls all stores back with the caller', async () => {
     const { customerPrincipal, resource, customer, sponsor } = await ticketHandoffFixture();
-    const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     const { withTransaction } = await import('@alga-psa/db');
     const request = { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate together.' };
     await expect(withTransaction(db, async trx => { await escalate(trx, customerPrincipal, resource, request); throw new Error('Caller rollback'); })).rejects.toThrow('Caller rollback');
@@ -3329,14 +3316,14 @@ describe('co-managed ticket escalation and handback', () => {
     expect(await customer.table('co_management_ticket_handoffs')).toHaveLength(1);
     await handback(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'We can continue locally.' });
     expect(await customer.table('co_management_ticket_work').first()).toMatchObject({ responsibility: 'customer', revision: 2 });
-    const migration = require('../../../migrations/20260906130000_create_co_management_ticket_handoffs.cjs');
+    const migration = require('../../../../../server/migrations/20260906130000_create_co_management_ticket_handoffs.cjs');
     await migration.up(db);
     await expect(migration.down(db)).rejects.toThrow('Cannot remove retained');
   });
 
   it('fails closed on foreign identity, malformed notes, inactive destinations, lifecycle pauses, and revoked sessions', async () => {
     const { principal, customerPrincipal, resource, customer, sponsor, operation, sponsorActor, target } = await ticketHandoffFixture();
-    const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     const request = { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate together.' };
     await expect(escalate(db, principal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
     for (const note of ['', '   ', 'x'.repeat(10001), '\0invalid']) await expect(escalate(db, customerPrincipal, resource, { ...request, note })).rejects.toMatchObject({ code: 'INVALID_HANDOFF' });
@@ -3359,7 +3346,7 @@ describe('co-managed ticket escalation and handback', () => {
     await expect(escalate(db, customerPrincipal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
     await customer.table('role_permissions').insert(permissionRows);
     await escalate(db, customerPrincipal, resource, request);
-    const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+    const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
     await replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
     await expect(handback(db, principal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Viewer cannot return work.' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
     await replaceCoManagedStaffAssignments(db, sponsorActor, target, 5, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
@@ -3371,8 +3358,8 @@ describe('co-managed ticket escalation and handback', () => {
 
   it('respects customer ticket narrowing and uses only a qualified MSP reference for local queue narrowing', async () => {
     const { principal, customerPrincipal, resource, customer, sponsor, operation } = await ticketHandoffFixture();
-    const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    const { escalateCoManagedTicket: escalate } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../../packages/co-managed/src/sharedWorkRead');
     const bundles = await import('@alga-psa/authorization');
     const customerBundle = await bundles.createAuthorizationBundle(db, { tenant: customerPrincipal.tenant, name: 'Local board authority', actorUserId: customerPrincipal.userId });
     await bundles.upsertBundleRule(db, { tenant: customerPrincipal.tenant, ...customerBundle, resourceType: 'ticket', action: 'update',
@@ -3400,7 +3387,7 @@ describe('co-managed ticket escalation and handback', () => {
 
   it.each(['session', 'license'])('rechecks %s expiry after waiting for the approved destination lock without leaving a grant or work reference', async expiration => {
     const { customerPrincipal, resource, customer, sponsor, operation } = await ticketHandoffFixture();
-    const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { escalateCoManagedTicket: escalate } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     if (expiration === 'session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
     else {
       const lapse = new Date(Date.now() - 30 * 86_400_000 + 1000);
@@ -3428,9 +3415,9 @@ describe('co-managed ticket escalation and handback', () => {
 
 it('keeps explicit ticket grant revocation customer-controlled during license pauses and requires a deliberate new escalation to restore it', async () => {
   const { principal, customerPrincipal, resource, customer, sponsor, actor, target, operation } = await ticketHandoffFixture();
-  const { escalateCoManagedTicket: escalate, revokeCoManagedTicketGrant: revoke } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-  const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
-  const policy = await import('../../../../packages/co-managed/src/policy');
+  const { escalateCoManagedTicket: escalate, revokeCoManagedTicketGrant: revoke } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+  const { getCoManagedSharedWorkSummary: read } = await import('../../../../../packages/co-managed/src/sharedWorkRead');
+  const policy = await import('../../../../../packages/co-managed/src/policy');
   const firstRequest = { operationId: randomUUID(), expectedRevision: 0, note: 'Shared investigation.' };
   const first = await escalate(db, customerPrincipal, resource, firstRequest);
   const revokeRequest = { operationId: randomUUID(), expectedRevision: 1, note: 'Return this ticket to our internal IT team.' };
@@ -3473,9 +3460,9 @@ it('keeps explicit ticket grant revocation customer-controlled during license pa
 
 it('derives ticket screen capabilities from each live actor and preserves customer revocation during lapse', async () => {
   const { principal, customerPrincipal, resource, operation, sponsorActor, target } = await ticketHandoffFixture();
-  const { getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
-  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-  const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+  const { getCoManagedTicketScreen: screen } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+  const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
   expect(await screen(db, customerPrincipal, resource)).toMatchObject({ side: 'customer', canWrite: true, canEscalate: true, canHandBack: false, canRevoke: false });
   await expect(screen(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Please take responsibility.' });
@@ -3490,8 +3477,8 @@ it('derives ticket screen capabilities from each live actor and preserves custom
 
 it('paginates the qualified shared IT journal without leaking source fields hidden by authorization bundles', async () => {
   const { principal, customerPrincipal, resource, customer, sponsor, operation } = await ticketHandoffFixture();
-  const { getCoManagedTicketHandoffHistory: history, getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
-  const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { getCoManagedTicketHandoffHistory: history, getCoManagedTicketScreen: screen } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   for (let revision = 0; revision < 26; revision++) {
     const command = revision % 2 === 0 ? escalate : handback;
     await command(db, revision % 2 === 0 ? customerPrincipal : principal, resource,
@@ -3529,8 +3516,8 @@ it('paginates the qualified shared IT journal without leaking source fields hidd
 
 it('discloses the sponsor identity and escalation destination while the relationship is live', async () => {
   const { customerPrincipal, resource, customer, sponsor } = await ticketHandoffFixture();
-  const { getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
-  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { getCoManagedTicketScreen: screen } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Live collaboration.' });
   const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
   const sponsorName = (await sponsor.table('tenants').first('client_name')).client_name;
@@ -3547,8 +3534,8 @@ it('discloses the sponsor identity and escalation destination while the relation
 // rather than re-read, so a post-termination rename can never reach the customer.
 it('withholds current former-sponsor state from retained customer reads after departure', async () => {
   const { principal, customerPrincipal, resource, customer, sponsor } = await ticketHandoffFixture();
-  const { getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
-  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { getCoManagedTicketScreen: screen } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate together.' });
   const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
   const customerName = (await customer.table('tenants').first('client_name')).client_name;
@@ -3572,8 +3559,8 @@ it('withholds current former-sponsor state from retained customer reads after de
 
 it('inventories only customer-owned active grants, withholds unreadable ticket labels, and allows revocation while paused', async () => {
   const { principal, customerPrincipal, resource, customer, operation } = await ticketHandoffFixture();
-  const { getCoManagedExplicitTicketGrants: grants } = await import('../../../../packages/co-managed/src/ticketCollaboration');
-  const { escalateCoManagedTicket: escalate, revokeCoManagedTicketGrant: revoke } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { getCoManagedExplicitTicketGrants: grants } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate, revokeCoManagedTicketGrant: revoke } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   expect(await grants(db, customerPrincipal)).toEqual({ items: [], nextAfterTicketId: null });
   await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate together.' });
   expect(await grants(db, customerPrincipal)).toMatchObject({ items: [{ resource, revision: 1, ticketNumber: 'SHARED-1' }], nextAfterTicketId: null });
@@ -3591,8 +3578,8 @@ it('inventories only customer-owned active grants, withholds unreadable ticket l
 
 it('paginates explicit grants by stable customer ticket identity without counting another customer or revoked grants', async () => {
   const { customerPrincipal, resource, customer } = await ticketHandoffFixture();
-  const { getCoManagedExplicitTicketGrants: grants } = await import('../../../../packages/co-managed/src/ticketCollaboration');
-  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { getCoManagedExplicitTicketGrants: grants } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Grant inventory fixture.' });
   const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('tenant', 'title', 'client_id', 'board_id', 'status_id', 'priority_id', 'entered_by');
   const work = await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first();
@@ -3615,8 +3602,8 @@ it('paginates explicit grants by stable customer ticket identity without countin
 
 async function withTicketUpdateFixture(work: (fixture: Awaited<ReturnType<typeof readyForAcceptance>> & {
   user: any; ticketId: string; openStatusId: string; closedStatusId: string;
-  legacy: typeof import('../../../../packages/tickets/src/actions/ticketActions');
-  optimized: typeof import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+  legacy: typeof import('../../../../../packages/tickets/src/actions/ticketActions');
+  optimized: typeof import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
   publish: ReturnType<typeof vi.spyOn>; workflow: ReturnType<typeof vi.spyOn>; live: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>) {
   await withProjectActionsFixture(async fixture => {
@@ -3630,11 +3617,11 @@ async function withTicketUpdateFixture(work: (fixture: Awaited<ReturnType<typeof
     await customer.table('tickets').insert({ tenant: actor.tenant, ticket_id: ticketId, ticket_number: 'EDIT-1', title: 'Original issue',
       client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: open.status_id,
       priority_id: priority.priority_id, entered_by: actor.userId });
-    const updates = await import('../../../../packages/tickets/src/lib/liveUpdates');
+    const updates = await import('../../../../../packages/tickets/src/lib/liveUpdates');
     const live = vi.spyOn(updates, 'publishTicketUpdate').mockResolvedValue(undefined);
     try {
-      const legacy = await import('../../../../packages/tickets/src/actions/ticketActions');
-      const optimized = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+      const legacy = await import('../../../../../packages/tickets/src/actions/ticketActions');
+      const optimized = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
       await work({ ...fixture, user, ticketId, openStatusId: open.status_id, closedStatusId: closed.status_id, legacy, optimized, live });
     } finally { live.mockRestore(); }
   });
@@ -3737,7 +3724,7 @@ it('admits the auto-close transaction before creating its resolution comment and
   const onQuery = (query: { sql: string; bindings?: unknown[] }) => queries.push(query);
   db.on('query', onQuery);
   try {
-    const { autoCloseTicketsHandler } = await import('../../../../packages/jobs/src/lib/handlers/autoCloseTicketsHandler');
+    const { autoCloseTicketsHandler } = await import('../../../../../packages/jobs/src/lib/handlers/autoCloseTicketsHandler');
     await autoCloseTicketsHandler({ tenantId: actor.tenant });
   } finally { db.removeListener('query', onQuery); }
   const comment = queries.findIndex(query => query.sql.startsWith('insert into "comments"'));
@@ -3751,9 +3738,9 @@ it('admits the auto-close transaction before creating its resolution comment and
 
 it('stores foreign ticket activity through an owner-local actor reference with immutable name and organization snapshots', async () => {
   const { principal, customerPrincipal, resource, customer, sponsor, operation } = await ticketHandoffFixture();
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
-  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+  const { withCoManagedSharedWork } = await import('../../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../../packages/co-managed/src/actorReferences');
   const { writeTicketActivity, readTicketActivity } = await import('@alga-psa/shared/lib/ticketActivity');
   await escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Shared work.' });
   await sponsor.table('users').where('user_id', principal.userId).update({ first_name: 'Morgan', last_name: 'Provider' });
@@ -3788,16 +3775,16 @@ it('stores foreign ticket activity through an owner-local actor reference with i
   expect(rows.find(row => row.audit_id === second.auditId)).toMatchObject({ actor_display_name: 'Renamed Provider', actor_organization_name: 'Renamed MSP' });
   expect(rows.find(row => row.audit_id === third.auditId)?.actor_display_name).toBe(`${longName} Provider`);
   expect(rows.every(row => row.actor_reference_id === first.actorReferenceId && row.actor_user_id === null)).toBe(true);
-  const migration = require('../../../migrations/20260906140000_create_collaboration_actor_references.cjs');
+  const migration = require('../../../../../server/migrations/20260906140000_create_collaboration_actor_references.cjs');
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot remove retained collaboration actor attribution');
 });
 
 it('keeps foreign actor references transactional, rejects mixed/local impersonation and other-owner references, and preserves legacy audit rows', async () => {
   const { principal, customerPrincipal, resource, customer } = await ticketHandoffFixture();
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
-  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+  const { withCoManagedSharedWork } = await import('../../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../../packages/co-managed/src/actorReferences');
   const { writeTicketActivity, readTicketActivity } = await import('@alga-psa/shared/lib/ticketActivity');
   const { withTransaction } = await import('@alga-psa/db');
   await escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Shared work.' });
@@ -3831,10 +3818,10 @@ it('keeps foreign actor references transactional, rejects mixed/local impersonat
 
 it('distinguishes equal user UUIDs across organizations and retains foreign attribution after source-user deletion', async () => {
   const { principal, customerPrincipal, resource, customer, sponsor, sponsorActor, target, roleId } = await ticketHandoffFixture();
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-  const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
-  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
-  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+  const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
+  const { withCoManagedSharedWork } = await import('../../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../../packages/co-managed/src/actorReferences');
   const { writeTicketActivity, readTicketActivity } = await import('@alga-psa/shared/lib/ticketActivity');
   await escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Shared work.' });
   const original = await sponsor.table('users').where('user_id', principal.userId).first();
@@ -3870,21 +3857,21 @@ async function withSharedTicketMutationFixture(work: (fixture: Awaited<ReturnTyp
 }) => Promise<void>) {
   const fixture = await ticketHandoffFixture();
   const { principal, customerPrincipal, resource, customer, sponsor, operation } = fixture;
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
-  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
-  const { assertCoManagedSessionUnexpired } = await import('../../../../packages/co-managed/src/sharedWorkIdentity');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+  const { withCoManagedSharedWork } = await import('../../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../../packages/co-managed/src/actorReferences');
+  const { assertCoManagedSessionUnexpired } = await import('../../../../../packages/co-managed/src/sharedWorkIdentity');
   await escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Begin shared work.' });
   await sponsor.table('users').where('user_id', principal.userId).update({ first_name: 'Morgan', last_name: 'Provider' });
   const user = await sponsor.table('users').where('user_id', principal.userId).first();
   const closedStatusId = (await customer.table('statuses').where({ board_id: operation.customer_board_id, is_closed: true }).first()).status_id;
   const events = await import('@alga-psa/event-bus/publishers');
-  const updates = await import('../../../../packages/tickets/src/lib/liveUpdates');
+  const updates = await import('../../../../../packages/tickets/src/lib/liveUpdates');
   const workflow = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
   const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
   const live = vi.spyOn(updates, 'publishTicketUpdate').mockResolvedValue(undefined);
   try {
-    const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const { updateTicketInTransaction } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
     const mutate = async (patch: Record<string, unknown>, options?: Record<string, unknown>, after?: (trx: Knex.Transaction) => Promise<void>) => {
       await withCoManagedSharedWork(db, principal, resource, 'update', async context => {
         const actorReferenceId = await ensureCoManagedActorReference(context);
@@ -3993,10 +3980,10 @@ it('rejects unsupported foreign routing and bundle propagation without modifying
 it('does not let an actor reference substitute another source user or a missing collaboration context', async () => withSharedTicketMutationFixture(async ({
   customer, resource, user, actor, principal, workflow, live,
 }) => {
-  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
-  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
-  const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
-  const { assertCoManagedSessionUnexpired } = await import('../../../../packages/co-managed/src/sharedWorkIdentity');
+  const { withCoManagedSharedWork } = await import('../../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../../packages/co-managed/src/actorReferences');
+  const { updateTicketInTransaction } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
+  const { assertCoManagedSessionUnexpired } = await import('../../../../../packages/co-managed/src/sharedWorkIdentity');
   await expect(withCoManagedSharedWork(db, principal, resource, 'update', context =>
     updateTicketInTransaction(context.trx, user, resource.tenant, resource.id, { title: 'Invalid local attribution' })))
     .rejects.toThrow('requires a collaboration context');
@@ -4013,8 +4000,8 @@ it('does not let an actor reference substitute another source user or a missing 
 it('rechecks the MSP session deadline after waiting for the actor-reference lock before a canonical mutation', async () => withSharedTicketMutationFixture(async ({
   customer, sponsor, principal, resource, mutate, workflow, live,
 }) => {
-  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
-  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const { withCoManagedSharedWork } = await import('../../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../../packages/co-managed/src/actorReferences');
   const referenceId = await withCoManagedSharedWork(db, principal, resource, 'update', ensureCoManagedActorReference);
   const baseline = await customer.table('tickets').where('ticket_id', resource.id).first();
   const blocker = await db.transaction();
@@ -4039,7 +4026,7 @@ it('rechecks the MSP session deadline after waiting for the actor-reference lock
 }));
 
 it('keeps historical MSP notification actors separate from a customer user with the same UUID', async () => withSharedTicketMutationFixture(async ({ customer, actor, principal, resource }) => {
-  const { readTicketNotificationActor, resolveTicketNotificationActorNames } = await import('../../lib/notifications/ticketNotificationContext');
+  const { readTicketNotificationActor, resolveTicketNotificationActorNames } = await import('../../../../../server/src/lib/notifications/ticketNotificationContext');
   const customerUser = await customer.table('users').where('user_id', actor.userId).first();
   const actorReference = { ownerTenantId: resource.tenant, referenceId: randomUUID(), tenantId: principal.tenant, userId: actor.userId,
     displayName: 'Former technician', organizationName: 'Historical MSP' };
@@ -4059,11 +4046,11 @@ it('renders qualified ticket edit/close attribution in immediate email, accumula
   customer, actor, principal, resource, closedStatusId, mutate, workflow,
 }) => {
   const dbModule = await import('@alga-psa/db');
-  const serverDb = await import('../../lib/db');
+  const serverDb = await import('../../../../../server/src/lib/db');
   const adminDb = await import('@alga-psa/db/admin');
   const notifications = await import('@alga-psa/notifications/actions');
-  const mail = await import('../../lib/notifications/sendEventEmail');
-  const { NotificationAccumulator } = await import('../../lib/notifications/NotificationAccumulator');
+  const mail = await import('../../../../../server/src/lib/notifications/sendEventEmail');
+  const { NotificationAccumulator } = await import('../../../../../server/src/lib/notifications/NotificationAccumulator');
   const accumulator = NotificationAccumulator.getInstance();
   const ready = vi.spyOn(accumulator, 'isReady').mockReturnValue(false);
   const accumulate = vi.spyOn(accumulator, 'accumulate').mockResolvedValue(undefined);
@@ -4078,8 +4065,8 @@ it('renders qualified ticket edit/close attribution in immediate email, accumula
   ];
   try {
     const { buildWorkflowPayload, EventSchemas } = await import('@alga-psa/event-schemas');
-    const { ticketEmailSubscriberTestHarness: email, handleAccumulatedTicketUpdates } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber');
-    const { internalNotificationSubscriberTestHarness: internal } = await import('../../lib/eventBus/subscribers/internalNotificationSubscriber');
+    const { ticketEmailSubscriberTestHarness: email, handleAccumulatedTicketUpdates } = await import('../../../../../server/src/lib/eventBus/subscribers/ticketEmailSubscriber');
+    const { internalNotificationSubscriberTestHarness: internal } = await import('../../../../../server/src/lib/eventBus/subscribers/internalNotificationSubscriber');
     await customer.table('tickets').where('ticket_id', resource.id).update({ assigned_to: actor.userId });
     const baseline = await customer.table('tickets').where('ticket_id', resource.id).first();
     const priority = await customer.table('priorities').where('item_type', 'ticket').whereNot('priority_id', baseline.priority_id).first();
@@ -4139,14 +4126,14 @@ it('carries foreign due-date and response-state changes to notification events w
 
 async function withSharedTicketEditorFixture(work: (fixture: Awaited<ReturnType<typeof ticketHandoffFixture>> & {
   user: any; closedStatusId: string; workflow: ReturnType<typeof vi.spyOn>; live: ReturnType<typeof vi.spyOn>;
-  editing: typeof import('../../../../packages/co-managed/src/ticketEditing');
-  save: (request: import('../../../../packages/co-managed/src/ticketEditing').CoManagedTicketEditRequest,
-    resource?: import('../../../../packages/co-managed/src/sharedWork').CoManagedSharedResource, connection?: Knex) => Promise<import('../../../../packages/co-managed/src/ticketEditing').CoManagedTicketEditReceipt>;
+  editing: typeof import('../../../../../packages/co-managed/src/ticketEditing');
+  save: (request: import('../../../../../packages/co-managed/src/ticketEditing').CoManagedTicketEditRequest,
+    resource?: import('../../../../../packages/co-managed/src/sharedWork').CoManagedSharedResource, connection?: Knex) => Promise<import('../../../../../packages/co-managed/src/ticketEditing').CoManagedTicketEditReceipt>;
 }) => Promise<void>) {
   await withSharedTicketMutationFixture(async fixture => {
-    const editing = await import('../../../../packages/co-managed/src/ticketEditing');
-    const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
-    const save = (request: import('../../../../packages/co-managed/src/ticketEditing').CoManagedTicketEditRequest, resource = fixture.resource, connection = db) =>
+    const editing = await import('../../../../../packages/co-managed/src/ticketEditing');
+    const { updateTicketInTransaction } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const save = (request: import('../../../../../packages/co-managed/src/ticketEditing').CoManagedTicketEditRequest, resource = fixture.resource, connection = db) =>
       editing.editCoManagedTicket(connection, fixture.principal, resource, request, async (context, patch) => {
         await updateTicketInTransaction(context.trx, fixture.user, context.resource.tenant, context.resource.id, patch, undefined, {
           actorReferenceId: context.actorReferenceId, assertWriteAuthority: context.assertWriteAuthority,
@@ -4173,7 +4160,7 @@ it('edits the canonical shared ticket and returns the same receipt for exact and
   expect(workflow.mock.calls.filter(([event]: any[]) => event.eventType === 'TICKET_UPDATED')).toHaveLength(1);
   expect(live).toHaveBeenCalledTimes(1);
   await expect(save({ ...request, patch: { title: 'Different operation content' } })).rejects.toMatchObject({ code: 'TICKET_EDIT_OPERATION_CONFLICT' });
-  const migration = require('../../../migrations/20260906150000_create_co_management_command_receipts.cjs');
+  const migration = require('../../../../../server/migrations/20260906150000_create_co_management_command_receipts.cjs');
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained co-management command receipts');
 }));
@@ -4255,7 +4242,7 @@ it('rejects foreign status/priority choices, incomplete baselines and unsupporte
 it('keeps viewer and lapsed editor reads available while denying edits and choice expansion', async () => withSharedTicketEditorFixture(async ({
   editing, save, principal, resource, customer, sponsorActor, target, operation,
 }) => {
-  const policy = await import('../../../../packages/co-managed/src/policy');
+  const policy = await import('../../../../../packages/co-managed/src/policy');
   const state = await editing.getCoManagedTicketEditor(db, principal, resource);
   const request = { operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title: 'Not allowed' } };
   await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
@@ -4291,7 +4278,7 @@ it('paginates customer-valid ticket choices and treats search wildcards literall
 it('loads shared ticket panels and editor capability hints concurrently without lock upgrades', async () => withSharedTicketEditorFixture(async ({
   editing, principal, resource, customerPrincipal,
 }) => {
-  const { getCoManagedTicketScreen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { getCoManagedTicketScreen } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
   const results = await Promise.all(Array.from({ length: 6 }, (_, index) => index % 3 === 0
     ? editing.getCoManagedTicketEditor(db, principal, resource) : getCoManagedTicketScreen(db, index % 3 === 1 ? principal : customerPrincipal, resource)));
   expect(results).toHaveLength(6);
@@ -4333,7 +4320,7 @@ it('denies stale editor reads, choices and receipt replay after the customer rev
   const state = await editing.getCoManagedTicketEditor(db, principal, resource);
   const request = { operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title: 'Previously admitted edit' } };
   await save(request);
-  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await revokeCoManagedTicketGrant(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Stop sharing this ticket.' });
   for (const read of [() => editing.getCoManagedTicketEditor(db, principal, resource),
     () => editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'status_id' }), () => save(request)]) {
@@ -4353,7 +4340,7 @@ it('binds edit receipts to the qualified ticket and disables workflow editing fo
   const { title_index: _generated, ...stored } = original;
   const other = { ...resource, id: randomUUID() };
   await customer.table('tickets').insert({ ...stored, ticket_id: other.id, ticket_number: 'EDIT-SECOND', title: state.values.title });
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalateCoManagedTicket(db, customerPrincipal, other, { operationId: randomUUID(), expectedRevision: 0, note: 'Share another ticket.' });
   await expect(save(request, other)).rejects.toMatchObject({ code: 'TICKET_EDIT_OPERATION_CONFLICT' });
   expect(await customer.table('tickets').where('ticket_id', other.id).first('title')).toEqual({ title: state.values.title });
@@ -4365,10 +4352,10 @@ it('binds edit receipts to the qualified ticket and disables workflow editing fo
     .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));
 
-async function withTicketQueueFixture(work: (fixture: Awaited<ReturnType<typeof ticketHandoffFixture>> & { nativeId: string; list: typeof import('../../../../packages/co-managed/src/ticketQueue').getCoManagedTicketQueue }) => Promise<void>) {
+async function withTicketQueueFixture(work: (fixture: Awaited<ReturnType<typeof ticketHandoffFixture>> & { nativeId: string; list: typeof import('../../../../../packages/co-managed/src/ticketQueue').getCoManagedTicketQueue }) => Promise<void>) {
   const fixture = await ticketHandoffFixture();
   const { customer, sponsor, operation, principal, resource, customerPrincipal } = fixture;
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Shared queue work' });
   const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket', is_closed: false }).first();
   await sponsor.table('statuses').insert({ ...status, tenant: principal.tenant, board_id: operation.request.escalationBoardId });
@@ -4376,7 +4363,7 @@ async function withTicketQueueFixture(work: (fixture: Awaited<ReturnType<typeof 
   await sponsor.table('tickets').insert({ tenant: principal.tenant, ticket_id: nativeId, ticket_number: 'SHARED-1', title: 'A native issue',
     client_id: operation.request.clientId, board_id: operation.request.escalationBoardId, status_id: status.status_id, entered_by: principal.userId,
     entered_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' });
-  const { getCoManagedTicketQueue: list } = await import('../../../../packages/co-managed/src/ticketQueue');
+  const { getCoManagedTicketQueue: list } = await import('../../../../../packages/co-managed/src/ticketQueue');
   await work({ ...fixture, nativeId, list });
 }
 
@@ -4418,7 +4405,7 @@ it('filters native and shared work by the sponsor client before search, counts a
 }));
 
 it('removes handed-back tickets from working while retaining oversight, and removes revoked explicit access from all queue results', async () => withTicketQueueFixture(async ({ principal, customerPrincipal, resource, nativeId, list }) => {
-  const { handBackCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { handBackCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await handBackCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer IT continues' });
   expect((await list(db, principal, { view: 'working' })).items.map(item => item.ticketId)).toEqual([nativeId]);
   expect((await list(db, principal, { view: 'oversight' })).items[0].fields.responsibility).toBe('customer');
@@ -4491,7 +4478,7 @@ it('keeps same-number same-UUID tickets from two customers separate in global or
     administrator: { firstName: 'Second', lastName: 'Admin', email: `admin-${randomUUID()}@example.test` } });
   const second = await readyForAcceptance('board_scope', provisioned);
   await acceptCoManagedRelationship(db, second.actor, second.input);
-  const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+  const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
   await replaceCoManagedStaffAssignments(db, principal, { customerTenant: second.actor.tenant, relationshipId: provisioned.relationship_id }, 2,
     [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
   const status = await second.customer.table('statuses').where({ board_id: provisioned.customer_board_id, item_type: 'ticket', is_closed: false }).first();
@@ -4530,8 +4517,8 @@ it('rechecks revoked queue scope and session expiry after waiting for lifecycle 
 }));
 
 it('retains legacy private notes and requires a disclosure command to change co-managed thread visibility', async () => withTicketQueueFixture(async ({ customer, resource, customerPrincipal }) => {
-  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
-  const { resolveCommentAudience, assertCommentThreadAudience } = await import('../../../../shared/lib/commentAudience');
+  const { default: Comment } = await import('../../../../../packages/tickets/src/models/comment');
+  const { resolveCommentAudience, assertCommentThreadAudience } = await import('../../../../../shared/lib/commentAudience');
   const id = await Comment.insert(db, resource.tenant, { ticket_id: resource.id, user_id: customerPrincipal.userId, author_type: 'internal', note: 'Private customer note', is_internal: true });
   const comment = await customer.table('comments').where('comment_id', id).first();
   const thread = await customer.table('comment_threads').where('thread_id', comment.thread_id).first();
@@ -4550,11 +4537,11 @@ it('retains legacy private notes and requires a disclosure command to change co-
 }));
 
 it('makes native comment model writes atomic and denies them after the co-managed grace period', async () => withTicketQueueFixture(async ({ customer, resource, customerPrincipal, principal }) => {
-  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+  const { default: Comment } = await import('../../../../../packages/tickets/src/models/comment');
   const input = { ticket_id: resource.id, user_id: customerPrincipal.userId, author_type: 'internal' as const, note: 'Original', is_internal: true };
   const id = await Comment.insert(db, resource.tenant, input);
   const threads = await customer.table('comment_threads').count('* as count').first();
-  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const { TicketModel } = await import('../../../../../shared/models/ticketModel');
   await expect(TicketModel.createComment({ ticket_id: resource.id, content: 'No transaction', author_type: 'internal', author_id: customerPrincipal.userId }, resource.tenant, db as any)).rejects.toThrow('owning transaction');
   await expect(db.transaction(async trx => { await Comment.insert(trx, resource.tenant, { ...input, note: 'Rolled back' }); throw new Error('Rollback comment'); })).rejects.toThrow('Rollback comment');
   expect(await customer.table('comment_threads').count('* as count').first()).toEqual(threads);
@@ -4568,7 +4555,7 @@ it('makes native comment model writes atomic and denies them after the co-manage
 it('retains qualified comment snapshots and denies native repairs or forged foreign authorship', async () => withSharedTicketMutationFixture(async ({ customer, resource, customerPrincipal, principal, mutate }) => {
   await mutate({ title: 'Create a verified actor reference' });
   const reference = await customer.table('collaboration_actor_references').first();
-  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+  const { default: Comment } = await import('../../../../../packages/tickets/src/models/comment');
   const input = { ticket_id: resource.id, user_id: customerPrincipal.userId, author_type: 'internal' as const, note: 'Shared contribution', is_internal: true };
   const id = await Comment.insert(db, resource.tenant, input);
   const attribution = { actor_reference_id: reference.actor_reference_id, actor_display_name: reference.display_name, actor_organization_name: reference.organization_name };
@@ -4576,7 +4563,7 @@ it('retains qualified comment snapshots and denies native repairs or forged fore
   await customer.table('comments').where('comment_id', id).update({ ...attribution, user_id: null });
   for (const operation of [() => Comment.update(db, resource.tenant, id, { note: 'Repair foreign note' }), () => Comment.delete(db, resource.tenant, id),
     () => Comment.insert(db, resource.tenant, { ...input, ...attribution } as any)]) await expect(operation()).rejects.toThrow('collaboration command');
-  const { TicketService } = await import('../../lib/api/services/TicketService');
+  const { TicketService } = await import('../../../../../server/src/lib/api/services/TicketService');
   const service = new TicketService(); const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
   try { await expect(service.updateComment(resource.id, id, { comment_text: 'Operator repair' }, { tenant: resource.tenant, userId: customerPrincipal.userId, user: await customer.table('users').where('user_id', customerPrincipal.userId).first() } as any)).rejects.toThrow('collaboration command'); }
   finally { connection.mockRestore(); }
@@ -4602,7 +4589,7 @@ it('stores MSP-private threads under MSP ownership with qualified soft resources
   await sponsor.table('co_management_private_threads').insert({ ...thread, thread_id: otherThreadId, root_comment_id: randomUUID() });
   await expect(sponsor.table('co_management_private_comments').insert({ ...comment, comment_id: randomUUID(), thread_id: otherThreadId, parent_comment_id: commentId })).rejects.toMatchObject({ code: '23503' });
   await sponsor.table('co_management_private_comments').insert({ ...comment, comment_id: randomUUID(), parent_comment_id: commentId });
-  const migration = require('../../../migrations/20260906160000_create_co_management_content_audiences.cjs');
+  const migration = require('../../../../../server/migrations/20260906160000_create_co_management_content_audiences.cjs');
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
   expect(await sponsor.table('co_management_private_comments')).toHaveLength(2);
@@ -4611,7 +4598,7 @@ it('stores MSP-private threads under MSP ownership with qualified soft resources
 async function withConversationFixture(work: (fixture: Awaited<ReturnType<typeof ticketHandoffFixture>> & {
   addCustomer: (options: { id?: string; internal?: boolean; audience?: 'requester' | 'shared_it' | 'organization_private'; state?: string; note: string; time?: string; parent?: { id: string; threadId: string }; deleted?: boolean; foreign?: boolean }) => Promise<{ id: string; threadId: string }>;
   addPrivate: (options: { id?: string; note: string; time?: string; sourceId?: string }) => Promise<{ id: string; threadId: string }>;
-  read: typeof import('../../../../packages/co-managed/src/ticketConversation').getCoManagedTicketConversation;
+  read: typeof import('../../../../../packages/co-managed/src/ticketConversation').getCoManagedTicketConversation;
 }) => Promise<void>) {
   await withSharedTicketMutationFixture(async fixture => {
     const { customer, sponsor, resource, principal, customerPrincipal } = fixture;
@@ -4637,7 +4624,7 @@ async function withConversationFixture(work: (fixture: Awaited<ReturnType<typeof
         actor_display_name: 'MSP private author', actor_organization_name: 'MSP', note: options.note, markdown_content: options.note, created_at: time, updated_at: time });
       return { id, threadId };
     };
-    const { getCoManagedTicketConversation: read } = await import('../../../../packages/co-managed/src/ticketConversation');
+    const { getCoManagedTicketConversation: read } = await import('../../../../../packages/co-managed/src/ticketConversation');
     await work({ ...fixture, addCustomer, addPrivate, read });
   });
 }
@@ -4725,7 +4712,7 @@ it('rechecks conversation grants on every page and retains reads during license 
   await addCustomer({ note: 'Public work' }); await addPrivate({ note: 'Private work' });
   await expireCoManagedEntitlement(principal.tenant);
   expect((await read(db, principal, resource)).items).toHaveLength(2);
-  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await revokeCoManagedTicketGrant(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Revoke live access' });
   await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect((await read(db, customerPrincipal, resource)).items.map(item => item.note)).toEqual(['Public work']);
@@ -4753,7 +4740,7 @@ it('applies conversation body and author redactions before returning content or 
 }));
 
 it('keeps private note commands and retry receipts in the MSP store without changing customer history', async () => withConversationFixture(async ({ principal, customerPrincipal, resource, customer, sponsor, read }) => {
-  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const before = await customer.table('tickets').where('ticket_id', resource.id).first();
   const customerReceipts = await customer.table('co_management_command_receipts');
   const create = { kind: 'create' as const, operationId: randomUUID(), text: 'Private **literal**\n![image](https://example.test/private) <script> & text' };
@@ -4775,13 +4762,13 @@ it('keeps private note commands and retry receipts in the MSP store without chan
   expect((await read(db, customerPrincipal, resource)).items).toEqual([]);
   expect((await read(db, principal, resource)).items).toHaveLength(2);
   expect((await read(db, principal, resource)).items.every(item => item.audience === 'organization_private' && item.revision === 1)).toBe(true);
-  const migration = require('../../../migrations/20260906170000_create_co_management_private_command_receipts.cjs');
+  const migration = require('../../../../../server/migrations/20260906170000_create_co_management_private_command_receipts.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained private command receipts');
   expect(await sponsor.table('co_management_private_command_receipts')).toHaveLength(2);
 }));
 
 it('makes private edits and tombstones revision-safe while exact retries retain their original receipts', async () => withConversationFixture(async ({ principal, resource, sponsor, read }) => {
-  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const create = { kind: 'create' as const, operationId: randomUUID(), text: 'Original note' };
   const created = await mutate(db, principal, resource, create);
   const comment = { storeTenant: created.storeTenant, threadId: created.threadId, commentId: created.commentId };
@@ -4805,7 +4792,7 @@ it('makes private edits and tombstones revision-safe while exact retries retain 
 }));
 
 it('rejects private note source/store/parent forgery and edits of another author without widening visibility', async () => withConversationFixture(async ({ principal, customerPrincipal, resource, sponsor, addPrivate, addCustomer }) => {
-  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const own = await addPrivate({ note: 'Own thread' }), other = await addPrivate({ note: 'Other thread' });
   const unrelated = await addPrivate({ note: 'Other ticket', sourceId: randomUUID() });
   const shared = await addCustomer({ note: 'Customer note' });
@@ -4828,7 +4815,7 @@ it('rejects private note source/store/parent forgery and edits of another author
 }));
 
 it('serializes concurrent private note edits and rolls back comments together with their private receipts', async () => withConversationFixture(async ({ principal, resource, sponsor }) => {
-  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const create = { kind: 'create' as const, operationId: randomUUID(), text: 'Once only' };
   const [first, retry] = await Promise.all([mutate(db, principal, resource, create), mutate(db, principal, resource, create)]);
   expect(first).toEqual(retry);
@@ -4842,7 +4829,7 @@ it('serializes concurrent private note edits and rolls back comments together wi
 }));
 
 it('denies private commands after license lapse or live grant revocation, including receipt replay', async () => withConversationFixture(async ({ principal, resource, customer, sponsor, read }) => {
-  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const create = { kind: 'create' as const, operationId: randomUUID(), text: 'Before lapse' };
   await mutate(db, principal, resource, create);
   await expireCoManagedEntitlement(principal.tenant);
@@ -4856,9 +4843,9 @@ it('denies private commands after license lapse or live grant revocation, includ
 }));
 
 it('requires both read and write content scope for private notes and denies viewer contributions', async () => withConversationFixture(async ({ principal, resource, operation, sponsor, sponsorActor, target }) => {
-  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const request = { kind: 'create' as const, operationId: randomUUID(), text: 'Denied content' };
-  const policy = await import('../../../../packages/co-managed/src/policy');
+  const policy = await import('../../../../../packages/co-managed/src/policy');
   await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
   await expect(mutate(db, principal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 5, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
@@ -4878,7 +4865,7 @@ it('requires both read and write content scope for private notes and denies view
 }));
 
 it('rechecks the actual session after waiting for a private thread lock before applying content', async () => withConversationFixture(async ({ principal, resource, sponsor, addPrivate }) => {
-  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const note = await addPrivate({ note: 'Unchanged' });
   await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() + 1000) });
   const blocker = await db.transaction();
@@ -4896,12 +4883,12 @@ it('rechecks the actual session after waiting for a private thread lock before a
 }));
 
 async function withCommentCreationFixture(work: (fixture: Parameters<Parameters<typeof withConversationFixture>[0]>[0] & {
-  create: (actor: Awaited<ReturnType<typeof ticketHandoffFixture>>['principal'], request: import('../../../../packages/co-managed/src/ticketCommentCreation').CoManagedCommentCreateRequest, connection?: Knex) => Promise<import('../../../../packages/co-managed/src/ticketCommentCreation').CoManagedCommentCreateReceipt>;
+  create: (actor: Awaited<ReturnType<typeof ticketHandoffFixture>>['principal'], request: import('../../../../../packages/co-managed/src/ticketCommentCreation').CoManagedCommentCreateRequest, connection?: Knex) => Promise<import('../../../../../packages/co-managed/src/ticketCommentCreation').CoManagedCommentCreateReceipt>;
 }) => Promise<void>) {
   await withConversationFixture(async fixture => {
-    const { createCoManagedTicketComment } = await import('../../../../packages/co-managed/src/ticketCommentCreation');
-    const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
-    const create = (actor: Awaited<ReturnType<typeof ticketHandoffFixture>>['principal'], request: import('../../../../packages/co-managed/src/ticketCommentCreation').CoManagedCommentCreateRequest, connection: Knex = db) =>
+    const { createCoManagedTicketComment } = await import('../../../../../packages/co-managed/src/ticketCommentCreation');
+    const { default: Comment } = await import('../../../../../packages/tickets/src/models/comment');
+    const create = (actor: Awaited<ReturnType<typeof ticketHandoffFixture>>['principal'], request: import('../../../../../packages/co-managed/src/ticketCommentCreation').CoManagedCommentCreateRequest, connection: Knex = db) =>
       createCoManagedTicketComment(connection, actor, fixture.resource, request, async (context, comment) => {
         await Comment.insert(context.trx, context.resource.tenant, comment, { ticketId: context.resource.id, actorTenant: context.actor.tenant, actorUserId: context.actor.userId,
           actorReferenceId: context.actorReferenceId, audience: context.audience, assertWriteAuthority: context.assertWriteAuthority });
@@ -4978,7 +4965,7 @@ it('rejects forged shared comment targets, implicit audience changes and mixed a
     { ...base, parent: { storeTenant: resource.tenant, threadId: randomUUID(), commentId: randomUUID() } }]) {
     await expect(create(principal, request as any)).rejects.toMatchObject({ code: 'INVALID_COMMENT_CREATE' });
   }
-  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+  const { default: Comment } = await import('../../../../../packages/tickets/src/models/comment');
   const reference = await customer.table('collaboration_actor_references').first();
   const context = { ticketId: resource.id, actorTenant: principal.tenant, actorUserId: principal.userId, actorReferenceId: reference.actor_reference_id,
     audience: 'shared_it' as const, assertWriteAuthority: async () => {} };
@@ -5039,7 +5026,7 @@ it('rechecks shared comment session authority after waiting on its root thread w
 it('revalidates published collaboration comment events against current audience, body and saved attribution before delivery', async () => withCommentCreationFixture(async ({
   principal, customerPrincipal, resource, customer, sponsor, create,
 }) => {
-  const { resolveTicketCommentNotificationPayload: resolve } = await import('../../lib/notifications/ticketCommentNotificationContext');
+  const { resolveTicketCommentNotificationPayload: resolve } = await import('../../../../../server/src/lib/notifications/ticketCommentNotificationContext');
   const receipt = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Saved IT body' });
   const row = await customer.table('comments').where('comment_id', receipt.commentId).first();
   const payload = { tenantId: resource.tenant, ticketId: resource.id, actorType: 'COLLABORATOR', actorReference: { ownerTenantId: resource.tenant,
@@ -5069,15 +5056,15 @@ it('revalidates published collaboration comment events against current audience,
 it('delivers qualified comment names to customer recipients without colliding author IDs or internal portal mentions', async () => withCommentCreationFixture(async ({
   principal, customerPrincipal, resource, customer, create,
 }) => {
-  const dbModule = await import('@alga-psa/db'); const serverDb = await import('../../lib/db'); const adminDb = await import('@alga-psa/db/admin');
-  const notifications = await import('@alga-psa/notifications/actions'); const mail = await import('../../lib/notifications/sendEventEmail');
+  const dbModule = await import('@alga-psa/db'); const serverDb = await import('../../../../../server/src/lib/db'); const adminDb = await import('@alga-psa/db/admin');
+  const notifications = await import('@alga-psa/notifications/actions'); const mail = await import('../../../../../server/src/lib/notifications/sendEventEmail');
   const send = vi.spyOn(mail, 'sendEventEmail').mockResolvedValue(undefined);
   const notify = vi.spyOn(notifications, 'createNotificationFromTemplateInternal').mockResolvedValue({} as any);
   const spies = [vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db), vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant }),
     vi.spyOn(serverDb, 'createTenantKnex').mockResolvedValue({ knex: db }), vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db)];
   try {
-    const { ticketEmailSubscriberTestHarness: email } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber');
-    const { internalNotificationSubscriberTestHarness: internal } = await import('../../lib/eventBus/subscribers/internalNotificationSubscriber');
+    const { ticketEmailSubscriberTestHarness: email } = await import('../../../../../server/src/lib/eventBus/subscribers/ticketEmailSubscriber');
+    const { internalNotificationSubscriberTestHarness: internal } = await import('../../../../../server/src/lib/eventBus/subscribers/internalNotificationSubscriber');
     const { EventSchemas } = await import('@alga-psa/event-schemas');
     const localUser = await customer.table('users').where('user_id', customerPrincipal.userId).first();
     await customer.table('users').insert({ ...localUser, user_id: principal.userId, first_name: 'Local', last_name: 'Collision', username: `collision-${randomUUID()}@example.test`, email: `collision-${randomUUID()}@example.test` });
@@ -5139,7 +5126,7 @@ it('delivers qualified comment names to customer recipients without colliding au
 it('commits shared comment response state, qualified activity and receipts before publishing production events exactly once', async () => withSharedTicketMutationFixture(async ({
   principal, resource, customer, publish, workflow,
 }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const { EventSchemas, buildWorkflowPayload } = await import('@alga-psa/event-schemas');
   const request = { operationId: randomUUID(), audience: 'requester' as const, text: 'Production public reply' };
   await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
@@ -5171,7 +5158,7 @@ it('commits shared comment response state, qualified activity and receipts befor
 it('rolls back all production comment state and effects with the owning transaction and respects disabled response tracking', async () => withSharedTicketMutationFixture(async ({
   principal, resource, customer, publish, workflow,
 }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const request = { operationId: randomUUID(), audience: 'requester' as const, text: 'Rollback production reply' };
   await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
   const before = await customer.table('ticket_audit_logs');
@@ -5189,7 +5176,7 @@ it('rolls back all production comment state and effects with the owning transact
 it('publishes distinct shared IT and customer-private workflow audiences without changing response state or fabricating local MSP IDs', async () => withSharedTicketMutationFixture(async ({
   principal, customerPrincipal, resource, customer, publish, workflow,
 }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const { EventSchemas, buildWorkflowPayload } = await import('@alga-psa/event-schemas');
   await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
   for (const [actor, audience] of [[principal, 'shared_it'], [customerPrincipal, 'organization_private']] as const) {
@@ -5212,7 +5199,7 @@ it('publishes distinct shared IT and customer-private workflow audiences without
 it('does not use public comment side effects to mutate a restricted response-state field', async () => withSharedTicketMutationFixture(async ({
   principal, resource, operation, sponsor, customer, publish, workflow,
 }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const bundles = await import('@alga-psa/authorization');
   const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Response side-effect restriction', actorUserId: principal.userId });
   for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action, templateKey: 'selected_clients',
@@ -5234,7 +5221,7 @@ async function withPortalConversationFixture(work: (fixture: Parameters<Paramete
     const auth = await import('@alga-psa/auth');
     const dbModule = await import('@alga-psa/db');
     const avatarActions = await import('@alga-psa/user-composition/actions/avatarActions');
-    const portal = await import('../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets');
+    const portal = await import('../../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets');
     const contact = await customer.table('contacts').where('client_id', operation.customer_client_id).first();
     const [requester] = await customer.table('users').insert({ tenant: resource.tenant, user_id: randomUUID(), username: `portal-${randomUUID()}`,
       email: 'requester@example.test', first_name: 'Portal', last_name: 'Requester', hashed_password: 'not-a-login',
@@ -5319,7 +5306,7 @@ it('redacts retained portal tombstone bodies and hidden parent IDs while preserv
 it('admits background recipients under their own home authority without a browser session or mutation capability', async () => withConversationFixture(async ({
   principal, customerPrincipal, resource, sponsor, customer,
 }) => {
-  const { withCoManagedNotificationRecipient: notify, withCoManagedSharedWork: interactive } = await import('../../../../packages/co-managed/src/sharedWork');
+  const { withCoManagedNotificationRecipient: notify, withCoManagedSharedWork: interactive } = await import('../../../../../packages/co-managed/src/sharedWork');
   const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
   const deliver = vi.fn(async (context: any) => ({ actor: context.actor, action: context.action, sessionId: context.sessionId }));
   await sponsor.table('sessions').where('user_id', principal.userId).del();
@@ -5346,7 +5333,7 @@ it('admits background recipients under their own home authority without a browse
 it('applies recipient-specific home bundle scope and redactions while retaining reads during lapse and rechecking revoked grants', async () => withConversationFixture(async ({
   principal, resource, sponsor, customer, operation,
 }) => {
-  const { withCoManagedNotificationRecipient: notify } = await import('../../../../packages/co-managed/src/sharedWork');
+  const { withCoManagedNotificationRecipient: notify } = await import('../../../../../packages/co-managed/src/sharedWork');
   const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
   const deliver = vi.fn(async (context: any) => context.redactedFields);
   const bundles = await import('@alga-psa/authorization');
@@ -5372,7 +5359,7 @@ it('applies recipient-specific home bundle scope and redactions while retaining 
 it('retains recipient identity, membership and resource grant locks through the delivery callback', async () => withConversationFixture(async ({
   principal, resource, sponsor, customer,
 }) => {
-  const { withCoManagedNotificationRecipient: notify } = await import('../../../../packages/co-managed/src/sharedWork');
+  const { withCoManagedNotificationRecipient: notify } = await import('../../../../../packages/co-managed/src/sharedWork');
   const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
   await notify(db, recipient, resource, async () => {
     for (const change of [
@@ -5393,7 +5380,7 @@ it('retains recipient identity, membership and resource grant locks through the 
 it('loads current shared comment content for independent MSP recipients with qualified author self-suppression', async () => withConversationFixture(async ({
   principal, customerPrincipal, resource, sponsor, addCustomer,
 }) => {
-  const { withCoManagedTicketCommentNotification: notify } = await import('../../../../packages/co-managed/src/ticketCommentNotification');
+  const { withCoManagedTicketCommentNotification: notify } = await import('../../../../../packages/co-managed/src/ticketCommentNotification');
   // The recipient deliberately shares a UUID with the customer author. Only
   // tenant-qualified equality may suppress a notification to this home user.
   const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: customerPrincipal.userId };
@@ -5420,7 +5407,7 @@ it('loads current shared comment content for independent MSP recipients with qua
 it('excludes private, unpublished and deleted notification content and respects the recipient content and author redactions', async () => withConversationFixture(async ({
   principal, resource, sponsor, operation, addCustomer, addPrivate,
 }) => {
-  const { withCoManagedTicketCommentNotification: notify } = await import('../../../../packages/co-managed/src/ticketCommentNotification');
+  const { withCoManagedTicketCommentNotification: notify } = await import('../../../../../packages/co-managed/src/ticketCommentNotification');
   const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
   const root = await addCustomer({ note: 'Visible notification' });
   const privateRoot = await addCustomer({ note: 'Customer private', internal: true });
@@ -5451,7 +5438,7 @@ it('excludes private, unpublished and deleted notification content and respects 
 it('holds comment audience and body locks through delivery and reads current content again on retry', async () => withConversationFixture(async ({
   principal, resource, customer, addCustomer,
 }) => {
-  const { withCoManagedTicketCommentNotification: notify } = await import('../../../../packages/co-managed/src/ticketCommentNotification');
+  const { withCoManagedTicketCommentNotification: notify } = await import('../../../../../packages/co-managed/src/ticketCommentNotification');
   const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
   const comment = await addCustomer({ note: 'Initial body' });
   await notify(db, recipient, resource, comment.id, async (_context, message) => {
@@ -5470,8 +5457,8 @@ it('holds comment audience and body locks through delivery and reads current con
 }));
 
 async function withRoutedCommentFixture(work: (fixture: Parameters<Parameters<typeof withConversationFixture>[0]>[0] & {
-  request: import('../../../../packages/co-managed/src/ticketCommentRecipients').CoManagedTicketCommentDeliveryRequest;
-  fanout: typeof import('../../../../packages/co-managed/src/ticketCommentRecipients').deliverCoManagedTicketCommentToAssignees;
+  request: import('../../../../../packages/co-managed/src/ticketCommentRecipients').CoManagedTicketCommentDeliveryRequest;
+  fanout: typeof import('../../../../../packages/co-managed/src/ticketCommentRecipients').deliverCoManagedTicketCommentToAssignees;
   teamId: string; eligibleIds: string[]; unassignedId: string; unpermittedId: string;
 }) => Promise<void>) {
   await withConversationFixture(async fixture => {
@@ -5489,7 +5476,7 @@ async function withRoutedCommentFixture(work: (fixture: Parameters<Parameters<ty
     await sponsor.table('team_members').insert([principal.userId, eligibleId, unpermittedId].map(id => ({ tenant: principal.tenant, team_id: teamId, user_id: id })));
     await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).update({ assigned_to: principal.userId, assigned_team_id: teamId });
     const comment = await addCustomer({ note: 'Customer shared reply', internal: true, audience: 'shared_it' });
-    const { deliverCoManagedTicketCommentToAssignees: fanout } = await import('../../../../packages/co-managed/src/ticketCommentRecipients');
+    const { deliverCoManagedTicketCommentToAssignees: fanout } = await import('../../../../../packages/co-managed/src/ticketCommentRecipients');
     await work({ ...fixture, teamId, eligibleIds: [principal.userId, eligibleId].sort(), unassignedId, unpermittedId, fanout,
       request: { ownerTenant: resource.tenant, ticketId: resource.id, commentId: comment.id, eventId: randomUUID(), channel: 'in_app' } });
   });
@@ -5564,7 +5551,7 @@ it('qualifies production comment event identities by owner when different tenant
   const operationId = randomUUID();
   const eventIds: string[] = [], owners: string[] = [];
   for (let i = 0; i < 2; i++) await withSharedTicketMutationFixture(async ({ principal, resource, customer, publish, workflow }) => {
-    const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+    const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
     const request = { operationId, audience: 'shared_it' as const, text: 'Same operation UUID in another owner' };
     publish.mockClear(); workflow.mockClear();
     const first = await createSharedTicketComment(db, principal, resource, request);
@@ -5580,7 +5567,7 @@ it('qualifies production comment event identities by owner when different tenant
 
 async function withInAppCommentFixture(work: (fixture: Parameters<Parameters<typeof withRoutedCommentFixture>[0]>[0] & {
   event: any; subtypeId: number; categoryId: number;
-  persist: typeof import('../../lib/co-managed/persistCommentNotifications').persistCoManagedCommentNotifications;
+  persist: typeof import('../../../../../server/src/lib/co-managed/persistCommentNotifications').persistCoManagedCommentNotifications;
 }) => Promise<void>) {
   await withRoutedCommentFixture(async fixture => {
     const { request, customerPrincipal } = fixture;
@@ -5589,7 +5576,7 @@ async function withInAppCommentFixture(work: (fixture: Parameters<Parameters<typ
       { name: 'ticket-comment-added', language_code: 'en', title: 'EN {{ticketId}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id },
       { name: 'ticket-comment-added', language_code: 'fr', title: 'FR {{ticketId}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id },
     ]).onConflict(['name', 'language_code']).ignore();
-    const { persistCoManagedCommentNotifications: persist } = await import('../../lib/co-managed/persistCommentNotifications');
+    const { persistCoManagedCommentNotifications: persist } = await import('../../../../../server/src/lib/co-managed/persistCommentNotifications');
     const event = { id: request.eventId, timestamp: new Date().toISOString(), eventType: 'TICKET_COMMENT_ADDED', payload: {
       tenantId: request.ownerTenant, ticketId: request.ticketId, userId: customerPrincipal.userId,
       comment: { id: request.commentId, content: 'Stale event body canary', author: 'Stale event author', authorType: 'internal', isInternal: true, audience: 'shared_it' },
@@ -5638,7 +5625,7 @@ it('creates exactly one in-app notification per qualified recipient under concur
   await sponsor.table('internal_notifications').where('user_id', eligibleIds[0]).del();
   await persist(db, event);
   expect(await sponsor.table('internal_notifications')).toHaveLength(1);
-  const migration = require('../../../migrations/20260906180000_create_co_management_in_app_receipts.cjs');
+  const migration = require('../../../../../server/migrations/20260906180000_create_co_management_in_app_receipts.cjs');
   await migration.up(db);
   expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
@@ -5673,7 +5660,7 @@ it('leaves no receipt after template failure and suppresses internal, revoked an
 it('revalidates stored notification content and recipient read restrictions instead of returning cached text', async () => withInAppCommentFixture(async ({
   principal, resource, sponsor, customer, operation, persist, event,
 }) => {
-  const { readCoManagedStoredCommentNotification: read } = await import('../../../../packages/co-managed/src/storedCommentNotification');
+  const { readCoManagedStoredCommentNotification: read } = await import('../../../../../packages/co-managed/src/storedCommentNotification');
   await persist(db, event);
   const notification = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Current authorized notification body' });
@@ -5703,7 +5690,7 @@ it('revalidates stored notification content and recipient read restrictions inst
 it('binds stored notification reads to the receipt recipient, source, thread and current audience', async () => withInAppCommentFixture(async ({
   principal, customerPrincipal, resource, sponsor, customer, eligibleIds, persist, event,
 }) => {
-  const { readCoManagedStoredCommentNotification: read } = await import('../../../../packages/co-managed/src/storedCommentNotification');
+  const { readCoManagedStoredCommentNotification: read } = await import('../../../../../packages/co-managed/src/storedCommentNotification');
   await persist(db, event);
   const notification = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   const id = notification.internal_notification_id;
@@ -5735,7 +5722,7 @@ it('binds stored notification reads to the receipt recipient, source, thread and
 it('rechecks the interactive session after waiting for a stored notification lock', async () => withInAppCommentFixture(async ({
   principal, sponsor, persist, event,
 }) => {
-  const { readCoManagedStoredCommentNotification: read } = await import('../../../../packages/co-managed/src/storedCommentNotification');
+  const { readCoManagedStoredCommentNotification: read } = await import('../../../../../packages/co-managed/src/storedCommentNotification');
   await persist(db, event);
   const notification = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
@@ -5848,7 +5835,7 @@ it('does not let removed notification metadata bypass receipt-based inbox classi
 it('revalidates queued shared deliveries and replaces cached content while retaining qualified routing', async () => withInAppCommentFixture(async ({
   principal, resource, sponsor, customer, persist, event,
 }) => {
-  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  const { withNotificationDelivery } = await import('../../../../../packages/notifications/src/lib/notificationDelivery');
   await persist(db, event);
   const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Fresh delivery content' });
@@ -5870,7 +5857,7 @@ it('revalidates queued shared deliveries and replaces cached content while retai
 it('suppresses receipt-backed queued delivery with stripped metadata, wrong recipients or changed audiences', async () => withInAppCommentFixture(async ({
   principal, sponsor, customer, eligibleIds, persist, event,
 }) => {
-  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  const { withNotificationDelivery } = await import('../../../../../packages/notifications/src/lib/notificationDelivery');
   await persist(db, event);
   const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   const deliver = vi.fn(async () => true);
@@ -5885,7 +5872,7 @@ it('suppresses receipt-backed queued delivery with stripped metadata, wrong reci
 it('holds shared source authority until asynchronous notification delivery finishes', async () => withInAppCommentFixture(async ({
   principal, resource, sponsor, customer, persist, event,
 }) => {
-  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  const { withNotificationDelivery } = await import('../../../../../packages/notifications/src/lib/notificationDelivery');
   await persist(db, event);
   const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   let release!: () => void, started!: () => void;
@@ -5908,7 +5895,7 @@ it('holds shared source authority until asynchronous notification delivery finis
 it('delivers current ordinary notification rows and suppresses deleted or forged shared rows', async () => withInAppCommentFixture(async ({
   principal, sponsor, persist, event,
 }) => {
-  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  const { withNotificationDelivery } = await import('../../../../../packages/notifications/src/lib/notificationDelivery');
   await persist(db, event);
   const shared = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   const id = randomUUID();
@@ -5924,8 +5911,8 @@ it('delivers current ordinary notification rows and suppresses deleted or forged
 it('rechecks routing for queued delivery while preserving an authorized historical inbox read', async () => withInAppCommentFixture(async ({
   principal, resource, sponsor, persist, event,
 }) => {
-  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
-  const { readCoManagedStoredCommentNotification } = await import('../../../../packages/co-managed/src/storedCommentNotification');
+  const { withNotificationDelivery } = await import('../../../../../packages/notifications/src/lib/notificationDelivery');
+  const { readCoManagedStoredCommentNotification } = await import('../../../../../packages/co-managed/src/storedCommentNotification');
   await persist(db, event);
   const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   await sponsor.table('co_managed_ticket_references').where({ customer_tenant: resource.tenant, ticket_id: resource.id }).update({ assigned_to: null, assigned_team_id: null });
@@ -5939,12 +5926,12 @@ it('guards the actual Redis broadcaster and asynchronous post-creation hooks wit
 }) => {
   const dbModule = await import('@alga-psa/db');
   const eventBus = await import('@alga-psa/event-bus');
-  const teams = await import('../../../../packages/notifications/src/realtime/teamsNotificationDelivery');
-  const { broadcastNotification } = await import('../../../../packages/notifications/src/realtime/internalNotificationBroadcaster');
-  const { registerInternalNotificationHook, runPostCreationHooks } = await import('../../../../packages/notifications/src/actions/internal-notification-actions/notificationHooks');
+  const teams = await import('../../../../../packages/notifications/src/realtime/teamsNotificationDelivery');
+  const { broadcastNotification } = await import('../../../../../packages/notifications/src/realtime/internalNotificationBroadcaster');
+  const { registerInternalNotificationHook, runPostCreationHooks } = await import('../../../../../packages/notifications/src/actions/internal-notification-actions/notificationHooks');
   // Production wiring: notificationCreatedEffects injects deliverCurrentNotification
   // (notificationHooks itself must stay free of server-only imports).
-  const { deliverCurrentNotification } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  const { deliverCurrentNotification } = await import('../../../../../packages/notifications/src/lib/notificationDelivery');
   await persist(db, event);
   const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
   const publish = vi.fn(async (_channel: string, _payload: string) => 1), observed: any[] = [];
@@ -5992,7 +5979,7 @@ async function withCoManagedNotificationSubscriberFixture(work: (fixture: Parame
     const teamsDelivery = vi.spyOn(teams, 'deliverAuthorizedTeamsNotification').mockResolvedValue({ status: 'skipped', reason: 'test_transport' });
     const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
     try {
-      const { internalNotificationSubscriberTestHarness } = await import('../../lib/eventBus/subscribers/internalNotificationSubscriber');
+      const { internalNotificationSubscriberTestHarness } = await import('../../../../../server/src/lib/eventBus/subscribers/internalNotificationSubscriber');
       await work({ ...fixture, handle: internalNotificationSubscriberTestHarness.handleInternalNotificationEvent, broadcast, hooks, observed });
     } finally {
       try { await vi.waitFor(async () => expect(await fixture.sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(0), { timeout: 10000 }); }
@@ -6025,7 +6012,7 @@ it('rolls back MSP notification receipts and effects with a failed inbound outbo
   resource, sponsor, customer, event, handle, broadcast, hooks, observed,
 }) => {
   const inbox = await stagedCoManagedInbox(resource.tenant);
-  const { insertOutboxRow } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+  const { insertOutboxRow } = await import('../../../../../shared/services/email/inboundEmailDurableStore');
   const dedupe = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
   await insertOutboxRow(db, { tenant: resource.tenant, inbox_id: inbox.inbox_id, outbox_id: event.id,
     event_key: `co-managed-comment:${event.id}`, event_type: event.eventType, payload: event.payload });
@@ -6167,7 +6154,7 @@ it('caps retryable attempts, isolates terminal channel failures and backfills le
   const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
   await persist(db, event);
   await sponsor.table('co_management_notification_deliveries').del();
-  const migration = require('../../../migrations/20260906190000_create_co_management_notification_deliveries.cjs');
+  const migration = require('../../../../../server/migrations/20260906190000_create_co_management_notification_deliveries.cjs');
   await migration.up(db); await migration.up(db);
   expect(await sponsor.table('co_management_notification_deliveries')).toHaveLength(6);
   await sponsor.table('co_management_notification_deliveries').where('channel', 'teams').update({ attempt_count: 9 });
@@ -6186,7 +6173,7 @@ it('recovers committed channels through the scheduled server job handler without
 }) => {
   await persist(db, event);
   expect(await sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(6);
-  const { coManagedNotificationRecoveryJobHandler } = await import('../../lib/jobs/handlers/coManagedNotificationRecoveryHandler');
+  const { coManagedNotificationRecoveryJobHandler } = await import('../../../../../server/src/lib/jobs/handlers/coManagedNotificationRecoveryHandler');
   expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 6, processed: 6 } });
   expect(observed).toHaveLength(2); expect(observed.every(item => item.committed)).toBe(true);
   expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
@@ -6213,9 +6200,9 @@ it('honors preferences changed after queue creation without hiding the already a
 it('issues notification signal tokens only for a current bound home session and caps them at its expiry', async () => withInAppCommentFixture(async ({
   principal, sponsor,
 }) => {
-  const { issueNotificationLiveToken } = await import('../../lib/notifications/notificationLiveToken');
+  const { issueNotificationLiveToken } = await import('../../../../../server/src/lib/notifications/notificationLiveToken');
   const jwt = (await import('jsonwebtoken')).default;
-  const { getHocuspocusJwtSecret } = await import('../../lib/hocuspocusJwt');
+  const { getHocuspocusJwtSecret } = await import('../../../../../server/src/lib/hocuspocusJwt');
   const actor = { ...principal, userType: 'internal' as const };
   const expires = new Date(Date.now() + 20000);
   await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: expires });
@@ -6236,7 +6223,7 @@ it('binds the actual notification live-token route to its browser session and re
   const dbModule = await import('@alga-psa/db');
   const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
   try {
-    const { GET } = await import('../../app/api/notifications/live-token/route');
+    const { GET } = await import('../../../../../server/src/app/api/notifications/live-token/route');
     const response = await (GET as any)(new Request(`http://localhost/api/notifications/live-token?tenant=${randomUUID()}&userId=${randomUUID()}`));
     expect(response.status).toBe(200); expect(await response.json()).toMatchObject({ tenant: principal.tenant, userId: principal.userId });
     expect(response.headers.get('Cache-Control')).toContain('no-store');
@@ -6248,7 +6235,7 @@ it('binds the actual notification live-token route to its browser session and re
 it('does not issue a notification signal token if the session expires while waiting for a home identity lock', async () => withInAppCommentFixture(async ({
   principal, sponsor,
 }) => {
-  const { issueNotificationLiveToken } = await import('../../lib/notifications/notificationLiveToken');
+  const { issueNotificationLiveToken } = await import('../../../../../server/src/lib/notifications/notificationLiveToken');
   await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
   const blocker = await db.transaction();
   await tenantDb(blocker, principal.tenant).table('users').where('user_id', principal.userId).forUpdate().first();
@@ -6267,7 +6254,7 @@ it('does not issue a notification signal token if the session expires while wait
 it('reauthorizes notification activity rows before pagination and totals and keeps API targets from borrowing a browser session', async () => withInAppInboxFixture(async ({
   principal, resource, sponsor, customer, notificationId, event, apiOverride, eligibleIds,
 }) => {
-  const feed = await import('../../../../packages/user-activities/src/actions/activityAggregationActions');
+  const feed = await import('../../../../../packages/user-activities/src/actions/activityAggregationActions');
   const ordinaryId = randomUUID();
   const common = { tenant: principal.tenant, user_id: principal.userId, template_name: 'native-example', language_code: 'en', title: 'Ordinary activity',
     message: 'Ordinary body', type: 'info', category: 'general', priority: 'normal' };
@@ -6301,7 +6288,7 @@ it('excludes shared receipts and malformed shared metadata from client notificat
   principal, sponsor, notificationId,
 }) => {
   const auth = await import('@alga-psa/auth');
-  const portal = await import('../../../../packages/client-portal/src/actions/client-portal-actions/notificationActivities');
+  const portal = await import('../../../../../packages/client-portal/src/actions/client-portal-actions/notificationActivities');
   const ordinaryId = randomUUID();
   const common = { tenant: principal.tenant, user_id: principal.userId, template_name: 'native-example', language_code: 'en', title: 'Portal notice',
     message: 'Portal body', type: 'info', category: 'general', priority: 'normal' };
@@ -6321,11 +6308,11 @@ it('excludes shared receipts and malformed shared metadata from client notificat
 }));
 
 async function withCommentMutationFixture(work: (fixture: Parameters<Parameters<typeof withCommentCreationFixture>[0]>[0] & {
-  mutateComment: typeof import('../../lib/co-managed/mutateTicketComment').mutateSharedTicketComment;
+  mutateComment: typeof import('../../../../../server/src/lib/co-managed/mutateTicketComment').mutateSharedTicketComment;
   publish: ReturnType<typeof vi.mocked<typeof import('@alga-psa/event-bus/publishers').publishEvent>>;
 }) => Promise<void>) {
   await withCommentCreationFixture(async fixture => {
-    const { mutateSharedTicketComment: mutateComment } = await import('../../lib/co-managed/mutateTicketComment');
+    const { mutateSharedTicketComment: mutateComment } = await import('../../../../../server/src/lib/co-managed/mutateTicketComment');
     const { publishEvent } = await import('@alga-psa/event-bus/publishers');
     await work({ ...fixture, mutateComment, publish: vi.mocked(publishEvent) });
   });
@@ -6351,8 +6338,8 @@ it('edits and deletes own qualified comments with exact-version retries, preserv
   const stored = await customer.table('comments').where('comment_id', created.commentId).first();
   expect(stored).toMatchObject({ note: '[deleted]', markdown_content: '[deleted]', user_id: null, actor_display_name: 'Morgan Provider', is_internal: true });
   expect(stored.deleted_at).not.toBeNull();
-  const { ticketCommentIndexer } = await import('../../../../packages/search/src/indexers/ticket_comment');
-  const { verifyResultVisibility } = await import('../../../../packages/search/src/acl');
+  const { ticketCommentIndexer } = await import('../../../../../packages/search/src/indexers/ticket_comment');
+  const { verifyResultVisibility } = await import('../../../../../packages/search/src/acl');
   expect(await ticketCommentIndexer.loadOne(db, resource.tenant, created.commentId)).toBeNull();
   expect((await ticketCommentIndexer.loadBatch(db, resource.tenant, null, 50)).map(row => row.objectId)).not.toContain(created.commentId);
   expect(await verifyResultVisibility(db, { tenant: resource.tenant, userId: customerPrincipal.userId, isInternal: true,
@@ -6436,7 +6423,7 @@ it('rechecks shared edit authority after a thread lock wait and leaves no receip
 it('derives conversation write audiences from actual content policy and preserves read-only conversation access', async () => withConversationFixture(async ({
   principal, customerPrincipal, resource, operation, sponsor, addCustomer, read,
 }) => {
-  const { getCoManagedConversationWriteAudiences: permissions } = await import('../../../../packages/co-managed/src/ticketConversation');
+  const { getCoManagedConversationWriteAudiences: permissions } = await import('../../../../../packages/co-managed/src/ticketConversation');
   expect(await permissions(db, principal, resource)).toEqual(['requester', 'shared_it', 'organization_private']);
   expect(await permissions(db, customerPrincipal, resource)).toEqual(['requester', 'shared_it', 'organization_private']);
   await addCustomer({ note: 'Readable history' });
@@ -6447,7 +6434,7 @@ it('derives conversation write audiences from actual content policy and preserve
   await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
   await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
   expect(await permissions(db, principal, resource)).toEqual(['organization_private']);
-  const { getCoManagedConversationContributionHints: hints } = await import('../../../../packages/co-managed/src/ticketConversation');
+  const { getCoManagedConversationContributionHints: hints } = await import('../../../../../packages/co-managed/src/ticketConversation');
   expect(await hints(db, principal, resource)).toEqual({ writeAudiences: ['organization_private'], attachmentAudiences: ['organization_private'] });
   for (const field of ['co_management_conversation_drafts', 'co_management_conversation_attachments', 'file_name']) {
     await sponsor.table('authorization_bundle_rules').where('bundle_id', bundleId).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: [field] } });
@@ -6486,7 +6473,7 @@ it('preserves canonical rich documents through create, inherited replies, exact 
 it('keeps rich private notes and edits exclusively in the MSP store and snapshots documents before awaiting authority', async () => withCommentCreationFixture(async ({
   principal, resource, sponsor, customer, create,
 }) => {
-  const { mutateCoManagedPrivateTicketComment: save } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment: save } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const document = [{ type: 'paragraph', content: [{ type: 'text', text: 'Private rich content', styles: { bold: true } }] }];
   const operationId = randomUUID();
   const pending = save(db, principal, resource, { kind: 'create', operationId, document });
@@ -6506,12 +6493,12 @@ it('keeps rich private notes and edits exclusively in the MSP store and snapshot
 }));
 
 async function withAttachmentFixture(work: (fixture: Parameters<Parameters<typeof withCommentCreationFixture>[0]>[0] & {
-  attachments: typeof import('../../../../packages/co-managed/src/conversationAttachments');
+  attachments: typeof import('../../../../../packages/co-managed/src/conversationAttachments');
   objects: Map<string, Uint8Array>; upload: ReturnType<typeof vi.fn<(path: string, content: Uint8Array, mime: string) => Promise<void>>>;
   download: ReturnType<typeof vi.fn<(path: string) => Promise<Uint8Array>>>;
 }) => Promise<void>) {
   await withCommentCreationFixture(async fixture => {
-    const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
+    const attachments = await import('../../../../../packages/co-managed/src/conversationAttachments');
     const objects = new Map<string, Uint8Array>();
     const upload = vi.fn(async (path: string, content: Uint8Array, _mime: string) => { objects.set(path, Uint8Array.from(content)); });
     const download = vi.fn(async (path: string) => { const data = objects.get(path); if (!data) throw new Error('Missing test object'); return data; });
@@ -6545,7 +6532,7 @@ it('uploads qualified conversation attachments once under concurrent retries wit
 it('inherits private attachment audiences from their actual home or customer comment and denies forged stores and threads', async () => withAttachmentFixture(async ({
   principal, customerPrincipal, resource, customer, sponsor, create, attachments, upload, download,
 }) => {
-  const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const roots = [await create(customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer private' }),
     await mutateCoManagedPrivateTicketComment(db, principal, resource, { operationId: randomUUID(), kind: 'create', text: 'MSP private' })];
   for (const [index, root] of roots.entries()) {
@@ -6625,7 +6612,7 @@ it('keeps attachment transport expiry pending, permits an exact renewed retry an
   await expireCoManagedEntitlement(principal.tenant);
   expect((await attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready), download)).content.length).toBe(5);
   await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, request, upload)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
-  const migration = require('../../../migrations/20260906200000_create_co_management_conversation_attachments.cjs');
+  const migration = require('../../../../../server/migrations/20260906200000_create_co_management_conversation_attachments.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 
@@ -6656,7 +6643,7 @@ it('uses the production attachment provider adapter and leaves incomplete provid
 }) => {
   const { StorageProviderFactory } = await import('@alga-psa/storage/StorageProviderFactory');
   const { StorageService } = await import('@alga-psa/storage/StorageService');
-  const production = await import('../../lib/co-managed/conversationAttachments');
+  const production = await import('../../../../../server/src/lib/co-managed/conversationAttachments');
   let acknowledge = false;
   const provider = { upload: vi.fn(async (content: Buffer, path: string, options: { mime_type: string }) => {
     objects.set(path, Buffer.from(content)); return { path, size: acknowledge ? content.length : content.length - 1, mime_type: options.mime_type };
@@ -6700,13 +6687,13 @@ it('derives attachment upload controls from actual qualified authorship, content
 }));
 
 async function withConversationDraftFixture(work: (fixture: Parameters<Parameters<typeof withAttachmentFixture>[0]>[0] & {
-  drafts: typeof import('../../../../packages/co-managed/src/conversationDrafts');
-  publishCustomer: typeof import('../../lib/co-managed/createTicketComment').createSharedTicketComment;
-  file: (text: string) => { descriptor: import('../../../../packages/co-managed/src/conversationDrafts').CoManagedDraftFile; content: Buffer };
+  drafts: typeof import('../../../../../packages/co-managed/src/conversationDrafts');
+  publishCustomer: typeof import('../../../../../server/src/lib/co-managed/createTicketComment').createSharedTicketComment;
+  file: (text: string) => { descriptor: import('../../../../../packages/co-managed/src/conversationDrafts').CoManagedDraftFile; content: Buffer };
 }) => Promise<void>) {
   await withAttachmentFixture(async fixture => {
-    const drafts = await import('../../../../packages/co-managed/src/conversationDrafts');
-    const { createSharedTicketComment: publishCustomer } = await import('../../lib/co-managed/createTicketComment');
+    const drafts = await import('../../../../../packages/co-managed/src/conversationDrafts');
+    const { createSharedTicketComment: publishCustomer } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
     const { createHash } = await import('node:crypto');
     const file = (text: string) => { const content = Buffer.from(text); return { content, descriptor: { attachmentId: randomUUID(), fileName: `${text}.txt`,
       mimeType: 'text/plain', size: content.length, contentHash: createHash('sha256').update(content).digest('hex') } }; };
@@ -6812,7 +6799,7 @@ it('rolls draft publication and native effects back with the owner and rejects p
   await reconcileHostedCoManagedEntitlement(db, principal.tenant, entitlement.source_reference, async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 86400000) }));
   await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant).delete();
   await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
-  const migration = require('../../../migrations/20260906210000_create_co_management_conversation_drafts.cjs');
+  const migration = require('../../../../../server/migrations/20260906210000_create_co_management_conversation_drafts.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 
@@ -6857,7 +6844,7 @@ it('rejects stale displayed reply audiences before draft reservation or text cre
 }));
 
 async function withPortalAttachmentFixture(work: (fixture: Parameters<Parameters<typeof withConversationDraftFixture>[0]>[0] & {
-  portal: typeof import('../../lib/co-managed/portalAttachments'); requester: import('../../../../packages/co-managed/src/sharedWorkIdentity').CoManagedSessionActor;
+  portal: typeof import('../../../../../server/src/lib/co-managed/portalAttachments'); requester: import('../../../../../packages/co-managed/src/sharedWorkIdentity').CoManagedSessionActor;
   contactId: string; roleId: string;
 }) => Promise<void>) {
   await withConversationDraftFixture(async fixture => {
@@ -6870,7 +6857,7 @@ async function withPortalAttachmentFixture(work: (fixture: Parameters<Parameters
     await customer.table('roles').insert({ tenant: resource.tenant, role_id: roleId, role_name: 'Attachment requester', msp: false, client: true });
     await customer.table('role_permissions').insert({ tenant: resource.tenant, role_id: roleId, permission_id: permission.permission_id });
     await customer.table('user_roles').insert({ tenant: resource.tenant, role_id: roleId, user_id: userId });
-    const portal = await import('../../lib/co-managed/portalAttachments');
+    const portal = await import('../../../../../server/src/lib/co-managed/portalAttachments');
     await work({ ...fixture, portal, requester: { kind: 'session', tenant: resource.tenant, userId, sessionId }, contactId: contact.contact_name_id, roleId });
   });
 }
@@ -7016,7 +7003,7 @@ it('rechecks requester session expiry after comment lock waits before opening st
 it('cancels an author draft idempotently, hides files immediately and keeps tombstones after scrubbing its bytes and content', async () => withConversationDraftFixture(async ({
   principal, customerPrincipal, resource, customer, drafts, publishCustomer, file, upload, objects,
 }) => {
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
   const part = file('Private evidence'), request = { operationId: randomUUID(), audience: 'shared_it' as const, content: { text: 'Unpublished private body' }, files: [part.descriptor] };
   const begun = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
   await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(begun), part.descriptor.attachmentId, part.content, upload);
@@ -7037,13 +7024,13 @@ it('cancels an author draft idempotently, hides files immediately and keeps tomb
   expect(await customer.table('comments').where('comment_id', begun.operationId).first()).toBeUndefined();
   expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ purgedFiles: 0, completedDrafts: 0 });
   expect(remove).toHaveBeenCalledOnce();
-  const migration = require('../../../migrations/20260906220000_add_co_managed_upload_cleanup.cjs'); await migration.up(db);
+  const migration = require('../../../../../server/migrations/20260906220000_add_co_managed_upload_cleanup.cjs'); await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 it('expires idle drafts and standalone pending uploads while retaining fresh work and every published file', async () => withConversationDraftFixture(async ({
   principal, resource, customer, drafts, publishCustomer, create, attachments, file, upload, objects,
 }) => {
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
   const prepared = [];
   for (const name of ['Idle', 'Fresh', 'Published', 'Retry']) {
     const part = file(name), request = { operationId: randomUUID(), audience: 'requester' as const, content: { text: name }, files: [part.descriptor] };
@@ -7069,7 +7056,7 @@ it('expires idle drafts and standalone pending uploads while retaining fresh wor
 it('retries failed or lost delete acknowledgements at the same path and rejects corrupted cleanup paths without blocking other files', async () => withConversationDraftFixture(async ({
   principal, resource, customer, drafts, file, upload, objects,
 }) => {
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
   const parts = [file('Lost acknowledgement'), file('Corrupt path'), file('Independent')];
   const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Cleanup' }, files: parts.map(part => part.descriptor) });
   for (const part of parts) await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
@@ -7094,13 +7081,13 @@ it('allows authors to discard their own drafts after grant loss and lapse withou
   await expireCoManagedEntitlement(principal.tenant);
   await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: db.fn.now() });
   expect(await drafts.abandonCoManagedConversationDraft(db, principal, resource, draftRef(draft))).toEqual({ status: 'abandoned' });
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
   const remove = vi.fn(); expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ completedDrafts: 1, purgedFiles: 0 }); expect(remove).not.toHaveBeenCalled();
 }));
 it('serializes cancellation after an in-flight upload and never publishes or resurrects its completed object', async () => withConversationDraftFixture(async ({
   principal, resource, customer, drafts, publishCustomer, file, upload, objects,
 }) => {
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
   const part = file('Concurrent'), draft = await drafts.beginCoManagedConversationDraft(db, principal, resource,
     { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Canceled during transfer' }, files: [part.descriptor] });
   let entered!: () => void, release!: () => void;
@@ -7120,7 +7107,7 @@ it('serializes cancellation after an in-flight upload and never publishes or res
 it('cleans only the owning store and invokes the production scheduled handler with idempotent provider deletion', async () => withConversationDraftFixture(async ({
   principal, resource, sponsor, customer, drafts, file, upload, objects,
 }) => {
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
   const prepared = [];
   for (const audience of ['shared_it', 'organization_private'] as const) {
     const part = file(audience), draft = await drafts.beginCoManagedConversationDraft(db, principal, resource,
@@ -7134,7 +7121,7 @@ it('cleans only the owning store and invokes the production scheduled handler wi
   const dbModule = await import('@alga-psa/db'), connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
   artifactStorage.delete.mockReset().mockImplementation(async path => { objects.delete(path); });
   try {
-    const { coManagedUploadCleanupJobHandler } = await import('../../lib/jobs/handlers/coManagedUploadCleanupHandler');
+    const { coManagedUploadCleanupJobHandler } = await import('../../../../../server/src/lib/jobs/handlers/coManagedUploadCleanupHandler');
     expect(await coManagedUploadCleanupJobHandler({ data: { tenantId: principal.tenant, limit: 1 } } as any)).toMatchObject({ purgedFiles: 1, completedDrafts: 1 });
     expect(artifactStorage.delete).toHaveBeenCalledWith(`co-management/${principal.tenant}/${prepared[1].part.descriptor.attachmentId}`);
     expect(await coManagedUploadCleanupJobHandler({ data: { tenantId: principal.tenant, limit: 1 } } as any)).toMatchObject({ purgedFiles: 0 });
@@ -7170,7 +7157,7 @@ it('rechecks draft session expiry after cleanup lock contention before uploading
 it('removes a published attachment idempotently without changing its message and purges only the selected object', async () => withAttachmentFixture(async ({
   principal, customerPrincipal, resource, customer, create, attachments, upload, download, objects,
 }) => {
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
   const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Keep this message' });
   const request = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Remove.txt', mimeType: 'text/plain', content: Buffer.from('Remove bytes') };
   const saved = await attachments.uploadCoManagedConversationAttachment(db, principal, resource, request, upload);
@@ -7192,14 +7179,14 @@ it('removes a published attachment idempotently without changing its message and
   expect(await attachments.removeCoManagedConversationAttachment(db, principal, resource, attachmentReference(saved))).toEqual(receipt);
   await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, request, upload)).rejects.toBeDefined();
   expect(upload).toHaveBeenCalledTimes(2);
-  const migration = require('../../../migrations/20260906230000_add_co_managed_attachment_removal.cjs'); await migration.up(db);
+  const migration = require('../../../../../server/migrations/20260906230000_add_co_managed_attachment_removal.cjs'); await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 
 it('revokes requester file access on removal while retaining published draft receipts and preventing upload resurrection', async () => withPortalAttachmentFixture(async ({
   principal, requester, portal, resource, customer, attachments, drafts, publishCustomer, upload, download, file, objects,
 }) => {
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
   const part = file('Public evidence'), request = { operationId: randomUUID(), audience: 'requester' as const, content: { text: 'Keep published body' }, files: [part.descriptor] };
   const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
   const ready = await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
@@ -7222,8 +7209,8 @@ it('revokes requester file access on removal while retaining published draft rec
 it('removes private attachments only as their author in their owning organization', async () => withAttachmentFixture(async ({
   principal, customerPrincipal, resource, create, attachments, upload, objects,
 }) => {
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
-  const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const roots = [await create(customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer secret' }),
     await mutateCoManagedPrivateTicketComment(db, principal, resource, { operationId: randomUUID(), kind: 'create', text: 'MSP secret' })];
   for (const [index, root] of roots.entries()) {
@@ -7254,7 +7241,7 @@ it('rolls attachment removal back with its caller and rejects staged-file remova
     await attachments.removeCoManagedConversationAttachment(trx, principal, resource, attachmentReference(ready)); throw new Error('Owner rollback');
   })).rejects.toThrow('Owner rollback');
   expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, attachmentComment(root))).toEqual([ready]);
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
   const remove = vi.fn(); expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ purgedFiles: 0 });
   expect(remove).not.toHaveBeenCalled(); expect(objects.size).toBe(2);
 }));
@@ -7298,8 +7285,8 @@ it('rechecks session expiry after an attachment removal lock wait before marking
 it('discloses a customer-owned thread and its files atomically with confirmed scope, attribution and exact retry', async () => withPortalAttachmentFixture(async ({
   customerPrincipal, principal, requester, portal, resource, customer, create, attachments, upload, download,
 }) => {
-  const { previewCoManagedThreadDisclosure } = await import('../../../../packages/co-managed/src/threadDisclosure');
-  const { discloseSharedTicketThread } = await import('../../lib/co-managed/discloseTicketThread');
+  const { previewCoManagedThreadDisclosure } = await import('../../../../../packages/co-managed/src/threadDisclosure');
+  const { discloseSharedTicketThread } = await import('../../../../../server/src/lib/co-managed/discloseTicketThread');
   const { publishEvent } = await import('@alga-psa/event-bus/publishers');
   const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer note' });
   const reply = await create(customerPrincipal, { operationId: randomUUID(), parent: attachmentComment(root), text: 'Customer reply' });
@@ -7332,7 +7319,7 @@ it('discloses a customer-owned thread and its files atomically with confirmed sc
 it('rejects stale disclosure confirmation after new replies, attachment changes and conflicting operation reuse', async () => withAttachmentFixture(async ({
   principal, resource, create, attachments, upload,
 }) => {
-  const { previewCoManagedThreadDisclosure, discloseCoManagedTicketThread } = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const { previewCoManagedThreadDisclosure, discloseCoManagedTicketThread } = await import('../../../../../packages/co-managed/src/threadDisclosure');
   const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Internal discussion' });
   const target = { storeTenant: resource.tenant, threadId: root.threadId }, apply = vi.fn();
   const initial = await previewCoManagedThreadDisclosure(db, principal, resource, target);
@@ -7353,7 +7340,7 @@ it('rejects stale disclosure confirmation after new replies, attachment changes 
 it('requires the thread author and explicit confirmation, blocks pending uploads and preserves caller rollback', async () => withAttachmentFixture(async ({
   principal, customerPrincipal, resource, customer, create, attachments,
 }) => {
-  const { previewCoManagedThreadDisclosure, discloseCoManagedTicketThread } = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const { previewCoManagedThreadDisclosure, discloseCoManagedTicketThread } = await import('../../../../../packages/co-managed/src/threadDisclosure');
   const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Whole discussion' });
   const target = { storeTenant: resource.tenant, threadId: root.threadId }, apply = vi.fn();
   await expect(previewCoManagedThreadDisclosure(db, customerPrincipal, resource, target)).rejects.toBeDefined();
@@ -7373,7 +7360,7 @@ it('requires the thread author and explicit confirmation, blocks pending uploads
 it('retains audience admission after grant loss, license lapse and session expiry behind a thread lock', async () => withAttachmentFixture(async ({
   principal, resource, sponsor, customer, create,
 }) => {
-  const { previewCoManagedThreadDisclosure, discloseCoManagedTicketThread } = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const { previewCoManagedThreadDisclosure, discloseCoManagedTicketThread } = await import('../../../../../packages/co-managed/src/threadDisclosure');
   const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Timed disclosure' });
   const target = { storeTenant: resource.tenant, threadId: root.threadId }, apply = vi.fn();
   const preview = await previewCoManagedThreadDisclosure(db, principal, resource, target);
@@ -7400,8 +7387,8 @@ it('retains audience admission after grant loss, license lapse and session expir
 it('keeps published draft files attached across disclosure and rejects old-audience staged replies', async () => withPortalAttachmentFixture(async ({
   principal, requester, portal, resource, drafts, publishCustomer, file, upload, attachments, customer,
 }) => {
-  const { previewCoManagedThreadDisclosure } = await import('../../../../packages/co-managed/src/threadDisclosure');
-  const { discloseSharedTicketThread } = await import('../../lib/co-managed/discloseTicketThread');
+  const { previewCoManagedThreadDisclosure } = await import('../../../../../packages/co-managed/src/threadDisclosure');
+  const { discloseSharedTicketThread } = await import('../../../../../server/src/lib/co-managed/discloseTicketThread');
   const { publishEvent } = await import('@alga-psa/event-bus/publishers');
   const part = file('Whole-thread evidence'), request = { operationId: randomUUID(), audience: 'shared_it' as const, content: { text: 'Published root' }, files: [part.descriptor] };
   const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
@@ -7423,15 +7410,15 @@ it('keeps published draft files attached across disclosure and rejects old-audie
 }));
 
 async function withPrivateThreadTransferFixture(work: (fixture: Parameters<Parameters<typeof withPortalAttachmentFixture>[0]>[0] & {
-  previewPrivate: typeof import('../../../../packages/co-managed/src/privateThreadDisclosure').previewCoManagedPrivateThreadDisclosure;
-  transferPrivate: typeof import('../../../../packages/co-managed/src/privateThreadDisclosure').discloseCoManagedPrivateTicketThread;
-  disclose: typeof import('../../lib/co-managed/discloseTicketThread').discloseSharedTicketThread;
-  privateComment: (request: import('../../../../packages/co-managed/src/privateTicketConversation').CoManagedPrivateCommentCommand) => Promise<import('../../../../packages/co-managed/src/privateTicketConversation').CoManagedPrivateCommentReceipt>;
+  previewPrivate: typeof import('../../../../../packages/co-managed/src/privateThreadDisclosure').previewCoManagedPrivateThreadDisclosure;
+  transferPrivate: typeof import('../../../../../packages/co-managed/src/privateThreadDisclosure').discloseCoManagedPrivateTicketThread;
+  disclose: typeof import('../../../../../server/src/lib/co-managed/discloseTicketThread').discloseSharedTicketThread;
+  privateComment: (request: import('../../../../../packages/co-managed/src/privateTicketConversation').CoManagedPrivateCommentCommand) => Promise<import('../../../../../packages/co-managed/src/privateTicketConversation').CoManagedPrivateCommentReceipt>;
 }) => Promise<void>) {
   await withPortalAttachmentFixture(async fixture => {
-    const { previewCoManagedPrivateThreadDisclosure: previewPrivate, discloseCoManagedPrivateTicketThread: transferPrivate } = await import('../../../../packages/co-managed/src/privateThreadDisclosure');
-    const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
-    const { discloseSharedTicketThread: disclose } = await import('../../lib/co-managed/discloseTicketThread');
+    const { previewCoManagedPrivateThreadDisclosure: previewPrivate, discloseCoManagedPrivateTicketThread: transferPrivate } = await import('../../../../../packages/co-managed/src/privateThreadDisclosure');
+    const { mutateCoManagedPrivateTicketComment } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
+    const { discloseSharedTicketThread: disclose } = await import('../../../../../server/src/lib/co-managed/discloseTicketThread');
     artifactStorage.download.mockReset().mockImplementation(async path => Buffer.from(fixture.objects.get(path)!));
     artifactStorage.upload.mockReset().mockImplementation(async (bytes, path, options) => { fixture.objects.set(path, Uint8Array.from(bytes)); return { path, size: bytes.length, mime_type: options.mime_type }; });
     artifactStorage.delete.mockReset().mockImplementation(async path => { fixture.objects.delete(path); });
@@ -7482,12 +7469,12 @@ it('transfers a confirmed MSP-private thread and files atomically with historica
   const downloaded = await portal.downloadPortalConversationAttachment(db, requester, { ticketId: resource.id, threadId: receipt.threadId, commentId: receipt.threadId }, files[0].attachmentId, async path => Buffer.from(objects.get(path)!));
   expect(Buffer.from(downloaded.content).toString()).toBe('Customer-owned evidence');
   expect(vi.mocked(publishEvent).mock.calls).toHaveLength(3);
-  const { getCoManagedTicketConversation } = await import('../../../../packages/co-managed/src/ticketConversation');
+  const { getCoManagedTicketConversation } = await import('../../../../../packages/co-managed/src/ticketConversation');
   const timeline = await getCoManagedTicketConversation(db, principal, resource); expect(timeline.items.every(item => item.storeTenant === resource.tenant)).toBe(true);
   await expect(privateComment({ kind: 'edit', operationId: randomUUID(), comment: attachmentComment(root), expectedRevision: root.revision, text: 'Archived edit' })).rejects.toBeDefined();
   await expect(attachments.listCoManagedConversationAttachments(db, principal, resource, attachmentComment(root))).rejects.toBeDefined();
   const copies = artifactStorage.upload.mock.calls.length; expect(await disclose(db, principal, resource, request)).toEqual(receipt); expect(artifactStorage.upload).toHaveBeenCalledTimes(copies);
-  const migration = require('../../../migrations/20260907000000_create_co_management_thread_transfers.cjs'); await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+  const migration = require('../../../../../server/migrations/20260907000000_create_co_management_thread_transfers.cjs'); await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 
 it('resumes a partial private-thread copy at the same reserved path without publishing an incomplete customer thread', async () => withPrivateThreadTransferFixture(async ({
@@ -7525,7 +7512,7 @@ it('rejects a changed private source after staging and cleans only abandoned des
   await expect(disclose(db, principal, resource, request)).rejects.toMatchObject({ code: 'THREAD_DISCLOSURE_CONFLICT' });
   expect(await customer.table('comments').where('thread_id', request.operationId)).toEqual([]);
   await sponsor.table('co_management_thread_transfers').where('operation_id', request.operationId).update({ last_activity_at: db.raw("clock_timestamp() - interval '8 days'") });
-  const { cleanupCoManagedThreadTransfers } = await import('../../../../packages/co-managed/src/privateThreadTransferCleanup');
+  const { cleanupCoManagedThreadTransfers } = await import('../../../../../packages/co-managed/src/privateThreadTransferCleanup');
   const remove = vi.fn(async path => { objects.delete(path); });
   expect(await cleanupCoManagedThreadTransfers(db, resource.tenant, remove)).toMatchObject({ cleanedTransfers: 0 });
   expect(await cleanupCoManagedThreadTransfers(db, principal.tenant, remove)).toMatchObject({ abandonedTransfers: 1, cleanedTransfers: 1, failedTransfers: 0 });
@@ -7580,8 +7567,8 @@ it('removes a disclosed attachment from its customer-owned path while preserving
   const [file] = await attachments.listCoManagedConversationAttachments(db, principal, resource, { storeTenant: receipt.storeTenant, threadId: receipt.threadId, commentId: receipt.threadId });
   await attachments.removeCoManagedConversationAttachment(db, principal, resource, attachmentReference(file));
   await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(file), download)).rejects.toBeDefined();
-  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
-  const { cleanupCoManagedThreadTransfers } = await import('../../../../packages/co-managed/src/privateThreadTransferCleanup');
+  const { cleanupCoManagedUploads } = await import('../../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedThreadTransfers } = await import('../../../../../packages/co-managed/src/privateThreadTransferCleanup');
   const remove = vi.fn(async path => { objects.delete(path); });
   expect(await cleanupCoManagedThreadTransfers(db, principal.tenant, remove)).toMatchObject({ cleanedTransfers: 0 });
   expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ purgedFiles: 1, failedFiles: 0 });
@@ -7603,7 +7590,7 @@ it('retries abandoned private-transfer deletion after lost acknowledgements and 
   const corrupted = await sponsor.table('co_management_thread_transfers').where('operation_id', operationIds[0]).first();
   await sponsor.table('co_management_thread_transfers').where('operation_id', operationIds[0]).update({ manifest: JSON.stringify([{ ...corrupted.manifest[0], path: `co-management/${principal.tenant}/${original.attachmentId}` }]) });
   await sponsor.table('co_management_thread_transfers').whereIn('operation_id', operationIds).update({ last_activity_at: db.raw("clock_timestamp() - interval '8 days'") });
-  const { cleanupCoManagedThreadTransfers } = await import('../../../../packages/co-managed/src/privateThreadTransferCleanup');
+  const { cleanupCoManagedThreadTransfers } = await import('../../../../../packages/co-managed/src/privateThreadTransferCleanup');
   let lost = false;
   const remove = vi.fn(async path => { objects.delete(path); if (!lost) { lost = true; throw new Error('Delete acknowledgement lost'); } });
   expect(await cleanupCoManagedThreadTransfers(db, principal.tenant, remove)).toMatchObject({ abandonedTransfers: 2, cleanedTransfers: 0, failedTransfers: 2 });
@@ -7645,7 +7632,7 @@ it('rejects a colliding private-transfer destination without overwriting an exis
 }));
 
 it('recovers co-managed event outbox publication failures with current content and stable strict transport identities', async () => withCommentCreationFixture(async ({ principal, resource, customer, sponsor }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const events = await import('@alga-psa/event-bus/publishers');
   const publish = vi.mocked(events.publishEvent), workflow = vi.mocked(events.publishWorkflowEvent);
   publish.mockReset().mockRejectedValue(new Error('transport unavailable')); workflow.mockReset().mockRejectedValue(new Error('transport unavailable'));
@@ -7676,8 +7663,8 @@ it('recovers co-managed event outbox publication failures with current content a
 }));
 
 it('commits co-managed event outbox intent atomically when the outer owner never flushes hooks and removes it on rollback', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const { publishEvent, publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
   vi.mocked(publishEvent).mockClear(); vi.mocked(publishWorkflowEvent).mockClear();
   const request = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'Crash after commit' };
@@ -7694,8 +7681,8 @@ it('commits co-managed event outbox intent atomically when the outer owner never
 }));
 
 it.each(['private', 'deleted'] as const)('cancels delayed co-managed event outbox message bodies when the source becomes %s', async mode => withCommentCreationFixture(async ({ principal, resource, customer }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const receipt = await db.transaction(trx => createSharedTicketComment(trx, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Never dispatch this body' }));
   if (mode === 'private') await customer.table('comment_threads').where('thread_id', receipt.threadId).update({ collaboration_audience: 'organization_private' });
   else await customer.table('comments').where('comment_id', receipt.commentId).update({ deleted_at: db.fn.now() });
@@ -7706,8 +7693,8 @@ it.each(['private', 'deleted'] as const)('cancels delayed co-managed event outbo
 }));
 
 it('retries co-managed event outbox lost acknowledgements, isolates damaged rows and prevents concurrent delivery', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   await db.transaction(trx => createSharedTicketComment(trx, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Recoverable' }));
   const rows = await customer.table('co_management_event_outbox').orderBy('event_id');
   const publish = vi.fn().mockRejectedValueOnce(new Error('sent but acknowledgement lost')).mockResolvedValue(undefined);
@@ -7731,7 +7718,7 @@ it('retries co-managed event outbox lost acknowledgements, isolates damaged rows
 }));
 
 it('retains metadata-only co-managed event outbox invalidations after source deletion and rejects changed event identities', async () => withCommentMutationFixture(async ({ principal, resource, customer, create, read, mutateComment }) => {
-  const { dispatchCoManagedConversationEvents, enqueueCoManagedConversationEvent } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { dispatchCoManagedConversationEvents, enqueueCoManagedConversationEvent } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const receipt = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Delete this content' });
   const item = (await read(db, principal, resource)).items.find(row => row.commentId === receipt.commentId)!;
   await db.transaction(trx => mutateComment(trx, principal, resource, { kind: 'delete', operationId: randomUUID(), expectedUpdatedAt: item.updatedAt,
@@ -7745,14 +7732,14 @@ it('retains metadata-only co-managed event outbox invalidations after source del
   expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish)).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(publish.mock.calls[0][0]).toMatchObject({ eventType: 'TICKET_COMMENT_DELETED' });
   expect(JSON.stringify(publish.mock.calls)).not.toContain('Delete this content');
-  const migration = require('../../../migrations/20260907010000_create_co_management_event_outbox.cjs');
+  const migration = require('../../../../../server/migrations/20260907010000_create_co_management_event_outbox.cjs');
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 
 it('holds current source visibility locks through co-managed event outbox transport and recovers after the sender loses its acknowledgement', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const receipt = await db.transaction(trx => createSharedTicketComment(trx, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Visible at dispatch' }));
   const row = await customer.table('co_management_event_outbox').where('event_type', 'TICKET_COMMENT_ADDED').first();
   const publish = vi.fn(async () => {
@@ -7769,7 +7756,7 @@ it('holds current source visibility locks through co-managed event outbox transp
 }));
 
 it('declares co-managed consumer obligations before publication and rolls transactional effects back with completion failure', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const { consumeCoManagedConversationEvent: consume, recoverCoManagedEventConsumers: recover } = await import('@alga-psa/co-managed');
   const receipt = await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Current consumer content' });
   const row = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
@@ -7793,12 +7780,12 @@ it('declares co-managed consumer obligations before publication and rolls transa
   expect((await customer.table('co_management_event_consumers').where('consumer', 'internal-notifications').first()).status).toBe('pending');
   await consume(db, event, 'internal-notifications', effect);
   expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 0, cancelled: 0, failed: 0 });
-  const migration = require('../../../migrations/20260907020000_create_co_management_event_consumers.cjs');
+  const migration = require('../../../../../server/migrations/20260907020000_create_co_management_event_consumers.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 
 it('recovers co-managed consumers that never saw Redis and cancels replay after source restriction without rerunning completed siblings', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const { recoverCoManagedEventConsumers: recover, consumeCoManagedConversationEvent: consume } = await import('@alga-psa/co-managed');
   const receipt = await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Do not replay after restriction' });
   const row = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
@@ -7823,8 +7810,8 @@ it('recovers co-managed consumers that never saw Redis and cancels replay after 
 }));
 
 it('commits actual co-managed search indexing with its consumer receipt and applies metadata-only deletion once', async () => withCommentMutationFixture(async ({ principal, resource, customer, read, mutateComment }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { handleSearchIndexEventForTest: handle } = await import('../../lib/eventBus/subscribers/searchIndexSubscriber');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { handleSearchIndexEventForTest: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/searchIndexSubscriber');
   const database = await import('@alga-psa/db');
   const connection = vi.spyOn(database, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
   vi.stubEnv('SEARCH_INDEX_LIVE', 'true');
@@ -7847,7 +7834,7 @@ it('commits actual co-managed search indexing with its consumer receipt and appl
 }));
 
 it('rolls actual co-managed in-app consumers back when completion fails and emits channels only after a successful retry', async () => withCoManagedNotificationSubscriberFixture(async ({ customerPrincipal, resource, customer, sponsor, handle, observed, broadcast, hooks }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const receipt = await createSharedTicketComment(db, customerPrincipal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Durable inbox source' });
   const row = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
   const event = { id: row.event_id, timestamp: new Date().toISOString(), eventType: row.event_type, payload: { ...row.publication.payload, comment: { ...row.publication.payload.comment, audience: undefined, content: 'Corrupted transport body' } } };
@@ -7868,7 +7855,7 @@ it('rolls actual co-managed in-app consumers back when completion fails and emit
 }));
 
 it('routes co-managed consumer recovery through the actual job with isolated targets and skips unpublished work before its batch limit', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const { coManagedNotificationRecoveryHandler } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
   const { recoverCoManagedEventConsumers } = await import('@alga-psa/co-managed');
   const database = await import('@alga-psa/db'), events = await import('@alga-psa/event-bus/publishers');
@@ -7893,7 +7880,7 @@ it('routes co-managed consumer recovery through the actual job with isolated tar
 }));
 
 it('does not consume foreign or mismatched co-managed event identities and rolls caller transactions back without completing work', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const { consumeCoManagedConversationEvent: consume } = await import('@alga-psa/co-managed');
   const receipt = await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Consumer identity' });
   const row = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
@@ -7963,13 +7950,13 @@ it('holds co-managed email authority through transport, retries a lost acknowled
   expect(retry.mock.calls.map(call => call[0].messageId).sort()).toEqual(ids);
   expect((await sponsor.table('co_management_email_deliveries')).every(row => row.status === 'failed' && row.attempt_count === 10 && row.completed_at)).toBe(true);
   expect(await process(db, principal.tenant, retry)).toEqual({ examined: 0, processed: 0 });
-  const migration = require('../../../migrations/20260907030000_create_co_management_email_deliveries.cjs');
+  const migration = require('../../../../../server/migrations/20260907030000_create_co_management_email_deliveries.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 
 it('connects co-managed email discovery to its own consumer and recovers recipient failures through the production job', async () => withRoutedCommentFixture(async ({ principal, customerPrincipal, resource, sponsor, customer }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { handleCoManagedCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedCommentEmailSubscriber');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { handleCoManagedCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedCommentEmailSubscriber');
   const { coManagedNotificationRecoveryHandler: recover } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
   const transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport'), database = await import('@alga-psa/db');
   const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
@@ -7997,7 +7984,7 @@ it('connects co-managed email discovery to its own consumer and recovers recipie
 async function withCustomerCommentNotificationFixture(work: (fixture: Parameters<Parameters<typeof withConversationFixture>[0]>[0] & {
   recipient: { kind: 'notification_recipient'; tenant: string; userId: string };
   localResource: { tenant: string; kind: 'ticket'; id: string };
-  readCustomer: (commentId: string) => Promise<import('../../../../packages/co-managed/src/customerCommentNotification').CoManagedCustomerCommentNotification | null>;
+  readCustomer: (commentId: string) => Promise<import('../../../../../packages/co-managed/src/customerCommentNotification').CoManagedCustomerCommentNotification | null>;
 }) => Promise<void>) {
   await withConversationFixture(async fixture => {
     const { customer, customerPrincipal, resource } = fixture;
@@ -8008,7 +7995,7 @@ async function withCustomerCommentNotificationFixture(work: (fixture: Parameters
     await customer.table('user_roles').insert(roles.map(role => ({ ...role, user_id: userId })));
     const recipient = { kind: 'notification_recipient' as const, tenant: resource.tenant, userId };
     const localResource = { tenant: resource.tenant, kind: 'ticket' as const, id: resource.id };
-    const { withCoManagedCustomerCommentNotification: read } = await import('../../../../packages/co-managed/src/customerCommentNotification');
+    const { withCoManagedCustomerCommentNotification: read } = await import('../../../../../packages/co-managed/src/customerCommentNotification');
     await work({ ...fixture, recipient, localResource, readCustomer: id => read(db, recipient, localResource, id, async (_, message) => message) });
   });
 }
@@ -8057,7 +8044,7 @@ it.each(['no_role', 'inactive', 'portal', 'suspended', 'foreign_tenant'] as cons
   if (condition === 'portal') await customer.table('users').where('user_id', recipient.userId).update({ user_type: 'client' });
   if (condition === 'suspended') await customer.table('tenants').update({ suspended_at: new Date() });
   if (condition === 'foreign_tenant') {
-    const { withCoManagedCustomerCommentNotification: read } = await import('../../../../packages/co-managed/src/customerCommentNotification');
+    const { withCoManagedCustomerCommentNotification: read } = await import('../../../../../packages/co-managed/src/customerCommentNotification');
     const deliver = vi.fn();
     await expect(read(db, { kind: 'notification_recipient', tenant: principal.tenant, userId: principal.userId }, localResource, comment.id, deliver))
       .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -8069,7 +8056,7 @@ it.each(['no_role', 'inactive', 'portal', 'suspended', 'foreign_tenant'] as cons
 it('rechecks customer notification body, publication and root audience and suppresses only the qualified author', async () => withCustomerCommentNotificationFixture(async ({
   customer, customerPrincipal, principal, resource, recipient, localResource, addCustomer, readCustomer,
 }) => {
-  const { withCoManagedCustomerCommentNotification: read } = await import('../../../../packages/co-managed/src/customerCommentNotification');
+  const { withCoManagedCustomerCommentNotification: read } = await import('../../../../../packages/co-managed/src/customerCommentNotification');
   const root = await addCustomer({ note: 'Original root', audience: 'shared_it', internal: true });
   const reply = await addCustomer({ note: 'Current reply', parent: root });
   await customer.table('comments').where('comment_id', reply.id).update({ note: 'Edited authoritative content' });
@@ -8117,7 +8104,7 @@ it('holds customer recipient and source locks through the awaited notification a
   resource, recipient, localResource, addCustomer,
 }) => {
   const comment = await addCustomer({ note: 'Locked customer delivery', audience: 'organization_private', internal: true });
-  const { withCoManagedCustomerCommentNotification: read } = await import('../../../../packages/co-managed/src/customerCommentNotification');
+  const { withCoManagedCustomerCommentNotification: read } = await import('../../../../../packages/co-managed/src/customerCommentNotification');
   await read(db, recipient, localResource, comment.id, async (_, message) => {
     for (const [table, where] of [
       ['tenants', {}], ['users', { user_id: recipient.userId }], ['tickets', { ticket_id: resource.id }],
@@ -8130,15 +8117,15 @@ it('holds customer recipient and source locks through the awaited notification a
 }));
 
 async function withCustomerEmailQueueFixture(work: (fixture: Parameters<Parameters<typeof withCustomerCommentNotificationFixture>[0]>[0] & {
-  request: import('../../../../packages/co-managed/src/customerEmailDeliveries').CoManagedCustomerEmailRequest;
-  enqueue: typeof import('../../../../packages/co-managed/src/customerEmailDeliveries').enqueueCoManagedCustomerEmailDeliveries;
-  processEmail: typeof import('../../../../packages/co-managed/src/customerEmailDeliveries').processCoManagedCustomerEmailDeliveries;
+  request: import('../../../../../packages/co-managed/src/customerEmailDeliveries').CoManagedCustomerEmailRequest;
+  enqueue: typeof import('../../../../../packages/co-managed/src/customerEmailDeliveries').enqueueCoManagedCustomerEmailDeliveries;
+  processEmail: typeof import('../../../../../packages/co-managed/src/customerEmailDeliveries').processCoManagedCustomerEmailDeliveries;
 }) => Promise<void>) {
   await withCustomerCommentNotificationFixture(async fixture => {
     const { customer, recipient, resource, addCustomer } = fixture;
     await customer.table('tickets').where('ticket_id', resource.id).update({ assigned_to: recipient.userId });
     const comment = await addCustomer({ note: 'Customer technician queue source', audience: 'shared_it', internal: true, foreign: true });
-    const { enqueueCoManagedCustomerEmailDeliveries: enqueue, processCoManagedCustomerEmailDeliveries: processEmail } = await import('../../../../packages/co-managed/src/customerEmailDeliveries');
+    const { enqueueCoManagedCustomerEmailDeliveries: enqueue, processCoManagedCustomerEmailDeliveries: processEmail } = await import('../../../../../packages/co-managed/src/customerEmailDeliveries');
     await work({ ...fixture, enqueue, processEmail, request: { ownerTenant: resource.tenant, ticketId: resource.id, commentId: comment.id, eventId: randomUUID() } });
   });
 }
@@ -8215,8 +8202,8 @@ it('retains customer email delivery after departure and upgrade and preserves lo
 it('recovers actual customer email discovery and scheduled delivery without resending completed native siblings', async () => withCustomerEmailQueueFixture(async ({
   customer, customerPrincipal, resource, recipient,
 }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { handleCoManagedCustomerCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedCustomerCommentEmailSubscriber');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { handleCoManagedCustomerCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedCustomerCommentEmailSubscriber');
   const { coManagedNotificationRecoveryHandler: recover } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
   const transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport'), database = await import('@alga-psa/db');
   const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
@@ -8240,21 +8227,21 @@ it('recovers actual customer email discovery and scheduled delivery without rese
 it('backfills only unpublished customer email work, preserves completed rollout history and refuses rollback', async () => withCustomerEmailQueueFixture(async ({
   customer, customerPrincipal, resource,
 }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const published = await createSharedTicketComment(db, customerPrincipal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Already native-delivered history' });
   const pending = await db.transaction(trx => createSharedTicketComment(trx, customerPrincipal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Unpublished rollout work' }));
   await customer.table('co_management_event_consumers').where('consumer', 'customer-internal-email').del();
-  const migration = require('../../../migrations/20260907040000_create_co_management_customer_email_deliveries.cjs');
+  const migration = require('../../../../../server/migrations/20260907040000_create_co_management_customer_email_deliveries.cjs');
   await migration.up(db); await migration.up(db);
   for (const [id, status] of [[published.commentId, 'cancelled'], [pending.commentId, 'pending']]) {
     const event = await customer.table('co_management_event_outbox').where({ comment_id: id, event_type: 'TICKET_COMMENT_ADDED' }).first();
     expect((await customer.table('co_management_event_consumers').where({ event_id: event.event_id, consumer: 'customer-internal-email' }).first()).status).toBe(status);
     if (status === 'cancelled') {
-      const { handleCoManagedCustomerCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedCustomerCommentEmailSubscriber');
+      const { handleCoManagedCustomerCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedCustomerCommentEmailSubscriber');
       expect(await handle({ id: event.event_id, eventType: event.event_type, timestamp: new Date().toISOString(), payload: event.publication.payload }, db)).toBe(false);
     }
   }
-  await require('../../../migrations/20260907030000_create_co_management_email_deliveries.cjs').up(db);
+  await require('../../../../../server/migrations/20260907030000_create_co_management_email_deliveries.cjs').up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 
@@ -8287,8 +8274,8 @@ it('rolls customer email discovery and completion back with its caller and sends
   customer, customerPrincipal, resource,
 }) => {
   const { withTransaction } = await import('@alga-psa/db');
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { handleCoManagedCustomerCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedCustomerCommentEmailSubscriber');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { handleCoManagedCustomerCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedCustomerCommentEmailSubscriber');
   const transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
   const receipt = await createSharedTicketComment(db, customerPrincipal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Commit-only customer delivery' });
   const source = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
@@ -8310,8 +8297,8 @@ it('rolls customer email discovery and completion back with its caller and sends
 
 async function withRequesterEmailAuthorityFixture(work: (fixture: Parameters<Parameters<typeof withConversationFixture>[0]>[0] & {
   contactId: string; commentId: string; localResource: { tenant: string; kind: 'ticket'; id: string };
-  discover: () => Promise<{ recipient: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterEmailRecipient; email: string; message: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterCommentEmail } | null>;
-  retry: (recipient: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterEmailRecipient) => Promise<{ recipient: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterEmailRecipient; email: string; message: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterCommentEmail } | null>;
+  discover: () => Promise<{ recipient: import('../../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterEmailRecipient; email: string; message: import('../../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterCommentEmail } | null>;
+  retry: (recipient: import('../../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterEmailRecipient) => Promise<{ recipient: import('../../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterEmailRecipient; email: string; message: import('../../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterCommentEmail } | null>;
   makeLocation: (options?: { id?: string; email?: string; active?: boolean; isDefault?: boolean }) => Promise<string>;
 }) => Promise<void>) {
   await withConversationFixture(async fixture => {
@@ -8321,7 +8308,7 @@ async function withRequesterEmailAuthorityFixture(work: (fixture: Parameters<Par
     await customer.table('contacts').insert({ ...contact, contact_name_id: contactId, full_name: 'Email-only requester', email: 'requester@example.test', is_inactive: false });
     await customer.table('tickets').where('ticket_id', resource.id).update({ contact_name_id: contactId });
     const comment = await addCustomer({ note: 'Requester-visible MSP response', audience: 'requester', foreign: true });
-    const { discoverCoManagedRequesterCommentEmail: discover, withCoManagedRequesterCommentEmail: retry } = await import('../../../../packages/co-managed/src/requesterCommentEmail');
+    const { discoverCoManagedRequesterCommentEmail: discover, withCoManagedRequesterCommentEmail: retry } = await import('../../../../../packages/co-managed/src/requesterCommentEmail');
     const localResource = { tenant: resource.tenant, kind: 'ticket' as const, id: resource.id };
     const result = async (context: any, message: any) => ({ recipient: context.recipient, email: context.email, message });
     const makeLocation = async (options: { id?: string; email?: string; active?: boolean; isDefault?: boolean } = {}) => {
@@ -8403,7 +8390,7 @@ it.each(['inactive_contact', 'inactive_client', 'invalid_address', 'wrong_client
 it('restricts requester email to current published public agent responses and suppresses self and close-paired mail', async () => withRequesterEmailAuthorityFixture(async ({
   customer, customerPrincipal, resource, contactId, commentId, localResource, discover, addCustomer,
 }) => {
-  const { discoverCoManagedRequesterCommentEmail: read } = await import('../../../../packages/co-managed/src/requesterCommentEmail');
+  const { discoverCoManagedRequesterCommentEmail: read } = await import('../../../../../packages/co-managed/src/requesterCommentEmail');
   const deliver = vi.fn(async (_, message) => message);
   for (const audience of ['shared_it', 'organization_private'] as const) {
     const comment = await addCustomer({ note: 'Not requester content', audience, internal: true });
@@ -8435,7 +8422,7 @@ it('preserves requester ownership after MSP revocation and departure while retai
   await customer.table('client_portal_visibility_groups').insert({ tenant: resource.tenant, group_id: groupId, client_id: operation.customer_client_id, name: 'Requester email boards' });
   await customer.table('contacts').where('contact_name_id', contactId).update({ portal_visibility_group_id: groupId });
   await customer.table('client_portal_visibility_group_boards').insert({ tenant: resource.tenant, group_id: groupId, board_id: operation.customer_board_id });
-  const { withCoManagedRequesterCommentEmail: read } = await import('../../../../packages/co-managed/src/requesterCommentEmail');
+  const { withCoManagedRequesterCommentEmail: read } = await import('../../../../../packages/co-managed/src/requesterCommentEmail');
   await read(db, original!.recipient, localResource, commentId, async () => {
     for (const [table, where] of [
       ['tenants', {}], ['clients', { client_id: operation.customer_client_id }], ['contacts', { contact_name_id: contactId }],
@@ -8451,7 +8438,7 @@ it('rejects foreign and malformed requester email identities without borrowing a
   principal, localResource, commentId, discover,
 }) => {
   const original = await discover();
-  const { withCoManagedRequesterCommentEmail: read } = await import('../../../../packages/co-managed/src/requesterCommentEmail');
+  const { withCoManagedRequesterCommentEmail: read } = await import('../../../../../packages/co-managed/src/requesterCommentEmail');
   const deliver = vi.fn();
   for (const recipient of [{ ...original!.recipient, tenant: principal.tenant }, { ...original!.recipient, kind: 'session' },
     { ...original!.recipient, contactId: 'not-a-contact' }, { ...original!.recipient, clientId: null }]) {
@@ -8462,14 +8449,14 @@ it('rejects foreign and malformed requester email identities without borrowing a
 
 async function withRequesterReplyTokenFixture(work: (fixture: Parameters<Parameters<typeof withRequesterEmailAuthorityFixture>[0]>[0] & {
   issue: (deliveryKey?: string) => Promise<{ token: string; email: string } | null>;
-  reply: typeof import('../../../../packages/co-managed/src/requesterReplyTokens').withCoManagedRequesterEmailReply;
-  senderAuth: import('../../../../shared/lib/email/senderAuthVerification').SenderAuthResults;
+  reply: typeof import('../../../../../packages/co-managed/src/requesterReplyTokens').withCoManagedRequesterEmailReply;
+  senderAuth: import('../../../../../shared/lib/email/senderAuthVerification').SenderAuthResults;
 }) => Promise<void>) {
   await withRequesterEmailAuthorityFixture(async fixture => {
     const { discover, localResource, commentId } = fixture;
     const selected = await discover();
-    const { issueCoManagedRequesterReplyToken, withCoManagedRequesterEmailReply: reply } = await import('../../../../packages/co-managed/src/requesterReplyTokens');
-    const { verifySenderAuthentication } = await import('../../../../shared/lib/email/senderAuthVerification');
+    const { issueCoManagedRequesterReplyToken, withCoManagedRequesterEmailReply: reply } = await import('../../../../../packages/co-managed/src/requesterReplyTokens');
+    const { verifySenderAuthentication } = await import('../../../../../shared/lib/email/senderAuthVerification');
     const senderAuth = verifySenderAuthentication('mx.example.test; spf=pass smtp.mailfrom=example.test', 'requester@example.test')!;
     await work({ ...fixture, senderAuth, reply, issue: (deliveryKey = 'requester-reply-test') => issueCoManagedRequesterReplyToken(db, {
       recipient: selected!.recipient, resource: localResource, commentId, deliveryKey,
@@ -8486,7 +8473,7 @@ it('issues stable requester reply tokens per delivery and address and preserves 
   await customer.table('contacts').where('contact_name_id', contactId).update({ email: 'new-address@example.test' });
   const next = await issue(); expect(next!.token).not.toBe(a!.token); expect(next!.email).toBe('new-address@example.test');
   expect(await customer.table('co_management_requester_reply_tokens')).toHaveLength(2);
-  const { parseEmailReply } = await import('../../../../shared/lib/email/replyParser');
+  const { parseEmailReply } = await import('../../../../../shared/lib/email/replyParser');
   expect(parseEmailReply({ text: `My reply\n\n[ALGA-REPLY-TOKEN ${a!.token}]` }).tokens?.conversationToken).toBe(a!.token);
 }));
 
@@ -8572,10 +8559,10 @@ it('rejects conflicting requester token identity reuse and preserves retained to
   await issue();
   const other = await addCustomer({ note: 'Another public source', audience: 'requester', foreign: true });
   const selected = await discover();
-  const { issueCoManagedRequesterReplyToken } = await import('../../../../packages/co-managed/src/requesterReplyTokens');
+  const { issueCoManagedRequesterReplyToken } = await import('../../../../../packages/co-managed/src/requesterReplyTokens');
   await expect(issueCoManagedRequesterReplyToken(db, { recipient: selected!.recipient, resource: localResource, commentId: other.id, deliveryKey: 'requester-reply-test' })).rejects.toThrow('identity conflict');
   expect(await customer.table('co_management_requester_reply_tokens')).toHaveLength(1);
-  const migration = require('../../../migrations/20260907050000_create_co_management_requester_reply_tokens.cjs');
+  const migration = require('../../../../../server/migrations/20260907050000_create_co_management_requester_reply_tokens.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
 
@@ -8595,7 +8582,7 @@ it('binds fallback requester reply tokens to the selected active client location
   await customer.table('contacts').where('contact_name_id', contactId).update({ email: null });
   await customer.table('client_locations').where('client_id', operation.customer_client_id).update({ is_default: false });
   const locationId = await makeLocation(); const selected = await discover();
-  const { issueCoManagedRequesterReplyToken } = await import('../../../../packages/co-managed/src/requesterReplyTokens');
+  const { issueCoManagedRequesterReplyToken } = await import('../../../../../packages/co-managed/src/requesterReplyTokens');
   const issued = await issueCoManagedRequesterReplyToken(db, { recipient: selected!.recipient, resource: localResource, commentId, deliveryKey: 'location-reply' });
   const input = { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth };
   expect(await reply(db, input, async context => context.recipient)).toMatchObject({ kind: 'requester_location', locationId });
@@ -8628,12 +8615,12 @@ it('rejects foreign-owner, legacy and malformed requester reply tokens instead o
 }));
 
 async function withRequesterEmailQueueFixture(work: (fixture: Parameters<Parameters<typeof withRequesterEmailAuthorityFixture>[0]>[0] & {
-  request: import('../../../../packages/co-managed/src/requesterEmailDeliveries').CoManagedRequesterEmailRequest;
-  enqueue: typeof import('../../../../packages/co-managed/src/requesterEmailDeliveries').enqueueCoManagedRequesterEmailDelivery;
-  processEmail: typeof import('../../../../packages/co-managed/src/requesterEmailDeliveries').processCoManagedRequesterEmailDeliveries;
+  request: import('../../../../../packages/co-managed/src/requesterEmailDeliveries').CoManagedRequesterEmailRequest;
+  enqueue: typeof import('../../../../../packages/co-managed/src/requesterEmailDeliveries').enqueueCoManagedRequesterEmailDelivery;
+  processEmail: typeof import('../../../../../packages/co-managed/src/requesterEmailDeliveries').processCoManagedRequesterEmailDeliveries;
 }) => Promise<void>) {
   await withRequesterEmailAuthorityFixture(async fixture => {
-    const { enqueueCoManagedRequesterEmailDelivery: enqueue, processCoManagedRequesterEmailDeliveries: processEmail } = await import('../../../../packages/co-managed/src/requesterEmailDeliveries');
+    const { enqueueCoManagedRequesterEmailDelivery: enqueue, processCoManagedRequesterEmailDeliveries: processEmail } = await import('../../../../../packages/co-managed/src/requesterEmailDeliveries');
     await work({ ...fixture, enqueue, processEmail, request: { ownerTenant: fixture.resource.tenant, ticketId: fixture.resource.id, commentId: fixture.commentId, eventId: randomUUID() } });
   });
 }
@@ -8768,7 +8755,7 @@ it('rolls back requester email discovery with its owning transaction and require
   for (const limit of [0, -1, 301, 1.5]) await expect(processEmail(db, resource.tenant, send, { limit })).rejects.toThrow('recovery scope');
   expect(send).not.toHaveBeenCalled();
   await enqueue(db, request);
-  const migration = require('../../../migrations/20260907060000_create_co_management_requester_email_deliveries.cjs');
+  const migration = require('../../../../../server/migrations/20260907060000_create_co_management_requester_email_deliveries.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained requester email');
 }));
 
@@ -8781,7 +8768,7 @@ it.each(['address', 'audience', 'revocation', 'preferences'] as const)('rechecks
     await processEmail(db, resource.tenant, async () => ({ status: 'failed', retryable: true, errorCode: 'prepare_revocation_retry' }));
     await customer.table('co_management_requester_email_deliveries').update({ next_attempt_at: '2020-01-01T00:00:00Z' });
   }
-  const tokens = await import('../../../../packages/co-managed/src/requesterReplyTokens');
+  const tokens = await import('../../../../../packages/co-managed/src/requesterReplyTokens');
   const original = tokens.issueCoManagedRequesterReplyToken;
   let mutation: Promise<void> | undefined, mutationPid: number | undefined;
   const source = await customer.table('comments').where('comment_id', commentId).first('thread_id');
@@ -8820,7 +8807,7 @@ it.each(['address', 'audience', 'revocation', 'preferences'] as const)('rechecks
 }));
 
 async function withRequesterInboundFixture(work: (fixture: Parameters<Parameters<typeof withRequesterReplyTokenFixture>[0]>[0] & {
-  inbox: any; emailData: any; run: () => Promise<import('../../../../shared/services/email/inboundEmailCoreProcessor').InboundInboxDisposition>;
+  inbox: any; emailData: any; run: () => Promise<import('../../../../../shared/services/email/inboundEmailCoreProcessor').InboundInboxDisposition>;
   nativeTokenLookup: ReturnType<typeof vi.spyOn>; nativeThreadLookup: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>) {
   await withRequesterReplyTokenFixture(async fixture => {
@@ -8831,14 +8818,14 @@ async function withRequesterInboundFixture(work: (fixture: Parameters<Parameters
       subject: 'Re: Requester reply', body: { text: `Here is the requested information.\n\n[ALGA-REPLY-TOKEN ${issued!.token}]` },
       attachments: [], sourceSha256: inbox.source_sha256,
       headers: { 'authentication-results': 'mx.example.test; spf=pass smtp.mailfrom=example.test' } };
-    const actual = await vi.importActual<typeof import('../../../../shared/services/email/processInboundEmailInApp')>('../../../../shared/services/email/processInboundEmailInApp');
-    const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+    const actual = await vi.importActual<typeof import('../../../../../shared/services/email/processInboundEmailInApp')>('../../../../../shared/services/email/processInboundEmailInApp');
+    const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions');
     const nativeTokenLookup = vi.spyOn(workflow, 'findTicketByReplyToken'), nativeThreadLookup = vi.spyOn(workflow, 'findTicketByEmailThread');
     intake.process.mockReset(); intake.process.mockImplementation(actual.processInboundEmailInApp);
     intake.read.mockReset(); intake.read.mockResolvedValue(Buffer.from('Requester MIME source'));
     intake.parse.mockReset(); intake.parse.mockImplementation(async () => ({ emailData }));
-    const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
-    const { admitCoManagedRequesterReply } = await import('../../../../packages/co-managed/src/inboundRequesterReply');
+    const { processInboundInbox } = await import('../../../../../shared/services/email/inboundEmailCoreProcessor');
+    const { admitCoManagedRequesterReply } = await import('../../../../../packages/co-managed/src/inboundRequesterReply');
     try {
       await work({ ...fixture, inbox, emailData, nativeTokenLookup, nativeThreadLookup,
         run: () => processInboundInbox({ tenantId: fixture.resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(),
@@ -8900,12 +8887,12 @@ it.each(['sender', 'authentication', 'contact', 'private', 'revoked', 'expired',
 it('rolls qualified requester reply writes and outbox back before retaining quarantine after expiry during the writer', async () => withRequesterInboundFixture(async ({
   customer, sponsor, resource, inbox, run,
 }) => {
-  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../packages/co-managed/src/ticketSla');
+  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../../packages/co-managed/src/ticketSla');
   await db.transaction(async trx => {
     await tenantDb(trx, resource.tenant).table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_client' });
     await syncCoManagedTicketAwaitingClientSla(trx, resource.tenant, resource.id);
   });
-  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), original = workflow.createCommentFromEmail;
+  const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions'), original = workflow.createCommentFromEmail;
   const slaBefore = await sponsor.table('sla_organization_obligations').first();
   const before = await customer.table('comments').where('ticket_id', resource.id);
   const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementationOnce(async (...args) => {
@@ -8929,7 +8916,7 @@ it('rolls qualified requester reply writes and outbox back before retaining quar
 it('retries actual requester email writer failures without quarantining valid authority or duplicating the eventual reply', async () => withRequesterInboundFixture(async ({
   customer, resource, inbox, run,
 }) => {
-  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+  const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions');
   const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockRejectedValueOnce(new Error('transient reply database failure'));
   const before = await customer.table('comments').where('ticket_id', resource.id);
   try {
@@ -8963,13 +8950,13 @@ it.each(['reopen', 'cutoff', 'hidden_destination', 'foreign_rule_client', 'rate_
       defaults.board_id = randomUUID();
       await customer.table('boards').insert({ ...board, board_id: defaults.board_id, board_name: 'Outside requester scope', is_default: false });
     }
-    const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+    const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions');
     const providerDefaults = vi.spyOn(workflow, 'resolveInboundTicketDefaults').mockResolvedValue(defaults as any);
     const effectiveDefaults = vi.spyOn(workflow, 'resolveEffectiveInboundTicketDefaults').mockResolvedValue({ defaults, source: 'provider' } as any);
-    const rules = await import('../../../../shared/services/email/inboundEmailRules');
+    const rules = await import('../../../../../shared/services/email/inboundEmailRules');
     const evaluate = vi.spyOn(rules, 'evaluateInboundEmailRules');
     if (scenario === 'foreign_rule_client') evaluate.mockResolvedValue({ outcome: { kind: 'assign_client', clientId: randomUUID(), ruleId: randomUUID(), ruleName: 'Wrong client', matchSource: 'rule' }, trace: [] } as any);
-    const limiter = await import('../../../../shared/services/email/inboundReopenRateLimiter');
+    const limiter = await import('../../../../../shared/services/email/inboundReopenRateLimiter');
     const rateLimit = vi.spyOn(limiter, 'checkInboundReopenRateLimit').mockResolvedValue({ allowed: scenario !== 'rate_limited', count: scenario === 'rate_limited' ? 4 : 1, limit: 3, windowSeconds: 3600 });
     if (scenario === 'automated') emailData.headers['auto-submitted'] = 'auto-replied';
     if (scenario === 'cutoff') await customer.table('tickets').where('ticket_id', resource.id).update({ email_metadata: {
@@ -9009,11 +8996,11 @@ it('keeps a default-location requester reply customer-authored without resolving
   await customer.table('client_locations').where('client_id', operation.customer_client_id).update({ is_default: false });
   await makeLocation({ email: 'location-requester@example.test' });
   const requester = await discover();
-  const { issueCoManagedRequesterReplyToken } = await import('../../../../packages/co-managed/src/requesterReplyTokens');
+  const { issueCoManagedRequesterReplyToken } = await import('../../../../../packages/co-managed/src/requesterReplyTokens');
   const issued = await issueCoManagedRequesterReplyToken(db, { recipient: requester!.recipient, resource: localResource, commentId, deliveryKey: 'location-inbound' });
   emailData.from.email = issued!.email;
   emailData.body.text = `Location reply\n\n[ALGA-REPLY-TOKEN ${issued!.token}]`;
-  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+  const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions');
   const sender = vi.spyOn(workflow, 'findContactByEmail').mockRejectedValue(new Error('Requester must not acquire another sender identity'));
   try {
     const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
@@ -9034,8 +9021,8 @@ it('retains requester email for retry when its worker lacks the required admissi
 it('defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause', async () => withRequesterInboundFixture(async ({
   customer, resource, inbox,
 }) => {
-  const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
-  const { admitCoManagedRequesterReply } = await import('../../../../packages/co-managed/src/inboundRequesterReply');
+  const { processInboundInbox } = await import('../../../../../shared/services/email/inboundEmailCoreProcessor');
+  const { admitCoManagedRequesterReply } = await import('../../../../../packages/co-managed/src/inboundRequesterReply');
   const before = await customer.table('comments').where('ticket_id', resource.id);
   const result = await processInboundInbox({ tenantId: resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce',
     retainConversationEvent: retainCoManagedInboundCommentEvent,
@@ -9078,8 +9065,8 @@ it('skips HTML-only requester mail containing just a token, markup and non-conte
 it('discovers production requester mail once, recovers it through the scheduled job and accepts a reply using its committed token', async () => withRequesterInboundFixture(async ({
   customer, customerPrincipal, resource, contactId, emailData, run,
 }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { handleCoManagedRequesterCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedRequesterCommentEmailSubscriber');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { handleCoManagedRequesterCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedRequesterCommentEmailSubscriber');
   const { coManagedNotificationRecoveryHandler: recover } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
   const transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport'), database = await import('@alga-psa/db');
   const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
@@ -9108,8 +9095,8 @@ it('discovers production requester mail once, recovers it through the scheduled 
 it('rolls requester discovery and after-commit delivery back with an enclosing transaction, then recovers once', async () => withRequesterEmailQueueFixture(async ({
   customer, customerPrincipal, resource,
 }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { handleCoManagedRequesterCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedRequesterCommentEmailSubscriber');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { handleCoManagedRequesterCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedRequesterCommentEmailSubscriber');
   const transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
   const send = vi.spyOn(transport, 'sendCoManagedRequesterCommentEmail').mockResolvedValue({ status: 'delivered' });
   try {
@@ -9127,19 +9114,19 @@ it('rolls requester discovery and after-commit delivery back with an enclosing t
 it('preserves native requester delivery for published rollout history and enrolls only unpublished work', async () => withRequesterEmailQueueFixture(async ({
   customer, customerPrincipal, resource,
 }) => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
-  const { handleCoManagedRequesterCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedRequesterCommentEmailSubscriber');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  const { handleCoManagedRequesterCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedRequesterCommentEmailSubscriber');
   const published = await createSharedTicketComment(db, customerPrincipal, resource, { operationId: randomUUID(), audience: 'requester', text: 'Native history' });
   const pending = await db.transaction(trx => createSharedTicketComment(trx, customerPrincipal, resource, { operationId: randomUUID(), audience: 'requester', text: 'Unpublished requester source' }));
   await customer.table('co_management_event_consumers').where('consumer', 'requester-email').del();
-  const migration = require('../../../migrations/20260907070000_add_co_management_requester_email_consumer.cjs');
+  const migration = require('../../../../../server/migrations/20260907070000_add_co_management_requester_email_consumer.cjs');
   await migration.up(db); await migration.up(db);
   for (const [source, status] of [[published, 'cancelled'], [pending, 'pending']] as const) {
     const row = await customer.table('co_management_event_outbox').where({ comment_id: source.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
     expect(await customer.table('co_management_event_consumers').where({ event_id: row.event_id, consumer: 'requester-email' }).first()).toMatchObject({ status });
     if (status === 'cancelled') expect(await handle({ id: row.event_id, timestamp: new Date().toISOString(), eventType: row.event_type, payload: row.publication.payload }, db)).toBe(false);
   }
-  await require('../../../migrations/20260907040000_create_co_management_customer_email_deliveries.cjs').up(db);
+  await require('../../../../../server/migrations/20260907040000_create_co_management_customer_email_deliveries.cjs').up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
   expect((await db.raw("SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid = 'co_management_event_consumers'::regclass AND conname = 'co_management_event_consumers_consumer_check'")).rows[0].definition).toContain('requester-email');
 }));
@@ -9147,8 +9134,8 @@ it('preserves native requester delivery for published rollout history and enroll
 it('moves primary requester delivery out of the native subscriber without bypassing the co-managed watcher authority boundary', async () => withRequesterEmailQueueFixture(async ({
   customer, customerPrincipal, resource,
 }) => {
-  const database = await import('@alga-psa/db'), serverDb = await import('../../lib/db');
-  const mail = await import('../../lib/notifications/sendEventEmail'), transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
+  const database = await import('@alga-psa/db'), serverDb = await import('../../../../../server/src/lib/db');
+  const mail = await import('../../../../../server/src/lib/notifications/sendEventEmail'), transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
   const native = vi.spyOn(mail, 'sendEventEmail').mockResolvedValue(undefined);
   const requester = vi.spyOn(transport, 'sendCoManagedRequesterCommentEmail').mockResolvedValue({ status: 'delivered' });
   const spies = [vi.spyOn(database, 'getConnection').mockResolvedValue(db),
@@ -9157,16 +9144,16 @@ it('moves primary requester delivery out of the native subscriber without bypass
   try {
     await customer.table('tickets').where('ticket_id', resource.id).update({ assigned_to: null, assigned_team_id: null,
       attributes: { watch_list: [{ email: 'REQUESTER@example.test', active: true }, { email: 'watcher@example.test', active: true }] } });
-    const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+    const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
     const source = await createSharedTicketComment(db, customerPrincipal, resource, { operationId: randomUUID(), audience: 'requester', text: 'Primary and watcher delivery' });
     const row = await customer.table('co_management_event_outbox').where({ comment_id: source.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
     const event = { id: row.event_id, timestamp: new Date().toISOString(), eventType: row.event_type, payload: row.publication.payload };
-    const { ticketEmailSubscriberTestHarness: subscriber } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber');
+    const { ticketEmailSubscriberTestHarness: subscriber } = await import('../../../../../server/src/lib/eventBus/subscribers/ticketEmailSubscriber');
     await subscriber.handleTicketCommentAdded(event);
     expect(requester).toHaveBeenCalledTimes(1);
     expect(requester.mock.calls[0][0].email).toBe('requester@example.test');
     expect(native).not.toHaveBeenCalled();
-    const { handleCoManagedRequesterCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedRequesterCommentEmailSubscriber');
+    const { handleCoManagedRequesterCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedRequesterCommentEmailSubscriber');
     await handle(event, db);
     expect(requester).toHaveBeenCalledTimes(1); expect(native).not.toHaveBeenCalled();
   } finally { native.mockRestore(); requester.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
@@ -9174,12 +9161,12 @@ it('moves primary requester delivery out of the native subscriber without bypass
 
 async function withCustomerReplyTokenFixture(work: (fixture: Parameters<Parameters<typeof withCustomerEmailQueueFixture>[0]>[0] & {
   issue: (deliveryKey?: string) => Promise<{ token: string; email: string } | null>;
-  reply: typeof import('../../../../packages/co-managed/src/customerReplyTokens').withCoManagedCustomerEmailReply;
-  senderAuth: import('../../../../shared/lib/email/senderAuthVerification').SenderAuthResults;
+  reply: typeof import('../../../../../packages/co-managed/src/customerReplyTokens').withCoManagedCustomerEmailReply;
+  senderAuth: import('../../../../../shared/lib/email/senderAuthVerification').SenderAuthResults;
 }) => Promise<void>) {
   await withCustomerEmailQueueFixture(async fixture => {
-    const { issueCoManagedCustomerReplyToken: issue, withCoManagedCustomerEmailReply: reply } = await import('../../../../packages/co-managed/src/customerReplyTokens');
-    const { verifySenderAuthentication } = await import('../../../../shared/lib/email/senderAuthVerification');
+    const { issueCoManagedCustomerReplyToken: issue, withCoManagedCustomerEmailReply: reply } = await import('../../../../../packages/co-managed/src/customerReplyTokens');
+    const { verifySenderAuthentication } = await import('../../../../../shared/lib/email/senderAuthVerification');
     const senderAuth = verifySenderAuthentication('mx.example.test; dmarc=pass header.from=example.test', 'technician@example.test')!;
     await fixture.customer.table('users').where('user_id', fixture.recipient.userId).update({ email: 'technician@example.test' });
     await work({ ...fixture, reply, senderAuth, issue: (deliveryKey = 'customer-technician-reply-test') => issue(db, {
@@ -9216,7 +9203,7 @@ it.each(['requester', 'shared_it', 'organization_private'] as const)('admits cus
   await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant).del();
   await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
   const commentId = randomUUID();
-  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+  const { default: Comment } = await import('../../../../../packages/tickets/src/models/comment');
   await reply(db, { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, async context => {
     expect(context).toMatchObject({ actor: { tenant: resource.tenant, userId: recipient.userId }, resource: localResource,
       parentCommentId: request.commentId, threadId: parent.thread_id, audience });
@@ -9296,7 +9283,7 @@ it('holds customer technician token, source and identity locks through reply wri
 it('keeps customer technician token issuance transactional, refuses identity reuse and preserves revoked token history', async () => withCustomerReplyTokenFixture(async ({
   customer, recipient, localResource, request, issue, addCustomer,
 }) => {
-  const tokens = await import('../../../../packages/co-managed/src/customerReplyTokens');
+  const tokens = await import('../../../../../packages/co-managed/src/customerReplyTokens');
   const input = { recipient, resource: localResource, commentId: request.commentId, deliveryKey: 'rolled-back-tech-token' };
   await expect(db.transaction(async trx => { await tokens.issueCoManagedCustomerReplyToken(trx, input); throw new Error('Abort token'); })).rejects.toThrow('Abort token');
   expect(await customer.table('co_management_customer_reply_tokens')).toHaveLength(0);
@@ -9306,7 +9293,7 @@ it('keeps customer technician token issuance transactional, refuses identity reu
   await customer.table('co_management_customer_reply_tokens').where('token', issued!.token).update({ revoked_at: new Date() });
   expect(await issue()).toBeNull();
   expect(await customer.table('co_management_customer_reply_tokens')).toHaveLength(1);
-  const migration = require('../../../migrations/20260907080000_create_co_management_customer_reply_tokens.cjs');
+  const migration = require('../../../../../server/migrations/20260907080000_create_co_management_customer_reply_tokens.cjs');
   await migration.up(db); await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
 }));
@@ -9420,7 +9407,7 @@ it.each(['savepoint', 'outer'] as const)('discards customer technician reply hoo
 }));
 
 async function withTechnicianInboundFixture(work: (fixture: Parameters<Parameters<typeof withCustomerReplyTokenFixture>[0]>[0] & {
-  inbox: any; emailData: any; run: () => Promise<import('../../../../shared/services/email/inboundEmailCoreProcessor').InboundInboxDisposition>;
+  inbox: any; emailData: any; run: () => Promise<import('../../../../../shared/services/email/inboundEmailCoreProcessor').InboundInboxDisposition>;
   nativeTokenLookup: ReturnType<typeof vi.spyOn>; nativeThreadLookup: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>, audience: 'requester' | 'shared_it' | 'organization_private' = 'shared_it') {
   await withCustomerReplyTokenFixture(async fixture => {
@@ -9432,14 +9419,14 @@ async function withTechnicianInboundFixture(work: (fixture: Parameters<Parameter
       receivedAt: new Date().toISOString(), from: { email: issued!.email, name: 'Customer technician' }, to: [{ email: 'helpdesk@example.test' }],
       subject: 'Private diagnostic subject', body: { text: `Technician diagnostic reply.\n\n[ALGA-REPLY-TOKEN ${issued!.token}]` },
       attachments: [], sourceSha256: inbox.source_sha256, headers: { 'authentication-results': 'mx.example.test; dmarc=pass header.from=example.test' } };
-    const actual = await vi.importActual<typeof import('../../../../shared/services/email/processInboundEmailInApp')>('../../../../shared/services/email/processInboundEmailInApp');
-    const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+    const actual = await vi.importActual<typeof import('../../../../../shared/services/email/processInboundEmailInApp')>('../../../../../shared/services/email/processInboundEmailInApp');
+    const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions');
     const nativeTokenLookup = vi.spyOn(workflow, 'findTicketByReplyToken'), nativeThreadLookup = vi.spyOn(workflow, 'findTicketByEmailThread');
     intake.process.mockReset(); intake.process.mockImplementation(actual.processInboundEmailInApp);
     intake.read.mockReset(); intake.read.mockResolvedValue(Buffer.from('Technician MIME source'));
     intake.parse.mockReset(); intake.parse.mockImplementation(async () => ({ emailData }));
-    const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
-    const { admitCoManagedEmailReply } = await import('../../../../packages/co-managed/src/inboundEmailReply');
+    const { processInboundInbox } = await import('../../../../../shared/services/email/inboundEmailCoreProcessor');
+    const { admitCoManagedEmailReply } = await import('../../../../../packages/co-managed/src/inboundEmailReply');
     try {
       await work({ ...fixture, inbox, emailData, nativeTokenLookup, nativeThreadLookup,
         run: () => processInboundInbox({ tenantId: fixture.resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(), leaseTtlMs: 30_000,
@@ -9518,7 +9505,7 @@ it.each(['sender', 'spf_only', 'missing_auth', 'no_update', 'inactive', 'disclos
 it('rolls actual technician comment and outbox writes back before quarantining a late token rejection', async () => withTechnicianInboundFixture(async ({
   customer, sponsor, resource, inbox, run,
 }) => {
-  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), real = workflow.createCommentFromEmail;
+  const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions'), real = workflow.createCommentFromEmail;
   const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementation(async (...args: any[]) => {
     const result = await (real as any)(...args);
     await tenantDb(args[3].existingConnection, resource.tenant).table('co_management_customer_reply_tokens').update({ expires_at: new Date(Date.now() - 1000) });
@@ -9564,7 +9551,7 @@ it.each(['requester', 'shared_it', 'organization_private'] as const)('preserves 
   const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket', is_closed: false }).first();
   const priority = await customer.table('priorities').where('item_type', 'ticket').first();
   const defaults = { client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: status.status_id, priority_id: priority.priority_id, entered_by: customerPrincipal.userId };
-  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+  const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions');
   const provider = vi.spyOn(workflow, 'resolveInboundTicketDefaults').mockResolvedValue(defaults as any);
   const effective = vi.spyOn(workflow, 'resolveEffectiveInboundTicketDefaults').mockResolvedValue({ defaults, source: 'provider' } as any);
   const before = await customer.table('tickets');
@@ -9621,10 +9608,10 @@ it.each(['create_permission', 'foreign_client', 'destination_scope'] as const)('
     await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: customerPrincipal.userId });
     await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: recipient.userId });
   }
-  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+  const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions');
   const provider = vi.spyOn(workflow, 'resolveInboundTicketDefaults').mockResolvedValue(defaults as any);
   const effective = vi.spyOn(workflow, 'resolveEffectiveInboundTicketDefaults').mockResolvedValue({ defaults, source: 'provider' } as any);
-  const rules = await import('../../../../shared/services/email/inboundEmailRules'), evaluate = vi.spyOn(rules, 'evaluateInboundEmailRules');
+  const rules = await import('../../../../../shared/services/email/inboundEmailRules'), evaluate = vi.spyOn(rules, 'evaluateInboundEmailRules');
   if (condition === 'foreign_client') evaluate.mockResolvedValue({ outcome: { kind: 'assign_client', clientId: randomUUID(), ruleId: randomUUID(), ruleName: 'Wrong client', matchSource: 'rule' }, trace: [] } as any);
   const before = await customer.table('tickets');
   try {
@@ -9640,7 +9627,7 @@ it.each(['reopen', 'automated', 'rate_limited'] as const)('applies technician %s
   await customer.table('boards').where('board_id', operation.customer_board_id).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 1 });
   await customer.table('tickets').where('ticket_id', resource.id).update({ is_closed: true, closed_at: new Date(Date.now() - 60000), response_state: 'awaiting_internal' });
   if (scenario === 'automated') emailData.headers['auto-submitted'] = 'auto-replied';
-  const limiter = await import('../../../../shared/services/email/inboundReopenRateLimiter');
+  const limiter = await import('../../../../../shared/services/email/inboundReopenRateLimiter');
   const rateLimit = vi.spyOn(limiter, 'checkInboundReopenRateLimit').mockResolvedValue({ allowed: scenario !== 'rate_limited', count: scenario === 'rate_limited' ? 4 : 1, limit: 3, windowSeconds: 3600 });
   try {
     const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
@@ -9653,7 +9640,7 @@ it.each(['reopen', 'automated', 'rate_limited'] as const)('applies technician %s
 it('retries a transient technician reply writer failure and commits only one eventual reply', async () => withTechnicianInboundFixture(async ({
   customer, resource, inbox, run,
 }) => {
-  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), real = workflow.createCommentFromEmail;
+  const workflow = await import('../../../../../shared/workflow/actions/emailWorkflowActions'), real = workflow.createCommentFromEmail;
   const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementationOnce(async (...args: any[]) => {
     await (real as any)(...args); throw new Error('Temporary technician writer failure');
   });
@@ -9689,7 +9676,7 @@ it('retains technician mail for retry if a durable worker has no qualified admis
 it('rejects conflicting explicit comment audience and visibility or a different parent audience before persisting mail content', async () => withCustomerReplyTokenFixture(async ({
   customer, recipient, resource, request,
 }) => {
-  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const { TicketModel } = await import('../../../../../shared/models/ticketModel');
   const before = await customer.table('comments').where('ticket_id', resource.id);
   for (const audience of ['requester', 'shared_it', 'organization_private'] as const) {
     await expect(db.transaction(trx => TicketModel.createComment({ ticket_id: resource.id, content: 'Conflicting audience',
@@ -9708,7 +9695,7 @@ it('retains technician reply receipts independently of editable metadata and exp
   const receipt = await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).first();
   await customer.table('comments').where('comment_id', receipt.comment_id).update({ metadata: {} });
   await customer.table('co_management_customer_reply_tokens').del();
-  const migration = require('../../../migrations/20260907122957_create_co_management_inbound_reply_receipts.cjs');
+  const migration = require('../../../../../server/migrations/20260907122957_create_co_management_inbound_reply_receipts.cjs');
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained inbound reply receipts');
   expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', reason: 'terminal_replay' });
@@ -9730,7 +9717,7 @@ async function technicianArtifacts(fixture: { emailData: any; run: () => Promise
   fixture.emailData.attachments = [{ id: 'diagnostics', name: 'diagnostics.txt', contentType: 'text/plain', size: 10, content: Buffer.from('diagnostic').toString('base64') }];
   expect(await fixture.run()).toMatchObject({ disposition: 'ack', outcome: 'replied' });
   artifactStorage.upload.mockReset().mockImplementation(async (bytes, path) => ({ path, size: bytes.length }));
-  const { processCoManagedReplyArtifact } = await import('../../../../packages/co-managed/src/inboundEmailAttachments');
+  const { processCoManagedReplyArtifact } = await import('../../../../../packages/co-managed/src/inboundEmailAttachments');
   const artifacts = await fixture.customer.table('inbound_email_artifacts').where('inbox_id', fixture.inbox.inbox_id);
   return { artifacts, process: (key: string) => runCoManagedArtifact(fixture.resource.tenant, fixture.inbox.inbox_id, key, processCoManagedReplyArtifact) };
 }
@@ -9747,7 +9734,7 @@ it.each(['requester', 'shared_it', 'organization_private'] as const)('materializ
   expect(completed.find(row => row.artifact_type === 'attachment')).toMatchObject({ status: 'succeeded', conversation_attachment_id: rows[0].attachment_id, file_id: null, document_id: null });
   expect(completed.find(row => row.artifact_type === 'original_email')).toMatchObject({ status: 'succeeded', storage_key: inbox.source_object_key,
     content_digest: inbox.source_sha256, conversation_attachment_id: null, file_id: null, document_id: null });
-  const { listCoManagedConversationAttachments: list } = await import('../../../../packages/co-managed/src/conversationAttachments');
+  const { listCoManagedConversationAttachments: list } = await import('../../../../../packages/co-managed/src/conversationAttachments');
   const comment = { storeTenant: resource.tenant, commentId: receipt.comment_id, threadId: receipt.thread_id };
   expect(await list(db, customerPrincipal, resource, comment)).toEqual([expect.objectContaining({ attachmentId: rows[0].attachment_id, audience })]);
   if (audience === 'organization_private') await expect(list(db, principal, resource, comment)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -9804,7 +9791,7 @@ it('materializes accepted technician files after token deletion and editable met
 it('rolls back technician file publication if artifact completion loses its fence after upload', async () => withTechnicianInboundFixture(async fixture => {
   const { customer, inbox } = fixture, { artifacts, process } = await technicianArtifacts(fixture);
   const artifact = artifacts.find(row => row.artifact_type === 'attachment');
-  const store = await import('../../../../shared/services/email/inboundEmailDurableStore'), original = store.transitionArtifact;
+  const store = await import('../../../../../shared/services/email/inboundEmailDurableStore'), original = store.transitionArtifact;
   const complete = vi.spyOn(store, 'transitionArtifact').mockImplementationOnce(async (...args) => { await original(...args); return false; });
   try {
     expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'defer', reason: 'co_managed_artifact_authority_unavailable' });
@@ -9819,8 +9806,8 @@ it('rolls back technician file publication if artifact completion loses its fenc
 it('does not publish technician artifact bytes after the retained claim expires during transport', async () => withTechnicianInboundFixture(async fixture => {
   const { customer, inbox, resource } = fixture, { artifacts } = await technicianArtifacts(fixture);
   const artifact = artifacts.find(row => row.artifact_type === 'attachment');
-  const { processCoManagedReplyArtifact } = await import('../../../../packages/co-managed/src/inboundEmailAttachments');
-  const { claimArtifact } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+  const { processCoManagedReplyArtifact } = await import('../../../../../packages/co-managed/src/inboundEmailAttachments');
+  const { claimArtifact } = await import('../../../../../shared/services/email/inboundEmailDurableStore');
   const claim = await claimArtifact(db, { tenant: resource.tenant, inbox_id: inbox.inbox_id, artifact_key: artifact.artifact_key, owner: 'expiry-test', leaseTtlMs: 2000 });
   expect(claim.claimed).toBe(true); if (!claim.claimed) throw new Error('Expected artifact claim');
   const upload = vi.fn(async () => { await db.raw('select pg_sleep(2.1)'); });
@@ -9917,7 +9904,7 @@ it.each(['address', 'audience', 'revocation', 'expiry', 'preferences', 'reassign
     await processEmail(db, resource.tenant, async () => ({ status: 'failed', retryable: true, errorCode: 'prepare_change' }));
     await customer.table('co_management_customer_email_deliveries').update({ next_attempt_at: new Date(0) });
   }
-  const tokens = await import('../../../../packages/co-managed/src/customerReplyTokens'), original = tokens.issueCoManagedCustomerReplyToken;
+  const tokens = await import('../../../../../packages/co-managed/src/customerReplyTokens'), original = tokens.issueCoManagedCustomerReplyToken;
   let mutation: Promise<void> | undefined, pid: number | undefined;
   const source = await customer.table('comments').where('comment_id', request.commentId).first('thread_id');
   const issue = vi.spyOn(tokens, 'issueCoManagedCustomerReplyToken').mockImplementationOnce(async (...args) => {
@@ -10001,7 +9988,7 @@ it('recovers inbound conversation publication from current content after a lost 
   expect(row).toMatchObject({ status: 'pending', attempts: 1 });
   await customer.table('comments').where('comment_id', row.comment_id).update({ note: 'Current edited reply body' });
   await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const send = vi.fn().mockResolvedValue(undefined);
   expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send)).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(send.mock.calls[0]).toEqual([expect.objectContaining({ payload: expect.objectContaining({ comment: expect.objectContaining({ content: 'Current edited reply body' }) }) }), row.event_id]);
@@ -10015,8 +10002,8 @@ it.each(['deleted', 'audience'] as const)('cancels undelivered inbound conversat
   if (change === 'deleted') await customer.table('comments').where('comment_id', row.comment_id).update({ deleted_at: new Date() });
   else await customer.table('comment_threads').where('thread_id', row.thread_id).update({ collaboration_audience: 'organization_private' });
   await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
-  const { recoverCoManagedEventConsumers } = await import('../../../../packages/co-managed/src/conversationEventConsumers');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
+  const { recoverCoManagedEventConsumers } = await import('../../../../../packages/co-managed/src/conversationEventConsumers');
   const send = vi.fn();
   expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send)).toEqual({ published: 0, cancelled: 1, failed: 0 });
   await customer.table('co_management_event_consumers').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
@@ -10026,8 +10013,8 @@ it.each(['deleted', 'audience'] as const)('cancels undelivered inbound conversat
 
 it('preserves initial inbound internal-only delivery even when excluded consumer rows are replayed', async () => withTechnicianInboundFixture(async ({ customer, resource, recipient, inbox, publish }) => {
   const { withTransaction } = await import('@alga-psa/db');
-  const { TicketModel } = await import('../../../../shared/models/ticketModel');
-  const { InboundEmailOutboxEventPublisher } = await import('../../../../shared/workflow/adapters/inboundEmailOutboxEventPublisher');
+  const { TicketModel } = await import('../../../../../shared/models/ticketModel');
+  const { InboundEmailOutboxEventPublisher } = await import('../../../../../shared/workflow/adapters/inboundEmailOutboxEventPublisher');
   const created = await withTransaction(db, trx => TicketModel.createComment({ ticket_id: resource.id, author_type: 'internal', author_id: recipient.userId,
     content: 'Initial ticket description', collaboration_audience: 'requester' }, resource.tenant, trx,
   new InboundEmailOutboxEventPublisher({ trx, tenantId: resource.tenant, inboxId: inbox.inbox_id, suppressCommentEmail: true, retainConversationEvent: retainCoManagedInboundCommentEvent }), undefined, recipient.userId));
@@ -10038,7 +10025,7 @@ it('preserves initial inbound internal-only delivery even when excluded consumer
   expect(consumers.filter(item => item.status === 'pending').map(item => item.consumer)).toEqual(['internal-notifications']);
   // A stale backfill must not revive delivery outside the original channel.
   await customer.table('co_management_event_consumers').where('event_id', row.event_id).update({ status: 'pending', completed_at: null, error_code: null, next_attempt_at: new Date(0) });
-  const { consumeCoManagedConversationEvent, recoverCoManagedEventConsumers } = await import('../../../../packages/co-managed/src/conversationEventConsumers');
+  const { consumeCoManagedConversationEvent, recoverCoManagedEventConsumers } = await import('../../../../../packages/co-managed/src/conversationEventConsumers');
   const effect = vi.fn(), event = { id: row.event_id, eventType: row.event_type, payload: row.publication.payload };
   expect(await consumeCoManagedConversationEvent(db, event, 'customer-internal-email', effect)).toBe(true); expect(effect).not.toHaveBeenCalled();
   const replay = vi.fn(); expect(await recoverCoManagedEventConsumers(db, resource.tenant, replay)).toEqual({ queued: 1, cancelled: 3, failed: 0 });
@@ -10046,8 +10033,8 @@ it('preserves initial inbound internal-only delivery even when excluded consumer
 }));
 
 it('retries co-managed inbox comments when the conversation-retention adapter is absent without native fallback', async () => withTechnicianInboundFixture(async ({ customer, resource, inbox }) => {
-  const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
-  const { admitCoManagedEmailReply } = await import('../../../../packages/co-managed/src/inboundEmailReply');
+  const { processInboundInbox } = await import('../../../../../shared/services/email/inboundEmailCoreProcessor');
+  const { admitCoManagedEmailReply } = await import('../../../../../packages/co-managed/src/inboundEmailReply');
   const before = await customer.table('comments').where('ticket_id', resource.id);
   expect(await processInboundInbox({ tenantId: resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce',
     qualifiedReplyAdmission: admitCoManagedEmailReply })).toMatchObject({ disposition: 'retry', error: 'Co-managed comment publication requires durable conversation retention' });
@@ -10058,7 +10045,7 @@ it('retries co-managed inbox comments when the conversation-retention adapter is
 
 it('keeps ordinary PSA inbox comment events in their native outbox', async () => {
   const { operation } = await readyForAcceptance(), tenant = operation.tenant, inbox = await stagedCoManagedInbox(tenant);
-  const { InboundEmailOutboxEventPublisher } = await import('../../../../shared/workflow/adapters/inboundEmailOutboxEventPublisher');
+  const { InboundEmailOutboxEventPublisher } = await import('../../../../../shared/workflow/adapters/inboundEmailOutboxEventPublisher');
   await db.transaction(trx => new InboundEmailOutboxEventPublisher({ trx, tenantId: tenant, inboxId: inbox.inbox_id,
     retainConversationEvent: retainCoManagedInboundCommentEvent }).publishCommentCreated({ tenantId: tenant, ticketId: randomUUID(), commentId: randomUUID(), userId: randomUUID(), metadata: { content: 'Native PSA comment' } }));
   const owner = tenantDb(db, tenant);
@@ -10072,9 +10059,9 @@ async function withNativeCommentFixture(work: (fixture: any) => Promise<void>) {
     const dbModule = await import('@alga-psa/db'), auth = await import('@alga-psa/auth');
     const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
     const currentUser = await customer.table('users').where('user_id', customerPrincipal.userId).first();
-    const actions = await import('../../../../packages/tickets/src/actions/comment-actions/commentActions');
-    const optimized = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
-    const simple = await import('../../../../packages/tickets/src/actions/ticketActions');
+    const actions = await import('../../../../../packages/tickets/src/actions/comment-actions/commentActions');
+    const optimized = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const simple = await import('../../../../../packages/tickets/src/actions/ticketActions');
     const { service, publish: legacy } = await ticketServiceForTest();
     const context = { tenant: resource.tenant, userId: currentUser.user_id, user: currentUser };
     const run = (work: () => Promise<unknown>) => auth.runWithApiKeyUser(currentUser, () => runWithTenant(resource.tenant, work));
@@ -10104,7 +10091,7 @@ it.each(['api', 'generic', 'optimized', 'simple'])('retains native %s comment de
   expect(legacy).not.toHaveBeenCalled();
   await customer.table('comments').where('comment_id', comment.comment_id).update({ note: 'Current native body' });
   await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const send = vi.fn();
   expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(send.mock.calls[0]).toEqual([expect.objectContaining({ payload: expect.objectContaining({ comment: expect.objectContaining({ content: 'Current native body' }) }) }), row.event_id]);
@@ -10161,7 +10148,7 @@ it('retains native deletion invalidation before removing a leaf and recovers it 
   const row = await customer.table('co_management_event_outbox').where({ comment_id: comment.comment_id, event_type: 'TICKET_COMMENT_DELETED' }).first();
   expect(row).toMatchObject({ status: 'pending', publication: { payload: { collaborationMutation: { kind: 'delete' } } } });
   await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const send = vi.fn(); expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(JSON.stringify(send.mock.calls)).not.toContain('Native comment body');
 }));
@@ -10197,7 +10184,7 @@ async function withScheduledCommentFixture(work: (fixture: any) => Promise<void>
     const comment = await addCustomer({ note: 'Withheld scheduled body', state: 'scheduled' });
     await customer.table('comments').where('comment_id', comment.id).update({ scheduled_publish_at: new Date(Date.now() - 1000), scheduled_publish_tz: 'UTC' });
     await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
-    const { publishScheduledComment, recoverCoManagedScheduledComments } = await import('../../../../packages/jobs/src/lib/handlers/publishScheduledComment');
+    const { publishScheduledComment, recoverCoManagedScheduledComments } = await import('../../../../../packages/jobs/src/lib/handlers/publishScheduledComment');
     const run = () => publishScheduledComment(db, { tenantId: resource.tenant, ticketId: resource.id, commentId: comment.id });
     const recover = (limit?: number) => recoverCoManagedScheduledComments(db, resource.tenant, limit);
     await work({ ...fixture, comment, run, recover });
@@ -10273,7 +10260,7 @@ it('recovers scheduled notification transport from the current body after the wo
   await customer.table('comments').where('comment_id', comment.id).update({ note: 'Current published body' });
   await expireCoManagedEntitlement(operation.tenant);
   await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const send = vi.fn(); expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(send.mock.calls[0]).toEqual([expect.objectContaining({ payload: expect.objectContaining({ comment: expect.objectContaining({ content: 'Current published body' }) }) }), row.event_id]);
 }));
@@ -10305,7 +10292,7 @@ it('continues scheduled maintenance past denied authors instead of starving late
 }));
 
 it('retains scheduled author, role and source locks until publication authority completes', async () => withScheduledCommentFixture(async ({ customer, resource, customerPrincipal, comment }: any) => {
-  const { assertCoManagedScheduledCommentPublication } = await import('../../../../packages/co-managed/src/scheduledCommentPublication');
+  const { assertCoManagedScheduledCommentPublication } = await import('../../../../../packages/co-managed/src/scheduledCommentPublication');
   await db.transaction(async trx => {
     expect(await assertCoManagedScheduledCommentPublication(trx, { tenant: resource.tenant, ticketId: resource.id, commentId: comment.id })).toEqual({ canUpdateResponseState: true });
     for (const [table, key, value] of [['users', 'user_id', customerPrincipal.userId], ['user_roles', 'user_id', customerPrincipal.userId],
@@ -10337,7 +10324,7 @@ it('preserves ordinary PSA scheduled publication and stable native retries', asy
     }));
   }
   const ordinaryTicketId = identities.get(resource.id)!, ordinaryCommentId = identities.get(comment.id)!;
-  const { publishScheduledComment } = await import('../../../../packages/jobs/src/lib/handlers/publishScheduledComment');
+  const { publishScheduledComment } = await import('../../../../../packages/jobs/src/lib/handlers/publishScheduledComment');
   const run = () => publishScheduledComment(db, { tenantId: tenant, ticketId: ordinaryTicketId, commentId: ordinaryCommentId });
   let fail = true; publish.mockClear(); publish.mockImplementation(async (event: any) => {
     if (event.eventType === 'TICKET_COMMENT_ADDED' && fail) { fail = false; throw new Error('Native dispatch crash'); }
@@ -10379,22 +10366,22 @@ async function withWorkflowCommentFixture(work: (fixture: any) => Promise<void>)
     await customer.table('workflow_definitions').insert({ tenant: resource.tenant, workflow_id: workflowId, name: 'Conversation workflow', payload_schema_ref: 'schema://test', draft_definition: {}, created_by: customerPrincipal.userId });
     await customer.table('workflow_definition_versions').insert({ tenant: resource.tenant, workflow_id: workflowId, version: 1, definition_json: {}, published_by: customerPrincipal.userId });
     await customer.table('workflow_runs').insert({ tenant: resource.tenant, run_id: runId, workflow_id: workflowId, workflow_version: 1, status: 'RUNNING', lease_expires_at: new Date(Date.now() + 600_000) });
-    const registry = await import('../../../../shared/workflow/runtime/registries/workflowConversationRegistry');
-    const { retainCoManagedWorkflowCommentEvent } = await import('../../../../packages/co-managed/src/workflowConversationEvents');
+    const registry = await import('../../../../../shared/workflow/runtime/registries/workflowConversationRegistry');
+    const { retainCoManagedWorkflowCommentEvent } = await import('../../../../../packages/co-managed/src/workflowConversationEvents');
     registry.registerWorkflowConversationRetainer(retainCoManagedWorkflowCommentEvent);
-    const { TicketModel } = await import('../../../../shared/models/ticketModel');
-    const { WorkflowEventPublisher } = await import('../../../../shared/workflow/adapters/workflowEventPublisher');
+    const { TicketModel } = await import('../../../../../shared/models/ticketModel');
+    const { WorkflowEventPublisher } = await import('../../../../../shared/workflow/adapters/workflowEventPublisher');
     const createModel = (options: any = {}) => withTransaction(db, async trx => {
       const publisher = options.native
-        ? new (await import('../../../../packages/tickets/src/lib/adapters/TicketModelEventPublisher')).TicketModelEventPublisher(trx)
+        ? new (await import('../../../../../packages/tickets/src/lib/adapters/TicketModelEventPublisher')).TicketModelEventPublisher(trx)
         : new WorkflowEventPublisher({ transaction: trx, workflowRunId: options.missingRun ? undefined : runId, suppressCommentEmail: options.suppress });
       return TicketModel.createComment({ ticket_id: resource.id, content: 'Workflow comment body', author_type: 'internal', author_id: options.authorId ?? customerPrincipal.userId,
         collaboration_audience: options.audience ?? 'requester', is_internal: options.audience && options.audience !== 'requester', is_resolution: false }, resource.tenant, trx, publisher, undefined, customerPrincipal.userId);
     });
-    const { getActionRegistryV2 } = await import('../../../../shared/workflow/runtime/registries/actionRegistry');
+    const { getActionRegistryV2 } = await import('../../../../../shared/workflow/runtime/registries/actionRegistry');
     const actions = getActionRegistryV2();
-    if (!actions.get('tickets.add_comment', 1)) (await import('../../../../shared/workflow/runtime/actions/businessOperations/tickets')).registerTicketActions();
-    if (!actions.get('create_comment_from_email', 1)) (await import('../../../../shared/workflow/runtime/actions/registerEmailWorkflowActions')).registerEmailWorkflowActionsV2();
+    if (!actions.get('tickets.add_comment', 1)) (await import('../../../../../shared/workflow/runtime/actions/businessOperations/tickets')).registerTicketActions();
+    if (!actions.get('create_comment_from_email', 1)) (await import('../../../../../shared/workflow/runtime/actions/registerEmailWorkflowActions')).registerEmailWorkflowActionsV2();
     const ctx = { tenantId: resource.tenant, runId, knex: db, stepPath: 'test.comment', attempt: 1, idempotencyKey: randomUUID(), env: {}, nowIso: () => new Date().toISOString() };
     const act = (id: string, input: any) => { const action = actions.get(id, 1)!; return action.handler(action.inputSchema.parse(input), ctx); };
     try { await work({ ...fixture, workflowId, runId, createModel, act, registry }); }
@@ -10412,7 +10399,7 @@ it.each(['requester', 'shared_it', 'organization_private'])('retains workflow mo
   await customer.table('comments').where('comment_id', comment.comment_id).update({ note: 'Current workflow body', markdown_content: 'Current workflow body' });
   await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
   const send = vi.fn();
-  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(JSON.stringify(send.mock.calls)).toContain('Current workflow body'); expect(JSON.stringify(send.mock.calls)).not.toContain('Workflow comment body');
 }));
@@ -10627,7 +10614,7 @@ it.each(['deleted', 'unpublished'])('allows cancellation but denies rescheduling
 async function withSharedProjectTaskFixture(work: (fixture: any) => Promise<void>) {
   const fixture = await sharedWorkFixture();
   const { principal, sponsorActor, actor, target, customer, operation } = fixture;
-  const policy = await import('../../../../packages/co-managed/src/policy');
+  const policy = await import('../../../../../packages/co-managed/src/policy');
   const { ProjectModel: model } = await import('@alga-psa/projects/models');
   const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
   const project = await model.create(db, actor.tenant, { project_name: 'Joint rollout', project_number: 'JOINT-1', client_id: operation.customer_client_id,
@@ -10648,8 +10635,8 @@ async function withSharedProjectTaskFixture(work: (fixture: any) => Promise<void
   const customerPrincipal = { ...actor, kind: 'session' as const, sessionId: randomUUID() };
   await customer.table('sessions').insert({ tenant: actor.tenant, user_id: actor.userId, session_id: customerPrincipal.sessionId, expires_at: new Date(Date.now() + 3600_000) });
   const resource = { tenant: actor.tenant, relationshipId: target.relationshipId, kind: 'project_task' as const, id: taskId };
-  const domain = await import('../../../../packages/co-managed/src/projectTaskEditing');
-  const { editSharedProjectTask: edit } = await import('../../lib/co-managed/editProjectTask');
+  const domain = await import('../../../../../packages/co-managed/src/projectTaskEditing');
+  const { editSharedProjectTask: edit } = await import('../../../../../server/src/lib/co-managed/editProjectTask');
   await work({ ...fixture, project, phase, mappings, customerPrincipal, resource, domain, edit });
 }
 
@@ -10767,7 +10754,7 @@ it('preserves explicit audit ownership across foreign connection context and ret
   expect(await customer.table('audit_logs').where('record_id', resource.id)).toHaveLength(1);
   expect(await sponsor.table('audit_logs').where('record_id', resource.id)).toHaveLength(0);
   expect(await sponsor.table('audit_logs').where('operation', 'legacy_context_test')).toHaveLength(1);
-  const migration = require('../../../migrations/20260907150600_preserve_explicit_audit_tenant.cjs');
+  const migration = require('../../../../../server/migrations/20260907150600_preserve_explicit_audit_tenant.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('shared project history');
 }));
 
@@ -10846,7 +10833,7 @@ it('omits the task history and its pagination metadata when the history field is
 
 async function withTaskAssignmentFixture(work: (fixture: any) => Promise<void>) {
   await withSharedProjectTaskFixture(async fixture => work({ ...fixture,
-    assignments: await import('../../../../packages/co-managed/src/projectTaskAssignments'),
+    assignments: await import('../../../../../packages/co-managed/src/projectTaskAssignments'),
     selected: { tenant: fixture.principal.tenant, kind: 'user', id: fixture.principal.userId } }));
 }
 it('assigns MSP task participation without changing native customer assignments and retains withdrawal history', async () => withTaskAssignmentFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, selected, assignments, domain }: any) => {
@@ -10868,7 +10855,7 @@ it('assigns MSP task participation without changing native customer assignments 
   const history = await domain.listCoManagedProjectTaskHistory(db, customerPrincipal, resource);
   expect(history.items).toHaveLength(2); expect(history.items[0].changes).toEqual([{ field: 'msp_assignment', value: null }]);
   expect(history.items[1].changes[0].value).toContain(candidates.options[0].name);
-  const migration = require('../../../migrations/20260907154500_create_co_managed_task_references.cjs');
+  const migration = require('../../../../../server/migrations/20260907154500_create_co_managed_task_references.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained co-managed task participation');
 }));
 
@@ -10912,7 +10899,7 @@ it('offers only assigned collaboration teams with an eligible current member', a
   const eligible = randomUUID(), empty = randomUUID(), unrelated = randomUUID();
   for (const team_id of [eligible, empty, unrelated]) await sponsor.table('teams').insert({ tenant: principal.tenant, team_id, team_name: team_id === eligible ? 'Joint service desk' : 'Do not disclose', manager_id: principal.userId });
   await sponsor.table('team_members').insert({ tenant: principal.tenant, team_id: eligible, user_id: principal.userId });
-  await (await import('../../../../packages/co-managed/src/policy')).replaceCoManagedStaffAssignments(db, sponsorActor, target, 4,
+  await (await import('../../../../../packages/co-managed/src/policy')).replaceCoManagedStaffAssignments(db, sponsorActor, target, 4,
     [{ kind: 'team', principalId: eligible, role: 'technician' }, { kind: 'team', principalId: empty, role: 'technician' }]);
   const options = await assignments.listCoManagedProjectTaskAssignees(db, customerPrincipal, resource, 'team');
   expect(options.options.map((option: any) => option.id)).toEqual([eligible]);
@@ -10974,7 +10961,7 @@ async function withTaskQueueFixture(work: (fixture: any) => Promise<void>) {
     const mappings = await model.getProjectStatusMappings(db, principal.tenant, nativeProject.project_id);
     await sponsor.table('project_tasks').insert({ tenant: principal.tenant, task_id: resource.id, phase_id: phase.phase_id, task_name: 'A native task', wbs_code: '1.1.1',
       project_status_mapping_id: mappings[0].project_status_mapping_id, task_type_key: 'task', assigned_to: principal.userId });
-    await work({ ...fixture, nativeProject, queue: (await import('../../../../packages/co-managed/src/projectTaskQueue')).getCoManagedProjectTaskQueue });
+    await work({ ...fixture, nativeProject, queue: (await import('../../../../../packages/co-managed/src/projectTaskQueue')).getCoManagedProjectTaskQueue });
   });
 }
 
@@ -11036,7 +11023,7 @@ it('filters task queues by personal resources and current team assignments', asy
   const teamId = randomUUID();
   await sponsor.table('teams').insert({ tenant: principal.tenant, team_id: teamId, team_name: 'Queue team', manager_id: principal.userId });
   await sponsor.table('team_members').insert({ tenant: principal.tenant, team_id: teamId, user_id: principal.userId });
-  await (await import('../../../../packages/co-managed/src/policy')).replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'team', principalId: teamId, role: 'technician' }]);
+  await (await import('../../../../../packages/co-managed/src/policy')).replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'team', principalId: teamId, role: 'technician' }]);
   await assignments.assignCoManagedProjectTask(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: { tenant: principal.tenant, kind: 'team', id: teamId } });
   expect((await queue(db, principal, { view: 'working', assignment: 'mine' })).items.map((item: any) => item.tenant)).toEqual([principal.tenant]);
   expect((await queue(db, principal, { view: 'working', assignment: 'my_teams' })).items.map((item: any) => item.tenant)).toEqual([resource.tenant]);
@@ -11094,7 +11081,7 @@ it('keeps two customers with identical task identities distinct in one MSP queue
   }
   await second.customer.table('project_tasks').insert({ ...sourceTask, tenant: second.actor.tenant, project_status_mapping_id: mappingIds.get(sourceTask.project_status_mapping_id), task_name: 'Same task' });
   await customer.table('project_tasks').where('task_id', resource.id).update({ task_name: 'Same task' });
-  const policy = await import('../../../../packages/co-managed/src/policy'), target = { customerTenant: second.actor.tenant, relationshipId: prepared.relationship_id };
+  const policy = await import('../../../../../packages/co-managed/src/policy'), target = { customerTenant: second.actor.tenant, relationshipId: prepared.relationship_id };
   await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
   const current = await policy.getCoManagedCollaborationPolicy(db, second.actor, target);
   await policy.replaceCoManagedCustomerScope(db, second.actor, target, 3, { ...current, projects: [{ id: sourceProject.project_id, canCollaborate: true }] });
@@ -11113,7 +11100,7 @@ it('keeps two customers with identical task identities distinct in one MSP queue
 
 async function withTaskConversationFixture(work: (fixture: any) => Promise<void>) {
   await withSharedProjectTaskFixture(async fixture => {
-    const conversation = await import('../../../../packages/co-managed/src/projectTaskConversation');
+    const conversation = await import('../../../../../packages/co-managed/src/projectTaskConversation');
     const write = (actor: any, command: any, resource = fixture.resource) => conversation.mutateCoManagedProjectTaskComment(db, actor, resource, command);
     const read = (actor: any, before?: any, resource = fixture.resource) => conversation.getCoManagedProjectTaskConversation(db, actor, resource, before);
     const ref = (receipt: any) => ({ storeTenant: receipt.storeTenant, threadId: receipt.threadId, commentId: receipt.commentId });
@@ -11123,8 +11110,8 @@ async function withTaskConversationFixture(work: (fixture: any) => Promise<void>
 }
 
 it('task attachments retain qualified audiences, retry identity and independent MSP archive bytes', async () => withTaskConversationFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, ref }: any) => {
-  const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
-  const archives = await import('../../../../packages/co-managed/src/archiveReads');
+  const attachments = await import('../../../../../packages/co-managed/src/conversationAttachments');
+  const archives = await import('../../../../../packages/co-managed/src/archiveReads');
   const objects = new Map<string, Buffer>(), upload = vi.fn(async (path: string, bytes: Uint8Array) => { objects.set(path, Buffer.from(bytes)); });
   const download = async (path: string) => objects.get(path)!;
   const shared = ref(await add(principal, 'shared_it', 'Shared task evidence'));
@@ -11159,11 +11146,11 @@ it('task attachments retain qualified audiences, retry identity and independent 
   await expect(sponsor.table('co_managed_archive_files').where('archive_file_id', kept.archiveFileId).update({ project_task_id: randomUUID() })).rejects.toThrow('immutable');
   const source = (await attachments.listCoManagedConversationAttachments(db, principal, resource, shared))[0];
   await expect(customer.table('co_management_conversation_attachments').where('attachment_id', source.attachmentId).update({ ticket_id: resource.id })).rejects.toThrow('co_attachment_parent_check');
-  const migration = (await import('../../../../server/migrations/20260908220024_add_co_managed_task_attachment_parents.cjs')).default;
+  const migration = (await import('../../../../../server/migrations/20260908220024_add_co_managed_task_attachment_parents.cjs')).default;
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('retained task attachments');
   await attachments.removeCoManagedConversationAttachment(db, principal, resource, { ...shared, attachmentId: source.attachmentId });
-  const cleanup = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const cleanup = await import('../../../../../packages/co-managed/src/uploadCleanup');
   await cleanup.cleanupCoManagedUploads(db, resource.tenant, async path => { objects.delete(path); });
   expect(await attachments.listCoManagedConversationAttachments(db, customerPrincipal, resource, shared)).toEqual([]);
   expect((await archives.downloadCoManagedArchiveFile(db, principal, resource, kept.archiveFileId)).content).toEqual(before.content);
@@ -11176,13 +11163,13 @@ it('task attachments retain qualified audiences, retry identity and independent 
 it('task attachments survive encrypted customer export and native restore without the MSP private store', async () => withTaskConversationFixture(async f => {
   const fs = await import('node:fs/promises'), os = await import('node:os'), path = await import('node:path');
   const { Readable } = await import('node:stream');
-  const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
-  const { prepareCoManagedPortableWorkspaceExport } = await import('../../../../ee/server/src/lib/co-managed/portableWorkspaceExport');
-  const { openPortableArchive } = await import('../../../../packages/co-managed/src/portableArchive');
-  const { prepareCoManagedPortableWorkspaceRecords } = await import('../../../../packages/co-managed/src/portableWorkspaceRestoreRecords');
-  const { prepareCoManagedPortableWorkspaceFiles, stageCoManagedPortableWorkspaceFiles } = await import('../../../../packages/co-managed/src/portableWorkspaceRestoreFiles');
-  const { prepareCoManagedPortableWorkspaceVault } = await import('../../../../ee/server/src/lib/co-managed/portableWorkspaceRestoreVault');
-  const { resolveCoManagedPortableDestinationCatalogs, insertCoManagedPortableWorkspaceDatabase } = await import('../../../../ee/server/src/lib/co-managed/portableWorkspaceRestoreDatabase');
+  const attachments = await import('../../../../../packages/co-managed/src/conversationAttachments');
+  const { prepareCoManagedPortableWorkspaceExport } = await importCoManagedPortableWorkspaceExport();
+  const { openPortableArchive } = await import('../../../../../packages/co-managed/src/portableArchive');
+  const { prepareCoManagedPortableWorkspaceRecords } = await import('../../../../../packages/co-managed/src/portableWorkspaceRestoreRecords');
+  const { prepareCoManagedPortableWorkspaceFiles, stageCoManagedPortableWorkspaceFiles } = await import('../../../../../packages/co-managed/src/portableWorkspaceRestoreFiles');
+  const { prepareCoManagedPortableWorkspaceVault } = await importCoManagedPortableWorkspaceRestoreVault();
+  const { resolveCoManagedPortableDestinationCatalogs, insertCoManagedPortableWorkspaceDatabase } = await importCoManagedPortableWorkspaceRestoreDatabase();
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'portable-task-files-test-')), previousTmp = process.env.TMPDIR;
   process.env.TMPDIR = root;
   const objects = new Map<string, Buffer>(), upload = async (key: string, bytes: Uint8Array) => { objects.set(key, Buffer.from(bytes)); };
@@ -11256,7 +11243,7 @@ it('task attachments survive encrypted customer export and native restore withou
 }));
 
 it('task attachments preserve files on surviving replies and reject removed comments or changed audiences', async () => withTaskConversationFixture(async ({ customer, principal, customerPrincipal, resource, add, write, ref }: any) => {
-  const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
+  const attachments = await import('../../../../../packages/co-managed/src/conversationAttachments');
   const root = await add(principal, 'shared_it', 'Root'), parent = ref(root);
   const reply = await write(customerPrincipal, { kind: 'create', operationId: randomUUID(), parent, expectedAudience: 'shared_it', text: 'Reply' });
   const comment = ref(reply), upload = vi.fn(async () => {});
@@ -11272,7 +11259,7 @@ it('task attachments preserve files on surviving replies and reject removed comm
 }));
 
 it.each(['customer', 'sponsor'])('task attachments reject %s body redaction and preserve failed-upload retry reservations', async side => withTaskConversationFixture(async ({ customer, principal, customerPrincipal, resource, operation, add, ref }: any) => {
-  const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
+  const attachments = await import('../../../../../packages/co-managed/src/conversationAttachments');
   const comment = ref(await add(customerPrincipal, 'shared_it', 'Task evidence'));
   const input = { attachmentId: randomUUID(), comment, fileName: 'Retry.txt', mimeType: 'text/plain', content: Buffer.from('Immutable retry') };
   const upload = vi.fn().mockRejectedValueOnce(new Error('Fixture transport failed')).mockResolvedValue(undefined);
@@ -11377,7 +11364,7 @@ it('task conversations preserve MSP private retry and own-author rules without a
   await expect(write(principal, { kind: 'create', operationId: randomUUID(), parent: ref(reply), text: 'Deleted private root' })).rejects.toThrow();
   expect((await read(customerPrincipal)).items).toEqual([]);
   expect((await read(principal)).items).toHaveLength(2);
-  const ticket = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const ticket = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   await expect(ticket.mutateCoManagedPrivateTicketComment(db, principal, resource, { kind: 'create', operationId: randomUUID(), text: 'Wrong kind' })).rejects.toThrow();
   expect(await sponsor.table('co_management_private_comments')).toHaveLength(2);
 }));
@@ -11469,7 +11456,7 @@ it('task conversations reject inconsistent stored audiences and retain timestamp
 }));
 
 it('task conversations migration is repeatable and refuses to erase retained attribution', async () => withTaskConversationFixture(async ({ customer, principal, customerPrincipal, add }: any) => {
-  const migration = require('../../../migrations/20260907163000_add_project_task_collaboration_comments.cjs');
+  const migration = require('../../../../../server/migrations/20260907163000_add_project_task_collaboration_comments.cjs');
   await migration.up(db);
   const saved = await add(principal, 'shared_it', 'Retained foreign contribution');
   for (const [patch, constraint] of [
@@ -11532,8 +11519,8 @@ async function withNativeTaskCommentsFixture(work: (fixture: any) => Promise<voi
     const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
     const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
     const avatar = vi.spyOn(avatars, 'getEntityImageUrlsBatch').mockResolvedValue(new Map());
-    const comments = await import('../../../../packages/projects/src/actions/projectTaskCommentActions');
-    const reactions = await import('../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
+    const comments = await import('../../../../../packages/projects/src/actions/projectTaskCommentActions');
+    const reactions = await import('../../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
     try { await withTrackedTaskBrowser(customerPrincipal, customer, browser => auth.runWithApiKeyUser(user, () => runWithTenant(resource.tenant,
       () => work({ ...fixture, ...browser, user, comments, reactions, publish, avatar, connection })))); }
     finally { avatar.mockRestore(); publish.mockRestore(); connection.mockRestore(); }
@@ -11746,7 +11733,7 @@ it('task events cancel stale creates but preserve metadata invalidations after a
   const other = await add(principal, 'shared_it', 'Delete before dispatch');
   await customer.table('comment_threads').where('thread_id', root.threadId).update({ collaboration_audience: 'organization_private' });
   await write(principal, { operationId: randomUUID(), kind: 'delete', comment: ref(other), expectedRevision: 1 });
-  const { dispatchCoManagedConversationEvents: dispatch } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { dispatchCoManagedConversationEvents: dispatch } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const send = vi.fn();
   expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 1, cancelled: 2, failed: 0 });
   expect(send.mock.calls[0][0]).toMatchObject({ eventType: 'PROJECT_TASK_COMMENT_DELETED' });
@@ -11755,8 +11742,8 @@ it('task events cancel stale creates but preserve metadata invalidations after a
 
 it('task events replay stable identities after transport loss and recover incomplete consumers', async () => withTaskConversationFixture(async ({ customer, principal, resource, add }: any) => {
   const root = await add(principal, 'shared_it', 'Current task source');
-  const { dispatchCoManagedConversationEvents: dispatch } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
-  const { consumeCoManagedConversationEvent: consume, recoverCoManagedEventConsumers: recover } = await import('../../../../packages/co-managed/src/conversationEventConsumers');
+  const { dispatchCoManagedConversationEvents: dispatch } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
+  const { consumeCoManagedConversationEvent: consume, recoverCoManagedEventConsumers: recover } = await import('../../../../../packages/co-managed/src/conversationEventConsumers');
   const send = vi.fn().mockRejectedValueOnce(new Error('Redis unavailable')).mockResolvedValue(undefined);
   expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 0, cancelled: 0, failed: 1 });
   await customer.table('co_management_event_outbox').update({ next_attempt_at: new Date(0) });
@@ -11775,8 +11762,8 @@ it('task events replay stable identities after transport loss and recover incomp
 }));
 
 it('task events update actual search state and cannot resurrect deleted comments through delayed edits or backfills', async () => withTaskConversationFixture(async ({ customer, principal, resource, add, write, ref }: any) => {
-  const { handleSearchIndexEventForTest: handle } = await import('../../lib/eventBus/subscribers/searchIndexSubscriber');
-  const { projectTaskCommentIndexer } = await import('../../../../packages/search/src/indexers/project_task_comment');
+  const { handleSearchIndexEventForTest: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/searchIndexSubscriber');
+  const { projectTaskCommentIndexer } = await import('../../../../../packages/search/src/indexers/project_task_comment');
   const database = await import('@alga-psa/db'), connection = vi.spyOn(database, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
   vi.stubEnv('SEARCH_INDEX_LIVE', 'true');
   try {
@@ -11796,7 +11783,7 @@ it('task events update actual search state and cannot resurrect deleted comments
 }));
 
 it('task events migration supports rolling ticket producers and refuses loss of retained task history', async () => withTaskConversationFixture(async ({ customer, principal, resource, add }: any) => {
-  const migration = require('../../../migrations/20260907171500_qualify_co_managed_conversation_events.cjs'); await migration.up(db);
+  const migration = require('../../../../../server/migrations/20260907171500_qualify_co_managed_conversation_events.cjs'); await migration.up(db);
   const ticketId = randomUUID(), eventId = randomUUID();
   await customer.table('co_management_event_outbox').insert({ tenant: resource.tenant, event_id: eventId, ticket_id: ticketId, comment_id: randomUUID(), thread_id: randomUUID(), event_type: 'TICKET_COMMENT_DELETED', audience: 'organization_private', publication: {}, request_hash: 'a'.repeat(64) });
   expect(await customer.table('co_management_event_outbox').where('event_id', eventId).first()).toMatchObject({ resource_type: 'ticket', resource_id: ticketId });
@@ -11834,7 +11821,7 @@ it('task events roll native comments and legacy notification hooks back if canon
 
 it('task events reject cached content and mismatched resource identities instead of publishing a corrupted intent', async () => withTaskConversationFixture(async ({ customer, principal, resource, add }: any) => {
   const root = await add(principal, 'shared_it', 'Protected task body');
-  const { enqueueCoManagedConversationEvent: enqueue, dispatchCoManagedConversationEvents: dispatch } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { enqueueCoManagedConversationEvent: enqueue, dispatchCoManagedConversationEvents: dispatch } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const row = await customer.table('co_management_event_outbox').where('event_id', root.operationId).first();
   const intent = { tenant: resource.tenant, eventId: root.operationId, resource: { kind: 'project_task' as const, id: resource.id }, commentId: root.commentId, threadId: root.threadId, audience: row.audience, publication: row.publication };
   await withTransaction(db, trx => enqueue(trx, intent));
@@ -11852,11 +11839,11 @@ async function withProjectSearchFixture(work: (fixture: any) => Promise<void>) {
     await customer.table('project_phases').where('phase_id', phase.phase_id).update({ phase_name: 'Neutronstage', description: 'quasarspectroscopy body', updated_at: new Date() });
     await customer.table('project_tasks').where('task_id', resource.id).update({ task_name: 'Cobaltworkitem', description: 'quasarspectroscopy body', updated_at: new Date() });
     const root = await add(customerPrincipal, 'organization_private', 'quasarspectroscopy body');
-    const indexers = await import('../../../../packages/search/src/index'), { upsertSearchDoc } = await import('../../../../packages/search/src/upsert');
+    const indexers = await import('../../../../../packages/search/src/index'), { upsertSearchDoc } = await import('../../../../../packages/search/src/upsert');
     const objects = [['project', project.project_id], ['project_phase', phase.phase_id], ['project_task', resource.id], ['project_task_comment', root.commentId]] as const;
     const reindex = async () => { for (const [kind, id] of objects) { const doc = await indexers.getIndexer(kind)!.loadOne(db, resource.tenant, id); if (doc) await upsertSearchDoc(db, doc); } };
     await reindex();
-    const search = await import('../../../../packages/search/src/runAppSearch');
+    const search = await import('../../../../../packages/search/src/runAppSearch');
     const authentication = { kind: 'session' as const, sessionId: customerPrincipal.sessionId };
     const input = (query = 'quasarspectroscopy') => ({ query, types: objects.map(([kind]) => kind) });
     const full = (query?: string, extra: any = {}, auth: any = authentication) => search.runAppSearch(db, resource.tenant, user, { ...input(query), ...extra }, auth);
@@ -11939,7 +11926,7 @@ it('project API search retains the actual key and applies key-specific bundle na
 }));
 
 it('project search action and typeahead bind the actual browser session and reject override authority', async () => withProjectSearchFixture(async ({ input, override, user }: any) => {
-  const actions = await import('../../lib/actions/searchActions');
+  const actions = await import('../../../../../server/src/lib/actions/searchActions');
   expect((await actions.searchAppAction(input())).totalCount).toBe(4);
   expect((await actions.searchAppTypeaheadAction(input())).totalCount).toBe(4);
   override.mockReturnValue(user);
@@ -11963,9 +11950,9 @@ it('project search suppresses rolling task-comment entries without source revisi
 }));
 
 it('project search rechecks session expiry after producing the admitted result', async () => withProjectSearchFixture(async ({ customer, resource, user, customerPrincipal, authentication, input }: any) => {
-  const { withProjectSearchAccess } = await import('../../../../packages/search/src/projectSearchAccess');
-  const { runSearchQuery } = await import('../../../../packages/search/src/query');
-  const { resolveSearchAclPrincipal } = await import('../../../../packages/search/src/acl');
+  const { withProjectSearchAccess } = await import('../../../../../packages/search/src/projectSearchAccess');
+  const { runSearchQuery } = await import('../../../../../packages/search/src/query');
+  const { resolveSearchAclPrincipal } = await import('../../../../../packages/search/src/acl');
   await expect(withProjectSearchAccess(db, resource.tenant, user, authentication, async (trx, searchIndex) => {
     const acl = await resolveSearchAclPrincipal(trx, user);
     const result = await runSearchQuery({ knex: trx, tenant: resource.tenant, ...input(), allowedTypes: input().types, acl, searchIndex });
@@ -11987,7 +11974,7 @@ it('project search retains customer-owned history after separation and applies p
 
 async function withTaskConversationActionsFixture(work: (fixture: any) => Promise<void>) {
   await withNativeTaskCommentsFixture(async fixture => {
-    const actions = await import('../../lib/actions/coManagedProjectTaskConversationActions'), auth = await import('@alga-psa/auth');
+    const actions = await import('../../../../../server/src/lib/actions/coManagedProjectTaskConversationActions'), auth = await import('@alga-psa/auth');
     const asMsp = async (command: () => Promise<any>) => {
       const user = await fixture.sponsor.table('users').where('user_id', fixture.principal.userId).first();
       const previous = fixture.session.getMockImplementation();
@@ -12091,17 +12078,17 @@ async function withTaskNotificationFixture(work: (fixture: any) => Promise<void>
     const localActor = { ...customerPrincipal, userId: localId, sessionId: randomUUID() };
     await customer.table('sessions').insert({ tenant: resource.tenant, user_id: localId, session_id: localActor.sessionId, expires_at: new Date(Date.now() + 3600000) });
     await customer.table('project_tasks').where('task_id', resource.id).update({ assigned_to: localId });
-    const assignments = await import('../../../../packages/co-managed/src/projectTaskAssignments');
+    const assignments = await import('../../../../../packages/co-managed/src/projectTaskAssignments');
     await assignments.assignCoManagedProjectTask(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: { tenant: principal.tenant, kind: 'user', id: principal.userId } });
     const subtype = await db('internal_notification_subtypes').where('name', 'task-comment-added').first();
     await db('internal_notification_templates').insert({ name: 'task-comment-added', language_code: 'en', title: 'Task {{taskName}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id }).onConflict(['name', 'language_code']).ignore();
-    const { persistCoManagedTaskCommentNotifications: persist } = await import('../../lib/co-managed/persistTaskCommentNotifications');
+    const { persistCoManagedTaskCommentNotifications: persist } = await import('../../../../../server/src/lib/co-managed/persistTaskCommentNotifications');
     const notify = async (comment: any) => {
       try { await persist(db, { ownerTenant: resource.tenant, taskId: resource.id, commentId: comment.commentId, eventId: comment.operationId }); }
       catch (error) { if (error instanceof AggregateError) throw error.errors[0]; throw error; }
     };
-    const { readCoManagedStoredCommentNotification: readStored } = await import('../../../../packages/co-managed/src/storedCommentNotification');
-    const { processCoManagedNotificationDeliveries: process } = await import('../../../../packages/notifications/src/lib/coManagedDeliveryQueue');
+    const { readCoManagedStoredCommentNotification: readStored } = await import('../../../../../packages/co-managed/src/storedCommentNotification');
+    const { processCoManagedNotificationDeliveries: process } = await import('../../../../../packages/notifications/src/lib/coManagedDeliveryQueue');
     await work({ ...fixture, localActor, localId, notify, persist, readStored, process, subtypeId: subtype.internal_notification_subtype_id });
   });
 }
@@ -12152,7 +12139,7 @@ it('task notification reads retain customer ownership after separation and resis
   const local = await customer.table('internal_notifications').first(), msp = await sponsor.table('internal_notifications').first();
   await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
   expect(await readStored(db, principal, msp.internal_notification_id)).toBeNull(); expect(await readStored(db, localActor, local.internal_notification_id)).not.toBeNull();
-  const { coManagedCommentPresentation } = await import('../../../../packages/notifications/src/lib/coManagedCommentPresentation');
+  const { coManagedCommentPresentation } = await import('../../../../../packages/notifications/src/lib/coManagedCommentPresentation');
   const retained = await readStored(db, localActor, local.internal_notification_id);
   expect(coManagedCommentPresentation(retained.message, retained.eventId, retained.deliveryKey).link).toMatch(new RegExp(`^/msp/projects/.+\\?phaseId=.+&taskId=${resource.id}$`));
   await customer.table('internal_notifications').where('internal_notification_id', local.internal_notification_id).update({ metadata: {}, message: 'Untrusted cached body' });
@@ -12178,7 +12165,7 @@ async function withTaskNotificationSubscriberFixture(work: (fixture: any) => Pro
       return { id: row.event_id, eventType: row.event_type, payload: row.publication.payload, timestamp: new Date().toISOString() };
     };
     try {
-      const { internalNotificationSubscriberTestHarness } = await import('../../lib/eventBus/subscribers/internalNotificationSubscriber');
+      const { internalNotificationSubscriberTestHarness } = await import('../../../../../server/src/lib/eventBus/subscribers/internalNotificationSubscriber');
       await work({ ...fixture, handle: internalNotificationSubscriberTestHarness.handleInternalNotificationEvent, event, observed, push });
     } finally {
       try { await vi.waitFor(async () => {
@@ -12224,7 +12211,7 @@ it('task notification subscriber suppresses native cached comment and mention ha
 }));
 
 it('task notification migration backfills pending obligations without replaying old native alerts and protects retained receipts', async () => withTaskNotificationFixture(async ({ customer, sponsor, customerPrincipal, resource, add, notify }: any) => {
-  const migration = require('../../../migrations/20260907183000_qualify_co_managed_notification_receipts.cjs');
+  const migration = require('../../../../../server/migrations/20260907183000_qualify_co_managed_notification_receipts.cjs');
   const pending = await add(customerPrincipal, 'shared_it', 'Pending pre-rollout'), published = await add(customerPrincipal, 'shared_it', 'Published pre-rollout');
   await customer.table('co_management_event_consumers').where('consumer', 'internal-notifications').del();
   await customer.table('co_management_event_outbox').where('event_id', published.operationId).update({ status: 'published', completed_at: new Date() });
@@ -12248,7 +12235,7 @@ it('task notification inbox filters legacy cached notices and denied rows before
     vi.spyOn(database, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant })];
   try {
     const actions = await import('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions');
-    const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+    const { withNotificationDelivery } = await import('../../../../../packages/notifications/src/lib/notificationDelivery');
     const local = await customer.table('users').where('user_id', localId).first();
     await auth.runWithApiKeyUser(local, () => runWithTenant(resource.tenant, async () => {
       expect(await actions.getNotificationsAction({ limit: 1 } as any)).toMatchObject({ total: 1, unread_count: 1, has_more: false, notifications: [expect.objectContaining({ internal_notification_id: current.internal_notification_id, message: expect.stringContaining('Visible task notice') })] });
@@ -12294,7 +12281,7 @@ it('task notification preferences suppress creation and later delivery independe
 it('task notification delivery holds current customer recipient authority through transport and rejects revocation on the next attempt', async () => withTaskNotificationFixture(async ({ customer, customerPrincipal, localId, resource, add, notify }: any) => {
   await notify(await add(customerPrincipal, 'shared_it', 'Delivery race body'));
   const queued = await customer.table('internal_notifications').first();
-  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  const { withNotificationDelivery } = await import('../../../../../packages/notifications/src/lib/notificationDelivery');
   let started!: () => void, resume!: () => void;
   const ready = new Promise<void>(resolve => { started = resolve; }), paused = new Promise<void>(resolve => { resume = resolve; });
   const delivery = withNotificationDelivery(db, queued, async () => { started(); await paused; return true; });
@@ -12310,7 +12297,7 @@ it('task notification delivery holds current customer recipient authority throug
 
 it('task notification owner reads reject expiry after assembling content and roll back callback work', async () => withTaskNotificationFixture(async ({ customer, customerPrincipal, localActor, resource, add }: any) => {
   const comment = await add(customerPrincipal, 'shared_it', 'Late expiry body');
-  const { withCoManagedTaskCommentNotification } = await import('../../../../packages/co-managed/src/taskCommentNotification');
+  const { withCoManagedTaskCommentNotification } = await import('../../../../../packages/co-managed/src/taskCommentNotification');
   await expect(withCoManagedTaskCommentNotification(db, localActor, resource, comment.commentId, async context => {
     await tenantDb(context.trx, resource.tenant).table('sessions').where('session_id', localActor.sessionId).update({ expires_at: new Date(0) }); return true;
   })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -12379,7 +12366,7 @@ it('task email retains customer-owned delivery after separation while terminatin
 }));
 
 it('task email migration preserves rolling ticket writers, enrolls only pending task events, and refuses retained task loss', async () => withTaskEmailFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, queue }: any) => {
-  const migration = require('../../../migrations/20260907190000_qualify_co_managed_email_deliveries.cjs');
+  const migration = require('../../../../../server/migrations/20260907190000_qualify_co_managed_email_deliveries.cjs');
   const pending = await add(customerPrincipal, 'shared_it', 'Pending task email'), published = await add(customerPrincipal, 'shared_it', 'Published task email');
   await customer.table('co_management_event_consumers').where('consumer', 'co-managed-email').del();
   await customer.table('co_management_event_outbox').where('event_id', published.operationId).update({ status: 'published', completed_at: new Date() });
@@ -12395,7 +12382,7 @@ it('task email migration preserves rolling ticket writers, enrolls only pending 
 }));
 
 it('task email discovery commits both organizations before transport and recovers failures through the actual maintenance handler', async () => withTaskEmailFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add }: any) => {
-  const { handleCoManagedTaskCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedCommentEmailSubscriber');
+  const { handleCoManagedTaskCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedCommentEmailSubscriber');
   const { coManagedNotificationRecoveryHandler: recover } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
   const transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport'), database = await import('@alga-psa/db');
   const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
@@ -12418,7 +12405,7 @@ it('task email discovery commits both organizations before transport and recover
 }));
 
 it('task email consumer rolls discovery and effects back when completion fails', async () => withTaskEmailFixture(async ({ customer, sponsor, customerPrincipal, resource, add }: any) => {
-  const { handleCoManagedTaskCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedCommentEmailSubscriber');
+  const { handleCoManagedTaskCommentEmailEvent: handle } = await import('../../../../../server/src/lib/eventBus/subscribers/coManagedCommentEmailSubscriber');
   const transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport'), database = await import('@alga-psa/db');
   const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db), send = vi.spyOn(transport, 'sendCoManagedCommentEmail').mockResolvedValue({ status: 'delivered' });
   const comment = await add(customerPrincipal, 'shared_it', 'Atomic task email'), row = await customer.table('co_management_event_outbox').where('event_id', comment.operationId).first();
@@ -12436,11 +12423,11 @@ it('task email suppresses legacy native events and cached event-email retries fo
   const spies = [vi.spyOn(database, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant }), vi.spyOn(database, 'getConnection').mockResolvedValue(db)];
   try {
     const comment = await add(customerPrincipal, 'shared_it', 'Current native task content');
-    const { projectEmailSubscriberTestHarness } = await import('../../lib/eventBus/subscribers/projectEmailSubscriber');
+    const { projectEmailSubscriberTestHarness } = await import('../../../../../server/src/lib/eventBus/subscribers/projectEmailSubscriber');
     await projectEmailSubscriberTestHarness.handleProjectEvent({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: 'TASK_COMMENT_ADDED', payload: {
       tenantId: resource.tenant, taskId: resource.id, projectId: project.project_id, userId: customerPrincipal.userId,
       taskCommentId: comment.commentId, taskName: 'Cached task title', commentContent: 'Cached private task email' } } as any);
-    const { sendEventEmailWithOutcome } = await import('../../lib/notifications/sendEventEmail');
+    const { sendEventEmailWithOutcome } = await import('../../../../../server/src/lib/notifications/sendEventEmail');
     const params = { tenantId: resource.tenant, to: 'stale@example.test', subject: 'Legacy task notice', template: 'task-comment-added', context: { comment: { contentText: 'Cached private task email' } }, locale: 'en' as const };
     expect(await sendEventEmailWithOutcome(params)).toBe('skipped');
     await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() }); await customer.table('tenants').update({ product_code: 'psa' });
@@ -12478,7 +12465,7 @@ async function withOperationalTimeFixture(work: (fixture: any) => Promise<void>)
   await withSharedProjectTaskFixture(async fixture => {
     const fields = { user_id: fixture.customerPrincipal.userId, work_item_type: 'project_task', work_item_id: fixture.resource.id,
       start_time: '2026-09-07T09:00:00Z', end_time: '2026-09-07T10:30:00Z', work_date: '2026-09-07', work_timezone: 'UTC', billable_duration: 0, notes: 'Private operational effort' };
-    const policy = await import('../../../../packages/co-managed/src/timeEntryBillingMode');
+    const policy = await import('../../../../../packages/co-managed/src/timeEntryBillingMode');
     const insert = async (extra: any = {}) => (await fixture.customer.table('time_entries').insert({ tenant: fixture.resource.tenant, ...fields, ...extra }).returning('*'))[0];
     await work({ ...fixture, fields, policy, insert });
   });
@@ -12528,14 +12515,14 @@ it('operational time policy retains lifecycle and product locks through mutation
 }));
 
 it('operational time migration preserves history on repeat and refuses destructive rollback', async () => withOperationalTimeFixture(async ({ customer, insert }: any) => {
-  const migration = require('../../../migrations/20260907192000_preserve_operational_time_entries.cjs'), entry = await insert();
+  const migration = require('../../../../../server/migrations/20260907192000_preserve_operational_time_entries.cjs'), entry = await insert();
   await migration.up(db); await migration.up(db);
   expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ billing_mode: 'operational', notes: entry.notes, billable_duration: 0 });
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained operational time history');
 }));
 
 it('operational time migration refuses pre-existing billing evidence instead of rewriting commercial minutes', async () => withOperationalTimeFixture(async ({ sponsor, principal, fields }: any) => {
-  const migration = require('../../../migrations/20260907192000_preserve_operational_time_entries.cjs');
+  const migration = require('../../../../../server/migrations/20260907192000_preserve_operational_time_entries.cjs');
   const [entry] = await sponsor.table('time_entries').insert({ tenant: principal.tenant, ...fields, user_id: principal.userId, work_item_id: null, work_item_type: 'ad_hoc', billable_duration: 45 }).returning('*');
   await sponsor.table('tenants').update({ product_code: 'co_managed' });
   try { await expect(migration.up(db)).rejects.toThrow('Existing co-managed time has billing evidence'); }
@@ -12590,7 +12577,7 @@ async function withNativeOperationalTimeFixture(work: (fixture: any) => Promise<
     const user = await customer.table('users').where('user_id', customerPrincipal.userId).first();
     const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
     const events = await import('@alga-psa/event-bus/publishers'), publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
-    const actions = await import('../../../../packages/scheduling/src/actions/timeEntryCrudActions');
+    const actions = await import('../../../../../packages/scheduling/src/actions/timeEntryCrudActions');
     const periodId = randomUUID(), sheetId = randomUUID();
     await customer.table('time_periods').insert({ tenant: resource.tenant, period_id: periodId, start_date: '2026-09-07', end_date: '2026-09-14' });
     await customer.table('time_sheets').insert({ tenant: resource.tenant, id: sheetId, period_id: periodId, user_id: user.user_id, approval_status: 'DRAFT' });
@@ -12700,10 +12687,10 @@ it('native operational time supports general effort without a fabricated work re
 }));
 
 it('native operational time cached search evidence cannot bypass the current work and private-note boundary', async () => withNativeOperationalTimeFixture(async ({ save, resource, customer, user, sessionId }: any) => {
-  const entry = await save(), { getIndexer } = await import('../../../../packages/search/src/index'), { upsertSearchDoc } = await import('../../../../packages/search/src/upsert');
+  const entry = await save(), { getIndexer } = await import('../../../../../packages/search/src/index'), { upsertSearchDoc } = await import('../../../../../packages/search/src/upsert');
   const doc = await getIndexer('time_entry')!.loadOne(db, resource.tenant, entry.entry_id); expect(doc).toBeTruthy();
   await upsertSearchDoc(db, doc!); expect(await customer.table('app_search_index').where('object_type', 'time_entry')).toHaveLength(1);
-  const { withProjectSearchAccess } = await import('../../../../packages/search/src/projectSearchAccess');
+  const { withProjectSearchAccess } = await import('../../../../../packages/search/src/projectSearchAccess');
   const results = await withProjectSearchAccess(db, resource.tenant, user, { kind: 'session', sessionId }, async (trx, relation) => {
     expect(relation).toBeTruthy();
     return trx.from(trx.raw(relation!.sql, relation!.bindings)).where('object_type', 'time_entry').select('object_id');
@@ -12746,10 +12733,10 @@ async function withOperationalTimeApiFixture(work: (fixture: any) => Promise<voi
     const { customer, resource, user } = fixture;
     const apiKeyId = randomUUID();
     await customer.table('api_keys').insert({ tenant: resource.tenant, api_key_id: apiKeyId, api_key: randomUUID(), user_id: user.user_id, active: true });
-    const { TimeEntryService } = await import('../../lib/api/services/TimeEntryService');
-    const schemas = await import('../../lib/api/schemas/timeEntry'), service = new TimeEntryService();
+    const { TimeEntryService } = await import('../../../../../server/src/lib/api/services/TimeEntryService');
+    const schemas = await import('../../../../../server/src/lib/api/schemas/timeEntry'), service = new TimeEntryService();
     const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
-    const apiEvents = await import('../../lib/eventBus/publishers');
+    const apiEvents = await import('../../../../../server/src/lib/eventBus/publishers');
     const publish = vi.spyOn(apiEvents, 'publishEvent').mockResolvedValue(undefined);
     const context = { tenant: resource.tenant, userId: user.user_id, user, apiKeyId };
     const input = { work_item_type: 'project_task', work_item_id: resource.id, start_time: fixture.input.start_time, end_time: fixture.input.end_time, notes: 'Private API effort' };
@@ -12880,9 +12867,9 @@ it('operational time API reports license read-only admission as forbidden withou
 }));
 
 it('operational time API bulk controllers retain the verified key through native create and update dispatch', async () => withOperationalTimeApiFixture(async ({ service, customer, context, user, apiInput, apiKeyId }: any) => {
-  const { ApiTimeEntryController } = await import('../../lib/api/controllers/ApiTimeEntryController');
-  const { ApiKeyServiceForApi } = await import('../../lib/services/apiKeyServiceForApi');
-  const users = await import('@alga-psa/users/actions'), dbModule = await import('@alga-psa/db'), rbac = await import('../../lib/auth/rbac');
+  const { ApiTimeEntryController } = await import('../../../../../server/src/lib/api/controllers/ApiTimeEntryController');
+  const { ApiKeyServiceForApi } = await import('../../../../../server/src/lib/services/apiKeyServiceForApi');
+  const users = await import('@alga-psa/users/actions'), dbModule = await import('@alga-psa/db'), rbac = await import('../../../../../server/src/lib/auth/rbac');
   const key = await customer.table('api_keys').where('api_key_id', apiKeyId).first();
   const validate = vi.spyOn(ApiKeyServiceForApi, 'validateApiKeyForTenant').mockResolvedValue(key);
   const findUser = vi.spyOn(users, 'findUserByIdForApi').mockResolvedValue(user);
@@ -12997,7 +12984,7 @@ it('native timers keep completion receipts immutable and do not recreate deleted
   await customer.table('time_entries').where('entry_id', timer.session_id).del();
   await expect(stop(timer)).rejects.toMatchObject({ statusCode: 404 });
   expect(await customer.table('time_entries')).toHaveLength(0);
-  const migration = require('../../../migrations/20260907210000_create_native_time_tracking_sessions.cjs');
+  const migration = require('../../../../../server/migrations/20260907210000_create_native_time_tracking_sessions.cjs');
   await migration.up(db); await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained timer clocks or completion receipts');
 }));
@@ -13119,9 +13106,9 @@ it('native timer cancellation and stop serialize to one final outcome without or
 }));
 
 it('native timer cancellation controller forwards the verified credential and exact path identity', async () => withNativeTimerFixture(async ({ start, service, customer, context, user, apiKeyId }: any) => {
-  const { ApiTimeEntryController } = await import('../../lib/api/controllers/ApiTimeEntryController');
-  const { ApiKeyServiceForApi } = await import('../../lib/services/apiKeyServiceForApi');
-  const users = await import('@alga-psa/users/actions'), limiter = await import('../../lib/api/rateLimit/enforce');
+  const { ApiTimeEntryController } = await import('../../../../../server/src/lib/api/controllers/ApiTimeEntryController');
+  const { ApiKeyServiceForApi } = await import('../../../../../server/src/lib/services/apiKeyServiceForApi');
+  const users = await import('@alga-psa/users/actions'), limiter = await import('../../../../../server/src/lib/api/rateLimit/enforce');
   const key = await customer.table('api_keys').where('api_key_id', apiKeyId).first();
   const validate = vi.spyOn(ApiKeyServiceForApi, 'validateApiKeyForTenant').mockResolvedValue(key);
   const findUser = vi.spyOn(users, 'findUserByIdForApi').mockResolvedValue(user);
@@ -13197,7 +13184,7 @@ it('native time detail reads deny a current source outside local bundle scope an
 }));
 
 it('native time detail reads recheck credential expiry after waiting for the actual work lock', async () => withOperationalTimeApiFixture(async ({ create, customer, context, resource, apiKeyId }: any) => {
-  const saved = await create(), domain = await import('../../../../packages/co-managed/src/nativeTimeRead');
+  const saved = await create(), domain = await import('../../../../../packages/co-managed/src/nativeTimeRead');
   const blocker = await db.transaction();
   await tenantDb(blocker, resource.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
   await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
@@ -13236,7 +13223,7 @@ it('native time detail reads preserve permitted manager access to a deactivated 
 async function withNativeTimeSheetReadFixture(work: (fixture: any) => Promise<void>) {
   await withOperationalTimeApiFixture(async (fixture: any) => {
     const entry = await fixture.create();
-    const review = await import('../../../../packages/scheduling/src/actions/timeEntryChangeRequestActions');
+    const review = await import('../../../../../packages/scheduling/src/actions/timeEntryChangeRequestActions');
     const addRequest = async (target = entry, comment = 'Please explain the logged effort') => {
       await review.createTimeEntryChangeRequestRecord(db, { tenant: fixture.context.tenant, timeEntryId: target.entry_id, timeSheetId: target.time_sheet_id, comment, createdBy: fixture.user.user_id });
     };
@@ -13303,7 +13290,7 @@ it('native timesheet collections preserve general-time identity and remain reada
 it('native timesheet collections do not upgrade shared sheet locks during concurrent post-upgrade reads', async () => withNativeTimeSheetReadFixture(async ({ entry, customer, context, apiKeyId }: any) => {
   await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
   await customer.table('tenants').update({ product_code: 'psa' });
-  const domain = await import('../../../../packages/co-managed/src/nativeTimeRead'), left = await db.transaction(), right = await db.transaction();
+  const domain = await import('../../../../../packages/co-managed/src/nativeTimeRead'), left = await db.transaction(), right = await db.transaction();
   await tenantDb(left, context.tenant).table('time_sheets').where('id', entry.time_sheet_id).forShare().first();
   await tenantDb(right, context.tenant).table('time_sheets').where('id', entry.time_sheet_id).forShare().first();
   const identify = async () => ({ kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId });
@@ -13314,7 +13301,7 @@ it('native timesheet collections do not upgrade shared sheet locks during concur
 }));
 
 it('native timesheet collections reject the whole response when credentials expire during a source lock wait', async () => withNativeTimeSheetReadFixture(async ({ entry, customer, context, resource, apiKeyId }: any) => {
-  const domain = await import('../../../../packages/co-managed/src/nativeTimeRead'), blocker = await db.transaction();
+  const domain = await import('../../../../../packages/co-managed/src/nativeTimeRead'), blocker = await db.transaction();
   await tenantDb(blocker, resource.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
   await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
   let pid: number | undefined;
@@ -13466,7 +13453,7 @@ async function withTimeAllocationFixture(work: (fixture: any) => Promise<void>) 
     await customer.table('service_catalog').insert({ tenant: context.tenant, service_id: serviceId, service_name: 'Allocation labor', billing_method: 'hourly', custom_service_type_id: typeId });
     const commercial = await create({ start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', service_id: serviceId, is_billable: true });
     const block = await seedTimeDeletionBlock(fixture, commercial);
-    const engine = await import('../../../../shared/billingClients/hourBlockService');
+    const engine = await import('../../../../../shared/billingClients/hourBlockService');
     const balance = async () => Number((await customer.table('hour_blocks').where('block_id', block.blockId).first()).remaining_minutes);
     await work({ ...fixture, ...block, commercial, engine, balance });
   });
@@ -13575,7 +13562,7 @@ it('native time API collections cannot infer masked notes or billing from search
   expect(await service.searchTimeEntries({ query: 'Private API', limit: 25 }, context)).toEqual({ total: 0, data: [] });
   expect(await service.getTimeEntryStatistics(undefined, context)).toMatchObject({ total_entries: 1, total_hours: 1.5, total_billable_hours: null, total_non_billable_hours: null, entries_by_user: {}, entries_by_status: {} });
   expect(await service.exportTimeEntries({ format: 'csv' }, context)).not.toMatch(/Private API|"No"|"DRAFT"/);
-  const schemas = await import('../../lib/api/schemas/timeEntry');
+  const schemas = await import('../../../../../server/src/lib/api/schemas/timeEntry');
   expect(schemas.timeEntryResponseSchema.parse((await service.list({}, context)).data[0])).toMatchObject({ billable_duration: null, approval_status: null });
   expect(schemas.timeEntryStatsResponseSchema.parse(await service.getStatistics(context))).toMatchObject({ total_hours: 1.5, total_billable_hours: null });
   await expect(service.list({}, { ...context, apiKeyId: randomUUID() })).rejects.toMatchObject({ statusCode: 403 });
@@ -13590,7 +13577,7 @@ it('native time API collections honor all search array values and actual interva
 }));
 
 it('native time API collections reject the whole result when a key expires during a source wait', async () => withNativeTimeSheetReadFixture(async ({ customer, context, resource, apiKeyId }: any) => {
-  const domain = await import('../../../../packages/co-managed/src/nativeTimeRead'), blocker = await db.transaction();
+  const domain = await import('../../../../../packages/co-managed/src/nativeTimeRead'), blocker = await db.transaction();
   await tenantDb(blocker, resource.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
   await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
   let pid: number | undefined;
@@ -13682,8 +13669,8 @@ it('native time review rejects draft approval and lapsed writes and serializes r
 
 async function withNativeTimeSheetCommandFixture(work: (fixture: any) => Promise<void>) {
   return withNativeTimeSheetReadFixture(async (fixture: any) => {
-    const sheets = await import('../../../../packages/scheduling/src/actions/timeSheetActions');
-    const operations = await import('../../../../packages/scheduling/src/actions/timeSheetOperations');
+    const sheets = await import('../../../../../packages/scheduling/src/actions/timeSheetActions');
+    const operations = await import('../../../../../packages/scheduling/src/actions/timeSheetOperations');
     const events = await import('@alga-psa/event-bus/publishers');
     await work({ ...fixture, sheets, operations, emitted: vi.mocked(events.publishEvent) });
   });
@@ -13762,7 +13749,7 @@ it('native time sheet commands roll back entries and sheet state when the sessio
 }));
 
 it('native time sheet commands refuse reversal when any entry has been invoiced after PSA upgrade', async () => withTimeAllocationFixture(async ({ entry, commercial, context, customer }: any) => {
-  const sheets = await import('../../../../packages/scheduling/src/actions/timeSheetActions');
+  const sheets = await import('../../../../../packages/scheduling/src/actions/timeSheetActions');
   await customer.table('time_entries').update({ approval_status: 'APPROVED' });
   await customer.table('time_entries').where('entry_id', commercial.entry_id).update({ invoiced: true });
   await customer.table('time_sheets').where('id', entry.time_sheet_id).update({ approval_status: 'APPROVED' });
@@ -13774,7 +13761,7 @@ it('native time sheet commands refuse reversal when any entry has been invoiced 
 it('native time sheet details return actual visible effort and comments with authenticated authorship', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, service, sheets }: any) => {
   const view = await sheets.fetchTimeSheet(entry.time_sheet_id);
   expect(view).toMatchObject({ id: entry.time_sheet_id, entry_count: 1, total_minutes: 90, total_hours: 1.5, time_period: { start_date: '2026-09-07', end_date: '2026-09-14' } });
-  const { timeSheetViewSchema, timeSheetCommentSchema } = await import('../../../../packages/scheduling/src/schemas/timeSheet.schemas');
+  const { timeSheetViewSchema, timeSheetCommentSchema } = await import('../../../../../packages/scheduling/src/schemas/timeSheet.schemas');
   expect(timeSheetViewSchema.safeParse(view).success).toBe(true);
   expect(await sheets.fetchTimeEntriesForTimeSheet(entry.time_sheet_id)).toMatchObject([{ entry_id: entry.entry_id, billing_mode: 'operational', elapsed_minutes: 90 }]);
   await expect(sheets.addCommentToTimeSheet(entry.time_sheet_id, randomUUID(), 'Forged author', true)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -13845,7 +13832,7 @@ it('native time sheet lists share detail projections across own all approval and
   await operations.submitTimeSheet(entry.time_sheet_id);
   const approvals = await sheets.fetchTimeSheetsForApproval();
   expect(approvals).toMatchObject([{ id: entry.time_sheet_id, employee_email: user.email, total_hours: 1.5, comments: [] }]);
-  const { timeSheetApprovalViewSchema } = await import('../../../../packages/scheduling/src/schemas/timeSheet.schemas');
+  const { timeSheetApprovalViewSchema } = await import('../../../../../packages/scheduling/src/schemas/timeSheet.schemas');
   expect(timeSheetApprovalViewSchema.safeParse(approvals[0]).success).toBe(true);
   expect(await operations.fetchTimePeriods(context.userId)).toMatchObject([{ timeSheetId: entry.time_sheet_id, hoursEntered: 1.5, daysLogged: 1, entryCount: 1, periodTimesheetCount: 1 }]);
   await sheets.approveTimeSheet(entry.time_sheet_id, context.userId);
@@ -13907,7 +13894,7 @@ it('native time sheet lists include unopened periods without fabricating a backi
 }));
 
 it('native time sheet lists reject the whole collection when the key expires during a nested source wait', async () => withNativeTimeSheetCommandFixture(async ({ context, customer, resource, apiKeyId }: any) => {
-  const domain = await import('../../../../packages/co-managed/src/nativeTimeSheetList'), blocker = await db.transaction();
+  const domain = await import('../../../../../packages/co-managed/src/nativeTimeSheetList'), blocker = await db.transaction();
   await tenantDb(blocker, resource.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
   await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
   let pid: number | undefined;
@@ -13972,7 +13959,7 @@ it.each(['create', 'delete'])('native time sheet lifecycle rolls %s and its chil
   try {
     if (operation === 'create') await expect(operations.fetchOrCreateTimeSheet(context.userId, periodId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
     else {
-      const domain = await import('../../../../packages/co-managed/src/nativeTimeSheetLifecycle');
+      const domain = await import('../../../../../packages/co-managed/src/nativeTimeSheetLifecycle');
       await expect(domain.deleteCoManagedNativeTimeSheet(db, context.tenant, target.id, async () => ({ kind: 'session', tenant: context.tenant, userId: context.userId, sessionId }))).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
     }
     expect(await customer.table('time_sheets').where('period_id', periodId)).toHaveLength(operation === 'delete' ? 1 : 0);
@@ -13984,7 +13971,7 @@ it('native time sheet lifecycle rechecks emptiness after a concurrent entry inse
   const periodId = await newSheetPeriod(customer, context.tenant), empty = await operations.fetchOrCreateTimeSheet(context.userId, periodId);
   const original = await customer.table('time_entries').where('entry_id', entry.entry_id).first(), writer = await db.transaction();
   await tenantDb(writer, context.tenant).table('time_entries').insert({ ...original, entry_id: randomUUID(), time_sheet_id: empty.id, work_date: '2026-09-15', start_time: '2026-09-15T09:00:00Z', end_time: '2026-09-15T10:30:00Z' });
-  const domain = await import('../../../../packages/co-managed/src/nativeTimeSheetLifecycle');
+  const domain = await import('../../../../../packages/co-managed/src/nativeTimeSheetLifecycle');
   let pid: number | undefined;
   const removing = withTransaction(db, async trx => {
     pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
@@ -14015,7 +14002,7 @@ it('native time sheet lifecycle applies creation permission to automatic API she
 
 async function withTimeSheetApiFixture(work: (fixture: any) => Promise<void>) {
   return withNativeTimeSheetCommandFixture(async (fixture: any) => {
-    const { TimeSheetService } = await import('../../lib/api/services/TimeSheetService');
+    const { TimeSheetService } = await import('../../../../../server/src/lib/api/services/TimeSheetService');
     const sheetService = new TimeSheetService();
     const connection = vi.spyOn(sheetService as any, 'getKnex').mockResolvedValue({ knex: db, tenant: fixture.context.tenant });
     try { await work({ ...fixture, sheetService }); } finally { connection.mockRestore(); }
@@ -14023,7 +14010,7 @@ async function withTimeSheetApiFixture(work: (fixture: any) => Promise<void>) {
 }
 
 it('customer sheet API returns scoped operational summaries and authentic private comment DTOs', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context }: any) => {
-  const schemas = await import('../../lib/api/schemas/timeSheet');
+  const schemas = await import('../../../../../server/src/lib/api/schemas/timeSheet');
   const comment = await sheetService.addComment(entry.time_sheet_id, { comment_text: 'Private API feedback' }, context);
   expect(comment).toMatchObject({ comment_text: 'Private API feedback', user_id: context.userId, user_role: 'owner' });
   expect(schemas.timeSheetCommentResponseSchema.safeParse(comment).success).toBe(true);
@@ -14061,7 +14048,7 @@ it('customer sheet API omits hidden source effort and forbids whole-sheet comman
   await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
   await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
   expect(await sheetService.getWithDetails(entry.time_sheet_id, context)).toMatchObject({ total_hours: 1, time_entries: [{ entry_id: visible.entry_id }], comments: [], summary: { approval_ready: null } });
-  const schemas = await import('../../lib/api/schemas/timeSheet');
+  const schemas = await import('../../../../../server/src/lib/api/schemas/timeSheet');
   schemas.timeSheetWithDetailsResponseSchema.parse(await sheetService.getWithDetails(entry.time_sheet_id, context));
   expect(await sheetService.list({}, context)).toMatchObject({ total: 1, data: [{ total_hours: 1, entry_count: 1 }] });
   await expect(sheetService.submitTimeSheet(entry.time_sheet_id, {}, context)).rejects.toMatchObject({ statusCode: 403 });
@@ -14096,7 +14083,7 @@ it('customer sheet API honors metric and comment aliases and keeps history reada
   const detail = await sheetService.getWithDetails(entry.time_sheet_id, context);
   expect(detail).toMatchObject({ billable_hours: null, comments: [], user_name: '', summary: { total_hours: null, billable_hours: null, non_billable_hours: null } });
   expect(detail.total_hours).toBeUndefined();
-  const schemas = await import('../../lib/api/schemas/timeSheet'); schemas.timeSheetWithDetailsResponseSchema.parse(detail);
+  const schemas = await import('../../../../../server/src/lib/api/schemas/timeSheet'); schemas.timeSheetWithDetailsResponseSchema.parse(detail);
   await expect(sheetService.addComment(entry.time_sheet_id, { comment_text: 'Blind comment alias' }, context)).rejects.toMatchObject({ statusCode: 403 });
   await expireCoManagedEntitlement(principal.tenant);
   expect(await sheetService.getWithDetails(entry.time_sheet_id, context)).toEqual(detail);
@@ -14195,7 +14182,7 @@ it('customer sheet reporting computes visible statistics and exports all pages w
   expect(Object.keys(grouped.data).sort()).toEqual(periodIds.slice(0, 2).sort());
   const stats = await sheetService.getStatistics(context);
   expect(stats).toMatchObject({ total_time_sheets: 28, average_hours_per_sheet: 1.5 / 28, time_sheets_by_status: { DRAFT: 28 }, top_users_by_hours: [{ total_hours: 1.5, sheet_count: 28 }] });
-  const schemas = await import('../../lib/api/schemas/timeSheet'); schemas.timeSheetStatsResponseSchema.parse(stats);
+  const schemas = await import('../../../../../server/src/lib/api/schemas/timeSheet'); schemas.timeSheetStatsResponseSchema.parse(stats);
   expect(await sheetService.getStatistics(context, { has_entries: true })).toMatchObject({ total_time_sheets: 1, average_hours_per_sheet: 1.5 });
 }));
 
@@ -14237,8 +14224,8 @@ it('customer sheet reporting preserves masked totals and withholds free text acr
 }));
 
 it('customer time periods share calendar views and authorized CRUD across native and API surfaces', async () => withTimeSheetApiFixture(async ({ sheetService, context }: any) => {
-  const native = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
-  const schemas = await import('../../lib/api/schemas/timeSheet');
+  const native = await import('../../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const schemas = await import('../../../../../server/src/lib/api/schemas/timeSheet');
   const created = await sheetService.createTimePeriod(schemas.createTimePeriodSchema.parse({ start_date: '2026-10-01', end_date: '2026-10-08' }), context);
   expect(created).toMatchObject({ start_date: '2026-10-01', end_date: '2026-10-08', duration_days: 7 });
   schemas.timePeriodResponseSchema.parse(created);
@@ -14255,7 +14242,7 @@ it('customer time periods share calendar views and authorized CRUD across native
 }));
 
 it('customer time periods serialize overlap checks with background model writes', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer }: any) => {
-  const { TimePeriod } = await import('../../../../packages/scheduling/src/models/timePeriod');
+  const { TimePeriod } = await import('../../../../../packages/scheduling/src/models/timePeriod');
   const results = await Promise.allSettled([
     sheetService.createTimePeriod({ start_date: '2026-10-01', end_date: '2026-10-10' }, context),
     TimePeriod.create(db, context.tenant, { start_date: '2026-10-05', end_date: '2026-10-15' } as any),
@@ -14271,13 +14258,13 @@ it('customer time periods refuse to alter used periods and preserve per-item nat
   await expect(sheetService.updateTimePeriod(sheet.period_id, { end_date: '2026-09-13' }, context)).rejects.toMatchObject({ statusCode: 409 });
   await expect(sheetService.deleteTimePeriod(sheet.period_id, context)).rejects.toMatchObject({ statusCode: 409 });
   const empty = await sheetService.createTimePeriod({ start_date: '2026-10-01', end_date: '2026-10-08' }, context);
-  const native = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const native = await import('../../../../../packages/scheduling/src/actions/timePeriodsActions');
   expect(await native.deleteTimePeriods([sheet.period_id, empty.period_id, empty.period_id])).toMatchObject({ deletedIds: [empty.period_id], failed: [{ periodId: sheet.period_id }] });
   expect(await customer.table('time_periods').where('period_id', sheet.period_id)).toHaveLength(1);
 }));
 
 it('customer time periods generate contiguous full periods and roll back overlapping batches', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer }: any) => {
-  const { generateTimePeriodCalendar } = await import('../../../../packages/co-managed/src/nativeTimePeriod');
+  const { generateTimePeriodCalendar } = await import('../../../../../packages/co-managed/src/nativeTimePeriod');
   expect(generateTimePeriodCalendar({ start_date: '2027-01-31', end_date: '2027-04-01', frequency: 'monthly' })).toEqual([
     { start_date: '2027-01-31', end_date: '2027-02-28' }, { start_date: '2027-02-28', end_date: '2027-03-31' },
   ]);
@@ -14303,7 +14290,7 @@ it('customer time periods use actual key permission and retain readable history 
   // without granting tenant-wide calendar administration.
   const technician = await customer.table('roles').where('role_name', 'Technician').first();
   await customer.table('user_roles').where('user_id', user.user_id).update({ role_id: technician.role_id });
-  const native = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const native = await import('../../../../../packages/scheduling/src/actions/timePeriodsActions');
   const own = await native.getCurrentTimePeriod();
   expect(own === null || typeof own.period_id === 'string').toBe(true);
   await expect(sheetService.getTimePeriods(context)).rejects.toMatchObject({ statusCode: 403 });
@@ -14320,7 +14307,7 @@ it('customer time periods roll back calendar insertion when its key expires befo
 
 it('customer time periods admit native settings generation before reading its configuration and include an exact end boundary', async () => withTimeSheetApiFixture(async ({ context, customer }: any) => {
   await customer.table('time_period_settings').insert({ tenant: context.tenant, time_period_settings_id: randomUUID(), start_day: 1, end_day: 7, frequency: 1, frequency_unit: 'week', is_active: true, effective_from: '2026-10-01', created_at: db.fn.now(), updated_at: db.fn.now() });
-  const native = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const native = await import('../../../../../packages/scheduling/src/actions/timePeriodsActions');
   const permissions = await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_period', action: 'create' }).select('permission_id'));
   await customer.table('role_permissions').whereIn('permission_id', permissions.map((row: any) => row.permission_id)).del();
   await expect(native.generateAndSaveTimePeriods('2026-10-05', '2026-10-19')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -14332,8 +14319,8 @@ it('customer time periods admit native settings generation before reading its co
 }));
 
 it('customer period settings normalize legacy and native API contracts and retain compatible active schedules', async () => withTimeSheetApiFixture(async ({ sheetService, context }: any) => {
-  const schemas = await import('../../lib/api/schemas/timeSheet');
-  const native = await import('../../../../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions');
+  const schemas = await import('../../../../../server/src/lib/api/schemas/timeSheet');
+  const native = await import('../../../../../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions');
   const weekly = await sheetService.createTimePeriodSettings(schemas.createTimePeriodSettingsSchema.parse({ frequency: 'weekly', frequency_unit: 1, effective_from: '2026-09-01', effective_to: '2026-10-01' }), context);
   expect(weekly).toMatchObject({ frequency: 1, frequency_unit: 'week', start_day: 1, end_day: 0, is_active: true });
   schemas.timePeriodSettingsResponseSchema.parse(weekly);
@@ -14369,7 +14356,7 @@ it('customer period settings require current manage permission and remain readab
   const permissions = await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_period', action: 'manage' }).select('permission_id'));
   await customer.table('role_permissions').whereIn('permission_id', permissions.map((row: any) => row.permission_id)).del();
   await expect(sheetService.updateTimePeriodSettings(created.settings_id, { is_active: false }, context)).rejects.toMatchObject({ statusCode: 403 });
-  const native = await import('../../../../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions');
+  const native = await import('../../../../../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions');
   const result = await native.deleteTimePeriodSettings(created.settings_id); expect(result).toBeDefined();
   expect(await sheetService.getTimePeriodSettings(context)).toHaveLength(1);
   await customer.table('role_permissions').insert(permissions);
@@ -14387,7 +14374,7 @@ it('customer period settings apply actual key bundle scope independently of the 
   await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
   await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
   expect(await sheetService.getTimePeriodSettings(context)).toEqual([]);
-  const native = await import('../../../../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions');
+  const native = await import('../../../../../packages/scheduling/src/actions/time-period-settings-actions/timePeriodSettingsActions');
   expect(await native.getActiveTimePeriodSettings()).toHaveLength(1);
   await expect(sheetService.createTimePeriodSettings({ frequency: 'weekly', effective_from: '2027-01-01' }, context)).rejects.toMatchObject({ statusCode: 403 });
 }));
@@ -14412,7 +14399,7 @@ async function withPeriodJobFixture(work: (fixture: any) => Promise<void>) {
     const identity = { tenant: context.tenant, jobId: randomUUID(), scheduledJobId: randomUUID() };
     await customer.table('jobs').insert({ tenant: context.tenant, job_id: identity.jobId, type: 'createNextTimePeriods', status: 'processing', user_id: null,
       metadata: JSON.stringify({ triggeredBy: 'scheduler', scheduledJobId: identity.scheduledJobId }) });
-    const { createNextTimePeriod } = await import('../../../../packages/scheduling/src/lib/timePeriodAutomation');
+    const { createNextTimePeriod } = await import('../../../../../packages/scheduling/src/lib/timePeriodAutomation');
     const run = (extra: any = {}) => createNextTimePeriod(db, { ...identity, ...extra }, 2);
     await work({ ...fixture, identity, settings, today, boundary, run });
   });
@@ -14436,7 +14423,7 @@ it('customer period jobs reject forged queue identity completed jobs and human j
   await customer.table('jobs').where('job_id', identity.jobId).update({ user_id: null, type: 'unrelatedJob' });
   await expect(run()).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
   expect(await customer.table('time_periods')).toHaveLength(1);
-  const actions = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const actions = await import('../../../../../packages/scheduling/src/actions/timePeriodsActions');
   expect('createNextTimePeriod' in actions).toBe(false);
 }));
 
@@ -14473,8 +14460,8 @@ it('customer period jobs roll back generated dates if the sponsor becomes read-o
 
 it('customer period jobs and native generation share semi-monthly and seasonal annual boundaries', async () => {
   const { Temporal } = await import('@js-temporal/polyfill');
-  const { TimePeriodSuggester } = await import('../../../../packages/scheduling/src/lib/timePeriodSuggester');
-  const { generateTimePeriods } = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const { TimePeriodSuggester } = await import('../../../../../packages/scheduling/src/lib/timePeriodSuggester');
+  const { generateTimePeriods } = await import('../../../../../packages/scheduling/src/actions/timePeriodsActions');
   const base = { tenant: randomUUID(), time_period_settings_id: randomUUID(), frequency: 1, is_active: true, effective_from: '2026-01-01', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' };
   for (const [settings, end, expected] of [
     [[{ ...base, frequency_unit: 'month', start_day: 1, end_day: 16 }, { ...base, frequency_unit: 'month', start_day: 16, end_day: 0 }], '2027-03-01', [['2027-01-01', '2027-01-16'], ['2027-01-16', '2027-02-01'], ['2027-02-01', '2027-02-16'], ['2027-02-16', '2027-03-01']]],
@@ -14503,7 +14490,7 @@ async function withScheduleReadFixture(work: (fixture: any) => Promise<void>) {
       { ...base, entry_id: taskId, title: 'Rollout appointment', is_private: false, work_item_type: 'project_task', work_item_id: resource.id },
     ]);
     await customer.table('schedule_entry_assignees').insert([ownId, taskId].map(entry_id => ({ tenant: context.tenant, entry_id, user_id: context.userId })));
-    const native = await import('../../../../packages/scheduling/src/actions/scheduleActions');
+    const native = await import('../../../../../packages/scheduling/src/actions/scheduleActions');
     await work({ ...fixture, ownId, busyId, taskId, native });
   });
 }
@@ -14518,7 +14505,7 @@ it('customer schedule reads share private detail projections and actual work tit
   expect(busy).toMatchObject({ title: 'Busy', notes: '', work_item_id: null, recurrence_pattern: null });
   expect(await native.getScheduleEntryById(busyId)).toMatchObject({ title: 'Busy', notes: '', work_item_id: null });
   expect(await sheetService.getScheduleEntry(taskId, context)).toMatchObject({ work_item: { id: resource.id, title: 'Verify rollout', type: 'project_task' } });
-  const { scheduleEntryResponseSchema } = await import('../../lib/api/schemas/timeSheet');
+  const { scheduleEntryResponseSchema } = await import('../../../../../server/src/lib/api/schemas/timeSheet');
   for (const row of rows) scheduleEntryResponseSchema.parse(row);
   expect(await sheetService.getScheduleEntries(context, { user_id: context.userId })).toHaveLength(2);
   expect(await sheetService.getScheduleEntries(context, { start_date: '2026-09-07T10:00:00Z' })).toEqual([]);
@@ -14563,7 +14550,7 @@ it('customer schedule reads retain lapse history and reject missing credentials 
 }));
 
 it('customer schedule reads reject the whole collection when its key expires while retaining a work root', async () => withScheduleReadFixture(async ({ context, customer, resource }: any) => {
-  const { readCoManagedNativeSchedules } = await import('../../../../packages/co-managed/src/nativeScheduleRead');
+  const { readCoManagedNativeSchedules } = await import('../../../../../packages/co-managed/src/nativeScheduleRead');
   const blocker = await db.transaction();
   await tenantDb(blocker, context.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
   await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
@@ -14629,7 +14616,7 @@ it('customer schedule calendar filters actual assignments sources and recurrence
 }));
 
 it('customer schedule commands create edit and delete actual API entries without leaking event content', async () => withScheduleReadFixture(async ({ sheetService, context, resource, customer, publish }: any) => {
-  const { createScheduleEntrySchema, updateScheduleEntrySchema, scheduleEntryResponseSchema } = await import('../../lib/api/schemas/timeSheet');
+  const { createScheduleEntrySchema, updateScheduleEntrySchema, scheduleEntryResponseSchema } = await import('../../../../../server/src/lib/api/schemas/timeSheet');
   publish.mockClear();
   const created = await sheetService.createScheduleEntry(createScheduleEntrySchema.parse({ title: 'API allocation', notes: 'Private allocation details', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z', work_item_type: 'project_task', work_item_id: resource.id }), context);
   expect(created).toMatchObject({ title: 'API allocation', assigned_user_ids: [context.userId], work_item: { title: 'Verify rollout' }, duration_hours: 1 });
@@ -14878,7 +14865,7 @@ it('customer schedule relations cancel linked requests meetings and conflicts at
   const meeting = await customer.table('online_meetings').where('meeting_id', meetingId).first();
   expect(meeting).toMatchObject({ status: 'cancelled', provider_meeting_id: `provider-${meetingId}`, provider_event_id: `event-${meetingId}`, co_managed_sync_action: 'delete' });
   expect(meeting.co_managed_sync_operation_id).toBeTruthy();
-  await expect(require('../../../migrations/20260908011054_add_co_managed_meeting_sync_intents.cjs').down(db)).rejects.toThrow(/pending co-managed meeting/);
+  await expect(require('../../../../../server/migrations/20260908011054_add_co_managed_meeting_sync_intents.cjs').down(db)).rejects.toThrow(/pending co-managed meeting/);
 }));
 
 it('customer schedule relations retain request-only provider identity before clearing live join fields', async () => withScheduleAppointmentFixture(async ({ native, ownId, customer, meetingId, requestId }: any) => {
@@ -14982,11 +14969,11 @@ it('customer schedule meeting sync defers suspended and read-only workspaces wit
 }));
 
 it('customer schedule meeting sync sweep uses the retained consumer and a successful replay does not call the provider twice', async () => withScheduleMeetingSyncFixture(async ({ customer, context, meetingId }: any) => {
-  const providerModule = await import('../../../../packages/scheduling/src/lib/teamsMeetingService');
+  const providerModule = await import('../../../../../packages/scheduling/src/lib/teamsMeetingService');
   const update = vi.fn().mockResolvedValue({ status: 'updated' }), remove = vi.fn();
   const spy = vi.spyOn(providerModule, 'resolveTeamsMeetingService').mockResolvedValue({ updateTeamsMeetingWithResult: update, deleteTeamsMeetingWithResult: remove } as any);
   try {
-    const { synchronizeCoManagedScheduleMeetings } = await import('../../../../packages/scheduling/src/lib/scheduleMeetingSynchronization');
+    const { synchronizeCoManagedScheduleMeetings } = await import('../../../../../packages/scheduling/src/lib/scheduleMeetingSynchronization');
     expect(await synchronizeCoManagedScheduleMeetings(db, context.tenant)).toEqual([{ status: 'synchronized' }]);
     expect(update).toHaveBeenCalledTimes(1);
     expect(update.mock.lastCall[0]).toMatchObject({ organizerUserId: 'original-organizer', eventId: `event-${meetingId}` });
@@ -15017,7 +15004,7 @@ async function withAppointmentAuthorityFixture(work: (fixture: any) => Promise<v
   return withScheduleAppointmentFixture(async (fixture: any) => {
     const { customer, requestId, context } = fixture;
     await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ description: 'Private appointment description', requester_name: 'Appointment requester', requester_email: 'requester@example.invalid' });
-    const appointment = await import('../../../../packages/scheduling/src/actions/appointmentRequestManagementActions');
+    const appointment = await import('../../../../../packages/scheduling/src/actions/appointmentRequestManagementActions');
     const domain = await import('@alga-psa/co-managed');
     const actor = async () => ({ kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId });
     const read = (options: any = {}) => domain.readCoManagedNativeAppointmentRequests(db, context.tenant, actor, options);
@@ -15227,7 +15214,7 @@ it('customer meeting creation preparation reserves one immutable disclosure with
   expect(JSON.stringify(first)).not.toContain(context.apiKeyId);
   expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending', schedule_entry_id: ownId });
   await expect(customer.table('co_managed_meeting_creation_operations').where('operation_id', first.operationId).update({ provider_request: '{}' })).rejects.toMatchObject({ code: '23514' });
-  await expect(require('../../../migrations/20260908021208_create_co_managed_meeting_creation_operations.cjs').down(db)).rejects.toThrow('retained meeting creation');
+  await expect(require('../../../../../server/migrations/20260908021208_create_co_managed_meeting_creation_operations.cjs').down(db)).rejects.toThrow('retained meeting creation');
 }));
 
 it('customer meeting creation preparation rejects changed disclosures and revoked credentials while retaining the original operation', async () => withAppointmentApprovalFixture(async ({ domain, actor, context, requestId, customer }: any) => {
@@ -15331,7 +15318,7 @@ it('customer meeting creation recovery retracts a changed disclosure instead of 
 }));
 
 it('customer meeting creation UI approval uses the durable provider identity and admitted recipient payload', async () => withMeetingCreationFixture(async ({ approve, provider, target, meeting, operation, requestId }: any) => {
-  const registry = await import('../../../../packages/scheduling/src/lib/teamsMeetingService');
+  const registry = await import('../../../../../packages/scheduling/src/lib/teamsMeetingService');
   const createMeeting = vi.fn(async () => ({ status: 'created', meeting }));
   const resolve = vi.spyOn(registry, 'resolveTeamsMeetingService').mockResolvedValue({ getTeamsMeetingCreationTarget: provider.target, createTeamsMeetingWithResult: createMeeting } as any);
   try {
@@ -15393,7 +15380,7 @@ it('customer approved meeting generation uses actual calendar times and all assi
   await customer.table('schedule_entry_assignees').insert({ tenant: context.tenant, entry_id: ownId, user_id: secondId });
   await customer.table('schedule_entries').where('entry_id', ownId).update({ scheduled_start: '2026-09-18T13:00:00Z', scheduled_end: '2026-09-18T14:00:00Z' });
   const before = await customer.table('schedule_entries').where('entry_id', ownId).first();
-  const registry = await import('../../../../packages/scheduling/src/lib/teamsMeetingService');
+  const registry = await import('../../../../../packages/scheduling/src/lib/teamsMeetingService');
   const createMeeting = vi.fn(async () => ({ status: 'created', meeting }));
   const resolve = vi.spyOn(registry, 'resolveTeamsMeetingService').mockResolvedValue({ getTeamsMeetingCreationTarget: provider.target, createTeamsMeetingWithResult: createMeeting } as any);
   try {
@@ -15564,7 +15551,7 @@ it('customer meeting artifact delivery cancels prepared content on final credent
 it('customer meeting artifact HTTP transcript download uses its owner and bypasses neither scope nor content-type controls', async () => withMeetingArtifactFixture(async ({ user, transcriptId, customer, ownId }: any) => {
   const auth = await import('@alga-psa/auth'), current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user);
   try {
-    const route = await import('../../app/api/online-meetings/artifacts/[artifactId]/route');
+    const route = await import('../../../../../server/src/app/api/online-meetings/artifacts/[artifactId]/route');
     const result = await route.GET(new Request('http://localhost/api/online-meetings/artifacts/test') as any, { params: Promise.resolve({ artifactId: transcriptId }) });
     expect(result.status).toBe(200); expect(result.headers.get('cache-control')).toBe('private, no-store');
     expect(result.headers.get('content-type')).toBe('text/plain; charset=utf-8'); expect(await result.text()).toContain('Private transcript content');
@@ -15575,7 +15562,7 @@ it('customer meeting artifact HTTP transcript download uses its owner and bypass
 }));
 
 it('customer meeting artifact document actions retain owner scope instead of relying on broad document permission', async () => withMeetingArtifactFixture(async ({ customer, documentId }: any) => {
-  const blocks = await import('../../../../packages/documents/src/actions/documentBlockContentActions');
+  const blocks = await import('../../../../../packages/documents/src/actions/documentBlockContentActions');
   expect(JSON.stringify(await blocks.getBlockContent(documentId))).toContain('Private transcript content');
   await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where('resource', 'user_schedule').select('permission_id')).del();
   const result = await blocks.getBlockContent(documentId);
@@ -15601,7 +15588,7 @@ async function withMeetingArtifactApiFixture(work: (fixture: any) => Promise<voi
     await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ api_key: createHash('sha256').update(plaintext).digest('hex') });
     const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
     const browser = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user), connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
-    const route = await import('../../app/api/online-meetings/artifacts/[artifactId]/route');
+    const route = await import('../../../../../server/src/app/api/online-meetings/artifacts/[artifactId]/route');
     const request = (key: string | null = plaintext, extra: Record<string, string> = {}) => new Request('http://localhost/api/online-meetings/artifacts/test', { headers: { ...(key !== null ? { 'x-api-key': key } : {}), ...extra } }) as any;
     const download = (key: string | null = plaintext, extra: Record<string, string> = {}) => route.GET(request(key, extra), { params: Promise.resolve({ artifactId: transcriptId }) });
     try { await work({ ...fixture, plaintext, request, download, browser }); }
@@ -15612,7 +15599,7 @@ async function withMeetingArtifactApiFixture(work: (fixture: any) => Promise<voi
 it('customer meeting artifact API authenticates the actual key through both download URLs without trusting tenant headers or cookies', async () => withMeetingArtifactApiFixture(async ({ download, request, browser, transcriptId }: any) => {
   const response = await download(undefined, { 'x-tenant-id': randomUUID(), 'x-user-id': randomUUID(), 'x-api-key-id': randomUUID() });
   expect(response.status).toBe(200); expect(await response.text()).toContain('Private transcript content');
-  const legacy = await import('../../app/api/online-meetings/recordings/[artifactId]/route');
+  const legacy = await import('../../../../../server/src/app/api/online-meetings/recordings/[artifactId]/route');
   const alias = await legacy.GET(request(), { params: Promise.resolve({ artifactId: transcriptId }) });
   expect(alias.status).toBe(200); expect(alias.headers.get('cache-control')).toBe('private, no-store');
   expect(browser).not.toHaveBeenCalled();
@@ -15640,7 +15627,7 @@ it('customer meeting artifact API applies key-specific document narrowing even w
 }));
 
 it('customer meeting artifact API rechecks revocation after initial key validation before delivering content', async () => withMeetingArtifactApiFixture(async ({ download, context, customer }: any) => {
-  const { ApiKeyServiceForApi } = await import('../../lib/services/apiKeyServiceForApi');
+  const { ApiKeyServiceForApi } = await import('../../../../../server/src/lib/services/apiKeyServiceForApi');
   const validate = ApiKeyServiceForApi.validateApiKeyAnyTenant.bind(ApiKeyServiceForApi);
   const lookup = vi.spyOn(ApiKeyServiceForApi, 'validateApiKeyAnyTenant').mockImplementation(async (plaintext: string) => {
     const key = await validate(plaintext);
@@ -15667,8 +15654,8 @@ async function withInteractionMeetingReadFixture(work: (fixture: any) => Promise
     await customer.table('interactions').insert({ tenant: context.tenant, interaction_id: interactionId, type_id: typeId, user_id: context.userId, client_id: request.client_id,
       title: 'Customer meeting follow-up', notes: 'Private interaction details', interaction_date: '2026-09-07T09:00:00Z' });
     await customer.table('online_meetings').where('meeting_id', meetingId).update({ interaction_id: interactionId });
-    const actions = await import('../../../../packages/clients/src/actions/interactionActions');
-    const meetings = await import('../../../../packages/clients/src/actions/onlineMeetingActions');
+    const actions = await import('../../../../../packages/clients/src/actions/interactionActions');
+    const meetings = await import('../../../../../packages/clients/src/actions/onlineMeetingActions');
     const list = (options: any = {}) => domain.readCoManagedNativeInteractions(db, context.tenant, actor, options);
     await work({ ...fixture, interactionId, typeId, clientId: request.client_id, actions, meetings, list });
   });
@@ -15892,7 +15879,7 @@ it('customer interaction lifecycle rolls back insertion and deletion when creden
 }));
 
 it('consolidated ticket export returns every matching row in global order regardless of page controls', async () => withTicketQueueFixture(async ({ principal, sponsor, nativeId, resource }: any) => {
-  const { exportCoManagedTicketQueue } = await import('../../../../packages/co-managed/src/ticketQueue');
+  const { exportCoManagedTicketQueue } = await import('../../../../../packages/co-managed/src/ticketQueue');
   const source = await sponsor.table('tickets').where('ticket_id', nativeId).first();
   await sponsor.table('tickets').insert(Array.from({ length: 105 }, (_, n) => ({ tenant: principal.tenant, ticket_id: randomUUID(), ticket_number: `EXPORT-${String(n).padStart(3, '0')}`, title: `Export row ${String(n).padStart(3, '0')}`, client_id: source.client_id, board_id: source.board_id, status_id: source.status_id, entered_by: principal.userId })));
   const rows = await exportCoManagedTicketQueue(db, principal, { view: 'working', state: 'all', sort: 'title', direction: 'asc', page: 100, pageSize: 1 } as any);
@@ -15905,7 +15892,7 @@ it('consolidated ticket export returns every matching row in global order regard
 }));
 
 it('consolidated ticket export applies current field restrictions and removes revoked work from the downloadable relation', async () => withTicketQueueFixture(async ({ principal, resource, customerPrincipal, operation }: any) => {
-  const { exportCoManagedTicketQueue } = await import('../../../../packages/co-managed/src/ticketQueue');
+  const { exportCoManagedTicketQueue } = await import('../../../../../packages/co-managed/src/ticketQueue');
   const bundles = await import('@alga-psa/authorization');
   const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Export title restriction', actorUserId: principal.userId });
   await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['title', 'status_id'] } });
@@ -15914,13 +15901,13 @@ it('consolidated ticket export applies current field restrictions and removes re
   const exported = await exportCoManagedTicketQueue(db, principal, { view: 'oversight', state: 'all' });
   expect(exported).toHaveLength(1); expect(exported[0].fields).not.toHaveProperty('title'); expect(exported[0].fields).not.toHaveProperty('status_name');
   expect(await exportCoManagedTicketQueue(db, principal, { view: 'oversight', state: 'all', search: 'Customer issue' })).toEqual([]);
-  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await revokeCoManagedTicketGrant(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'End this disclosure' });
   expect(await exportCoManagedTicketQueue(db, principal, { view: 'oversight', state: 'all' })).toEqual([]);
 }));
 
 it('consolidated ticket export remains available during license lapse but rejects expired sessions', async () => withTicketQueueFixture(async ({ principal, sponsor, resource }: any) => {
-  const { exportCoManagedTicketQueue } = await import('../../../../packages/co-managed/src/ticketQueue');
+  const { exportCoManagedTicketQueue } = await import('../../../../../packages/co-managed/src/ticketQueue');
   await expireCoManagedEntitlement(principal.tenant);
   expect(await exportCoManagedTicketQueue(db, principal, { view: 'oversight' })).toEqual([expect.objectContaining({ tenant: resource.tenant, ticketId: resource.id })]);
   await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(0) });
@@ -15985,7 +15972,7 @@ it('bulk handback rolls back an individual handoff if its retained session expir
 }));
 
 async function withTicketAssignmentFixture(work: (fixture: any) => Promise<void>) {
-  return withTicketQueueFixture(async fixture => work({ ...fixture, assignments: await import('../../../../packages/co-managed/src/ticketAssignments'),
+  return withTicketQueueFixture(async fixture => work({ ...fixture, assignments: await import('../../../../../packages/co-managed/src/ticketAssignments'),
     selected: { tenant: fixture.principal.tenant, kind: 'user', id: fixture.principal.userId } }));
 }
 
@@ -16091,7 +16078,7 @@ it.each(['customer', 'sponsor'])('pre-handoff assignment lets the %s assign visi
   await domain.assignCoManagedTicket(db, actor, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: null });
   expect((await domain.getCoManagedTicketQueue(db, principal, { view: 'working' })).totalCount).toBe(0);
   expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ assigned_to: null, assigned_team_id: null });
-  const migration = require('../../../migrations/20260908043851_allow_co_managed_assignment_before_escalation.cjs');
+  const migration = require('../../../../../server/migrations/20260908043851_allow_co_managed_assignment_before_escalation.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('not been escalated');
 }));
 
@@ -16164,7 +16151,7 @@ it('pre-handoff assignment rolls back new work routing and receipts on final cre
 
 async function organizationSlaStoreFixture() {
   const fixture = await ticketHandoffFixture();
-  const domain = await import('../../../../packages/sla/src/services/organizationSlaStore');
+  const domain = await import('../../../../../packages/sla/src/services/organizationSlaStore');
   const identity = { tenant: fixture.principal.tenant, obligationId: randomUUID(), sourceTenant: fixture.resource.tenant, ticketId: fixture.resource.id };
   const input = { workId: randomUUID(), generation: 1, policyId: randomUUID(), priorityId: randomUUID(),
     schedule: { timezone: 'UTC', is_24x7: true, entries: [] }, targets: { responseMinutes: 1, resolutionMinutes: 10 }, occurredAt: '2026-09-08T12:00:00.000Z' };
@@ -16236,7 +16223,7 @@ describe('organization SLA durable clock', () => {
   it('replays migration safely, refuses history loss, and rejects mismatched clock identities', async () => {
     const f = await organizationSlaStoreFixture();
     await f.start();
-    const migration = require('../../../../server/migrations/20260908050419_create_organization_sla_obligations.cjs');
+    const migration = require('../../../../../server/migrations/20260908050419_create_organization_sla_obligations.cjs');
     await migration.up(db);
     await expect(migration.down(db)).rejects.toThrow('retained organization SLA history');
     await expect(f.sponsor.table('sla_organization_obligations').where('obligation_id', f.identity.obligationId)
@@ -16250,7 +16237,7 @@ describe('organization SLA durable clock', () => {
 
 it('handoff SLA starts with actual escalation, resumes the original MSP target and leaves the customer timeline intact', async () => {
   const f = await ticketHandoffFixture();
-  const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
   expect(await f.sponsor.table('sla_organization_obligations')).toEqual([]);
   const request = { operationId: randomUUID(), expectedRevision: 0, note: 'Please investigate' };
@@ -16279,7 +16266,7 @@ it.each(['mapping', 'policy', 'target'] as const)('handoff SLA rejects missing %
   if (missing === 'mapping') await f.sponsor.table('co_managed_sla_priority_mappings').del();
   if (missing === 'target') await f.sponsor.table('sla_policy_targets').del();
   if (missing === 'policy') await f.sponsor.table('sla_policies').update({ is_default: false });
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await expect(escalateCoManagedTicket(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 0, note: 'Escalate' })).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
   for (const table of ['co_management_ticket_work', 'co_management_ticket_handoffs']) expect(await f.customer.table(table)).toEqual([]);
@@ -16288,7 +16275,7 @@ it.each(['mapping', 'policy', 'target'] as const)('handoff SLA rejects missing %
 
 it('handoff SLA priority configuration requires the actual sponsor administrator and current revision/session', async () => {
   const f = await ticketHandoffFixture();
-  const policy = await import('../../../../packages/co-managed/src/policy');
+  const policy = await import('../../../../../packages/co-managed/src/policy');
   const state = await policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target);
   expect(state).toMatchObject({ revision: 4, canWrite: true });
   expect(state.customerPriorities).toHaveLength(state.mappings.length);
@@ -16316,7 +16303,7 @@ it.each(['default', 'board', 'client'] as const)('handoff SLA uses the MSP %s po
   }
   if (selection !== 'default') await f.sponsor.table('boards').where('board_id', f.operation.escalation_board_id).update({ sla_policy_id: boardPolicy });
   if (selection === 'client') await f.sponsor.table('clients').where('client_id', f.operation.request.clientId).update({ sla_policy_id: clientPolicy });
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Escalate' });
   expect(await f.sponsor.table('sla_organization_obligations').first()).toMatchObject({
     sla_policy_id: selection === 'default' ? target.sla_policy_id : selection === 'board' ? boardPolicy : clientPolicy,
@@ -16325,7 +16312,7 @@ it.each(['default', 'board', 'client'] as const)('handoff SLA uses the MSP %s po
 });
 
 it('handoff SLA configuration blocks suspended workspaces and license-lapsed mutations', async () => {
-  const f = await ticketHandoffFixture(), policy = await import('../../../../packages/co-managed/src/policy');
+  const f = await ticketHandoffFixture(), policy = await import('../../../../../packages/co-managed/src/policy');
   const initial = await policy.getCoManagedSlaPriorityMappings(db, f.principal, f.target);
   expect(initial.policyName).toBe('MSP policy');
   for (const owner of [f.sponsor, f.customer]) {
@@ -16344,7 +16331,7 @@ it('handoff SLA and responsibility both roll back when the initiating session ex
   await db.raw(`CREATE FUNCTION expire_sla_handoff_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${actor.tenant}'::uuid AND session_id = '${actor.sessionId}'::uuid; RETURN NEW; END $$`);
   await db.raw('CREATE TRIGGER expire_sla_handoff_session AFTER INSERT ON co_management_ticket_handoffs FOR EACH ROW EXECUTE FUNCTION expire_sla_handoff_session()');
   try {
-    const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     await expect(escalateCoManagedTicket(db, actor, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Escalate' }))
       .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
     for (const table of ['co_management_ticket_work', 'co_management_ticket_handoffs']) expect(await f.customer.table(table)).toEqual([]);
@@ -16355,7 +16342,7 @@ it('handoff SLA and responsibility both roll back when the initiating session ex
 it.each(['requester', 'shared_it'] as const)('MSP SLA response counts the first actual %s reply, not customer or MSP-private notes', async audience => withCommentCreationFixture(async f => {
   const before = await f.sponsor.table('sla_organization_obligations').first();
   await f.create(f.customerPrincipal, { operationId: randomUUID(), audience, text: 'Customer troubleshooting' });
-  const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP private diagnosis' });
   expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
   const request = { operationId: randomUUID(), audience, text: 'MSP response' };
@@ -16373,7 +16360,7 @@ it.each(['requester', 'shared_it'] as const)('MSP SLA response counts the first 
 }));
 
 it('MSP SLA response while handed back records the paused elapsed time without restarting responsibility', async () => withCommentCreationFixture(async f => {
-  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { handBackCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer is checking' });
   const paused = await f.sponsor.table('sla_organization_obligations').first();
   await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Additional guidance' });
@@ -16397,12 +16384,12 @@ it('MSP SLA response and published comment roll back together if the author expi
 }));
 
 it.each(['customer', 'msp'] as const)('MSP SLA resolution closes during handback when %s closes the canonical ticket', async side => withSharedTicketMutationFixture(async f => {
-  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { handBackCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify the fix' });
   const paused = await f.sponsor.table('sla_organization_obligations').first();
   if (side === 'msp') await f.mutate({ status_id: f.closedStatusId });
   else {
-    const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const { updateTicketInTransaction } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
     const localUser = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
     await db.transaction(trx => updateTicketInTransaction(trx, localUser, f.resource.tenant, f.resource.id, { status_id: f.closedStatusId }));
   }
@@ -16416,15 +16403,15 @@ it.each(['customer', 'msp'] as const)('MSP SLA resolution closes during handback
 }));
 
 it('MSP SLA resolution preserves the frozen obligation after all ticket visibility is revoked', async () => withSharedTicketMutationFixture(async f => {
-  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Keep this ticket private' });
   const frozen = await f.sponsor.table('sla_organization_obligations').first();
-  const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+  const { updateTicketInTransaction } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
   const localUser = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
   await db.transaction(trx => updateTicketInTransaction(trx, localUser, f.resource.tenant, f.resource.id, { status_id: f.closedStatusId }));
   expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(frozen);
   expect(await f.sponsor.table('sla_organization_events').where('event_type', 'resolved')).toEqual([]);
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   const shared = await escalateCoManagedTicket(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 2, note: 'Share the completed result' });
   const resolved = await f.sponsor.table('sla_organization_obligations').first();
@@ -16463,7 +16450,7 @@ it('MSP SLA reopen creates a new obligation only for a genuine reopening while M
 
 it('MSP SLA reopen under customer responsibility waits for a fresh escalation', async () => withSharedTicketMutationFixture(async f => {
   const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
-  const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer validates' });
   await f.mutate({ status_id: f.closedStatusId });
   const closed = await f.sponsor.table('sla_organization_obligations').first();
@@ -16491,8 +16478,8 @@ it.each(['legacy', 'optimized'] as const)('MSP SLA native %s customer close/reop
   const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
   const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
   try {
-    const action = path === 'legacy' ? (await import('../../../../packages/tickets/src/actions/ticketActions')).updateTicket
-      : (await import('../../../../packages/tickets/src/actions/optimizedTicketActions')).updateTicketWithCache;
+    const action = path === 'legacy' ? (await import('../../../../../packages/tickets/src/actions/ticketActions')).updateTicket
+      : (await import('../../../../../packages/tickets/src/actions/optimizedTicketActions')).updateTicketWithCache;
     await auth.runWithApiKeyUser(user, () => runWithTenant(f.resource.tenant, async () => {
       expect(await action(f.resource.id, { status_id: f.closedStatusId })).toBe('success');
       const closed = await f.sponsor.table('sla_organization_obligations').first();
@@ -16520,15 +16507,15 @@ it('MSP SLA shared edit checks the initiating session after its final close rece
 
 async function dueMspSlaFixture() {
   const f = await ticketHandoffFixture();
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Please investigate' });
   const row = await f.sponsor.table('sla_organization_obligations').first();
-  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const { startOrganizationSlaClock } = await import('../../../../../shared/lib/sla/organizationSlaClock');
   const clock = startOrganizationSlaClock(row.clock.identity, row.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 },
     new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString());
   await f.sponsor.table('sla_organization_obligations').where('obligation_id', row.obligation_id).update({ clock: JSON.stringify(clock) });
   const read = () => f.sponsor.table('sla_organization_obligations').where('obligation_id', row.obligation_id).first();
-  const observer = await import('../../../../packages/co-managed/src/ticketSla');
+  const observer = await import('../../../../../packages/co-managed/src/ticketSla');
   return { ...f, identity: clock.identity, read, ...observer };
 }
 
@@ -16549,7 +16536,7 @@ it('MSP SLA observation records one due breach under concurrent workers and leav
 it.each(['revoked', 'handback', 'terminated', 'suspended', 'read-only', 'wrong-owner', 'wrong-obligation'] as const)
 ('MSP SLA observation does not advance %s work', async reason => {
   const f = await dueMspSlaFixture();
-  const { revokeCoManagedTicketGrant, handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { revokeCoManagedTicketGrant, handBackCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   if (reason === 'revoked') await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
   if (reason === 'handback') await handBackCoManagedTicket(db, f.principal, f.resource,
@@ -16579,7 +16566,7 @@ it('MSP SLA observation keyset scan reaches due work beyond a skipped historical
 
 it('MSP SLA display presents separate customer and MSP outcomes without persisting a read or exposing policy configuration', async () => {
   const f = await dueMspSlaFixture();
-  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { getCoManagedTicketScreen: read } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
   const policy = await f.sponsor.table('sla_policies').first();
   const customerPolicyId = randomUUID();
   await f.customer.table('sla_policies').insert({ ...policy, tenant: f.resource.tenant, sla_policy_id: customerPolicyId, policy_name: 'Private customer policy' });
@@ -16601,9 +16588,9 @@ it('MSP SLA display presents separate customer and MSP outcomes without persisti
 
 it('MSP SLA display distinguishes pre-escalation from unavailable historical timing and retains paused outcomes during lapse', async () => {
   const f = await ticketHandoffFixture();
-  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { getCoManagedTicketScreen: read } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
   expect((await read(db, f.customerPrincipal, f.resource)).sla).toEqual({ customer: { state: 'not_configured' }, msp: { state: 'not_started' } });
-  const { escalateCoManagedTicket, handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket, handBackCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate' });
   await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify' });
   await f.sponsor.table('co_managed_allocations').del();
@@ -16622,7 +16609,7 @@ it.each(['sla', 'tickets.sla_response_at', 'work', 'fields.priority.name', 'tick
     templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.request.clientId], redactedFields: [field] } });
   await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
   await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
-  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { getCoManagedTicketScreen: read } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
   const result = (await read(db, f.principal, f.resource)).sla;
   if (field === 'work') { expect(result.msp).toBeUndefined(); expect(result.customer).toBeDefined(); }
   else if (field === 'tickets.sla_response_at') { expect(result.customer).toBeUndefined(); expect(result.msp).toBeDefined(); }
@@ -16631,8 +16618,8 @@ it.each(['sla', 'tickets.sla_response_at', 'work', 'fields.priority.name', 'tick
 
 it('MSP SLA display rejects revoked foreign readers and shows the customer only the retained paused result', async () => {
   const f = await ticketHandoffFixture();
-  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
-  const { escalateCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { getCoManagedTicketScreen: read } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate' });
   await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
   const before = await f.sponsor.table('sla_organization_obligations').first();
@@ -16654,7 +16641,7 @@ async function addMspSlaThresholds(f: Awaited<ReturnType<typeof dueMspSlaFixture
 it('MSP SLA threshold scan captures warning crossings before the due date once across workers', async () => {
   const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
   const saved = await f.read();
-  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const { startOrganizationSlaClock } = await import('../../../../../shared/lib/sla/organizationSlaClock');
   const clock = startOrganizationSlaClock(f.identity, saved.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 },
     new Date(Date.now() - 50 * 60000).toISOString());
   await f.sponsor.table('sla_organization_obligations').where('obligation_id', f.identity.obligationId).update({ clock: JSON.stringify(clock) });
@@ -16685,7 +16672,7 @@ it('MSP SLA threshold capture retains all missed warnings and breaches with immu
 
 it('MSP SLA threshold capture rolls back with the source transaction and deduplicates exact retries', async () => {
   const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
-  const { applyOrganizationSlaEvent } = await import('../../../../shared/lib/sla/organizationSlaStore');
+  const { applyOrganizationSlaEvent } = await import('../../../../../shared/lib/sla/organizationSlaStore');
   const operationId = randomUUID(), event = { kind: 'observed' as const, occurredAt: new Date().toISOString() };
   const before = await f.read();
   await expect(db.transaction(async trx => { await applyOrganizationSlaEvent(trx, f.identity, operationId, event); throw new Error('Caller rollback'); })).rejects.toThrow('Caller rollback');
@@ -16698,10 +16685,10 @@ it('MSP SLA threshold capture rolls back with the source transaction and dedupli
 
 it('MSP SLA threshold capture catches handback crossings without later paused or completed targets gaining new notices', async () => {
   const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
-  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { handBackCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify' });
   expect(await notices()).toHaveLength(3);
-  const { applyOrganizationSlaEvent } = await import('../../../../shared/lib/sla/organizationSlaStore');
+  const { applyOrganizationSlaEvent } = await import('../../../../../shared/lib/sla/organizationSlaStore');
   await db.transaction(trx => applyOrganizationSlaEvent(trx, f.identity, randomUUID(), { kind: 'resolved', occurredAt: new Date().toISOString() }));
   const rows = await notices();
   await addMspSlaThresholds(f, [80]);
@@ -16712,7 +16699,7 @@ it('MSP SLA threshold capture catches handback crossings without later paused or
 it('MSP SLA threshold migration replays safely and refuses retained history loss', async () => {
   const f = await dueMspSlaFixture(), notices = await addMspSlaThresholds(f);
   await f.observeCoManagedTicketSla(db, f.identity);
-  const migration = require('../../../migrations/20260908062358_create_organization_sla_notification_events.cjs');
+  const migration = require('../../../../../server/migrations/20260908062358_create_organization_sla_notification_events.cjs');
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('retained organization SLA notifications');
   const row = (await notices())[0];
@@ -16723,7 +16710,7 @@ it('MSP SLA threshold migration replays safely and refuses retained history loss
 
 it('MSP SLA threshold capture commits a late first reply and its breach together before any timer run', async () => withCommentCreationFixture(async f => {
   const row = await f.sponsor.table('sla_organization_obligations').first();
-  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const { startOrganizationSlaClock } = await import('../../../../../shared/lib/sla/organizationSlaClock');
   const clock = startOrganizationSlaClock(row.clock.identity, row.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 },
     new Date(Date.now() - 2 * 60 * 60000).toISOString());
   await f.sponsor.table('sla_organization_obligations').where('obligation_id', row.obligation_id).update({ clock: JSON.stringify(clock) });
@@ -16753,7 +16740,7 @@ async function mspSlaNoticeFixture() {
     title: '{{slaType}} {{ticketNumber}}', message: '{{ticketTitle}}: {{timeOverdue}}', subtype_id: subtype.internal_notification_subtype_id })))
     .onConflict(['name', 'language_code']).ignore();
   const { persistCoManagedSlaNotifications: persist } = await import('@alga-psa/notifications/lib/coManagedSlaNotifications');
-  const { withCoManagedSlaNotification: withNotice } = await import('../../../../packages/co-managed/src/slaNotification');
+  const { withCoManagedSlaNotification: withNotice } = await import('../../../../../packages/co-managed/src/slaNotification');
   const { withNotificationDelivery: deliver } = await import('@alga-psa/notifications/lib/notificationDelivery');
   const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
   return { ...f, event, persist, withNotice, deliver, process };
@@ -16792,7 +16779,7 @@ it.each(['assignee', 'board-manager', 'escalation-manager'] as const)('MSP SLA n
   await f.sponsor.table('escalation_managers').del();
   expect(await f.deliver(db, notice, async () => 'delivered')).toBeNull();
   // The actual recipient can still read an old notice while retaining ticket access.
-  const { withCoManagedStoredSlaNotification } = await import('../../../../packages/co-managed/src/storedSlaNotification');
+  const { withCoManagedStoredSlaNotification } = await import('../../../../../packages/co-managed/src/storedSlaNotification');
   expect(await withCoManagedStoredSlaNotification(db, f.principal, notice.internal_notification_id, async (_context, current) => current.message.eventId)).toBe(f.event.notification_event_id);
 });
 
@@ -16801,7 +16788,7 @@ it.each(['revoked', 'metadata', 'threshold-disabled', 'inactive'] as const)('MSP
   await f.persist(db, f.identity.tenant);
   const notice = await f.sponsor.table('internal_notifications').first();
   if (reason === 'revoked') {
-    const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
   }
   if (reason === 'metadata') await f.sponsor.table('internal_notifications').update({ metadata: null, title: 'Cached private canary', message: 'Never deliver this' });
@@ -16829,7 +16816,7 @@ it('MSP SLA inbox uses fresh redacted content, qualified counts and actual brows
       const page = await actions.getNotificationsAction({ limit: 5 } as any);
       expect(page.total).toBe(1); expect(page.unread_count).toBe(1);
       expect(page.notifications[0].message).toContain('Current authorized title');
-      const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+      const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
       await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
       expect((await actions.getNotificationsAction({ limit: 5 } as any)).total).toBe(0);
       expect(await actions.getNotificationByIdAction(notice.internal_notification_id)).toBeNull();
@@ -16862,7 +16849,7 @@ it('MSP SLA notice storage and delivery tasks roll back with the caller, then re
   expect((await f.sponsor.table('sla_organization_notification_events').first()).status).toBe('pending');
   await f.persist(db, f.identity.tenant);
   expect(await f.sponsor.table('internal_notifications')).toHaveLength(1);
-  const migration = require('../../../migrations/20260908063356_create_organization_sla_notification_recipients.cjs');
+  const migration = require('../../../../../server/migrations/20260908063356_create_organization_sla_notification_recipients.cjs');
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('retained organization SLA notification recipients');
 });
@@ -16880,7 +16867,7 @@ async function mspSlaEmailFixture() {
   const f = await mspSlaNoticeFixture();
   await f.sponsor.table('users').where('user_id', f.principal.userId).update({ email: 'original@example.test' });
   await f.persist(db, f.identity.tenant);
-  const { processCoManagedSlaEmailDeliveries: processEmail } = await import('../../../../packages/co-managed/src/slaEmailDeliveries');
+  const { processCoManagedSlaEmailDeliveries: processEmail } = await import('../../../../../packages/co-managed/src/slaEmailDeliveries');
   const readEmail = () => f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').first();
   return { ...f, processEmail, readEmail };
 }
@@ -16908,7 +16895,7 @@ it.each(['revoked', 'unassigned', 'preference', 'tenant-settings', 'inactive', '
 ('MSP SLA email skips a queued recipient after %s changes', async condition => {
   const f = await mspSlaEmailFixture();
   if (condition === 'revoked') {
-    const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
   }
   if (condition === 'unassigned') await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: null });
@@ -16947,7 +16934,7 @@ it.each(['permanent', 'exhausted'] as const)('MSP SLA email records %s provider 
 
 it('MSP SLA email retry migration replays safely and refuses to discard retained delivery state', async () => {
   const f = await mspSlaEmailFixture();
-  const migration = require('../../../migrations/20260908065525_add_organization_sla_email_retry_state.cjs');
+  const migration = require('../../../../../server/migrations/20260908065525_add_organization_sla_email_retry_state.cjs');
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('retained SLA email retry state');
   await expect(f.sponsor.table('sla_organization_notification_recipients').where('channel', 'email').update({ next_attempt_at: null })).rejects.toMatchObject({ code: '23514' });
@@ -16959,8 +16946,8 @@ it('MSP SLA email warning uses current remaining time without rewriting its capt
   await addMspSlaThresholds(f, [50]);
   await f.sponsor.table('sla_notification_thresholds').update({ channels: ['email'] });
   await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: f.principal.userId });
-  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
-  const { applyOrganizationSlaEvent } = await import('../../../../shared/lib/sla/organizationSlaStore');
+  const { startOrganizationSlaClock } = await import('../../../../../shared/lib/sla/organizationSlaClock');
+  const { applyOrganizationSlaEvent } = await import('../../../../../shared/lib/sla/organizationSlaStore');
   const old = await f.read(), now = Date.now();
   const clock = startOrganizationSlaClock(f.identity, old.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 }, new Date(now - 45 * 60000).toISOString());
   await f.sponsor.table('sla_organization_obligations').where('obligation_id', f.identity.obligationId).update({ clock: JSON.stringify(clock) });
@@ -16969,7 +16956,7 @@ it('MSP SLA email warning uses current remaining time without rewriting its capt
   expect(Number(event.elapsed_milliseconds)).toBe(40 * 60000);
   const { persistCoManagedSlaNotifications } = await import('@alga-psa/notifications/lib/coManagedSlaNotifications');
   await persistCoManagedSlaNotifications(db, f.identity.tenant);
-  const { processCoManagedSlaEmailDeliveries } = await import('../../../../packages/co-managed/src/slaEmailDeliveries');
+  const { processCoManagedSlaEmailDeliveries } = await import('../../../../../packages/co-managed/src/slaEmailDeliveries');
   const send = vi.fn(async delivery => {
     expect(delivery.message.notificationType).toBe('warning');
     expect(delivery.message.elapsedMilliseconds).toBeGreaterThanOrEqual(45 * 60000);
@@ -16983,7 +16970,7 @@ it('MSP SLA email warning uses current remaining time without rewriting its capt
 
 it('MSP SLA awaiting-client pause composes with handback and preserves elapsed time and breaches', async () => {
   const f = await dueMspSlaFixture();
-  const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   const mutate = (state: string) => db.transaction(async trx => {
     await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: state });
     await f.syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
@@ -17010,7 +16997,7 @@ it('MSP SLA awaiting-client pause composes with handback and preserves elapsed t
 it.each(['msp-pause-disabled', 'msp-tracking-disabled', 'customer-tracking-disabled', 'customer-pause-disabled'] as const)
 ('MSP SLA awaiting-client initial escalation respects %s independently', async condition => {
   const f = await ticketHandoffFixture();
-  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   if (condition.endsWith('pause-disabled')) {
     const scope = condition.startsWith('msp') ? f.sponsor : f.customer;
     const tenant = condition.startsWith('msp') ? f.principal.tenant : f.resource.tenant;
@@ -17033,7 +17020,7 @@ it.each(['revoked', 'terminated', 'suspended', 'read-only'] as const)
 ('MSP SLA awaiting-client does not expose new response state after %s', async reason => {
   const f = await dueMspSlaFixture();
   if (reason === 'revoked') {
-    const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private work' });
   }
   if (reason === 'terminated') await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
@@ -17052,8 +17039,8 @@ it.each(['legacy', 'optimized'] as const)('MSP SLA awaiting-client follows nativ
   const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
   const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
   try {
-    const action = path === 'legacy' ? (await import('../../../../packages/tickets/src/actions/ticketActions')).updateTicket
-      : (await import('../../../../packages/tickets/src/actions/optimizedTicketActions')).updateTicketWithCache;
+    const action = path === 'legacy' ? (await import('../../../../../packages/tickets/src/actions/ticketActions')).updateTicket
+      : (await import('../../../../../packages/tickets/src/actions/optimizedTicketActions')).updateTicketWithCache;
     await auth.runWithApiKeyUser(user, () => runWithTenant(f.resource.tenant, async () => {
       expect(await action(f.resource.id, { response_state: 'awaiting_client' })).toBe('success');
       const paused = await f.sponsor.table('sla_organization_obligations').first();
@@ -17066,7 +17053,7 @@ it.each(['legacy', 'optimized'] as const)('MSP SLA awaiting-client follows nativ
 }));
 
 it('MSP SLA awaiting-client records the actual public MSP response before pausing and rolls back with the source', async () => withCommentCreationFixture(async f => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const before = await f.sponsor.table('sla_organization_obligations').first();
   const request = { operationId: randomUUID(), audience: 'requester' as const, text: 'Please confirm the fix' };
   await expect(db.transaction(async trx => {
@@ -17085,7 +17072,7 @@ it('MSP SLA awaiting-client records the actual public MSP response before pausin
 
 it('MSP SLA awaiting-client re-escalation preserves the pause until an actual response-state change', async () => {
   const f = await ticketHandoffFixture();
-  const { escalateCoManagedTicket, handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { escalateCoManagedTicket, handBackCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate' });
   await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Check locally' });
   const before = await f.sponsor.table('sla_organization_obligations').first();
@@ -17120,7 +17107,7 @@ it.each(['generic', 'optimized'] as const)('MSP SLA reply adapters pause on nati
 }));
 
 it('MSP SLA reply adapters resume after an actual qualified requester email and retain replay identity', async () => withRequesterInboundFixture(async f => {
-  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../packages/co-managed/src/ticketSla');
+  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../../packages/co-managed/src/ticketSla');
   await db.transaction(async trx => {
     await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
     await syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
@@ -17150,7 +17137,7 @@ async function withSlaPortalWriter(work: (fixture: Parameters<Parameters<typeof 
     const role = await f.customer.table('user_roles').where('user_id', f.requester.user_id).first();
     await f.customer.table('role_permissions').insert({ tenant: f.resource.tenant, role_id: role.role_id, permission_id: permission.permission_id });
     const auth = await import('@alga-psa/auth');
-    const portal = await import('../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets');
+    const portal = await import('../../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets');
     const run = (action: () => Promise<unknown>) => auth.runWithApiKeyUser(f.requester, () => runWithTenant(f.resource.tenant, action));
     await work({ ...f, add: () => run(() => portal.addClientTicketComment(f.resource.id, 'Requester has confirmed the fix')),
       status: id => run(() => portal.updateTicketStatus(f.resource.id, id)) });
@@ -17158,7 +17145,7 @@ async function withSlaPortalWriter(work: (fixture: Parameters<Parameters<typeof 
 }
 
 it('MSP SLA reply adapters resume through the actual requester portal and close/reopen independently', async () => withSlaPortalWriter(async f => {
-  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../packages/co-managed/src/ticketSla');
+  const { syncCoManagedTicketAwaitingClientSla } = await import('../../../../../packages/co-managed/src/ticketSla');
   await db.transaction(async trx => {
     await tenantDb(trx, f.resource.tenant).table('tickets').where('ticket_id', f.resource.id).update({ response_state: 'awaiting_client' });
     await syncCoManagedTicketAwaitingClientSla(trx, f.resource.tenant, f.resource.id);
@@ -17190,7 +17177,7 @@ it.each(['reply', 'status'] as const)('MSP SLA reply adapters block read-only po
 
 it('MSP SLA ticket API preserves validated response-state updates and closes/reopens the independent obligation', async () => withSharedTicketMutationFixture(async f => {
   const { service, publish } = await ticketServiceForTest();
-  const { updateTicketSchema } = await import('../../lib/api/schemas/ticket');
+  const { updateTicketSchema } = await import('../../../../../server/src/lib/api/schemas/ticket');
   const context = { tenant: f.resource.tenant, userId: f.customerPrincipal.userId };
   const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
   const patch = updateTicketSchema.parse({ response_state: 'awaiting_client' });
@@ -17232,7 +17219,7 @@ it('MSP SLA ticket API missing reopen setup rolls back the canonical row and ret
 
 it('MSP SLA ticket API keeps revoked private response and closure changes outside retained MSP history', async () => withSharedTicketMutationFixture(async f => {
   const { service } = await ticketServiceForTest();
-  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private customer investigation' });
   const before = await f.sponsor.table('sla_organization_obligations').first();
   await service.update(f.resource.id, { response_state: 'awaiting_client' }, { tenant: f.resource.tenant, userId: f.customerPrincipal.userId });
@@ -17260,7 +17247,7 @@ async function withBundleSlaFixture(work: (fixture: any) => Promise<void>) {
     const childId = randomUUID();
     await f.customer.table('tickets').insert({ ...original, ticket_id: childId, ticket_number: 'SLA-BUNDLE-CHILD', master_ticket_id: f.resource.id });
     await f.customer.table('ticket_bundle_settings').insert({ tenant: f.resource.tenant, master_ticket_id: f.resource.id, mode: 'link_only', reopen_on_child_reply: true });
-    const { addTicketCommentWithCache } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const { addTicketCommentWithCache } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
     const reply = (ticketId = childId) => f.run(() => addTicketCommentWithCache(ticketId, 'Customer technician has an update', false, false));
     await work({ ...f, childId, original, closed, reply });
   });
@@ -17284,7 +17271,7 @@ it('MSP SLA bundle child reply reopens its actual master board with one new obli
 }));
 
 it.each(['handed-back', 'revoked'] as const)('MSP SLA bundle child reply does not restart %s master obligations', async reason => withBundleSlaFixture(async f => {
-  const { handBackCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { handBackCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   if (reason === 'handed-back') await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer investigation' });
   else await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private investigation' });
   const before = await f.sponsor.table('sla_organization_obligations').first();
@@ -17323,11 +17310,11 @@ async function withBundlePropagationSlaFixture(work: (fixture: any) => Promise<v
     await f.sponsor.table('co_managed_sla_priority_mappings').insert({ ...mapping, customer_priority_id: childPriorityId });
     await f.customer.table('tickets').insert({ ...original, ticket_id: childId, ticket_number: 'SLA-PROPAGATED-CHILD', priority_id: childPriorityId });
     const childResource = { ...f.resource, id: childId };
-    const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     await escalateCoManagedTicket(db, f.customerPrincipal, childResource, { operationId: randomUUID(), expectedRevision: 0, note: 'Escalated child' });
     await f.customer.table('tickets').where('ticket_id', childId).update({ master_ticket_id: f.resource.id });
     await f.customer.table('ticket_bundle_settings').insert({ tenant: f.resource.tenant, master_ticket_id: f.resource.id, mode: 'sync_updates' });
-    const { updateTicketWithCache } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const { updateTicketWithCache } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
     const update = (patch: any) => f.run(() => updateTicketWithCache(f.resource.id, patch));
     await work({ ...f, original, childId, childPriorityId, childResource, update });
   });
@@ -17365,7 +17352,7 @@ it('MSP SLA bundle propagation missing child reopen mapping rolls back the maste
 }));
 
 it('MSP SLA bundle propagation leaves revoked child history frozen while customer IT closes the canonical child', async () => withBundlePropagationSlaFixture(async f => {
-  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.childResource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private child' });
   const before = await f.sponsor.table('sla_organization_obligations').where('ticket_id', f.childId).first();
   await f.update({ status_id: f.closedStatusId });
@@ -17412,8 +17399,8 @@ it('MSP SLA bundle propagation preserves additional resources when a child assig
 
 async function withWorkflowSlaFixture(work: (fixture: any) => Promise<void>) {
   return withWorkflowCommentFixture(async f => {
-    const registry = await import('../../../../shared/workflow/runtime/registries/workflowTicketMutationRegistry');
-    const { withCoManagedWorkflowTicketMutation } = await import('../../../../packages/co-managed/src/workflowTicketMutation');
+    const registry = await import('../../../../../shared/workflow/runtime/registries/workflowTicketMutationRegistry');
+    const { withCoManagedWorkflowTicketMutation } = await import('../../../../../packages/co-managed/src/workflowTicketMutation');
     registry.registerWorkflowTicketMutationAdapter(withCoManagedWorkflowTicketMutation);
     const update = (patch: any) => f.act('tickets.update_fields', { ticket_id: f.resource.id, patch });
     try { await work({ ...f, mutationRegistry: registry, update }); }
@@ -17463,7 +17450,7 @@ it('MSP SLA workflow updates roll back canonical reopen on missing MSP setup', a
 }));
 
 it('MSP SLA workflow updates roll back source, clock and audit when the run expires during the writer', async () => withWorkflowSlaFixture(async f => {
-  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const { TicketModel } = await import('../../../../../shared/models/ticketModel');
   const original = TicketModel.updateTicket;
   const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
   const clock = await f.sponsor.table('sla_organization_obligations').first();
@@ -17537,7 +17524,7 @@ it.each(['expired_lease', 'missing_role', 'read_only', 'missing_composition'] as
 }));
 
 it('co-managed workflow assignment rolls back the ticket, resources and audit after late lease expiry', async () => withWorkflowAssignmentFixture(async f => {
-  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const { TicketModel } = await import('../../../../../shared/models/ticketModel');
   const original = TicketModel.updateTicket;
   const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
   const writer = vi.spyOn(TicketModel, 'updateTicket').mockImplementationOnce(async (...args) => {
@@ -17579,7 +17566,7 @@ async function withWorkflowCloseFixture(work: (fixture: any) => Promise<void>) {
     const contactId = randomUUID();
     await f.customer.table('contacts').insert({ ...contact, contact_name_id: contactId, email: 'workflow-requester@example.test', is_inactive: false });
     await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ contact_name_id: contactId, response_state: 'awaiting_client' });
-    const { processCoManagedWorkflowTicketEmails } = await import('../../../../packages/co-managed/src/workflowTicketEmails');
+    const { processCoManagedWorkflowTicketEmails } = await import('../../../../../packages/co-managed/src/workflowTicketEmails');
     const send = vi.fn().mockResolvedValue({ status: 'delivered' });
     const close = (extra: any = {}) => f.act('tickets.close', { ticket_id: f.resource.id, resolution: { code: 'Fixed <safe>' }, notify_requester: true, ...extra });
     const recover = () => processCoManagedWorkflowTicketEmails(db, f.resource.tenant, send);
@@ -17619,7 +17606,7 @@ it.each(['expired_lease', 'missing_role', 'missing_composition', 'lapsed_license
 }));
 
 it('co-managed workflow close rolls back an enqueued email on final lease failure', async () => withWorkflowCloseFixture(async f => {
-  const adapter = (await import('../../../../packages/co-managed/src/workflowTicketMutation')).withCoManagedWorkflowTicketMutation;
+  const adapter = (await import('../../../../../packages/co-managed/src/workflowTicketMutation')).withCoManagedWorkflowTicketMutation;
   f.mutationRegistry.registerWorkflowTicketMutationAdapter((trx: any, input: any, write: any) => adapter(trx, input, async effects => {
     const result = await write(effects);
     expect(await tenantDb(trx, f.resource.tenant).table('co_management_workflow_ticket_emails')).toHaveLength(1);
@@ -17706,8 +17693,8 @@ async function withMspTimeWorkFixture(work: (fixture: any) => Promise<void>) {
       await f.sponsor.table('permissions').insert({ ...permission, tenant: f.principal.tenant });
       await f.sponsor.table('role_permissions').insert({ tenant: f.principal.tenant, role_id: f.roleId, permission_id: permission.permission_id });
     }
-    const { registerCoManagedTimeWorkReference } = await import('../../../../packages/co-managed/src/timeWorkReference');
-    const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
+    const { registerCoManagedTimeWorkReference } = await import('../../../../../packages/co-managed/src/timeWorkReference');
+    const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
     const register = (resource = f.resource) => registerCoManagedTimeWorkReference(db, f.principal, resource);
     const load = (tenant = f.principal.tenant) => {
       const query = tenantDb(db, tenant).table('time_entries');
@@ -17745,7 +17732,7 @@ it('MSP time billing work registers one qualified source and keeps customer work
 it('MSP time billing work retains admitted evidence after revocation without allowing another live registration', async () => withMspTimeWorkFixture(async f => {
   const reference = await f.register(); await f.insertTime(reference.referenceId);
   const before = await f.load();
-  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+  await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 1, note: 'End live sharing' });
   await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private title', attributes: { description: 'Private replacement' } });
   await expect(f.register()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -17780,7 +17767,7 @@ it('MSP time billing work reaches the existing catalog charge engine with retain
     custom_service_type_id: typeId, billing_method: 'hourly', default_rate: 12000 });
   await f.sponsor.table('time_entries').where('entry_id', entryId).update({ service_id: serviceId });
   const relation = await f.customer.table('co_management_relationships').first();
-  const { BillingEngine } = await import('../../../../packages/billing/src/lib/billing/billingEngine');
+  const { BillingEngine } = await import('../../../../../packages/billing/src/lib/billing/billingEngine');
   await withTransaction(db, async trx => {
     const engine = BillingEngine.forTransaction(trx, f.principal.tenant) as any;
     // Keep this test about actual loader/charge integration; tax and contract
@@ -17805,12 +17792,12 @@ it('MSP time billing work supports shared tasks without assigning an MSP project
     await f.sponsor.table('permissions').insert({ ...permission, tenant: f.principal.tenant });
     await f.sponsor.table('role_permissions').insert({ tenant: f.principal.tenant, role_id: f.roleId, permission_id: permission.permission_id });
   }
-  const { registerCoManagedTimeWorkReference } = await import('../../../../packages/co-managed/src/timeWorkReference');
+  const { registerCoManagedTimeWorkReference } = await import('../../../../../packages/co-managed/src/timeWorkReference');
   const reference = await registerCoManagedTimeWorkReference(db, f.principal, f.resource), entryId = randomUUID();
   await f.sponsor.table('time_entries').insert({ tenant: f.principal.tenant, entry_id: entryId, user_id: f.principal.userId,
     work_item_type: 'co_managed', work_item_id: reference.referenceId, co_managed_work_reference_id: reference.referenceId,
     start_time: new Date('2026-09-08T09:00:00Z'), end_time: new Date('2026-09-08T10:00:00Z'), work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 60 });
-  const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
+  const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
   const query = f.sponsor.table('time_entries'); joinTimeEntryBillingWorkContext(db, f.principal.tenant, query);
   expect(await query.select(...timeEntryBillingWorkColumns)).toEqual([expect.objectContaining({ work_source_tenant: f.resource.tenant,
     work_source_id: f.resource.id, work_source_kind: 'project_task', project_task_name: 'Verify rollout', project_id: null, project_phase_id: null })]);
@@ -17822,7 +17809,7 @@ it('MSP time billing work keeps native ticket and task UUID collisions distinct 
   for (const type of ['ticket', 'project_task']) await f.customer.table('time_entries').insert({ tenant: f.resource.tenant,
     entry_id: randomUUID(), user_id: f.customerPrincipal.userId, work_item_id: f.resource.id, work_item_type: type,
     start_time: new Date('2026-09-08T09:00:00Z'), end_time: new Date('2026-09-08T10:00:00Z'), work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 0 });
-  const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
+  const { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } = await import('../../../../../packages/billing/src/lib/billing/timeEntryWorkContext');
   const query = f.customer.table('time_entries'); joinTimeEntryBillingWorkContext(db, f.resource.tenant, query);
   const rows = await query.select('time_entries.work_item_type', ...timeEntryBillingWorkColumns);
   expect(rows).toHaveLength(2);
@@ -17845,7 +17832,7 @@ async function withMspSharedTimeSaveFixture(work: (fixture: any) => Promise<void
     await f.sponsor.table('service_catalog').insert({ tenant: f.principal.tenant, service_id: serviceId, service_name: 'MSP labor', billing_method: 'hourly', custom_service_type_id: typeId, default_rate: 12000 });
     const dbModule = await import('@alga-psa/db'), auth = await import('@alga-psa/auth');
     const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.principal.tenant });
-    const actions = await import('../../../../packages/scheduling/src/actions/timeEntryCrudActions');
+    const actions = await import('../../../../../packages/scheduling/src/actions/timeEntryCrudActions');
     const input = { entry_id: '', work_item_type: 'co_managed', work_item_id: referenceId, user_id: f.principal.userId, time_sheet_id: sheetId,
       start_time: '2026-09-08T09:00:00Z', end_time: '2026-09-08T10:00:00Z', created_at: '2026-09-08T09:00:00Z', updated_at: '2026-09-08T09:00:00Z',
       notes: 'MSP-owned work note', billable_duration: 60, approval_status: 'DRAFT', service_id: serviceId };
@@ -17871,7 +17858,7 @@ it('MSP shared time save uses the existing writer and reads its own commercial e
 
 it('MSP shared time save retains existing effort after revocation and blocks fresh contributions', async () => withMspSharedTimeSaveFixture(async f => {
   const entry = await f.save();
-  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+  await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 1, note: 'Private customer work' });
   await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Private replacement title' });
   await expect(f.save()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -17881,7 +17868,7 @@ it('MSP shared time save retains existing effort after revocation and blocks fre
 }));
 
 it('MSP shared time save rechecks the session before committing source evidence and time', async () => withMspSharedTimeSaveFixture(async f => {
-  const allocation = await import('../../../../shared/billingClients/hourBlockService');
+  const allocation = await import('../../../../../shared/billingClients/hourBlockService');
   const original = allocation.allocateTimeEntry;
   const late = vi.spyOn(allocation, 'allocateTimeEntry').mockImplementation(async (...args) => {
     const result = await original(...args);
@@ -17898,7 +17885,7 @@ it('MSP shared time save rechecks the session before committing source evidence 
 }));
 
 it('MSP shared time save admits actual API credentials and preserves qualified work on updates and reads', async () => withMspSharedTimeSaveFixture(async f => {
-  const { TimeEntryService } = await import('../../lib/api/services/TimeEntryService'), service = new TimeEntryService();
+  const { TimeEntryService } = await import('../../../../../server/src/lib/api/services/TimeEntryService'), service = new TimeEntryService();
   const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: f.principal.tenant });
   const apiKeyId = randomUUID();
   await f.sponsor.table('api_keys').insert({ tenant: f.principal.tenant, api_key_id: apiKeyId, api_key: randomUUID(), user_id: f.principal.userId, active: true });
@@ -17934,7 +17921,7 @@ it('MSP shared time review preserves the native approval transitions and invoice
   const review = (approvalStatus: 'SUBMITTED' | 'APPROVED' | 'DRAFT') => f.actions.updateTimeEntryApprovalStatus({ entryId: entry.entry_id, approvalStatus });
   await expect(review('APPROVED')).rejects.toMatchObject({ code: 'TIME_REVIEW_STATE_CONFLICT' });
   await review('SUBMITTED');
-  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+  await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 1, note: 'MSP retains its own commercial records' });
   await review('APPROVED');
   await review('APPROVED');
@@ -17949,7 +17936,7 @@ it('MSP shared time deletion retains the source reference and prevents deleting 
   await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'SUBMITTED' });
   await expect(f.actions.deleteTimeEntry(entry.entry_id)).rejects.toMatchObject({ code: 'TIME_DELETE_NOT_EDITABLE' });
   await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'DRAFT' });
-  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+  await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 1, note: 'Delete only our own draft time' });
   await f.actions.deleteTimeEntry(entry.entry_id);
   expect(await f.sponsor.table('time_entries')).toHaveLength(0);
@@ -17963,7 +17950,7 @@ async function withMspSharedTimerFixture(work: (fixture: any) => Promise<void>) 
     const apiKeyId = randomUUID();
     await f.sponsor.table('api_keys').insert({ tenant: f.principal.tenant, api_key_id: apiKeyId, user_id: f.principal.userId, api_key: randomUUID(), active: true });
     const context = { tenant: f.principal.tenant, userId: f.principal.userId, apiKeyId, user: f.user };
-    const { TimeEntryService } = await import('../../lib/api/services/TimeEntryService');
+    const { TimeEntryService } = await import('../../../../../server/src/lib/api/services/TimeEntryService');
     const service = new TimeEntryService();
     const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: context.tenant });
     const today = Date.now();
@@ -17979,7 +17966,7 @@ it('MSP shared timers retain running effort after revocation and stop exactly on
   const timer = await f.start();
   expect(timer).toMatchObject({ work_item_type: 'co_managed', work_item_id: f.referenceId, work_item_title: 'Customer issue', billing_mode: 'commercial' });
   expect(await f.sponsor.table('time_entries')).toHaveLength(0);
-  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+  await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 1, note: 'Already running effort stays MSP-owned' });
   await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'New private customer title' });
   expect(await f.service.getActiveSession(f.context.userId, f.context)).toMatchObject({ session_id: timer.session_id, work_item_title: 'Customer issue' });
@@ -18019,7 +18006,7 @@ it('MSP shared timer references retain local integrity and cannot be removed by 
   const timer = await f.start();
   const clock = await f.sponsor.table('native_time_tracking_sessions').where('session_id', timer.session_id).first();
   expect(clock.co_managed_work_reference_id).toBe(f.referenceId);
-  const migration = require('../../../migrations/20260908091756_allow_co_managed_time_tracking.cjs');
+  const migration = require('../../../../../server/migrations/20260908091756_allow_co_managed_time_tracking.cjs');
   await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained co-managed timer');
   await expect(f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).del()).rejects.toMatchObject({ code: '23503' });
@@ -18030,16 +18017,16 @@ it('MSP shared timer references retain local integrity and cannot be removed by 
 
 
 it('shared time UI actions register the current browser and resolve only the MSP billing client', async () => withMspSharedTimeSaveFixture(async f => {
-  const actions = await import('../../lib/actions/coManagedTimeActions');
+  const actions = await import('../../../../../server/src/lib/actions/coManagedTimeActions');
   const auth = await import('@alga-psa/auth');
   const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(f.user);
-  const { getClientIdForWorkItem } = await import('../../../../packages/scheduling/src/lib/contractLineDisambiguation');
+  const { getClientIdForWorkItem } = await import('../../../../../packages/scheduling/src/lib/contractLineDisambiguation');
   try {
     expect(await actions.registerSharedTimeWorkAction({ ...f.resource, userId: randomUUID(), sessionId: randomUUID() } as any)).toMatchObject({ referenceId: f.referenceId, resource: f.resource });
     const relationship = await f.customer.table('co_management_relationships').first();
     expect(await getClientIdForWorkItem(f.referenceId, 'co_managed')).toBe(relationship.sponsor_client_id);
     const entry = await f.save();
-    await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
       { operationId: randomUUID(), expectedRevision: 1, note: 'Keep MSP billing history' });
     await expect(actions.registerSharedTimeWorkAction(f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
     await expect(getClientIdForWorkItem(f.referenceId, 'co_managed')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -18049,10 +18036,10 @@ it('shared time UI actions register the current browser and resolve only the MSP
 }));
 
 it('shared time UI actions reject API overrides and redact current local client fields', async () => withMspSharedTimeSaveFixture(async f => {
-  const actions = await import('../../lib/actions/coManagedTimeActions');
+  const actions = await import('../../../../../server/src/lib/actions/coManagedTimeActions');
   const auth = await import('@alga-psa/auth');
   const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(f.user);
-  const { getClientIdForWorkItem } = await import('../../../../packages/scheduling/src/lib/contractLineDisambiguation');
+  const { getClientIdForWorkItem } = await import('../../../../../packages/scheduling/src/lib/contractLineDisambiguation');
   const entry = await f.save();
   try {
     vi.mocked(auth.getApiKeyUserOverride).mockReturnValue(f.user);
@@ -18140,7 +18127,7 @@ it('shared time billing allocates and reverses prepaid hours through native API 
   await f.service.update(entry.entry_id, { end_time: '2026-09-08T12:30:00Z' }, f.context); expect(await remaining()).toBe(90);
   await f.service.update(entry.entry_id, { is_billable: false }, f.context); expect(await remaining()).toBe(180);
   await f.service.update(entry.entry_id, { is_billable: true }, f.context); expect(await remaining()).toBe(90);
-  const blocks = await import('../../../../shared/billingClients/hourBlockService');
+  const blocks = await import('../../../../../shared/billingClients/hourBlockService');
   await withTransaction(db, trx => blocks.reverseTimeEntryAllocations(trx, f.principal.tenant, entry.entry_id));
   expect(await remaining()).toBe(180);
   expect(await withTransaction(db, trx => blocks.reconcileClientAllocations(trx, f.principal.tenant, relation.sponsor_client_id))).toBe(1);
@@ -18167,7 +18154,7 @@ it('shared time billing uses the MSP profile to resolve parallel contracts and e
 }));
 
 it('shared effort totals count completed customer and MSP time without exposing private billing or approval details', async () => withMspSharedTimeSaveFixture(async f => {
-  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const { getCoManagedEffortTotals: totals } = await import('../../../../../packages/co-managed/src/effortTotals');
   const localId = await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
   await f.customer.table('time_entries').where('entry_id', localId).update({ end_time: '2026-09-08T09:20:00Z', notes: 'Private customer timesheet note' });
   const entry = await f.save({ billable_duration: 0 });
@@ -18181,10 +18168,10 @@ it('shared effort totals count completed customer and MSP time without exposing 
 }));
 
 it('shared effort totals retain customer-owned effort after revocation without reading ongoing MSP totals', async () => withMspSharedTimeSaveFixture(async f => {
-  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const { getCoManagedEffortTotals: totals } = await import('../../../../../packages/co-managed/src/effortTotals');
   await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
   const entry = await f.save();
-  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+  await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 1, note: 'End shared work' });
   await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 90 });
   await expect(totals(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -18194,9 +18181,9 @@ it('shared effort totals retain customer-owned effort after revocation without r
 }));
 
 it('shared effort totals retain customer-owned effort after termination while MSP reads and customer writes stay closed', async () => withMspSharedTimeSaveFixture(async f => {
-  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
-  const { withCoManagedCustomerTicket } = await import('../../../../packages/co-managed/src/customerWork');
+  const { getCoManagedEffortTotals: totals } = await import('../../../../../packages/co-managed/src/effortTotals');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
+  const { withCoManagedCustomerTicket } = await import('../../../../../packages/co-managed/src/customerWork');
   await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
   await f.save();
   expect(await totals(db, f.customerPrincipal, f.resource)).toEqual({ resource: f.resource, customerMinutes: 60, mspMinutes: 60, combinedMinutes: 120 });
@@ -18219,7 +18206,7 @@ it.each([
   [['effort_totals.mspMinutes'], { customerMinutes: 60, mspMinutes: null, combinedMinutes: null }],
   [['actual_hours'], { customerMinutes: null, mspMinutes: null, combinedMinutes: null }],
 ])('shared effort totals respect source field restrictions %j', async (redactedFields, expected) => withMspSharedTimeSaveFixture(async f => {
-  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const { getCoManagedEffortTotals: totals } = await import('../../../../../packages/co-managed/src/effortTotals');
   await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId); await f.save();
   const bundles = await import('@alga-psa/authorization'), relation = await f.customer.table('co_management_relationships').first();
   const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Shared effort scope', actorUserId: f.principal.userId });
@@ -18231,7 +18218,7 @@ it.each([
 }));
 
 it('shared effort totals roll up actual project tasks without using cached hours or colliding ticket IDs', async () => withSharedProjectTaskFixture(async f => {
-  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const { getCoManagedEffortTotals: totals } = await import('../../../../../packages/co-managed/src/effortTotals');
   const relation = await f.customer.table('co_management_relationships').first();
   const referenceId = randomUUID();
   await f.sponsor.table('co_managed_time_work_references').insert({ tenant: f.principal.tenant, reference_id: referenceId, customer_tenant: f.resource.tenant,
@@ -18259,7 +18246,7 @@ it('shared effort totals roll up actual project tasks without using cached hours
 
 it('native task effort action binds customer work to the current browser and denies forged identity and API overrides', async () => withSharedProjectTaskFixture(async f => {
   const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
-  const actions = await import('../../lib/actions/coManagedTimeActions');
+  const actions = await import('../../../../../server/src/lib/actions/coManagedTimeActions');
   const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
   const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.resource.tenant });
   const current = vi.spyOn(auth, 'getCurrentUser').mockResolvedValue(user);
@@ -18275,7 +18262,7 @@ it('native task effort action binds customer work to the current browser and den
     // After departure the local target still resolves through the ended
     // relationship: the customer keeps its own effort view, MSP totals do not.
     browser.session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { id: f.customerPrincipal.userId, tenant: f.resource.tenant, user_type: 'internal' } });
-    const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+    const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
     const relationship = await f.customer.table('co_management_relationships').first();
     await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: relationship.relationship_id },
       { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, async () => {});
@@ -18285,7 +18272,7 @@ it('native task effort action binds customer work to the current browser and den
 }));
 
 it('shared effort totals follow task moves between actual projects and retain customer totals when the project grant ends', async () => withSharedProjectTaskFixture(async f => {
-  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const { getCoManagedEffortTotals: totals } = await import('../../../../../packages/co-managed/src/effortTotals');
   const { ProjectModel: model } = await import('@alga-psa/projects/models');
   const next = await model.create(db, f.resource.tenant, { project_name: 'Private project', project_number: 'PRIVATE-2', client_id: f.operation.customer_client_id,
     status: f.project.status, wbs_code: '2' } as any);
@@ -18304,7 +18291,7 @@ it('shared effort totals follow task moves between actual projects and retain cu
 }));
 
 it.each(['customer', 'sponsor'])('relationship closure by %s finalizes evidence before revocation and releases capacity exactly once under concurrent retries', async side => withMspSharedTimeSaveFixture(async f => {
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
   const relationship = await f.customer.table('co_management_relationships').first();
   const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
   const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
@@ -18326,17 +18313,17 @@ it.each(['customer', 'sponsor'])('relationship closure by %s finalizes evidence 
   expect(await f.customer.table('co_management_relationships').first()).toMatchObject({ state: 'terminated', ended_at: new Date(first.closedAt) });
   expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toMatchObject({ state: 'released', released_at: new Date(first.closedAt) });
   expect(await f.sponsor.table('co_managed_relationship_closures')).toHaveLength(1);
-  await expect((await import('../../../../packages/co-managed/src/sharedWorkRead')).getCoManagedSharedWorkSummary(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect((await import('../../../../../packages/co-managed/src/sharedWorkRead')).getCoManagedSharedWorkSummary(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect(await getCoManagedOperationalState(db, f.resource.tenant)).toMatchObject({ state: 'terminated', canWrite: false });
   expect(await f.actions.getTimeEntryById(entry.entry_id)).toMatchObject({ entry_id: entry.entry_id, workItem: { name: 'Finalized retained work' } });
   await expect(close(db, f.customerPrincipal, target, { ...request, reason: 'independent_upgrade' }, finalize)).rejects.toMatchObject({ code: 'CLOSURE_CHANGED' });
   await expect(close(db, f.customerPrincipal, target, { ...request, operationId: randomUUID() }, finalize)).rejects.toMatchObject({ code: 'RELATIONSHIP_CLOSED' });
-  const migration = require('../../../migrations/20260908102610_create_co_managed_relationship_closures.cjs');
+  const migration = require('../../../../../server/migrations/20260908102610_create_co_managed_relationship_closures.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained');
 }));
 
 it.each(['archive_failure', 'late_session_expiry'])('relationship closure rolls back evidence capacity and trust on %s', async failure => withMspSharedTimeSaveFixture(async f => {
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
   const relationship = await f.customer.table('co_management_relationships').first();
   const before = await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).first();
   const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
@@ -18353,7 +18340,7 @@ it.each(['archive_failure', 'late_session_expiry'])('relationship closure rolls 
 }));
 
 it('relationship closure requires current administrator authority but remains available after license grace expires', async () => withMspSharedTimeSaveFixture(async f => {
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
   const relationship = await f.customer.table('co_management_relationships').first();
   const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
   const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const }, finalize = vi.fn(async () => {});
@@ -18371,7 +18358,7 @@ it('relationship closure requires current administrator authority but remains av
 
 it('relationship closure pauses the existing MSP SLA at the archive cutoff and blocks later observation', async () => {
   const f = await dueMspSlaFixture();
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
   const relationship = await f.customer.table('co_management_relationships').first();
   const beforeTicket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
   const result = await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
@@ -18391,7 +18378,7 @@ it('participation evidence retains explicit handoff history through revocation a
   const original = await evidence(); expect(original).toHaveLength(1);
   expect(original[0]).toMatchObject({ resource_type: 'ticket', source_type: 'ticket_handoff', event_type: 'escalated', payload: { audience: 'shared_it', revision: 1 } });
   await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ attributes: JSON.stringify({ secret: 'Customer-only password', description: 'Private operational description' }) });
-  const handoff = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const handoff = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   const request = { operationId: randomUUID(), expectedRevision: 1, note: 'Retain this explicit shared history' };
   await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
   await handoff.handBackCoManagedTicket(db, f.principal, f.resource, request);
@@ -18406,13 +18393,13 @@ it('participation evidence retains explicit handoff history through revocation a
   expect(JSON.stringify(captured)).not.toMatch(/Customer-only password|Private operational description/);
   await f.customer.table('tickets').where('ticket_id', f.resource.id).del();
   expect(await evidence()).toEqual(captured);
-  const migration = require('../../../migrations/20260908103849_create_co_managed_participation_evidence.cjs');
+  const migration = require('../../../../../server/migrations/20260908103849_create_co_managed_participation_evidence.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained participation');
   await expect(f.sponsor.table('co_managed_participation_evidence').where('evidence_id', captured[0].evidence_id).update({ payload: '{}' })).rejects.toMatchObject({ code: '23514' });
 }));
 
 it('a repeated handback operation converges to one retained handoff, one evidence row and the first receipt', async () => withSharedTicketMutationFixture(async f => {
-  const handoff = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const handoff = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   const handedBack = () => f.customer.table('co_management_ticket_handoffs').where({ ticket_id: f.resource.id, transition: 'handed_back' });
   const evidence = () => f.sponsor.table('co_managed_participation_evidence')
     .where({ customer_tenant: f.resource.tenant, resource_id: f.resource.id, source_type: 'ticket_handoff', event_type: 'handed_back' });
@@ -18467,7 +18454,7 @@ it('participation evidence records an MSP task assignment and its withdrawal wit
 }));
 
 it('participation evidence rolls back with the canonical task when the writer expires after capture', async () => withSharedProjectTaskFixture(async f => {
-  const evidence = await import('../../../../packages/co-managed/src/participationEvidence'), original = evidence.retainCoManagedParticipationEvidence;
+  const evidence = await import('../../../../../packages/co-managed/src/participationEvidence'), original = evidence.retainCoManagedParticipationEvidence;
   const capture = vi.spyOn(evidence, 'retainCoManagedParticipationEvidence').mockImplementation(async (...args) => {
     await original(...args);
     await tenantDb(args[0].trx, f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
@@ -18488,7 +18475,7 @@ it('time participation evidence requires a completed entry and native timer retr
   expect(rows[0]).toMatchObject({ source_id: entry.entry_id, resource_id: f.resource.id, customer_tenant: f.resource.tenant,
     actor_tenant: f.principal.tenant, payload: { entryId: entry.entry_id, workReferenceId: f.referenceId, audience: 'organization_private' } });
   await f.service.getById(entry.entry_id, f.context); expect(await evidence()).toEqual(rows);
-  const migration = require('../../../migrations/20260908105022_allow_co_managed_time_participation.cjs');
+  const migration = require('../../../../../server/migrations/20260908105022_allow_co_managed_time_participation.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained time participation');
 }));
 
@@ -18513,7 +18500,7 @@ it('time participation evidence records both qualified work identities when exis
   const { title_index: generatedTitleIndex, ...ticketFields } = ticket;
   await f.customer.table('tickets').insert({ ...ticketFields, ticket_id: otherId, ticket_number: 'MOVE-SECOND' });
   const other = { ...f.resource, id: otherId };
-  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).escalateCoManagedTicket(db, f.customerPrincipal, other,
+  await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).escalateCoManagedTicket(db, f.customerPrincipal, other,
     { operationId: randomUUID(), expectedRevision: 0, note: 'Second shared work item' });
   const reference = await f.register(other);
   await f.service.update(entry.entry_id, { work_item_type: 'co_managed', work_item_id: reference.referenceId }, f.context);
@@ -18524,7 +18511,7 @@ it('time participation evidence records both qualified work identities when exis
 
 it('time participation evidence can finish retained MSP clocks after revocation without reading newly private customer content', async () => withMspSharedTimerFixture(async f => {
   const timer = await f.start();
-  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+  await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
     { operationId: randomUUID(), expectedRevision: 1, note: 'End live sharing' });
   await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private customer title' });
   const entry = await f.stop(timer);
@@ -18534,7 +18521,7 @@ it('time participation evidence can finish retained MSP clocks after revocation 
 }));
 
 it('time participation evidence rolls back with a native save when the current writer expires after capture', async () => withMspSharedTimeSaveFixture(async f => {
-  const module = await import('../../../../packages/co-managed/src/timeParticipationEvidence'), original = module.retainCoManagedTimeParticipation;
+  const module = await import('../../../../../packages/co-managed/src/timeParticipationEvidence'), original = module.retainCoManagedTimeParticipation;
   const capture = vi.spyOn(module, 'retainCoManagedTimeParticipation').mockImplementation(async (...args) => {
     await original(...args);
     await tenantDb(args[0], f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
@@ -18566,7 +18553,7 @@ it('conversation participation retains only shared task revisions after actual M
   expect(JSON.stringify(saved)).not.toMatch(/Customer-only work|Never copy|Keep MSP private|Private detailed work/);
   expect(JSON.stringify(await f.customer.table('co_management_event_outbox'))).not.toMatch(/MSP shared diagnosis|MSP revised diagnosis/);
   await f.customer.table('project_tasks').where('task_id', f.resource.id).del(); expect(await evidence()).toEqual(saved);
-  const migration = require('../../../migrations/20260908110522_retain_co_managed_conversation_participation.cjs');
+  const migration = require('../../../../../server/migrations/20260908110522_retain_co_managed_conversation_participation.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained conversation');
 }));
 
@@ -18578,7 +18565,7 @@ it('conversation participation stops new capture after unsharing and never refre
   await f.add(f.customerPrincipal, 'shared_it', 'Unshared later customer body');
   expect(await evidence()).toEqual(saved);
   const event = await f.customer.table('co_management_event_outbox').where('comment_id', root.commentId).first();
-  const { enqueueCoManagedConversationEvent } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { enqueueCoManagedConversationEvent } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   await f.customer.table('project_task_comments').where('task_comment_id', root.commentId).update({ note: 'Do not refresh this later body', markdown_content: 'Do not refresh this later body' });
   await db.transaction(trx => enqueueCoManagedConversationEvent(trx, { tenant: f.resource.tenant, eventId: event.event_id,
     resource: { kind: 'project_task', id: f.resource.id }, commentId: root.commentId, threadId: root.threadId, audience: event.audience, publication: event.publication }));
@@ -18595,7 +18582,7 @@ it('conversation participation rolls back the canonical task mutation when captu
 }));
 
 it('conversation participation uses actual ticket authors and excludes private roots and publication bodies', async () => withConversationFixture(async f => {
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const command = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'Actual ticket diagnosis' };
   await createSharedTicketComment(db, f.principal, f.resource, command); await createSharedTicketComment(db, f.principal, f.resource, command);
   const evidence = () => f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'conversation', resource_id: f.resource.id }).orderBy('occurred_at');
@@ -18605,7 +18592,7 @@ it('conversation participation uses actual ticket authors and excludes private r
     full_name: 'Actual requester', email: 'requester@example.test' });
   const root = await f.addCustomer({ audience: 'requester', note: 'Actual requester text' });
   await f.customer.table('comments').where('comment_id', root.id).update({ user_id: null, contact_id: contactId, author_type: 'client' });
-  const { enqueueCoManagedConversationEvent } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { enqueueCoManagedConversationEvent } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
   const publish = (id: string, threadId: string) => db.transaction(trx => enqueueCoManagedConversationEvent(trx, { tenant: f.resource.tenant, eventId: randomUUID(),
     ticketId: f.resource.id, commentId: id, threadId, audience: 'requester', publication: { kind: 'event', eventType: 'TICKET_COMMENT_ADDED',
       payload: { tenantId: f.resource.tenant, ticketId: f.resource.id, commentId: id, comment: { id, content: 'Untrusted publication content', author: 'Invented author' } } } }));
@@ -18633,7 +18620,7 @@ it('archive files retain authorized bytes before customer deletion and drain wit
   await f.customer.table('ticket_audit_logs').where('ticket_id', f.resource.id).del();
   await f.customer.table('tickets').where('ticket_id', f.resource.id).del(); f.objects.clear();
   artifactStorage.download.mockRejectedValue(new Error('Customer storage must not be reopened'));
-  const { storeCoManagedArchiveFiles, coManagedArchiveFilePath } = await import('../../../../packages/co-managed/src/archiveFiles');
+  const { storeCoManagedArchiveFiles, coManagedArchiveFilePath } = await import('../../../../../packages/co-managed/src/archiveFiles');
   const storedObjects = new Map<string, Buffer>();
   artifactStorage.upload.mockReset().mockImplementation(async (bytes: Buffer, path: string) => { storedObjects.set(path, Buffer.from(bytes)); return { path, size: bytes.length }; });
   const outcomes = await Promise.all([storeCoManagedArchiveFiles(db, f.principal.tenant), storeCoManagedArchiveFiles(db, f.principal.tenant)]);
@@ -18643,7 +18630,7 @@ it('archive files retain authorized bytes before customer deletion and drain wit
   expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 0, failed: 0 });
   expect(artifactStorage.upload).toHaveBeenCalledOnce();
   await expect(files().where('archive_file_id', saved.archive_file_id).update({ file_name: 'Rewritten.txt' })).rejects.toMatchObject({ code: '23514' });
-  const migration = require('../../../migrations/20260908111943_create_co_managed_archive_files.cjs');
+  const migration = require('../../../../../server/migrations/20260908111943_create_co_managed_archive_files.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained archive files');
 }));
 
@@ -18676,7 +18663,7 @@ it('archive files roll back publication on corrupt source bytes and retain stagi
   expect(await f.sponsor.table('co_managed_archive_files')).toHaveLength(0);
   expect(await f.customer.table('co_management_conversation_drafts').where('operation_id', draft.operationId).first()).toMatchObject({ status: 'draft' });
   await f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer);
-  const { storeCoManagedArchiveFiles } = await import('../../../../packages/co-managed/src/archiveFiles');
+  const { storeCoManagedArchiveFiles } = await import('../../../../../packages/co-managed/src/archiveFiles');
   artifactStorage.upload.mockReset().mockRejectedValueOnce(new Error('Lost acknowledgement')).mockImplementation(async (bytes: Buffer, path: string) => ({ path, size: bytes.length }));
   expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 0, failed: 1 });
   const saved = await f.sponsor.table('co_managed_archive_files').first(); expect(saved).toMatchObject({ status: 'pending', attempts: 1, staged_bytes: file.content });
@@ -18686,7 +18673,7 @@ it('archive files roll back publication on corrupt source bytes and retain stagi
 }));
 
 it('archive reads retain qualified shared history after customer source deletion without restoring live access', async () => withTaskConversationFixture(async f => {
-  const archive = await import('../../../../packages/co-managed/src/archiveReads');
+  const archive = await import('../../../../../packages/co-managed/src/archiveReads');
   await f.add(f.principal, 'shared_it', 'Retained MSP contribution');
   await f.add(f.customerPrincipal, 'organization_private', 'Never archived customer secret');
   const before = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
@@ -18703,8 +18690,8 @@ it('archive reads retain qualified shared history after customer source deletion
 }));
 
 it('archive reads enforce current MSP client scope and field restrictions on history authors and files', async () => withAttachmentFixture(async f => {
-  const archive = await import('../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
-  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const archive = await import('../../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const root = await createSharedTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Scoped archive content' });
   await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
     { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Scoped.txt', mimeType: 'text/plain', content: Buffer.from('Scoped bytes') }, f.upload);
@@ -18732,8 +18719,8 @@ it('archive reads enforce current MSP client scope and field restrictions on his
 }));
 
 it('archive reads deliver pending and stored bytes with integrity and final session checks', async () => withAttachmentFixture(async f => {
-  const archive = await import('../../../../packages/co-managed/src/archiveReads');
-  const { storeCoManagedArchiveFiles, coManagedArchiveFilePath } = await import('../../../../packages/co-managed/src/archiveFiles');
+  const archive = await import('../../../../../packages/co-managed/src/archiveReads');
+  const { storeCoManagedArchiveFiles, coManagedArchiveFilePath } = await import('../../../../../packages/co-managed/src/archiveFiles');
   const root = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'File archive' }), bytes = Buffer.from('Actual retained bytes');
   await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
     { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Retained.txt', mimeType: 'text/plain', content: bytes }, f.upload);
@@ -18763,7 +18750,7 @@ it('archive reads download route binds the actual MSP session and returns non-ca
   const session = vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: f.principal.sessionId, user: { tenant: f.principal.tenant, id: f.principal.userId, user_type: 'internal' } } as any);
   const override = vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined), connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
   try {
-    const { GET } = await import('../../app/api/co-management/archive-files/[archiveFileId]/route');
+    const { GET } = await import('../../../../../server/src/app/api/co-management/archive-files/[archiveFileId]/route');
     const { NextRequest } = await import('next/server');
     const query = new URLSearchParams({ customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId, ticketId: f.resource.id });
     const request = new NextRequest(`http://localhost/api/co-management/archive-files/${file.archive_file_id}?${query}`);
@@ -18780,7 +18767,7 @@ it('archive reads download route binds the actual MSP session and returns non-ca
 }));
 
 it('MSP-private archive retains actual task revisions and tombstones without publishing customer history', async () => withTaskConversationFixture(async f => {
-  const archive = await import('../../../../packages/co-managed/src/archiveReads');
+  const archive = await import('../../../../../packages/co-managed/src/archiveReads');
   const request = { kind: 'create', operationId: randomUUID(), audience: 'organization_private', text: 'Original MSP diagnosis' };
   const root = await f.write(f.principal, request); await f.write(f.principal, request);
   await f.sponsor.table('users').where('user_id', f.principal.userId).update({ first_name: 'Renamed', last_name: 'Technician' });
@@ -18800,12 +18787,12 @@ it('MSP-private archive retains actual task revisions and tombstones without pub
   await f.sponsor.table('co_management_private_comments').where('thread_id', root.threadId).del();
   expect(await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).toEqual(history);
   await expect(archive.getCoManagedArchiveHistory(db, f.customerPrincipal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
-  for (const file of ['20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908131037_create_tenant_license_state.cjs']) await require('../../../migrations/' + file).up(db);
-  await expect(require('../../../migrations/20260908115957_retain_co_managed_private_history.cjs').down(db)).rejects.toThrow('retained MSP-private history');
+  for (const file of ['20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908131037_create_tenant_license_state.cjs']) await require('../../../../../server/migrations/' + file).up(db);
+  await expect(require('../../../../../server/migrations/20260908115957_retain_co_managed_private_history.cjs').down(db)).rejects.toThrow('retained MSP-private history');
 }));
 
 it('MSP-private archive captures published draft files and keeps private and shared policies independent', async () => withConversationDraftFixture(async f => {
-  const archive = await import('../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
+  const archive = await import('../../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
   const part = f.file('MSP-private bytes');
   const draft = await f.drafts.beginCoManagedConversationDraft(db, f.principal, f.resource,
     { operationId: randomUUID(), audience: 'organization_private', content: { text: 'MSP-only draft note' }, files: [part.descriptor] });
@@ -18839,7 +18826,7 @@ it('MSP-private archive captures published draft files and keeps private and sha
 }));
 
 it('MSP-private archive capture rolls back with a private writer that expires after retaining evidence', async () => withTaskConversationFixture(async f => {
-  const module = await import('../../../../packages/co-managed/src/privateParticipationEvidence'), original = module.retainCoManagedPrivateParticipation;
+  const module = await import('../../../../../packages/co-managed/src/privateParticipationEvidence'), original = module.retainCoManagedPrivateParticipation;
   const capture = vi.spyOn(module, 'retainCoManagedPrivateParticipation').mockImplementation(async (...args) => {
     await original(...args); await tenantDb(args[0].trx, f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
   });
@@ -18856,7 +18843,7 @@ it('sharing reduction archives legacy ticket history before revocation without c
   const events = await f.customer.table('co_management_event_outbox');
   const live = await f.read(db, f.principal, f.resource);
   expect(live.items.find((item: any) => item.commentId === reply.id)?.markdown).toBe('Still visible legacy reply');
-  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   const work = await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first();
   const request = { operationId: randomUUID(), expectedRevision: work.revision, note: 'Return to our desk' };
   await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
@@ -18873,7 +18860,7 @@ it('sharing reduction archives legacy ticket history before revocation without c
 }));
 
 it('sharing reduction snapshots project history only after MSP participation and rolls back with failed scope changes', async () => withTaskConversationFixture(async f => {
-  const policy = await import('../../../../packages/co-managed/src/policy');
+  const policy = await import('../../../../../packages/co-managed/src/policy');
   await f.add(f.customerPrincipal, 'shared_it', 'Older shared customer history');
   await f.add(f.customerPrincipal, 'organization_private', 'Never capture customer private task');
   const original = await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target);
@@ -18903,7 +18890,7 @@ it('sharing reduction snapshots project history only after MSP participation and
 }));
 
 it('sharing reduction archives board-only visibility using the persisted policy operation', async () => withConversationFixture(async f => {
-  const policy = await import('../../../../packages/co-managed/src/policy');
+  const policy = await import('../../../../../packages/co-managed/src/policy');
   const initial = await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target);
   const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
   await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, initial.revision,
@@ -18921,8 +18908,8 @@ it('sharing reduction archives board-only visibility using the persisted policy 
 }));
 
 it('audience reduction retains only the changed shared thread and its legacy files before hiding it', async () => withAttachmentFixture(async f => {
-  const domain = await import('../../../../packages/co-managed/src/threadDisclosure');
-  const { discloseSharedTicketThread } = await import('../../lib/co-managed/discloseTicketThread');
+  const domain = await import('../../../../../packages/co-managed/src/threadDisclosure');
+  const { discloseSharedTicketThread } = await import('../../../../../server/src/lib/co-managed/discloseTicketThread');
   const root = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Legacy customer shared thread' });
   const reply = await f.create(f.customerPrincipal, { operationId: randomUUID(), parent: attachmentComment(root), text: 'Legacy reply with evidence' });
   await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Unchanged thread must not be swept' });
@@ -18948,7 +18935,7 @@ it('audience reduction retains only the changed shared thread and its legacy fil
 }));
 
 it('audience reduction rolls back captured history when the confirmed disclosure fails', async () => withCommentCreationFixture(async f => {
-  const domain = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const domain = await import('../../../../../packages/co-managed/src/threadDisclosure');
   const root = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Remain shared on failure' });
   const target = { storeTenant: f.resource.tenant, threadId: root.threadId };
   const preview = await domain.previewCoManagedThreadDisclosure(db, f.customerPrincipal, f.resource, target);
@@ -18963,7 +18950,7 @@ it('audience reduction rolls back captured history when the confirmed disclosure
 }));
 
 it('source move retention captures board-shared history in the native ticket writer before losing its grant', async () => withConversationFixture(async f => {
-  const policy = await import('../../../../packages/co-managed/src/policy');
+  const policy = await import('../../../../../packages/co-managed/src/policy');
   const original = await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target);
   const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
   await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, original.revision,
@@ -18976,7 +18963,7 @@ it('source move retention captures board-shared history in the native ticket wri
   await f.customer.table('statuses').insert({ tenant: f.resource.tenant, status_id: statusId, name: 'Open', status_type: 'ticket', board_id: boardId,
     order_number: 1, is_closed: false, is_default: true });
   const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
-  const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+  const { updateTicketInTransaction } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
   await db.transaction(trx => updateTicketInTransaction(trx, user, f.resource.tenant, f.resource.id, { board_id: boardId, status_id: statusId }));
   const saved = await f.sponsor.table('co_managed_participation_evidence').where('event_type', 'TICKET_COMMENT_ARCHIVED');
   expect(saved).toHaveLength(1); expect(saved[0].payload.markdown).toBe('Before native board move');
@@ -19005,9 +18992,9 @@ it.each(['task', 'phase'] as const)('source move retention preserves project his
 }));
 
 it('archive manifest seals qualified evidence and pending files at closure and survives storage completion and source deletion', async () => withAttachmentFixture(async f => {
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
-  const { retainCoManagedSharedConversationBeforeReduction: capture } = await import('../../../../packages/co-managed/src/conversationParticipationEvidence');
-  const { coManagedArchiveManifestHash } = await import('../../../../packages/co-managed/src/archiveManifest');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
+  const { retainCoManagedSharedConversationBeforeReduction: capture } = await import('../../../../../packages/co-managed/src/conversationParticipationEvidence');
+  const { coManagedArchiveManifestHash } = await import('../../../../../packages/co-managed/src/archiveManifest');
   const root = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Final permitted shared history' });
   await f.attachments.uploadCoManagedConversationAttachment(db, f.customerPrincipal, f.resource, { attachmentId: randomUUID(),
     comment: attachmentComment(root), fileName: 'Closure.txt', mimeType: 'text/plain', content: Buffer.from('Final bytes') }, f.upload);
@@ -19036,18 +19023,18 @@ it('archive manifest seals qualified evidence and pending files at closure and s
   await f.customer.table('tickets').where('ticket_id', f.resource.id).del();
   artifactStorage.download.mockRejectedValue(new Error('Do not reopen source storage'));
   artifactStorage.upload.mockReset().mockImplementation(async (bytes: Buffer, path: string) => ({ path, size: bytes.length }));
-  const { storeCoManagedArchiveFiles } = await import('../../../../packages/co-managed/src/archiveFiles');
+  const { storeCoManagedArchiveFiles } = await import('../../../../../packages/co-managed/src/archiveFiles');
   expect(await storeCoManagedArchiveFiles(db, f.principal.tenant)).toEqual({ stored: 1, failed: 0 });
   expect(await manifests().first()).toEqual(saved);
   await expect(manifests().update({ manifest: {} })).rejects.toMatchObject({ code: '23514' });
-  const migration = require('../../../migrations/20260908123721_create_co_managed_archive_manifests.cjs');
+  const migration = require('../../../../../server/migrations/20260908123721_create_co_managed_archive_manifests.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained archive manifests');
 }));
 
 it('archive manifest failure rolls back final history capture and relationship closure', async () => withConversationFixture(async f => {
   await f.addCustomer({ note: 'Capture must roll back with seal' });
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
-  const { retainCoManagedSharedConversationBeforeReduction: capture } = await import('../../../../packages/co-managed/src/conversationParticipationEvidence');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
+  const { retainCoManagedSharedConversationBeforeReduction: capture } = await import('../../../../../packages/co-managed/src/conversationParticipationEvidence');
   const relationship = await f.customer.table('co_management_relationships').first();
   const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
   const constraint = `reject_archive_seal_${randomUUID().replaceAll('-', '')}`;
@@ -19064,9 +19051,9 @@ it('archive manifest failure rolls back final history capture and relationship c
 }));
 
 it('closure private history captures legacy MSP notes and files after unsharing without reopening customer content', async () => withAttachmentFixture(async f => {
-  const { retainCoManagedPrivateHistoryAtClosure } = await import('../../../../packages/co-managed/src/privateParticipationEvidence');
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
-  const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const { retainCoManagedPrivateHistoryAtClosure } = await import('../../../../../packages/co-managed/src/privateParticipationEvidence');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
   const root = await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP retained diagnosis' });
   const input = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Private proof.txt', mimeType: 'text/plain', content: Buffer.from('MSP-owned private bytes') };
   await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource, input, f.upload);
@@ -19093,8 +19080,8 @@ it('closure private history captures legacy MSP notes and files after unsharing 
 }));
 
 it('closure private history keeps historical authors and empty tombstones for unshared tasks and rolls back with closure', async () => withTaskConversationFixture(async f => {
-  const { retainCoManagedPrivateHistoryAtClosure } = await import('../../../../packages/co-managed/src/privateParticipationEvidence');
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { retainCoManagedPrivateHistoryAtClosure } = await import('../../../../../packages/co-managed/src/privateParticipationEvidence');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
   const root = await f.add(f.principal, 'organization_private', 'Deleted private root body');
   await f.write(f.principal, { kind: 'create', operationId: randomUUID(), parent: f.ref(root), text: 'Surviving private reply' });
   await f.write(f.principal, { kind: 'delete', operationId: randomUUID(), comment: f.ref(root), expectedRevision: 1 });
@@ -19119,9 +19106,9 @@ it('closure private history keeps historical authors and empty tombstones for un
 }));
 
 it('work snapshot retains only shared metadata after participation and applies current source-field restrictions after deletion', async () => withTaskConversationFixture(async f => {
-  const { retainCoManagedWorkSnapshot: capture } = await import('../../../../packages/co-managed/src/workSnapshotEvidence');
-  const { getCoManagedSharedWorkSummary } = await import('../../../../packages/co-managed/src/sharedWorkRead');
-  const archive = await import('../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
+  const { retainCoManagedWorkSnapshot: capture } = await import('../../../../../packages/co-managed/src/workSnapshotEvidence');
+  const { getCoManagedSharedWorkSummary } = await import('../../../../../packages/co-managed/src/sharedWorkRead');
+  const archive = await import('../../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
   await db.transaction(trx => capture(trx, f.resource, randomUUID(), new Date()));
   expect(await f.sponsor.table('co_managed_participation_evidence').where('source_type', 'work_snapshot')).toHaveLength(0);
   await f.add(f.principal, 'shared_it', 'Actual contribution');
@@ -19152,14 +19139,14 @@ it('work snapshot retains only shared metadata after participation and applies c
   const notesMasked = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource);
   expect(notesMasked.entries.map(entry => entry.kind)).toEqual(['work_snapshot']);
   expect(notesMasked.entries[0].summary).toEqual(expected.fields);
-  const old = require('../../../migrations/20260908115957_retain_co_managed_private_history.cjs'); await old.up(db);
-  const migration = require('../../../migrations/20260908124921_retain_co_managed_work_snapshots.cjs'); await migration.up(db);
+  const old = require('../../../../../server/migrations/20260908115957_retain_co_managed_private_history.cjs'); await old.up(db);
+  const migration = require('../../../../../server/migrations/20260908124921_retain_co_managed_work_snapshots.cjs'); await migration.up(db);
   await expect(migration.down(db)).rejects.toThrow('retained shared work snapshots');
 }));
 
 it('work snapshot captures ticket context before grant removal and does not refresh newly private metadata', async () => withConversationFixture(async f => {
-  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-  const { retainCoManagedWorkSnapshot } = await import('../../../../packages/co-managed/src/workSnapshotEvidence');
+  const { revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+  const { retainCoManagedWorkSnapshot } = await import('../../../../../packages/co-managed/src/workSnapshotEvidence');
   const work = await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first();
   const request = { operationId: randomUUID(), expectedRevision: work.revision, note: 'Take back access' };
   await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, request);
@@ -19172,9 +19159,9 @@ it('work snapshot captures ticket context before grant removal and does not refr
 }));
 
 it('archive finalizer composes legacy handoffs shared conversations private history and work context before sealing closure', async () => withConversationFixture(async f => {
-  const { finalizeCoManagedArchive } = await import('../../../../packages/co-managed/src/archiveFinalization');
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
-  const { handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { finalizeCoManagedArchive } = await import('../../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
+  const { handBackCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   const work = await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).first();
   const handback = { operationId: randomUUID(), expectedRevision: work.revision, note: 'Historical shared handback' };
   await handBackCoManagedTicket(db, f.principal, f.resource, handback);
@@ -19201,8 +19188,8 @@ it('archive finalizer composes legacy handoffs shared conversations private hist
 }));
 
 it.each([true, false])('archive finalizer discovers legacy MSP task audits while enforcing current sharing=%s', async shared => withTaskConversationFixture(async f => {
-  const { finalizeCoManagedArchive } = await import('../../../../packages/co-managed/src/archiveFinalization');
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { finalizeCoManagedArchive } = await import('../../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
   await f.edit(db, f.principal, f.resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Actual MSP audit contribution' } });
   const audit = await f.customer.table('audit_logs').where({ table_name: 'project_tasks', record_id: f.resource.id, operation: 'co_managed_project_task_update' }).first();
   await f.sponsor.table('co_managed_participation_evidence').where('resource_id', f.resource.id).del();
@@ -19229,8 +19216,8 @@ it.each([true, false])('archive finalizer discovers legacy MSP task audits while
 }));
 
 it('archive finalizer captures completed owned time but not unused time-reference registration', async () => withMspSharedTimeSaveFixture(async f => {
-  const { finalizeCoManagedArchive } = await import('../../../../packages/co-managed/src/archiveFinalization');
-  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const { finalizeCoManagedArchive } = await import('../../../../../packages/co-managed/src/archiveFinalization');
+  const { closeCoManagedRelationship: close } = await import('../../../../../packages/co-managed/src/relationshipClosure');
   const entry = await f.save();
   await f.sponsor.table('co_managed_participation_evidence').where({ source_type: 'time_entry', source_id: entry.entry_id }).del();
   const reference = await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).first();
@@ -19248,8 +19235,8 @@ it('archive finalizer captures completed owned time but not unused time-referenc
 
 async function withTenantLicenseFixture(work: (sign: (claims?: Record<string, unknown>) => string) => Promise<void>) {
   const crypto = await import('node:crypto');
-  const { LICENSE_PUBLIC_KEYS } = await import('../../../../packages/licensing/src/lib/license-keys');
-  const { clearLicenseVerifyCache } = await import('../../../../packages/licensing/src/lib/verify-license');
+  const { LICENSE_PUBLIC_KEYS } = await import('../../../../../packages/licensing/src/lib/license-keys');
+  const { clearLicenseVerifyCache } = await import('../../../../../packages/licensing/src/lib/verify-license');
   const keys = crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' }), kid = `tenant-fixture-${randomUUID()}`;
   LICENSE_PUBLIC_KEYS[kid] = keys.publicKey.export({ type: 'spki', format: 'pem' }).toString();
   const sign = (claims: Record<string, unknown> = {}) => {
@@ -19269,7 +19256,7 @@ it('tenant license state uses real signed tenant binding without changing MSP li
   const f = await ticketHandoffFixture();
   await withTenantLicenseFixture(async sign => {
     const licensing = await import('@alga-psa/licensing');
-    const { checkApplianceLicenseSeatLimit } = await import('../../../../ee/server/src/lib/license/userSeatGuard');
+    const { checkApplianceLicenseSeatLimit } = await importApplianceLicenseSeatGuard();
     const install = await db('license_state').first(), entitlement = await f.sponsor.table('co_managed_entitlements').first();
     const token = sign({ aud: f.resource.tenant, seats: 2 });
     await db.transaction(trx => licensing.activateTenantPsaLicense(trx, f.resource.tenant, token));
@@ -19282,7 +19269,7 @@ it('tenant license state uses real signed tenant binding without changing MSP li
     expect(await f.sponsor.table('co_managed_entitlements').first()).toEqual(entitlement);
     expect(await f.sponsor.table('tenant_license_state')).toHaveLength(0);
     expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
-    const migration = require('../../../migrations/20260908131037_create_tenant_license_state.cjs');
+    const migration = require('../../../../../server/migrations/20260908131037_create_tenant_license_state.cjs');
     await migration.up(db); await expect(migration.down(db)).rejects.toThrow('tenant-bound license state');
   });
 });
@@ -19325,7 +19312,7 @@ it('tenant license state does not revive an expired independent PSA license from
 
 it('PSA capability backfills join the co-managed upgrade transaction and preserve customer work and existing grants', async () => {
   const f = await ticketHandoffFixture();
-  const upgrade = await import('../../../../ee/temporal-workflows/src/db/product-upgrade-operations');
+  const upgrade = await import('../../db/product-upgrade-operations');
   const customerTenant = f.resource.tenant;
   await f.customer.table('boards').where('board_id', f.operation.customer_board_id).update({ priority_type: 'itil', sla_policy_id: null });
   const tables = ['roles', 'permissions', 'role_permissions', 'tax_rates', 'tax_components', 'client_tax_settings', 'client_tax_rates',
@@ -19379,9 +19366,9 @@ it('independent PSA upgrade atomically converts an active customer with its own 
   const f = await ticketHandoffFixture();
   await withTenantLicenseFixture(async sign => {
     const { activateTenantPsaLicense, resolveTenantTier } = await import('@alga-psa/licensing');
-    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
-    const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
-    const { getCoManagedSharedWorkSummary } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../db/co-managed-upgrade-operations');
+    const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+    const { getCoManagedSharedWorkSummary } = await import('../../../../../packages/co-managed/src/sharedWorkRead');
     await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Keep this shared history' });
     const relationship = await f.customer.table('co_management_relationships').first();
     const request = { operationId: randomUUID(), expectedRevision: relationship.revision };
@@ -19411,7 +19398,7 @@ it('independent PSA upgrade atomically converts an active customer with its own 
     await expect(upgrade(db, f.customerPrincipal, f.target, { ...request, expectedRevision: request.expectedRevision + 1 }, log)).rejects.toMatchObject({ code: 'UPGRADE_CHANGED' });
     await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
     await expect(upgrade(db, f.customerPrincipal, f.target, request, log)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
-    const migration = require('../../../migrations/20260908134800_create_co_managed_independent_upgrades.cjs');
+    const migration = require('../../../../../server/migrations/20260908134800_create_co_managed_independent_upgrades.cjs');
     await migration.up(db); await expect(migration.down(db)).rejects.toThrow('independent upgrade receipts');
     await expect(f.customer.table('co_managed_independent_upgrades').update({ seats: 100 })).rejects.toThrow('immutable');
   });
@@ -19422,7 +19409,7 @@ it('independent PSA upgrade after departure preserves the original seal and neve
   await withTenantLicenseFixture(async sign => {
     const { activateTenantPsaLicense } = await import('@alga-psa/licensing');
     const { closeCoManagedRelationship, finalizeCoManagedArchive } = await import('@alga-psa/co-managed');
-    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../db/co-managed-upgrade-operations');
     const relationship = await f.customer.table('co_management_relationships').first();
     const closed = await closeCoManagedRelationship(db, f.customerPrincipal, f.target,
       { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, finalizeCoManagedArchive);
@@ -19446,7 +19433,7 @@ it('independent PSA upgrade rejects MSP actors and missing or insufficient custo
   const f = await ticketHandoffFixture();
   await withTenantLicenseFixture(async sign => {
     const { activateTenantPsaLicense, countCoManagedCommittedSeats } = await import('@alga-psa/licensing');
-    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../db/co-managed-upgrade-operations');
     const relationship = await f.customer.table('co_management_relationships').first();
     const request = { operationId: randomUUID(), expectedRevision: relationship.revision };
     const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
@@ -19488,7 +19475,7 @@ async function withTenantLicenseBrowser(f: Awaited<ReturnType<typeof ticketHando
 it('tenant license controls bind browser activation to the customer and never expose or mutate installation licensing', async () => {
   const f = await ticketHandoffFixture();
   await withTenantLicenseFixture(async sign => withTenantLicenseBrowser(f, async browser => {
-    const actions = await import('../../lib/actions/licenseManagementActions');
+    const actions = await import('../../../../../server/src/lib/actions/licenseManagementActions');
     const installation = await db('license_state').first(), workspace = await f.customer.table('tenants').first();
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No license provider call is permitted'));
     try {
@@ -19520,8 +19507,8 @@ it('tenant license controls bind browser activation to the customer and never ex
 it('tenant license controls renew independent PSA seats and retain tenant scope when its key disappears with final-session rollback', async () => {
   const f = await ticketHandoffFixture();
   await withTenantLicenseFixture(async sign => withTenantLicenseBrowser(f, async () => {
-    const actions = await import('../../lib/actions/licenseManagementActions');
-    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const actions = await import('../../../../../server/src/lib/actions/licenseManagementActions');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../db/co-managed-upgrade-operations');
     const { resolveTenantTier } = await import('@alga-psa/licensing');
     await actions.submitLicense(sign({ aud: f.resource.tenant, seats: 10 }));
     const relationship = await f.customer.table('co_management_relationships').first();
@@ -19555,13 +19542,13 @@ it('tenant license controls renew independent PSA seats and retain tenant scope 
 it.each(['async', 'sync'])('session tier resolution uses the customer entitlement through sign-in and upgrade in the %s auth configuration', async kind => {
   const f = await ticketHandoffFixture();
   await withTenantLicenseFixture(async sign => {
-    const tenantConnection = await import('../../../../packages/db/src/lib/tenant');
+    const tenantConnection = await import('../../../../../packages/db/src/lib/tenant');
     const connection = vi.spyOn(tenantConnection, 'getConnection').mockResolvedValue(db);
     try {
-      const auth = await import('../../../../packages/auth/src/lib/nextAuthOptions');
+      const auth = await import('../../../../../packages/auth/src/lib/nextAuthOptions');
       const config = kind === 'async' ? await auth.getAuthOptions() : auth.options;
       const { activateTenantPsaLicense, resolveTenantTier } = await import('@alga-psa/licensing');
-      const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+      const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../db/co-managed-upgrade-operations');
       const install = await db('license_state').first();
       const user = { id: f.customerPrincipal.userId, tenant: f.resource.tenant, user_type: 'internal', email: 'session-tier@example.test' };
       const token = await config.callbacks.jwt({ token: { session_id: f.customerPrincipal.sessionId, last_session_extend: Date.now() }, user, trigger: 'signIn' });
@@ -19612,7 +19599,7 @@ async function withHostedPsaUpgradeFixture(work: (f: any) => Promise<void>) {
     const stripe = { customers: { retrieve: vi.fn(async () => structuredClone(providerCustomer)) },
       subscriptions: { retrieve: vi.fn(async () => structuredClone(providerSubscription)) } };
     const { upgradeCoManagedWorkspaceWithHostedSubscription: upgrade, paidPsaUpgradeFromStripe: paid } =
-      await import('../../../../ee/temporal-workflows/src/db/co-managed-hosted-upgrade');
+      await import('../../db/co-managed-hosted-upgrade');
     const relationship = await f.customer.table('co_management_relationships').first();
     const request = { operationId: randomUUID(), expectedRevision: relationship.revision };
     const prices = { month: externalPrice };
@@ -19638,7 +19625,7 @@ it('hosted PSA upgrade verifies its own paid subscription outside locks and pres
       administrator: { firstName: 'Another', lastName: 'Admin', email: `other-${randomUUID()}@example.test` } });
     const otherAllocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', other.customer_tenant).first();
     const ownSubscription = await f.customer.table('stripe_subscriptions').first();
-    await require('../../../migrations/20260908143941_retain_stripe_subscription_item_identity.cjs').up(db);
+    await require('../../../../../server/migrations/20260908143941_retain_stripe_subscription_item_identity.cjs').up(db);
     const sponsorSubscriptions = await f.sponsor.table('stripe_subscriptions');
     const sponsorTenant = await f.sponsor.table('tenants').first(), entitlement = await f.sponsor.table('co_managed_entitlements').first();
     const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
@@ -19721,11 +19708,11 @@ it('public PSA upgrade binds the browser customer and worker to current authorit
       const authContext = await import('@alga-psa/auth');
       const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
       await authContext.runWithApiKeyUser(user, async () => {
-      const actions = await import('../../../../ee/server/src/lib/actions/coManagedUpgradeActions');
-      const workflows = await import('../../../../ee/server/src/lib/tenant-management/workflowClient');
+      const actions = await importCoManagedUpgradeActions();
+      const workflows = await importTenantManagementWorkflowClient();
       const licensing = await import('@alga-psa/licensing');
       const temporal = await import('@temporalio/activity');
-      const worker = await import('../../../../ee/temporal-workflows/src/activities/product-upgrade-activities');
+      const worker = await import('../../activities/product-upgrade-activities');
       const schedule = vi.spyOn(workflows, 'startTenantProductUpgradeWorkflow').mockResolvedValue({ available: true,
         workflowId: 'fixture-upgrade', alreadyRunning: false });
       const status = vi.spyOn(workflows, 'getTenantProductUpgradeStatus').mockResolvedValue({ available: true, data: { state: 'idle' } });
@@ -19765,7 +19752,7 @@ it('public PSA upgrade binds the browser customer and worker to current authorit
 
 async function withIndependentCheckoutFixture(work: (f: any) => Promise<void>) {
   await withHostedPsaUpgradeFixture(async f => {
-    const checkout = await import('../../../../ee/server/src/lib/stripe/coManagedUpgradeCheckout');
+    const checkout = await importCoManagedUpgradeCheckout();
     await f.customer.table('stripe_subscriptions').delete();
     await f.customer.table('stripe_customers').delete();
     const sessions = new Map<string, any>();
@@ -19815,8 +19802,8 @@ it('independent hosted checkout recovers a lost response and a paid webhook afte
     Object.assign(session, { status: 'complete', payment_status: 'paid', subscription: f.providerSubscription.id });
     await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
     const event = { id: `evt_${randomUUID()}`, type: 'checkout.session.completed', data: { object: structuredClone(session) } } as any;
-    const { StripeService } = await import('../../../../ee/server/src/lib/stripe/StripeService');
-    const dbModule = await import('../../lib/db/db');
+    const { StripeService } = await importStripeService();
+    const dbModule = await import('../../../../../server/src/lib/db/db');
     const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
     const service = new StripeService();
     Object.assign(service, { stripe: f.paymentStripe, initPromise: Promise.resolve() });
@@ -19846,7 +19833,7 @@ it('independent hosted checkout recovers a lost response and a paid webhook afte
     await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: null });
     expect(await f.purchase()).toEqual({ kind: 'paid' });
     expect((await f.upgrade()).productCode).toBe('psa');
-    const migration = require('../../../migrations/20260908150135_create_co_managed_upgrade_purchases.cjs');
+    const migration = require('../../../../../server/migrations/20260908150135_create_co_managed_upgrade_purchases.cjs');
     await migration.up(db); await expect(migration.down(db)).rejects.toThrow('purchase history');
   });
 });
@@ -19922,7 +19909,7 @@ it('independent payment recovery refuses cancellation when the initial invoice h
     Object.assign(session, { status: 'complete', payment_status: 'unpaid', subscription: f.providerSubscription.id });
     Object.assign(f.providerSubscription.latest_invoice, { status: 'void', amount_paid: 0 });
     await f.checkout.reconcileCoManagedUpgradeCheckout(db, f.paymentStripe, f.resource.tenant, f.purchaseRequest.operationId, session.id);
-    const migration = require('../../../migrations/20260908152550_retain_co_managed_payment_failure.cjs');
+    const migration = require('../../../../../server/migrations/20260908152550_retain_co_managed_payment_failure.cjs');
     await migration.up(db); await expect(migration.down(db)).rejects.toThrow('pending failed payment');
     session.payment_status = 'paid'; Object.assign(f.providerSubscription.latest_invoice, { status: 'paid', amount_paid: 26000 });
     f.paymentStripe.subscriptions.cancel = vi.fn();
@@ -19936,7 +19923,7 @@ it('independent payment recovery refuses cancellation when the initial invoice h
 
 it('independent billing portal binds paid seat confirmation to its own subscription and current customer authority', async () => {
   await withHostedPsaUpgradeFixture(async f => {
-    const { openCoManagedIndependentBilling: open } = await import('../../../../ee/server/src/lib/stripe/coManagedUpgradeCheckout');
+    const { openCoManagedIndependentBilling: open } = await importCoManagedUpgradeCheckout();
     const portal = vi.fn(async () => ({ url: 'https://billing.stripe.com/p/fixture' }));
     const stripe = { ...f.stripe, billingPortal: { sessions: { create: portal } } };
     const dependencies = { stripe: stripe as any, prices: Object.values(f.prices) as string[], returnBaseUrl: 'https://app.example.test' };
@@ -19967,8 +19954,8 @@ it('independent billing portal binds paid seat confirmation to its own subscript
 
 async function withPortableVaultExportFixture(work: (fixture: any) => Promise<void>) {
   const f = await ticketHandoffFixture();
-  const portable = await import('../../../../ee/server/src/lib/co-managed/portableVaultExport');
-  const encryption = await import('../../../../ee/server/src/lib/credentials/encryption');
+  const portable = await importCoManagedPortableVaultExport();
+  const encryption = await importCredentialEncryption();
   const context = { packageId: randomUUID(), sourceTenant: f.actor.tenant };
   const permission = await f.customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
   let read = await f.customer.table('permissions').where({ resource: 'credential', action: 'read' }).first();
@@ -20025,7 +20012,7 @@ it('portable vault export retains customer metadata and audited usable secrets a
   expect(audit.map((row: any) => row.operation)).toEqual(['credential_otp_seed_reveal', 'credential_reveal']);
   expect(audit.every((row: any) => row.details.export_package_id === f.context.packageId)).toBe(true);
   expect(JSON.stringify(audit)).not.toContain('customer recovery password');
-  const { restorePortableCredentialVault } = await import('../../../../ee/server/src/lib/credentials/portable');
+  const { restorePortableCredentialVault } = await importPortableCredentialVault();
   const restored = await restorePortableCredentialVault(result.vault, f.context, [f.credentialId], 'customer-held portable recovery phrase');
   expect(await f.encryption.decryptCredentialValue(restored[0].passwordCiphertext, restored[0].scheme)).toBe('customer recovery password');
   expect(await f.encryption.decryptCredentialValue(restored[0].otpSecretCiphertext, restored[0].scheme)).toBe('JBSWY3DPEHPK3PXP');
@@ -20063,7 +20050,7 @@ it('portable vault export fails closed on restricted ACL, audit failure and auth
 
 it('portable workspace core preserves local identity relationships and saved authors while excluding authentication and live trust', async () => {
   const f = await ticketHandoffFixture();
-  const { exportCoManagedPortableCore, validateCoManagedPortableCoreRecords } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  const { exportCoManagedPortableCore, validateCoManagedPortableCoreRecords } = await import('../../../../../packages/co-managed/src/portableCoreExport');
   await f.customer.table('users').where('user_id', f.actor.userId).update({ hashed_password: 'never-export-password-hash',
     two_factor_secret: 'never-export-mfa-secret', client_portal_entra_metadata: { token: 'never-export-entra-login' } });
   await f.customer.table('tenants').update({ payment_platform_id: 'never-export-billing-customer' });
@@ -20095,7 +20082,7 @@ it('portable workspace core preserves local identity relationships and saved aut
 
 it('portable workspace core requires current customer directory permissions and rejects revoked or MSP sessions', async () => {
   const f = await ticketHandoffFixture();
-  const { exportCoManagedPortableCore } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  const { exportCoManagedPortableCore } = await import('../../../../../packages/co-managed/src/portableCoreExport');
   const packageId = randomUUID();
   await expect(exportCoManagedPortableCore(db, f.principal, packageId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: db.fn.now() });
@@ -20107,7 +20094,7 @@ it('portable workspace core requires current customer directory permissions and 
 });
 
 it('portable work export preserves customer and shared ticket history while excluding MSP private notes and transport metadata', async () => withConversationFixture(async f => {
-  const { exportCoManagedPortableWork, validateCoManagedPortableWorkRecords } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  const { exportCoManagedPortableWork, validateCoManagedPortableWorkRecords } = await import('../../../../../packages/co-managed/src/portableWorkExport');
   await f.addCustomer({ note: 'Customer private portable history', internal: true, audience: 'organization_private' });
   const shared = await f.addCustomer({ note: 'Shared portable history', internal: true, audience: 'shared_it', foreign: true });
   await f.addPrivate({ note: 'MSP-private never portable' });
@@ -20133,7 +20120,7 @@ it('portable work export preserves customer and shared ticket history while excl
 }));
 
 it('portable work export preserves project structure and task audiences and rejects missing current work permission', async () => withTaskConversationFixture(async f => {
-  const { exportCoManagedPortableWork } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  const { exportCoManagedPortableWork } = await import('../../../../../packages/co-managed/src/portableWorkExport');
   await f.add(f.customerPrincipal, 'organization_private', 'Customer private task history');
   const shared = await f.add(f.principal, 'shared_it', 'Shared task history');
   await f.add(f.principal, 'organization_private', 'MSP private task history');
@@ -20156,7 +20143,7 @@ async function withPortableDocumentFixture(work: (fixture: any) => Promise<void>
   const { Readable } = await import('node:stream');
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'co-managed-document-test-'));
   const previousTmp = process.env.TMPDIR; process.env.TMPDIR = root;
-  const { exportCoManagedPortableDocuments } = await import('../../../../packages/co-managed/src/portableDocumentExport');
+  const { exportCoManagedPortableDocuments } = await import('../../../../../packages/co-managed/src/portableDocumentExport');
   const documentId = randomUUID(), legacyId = randomUUID(), fileId = randomUUID(), versionId = randomUUID();
   const bytes = Buffer.from('Customer file bytes\u0000with binary data'), legacyBytes = Buffer.from('Legacy customer document');
   const storagePath = `/${f.actor.tenant}/portable-file.bin`, legacyPath = `/${f.actor.tenant}/portable-legacy.bin`;
@@ -20227,11 +20214,11 @@ async function withPortableConversationFileFixture(work: (fixture: any) => Promi
     const { Readable } = await import('node:stream');
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'co-managed-conversation-export-test-'));
     const previousTmp = process.env.TMPDIR; process.env.TMPDIR = root;
-    const { exportCoManagedPortableConversationFiles } = await import('../../../../packages/co-managed/src/portableConversationExport');
+    const { exportCoManagedPortableConversationFiles } = await import('../../../../../packages/co-managed/src/portableConversationExport');
     const sharedRoot = await f.create(f.principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Shared root' });
     const shared = await f.create(f.principal, { operationId: randomUUID(), parent: attachmentComment(sharedRoot), text: 'Surviving shared reply' });
     const customerPrivate = await f.create(f.customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer private message' });
-    const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+    const { mutateCoManagedPrivateTicketComment } = await import('../../../../../packages/co-managed/src/privateTicketConversation');
     const mspPrivate = await mutateCoManagedPrivateTicketComment(db, f.principal, f.resource, { operationId: randomUUID(), kind: 'create', text: 'MSP private file message' });
     const uploaded = [];
     for (const [comment, actor, name] of [[shared, f.principal, 'shared.txt'], [customerPrivate, f.customerPrincipal, 'customer-private.txt'], [mspPrivate, f.principal, 'msp-private.txt']] as const) {
@@ -20273,9 +20260,9 @@ it('portable conversation export preserves published customer/shared files after
 }));
 
 it('portable workspace coordinator binds actual private and shared conversation files to authenticated package records', async () => withPortableConversationFileFixture(async f => {
-  const { prepareCoManagedPortableWorkspaceExport } = await import('../../../../ee/server/src/lib/co-managed/portableWorkspaceExport');
-  const { openPortableArchive } = await import('../../../../packages/co-managed/src/portableArchive');
-  const { validateCoManagedPortableWorkspaceManifest } = await import('../../../../packages/co-managed/src/portableWorkspaceManifest');
+  const { prepareCoManagedPortableWorkspaceExport } = await importCoManagedPortableWorkspaceExport();
+  const { openPortableArchive } = await import('../../../../../packages/co-managed/src/portableArchive');
+  const { validateCoManagedPortableWorkspaceManifest } = await import('../../../../../packages/co-managed/src/portableWorkspaceManifest');
   let read = await f.customer.table('permissions').where({ resource: 'credential', action: 'read' }).first();
   if (!read) {
     const existing = await f.customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
@@ -20328,7 +20315,7 @@ registerCoManagedPortableAssetTests(() => db, ticketHandoffFixture);
 
 it.each(['customer', 'sponsor'])('public departure by %s retains an archive and releases seats once using the reviewed relationship', async side => {
   const f = await ticketHandoffFixture();
-  const { getCoManagedDepartureScreen: review, departCoManagedRelationship: depart } = await import('../../../../packages/co-managed/src/departure');
+  const { getCoManagedDepartureScreen: review, departCoManagedRelationship: depart } = await import('../../../../../packages/co-managed/src/departure');
   const actor = side === 'customer' ? f.customerPrincipal : f.principal;
   const provisioning = side === 'sponsor' ? f.operation.operation_id : undefined;
   const screen = await review(db, actor, provisioning);
@@ -20355,7 +20342,7 @@ it.each(['customer', 'sponsor'])('public departure by %s retains an archive and 
 
 it('public departure rejects foreign provisioning selectors and rolls back closure if archive sealing fails', async () => {
   const f = await ticketHandoffFixture();
-  const { getCoManagedDepartureScreen: review, departCoManagedRelationship: depart } = await import('../../../../packages/co-managed/src/departure');
+  const { getCoManagedDepartureScreen: review, departCoManagedRelationship: depart } = await import('../../../../../packages/co-managed/src/departure');
   await expect(review(db, f.principal, randomUUID())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   await expect(review(db, f.customerPrincipal, f.operation.operation_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   const screen = await review(db, f.customerPrincipal);
@@ -20375,7 +20362,7 @@ it('public departure browser actions derive customer authority and reject API ov
     const auth = await import('@alga-psa/auth');
     const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
     await auth.runWithApiKeyUser(user, async () => {
-      const actions = await import('../../lib/actions/coManagedDepartureActions');
+      const actions = await import('../../../../../server/src/lib/actions/coManagedDepartureActions');
       const screen = await actions.getCoManagedDepartureScreenAction();
       const request = { operationId: randomUUID(), relationshipId: screen.relationshipId, expectedRevision: screen.revision };
       browser.override.mockReturnValue({ tenant: f.actor.tenant, user_id: f.customerPrincipal.userId });
@@ -20393,9 +20380,9 @@ it('public departure browser actions derive customer authority and reject API ov
 
 it('portable coordinated snapshot gives independently authorized record collectors one cutoff and rejects expired or forged capabilities', async () => {
   const f = await ticketHandoffFixture();
-  const { withCoManagedPortableSnapshot: capture, portableSnapshotTransaction: read } = await import('../../../../packages/co-managed/src/portableSnapshot');
-  const { exportCoManagedPortableCore: core } = await import('../../../../packages/co-managed/src/portableCoreExport');
-  const { exportCoManagedPortableWork: work } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  const { withCoManagedPortableSnapshot: capture, portableSnapshotTransaction: read } = await import('../../../../../packages/co-managed/src/portableSnapshot');
+  const { exportCoManagedPortableCore: core } = await import('../../../../../packages/co-managed/src/portableCoreExport');
+  const { exportCoManagedPortableWork: work } = await import('../../../../../packages/co-managed/src/portableWorkExport');
   const packageId = randomUUID(), laterTicketId = randomUUID();
   let expired: any;
   await capture(db, async snapshot => {
@@ -20419,8 +20406,8 @@ it('portable coordinated snapshot gives independently authorized record collecto
 });
 
 it('portable coordinated snapshot still performs document delivery checks against current source and current authority', async () => withPortableDocumentFixture(async f => {
-  const { withCoManagedPortableSnapshot: capture } = await import('../../../../packages/co-managed/src/portableSnapshot');
-  const { exportCoManagedPortableDocuments: documents } = await import('../../../../packages/co-managed/src/portableDocumentExport');
+  const { withCoManagedPortableSnapshot: capture } = await import('../../../../../packages/co-managed/src/portableSnapshot');
+  const { exportCoManagedPortableDocuments: documents } = await import('../../../../../packages/co-managed/src/portableDocumentExport');
   await capture(db, async snapshot => {
     const result = await documents(db, f.customerPrincipal, randomUUID(), snapshot);
     try { expect(result.component.records.documents.length).toBeGreaterThan(0); }
@@ -20437,10 +20424,10 @@ it('portable coordinated snapshot still performs document delivery checks agains
 it('self-host AI gateway ownership never lends appliance credits to active departed or independently upgraded customers', async () => {
   const f = await ticketHandoffFixture();
   await withTenantLicenseFixture(async sign => {
-    const { getSelfHostAiGatewayCredential: credential } = await import('../../../../packages/licensing/src/lib/ai-gateway-auth');
+    const { getSelfHostAiGatewayCredential: credential } = await import('../../../../../packages/licensing/src/lib/ai-gateway-auth');
     const licensing = await import('@alga-psa/licensing');
-    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
-    const { departCoManagedRelationship: depart } = await import('../../../../packages/co-managed/src/departure');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../db/co-managed-upgrade-operations');
+    const { departCoManagedRelationship: depart } = await import('../../../../../packages/co-managed/src/departure');
     await db('license_state').update({ appliance_credential: 'owned-only-by-appliance-msp' });
     expect(await credential(f.principal.tenant, db)).toBe('owned-only-by-appliance-msp');
     await expect(credential(f.customerPrincipal.tenant, db)).rejects.toThrow('own AI gateway connection');
@@ -20462,15 +20449,15 @@ registerCoManagedPortableWorkflowTests(() => db, ticketHandoffFixture);
 registerCoManagedPortableEngagementCases(() => db, ticketHandoffFixture, withSharedProjectTaskFixture);
 
 it('portable workspace graph validates cross-section identities and rejects dangling author service and configuration references', async () => withTaskConversationFixture(async f => {
-  const { withCoManagedPortableSnapshot } = await import('../../../../packages/co-managed/src/portableSnapshot');
-  const { validateCoManagedPortableWorkspaceRecords: validate } = await import('../../../../packages/co-managed/src/portableWorkspaceGraph');
-  const { exportCoManagedPortableCore } = await import('../../../../packages/co-managed/src/portableCoreExport');
-  const { exportCoManagedPortableWork } = await import('../../../../packages/co-managed/src/portableWorkExport');
-  const { exportCoManagedPortableDocuments } = await import('../../../../packages/co-managed/src/portableDocumentExport');
-  const { exportCoManagedPortableAssets } = await import('../../../../packages/co-managed/src/portableAssetExport');
-  const { exportCoManagedPortableOperational } = await import('../../../../packages/co-managed/src/portableOperationalExport');
-  const { exportCoManagedPortableWorkflows } = await import('../../../../packages/co-managed/src/portableWorkflowExport');
-  const { exportCoManagedPortableEngagement } = await import('../../../../packages/co-managed/src/portableEngagementExport');
+  const { withCoManagedPortableSnapshot } = await import('../../../../../packages/co-managed/src/portableSnapshot');
+  const { validateCoManagedPortableWorkspaceRecords: validate } = await import('../../../../../packages/co-managed/src/portableWorkspaceGraph');
+  const { exportCoManagedPortableCore } = await import('../../../../../packages/co-managed/src/portableCoreExport');
+  const { exportCoManagedPortableWork } = await import('../../../../../packages/co-managed/src/portableWorkExport');
+  const { exportCoManagedPortableDocuments } = await import('../../../../../packages/co-managed/src/portableDocumentExport');
+  const { exportCoManagedPortableAssets } = await import('../../../../../packages/co-managed/src/portableAssetExport');
+  const { exportCoManagedPortableOperational } = await import('../../../../../packages/co-managed/src/portableOperationalExport');
+  const { exportCoManagedPortableWorkflows } = await import('../../../../../packages/co-managed/src/portableWorkflowExport');
+  const { exportCoManagedPortableEngagement } = await import('../../../../../packages/co-managed/src/portableEngagementExport');
   await f.add(f.principal, 'shared_it', 'Foreign historical author');
   await f.customer.table('availability_settings').insert({ tenant: f.actor.tenant, availability_setting_id: randomUUID(), setting_type: 'general_settings', config_json: { approver_user_ids: [f.customerPrincipal.userId] } });
   await f.customer.table('documents').insert({ tenant: f.actor.tenant, document_id: randomUUID(), document_name: 'Historical rendered document', user_id: f.customerPrincipal.userId, created_by: f.customerPrincipal.userId, source_template_id: 'standard-invoice-by-location' });
@@ -20487,7 +20474,7 @@ it('portable workspace graph validates cross-section identities and rejects dang
         engagement: (await exportCoManagedPortableEngagement(db, f.customerPrincipal, packageId, snapshot)).records };
       expect(validate(sections, { sourceTenant: f.actor.tenant }).records.project_tasks.some(row => row.task_id === f.resource.id)).toBe(true);
       expect(sections.documents.documents.some((row: any) => row.source_template_id === 'standard-invoice-by-location')).toBe(true);
-      const { prepareCoManagedPortableWorkspaceRecords, CO_MANAGED_PORTABLE_RESTORE_GLOBALS } = await import('../../../../packages/co-managed/src/portableWorkspaceRestoreRecords');
+      const { prepareCoManagedPortableWorkspaceRecords, CO_MANAGED_PORTABLE_RESTORE_GLOBALS } = await import('../../../../../packages/co-managed/src/portableWorkspaceRestoreRecords');
       const allRecords = validate(sections, { sourceTenant: f.actor.tenant }).records;
       const globalColumns = ['standard_status_id', 'type_id', 'type_id', 'id'];
       const destinationCatalogMappings = Object.fromEntries(CO_MANAGED_PORTABLE_RESTORE_GLOBALS.map((table, index) =>
@@ -20496,7 +20483,7 @@ it('portable workspace graph validates cross-section identities and rejects dang
       expect(prepared.records.users.every(row => row.is_inactive)).toBe(true);
       expect(prepared.records.project_tasks[0].task_id).not.toBe(sections.work.project_tasks[0].task_id);
       expect(prepared.records.project_task_comments[0].task_id).toBe(prepared.records.project_tasks[0].task_id);
-      const { sealPortableArchive, openPortableArchive } = await import('../../../../packages/co-managed/src/portableArchive');
+      const { sealPortableArchive, openPortableArchive } = await import('../../../../../packages/co-managed/src/portableArchive');
       const context = { packageId, sourceTenant: f.actor.tenant };
       const encrypted = await sealPortableArchive({ context, manifest: { sections }, files: documents.files }, 'Customer-owned complete archive passphrase');
       try {

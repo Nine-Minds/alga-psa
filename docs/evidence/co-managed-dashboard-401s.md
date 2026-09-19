@@ -158,7 +158,7 @@ regardless of flag state.
 
 ### Why the tests did not catch it
 
-`server/src/test/integration/coManagedBootstrap.integration.test.ts:6235`
+`ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:6235`
 imports the route module directly and calls `GET` on a hand-built `Request`.
 That exercises the handler but bypasses `middleware.ts` entirely, so the route
 passed its tests while being unreachable from a browser.
@@ -455,7 +455,7 @@ their handlers instead of dying at the edge, and the handlers' own auth still
 decides the outcome. The happy paths stay covered by
 `server/src/test/unit/product/coManagedPortalAttachmentDownload.test.ts`
 (6 tests) and the `online-meetings/artifacts` cases in
-`server/src/test/integration/coManagedBootstrap.integration.test.ts:15563-15601`,
+`ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts:15563-15601`,
 which drive both the session and the API-key branches.
 
 A follow-up worth its own card: the fixture set should seed a client-portal

@@ -4,11 +4,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { tenantDb, runWithTenant } from '@alga-psa/db';
 import { getCoManagedEntitlementState } from '@alga-psa/licensing';
 import { requestCoManagedProvisioningCleanup, runCoManagedProvisioningCleanup,
-  completeCoManagedProvisioningCleanup, type CoManagedProvisioningOperation } from '../../../../../packages/co-managed/src/provisioning';
-import { bootstrapCoManagedWorkspace } from '../../../../../ee/temporal-workflows/src/db/co-managed-provisioning-operations';
-import { deleteCoManagedProvisioningRows } from '../../../../../ee/temporal-workflows/src/db/co-managed-provisioning-cleanup';
-import { cleanupCoManagedCustomer } from '../../../../../ee/temporal-workflows/src/activities/co-managed-provisioning-activities';
-import { TENANT_TABLES_DELETION_ORDER } from '../../../../../ee/temporal-workflows/src/activities/tenant-deletion-activities';
+  completeCoManagedProvisioningCleanup, type CoManagedProvisioningOperation } from '../../../../../../packages/co-managed/src/provisioning';
+import { bootstrapCoManagedWorkspace } from '../../../db/co-managed-provisioning-operations';
+import { deleteCoManagedProvisioningRows } from '../../../db/co-managed-provisioning-cleanup';
+import { cleanupCoManagedCustomer } from '../../../activities/co-managed-provisioning-activities';
+import { TENANT_TABLES_DELETION_ORDER } from '../../../activities/tenant-deletion-activities';
 
 export function registerCoManagedProvisioningCleanupTests(getDb: () => Knex, prepare: () => Promise<CoManagedProvisioningOperation>) {
   async function fixture(bootstrap = true) {
@@ -22,7 +22,7 @@ export function registerCoManagedProvisioningCleanupTests(getDb: () => Knex, pre
   }
   async function signup(f: Awaited<ReturnType<typeof fixture>>) {
     const invitation = await f.customer.table('user_invitations').first();
-    const { UserService } = await import('../../../../../packages/users/src/services/UserService');
+    const { UserService } = await import('../../../../../../packages/users/src/services/UserService');
     const service = new UserService();
     vi.spyOn(service as any, 'ensurePermission').mockResolvedValue(undefined);
     vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: f.db });

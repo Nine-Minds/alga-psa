@@ -71,7 +71,7 @@ Implemented the client target and read contracts.
 
 ### Evidence
 
-- `server/src/test/integration/helpers/coManagedManagementPolicyCases.ts` adds five cases: authorized sponsor-client resolution plus admission-consistent usage; foreign/forged/mismatched denial and redaction; explicit selection for multiple current relationships with retained ended history; single-setup resume under different operation IDs; and legacy operation-to-client mapping with conflicting-client rejection.
+- `ee/temporal-workflows/src/__tests__/integration/helpers/coManagedManagementPolicyCases.ts` adds five cases: authorized sponsor-client resolution plus admission-consistent usage; foreign/forged/mismatched denial and redaction; explicit selection for multiple current relationships with retained ended history; single-setup resume under different operation IDs; and legacy operation-to-client mapping with conflicting-client rejection.
 - Direct run against the migrated database: `DB_HOST=127.0.0.1 DB_PORT=5472 DB_USER_ADMIN=postgres DB_NAME_SERVER=server npx vitest run src/test/integration/coManagedBootstrap.integration.test.ts -t "co-managed client target and read contracts"` passed 5/5; the existing `-t "co-managed management policy"` block passed 7/7.
 - `server/src/test/unit/product` (83 files, 627 tests) passed, including the updated policy, delegation, departure, management, provisioning, and overview suites.
 - `npx tsc -p packages/co-managed/tsconfig.json --noEmit` is clean. The server project typecheck reports only the three pre-existing `src/lib/notifications/sendEventEmail.ts` errors.
