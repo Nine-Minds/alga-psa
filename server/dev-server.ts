@@ -10,6 +10,14 @@ import {
 // `import next from 'next'` trips Vitest's CJS interop ("Cannot set property
 // default of [object Module]"); the CJS export works identically under tsx.
 const require = createRequire(import.meta.url);
+// The programmatic `next` entrypoint does not install Next's Node globals until
+// `app.prepare()`.  Importers can load server-action modules in the gap between
+// importing this entrypoint and starting the app (Vitest's collection phase is
+// one example).  Those modules snapshot `globalThis.AsyncLocalStorage` and
+// permanently fall back to Next's throwing browser shim when it is absent.
+// Next documents this environment module as needing to load before any other
+// server modules, so do that before exposing the custom server entrypoint.
+require('next/dist/server/node-environment');
 type CreateNext = (options: Record<string, unknown>) => NextUpgradeApp & {
   prepare: () => Promise<void>;
   getRequestHandler: () => (

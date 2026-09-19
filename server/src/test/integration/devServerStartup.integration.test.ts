@@ -3,11 +3,22 @@ import type { Duplex } from 'node:stream';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { createRequire } from 'node:module';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   startDevServer,
   type RunningDevServer,
 } from '../../../dev-server';
+
+// Load the same singleton used by Next server actions immediately after the
+// custom entrypoint, before beforeAll calls app.prepare(). This guards the
+// import-time window that previously cached Next's throwing browser fallback
+// and poisoned every later integration suite in the shared worker.
+const require = createRequire(import.meta.url);
+const { workAsyncStorageInstance } = require(
+  'next/dist/server/app-render/work-async-storage-instance',
+) as { workAsyncStorageInstance: AsyncLocalStorage<unknown> };
 
 /**
  * Regression coverage for the `npm run dev` / `npm run dev:turbo` startup path.
@@ -153,6 +164,13 @@ describe('development server startup path (npm run dev)', () => {
   afterAll(async () => {
     if (running) await running.close();
     await removeFixtureApp(fixtureDir);
+  });
+
+  it('initializes Next server actions with Node AsyncLocalStorage at import time', () => {
+    expect(workAsyncStorageInstance).toBeInstanceOf(AsyncLocalStorage);
+    expect(workAsyncStorageInstance.run('dev-server-context', () =>
+      workAsyncStorageInstance.getStore(),
+    )).toBe('dev-server-context');
   });
 
   it('owns exactly one upgrade listener', () => {
