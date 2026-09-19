@@ -50,6 +50,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -502,25 +503,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       priorities,
       categories
     ] = await Promise.all([
-      // Comments, plus read-time bundle provenance: a comment is a bundle
-      // mirror when ticket_bundle_mirrors points at it. The mirror's source
-      // comment carries the master ticket so the chip can name and link it.
-      (() => {
-        const commentsQuery = tenantScopedTable(trx, 'comments', tenant).select(
-          'comments.*',
-          'bm.source_comment_id as bundle_mirror_source_comment_id',
-          'mt.ticket_id as bundle_source_ticket_id',
-          'mt.ticket_number as bundle_source_ticket_number'
-        );
-        tenantLeftJoin(trx, tenant, commentsQuery, 'ticket_bundle_mirrors as bm', 'comments.comment_id', 'bm.child_comment_id');
-        tenantLeftJoin(trx, tenant, commentsQuery, 'comments as src', 'bm.source_comment_id', 'src.comment_id', { rootTenantColumn: 'comments.tenant' });
-        tenantLeftJoin(trx, tenant, commentsQuery, 'tickets as mt', 'src.ticket_id', 'mt.ticket_id', { rootTenantColumn: 'comments.tenant' });
-        return commentsQuery
-          .where({
-            'comments.ticket_id': ticketId
-          })
-          .orderBy('comments.created_at', 'asc');
-      })(),
+      // Comments, with read-time bundle provenance owned by the shared read
+      // layer so this load and every refresh path return identical shapes.
+      Comment.getAllbyTicketId(trx, tenant, ticketId),
       
       // Documents
       tenantLeftJoin(
@@ -628,22 +613,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           .orderBy('category_name', 'asc');
       })()
     ]);
-
-    for (const comment of comments as Array<Record<string, any>>) {
-      const sourceCommentId = comment.bundle_mirror_source_comment_id as string | null | undefined;
-      const masterTicketId = (comment.bundle_source_ticket_id as string | null) ?? null;
-      const masterTicketNumber = (comment.bundle_source_ticket_number as string | null) ?? null;
-      delete comment.bundle_mirror_source_comment_id;
-      delete comment.bundle_source_ticket_id;
-      delete comment.bundle_source_ticket_number;
-      comment.bundle_mirror_source = sourceCommentId
-        ? {
-            source_comment_id: sourceCommentId,
-            master_ticket_id: masterTicketId,
-            master_ticket_number: masterTicketNumber,
-          }
-        : null;
-    }
 
     // Use the same document policy as subsequent fetches before returning rows
     // or deriving counts. This also annotates effective comment visibility.

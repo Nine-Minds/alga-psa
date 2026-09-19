@@ -126,6 +126,7 @@ let getConsolidatedTicketData: any;
 let fetchTicketsWithPagination: any;
 let updateComment: any;
 let createComment: any;
+let findCommentsByTicketId: any;
 let saveTimeEntry: any;
 let TicketService: any;
 
@@ -179,7 +180,7 @@ describe('Ticket bundling integration', () => {
       '@alga-psa/tickets/actions/optimizedTicketActions'
     ));
 
-    ({ updateComment, createComment } = await import('@alga-psa/tickets/actions/comment-actions/commentActions'));
+    ({ updateComment, createComment, findCommentsByTicketId } = await import('@alga-psa/tickets/actions/comment-actions/commentActions'));
     ({ saveTimeEntry } = await import('@alga-psa/scheduling/actions/timeEntryActions'));
     ({ TicketService } = await import('server/src/lib/api/services/TicketService'));
 
@@ -725,6 +726,26 @@ describe('Ticket bundling integration', () => {
     const plain = childComments.find((comment) => comment.note === 'Child-only note' || comment.note?.includes?.('Child-only note'));
     expect(plain).toBeTruthy();
     expect(plain.bundle_mirror_source).toBeNull();
+
+    // Every MSP refresh path (remote 'comments' update, post add/edit/delete)
+    // refetches through findCommentsByTicketId -> Comment.getAllbyTicketId, not
+    // through getConsolidatedTicketData. If the provenance join lived only in
+    // the consolidated loader, mirrors would silently flip to "System" with no
+    // chip after the first refetch. Assert the shared read layer returns the
+    // same shape.
+    const refreshedComments = await runWithTenant(tenantId, async () =>
+      findCommentsByTicketId(childId)
+    );
+    expect(Array.isArray(refreshedComments)).toBe(true);
+    const refreshedMirror = (refreshedComments as any[]).find((comment) => comment.comment_id === mirroredCommentId);
+    expect(refreshedMirror).toBeTruthy();
+    expect(refreshedMirror.bundle_mirror_source).toMatchObject({
+      source_comment_id: sourceCommentId,
+      master_ticket_id: masterId,
+      master_ticket_number: masterNumber,
+    });
+    const refreshedPlain = (refreshedComments as any[]).find((comment) => comment.comment_id !== mirroredCommentId && !comment.is_system_generated);
+    expect(refreshedPlain?.bundle_mirror_source ?? null).toBeNull();
 
     const resolutionMasterId = uuidv4();
     const resolutionChildId = uuidv4();
