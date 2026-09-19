@@ -211,6 +211,36 @@ const APPLICATION_ERROR_STATUS: Record<string, number> = {
   XERO_API_ERROR: 502,
 };
 
+// External-link validation failures surface from tenant link actions and the
+// ticket/comment create paths (via ExternalLinkValidationError). They are
+// client input problems, not server faults, so map each code to a 4xx while
+// preserving the machine-readable code (e.g. origin_exists, duplicate_external_link).
+const EXTERNAL_LINK_ERROR_STATUS: Record<string, number> = {
+  ticket_not_found: 404,
+  comment_not_found: 404,
+  link_not_found: 404,
+  system_not_found: 422,
+  external_id_required: 422,
+  invalid_url: 422,
+  url_required: 422,
+  invalid_relationship: 422,
+  invalid_entity_type: 422,
+  invalid_system_key: 422,
+  system_label_required: 422,
+  origin_exists: 409,
+  duplicate_external_link: 409,
+  system_in_use: 409,
+};
+
+function isExternalLinkValidationError(error: unknown): error is { code: string; message: string } {
+  return (
+    Boolean(error) &&
+    typeof error === 'object' &&
+    (error as { name?: unknown }).name === 'ExternalLinkValidationError' &&
+    typeof (error as { code?: unknown }).code === 'string'
+  );
+}
+
 function getApplicationErrorStatus(error: unknown): number | undefined {
   if (!error || typeof error !== 'object') {
     return undefined;
@@ -469,6 +499,15 @@ export function handleApiError(error: any): NextResponse {
       status: explicitStatus,
       headers: error.headers
     });
+  }
+
+  if (isExternalLinkValidationError(error)) {
+    return NextResponse.json({
+      error: {
+        code: error.code,
+        message: error.message,
+      }
+    }, { status: EXTERNAL_LINK_ERROR_STATUS[error.code] ?? 422 });
   }
 
   const applicationStatus = getApplicationErrorStatus(error);

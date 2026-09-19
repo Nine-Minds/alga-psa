@@ -43,7 +43,7 @@ vi.mock("../ui/toast/ToastProvider", () => ({
   useToast: () => ({ showToast: showToastMock }),
 }));
 
-vi.mock("../features/opportunities/hooks/usePendingCallPrompt", () => ({
+vi.mock("../features/interactions/hooks/usePendingCallPrompt", () => ({
   recordPendingCall: (...args: unknown[]) => recordPendingCallMock(...args),
   usePendingCallPrompt: () => ({ prompt: null, dismiss: () => undefined }),
 }));
@@ -345,7 +345,14 @@ describe("OpportunityDetailScreen", () => {
 
     expect(openUrl).toHaveBeenCalledWith("tel:+15551234567");
     expect(recordPendingCallMock).toHaveBeenCalledWith(
-      expect.objectContaining({ opportunityId: "opp-1", contactId: "contact-1", contactName: "Jane Doe" }),
+      expect.objectContaining({
+        origin: { kind: "opportunity", id: "opp-1" },
+        phone: "+15551234567",
+        name: "Jane Doe",
+        contactId: "contact-1",
+        clientId: "c1",
+        opportunityId: "opp-1",
+      }),
     );
     openUrl.mockRestore();
   });

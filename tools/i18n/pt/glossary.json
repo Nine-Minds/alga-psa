@@ -2595,9 +2595,11 @@
       "ID",
       "JSON",
       "KB",
+      "Keycloak / OpenID Connect",
       "OK",
       "PDF",
       "Portal",
+      "Realm",
       "SLA",
       "SMS",
       "SSO",
@@ -2702,7 +2704,11 @@
       "Alt",
       "Shift",
       "×",
-      "{{value}} bytes"
+      "{{value}} bytes",
+      "{{count}} h",
+      "{{hours}} h {{minutes}} min",
+      "3CX",
+      "Teams Phone"
     ],
     "caseInsensitive": [
       "api",
@@ -2796,6 +2802,6 @@
       "^\\(SN \\{\\{sn\\}\\}\\)$",
       "^T[+-]\\{\\{days\\}\\}$"
     ],
-    "notes": "This allowlist is intentionally conservative; audit tooling should report identical English unless it matches one of these exact values, case-insensitive loanwords, or technical patterns."
+    "notes": "This allowlist is intentionally conservative; audit tooling should report identical English unless it matches one of these exact values, case-insensitive loanwords, or technical patterns. Duration templates use the unit symbols h and min in this locale as in English; only the exact symbol-only templates are allowed."
   }
 }

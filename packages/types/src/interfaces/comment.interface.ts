@@ -1,4 +1,5 @@
 import { TenantEntity } from './index';
+import type { IExternalEntityLink } from './externalSystem.interfaces';
 
 export type CommentAuthorType = 'internal' | 'client' | 'contact' | 'system' | 'unknown';
 export const COMMENT_RESPONSE_SOURCES = {
@@ -69,4 +70,6 @@ export interface IComment extends TenantEntity {
   scheduled_response_event_id?: string | null;
   scheduled_previous_response_state?: string | null;
   scheduled_response_dispatched_at?: string | null;
+  /** Structured references to external records attached to this comment. */
+  external_links?: IExternalEntityLink[];
 }

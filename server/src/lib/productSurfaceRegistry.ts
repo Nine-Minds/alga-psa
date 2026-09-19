@@ -158,6 +158,16 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: true, algadesk: false, co_managed: false },
   },
   {
+    // Notification settings are PSA-only in the UI (/msp/settings/notifications),
+    // so editing the same templates over the API follows them.
+    group: 'api_email_templates_psa_only',
+    staticPrefixes: [
+      '/api/v1/email/templates',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: true, algadesk: false },
+  },
+  {
     group: 'api_helpdesk_allowed',
     staticPrefixes: [
       '/api/v1/meta',
@@ -179,6 +189,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/teams',
       '/api/v1/interactions',
       '/api/v1/interaction-types',
+      '/api/v1/interaction-statuses',
       '/api/v1/mobile/me/capabilities',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },

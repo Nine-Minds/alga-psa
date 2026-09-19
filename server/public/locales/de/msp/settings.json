@@ -441,7 +441,8 @@
       "boards": "Boards",
       "priorities": "Prioritäten",
       "categories": "Kategorien",
-      "checklistTemplates": "Checklisten-Vorlagen"
+      "checklistTemplates": "Checklisten-Vorlagen",
+      "externalSystems": "Externe Systeme"
     },
     "numbering": {
       "title": "Nummernformat",
@@ -549,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Aktiv",
-        "inactive": "Inaktiv"
+        "inactive": "Inaktiv",
+        "hiddenFromPortal": "Im Portal ausgeblendet"
       },
       "actions": {
         "addBoard": "Board hinzufügen",
@@ -629,7 +631,8 @@
           "loading": "Board-Ticket-Status werden geladen…",
           "statusName": "Statusname",
           "closed": "Geschlossen",
-          "default": "Standard"
+          "default": "Standard",
+          "portalSelectable": "Kundenportal-Benutzer können diesen Status auswählen"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Geschlossene Tickets bei eingehenden Antworten wieder öffnen",
@@ -645,6 +648,10 @@
         "liveTimer": {
           "label": "Live-Ticket-Timer aktivieren",
           "help": "Zeigt den Live-Timer und erfasste Zeitintervalle auf Tickets in diesem Board an. Manuelle Zeiterfassung bleibt verfügbar."
+        },
+        "clientPortalVisible": {
+          "label": "Im Kundenportal sichtbar",
+          "help": "Wenn deaktiviert, sind dieses Board und seine Tickets für alle Kundenportal-Benutzer ausgeblendet, unabhängig von Sichtbarkeitsgruppen."
         },
         "defaultBoard": {
           "label": "Standard-Board für Tickets aus dem Kundenportal",
@@ -985,6 +992,47 @@
           "updateStatusFailed": "Vorlagenstatus konnte nicht aktualisiert werden",
           "itemSaveFailed": "Checklisten-Element konnte nicht gespeichert werden",
           "ruleSaveFailed": "Regel für automatische Anwendung konnte nicht gespeichert werden"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Externe Systeme",
+      "subtitle": "Fügen Sie benutzerdefinierte externe Systeme hinzu, damit Tickets auf Datensätze außerhalb des integrierten Katalogs verweisen können.",
+      "addButton": "System hinzufügen",
+      "builtInTitle": "Integrierte Systeme",
+      "builtInSubtitle": "Für jeden Mandanten verfügbar; URLs werden aus der Systemvorlage erzeugt.",
+      "table": {
+        "label": "Bezeichnung",
+        "key": "Schlüssel",
+        "urlTemplate": "URL-Vorlage",
+        "actions": "Aktionen"
+      },
+      "actions": {
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Abbrechen",
+        "save": "Speichern"
+      },
+      "fields": {
+        "key": "Schlüssel",
+        "keyHint": "Muss custom:<slug> entsprechen (Kleinbuchstaben, Ziffern oder Unterstriche).",
+        "label": "Bezeichnung",
+        "urlTemplate": "URL-Vorlage",
+        "urlTemplateHint": "Optional. Verwenden Sie die Platzhalter {realm} und {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Externes System hinzufügen",
+        "editTitle": "Externes System bearbeiten"
+      },
+      "deleteDialog": {
+        "title": "Externes System löschen",
+        "message": "\"{{label}}\" löschen? Systeme, die noch von Links verwendet werden, können nicht gelöscht werden."
+      },
+      "messages": {
+        "success": {
+          "created": "Externes System erstellt.",
+          "updated": "Externes System aktualisiert.",
+          "deleted": "Externes System gelöscht."
         }
       }
     }
@@ -1473,6 +1521,9 @@
       "notice": "Sie sehen eine Vorschau eines nicht gespeicherten Themes. Alle anderen behalten das gespeicherte, bis Sie es anwenden.",
       "save": "Für alle übernehmen",
       "discard": "Verwerfen"
+    },
+    "upgrade": {
+      "pitch": "Organisationsweite Themenpaare, ein Editor für eigene Farbpaletten und das White-Labeling der MSP-App gehören zur Enterprise Edition."
     }
   },
   "mspLanguage": {
@@ -1500,6 +1551,7 @@
     "emailTabs": {
       "settings": "Einstellungen",
       "emailTemplates": "E-Mail-Vorlagen",
+      "emailBranding": "E-Mail-Branding",
       "categories": "Kategorien",
       "telemetry": "Telemetrie"
     },
@@ -1556,7 +1608,8 @@
       "preview": {
         "subjectLabel": "Betreff-Vorschau",
         "iframeTitle": "Vorschau der E-Mail-Vorlage",
-        "sampleDataNote": "Die Vorschau verwendet Beispieldaten. Tatsächliche E-Mails enthalten echte Werte."
+        "sampleDataNote": "Die Vorschau verwendet Beispieldaten. Tatsächliche E-Mails enthalten echte Werte.",
+        "sourceSyncNote": "Klicken Sie in der Vorschau auf ein Element, um den zugehörigen Code auszuwählen; wenn Sie den Cursor im Code bewegen, wird das Element hier umrandet."
       },
       "errors": {
         "loadFailed": "Vorlagen konnten nicht geladen werden"
@@ -1605,7 +1658,8 @@
       },
       "tabs": {
         "source": "Quellcode",
-        "preview": "Vorschau"
+        "preview": "Vorschau",
+        "variables": "Variablen"
       },
       "common": {
         "notAvailable": "k. A."
@@ -1622,6 +1676,110 @@
         "it": "Italienisch",
         "pl": "Polnisch",
         "pt": "Portugiesisch"
+      }
+    },
+    "emailBranding": {
+      "title": "E-Mail-Branding",
+      "description": "Versehen Sie jede ausgehende E-Mail mit Ihren Farben. Sehen Sie sich hier die Vorschau an und wählen Sie dann die Vorlagen aus, auf die sie angewendet werden.",
+      "unsavedHint": "Speichern Sie die Palette, bevor Sie sie anwenden.",
+      "source": {
+        "saved": "Gespeichert",
+        "custom-theme": "Aus Ihrem benutzerdefinierten Design",
+        "theme-pair": "Aus Ihrem Design",
+        "portal-branding": "Aus dem Branding Ihres Kundenportals",
+        "default": "AlgaPSA-Standard"
+      },
+      "fields": {
+        "primary": "Primärfarbe",
+        "secondary": "Sekundärfarbe",
+        "singleColor": "Einzelne Farbe (Verlauf wird aus der Primärfarbe abgeleitet)"
+      },
+      "tokens": {
+        "dark": "Dunkler Akzent",
+        "outerBg": "Äußerer Hintergrund",
+        "footerBg": "Hintergrund der Fußzeile",
+        "cardBorder": "Kartenrahmen",
+        "infoBoxBg": "Hintergrund des Infofelds",
+        "infoBoxBorder": "Rahmen des Infofelds"
+      },
+      "preview": {
+        "title": "Vorschau"
+      },
+      "actions": {
+        "save": "Palette speichern",
+        "saving": "Wird gespeichert...",
+        "useSuggested": "Vorgeschlagene Farben übernehmen",
+        "adjust": "Abgeleitete Farben anpassen",
+        "apply": "Auf Vorlagen anwenden",
+        "applying": "Wird angewendet...",
+        "applyCount": "Auf {{count}} Vorlagen anwenden",
+        "applyToTemplate": "Meine Palette anwenden",
+        "remove": "Branding aus allen Vorlagen entfernen",
+        "removing": "Wird entfernt...",
+        "cancel": "Abbrechen",
+        "done": "Fertig"
+      },
+      "apply": {
+        "title": "Branding auf Vorlagen anwenden",
+        "languages": "Sprachen",
+        "selectAll": "Alle auswählen",
+        "selectNone": "Keine auswählen",
+        "differs": "Unterschied bei {{parts}}",
+        "differsParts": {
+          "colors": "Farben",
+          "text": "Text",
+          "subject": "Betreff"
+        },
+        "overwrite": "Überschreiben",
+        "overwriteHint": "Beim Überschreiben wird eine Vorlage aus der Standardvorlage in Ihrer Farbpalette neu erstellt; Ihre Bearbeitungen gehen dabei verloren.",
+        "preview": {
+          "open": "Ergebnis in der Vorschau ansehen",
+          "title": "Vorschau: {{name}}",
+          "loading": "Vorschau wird erstellt ...",
+          "captions": {
+            "create": "Eine gebrandete Kopie der Standardvorlage wird für Sie erstellt.",
+            "update": "Ihre gebrandete Kopie wird mit der gespeicherten Palette aus der Standardvorlage neu erstellt.",
+            "customized": "Ihre Bearbeitungen bleiben Wort für Wort erhalten. Nur die in dieser Vorlage verbliebenen Standardfarben werden ersetzt.",
+            "overwrite": "Ihre Bearbeitungen an dieser Vorlage werden verworfen. Sie wird aus der Standardvorlage in Ihrer Farbpalette neu erstellt.",
+            "skipped": "Es wird nichts geschrieben – {{reason}}. So sieht die Vorlage heute aus."
+          }
+        },
+        "summary": "{{written}} gebrandet, {{skipped}} übersprungen, {{failed}} fehlgeschlagen",
+        "groups": {
+          "system": {
+            "title": "Nicht angepasst",
+            "action": "Gebrandete Kopie erstellen"
+          },
+          "branded": {
+            "title": "Von Ihnen gebrandet",
+            "action": "Farben aktualisieren"
+          },
+          "customized": {
+            "title": "Angepasst",
+            "action": "Nur verbleibende Standardfarben ersetzen"
+          },
+          "no-stock-colors": {
+            "title": "Keine Standardfarben",
+            "action": "Nichts zu ersetzen"
+          }
+        },
+        "skipReasons": {
+          "customized": "Angepasst – nicht ausgewählt",
+          "nothing-to-replace": "Nichts zu ersetzen",
+          "unchanged": "Bereits aktuell"
+        }
+      },
+      "newTemplates": {
+        "message": "Seit der letzten Anwendung Ihrer Palette wurden {{count}} Vorlagen hinzugefügt.",
+        "action": "Palette auf neue Vorlagen anwenden",
+        "dismiss": "Ausblenden"
+      },
+      "enterprise": {
+        "useLogo": "Mein Logo in der E-Mail-Kopfzeile verwenden",
+        "logoWide": "Breites Logo",
+        "logoDefault": "Quadratisches Logo",
+        "noLogo": "Laden Sie unter Einstellungen → Kundenportal → Branding ein Logo hoch, um es hier zu verwenden.",
+        "showAttribution": "„Powered by AlgaPSA“ in der Fußzeile anzeigen"
       }
     },
     "categoriesUi": {
@@ -2019,7 +2177,17 @@
         "upload": "Paket hochladen"
       },
       "errors": {
-        "noImportableRecords": "Dieses Paket enthielt keine importierbaren Datensätze."
+        "noImportableRecords": "Dieses Paket enthielt keine importierbaren Datensätze.",
+        "permissionDenied": "Sie haben keine Berechtigung, Daten zu importieren oder zu exportieren.",
+        "invalidSpreadsheet": "Diese Tabelle konnte nicht gelesen werden. Prüfen Sie, ob es sich um eine gültige CSV- oder XLSX-Datei handelt, und versuchen Sie es erneut.",
+        "notAmpPackage": "Diese Datei ist kein AMP-Paket. Laden Sie eine .amp- oder .sqlite-Datei hoch.",
+        "tooLarge": "Dieser Upload ist größer als die maximal zulässige Größe.",
+        "sizeMismatch": "Der Upload wurde nicht abgeschlossen. Bitte versuchen Sie es erneut.",
+        "noRecognizedHeaders": "Keine der Spalten in dieser Tabelle wurde erkannt. Prüfen Sie die Kopfzeile und versuchen Sie es erneut.",
+        "storageRejected": "Der Server hat diesen Upload abgelehnt. Bitten Sie Ihren Administrator, die Speicherkonfiguration für Dateitypen zu prüfen.",
+        "spreadsheetFailed": "Die Tabelle konnte nicht importiert werden. Bitte versuchen Sie es erneut.",
+        "uploadFailed": "Das Paket konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut.",
+        "unknown": "Der Upload ist fehlgeschlagen. Bitte versuchen Sie es erneut."
       },
       "preflight": {
         "title": "Vorprüfung"
@@ -2027,6 +2195,19 @@
       "run": {
         "queued": "Migration in Warteschlange",
         "applying": "Migration läuft"
+      },
+      "badges": {
+        "nothingImported": "Nichts importiert"
+      },
+      "results": {
+        "skippedSamePackage": "Übersprungene Datensätze wurden bereits durch einen früheren Lauf desselben Pakets migriert.",
+        "skippedOtherPackage": "Übersprungene Datensätze wurden Entitäten zugeordnet, die eine frühere Migration eines anderen Pakets erstellt hat: {{packages}}.",
+        "skippedExistingEntity": "Übersprungene Datensätze wurden vorhandenen Entitäten zugeordnet.",
+        "nothingImportedTitle": "Nichts importiert",
+        "nothingImportedBody": "Dieser Lauf hat keine neuen Datensätze erstellt. Jede Zeile entsprach etwas, das bereits vorhanden war, daher wurde nichts geändert.",
+        "claimedBySamePackage": "Bereits durch dieses Paket migriert",
+        "claimedByOtherPackage": "Bereits migriert durch {{file}}",
+        "claimedByExistingEntity": "Einer vorhandenen Entität zugeordnet"
       }
     },
     "jobDetails": {
@@ -2876,7 +3057,8 @@
         "fieldCount": "Felder",
         "order": "Reihenfolge",
         "actions": "Aktionen",
-        "openMenu": "Menü öffnen"
+        "openMenu": "Menü öffnen",
+        "searchPlaceholder": "Asset-Typen suchen…"
       },
       "actions": {
         "addType": "Asset-Typ hinzufügen",

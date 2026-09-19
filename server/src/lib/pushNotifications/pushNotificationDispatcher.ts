@@ -1,6 +1,6 @@
 import type { NotificationDeliveryResult } from '@alga-psa/notifications/lib/notificationTransportTypes';
 import logger from '@alga-psa/core/logger';
-import { getActivePushTokensForUser } from './pushTokenService';
+import { getActivePushTokensForUser, meetsPushPriorityThreshold } from './pushTokenService';
 import { buildTicketPushMessage, sendPushNotifications } from './expoPushService';
 
 const TICKET_PUSH_TEMPLATES = new Set([
@@ -57,9 +57,31 @@ export async function triggerPushForNotification(
     notification.user_id,
   );
 
-  if (tokens.length === 0) return { status: 'skipped', reason: 'no_active_devices' };
+  if (tokens.length === 0) {
+    logger.info('[PushDispatcher] No active push tokens for user; skipping', {
+      template: notification.template_name,
+      userId: notification.user_id,
+      tenant: notification.tenant,
+    });
+    return { status: 'skipped', reason: 'no_active_devices' };
+  }
 
-  const messages = tokens.map((t) =>
+  // Each device chooses the lowest priority it wants pushed (Settings →
+  // "Push me for"). Below-threshold notifications still exist in-app.
+  const priority = notification.priority ?? 'normal';
+  const eligible = tokens.filter((t) => meetsPushPriorityThreshold(priority, t.push_priority_threshold));
+  if (eligible.length === 0) {
+    logger.info('[PushDispatcher] All devices filtered by priority threshold; skipping', {
+      template: notification.template_name,
+      userId: notification.user_id,
+      tenant: notification.tenant,
+      priority,
+      deviceCount: tokens.length,
+    });
+    return;
+  }
+
+  const messages = eligible.map((t) =>
     buildTicketPushMessage({
       expoPushToken: t.expo_push_token,
       title: notification.title,
@@ -67,17 +89,19 @@ export async function triggerPushForNotification(
       ticketId: ticketId ?? '',
       notificationId: notification.internal_notification_id,
       tenant: notification.tenant,
-      priority: notification.priority ?? 'normal',
+      priority,
     }),
   );
 
-  const result = await sendPushNotifications(messages, notification.tenant);
+  const { delivery } = await sendPushNotifications(messages, notification.tenant);
 
   logger.info('[PushDispatcher] Sent push notifications', {
     template: notification.template_name,
     userId: notification.user_id,
     tenant: notification.tenant,
-    deviceCount: tokens.length,
+    priority,
+    deviceCount: eligible.length,
+    filteredByThreshold: tokens.length - eligible.length,
   });
-  return result;
+  return delivery;
 }

@@ -34,6 +34,7 @@ vi.mock('@alga-psa/clients/actions/clientLocationActions', () => ({
 
 vi.mock('@alga-psa/clients/actions/countryActions', () => ({
   getAllCountries: vi.fn().mockResolvedValue([{ code: 'US', name: 'United States', phone_code: '+1' }]),
+  getTenantDefaultCountry: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({

@@ -143,6 +143,7 @@ import {
   normalizeProjectPhaseRateOverride,
 } from "../../models/projectBillingModelUtils";
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
+import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
 // Workflow imports removed as event emission is moved back to the calling action
 
 type DiscountQueryRow = IDiscount & {
@@ -329,8 +330,17 @@ const selectActivePricingSchedule = (
   schedules: any[],
   servicePeriodStartExclusive: ISO8601String,
   servicePeriodEndExclusive: ISO8601String,
-): any | undefined =>
-  schedules.find((schedule) => {
+  contractLineId?: string | null,
+): any | undefined => {
+  const candidates = schedules.filter((schedule) => {
+    // A line-scoped schedule applies only to its line; contract-wide (NULL)
+    // applies to all of them. Mirrors the resolver's selection.
+    if (contractLineId !== undefined && contractLineId !== null) {
+      const scope = schedule.contract_line_id ?? null;
+      if (scope !== null && scope !== contractLineId) {
+        return false;
+      }
+    }
     const effectiveDate = normalizeScheduleDate(schedule.effective_date);
     if (effectiveDate === null || effectiveDate >= servicePeriodEndExclusive) {
       return false;
@@ -338,6 +348,20 @@ const selectActivePricingSchedule = (
     const endDate = normalizeScheduleDate(schedule.end_date);
     return endDate === null || endDate > servicePeriodStartExclusive;
   });
+
+  // Most-specific scope wins, then newest effective_date.
+  return candidates
+    .slice()
+    .sort((a, b) => {
+      const scopeDelta =
+        Number((b.contract_line_id ?? null) !== null) -
+        Number((a.contract_line_id ?? null) !== null);
+      if (scopeDelta !== 0) return scopeDelta;
+      const aDate = normalizeScheduleDate(a.effective_date) ?? "";
+      const bDate = normalizeScheduleDate(b.effective_date) ?? "";
+      return bDate < aDate ? -1 : bDate > aDate ? 1 : 0;
+    })[0];
+};
 
 /** Pricing-schedule overrides cannot rescue a missing plan-level base rate. */
 const isFixedLineUnpriceable = (
@@ -3331,6 +3355,8 @@ export class BillingEngine {
     try {
       staticInputsByLineId = await this.loadFixedChargeLineStaticInputs(
         dueFixedLines,
+        billingPeriod.startDate,
+        dueFixedLines[0]?.currency_code || "USD",
         session,
       );
       priceableLines = dueFixedLines.filter(
@@ -3446,12 +3472,17 @@ export class BillingEngine {
    */
   private async loadFixedChargeLineStaticInputs(
     clientContractLines: IClientContractLine[],
+    asOf: string,
+    currency: string,
     session?: FixedChargePreviewSession,
   ): Promise<Map<string, FixedChargeLineStaticInputs>> {
     const staticInputsByLineId = new Map<string, FixedChargeLineStaticInputs>();
     const pendingLines: IClientContractLine[] = [];
+    // Catalog prices are effective-dated, so a cached load is only reusable for
+    // the same as-of date and currency.
+    const sessionKey = (lineId: string) => `${lineId}::${asOf}::${currency}`;
     for (const line of clientContractLines) {
-      const cached = session?.get(line.client_contract_line_id);
+      const cached = session?.get(sessionKey(line.client_contract_line_id));
       if (cached) {
         staticInputsByLineId.set(line.client_contract_line_id, cached);
         continue;
@@ -3510,6 +3541,14 @@ export class BillingEngine {
       "sc.service_id",
       "cls.service_id",
     );
+    joinEffectiveServicePrice({
+      db,
+      query: planServicesQuery,
+      catalogExpression: "service_catalog as sc",
+      catalogServiceColumn: "sc.service_id",
+      asOf,
+      currency: currency,
+    });
 
     const planServiceRows = await planServicesQuery
       .whereIn("cls.contract_line_id", serviceLineIds)
@@ -3523,6 +3562,7 @@ export class BillingEngine {
         "sc.service_id",
         "sc.service_name",
         "sc.default_rate",
+        "esp.rate as currency_rate",
         "sc.tax_rate_id",
         "cls.quantity as service_quantity",
         "cls.custom_rate as service_line_custom_rate",
@@ -3616,7 +3656,7 @@ export class BillingEngine {
         ),
       };
       staticInputsByLineId.set(line.client_contract_line_id, staticInputs);
-      session?.set(line.client_contract_line_id, staticInputs);
+      session?.set(sessionKey(line.client_contract_line_id), staticInputs);
     }
 
     return staticInputsByLineId;
@@ -3625,6 +3665,7 @@ export class BillingEngine {
   /** Per-line plan services (and product-only fallback) for the generation path. */
   private async queryFixedChargeLineServices(
     clientContractLine: IClientContractLine,
+    asOf: string,
   ): Promise<{ planServices: any[]; fallbackService: any | null }> {
     const db = tenantDb(this.knex, this.tenant!);
     const tenant = this.tenant;
@@ -3656,6 +3697,14 @@ export class BillingEngine {
       "sc.service_id",
       "cls.service_id",
     );
+    joinEffectiveServicePrice({
+      db,
+      query: planServicesQuery,
+      catalogExpression: "service_catalog as sc",
+      catalogServiceColumn: "sc.service_id",
+      asOf,
+      currency: clientContractLine.currency_code || "USD",
+    });
 
     const planServices = await planServicesQuery
       .where({
@@ -3668,6 +3717,7 @@ export class BillingEngine {
         "sc.service_id",
         "sc.service_name",
         "sc.default_rate",
+        "esp.rate as currency_rate",
         "sc.tax_rate_id",
         "cls.quantity as service_quantity",
         "cls.custom_rate as service_line_custom_rate",
@@ -4063,12 +4113,24 @@ export class BillingEngine {
               preloaded.pricingSchedules,
               servicePeriodStartExclusive,
               servicePeriodEndExclusive,
+              clientContractLine.contract_line_id,
             )
           : await db
               .table("contract_pricing_schedules")
               .where({
                 tenant: this.tenant,
                 contract_id: clientContractLine.contract_id,
+              })
+              // A line-scoped schedule only applies to its line; NULL is
+              // contract-wide. Most-specific scope wins, then newest.
+              .where(function (builder) {
+                builder.whereNull("contract_line_id");
+                if (clientContractLine.contract_line_id) {
+                  builder.orWhere(
+                    "contract_line_id",
+                    clientContractLine.contract_line_id,
+                  );
+                }
               })
               // [start, end) semantics: schedule starting exactly on service-period end does not apply.
               .where("effective_date", "<", servicePeriodEndExclusive)
@@ -4077,6 +4139,9 @@ export class BillingEngine {
                   .whereNull("end_date")
                   .orWhere("end_date", ">", servicePeriodStartExclusive);
               })
+              .orderByRaw(
+                "CASE WHEN contract_line_id IS NULL THEN 1 ELSE 0 END",
+              )
               .orderBy("effective_date", "desc")
               .first();
 
@@ -4126,7 +4191,10 @@ export class BillingEngine {
 
     const { planServices, fallbackService } =
       preloaded ??
-      (await this.queryFixedChargeLineServices(clientContractLine));
+      (await this.queryFixedChargeLineServices(
+        clientContractLine,
+        servicePeriodStart,
+      ));
 
     // Recurring-seat (unit-priced Fixed) lines may carry prospective
     // quantity/rate revisions effective at a service-period boundary. The
@@ -4154,22 +4222,27 @@ export class BillingEngine {
         unit_rate_cents: number | string;
       }>;
       if (revisionRows.length > 0) {
-        const latestRevisionByService = new Map<
+        // Keyed on (service_id, config_id): a line may carry two configs of the
+        // same service, each with its own prospective revision. Keying on
+        // service_id alone silently dropped the second config's revision.
+        const latestRevisionByConfig = new Map<
           string,
-          { config_id: string; quantity: number; unit_rate_cents: number }
+          { quantity: number; unit_rate_cents: number }
         >();
         for (const revision of revisionRows) {
-          if (!latestRevisionByService.has(revision.service_id)) {
-            latestRevisionByService.set(revision.service_id, {
-              config_id: revision.config_id,
+          const configKey = `${revision.service_id}::${revision.config_id}`;
+          if (!latestRevisionByConfig.has(configKey)) {
+            latestRevisionByConfig.set(configKey, {
               quantity: Number(revision.quantity),
               unit_rate_cents: Number(revision.unit_rate_cents),
             });
           }
         }
         effectivePlanServices = planServices.map((service) => {
-          const revision = latestRevisionByService.get(service.service_id);
-          if (!revision || revision.config_id !== service.config_id) {
+          const revision = latestRevisionByConfig.get(
+            `${service.service_id}::${service.config_id}`,
+          );
+          if (!revision) {
             return service;
           }
           return {
@@ -4775,7 +4848,6 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
-    const knexRef = this.knex; // Closure-friendly knex reference for join callbacks
     const contractCurrency = clientContractLine.currency_code || "USD";
     const clientConfigService = new ClientContractServiceConfigurationService(
       this.knex,
@@ -4896,22 +4968,19 @@ export class BillingEngine {
       "time_entries.service_id",
       { type: "left" },
     );
-    db.tenantJoin(
+    joinEffectiveServicePrice({
+      db,
       query,
-      "service_prices as sp",
-      "sp.service_id",
-      "service_catalog.service_id",
-      {
-        type: "left",
-        on(join) {
-          join.andOn(
-            "sp.currency_code",
-            "=",
-            knexRef.raw("?", [contractCurrency]),
-          );
-        },
-      },
-    );
+      catalogExpression: "service_catalog",
+      catalogServiceColumn: "service_catalog.service_id",
+      asOf: timingResolution.servicePeriodStart,
+      currency: contractCurrency,
+      alias: "sp",
+    });
+    // Branch supersedes main's project_ticket_links/project_tasks/project_phases/
+    // projects/tickets LEFT JOIN chain with the unioned billing_work subquery,
+    // which resolves the same columns and additionally covers retained
+    // co-managed work references.
     joinTimeEntryBillingWorkContext(this.knex, this.tenant!, query);
 
     query
@@ -5106,7 +5175,6 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
-    const knexRef = this.knex; // Closure-friendly knex reference for join callbacks
     const contractCurrency = clientContractLine.currency_code || "USD";
     const clientConfigService = new ClientContractServiceConfigurationService(
       this.knex,
@@ -5269,22 +5337,15 @@ export class BillingEngine {
         "upt.service_id",
         { type: "left" },
       );
-      db.tenantJoin(
-        totalQuery,
-        "service_prices as sp",
-        "sp.service_id",
-        "service_catalog.service_id",
-        {
-          type: "left",
-          on(join) {
-            join.andOn(
-              "sp.currency_code",
-              "=",
-              knexRef.raw("?", [contractCurrency]),
-            );
-          },
-        },
-      );
+      joinEffectiveServicePrice({
+        db,
+        query: totalQuery,
+        catalogExpression: "service_catalog",
+        catalogServiceColumn: "service_catalog.service_id",
+        asOf: servicePeriodStart,
+        currency: contractCurrency,
+        alias: "sp",
+      });
       const fetchedTotals = await totalQuery
         .where({
           "upt.tenant": this.tenant,
@@ -5330,22 +5391,15 @@ export class BillingEngine {
       "usage_tracking.service_id",
       { type: "left" },
     );
-    db.tenantJoin(
-      usageRecordQuery,
-      "service_prices as sp",
-      "sp.service_id",
-      "service_catalog.service_id",
-      {
-        type: "left",
-        on(join) {
-          join.andOn(
-            "sp.currency_code",
-            "=",
-            knexRef.raw("?", [contractCurrency]),
-          );
-        },
-      },
-    );
+    joinEffectiveServicePrice({
+      db,
+      query: usageRecordQuery,
+      catalogExpression: "service_catalog",
+      catalogServiceColumn: "service_catalog.service_id",
+      asOf: servicePeriodStart,
+      currency: contractCurrency,
+      alias: "sp",
+    });
 
     usageRecordQuery
       .where({
@@ -5931,22 +5985,15 @@ export class BillingEngine {
       "sc.service_id",
       "cls.service_id",
     );
-    db.tenantJoin(
-      planServicesQuery,
-      "service_prices as sp",
-      "sp.service_id",
-      "sc.service_id",
-      {
-        type: "left",
-        on: (join) => {
-          join.andOn(
-            "sp.currency_code",
-            "=",
-            this.knex.raw("?", [clientContractLine.currency_code || "USD"]),
-          );
-        },
-      },
-    );
+    joinEffectiveServicePrice({
+      db,
+      query: planServicesQuery,
+      catalogExpression: "service_catalog as sc",
+      catalogServiceColumn: "sc.service_id",
+      asOf: timingResolution.servicePeriodStart,
+      currency: clientContractLine.currency_code || "USD",
+      alias: "sp",
+    });
 
     planServicesQuery
       .where({

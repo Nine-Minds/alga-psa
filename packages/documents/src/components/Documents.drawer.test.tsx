@@ -275,6 +275,29 @@ describe('Documents drawer', () => {
     expect(mockFolderTreeView).not.toHaveBeenCalled();
   });
 
+  it('opens the standard editor directly in drawer-only mode and reports closing', async () => {
+    const document = {
+      document_id: 'doc-1', document_name: 'Runbook', type_id: null,
+      user_id: 'user-1', order_number: 0, created_by: 'user-1',
+      type_name: 'text/plain', tenant: 'tenant-1',
+    };
+    const onDocumentClosed = vi.fn();
+    render(<Documents id="documents" documents={[document]} userId="user-1"
+      entityId="ticket-1" entityType="ticket" drawerOnly documentToOpen={document}
+      onDocumentClosed={onDocumentClosed} />);
+    await waitFor(() => expect(screen.getByTestId('collab-editor')).toBeInTheDocument());
+    expect(screen.getByText('Edit Document')).toBeInTheDocument();
+    expect(screen.getByText('PDF')).toBeInTheDocument();
+    expect(screen.getByText('Markdown')).toBeInTheDocument();
+    expect(screen.getByText('Print')).toBeInTheDocument();
+    expect(screen.getByText('Save')).toBeInTheDocument();
+    expect(screen.queryByTestId('doc-card')).not.toBeInTheDocument();
+    expect(onDocumentClosed).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Cancel'));
+    await waitFor(() => expect(onDocumentClosed).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('drawer')).not.toBeInTheDocument();
+  });
+
   it('opens CollaborativeEditor when editing an in-app document', async () => {
     render(
       <Documents

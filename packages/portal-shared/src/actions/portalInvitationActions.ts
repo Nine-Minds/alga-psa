@@ -867,9 +867,11 @@ export async function completePortalSetup(
               updated_at: trx.raw('now()')
             })
             .onConflict(['tenant', 'user_id', 'provider'])
+            // Citus rejects STABLE functions (now() → CURRENT_TIMESTAMP) inside
+            // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
             .merge({
               provider_account_id: prelinkedOAuth.providerAccountId,
-              updated_at: trx.raw('now()')
+              updated_at: new Date().toISOString()
             });
         } catch (error) {
           if ((error as { code?: string })?.code === '23505') {

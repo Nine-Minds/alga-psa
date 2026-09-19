@@ -69,9 +69,10 @@
       "servicePeriods": "Períodos de serviço",
       "credits": "Créditos",
       "serviceTypes": "Tipos de serviço",
+      "serviceCategories": "Categorias de serviço",
       "serviceCatalog": "Serviços",
       "products": "Produtos",
-      "taxRates": "Taxas de imposto",
+      "taxRates": "Impostos",
       "usageTracking": "Rastreamento de uso",
       "reports": "Relatórios",
       "accountingExports": "Exportações Contábeis"

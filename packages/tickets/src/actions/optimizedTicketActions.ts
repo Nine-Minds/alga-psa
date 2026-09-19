@@ -1,4 +1,6 @@
-'use server'
+'use server';
+
+import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication, reconcileCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
@@ -94,7 +96,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
-import { actionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 
@@ -221,28 +223,23 @@ function toTicketAuthorizationRecord(
     assignedUserIds: Array.from(assignees),
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
+    contactId: ticket.contact_name_id ?? null,
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
 
-async function resolveClientSelectedBoardIds(
+async function resolveClientVisibility(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles
-): Promise<string[] | undefined> {
-  if (user.user_type !== 'client') {
-    return undefined;
-  }
-
-  if (!user.contact_id) {
-    return [];
-  }
-
+): Promise<ContactVisibilityContext | null | undefined> {
+  if (user.user_type !== 'client') return undefined;
+  if (!user.contact_id) return null;
   try {
-    const visibilityContext = await getClientContactVisibilityContext(trx, tenant, user.contact_id);
-    return visibilityContext.visibleBoardIds ?? undefined;
+    return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
   } catch {
-    return [];
+    // A failed resolution is distinct from an internal user: deny all.
+    return null;
   }
 }
 
@@ -254,13 +251,15 @@ async function createTicketAuthorizationContext(
   authorizationSubject: AuthorizationSubject;
   authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
   selectedBoardIds: string[] | undefined;
+  contactVisibility: ContactVisibilityContext | null | undefined;
   requestCache: RequestLocalAuthorizationCache;
   ticketReadBundleNarrowingRules: Awaited<ReturnType<typeof resolveBundleNarrowingRulesForEvaluation>>;
 }> {
   const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-  const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user);
+  const contactVisibility = await resolveClientVisibility(trx, tenant, user);
+  const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
   const relationshipRules =
-    selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+    contactVisibility === undefined ? [] : [{ template: 'contact_visibility' as const }];
   const requestCache = new RequestLocalAuthorizationCache();
   const ticketReadBundleNarrowingRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
     subject: authorizationSubject,
@@ -269,6 +268,7 @@ async function createTicketAuthorizationContext(
       action: 'read',
     },
     selectedBoardIds,
+    contactVisibility,
     requestCache,
     knex: trx,
   });
@@ -299,6 +299,7 @@ async function createTicketAuthorizationContext(
       rbacEvaluator: async () => true,
     }),
     selectedBoardIds,
+    contactVisibility,
     requestCache,
     ticketReadBundleNarrowingRules,
   };
@@ -325,6 +326,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
         },
         record: toTicketAuthorizationRecord(ticket),
         selectedBoardIds: context.selectedBoardIds,
+        contactVisibility: context.contactVisibility,
         requestCache: context.requestCache,
         knex: trx,
       });
@@ -344,7 +346,7 @@ function applyTicketReadAuthorizationSql(
 ): RelationshipSqlCompileResult {
   // Built-in narrowing for client-portal users mirrors createTicketAuthorizationContext.
   const builtinRules: RelationshipRule[] =
-    context.selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' }];
+    context.contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }];
 
   return compileTenantScopedResourceReadAuthorizationSql(query, {
     resourceType: 'ticket',
@@ -354,6 +356,7 @@ function applyTicketReadAuthorizationSql(
     ctx: {
       subject: context.authorizationSubject,
       selectedBoardIds: context.selectedBoardIds,
+      contactVisibility: context.contactVisibility,
       adapter: createTicketRelationshipSqlAdapter(trx, tenant),
     },
   });
@@ -983,6 +986,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.ticket_number',
         'ct.title',
         'ct.client_id',
+        'ct.contact_name_id',
         'comp.client_name',
         'ct.status_id',
         'ct.entered_at',
@@ -1005,6 +1009,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'mt.ticket_number',
           'mt.title',
           'mt.client_id',
+          'mt.contact_name_id',
           'comp.client_name',
           'mt.status_id',
           'mt.entered_at',
@@ -2216,7 +2221,7 @@ export const getAllMatchingTicketIds = withAuth(async (
               .clone()
               .clearSelect()
               .clearOrder()
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
           );
 
       const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
@@ -2278,7 +2283,7 @@ export const getTicketBoardIds = withAuth(async (
             authorizationContext,
             await tenantScopedTable(trx, 'tickets as t', tenant)
               .whereIn('t.ticket_id', uniqueIds)
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
           );
 
       return rows
@@ -3130,6 +3135,14 @@ export async function updateTicketInTransaction(
           propagateFields[key] = (updateData as any)[key];
         }
       }
+      // Live updates diff the user-facing fields only; is_closed mirrors
+      // status_id and is added to the write below, not to the diff.
+      const liveUpdateFields = { ...propagateFields };
+      // is_closed is written to the master outside updateData (see above);
+      // children need the same denormalized flag or they read as open.
+      if (Object.prototype.hasOwnProperty.call(propagateFields, 'status_id')) {
+        propagateFields.is_closed = !!newStatus?.is_closed;
+      }
 
       if (Object.keys(propagateFields).length > 0) {
         if (collaboration) throw new Error('Shared bundle workflow edits require authority for every child ticket');
@@ -3180,7 +3193,18 @@ export async function updateTicketInTransaction(
               details: { bundle_master_ticket_id: id },
             });
           }
-          const childUpdatedFields = diffTicketFields(child, propagate);
+          // main: live updates diff the user-facing fields only, so is_closed
+          // (mirrors status_id) and the updated_by/updated_at bookkeeping never
+          // reach the client as "changed fields". Start from that curated set and
+          // add the close denormalization this loop derives per child, which
+          // main's single bulk UPDATE could not compute.
+          const childLiveUpdateFields: Record<string, any> = { ...liveUpdateFields };
+          for (const closeField of ['closed_at', 'closed_by', 'response_state']) {
+            if (closeField in propagate) childLiveUpdateFields[closeField] = propagate[closeField];
+          }
+          const childUpdatedFields = diffTicketFields(child, childLiveUpdateFields);
+          // System closes (auto-close engine) skip the live UI update entirely,
+          // exactly as the master update above does.
           if (!isSystemActor && childUpdatedFields.length) registerAfterCommit(trx, () =>
             publishTicketUpdate({
               tenantId: tenant, ticketId: child.ticket_id, updatedFields: childUpdatedFields,
@@ -3226,6 +3250,12 @@ export const updateTicketWithCache = withAuth(async (
   >,
 ): Promise<'success' | TicketActionError> => {
   try {
+    // MSP cached ticket write surface. A client-portal session must not reach it;
+    // reject before the permission lookup or any ticket mutation.
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
+    }
+
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx) => {
@@ -3962,7 +3992,7 @@ export const getAdjacentTicketIds = withAuth(async (
     }
 
     const orderedRows = await applyTicketListSort(
-      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id'),
+      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id'),
       validatedFilters
     );
     const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, orderedRows);

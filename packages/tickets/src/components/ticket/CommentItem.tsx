@@ -21,6 +21,7 @@ import { getCommentResponseSource } from '../../lib/responseSource';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
+import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
@@ -67,6 +68,12 @@ interface CommentItemProps {
    * 1px border width and radius — only the color changes.
    */
   accentBorderClassName?: string;
+  /**
+   * Read-only external-system references attached to this comment (comment-level
+   * links). Rendered as link-out chips; the manual writer only creates
+   * ticket-level links, so these come from the API/integration path.
+   */
+  externalLinks?: ITicketExternalLinkView[];
 }
 
 function getInboundSenderIdentity(
@@ -170,6 +177,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   canViewCommentMetadataDebug = false,
   variant = 'default',
   accentBorderClassName,
+  externalLinks = [],
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
@@ -550,6 +558,29 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     }}
                   />
                 )}
+                {externalLinks.map((link) => (
+                  <span
+                    key={link.link_id}
+                    id={`${commentId}-external-link-${link.link_id}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs text-[rgb(var(--color-text-600))]"
+                    title={link.display.label}
+                  >
+                    {link.display.href ? (
+                      <a
+                        href={link.display.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {link.display.label} · {link.external_id}
+                      </a>
+                    ) : (
+                      <span>
+                        {link.display.label} · {link.external_id}
+                      </span>
+                    )}
+                  </span>
+                ))}
                 {canViewCommentMetadataDebug && isNonEmptyCommentMetadata(conversation.metadata) && (
                   <>
                     <Tooltip content={t('conversation.metadataDebug', 'View metadata (debug)')}>

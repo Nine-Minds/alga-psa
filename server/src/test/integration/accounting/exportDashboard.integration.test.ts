@@ -13,6 +13,14 @@ import {
 } from '@alga-psa/billing/services';
 import { AccountingExportAdapterCapabilities } from '@alga-psa/types';
 
+// An explicit manual export target must resolve to a connected integration.
+// This suite has no live QBO OAuth setup, so declare realm-demo connected while
+// keeping the rest of the real client module intact.
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/integrations/lib/qbo/qboClientService')>()),
+  getStoredQboCredentialsMap: async () => ({ 'realm-demo': { realmId: 'realm-demo' } })
+}));
+
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 180_000;
 

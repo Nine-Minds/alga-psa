@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tenantHandlerMock = vi.fn();
 const systemHandlerMock = vi.fn();
+const contractSweepMock = vi.fn();
 const listTenantsMock = vi.fn();
 // Rows returned for the per-job tenant selector tables (teams_integrations, email_providers).
 const selectTenantsMock = vi.fn();
@@ -59,6 +60,9 @@ vi.mock('@alga-psa/jobs/handlers/coManagedSlaObservationHandler', () => ({ CO_MA
 vi.mock('@alga-psa/jobs/handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('inbound-email-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallNotificationHandler', () => ({ renewTelephonyCallSubscriptions: (...a: unknown[]) => tenantHandlerMock('renew-telephony-call-subscriptions', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallArtifactHandler', () => ({ TELEPHONY_CALL_ARTIFACT_SWEEP_JOB: 'sweep-telephony-call-artifacts', telephonyCallArtifactSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-telephony-call-artifacts', ...a) }));
+vi.mock('@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization', () => ({
+  replenishContractCadenceServicePeriodsSweep: (...a: unknown[]) => contractSweepMock(...a),
+}));
 
 import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
 
@@ -73,12 +77,20 @@ describe('runMaintenanceJob', () => {
   beforeEach(() => {
     tenantHandlerMock.mockReset();
     systemHandlerMock.mockReset();
+    contractSweepMock.mockReset();
     listTenantsMock.mockReset();
     selectTenantsMock.mockReset();
     selectorTablesSeen.length = 0; suspendedFilter.mockClear();
     tenantHandlerMock.mockResolvedValue(undefined);
     systemHandlerMock.mockResolvedValue(undefined);
+    contractSweepMock.mockResolvedValue({ tenantsProcessed: 0, tenantsFailed: 0, summaries: [] });
   });
+
+  function sweepSummary(overrides: { failures?: Array<{ contractLineId: string; error: string }> } = {}) {
+    return {
+      failures: overrides.failures ?? [],
+    };
+  }
 
   it('runs a system job once and does not list tenants', async () => {
     const result = await runMaintenanceJob('cleanup-temporary-workflow-forms');
@@ -228,6 +240,61 @@ describe('runMaintenanceJob', () => {
   it('reports known jobs via isKnownMaintenanceJob', () => {
     expect(isKnownMaintenanceJob('search:reconcile')).toBe(true);
     expect(isKnownMaintenanceJob('sla-timer')).toBe(false);
+    expect(isKnownMaintenanceJob('replenishContractCadenceServicePeriods')).toBe(true);
+  });
+
+  it('runs contract-cadence replenishment once as a system job', async () => {
+    contractSweepMock.mockResolvedValue({
+      tenantsProcessed: 3,
+      tenantsFailed: 0,
+      summaries: [sweepSummary(), sweepSummary(), sweepSummary()],
+    });
+
+    const result = await runMaintenanceJob('replenishContractCadenceServicePeriods');
+
+    expect(listTenantsMock).not.toHaveBeenCalled();
+    expect(contractSweepMock).toHaveBeenCalledTimes(1);
+    expect(contractSweepMock).toHaveBeenCalledWith({
+      sourceRunPrefix: 'temporal-contract-cadence-replenishment',
+    });
+    expect(result).toEqual({
+      jobName: 'replenishContractCadenceServicePeriods',
+      scope: 'system',
+      total: 3,
+      succeeded: 3,
+      failed: 0,
+    });
+  });
+
+  it('reports partial contract-cadence failures instead of unconditional success', async () => {
+    contractSweepMock.mockResolvedValue({
+      tenantsProcessed: 2,
+      tenantsFailed: 1,
+      summaries: [
+        sweepSummary(),
+        sweepSummary({ failures: [{ contractLineId: 'line-1', error: 'overlap' }] }),
+      ],
+    });
+
+    const result = await runMaintenanceJob('replenishContractCadenceServicePeriods');
+
+    // One tenant-level failure plus one line-level failure, none of which the
+    // system branch may flatten into succeeded=1.
+    expect(result).toEqual({
+      jobName: 'replenishContractCadenceServicePeriods',
+      scope: 'system',
+      total: 4,
+      succeeded: 2,
+      failed: 2,
+    });
+  });
+
+  it('propagates a total contract-cadence failure', async () => {
+    contractSweepMock.mockRejectedValue(new Error('database unavailable'));
+
+    await expect(runMaintenanceJob('replenishContractCadenceServicePeriods')).rejects.toThrow(
+      'database unavailable',
+    );
   });
 });
 

@@ -1,5 +1,5 @@
 export interface SsoProviderOption {
-  id: 'google' | 'azure-ad';
+  id: 'google' | 'azure-ad' | 'keycloak';
   name: string;
   description: string;
   configured: boolean;
@@ -17,6 +17,12 @@ export async function getSsoProviderOptions(_tenantId?: string): Promise<SsoProv
       id: 'azure-ad',
       name: 'Microsoft 365 (Azure AD)',
       description: 'Allow Azure Active Directory accounts to access AlgaPSA.',
+      configured: false,
+    },
+    {
+      id: 'keycloak',
+      name: 'Keycloak',
+      description: 'Sign in through a Keycloak realm or any OpenID Connect identity it federates.',
       configured: false,
     },
   ];

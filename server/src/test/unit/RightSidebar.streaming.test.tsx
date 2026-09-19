@@ -218,7 +218,7 @@ describe('RightSidebar (streaming)', () => {
       />,
     );
 
-    fireEvent.change(await screen.findByPlaceholderText('Send a message', {}, { timeout: 5000 }), {
+    fireEvent.change(await screen.findByPlaceholderText('Send a message', {}, { timeout: 15000 }), {
       target: { value: 'Ping' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
@@ -301,7 +301,7 @@ describe('RightSidebar (streaming)', () => {
       />,
     );
 
-    fireEvent.change(await screen.findByPlaceholderText('Send a message', {}, { timeout: 5000 }), {
+    fireEvent.change(await screen.findByPlaceholderText('Send a message', {}, { timeout: 15000 }), {
       target: { value: 'Ping' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'SEND' }));

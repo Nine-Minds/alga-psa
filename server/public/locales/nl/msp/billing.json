@@ -43,13 +43,14 @@
       "contractTemplates": "Contractsjablonen",
       "invoicing": "Facturering",
       "invoiceLayouts": "Factuurlay-outs",
-      "taxRates": "Belastingtarieven",
+      "taxRates": "Belastingen",
       "contractLinePresets": "Voorinstellingen voor contractregels",
       "billingCycles": "Factureringscycli",
       "servicePeriods": "Serviceperioden",
       "usageTracking": "Gebruik volgen",
       "reports": "Rapporten",
       "serviceTypes": "Servicetypen",
+      "serviceCategories": "Servicecategorieën",
       "serviceCatalog": "Diensten",
       "products": "Producten"
     }
@@ -389,7 +390,8 @@
       "execute": "Uitvoeren",
       "createBatch": "Batch maken",
       "creating": "Creëren...",
-      "cancelBatch": "Batch annuleren"
+      "cancelBatch": "Batch annuleren",
+      "retry": "Opnieuw proberen"
     },
     "states": {
       "loadingBatches": "Batch laden...",
@@ -416,7 +418,12 @@
         "invoiceStatuses": "Door komma's gescheiden (optioneel), b.v. afgerond, geplaatst",
         "notes": "Optionele opmerkingen"
       },
-      "defaultRealmLabel": "{{realmId}} (standaard)"
+      "defaultRealmLabel": "{{realmId}} (standaard)",
+      "loadingConnections": "Boekhoudverbindingen laden...",
+      "connectionLoadError": "Kan boekhoudverbindingen niet laden. Controleer uw verbindingsinstellingen en probeer het opnieuw.",
+      "ambiguousRealm": "Uw opgeslagen standaard boekhoudorganisatie wordt gedeeld door meer dan één verbinding. Kies een verbinding om door te gaan.",
+      "noXeroConnection": "Er is geen Xero-verbinding beschikbaar. Verbind Xero in de boekhoudinstellingen om te exporteren.",
+      "noQboConnection": "Er is geen QuickBooks Online-verbinding beschikbaar. Verbind deze in de boekhoudinstellingen om te exporteren."
     },
     "detailDialog": {
       "title": "Boekhoudkundige exportbatch",
@@ -440,7 +447,8 @@
       "createError": "Kan exportbatch niet maken",
       "executeError": "Kan batch niet uitvoeren",
       "cancelled": "Batch geannuleerd",
-      "cancelError": "Kan batch niet annuleren"
+      "cancelError": "Kan batch niet annuleren",
+      "realmRequired": "Kies een verbonden boekhoudbedrijf voordat u de export aanmaakt."
     },
     "status": {
       "pending": "In afwachting",

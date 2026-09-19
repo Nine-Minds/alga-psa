@@ -164,6 +164,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Iniciar sesión con Microsoft",
+      "signInWithKeycloak": "Iniciar sesión con Keycloak",
       "signInWithGoogle": "Iniciar sesión con Google",
       "redirecting": "Redirigiendo...",
       "startFailed": "No se pudo iniciar el inicio de sesión SSO. Verifique la configuración del proveedor e inténtelo de nuevo."
@@ -1599,7 +1600,10 @@
     "defaultClosedHelp": "Un estado cerrado no puede ser el predeterminado para los elementos nuevos."
   },
   "callLink": {
-    "teamsCall": "Llamar en Microsoft Teams"
+    "teamsCall": "Llamar en Microsoft Teams",
+    "threecxCall": "Llamar mediante 3CX",
+    "threecxDialing": "Marcando desde su extensión de 3CX",
+    "threecxFailed": "La centralita no pudo realizar la llamada"
   },
   "users": {
     "soloLicenseLimit": "El plan Solo admite un técnico. Mejore el plan del espacio de trabajo antes de activar otro usuario.",

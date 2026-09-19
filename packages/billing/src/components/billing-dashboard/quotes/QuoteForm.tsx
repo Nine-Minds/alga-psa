@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -38,6 +38,9 @@ import {
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
+import type { PartialBlock } from '@blocknote/core';
+import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -47,6 +50,12 @@ interface QuoteFormProps {
     contactId?: string;
     opportunityId?: string;
     title?: string;
+    /**
+     * Business template to instantiate on mount (the "Create Quote from
+     * Template" deep link). Distinct from `documentTemplateId`, which is the
+     * PDF layout. Consumed once, in create mode only.
+     */
+    sourceTemplateId?: string;
   };
   onCancel: () => void;
   onSaved: (quoteId: string) => void;
@@ -55,7 +64,8 @@ interface QuoteFormProps {
 interface QuoteFormState {
   client_id: string;
   contact_id: string;
-  template_id: string;
+  /** Source business template for a create; never the PDF layout id. */
+  source_template_id: string;
   title: string;
   description: string;
   quote_date: string;
@@ -69,7 +79,7 @@ interface QuoteFormState {
 const EMPTY_FORM: QuoteFormState = {
   client_id: '',
   contact_id: '',
-  template_id: '',
+  source_template_id: '',
   title: '',
   description: '',
   quote_date: '',
@@ -79,6 +89,32 @@ const EMPTY_FORM: QuoteFormState = {
   terms_and_conditions: '',
   currency_code: 'USD',
 };
+
+/**
+ * Legacy Terms & Conditions are plain text with newlines as paragraph breaks.
+ * Seed the editor with one paragraph per line so line breaks survive the
+ * structured round-trip (a single paragraph carrying "\n" would collapse in the
+ * HTML converter).
+ */
+const termsBlocksFromLegacyText = (text?: string | null): PartialBlock[] => {
+  const value = typeof text === 'string' ? text : '';
+  const lines = value.length > 0 ? value.split('\n') : [''];
+  return lines.map((line) => ({
+    type: 'paragraph',
+    props: { textAlignment: 'left', backgroundColor: 'default', textColor: 'default' },
+    content: line.length > 0 ? [{ type: 'text', text: line, styles: {} }] : [],
+  })) as PartialBlock[];
+};
+
+const seedTermsBlocks = (block: unknown, text?: string | null): PartialBlock[] => {
+  if (Array.isArray(block) && block.length > 0) {
+    return block as PartialBlock[];
+  }
+  return termsBlocksFromLegacyText(text);
+};
+
+const hasTermsContent = (blocks: PartialBlock[]): boolean =>
+  flattenBlockContentToPlainText(blocks).trim().length > 0;
 
 const toDateInputValue = (value?: string | Date | null): string => {
   if (!value) return '';
@@ -116,6 +152,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
+  const [termsBlock, setTermsBlock] = useState<PartialBlock[]>(() => termsBlocksFromLegacyText(''));
+  // Bumped only when the editor's content is replaced from outside (quote load,
+  // template selection). TextEditor builds its document once from
+  // `initialContent`, so a remount is how an external replacement becomes
+  // visible; ordinary typing leaves the key alone and keeps cursor/undo.
+  const [termsEditorKey, setTermsEditorKey] = useState(0);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   /**
    * True once the user has explicitly clicked "+ Add location" OR loaded a quote
@@ -144,9 +186,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [isTemplate, setIsTemplate] = useState(initialIsTemplate);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
-  const [templates, setTemplates] = useState<IQuoteListItem[]>([]);
+  const [businessTemplates, setBusinessTemplates] = useState<IQuoteListItem[]>([]);
   const [documentTemplates, setDocumentTemplates] = useState<IQuoteDocumentTemplate[]>([]);
   const [documentTemplateId, setDocumentTemplateId] = useState<string>('');
+  // Guards the deep-link source-template seed so it runs exactly once per mount
+  // and never re-clobbers edits on subsequent renders.
+  const hasSeededSourceTemplateRef = useRef(false);
   const [lineItems, setLineItems] = useState<DraftQuoteItem[]>([]);
   const [persistedQuoteItemIds, setPersistedQuoteItemIds] = useState<string[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
@@ -276,7 +321,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
       setClients(fetchedClients);
       setContacts(fetchedContacts);
-      setTemplates(isActionPermissionError(fetchedTemplates) ? [] : fetchedTemplates.data);
+      setBusinessTemplates(isActionPermissionError(fetchedTemplates) ? [] : fetchedTemplates.data);
       setDocumentTemplates(Array.isArray(fetchedDocTemplates) ? fetchedDocTemplates : []);
 
       if (isEditMode && quoteId) {
@@ -295,7 +340,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         setForm({
           client_id: quote.client_id || '',
           contact_id: quote.contact_id || '',
-          template_id: quote.template_id || '',
+          // A quote has no column recording its source business template, so in
+          // edit mode this stays empty. The layout id travels in
+          // `documentTemplateId` instead.
+          source_template_id: '',
           title: quote.title || '',
           description: quote.description || '',
           quote_date: toDateInputValue(quote.quote_date),
@@ -305,6 +353,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           terms_and_conditions: quote.terms_and_conditions || '',
           currency_code: quote.currency_code || defaultCurrency,
         });
+        setTermsBlock(seedTermsBlocks(quote.terms_and_conditions_block, quote.terms_and_conditions));
+        setTermsEditorKey((key) => key + 1);
         setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
         setPersistedQuoteItemIds((quote.quote_items || []).map((item) => item.quote_item_id));
         setLastSavedAt(quote.updated_at || quote.created_at || null);
@@ -322,9 +372,20 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           quote_date: today.toISOString().slice(0, 10),
           valid_until: validUntil.toISOString().slice(0, 10),
         });
+        setTermsBlock(termsBlocksFromLegacyText(''));
         setLineItems([]);
         setPersistedQuoteItemIds([]);
         setLastSavedAt(null);
+
+        // "Create Quote from Template" deep link: the business template list
+        // has now loaded, so seed through the same routine the "+ From
+        // template" picker uses. The ref keeps this to a single application per
+        // mount; without it a re-render would clobber the user's edits.
+        const sourceTemplateId = initialContext?.sourceTemplateId;
+        if (sourceTemplateId && !hasSeededSourceTemplateRef.current) {
+          hasSeededSourceTemplateRef.current = true;
+          await handleTemplateChange(sourceTemplateId);
+        }
       }
 
       setError(null);
@@ -379,7 +440,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   };
 
   const handleTemplateChange = async (templateId: string) => {
-    handleChange('template_id', templateId);
+    handleChange('source_template_id', templateId);
 
     if (!templateId) {
       setLineItems([]);
@@ -388,18 +449,33 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
     try {
       const template = await getQuote(templateId);
-      if (!template || isActionPermissionError(template)) return;
+      if (!template || isActionPermissionError(template)) {
+        // A source template that cannot be loaded (deleted, or no longer
+        // visible) must not leave a dangling id: clear it so submit falls back
+        // to a plain createQuote and the user still gets a blank quote.
+        handleChange('source_template_id', '');
+        return;
+      }
 
       setForm((current) => ({
         ...current,
-        template_id: templateId,
+        source_template_id: templateId,
         title: current.title || template.title || '',
         description: current.description || template.description || '',
         client_notes: current.client_notes || template.client_notes || '',
         terms_and_conditions: current.terms_and_conditions || template.terms_and_conditions || '',
-        currency_code: current.currency_code || template.currency_code || defaultCurrency,
+        // The template owns the currency; a blank/absent value falls back to the
+        // form's existing choice, then the tenant default.
+        currency_code: template.currency_code || current.currency_code || defaultCurrency,
         po_number: current.po_number || template.po_number || '',
       }));
+
+      setTermsBlock((currentBlock) =>
+        hasTermsContent(currentBlock)
+          ? currentBlock
+          : seedTermsBlocks(template.terms_and_conditions_block, template.terms_and_conditions),
+      );
+      setTermsEditorKey((key) => key + 1);
 
       if (template.quote_items?.length) {
         setLineItems(template.quote_items.map((item) => ({
@@ -414,6 +490,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       }
     } catch (err) {
       console.error('Failed to load template:', err);
+      handleChange('source_template_id', '');
     }
   };
 
@@ -425,7 +502,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       return;
     }
 
-    if (!form.title && !form.template_id) {
+    if (!form.title && !form.source_template_id) {
       setError(
         t('quoteForm.validation.titleRequired', {
           defaultValue: 'Title is required unless creating from template',
@@ -447,6 +524,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         po_number: form.po_number || null,
         client_notes: form.client_notes || null,
         terms_and_conditions: form.terms_and_conditions || null,
+        terms_and_conditions_block: hasTermsContent(termsBlock) ? termsBlock : null,
         subtotal: 0,
         discount_total: 0,
         tax: 0,
@@ -461,8 +539,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
       if (isEditMode && quoteId) {
         result = await updateQuote(quoteId, payload as Partial<IQuote>);
-      } else if (form.template_id) {
-        result = await createQuoteFromTemplate(form.template_id, payload as any);
+      } else if (form.source_template_id) {
+        result = await createQuoteFromTemplate(form.source_template_id, payload as any);
       } else {
         result = await createQuote(payload as any);
       }
@@ -477,7 +555,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
       // When creating from a template, the server already created all line items.
       // Skip client-side item persistence to avoid duplicates.
-      const createdFromTemplate = !isEditMode && Boolean(form.template_id);
+      const createdFromTemplate = !isEditMode && Boolean(form.source_template_id);
 
       let nextLineItems = createdFromTemplate
         ? (result.quote_items || []).map(createDraftQuoteItemFromQuoteItem)
@@ -1442,14 +1520,14 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                         {t('quoteForm.lineItems.addLocation', { defaultValue: '+ Add location' })}
                       </Button>
                     )}
-                    {!isEditMode && templates.length > 0 && (
+                    {!isEditMode && businessTemplates.length > 0 && (
                       <CustomSelect
                         id="quote-form-template-picker"
-                        value={form.template_id || undefined}
+                        value={form.source_template_id || undefined}
                         onValueChange={(value) => void handleTemplateChange(value)}
                         placeholder={t('quoteForm.fields.createFromTemplate', { defaultValue: '+ From template' })}
                         allowClear
-                        options={templates.map((template) => ({
+                        options={businessTemplates.map((template) => ({
                           value: template.quote_id,
                           label: template.title,
                         }))}
@@ -1489,10 +1567,37 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <TextArea value={form.client_notes} onChange={(event) => handleChange('client_notes', event.target.value)} rows={3} disabled={isReadOnly} />
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  {t('quoteForm.clientFacing.terms', { defaultValue: 'Terms & conditions (Optional)' })}
-                  <TextArea value={form.terms_and_conditions} onChange={(event) => handleChange('terms_and_conditions', event.target.value)} rows={4} disabled={isReadOnly} />
-                </label>
+                <div className="flex flex-col gap-1 text-sm font-medium">
+                  <label htmlFor="quote-terms-editor">{t('quoteForm.clientFacing.terms', { defaultValue: 'Terms & conditions (Optional)' })}</label>
+                  {isReadOnly ? (
+                    <QuoteTermsContent
+                      id="quote-terms-readonly"
+                      block={hasTermsContent(termsBlock) ? termsBlock : null}
+                      text={form.terms_and_conditions}
+                      textClassName="text-sm text-foreground"
+                      richClassName="text-sm text-foreground"
+                      emptyFallback="—"
+                    />
+                  ) : (
+                    <div id="quote-terms-editor" className="rounded-md border border-border bg-background">
+                      <TextEditor
+                        key={`quote-terms-editor-${termsEditorKey}`}
+                        id="quote-terms-editor-input"
+                        initialContent={termsBlock}
+                        onContentChange={(blocks) => {
+                          setTermsBlock(blocks);
+                          setForm((current) => ({
+                            ...current,
+                            terms_and_conditions: flattenBlockContentToPlainText(blocks),
+                          }));
+                        }}
+                        placeholder={t('quoteForm.clientFacing.termsPlaceholder', {
+                          defaultValue: 'Add terms, links and paragraphs…',
+                        })}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
 

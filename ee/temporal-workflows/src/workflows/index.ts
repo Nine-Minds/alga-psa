@@ -27,3 +27,4 @@ export * from './tenant-product-upgrade-workflow.js';
 
 export * from './co-managed-provisioning-workflow.js';
 export * from './trial-payment-reminder-workflow.js';
+export * from './threecx-call-control-workflow.js';

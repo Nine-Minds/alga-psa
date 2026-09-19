@@ -172,11 +172,11 @@ export const CustomTabs = ({
 
   const defaultListClass = orientation === 'vertical'
     ? 'flex flex-col border-r border-border/60 space-y-1 pr-4'
-    : 'flex items-center border-b border-gray-200 mb-4';
+    : 'flex items-center border-b border-[rgb(var(--color-border-200))] mb-4';
 
   const defaultTriggerClass = orientation === 'vertical'
     ? 'w-full justify-start px-3 py-2 text-left text-sm text-muted-foreground hover:text-foreground border-l-2 border-transparent data-[state=active]:border-primary-500 data-[state=active]:text-primary-600'
-    : 'px-4 py-2 focus:outline-none transition-colors text-gray-500 hover:text-gray-700 border-b-2 border-transparent';
+    : 'px-4 py-2 focus:outline-none transition-colors text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] border-b-2 border-transparent';
 
   const defaultActiveTriggerClass = orientation === 'vertical'
     ? ''

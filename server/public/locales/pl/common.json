@@ -238,6 +238,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Zaloguj się za pomocą konta Microsoft",
+      "signInWithKeycloak": "Zaloguj się za pomocą Keycloak",
       "signInWithGoogle": "Zaloguj się za pomocą konta Google",
       "redirecting": "Przekierowywanie...",
       "startFailed": "Nie udało się rozpocząć logowania SSO. Sprawdź konfigurację dostawcy i spróbuj ponownie."
@@ -1633,7 +1634,10 @@
     "defaultClosedHelp": "Status zamknięty nie może być domyślny dla nowych elementów."
   },
   "callLink": {
-    "teamsCall": "Zadzwoń w Microsoft Teams"
+    "teamsCall": "Zadzwoń w Microsoft Teams",
+    "threecxCall": "Zadzwoń przez 3CX",
+    "threecxDialing": "Wybieranie numeru z Twojego numeru wewnętrznego 3CX",
+    "threecxFailed": "Centrala nie mogła nawiązać połączenia"
   },
   "users": {
     "soloLicenseLimit": "Plan Solo obsługuje jednego technika. Podnieś plan obszaru roboczego, zanim aktywujesz kolejnego użytkownika.",

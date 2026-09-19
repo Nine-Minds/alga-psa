@@ -267,6 +267,7 @@
     "sso": {
       "signInWithGoogle": "Sign in with Google",
       "signInWithMicrosoft": "Sign in with Microsoft",
+      "signInWithKeycloak": "Sign in with Keycloak",
       "redirecting": "Redirecting...",
       "startFailed": "We couldn't start SSO sign-in. Please verify provider setup and try again."
     },
@@ -1599,7 +1600,10 @@
     "defaultClosedHelp": "A closed status cannot be the default for new items."
   },
   "callLink": {
-    "teamsCall": "Call in Microsoft Teams"
+    "teamsCall": "Call in Microsoft Teams",
+    "threecxCall": "Call via 3CX",
+    "threecxDialing": "Dialing from your 3CX extension",
+    "threecxFailed": "The PBX could not place the call"
   },
   "users": {
     "soloLicenseLimit": "The Solo plan supports one technician. Upgrade the workspace before activating another user.",

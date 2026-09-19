@@ -15,6 +15,7 @@ import {
   type MigrationJobSummary,
   type MigrationOutcomeRecord,
   type MigrationOutcomeSummary,
+  type MigrationSkipProvenance,
   type PreflightResult,
 } from './types';
 
@@ -301,6 +302,18 @@ export async function getMigrationOutcomeRecords(
   return new MigrationReportService(knex, tenant).getOutcomeRecords(migrationJobId, options);
 }
 
+/**
+ * Where this job's skipped records came from, so the results copy only claims
+ * "same package" when that is true.
+ */
+export async function getMigrationSkipProvenance(
+  migrationJobId: string
+): Promise<MigrationSkipProvenance> {
+  const { tenant } = await requirePermission('read');
+  const { knex } = await createTenantKnex(tenant);
+  return new MigrationReportService(knex, tenant).getSkipProvenance(migrationJobId);
+}
+
 /** CSV export of the preflight or outcome report for download. */
 export async function getMigrationReportCsv(
   migrationJobId: string,
@@ -407,7 +420,9 @@ export async function saveMigrationMappingProfile(profile: {
       created_by: userId,
     })
     .onConflict(['tenant', 'entity_type', 'source_signature', 'name'])
-    .merge({ mapping: JSON.stringify(profile.mapping), updated_at: knex.fn.now() });
+    // Citus rejects STABLE functions (knex.fn.now() → CURRENT_TIMESTAMP) inside
+    // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
+    .merge({ mapping: JSON.stringify(profile.mapping), updated_at: new Date().toISOString() });
 }
 
 function toSummary(

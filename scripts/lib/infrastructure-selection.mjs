@@ -4,6 +4,8 @@ export const infrastructureFloor = Object.freeze([
   'server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts',
   'server/src/test/infrastructure/billing/tax/taxRoundingBehavior.test.ts',
   'server/src/test/infrastructure/billing/credits/creditApplication.test.ts',
+  'server/src/test/infrastructure/billing/catalogPricing/catalogPriceResolution.test.ts',
+  'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
 ].sort());
 
 // The producer supplies its reconciled collection; the aggregate independently

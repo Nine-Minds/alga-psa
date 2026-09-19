@@ -35,6 +35,7 @@ import type { TicketNotificationSuppressionValue } from './TicketNotificationSup
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import { TicketCredentialsSection } from "./TicketCredentialsSection";
+import { TicketExternalLinksSection } from "./TicketExternalLinksSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
@@ -64,6 +65,7 @@ import {
     type ITicketAutoCloseState,
 } from "../../actions/close-rules/closeRuleActions";
 import { getTicketChecklistItems, type ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
+import type { ITicketExternalLinkView } from "../../actions/externalLinks/externalLinkActions";
 import type { CloseRuleFailure } from "../../lib/validateTicketClosure";
 import TicketChecklistSection, { summarizeChecklist } from "./TicketChecklistSection";
 import { Dialog, DialogContent, DialogFooter } from "@alga-psa/ui/components/Dialog";
@@ -74,6 +76,7 @@ import { addTicketResource, getTicketResources, removeTicketResource } from "../
 import { assignTeamToTicket, removeTeamFromTicket } from "../../actions/teamAssignmentActions";
 import { getTeamById, getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
+import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
 import { Button } from "@alga-psa/ui/components/Button";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
@@ -224,6 +227,12 @@ interface TicketDetailsProps {
     renderCreateProjectTask?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
 
     /**
+     * Optional injected UI for quick-invoicing a ticket (e.g. billing package
+     * QuickInvoiceTicketDialog). Keeps @alga-psa/tickets from importing billing.
+     */
+    renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -299,6 +308,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     associatedAssets = null,
     renderContactDetails,
     renderCreateProjectTask,
+    renderQuickInvoice,
     renderClientDetails,
     renderIntervalManagement,
     hideSlaStatus = false,
@@ -548,7 +558,34 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
     const [allContactsForWatchListLoading, setAllContactsForWatchListLoading] = useState(false);
-    const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
+    // Single source of truth for this ticket's links: seeded from the server
+    // bootstrap, then kept current by the section's onLinksChanged so the origin
+    // badge and comment chips update immediately on add/edit/remove — no reload.
+    const [externalLinks, setExternalLinks] = useState<ITicketExternalLinkView[] | null>(
+        bootstrap?.externalLinks ?? null,
+    );
+    const originExternalLink = useMemo(
+        () => (externalLinks ?? []).find(
+            (link) => link.entity_type === 'ticket' && link.relationship === 'origin',
+        ),
+        [externalLinks],
+    );
+    const externalLinksByCommentId = useMemo(() => {
+        const grouped: Record<string, ITicketExternalLinkView[]> = {};
+        for (const link of externalLinks ?? []) {
+            if (link.entity_type !== 'comment' || !link.entity_id) continue;
+            (grouped[link.entity_id] ??= []).push(link);
+        }
+        return grouped;
+    }, [externalLinks]);
+    const ticketOrigin = useMemo(
+        () =>
+            getTicketOrigin({
+                ...(ticket as any),
+                origin_link_system: originExternalLink?.system ?? null,
+            }),
+        [ticket, originExternalLink?.system],
+    );
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
         clientPortal: t('origin.clientPortal', 'Created via Client Portal'),
@@ -1104,7 +1141,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
-    const [nextVisitRefreshKey, setNextVisitRefreshKey] = useState(0);
+    const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
     const [tags, setTags] = useState<ITag[]>(bootstrap?.tags ?? []);
     const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
@@ -1653,12 +1690,31 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
       return;
     }
 
+    if (!ticket.ticket_id) {
+      return;
+    }
+
+    // Seven day columns need the room; the drawer caps itself at 60vw.
     openDrawer(
       <AgentScheduleDrawer
         agentId={userId}
-      />
+        workItemContext={buildScheduleContext(ticket.ticket_id)}
+      />,
+      undefined,
+      undefined,
+      '1200px'
     );
   };
+
+  /** The ticket as a schedulable work item, shared by every scheduling surface on this page. */
+  const buildScheduleContext = (ticketId: string): WorkItemScheduleContext => ({
+    workItemId: ticketId,
+    workItemType: 'ticket',
+    title: ticket.title || t('bento.tiles.scheduledWork', 'Scheduled work'),
+    clientName: client?.client_name ?? null,
+    defaultAssigneeId: ticket.assigned_to ?? null,
+    onScheduled: () => setScheduleRefreshKey((value) => value + 1),
+  });
 
     const handleAddAgent = async (userId: string) => {
         try {
@@ -2386,7 +2442,7 @@ const handleClose = () => {
         }
     };
 
-    const handleScheduleVisit = async () => {
+    const openScheduleEntryEditor = async (existingEntryId?: string) => {
         try {
             if (!ticket.ticket_id) {
                 toast.error(t('messages.ticketIdMissing'));
@@ -2396,18 +2452,17 @@ const handleClose = () => {
             await launchScheduleEntry({
                 openDrawer,
                 closeDrawer,
-                context: {
-                    workItemId: ticket.ticket_id,
-                    workItemType: 'ticket',
-                    title: ticket.title || t('bento.tiles.scheduledWork', 'Scheduled work'),
-                    clientName: client?.client_name ?? null,
-                },
-                onComplete: () => setNextVisitRefreshKey((value) => value + 1),
+                context: buildScheduleContext(ticket.ticket_id),
+                onComplete: () => setScheduleRefreshKey((value) => value + 1),
+                existingEntryId,
             });
         } catch (error) {
-            handleTicketActionError(error, t('messages.scheduleVisitFailed', { defaultValue: 'Failed to open the scheduler' }));
+            handleTicketActionError(error, t('messages.scheduleOpenFailed', { defaultValue: 'Failed to open the scheduler' }));
         }
     };
+
+    const handleScheduleWork = () => openScheduleEntryEditor();
+    const handleOpenScheduleEntry = (entryId: string) => openScheduleEntryEditor(entryId);
 
     const handleEditTimeEntry = async (entry: { entry_id: string }) => {
         try {
@@ -3392,6 +3447,7 @@ const handleClose = () => {
                                     labels={ticketOriginLabels}
                                     size="sm"
                                     className="flex-shrink-0"
+                                    systemLabel={originExternalLink?.display.label ?? null}
                                 />
                             </div>
 
@@ -3691,6 +3747,7 @@ const handleClose = () => {
                     tags={tags}
                     onTagsChange={handleTagsChange}
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
+                    quickInvoiceActions={hideBilling ? undefined : renderQuickInvoice?.({ ticket })}
                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                         ? () => setIsResolutionCloseDialogOpen(true)
                         : undefined}
@@ -3749,6 +3806,8 @@ const handleClose = () => {
                     onChangeClient={handleClientChange}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
+                    externalLinks={externalLinks ?? undefined}
+                    onExternalLinksChanged={setExternalLinks}
                     hideTimeEntry={hideTimeEntry}
                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                     elapsedTime={elapsedTime}
@@ -3760,8 +3819,9 @@ const handleClose = () => {
                     onPause={handlePauseClick}
                     onStop={handleStopClick}
                     onAddTimeEntry={handleAddTimeEntry}
-                    onScheduleVisit={handleScheduleVisit}
-                    nextVisitRefreshKey={nextVisitRefreshKey}
+                    onScheduleWork={handleScheduleWork}
+                    onOpenScheduleEntry={handleOpenScheduleEntry}
+                    scheduleRefreshKey={scheduleRefreshKey}
                     userId={userId || ''}
                     dateTimeFormat={dateTimeFormat}
                     timeEntriesRefreshKey={timeEntriesRefreshKey}
@@ -3823,6 +3883,7 @@ const handleClose = () => {
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
+                                    renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                         ? () => setIsResolutionCloseDialogOpen(true)
                                         : undefined}
@@ -3893,6 +3954,7 @@ const handleClose = () => {
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                     reactionRefreshVersion={reactionRefreshVersion}
+                                    externalLinksByCommentId={externalLinksByCommentId}
                                 />
                             </div>
                         </Suspense>
@@ -3925,6 +3987,15 @@ const handleClose = () => {
                             ticketId={ticket.ticket_id || ''}
                             clientId={ticket.client_id ?? null}
                         />
+
+                        <div className="mt-6">
+                            <TicketExternalLinksSection
+                                id={`${id}-external-links-section`}
+                                ticketId={ticket.ticket_id || ''}
+                                initialLinks={externalLinks ?? undefined}
+                                onLinksChanged={setExternalLinks}
+                            />
+                        </div>
 
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
@@ -4037,6 +4108,7 @@ const handleClose = () => {
                             isBundledChild={Boolean(bundle?.isBundleChild)}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
+                            renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                             onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                 ? () => setIsResolutionCloseDialogOpen(true)
                                 : undefined}

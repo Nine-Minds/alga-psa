@@ -4,7 +4,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
-import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from '@alga-psa/types'; // Renamed for clarity
+import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType, ManualInvoiceSourceLink } from '@alga-psa/types'; // Renamed for clarity
 import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
@@ -509,6 +509,12 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   so_line_id?: string | null;
   /** Per-line tax override: takes precedence over the service's tax_rate_id (F045). */
   tax_rate_id?: string | null;
+  /**
+   * Ticket source record this line claims (quick-invoice-a-ticket). When set,
+   * the owning time entry / ticket material is marked billed and linked in the
+   * same transaction as the charge, so an already-billed selection aborts.
+   */
+  source_link?: ManualInvoiceSourceLink;
 }
 
 
@@ -600,6 +606,143 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   return normalizedInvoiceItems;
 }
 
+/** Validate ticket sources under locks held until invoice creation commits. */
+async function validateManualTicketSources(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  clientId: string,
+  items: ManualInvoiceItemInput[],
+): Promise<Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot>> {
+  const snapshots = new Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot>();
+  const invoice = await tenantScopedTable(tx, tenant, 'invoices')
+    .where({ invoice_id: invoiceId }).first();
+  const sourceItems = items.filter(item => item.source_link);
+  if (!invoice?.ticket_id && sourceItems.length === 0) return snapshots;
+
+  const reject = () => new ManualInvoiceError(
+    'SOURCE_NOT_ELIGIBLE', 'The selected source does not match this ticket invoice or is no longer eligible.',
+  );
+  if (!invoice?.ticket_id || invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) {
+    throw reject();
+  }
+  const ticket = await tenantScopedTable(tx, tenant, 'tickets')
+    .where({ ticket_id: invoice.ticket_id }).forShare().first();
+  if (!ticket || ticket.client_id !== invoice.client_id) throw reject();
+
+  // Stable lock order prevents overlapping selections from deadlocking.
+  const key = (item: ManualInvoiceItemInput) => {
+    const link = item.source_link!;
+    return link.kind === 'time_entry' ? `time:${link.entryId}` : `material:${'materialId' in link ? link.materialId : ''}`;
+  };
+  const seen = new Set<string>();
+  for (const item of [...sourceItems].sort((a, b) => key(a).localeCompare(key(b)))) {
+    const link = item.source_link!;
+    if (seen.has(key(item)) || item.is_discount) throw reject();
+    seen.add(key(item));
+    if (link.kind === 'time_entry') {
+      const entry = await tenantScopedTable(tx, tenant, 'time_entries')
+        .where({ entry_id: link.entryId }).forUpdate().first();
+      if (!entry || entry.invoiced) {
+        throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected time entry is already billed or removed.');
+      }
+      if (entry.work_item_type !== 'ticket' || entry.work_item_id !== ticket.ticket_id ||
+          entry.approval_status !== 'APPROVED' || Number(entry.billable_duration) <= 0 || !entry.service_id) {
+        throw reject();
+      }
+      const service = await tenantScopedTable(tx, tenant, 'service_catalog')
+        .where({ service_id: entry.service_id }).forShare().first();
+      if (!service) throw reject();
+      const minutes = Number(entry.billable_duration);
+      const rate = Math.max(0, Math.round(Number(service.default_rate) || 0));
+      if (item.service_id !== entry.service_id || item.quantity !== minutes / 60 || item.rate !== rate) throw reject();
+      snapshots.set(item, {
+        version: 2, rateKind: 'uniform', uniformRate: rate,
+        workItemType: 'ticket', workItemId: ticket.ticket_id,
+        ticketNumber: ticket.ticket_number ?? null, title: ticket.title ?? null,
+        description: null, entryDate: entry.start_time ? new Date(entry.start_time).toISOString() : null,
+        billedMinutes: minutes, rate, netAmount: Math.round(minutes / 60 * rate),
+        serviceId: entry.service_id, serviceName: service.service_name,
+      });
+    } else if (link.kind === 'ticket_material') {
+      const material = await tenantScopedTable(tx, tenant, 'ticket_materials')
+        .where({ ticket_material_id: link.materialId }).forUpdate().first();
+      if (!material || material.is_billed) {
+        throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected product is already billed or removed.');
+      }
+      if (material.ticket_id !== ticket.ticket_id || material.client_id !== invoice.client_id || Number(material.quantity) <= 0) {
+        throw reject();
+      }
+      if (material.currency_code !== invoice.currency_code) {
+        throw new ManualInvoiceError('SOURCE_CURRENCY_MISMATCH', 'The selected product currency does not match the invoice.');
+      }
+      if (item.service_id !== material.service_id || item.quantity !== Number(material.quantity) ||
+          item.rate !== Math.max(0, Math.round(Number(material.rate) || 0))) throw reject();
+    } else {
+      throw reject();
+    }
+  }
+  return snapshots;
+}
+
+/**
+ * Claims the source record behind a manual invoice line inside the caller's
+ * transaction. Conditional updates are the lock: a record already billed by
+ * another invoice updates zero rows and aborts the whole invoice, so a stale
+ * or concurrent selection can never be billed twice.
+ */
+async function claimManualChargeSource(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  invoiceItemId: string,
+  sourceLink: ManualInvoiceSourceLink,
+  claimedAt: string,
+  snapshot?: InvoiceTimeEntrySnapshot,
+): Promise<void> {
+  if (sourceLink.kind === 'time_entry') {
+    const updated = await tenantScopedTable(tx, tenant, 'time_entries')
+      .where({ entry_id: sourceLink.entryId, invoiced: false })
+      .update({ invoiced: true });
+    if (updated !== 1) {
+      throw new ManualInvoiceError(
+        'SOURCE_ALREADY_BILLED',
+        `Time entry ${sourceLink.entryId} is no longer billable (already invoiced or removed).`,
+        { recordId: sourceLink.entryId },
+      );
+    }
+
+    await tenantScopedTable(tx, tenant, 'invoice_time_entries').insert({
+      invoice_time_entry_id: uuidv4(),
+      invoice_id: invoiceId,
+      item_id: invoiceItemId,
+      entry_id: sourceLink.entryId,
+      work_item_snapshot: snapshot ? JSON.stringify(snapshot) : null,
+      tenant,
+      created_at: claimedAt,
+    });
+    return;
+  }
+
+  if (sourceLink.kind === 'ticket_material') {
+    const updated = await tenantScopedTable(tx, tenant, 'ticket_materials')
+      .where({ ticket_material_id: sourceLink.materialId, is_billed: false })
+      .update({
+        is_billed: true,
+        billed_invoice_id: invoiceId,
+        billed_at: claimedAt,
+        updated_at: claimedAt,
+      });
+    if (updated !== 1) {
+      throw new ManualInvoiceError(
+        'SOURCE_ALREADY_BILLED',
+        `Ticket product ${sourceLink.materialId} is no longer billable (already invoiced or removed).`,
+        { recordId: sourceLink.materialId },
+      );
+    }
+  }
+}
+
 /**
  * Persists manual invoice items to the database.
  * Handles both regular manual items and manual discount items.
@@ -616,6 +759,7 @@ export async function persistManualInvoiceCharges(
   session: Session,
   tenant: string
 ): Promise<number> {
+  const sourceSnapshots = await validateManualTicketSources(tx, tenant, invoiceId, client.client_id, manualItems);
   let subtotal = 0;
   const serviceToItemMap = new Map<string, string>(); // Maps service_id to item_id for discount resolution
   const now = Temporal.Now.instant().toString();
@@ -727,6 +871,17 @@ export async function persistManualInvoiceCharges(
     };
 
     await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
+    if (requestItem.source_link) {
+      await claimManualChargeSource(
+        tx,
+        tenant,
+        invoiceId,
+        invoiceItem.item_id,
+        requestItem.source_link,
+        now,
+        sourceSnapshots.get(requestItem),
+      );
+    }
     if (requestItem.service_id) {
       serviceToItemMap.set(requestItem.service_id, invoiceItem.item_id);
     }

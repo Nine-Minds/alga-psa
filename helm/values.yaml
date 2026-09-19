@@ -387,6 +387,18 @@ microsoft_integration:
   # OAuth redirect URI configured in the app registration
   redirect_uri: ""
 
+# Optional deployment-level Keycloak / OpenID Connect sign-in fallback. Tenants
+# normally configure their own realm in Settings → Security → Single Sign-On
+# (stored as tenant secrets), which needs nothing here. Users are matched by
+# the realm's email claim to existing AlgaPSA users. All four values are
+# required; the issuer becomes <url>/realms/<realm> (Keycloak 17+ paths).
+# Allow <NEXTAUTH_URL>/api/auth/callback/keycloak as a redirect URI on the client.
+keycloak_sso:
+  url: ""
+  realm: ""
+  client_id: ""
+  client_secret: ""
+
 # NinjaOne RMM Integration
 ninjaone_integration:
   enabled: false

@@ -51,6 +51,10 @@ function buildChain(result: any) {
 function buildTrx(invoiceRows: any[]) {
   return Object.assign(
     ((table: string) => {
+      if (table === 'boards') {
+        return { select: async () => [] };
+      }
+
       if (table === 'contacts') {
         const contactRow = {
           contact_name_id: 'contact-1',

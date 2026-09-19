@@ -172,6 +172,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.billing.quoteBusinessTemplates',
       'nav.billing.quoteLayouts',
       'nav.billing.serviceTypes',
+      'nav.billing.serviceCategories',
       'nav.billing.serviceCatalog',
       'nav.billing.products',
       'nav.billing.taxRates',

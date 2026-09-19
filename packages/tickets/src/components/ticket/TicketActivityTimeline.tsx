@@ -9,6 +9,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronRight,
+  Link2,
   Lock,
   Mail,
   MessageSquare,
@@ -153,9 +154,23 @@ function eventIcon(eventType: string): React.ReactElement {
       return <Paperclip className="h-4 w-4" />;
     case 'TICKET_INBOUND_EMAIL_RECEIVED':
       return <Mail className="h-4 w-4" />;
+    case 'TICKET_EXTERNAL_LINK_ADDED':
+    case 'TICKET_EXTERNAL_LINK_UPDATED':
+    case 'TICKET_EXTERNAL_LINK_REMOVED':
+      return <Link2 className="h-4 w-4" />;
     default:
       return <Activity className="h-4 w-4" />;
   }
+}
+
+function externalLinkReference(activity: TicketActivityRow): string {
+  const details = (activity.details ?? {}) as {
+    system?: string;
+    system_label?: string;
+    external_id?: string;
+  };
+  const system = details.system_label ?? details.system ?? 'an external system';
+  return details.external_id ? `${system} #${details.external_id}` : system;
 }
 
 function notificationSuppressionAnnotation(activity: TicketActivityRow): string | undefined {
@@ -276,6 +291,12 @@ function describeActivity(activity: TicketActivityRow): { title: string; annotat
         subtitle: fields.length > 0 ? fields.map(fieldLabel).join(', ') : undefined,
       };
     }
+    case 'TICKET_EXTERNAL_LINK_ADDED':
+      return { title: `${actor} linked ${externalLinkReference(activity)}` };
+    case 'TICKET_EXTERNAL_LINK_UPDATED':
+      return { title: `${actor} updated the ${externalLinkReference(activity)} link` };
+    case 'TICKET_EXTERNAL_LINK_REMOVED':
+      return { title: `${actor} unlinked ${externalLinkReference(activity)}` };
     default:
       return { title: `${actor} • ${activity.event_type}` };
   }

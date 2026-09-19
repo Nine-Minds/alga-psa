@@ -1,15 +1,16 @@
 import useSWR from 'swr';
 import { useState, useCallback } from 'react';
 import { getAsset, getAssetSummaryMetrics, getAvailableAssetFacts } from '@alga-psa/assets/actions/assetActions';
-import { getAssetRmmData, refreshAssetRmmData } from '@alga-psa/assets/actions/rmmActions';
 import { toast } from 'react-hot-toast';
 import { unwrapAssetActionResult } from '@alga-psa/assets/actions/assetActionErrors';
+import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 
 async function unwrapAssetFetcher<T>(resultPromise: Promise<T>): Promise<T> {
   return unwrapAssetActionResult(await resultPromise);
 }
 
 export function useAssetDetail(assetId: string) {
+  const { rmm } = useAssetCrossFeature();
   const {
     data: asset,
     error: assetError,
@@ -28,7 +29,7 @@ export function useAssetDetail(assetId: string) {
     error: rmmError,
     isLoading: rmmLoading,
     mutate: mutateRmmData,
-  } = useSWR(assetId ? ['asset', assetId, 'rmm'] : null, ([_, id]) => getAssetRmmData(id));
+  } = useSWR(assetId ? ['asset', assetId, 'rmm'] : null, ([_, id]) => rmm.getAssetRmmData(id));
   const {
     data: assetFacts,
     error: assetFactsError,
@@ -44,7 +45,7 @@ export function useAssetDetail(assetId: string) {
       try {
         setIsRefreshing(true);
         const [updatedData, updatedAsset] = await Promise.all([
-          refreshAssetRmmData(assetId),
+          rmm.refreshAssetRmmData(assetId),
           unwrapAssetFetcher(getAsset(assetId)),
         ]);
 
@@ -59,7 +60,31 @@ export function useAssetDetail(assetId: string) {
         setIsRefreshing(false);
       }
     },
-    [assetId, mutateAsset, mutateRmmData]
+    [assetId, mutateAsset, mutateRmmData, rmm]
+  );
+
+  const [isRebooting, setIsRebooting] = useState(false);
+
+  const rebootDevice = useCallback(
+    async () => {
+      if (!assetId) return;
+
+      try {
+        setIsRebooting(true);
+        const result = await rmm.triggerRmmReboot(assetId);
+        if (result.success) {
+          toast.success(result.message);
+        } else {
+          toast.error(result.message);
+        }
+      } catch (error) {
+        console.error('Error sending reboot command:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to send reboot command');
+      } finally {
+        setIsRebooting(false);
+      }
+    },
+    [assetId, rmm]
   );
 
   return {
@@ -70,6 +95,8 @@ export function useAssetDetail(assetId: string) {
     isLoading: assetLoading || metricsLoading || rmmLoading || assetFactsLoading,
     isRefreshing,
     refreshRmmData,
+    isRebooting,
+    rebootDevice,
     errors: {
       asset: assetError,
       metrics: metricsError,

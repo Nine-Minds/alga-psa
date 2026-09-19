@@ -16,6 +16,8 @@ describe('hudu asset mappings — DB persistence (T214/T215)', () => {
   let assetMappingDb: typeof import('../../lib/integrations/hudu/assetMapping');
   let companyMappingDb: typeof import('../../lib/integrations/hudu/companyMapping');
 
+  // createTestDbConnection recreates, migrates, and seeds the entire database.
+  // That bootstrap can exceed a minute on CI; keep the shorter cleanup limit.
   beforeAll(async () => {
     assetMappingDb = await vi.importActual('@ee/lib/integrations/hudu/assetMapping');
     companyMappingDb = await vi.importActual('@ee/lib/integrations/hudu/companyMapping');
@@ -58,7 +60,7 @@ describe('hudu asset mappings — DB persistence (T214/T215)', () => {
       .returning(['asset_id', 'name']);
     assetA = inserted.find((a: any) => a.name === 'EC-WS-001').asset_id;
     assetB = inserted.find((a: any) => a.name === 'EC-SRV-01').asset_id;
-  }, HOOK_TIMEOUT);
+  }, 300_000);
 
   afterAll(async () => {
     if (db && tenantId) {

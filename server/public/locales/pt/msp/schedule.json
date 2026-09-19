@@ -26,7 +26,17 @@
     "loading": "Carregando...",
     "errors": {
       "loadPermissions": "Falha ao carregar as permissões do usuário",
-      "forbidden": "Você não tem permissão para visualizar esta programação."
+      "forbidden": "Você não tem permissão para visualizar esta programação.",
+      "moveFailed": "Não foi possível mover a entrada de agenda"
+    },
+    "schedulingFor": "Agendando",
+    "selectSlotHint": "Arraste para criar, mover ou redimensionar entradas. Clique numa entrada para editá-la.",
+    "readOnlyHint": "Você pode ver esta agenda, mas precisa da permissão de atualização de agenda para adicionar ou alterar entradas.",
+    "workItemLegend": "Este item de trabalho",
+    "schedulingForAgent": "Agendando para {{name}}",
+    "otherWorkLegend": "Outro trabalho",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -553,7 +563,8 @@
       "appointmentRequest": "Solicitação de agendamento",
       "view": "Ver entrada",
       "edit": "Editar entrada",
-      "new": "Nova entrada"
+      "new": "Nova entrada",
+      "newForWorkItem": "Agendar {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Esta é uma entrada privada. Somente o criador pode visualizar ou editar detalhes."
@@ -578,7 +589,9 @@
       "privateEntry": "Entrada privada (não visível para outros usuários)",
       "start": "Começar *",
       "end": "Fim *",
-      "notes": "Notas"
+      "notes": "Notas",
+      "technician": "Técnico",
+      "notesPlaceholder": "Tudo o que o técnico deve saber antes de começar"
     },
     "actions": {
       "cancel": "Cancelar",
@@ -588,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Entrada ad hoc (sem item de trabalho)",
-      "openDetails": "Detalhes"
+      "openDetails": "Detalhes",
+      "loading": "Carregando item de trabalho…",
+      "openTicket": "Abrir ticket",
+      "openTask": "Abrir tarefa",
+      "openInteraction": "Abrir interação"
     },
     "appointmentRequest": {
       "approved": {
@@ -691,6 +708,11 @@
       "created": "Reunião do Microsoft Teams criada",
       "createFailed": "Falha ao criar a reunião do Teams",
       "recurringUnsupported": "Reuniões do Teams só podem ser adicionadas a entradas avulsas, não a séries recorrentes."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {
@@ -744,5 +766,15 @@
       "graphThrottled": "O Microsoft Graph está limitando a taxa de downloads de gravações. Tente novamente em instantes.",
       "graphHttpStatus": "O Microsoft Graph retornou HTTP {{status}} ao baixar a gravação do Teams."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} agendado",
+    "updated": "Entrada de agenda atualizada",
+    "deleted": "Entrada de agenda excluída",
+    "createFailed": "Não foi possível agendar este trabalho",
+    "updateFailed": "Não foi possível atualizar a entrada de agenda",
+    "deleteFailed": "Não foi possível excluir a entrada de agenda",
+    "loadFailed": "Não foi possível carregar a entrada de agenda",
+    "noPermission": "Você precisa da permissão de atualização de agenda para agendar trabalho."
   }
 }

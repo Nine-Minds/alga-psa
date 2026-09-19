@@ -107,7 +107,7 @@ export {
 } from './ticketMobileEditorBridge';
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
 export {
-  applyVisibilityBoardFilter,
+  applyTicketVisibilityFilter,
   VISIBILITY_GROUP_MISMATCH_ERROR,
   VISIBILITY_GROUP_MISSING_ERROR,
 } from './clientPortalVisibility';
@@ -150,6 +150,20 @@ export type {
 export type { TicketMobileEditorRuntimeOptions } from './ticketMobileEditorRuntime';
 export { getTicketOrigin, TICKET_ORIGIN_OTHER } from './ticketOrigin';
 export type { ResolvedTicketOrigin } from './ticketOrigin';
+export {
+  isBuiltInExternalSystemKey,
+  isCustomExternalSystemKey,
+  findBuiltInExternalSystem,
+  customExternalSystemToDefinition,
+  resolveExternalSystem,
+  listExternalSystems,
+  safeExternalUrl,
+  isValidExternalUrl,
+  renderExternalLinkUrl,
+  resolveExternalSystemOrigin,
+} from './externalSystems';
+export { resolveDocumentViewUrl, documentViewUrl } from './documentViewUrl';
+export type { DocumentViewUrlInput } from './documentViewUrl';
 // Only the client-safe close-rule types/constants/error are exported from this
 // barrel. enforceTicketCloseRules / evaluateTicketCloseRules are server-only
 // (they import hasPermission + DB) and must be imported from the deep path

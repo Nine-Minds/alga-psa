@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
-import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle } from 'lucide-react';
+import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, CalendarDays } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -110,6 +110,8 @@ interface BentoHeroProps {
   onTagsChange?: (tags: ITag[]) => void;
   /** Rendered create-task / link-task actions (injected node). */
   taskActions?: React.ReactNode;
+  /** Rendered quick-invoice action (injected node). */
+  quickInvoiceActions?: React.ReactNode;
   /** Opens the dedicated resolution-and-close dialog. */
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
@@ -187,6 +189,7 @@ export function BentoHero({
   tags,
   onTagsChange,
   taskActions,
+  quickInvoiceActions,
   onResolveAndClose,
   resolveAndCloseDisabled = false,
   liveHighlightedFields = [],
@@ -947,6 +950,7 @@ export function BentoHero({
               </span>
             ) : null}
             {taskActions}
+            {quickInvoiceActions}
             {onResolveAndClose ? (
               <Button
                 id={`${id}-resolve-and-close-button`}
@@ -1063,6 +1067,19 @@ export function BentoHero({
                 placeholder={t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />
+              {onAgentClick && ticket.assigned_to ? (
+                <Tooltip content={t('bento.hero.viewSchedule', 'View schedule')}>
+                  <button
+                    id={`${id}-assignee-schedule`}
+                    type="button"
+                    aria-label={t('bento.hero.viewSchedule', 'View schedule')}
+                    className="inline-flex items-center justify-center h-6 w-6 rounded text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
+                    onClick={() => onAgentClick(ticket.assigned_to!)}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+              ) : null}
               {assignedTeam ? (
                 <Tooltip content={assignedTeam.team_name}>
                   <Badge variant="info" size="sm" className="gap-1 cursor-help">
@@ -1075,35 +1092,29 @@ export function BentoHero({
                   </Badge>
                 </Tooltip>
               ) : null}
-              {additionalAgentEntries.length > 0 ? (
-                <Tooltip
-                  content={
-                    <div className="text-xs space-y-1.5">
-                      <div className="font-medium text-gray-300 mb-1">
-                        {t('bento.hero.additionalAgentsTooltip', 'Additional agents:')}
-                      </div>
-                      {additionalAgentEntries.map((agent) => (
-                        <div key={agent.userId} className="flex items-center gap-2">
-                          <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />
-                          <span>{agent.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  }
-                >
-                  <Badge
-                    variant="info"
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={() => {
-                      const first = additionalAgentEntries[0];
-                      if (first) onAgentClick?.(first.userId);
-                    }}
-                  >
-                    +{additionalAgentEntries.length}
-                  </Badge>
-                </Tooltip>
-              ) : null}
+              {additionalAgentEntries.map((agent) => {
+                const label = onAgentClick
+                  ? `${t('bento.hero.viewSchedule', 'View schedule')}: ${agent.name}`
+                  : agent.name;
+                const avatar = <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />;
+                return (
+                  <Tooltip key={agent.userId} content={label}>
+                    {onAgentClick ? (
+                      <button
+                        id={`${id}-additional-agent-${agent.userId}`}
+                        type="button"
+                        aria-label={label}
+                        className="rounded-full hover:ring-2 hover:ring-[rgb(var(--color-primary-300))]"
+                        onClick={() => onAgentClick(agent.userId)}
+                      >
+                        {avatar}
+                      </button>
+                    ) : (
+                      <span id={`${id}-additional-agent-${agent.userId}`} className="cursor-help">{avatar}</span>
+                    )}
+                  </Tooltip>
+                );
+              })}
               </>
             ))}
           </HeroField>

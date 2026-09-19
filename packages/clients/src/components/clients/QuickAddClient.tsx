@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ClientLifecycleStatus, ContactPhoneNumberInput, CreateContactInput, IClient, IClientLocation } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
@@ -21,7 +21,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { createClient } from '@alga-psa/clients/actions/clientActions';
 import { createClientLocation } from '@alga-psa/clients/actions/clientLocationActions';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
+import { getAllCountries, getTenantDefaultCountry, ICountry } from '@alga-psa/clients/actions/countryActions';
 import { listContactPhoneTypeSuggestions, createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -106,6 +106,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     account_manager_id: null
   };
 
+  // The tenant's own country, once resolved. Declared ahead of the initial form
+  // data because every reset seeds the country field from it.
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
+  const hasEditedCountryRef = useRef(false);
+
   const initialLocationData: CreateLocationData = {
     client_id: '',
     location_name: 'Main Office',
@@ -115,8 +120,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     city: '',
     state_province: '',
     postal_code: '',
-    country_code: 'US',
-    country_name: 'United States',
+    country_code: tenantDefaultCountry?.code ?? 'US',
+    country_name: tenantDefaultCountry?.name ?? 'United States',
     region_code: null,
     is_billing_address: true,
     is_shipping_address: true,
@@ -203,8 +208,21 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         if (isLoadingCountries || countries.length > 0) return;
         setIsLoadingCountries(true);
         try {
-          const countriesData = await getAllCountries();
+          // A missing tenant default must not empty the picker, so it fails soft.
+          const [countriesData, tenantCountry] = await Promise.all([
+            getAllCountries(),
+            getTenantDefaultCountry().catch(() => null),
+          ]);
           setCountries(countriesData);
+          if (tenantCountry) {
+            setTenantDefaultCountry(tenantCountry);
+            // An in-progress selection outranks the default that arrives after it.
+            setLocationData(prev => hasEditedCountryRef.current ? prev : {
+              ...prev,
+              country_code: tenantCountry.code,
+              country_name: tenantCountry.name,
+            });
+          }
         } catch (error: any) {
           handleError(error, t('quickAddClient.countriesLoadError', {
             defaultValue: 'Failed to load countries.',
@@ -233,6 +251,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       setFormData(initialFormData);
       setLocationData(initialLocationData);
       setContactData(initialContactData);
+      hasEditedCountryRef.current = false;
       setContactPhoneValidationErrors([]);
       setContactEmailValidationErrors([]);
       setIsSubmitting(false);
@@ -512,6 +531,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         setFormData(initialFormData);
         setLocationData(initialLocationData);
         setContactData(initialContactData);
+        hasEditedCountryRef.current = false;
         setContactPhoneValidationErrors([]);
         setContactEmailValidationErrors([]);
         setIsSubmitting(false);
@@ -623,6 +643,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   };
 
   const handleCountryChange = (countryCode: string, countryName: string) => {
+    hasEditedCountryRef.current = true;
     setLocationData(prev => ({
       ...prev,
       country_code: countryCode,

@@ -134,13 +134,15 @@ export const upsertVendorProduct = withAuth(
             is_preferred: input.is_preferred ?? false,
           })
           .onConflict(['tenant', 'vendor_id', 'service_id'])
+          // Citus rejects STABLE functions (trx.fn.now() → CURRENT_TIMESTAMP) inside
+          // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
           .merge({
             vendor_sku: input.vendor_sku?.trim() || null,
             unit_cost: input.unit_cost ?? null,
             cost_currency: costCurrency,
             lead_time_days: input.lead_time_days ?? null,
             is_preferred: input.is_preferred ?? false,
-            updated_at: trx.fn.now(),
+            updated_at: new Date().toISOString(),
           })
           .returning('*');
 

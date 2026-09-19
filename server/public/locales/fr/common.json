@@ -802,6 +802,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Se connecter avec Microsoft",
+      "signInWithKeycloak": "Se connecter avec Keycloak",
       "signInWithGoogle": "Se connecter avec Google",
       "redirecting": "Redirection...",
       "startFailed": "Impossible de démarrer la connexion SSO. Veuillez vérifier la configuration du fournisseur et réessayer."
@@ -1599,7 +1600,10 @@
     "defaultClosedHelp": "Un statut fermé ne peut pas être le statut par défaut des nouveaux éléments."
   },
   "callLink": {
-    "teamsCall": "Appeler dans Microsoft Teams"
+    "teamsCall": "Appeler dans Microsoft Teams",
+    "threecxCall": "Appeler via 3CX",
+    "threecxDialing": "Numérotation depuis votre extension 3CX",
+    "threecxFailed": "Le PBX n'a pas pu passer l'appel"
   },
   "users": {
     "soloLicenseLimit": "L’offre Solo permet un seul technicien. Faites évoluer l’espace de travail avant d’activer un autre utilisateur.",

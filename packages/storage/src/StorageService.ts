@@ -22,8 +22,23 @@ import type { Knex } from 'knex';
 import {
     getProviderConfig,
     getStorageConfig,
-    validateFileUpload as validateFileConfig
+    validateFileUpload as validateFileConfig,
+    validateSystemArtifact,
+    type StorageArtifactOrigin,
 } from './config/storage';
+
+/**
+ * Run the attachment validator for user uploads, or the size-only validator
+ * for product-generated artifacts. Omitting `origin` keeps the user-upload
+ * allowlist, so a call site that forgets to declare provenance fails closed.
+ */
+async function validateUpload(origin: StorageArtifactOrigin | undefined, mimeType: string, fileSize: number): Promise<void> {
+    if ((origin ?? 'user-upload') === 'system-artifact') {
+        await validateSystemArtifact(fileSize);
+        return;
+    }
+    await validateFileConfig(mimeType, fileSize);
+}
 import { LocalProviderConfig, S3ProviderConfig } from './types/storage';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { CoManagedLifecycleError, getCoManagedOperationalState, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
@@ -127,12 +142,20 @@ export class StorageService {
       tenant: string,
       stream: Readable,
       originalName: string,
-      options: { mime_type?: string; uploaded_by_id: string; size: number; metadata?: Record<string, any> }
+      options: {
+        mime_type?: string;
+        uploaded_by_id: string;
+        size: number;
+        metadata?: Record<string, any>;
+        /** Who chose the MIME type. Defaults to `'user-upload'`. */
+        // LEVERAGE: friction storage-artifact-origin — 'system-artifact' skips the allowlist but nothing forces mime_type to be a code-chosen literal; a typed narrowing would make a header-derived MIME a compile error
+        origin?: StorageArtifactOrigin;
+      }
     ): Promise<FileStore> {
       if (!options.uploaded_by_id) throw new Error('uploaded_by_id is required');
       const { knex } = await createTenantKnex(tenant);
       await assertUploadAdmission(knex, tenant);
-      await validateFileConfig(options.mime_type || 'application/octet-stream', options.size);
+      await validateUpload(options.origin, options.mime_type || 'application/octet-stream', options.size);
       const provider = await StorageProviderFactory.createProvider();
       const storagePath = generateStoragePath(tenant, '', originalName);
       const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream', content_length: options.size });
@@ -169,6 +192,8 @@ export class StorageService {
        * Workflow events publish only after this callback and the transaction
        * succeed. Do not perform transport or other external effects here. */
       persistRelatedRecords?: (trx: Knex.Transaction, file: FileStore) => Promise<void>;
+      /** Who chose the MIME type. Defaults to `'user-upload'`. */
+      origin?: StorageArtifactOrigin;
     }
   ) {
     try {
@@ -194,7 +219,7 @@ export class StorageService {
       }
 
       const originalMimeType = options.mime_type || 'application/octet-stream';
-      await validateFileConfig(originalMimeType, fileSize);
+      await validateUpload(options.origin, originalMimeType, fileSize);
 
       let processedBuffer = fileBuffer;
       let processedMimeType = originalMimeType;

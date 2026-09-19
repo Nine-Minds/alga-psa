@@ -266,6 +266,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Entrar com a Microsoft",
+      "signInWithKeycloak": "Entrar com o Keycloak",
       "signInWithGoogle": "Entrar com o Google",
       "redirecting": "Redirecionando...",
       "startFailed": "Não foi possível iniciar o login SSO. Verifique a configuração do provedor e tente novamente."
@@ -1599,7 +1600,10 @@
     "defaultClosedHelp": "Um status fechado não pode ser o padrão para novos itens."
   },
   "callLink": {
-    "teamsCall": "Ligar no Microsoft Teams"
+    "teamsCall": "Ligar no Microsoft Teams",
+    "threecxCall": "Ligar via 3CX",
+    "threecxDialing": "Discando a partir do seu ramal 3CX",
+    "threecxFailed": "O PBX não conseguiu fazer a chamada"
   },
   "users": {
     "soloLicenseLimit": "O plano Solo permite um técnico. Faça o upgrade do espaço de trabalho antes de ativar outro usuário.",

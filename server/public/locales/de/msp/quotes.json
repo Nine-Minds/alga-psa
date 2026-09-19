@@ -315,7 +315,8 @@
       "title": "Kundensichtbarer Text",
       "subtitle": "Erscheint im PDF unter den Summen.",
       "notes": "Notizen an den Kunden (optional)",
-      "terms": "Geschäftsbedingungen (optional)"
+      "terms": "Geschäftsbedingungen (optional)",
+      "termsPlaceholder": "Bedingungen, Links und Absätze hinzufügen…"
     },
     "moreDetails": {
       "title": "Weitere Details",

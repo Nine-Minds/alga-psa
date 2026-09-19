@@ -402,7 +402,7 @@ export function MaterialsSection({
                     <Text style={{
                       ...typography.body,
                       fontWeight: "600",
-                      color: code === selectedCurrency ? colors.textInverse ?? "#fff" : colors.text,
+                      color: code === selectedCurrency ? colors.textInverse : colors.text,
                     }}>
                       {code}
                     </Text>

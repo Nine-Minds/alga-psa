@@ -7,6 +7,8 @@ import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import type { TenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from '@alga-psa/types';
+import { replenishContractCadenceServicePeriodsSweep } from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
 
 // Sibling handlers live in this same package; imported relatively so the
 // wildcard './handlers/*' export-map entry is not self-referenced (which would
@@ -34,6 +36,9 @@ import {
   telephonyCallArtifactSweepHandler,
 } from './handlers/telephonyCallArtifactHandler';
 import { teamsMeetingSweepHandler, TEAMS_MEETING_SWEEP_JOB } from './handlers/teamsMeetingSweepHandler';
+import { reconcileThreecxCallControlHandler, THREECX_CALL_CONTROL_RECONCILE_JOB } from './handlers/threecxCallControlReconcileHandler';
+import { backfillThreecxCdrHandler, THREECX_CDR_BACKFILL_JOB } from './handlers/threecxCdrBackfillHandler';
+import { reconcileThreecxPhonebookHandler, THREECX_PHONEBOOK_RECONCILE_JOB } from './handlers/threecxPhonebookHandlers';
 import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeScanHandler';
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
 import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
@@ -49,8 +54,21 @@ const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
 // per tenant just to discover there is nothing to do. Returns distinct tenant ids.
 type TenantSelector = (db: TenantDb) => PromiseLike<Array<{ tenant: string }>>;
 
+/**
+ * Aggregate outcome a system job may report so partial failures are not
+ * flattened into "succeeded". Returning nothing keeps the historical
+ * single-unit success result.
+ */
+export type MaintenanceJobExecutionOutcome = {
+  total: number;
+  succeeded: number;
+  failed: number;
+};
+
 type MaintenanceJobDef =
   | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean }
+  // System jobs may return anything; a result carrying numeric total/succeeded/
+  // failed is treated as an execution outcome, everything else is a single unit.
   | { scope: 'system'; run: () => Promise<unknown> };
 
 const DEFAULT_CONCURRENCY = 10;
@@ -118,6 +136,27 @@ const tenantsWithActiveTeamsPhone: TenantSelector = (db) => db
   .where('status', 'active')
   .distinct('tenant');
 
+// '3cx' mirrors THREECX_PROVIDER in @alga-psa/ee-threecx, which this CE package cannot import.
+const tenantsWithActiveThreecx: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows 3CX call-control reconciliation to tenants with an active 3CX provider')
+  .where('provider', '3cx')
+  .where('status', 'active')
+  .distinct('tenant');
+
+const tenantsWithThreecxCdrImport: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows 3CX call-history import to tenants that opted in')
+  .where('provider', '3cx')
+  .where('status', 'active')
+  .whereRaw("config->'cdr'->>'enabled' = 'true'")
+  .distinct('tenant');
+
+const tenantsWithThreecxPhonebookSync: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows 3CX phonebook reconciliation to tenants that opted in')
+  .where('provider', '3cx')
+  .where('status', 'active')
+  .whereRaw("config->'phonebook'->>'enabled' = 'true'")
+  .distinct('tenant');
+
 const tenantsWithPendingCallArtifacts: TenantSelector = (db) => db
   .unscoped<{ tenant: string }>('telephony_call_records', 'maintenance fanout narrows the call artifact sweep to tenants with calls awaiting artifacts')
   .where('artifact_status', 'pending')
@@ -153,6 +192,9 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }), tenants: tenantsWithActiveTeamsPhone },
   [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }), tenants: tenantsWithPendingCallArtifacts },
   [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithTeamsMaintenance, includeSuspended: true },
+  [THREECX_CALL_CONTROL_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxCallControlHandler({ tenantId }), tenants: tenantsWithActiveThreecx },
+  [THREECX_CDR_BACKFILL_JOB]: { scope: 'tenant', run: (tenantId) => backfillThreecxCdrHandler({ tenantId }), tenants: tenantsWithThreecxCdrImport },
+  [THREECX_PHONEBOOK_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxPhonebookHandler({ tenantId }), tenants: tenantsWithThreecxPhonebookSync },
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
@@ -162,6 +204,28 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   [CO_MANAGED_NOTIFICATION_RECOVERY_JOB]: { scope: 'tenant', run: tenantId => coManagedNotificationRecoveryHandler({ tenantId }), tenants: tenantsWithPendingCoManagedNotifications, concurrency: 3 },
   'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }), tenants: tenantsWithInboundEmail, concurrency: 3 },
   'provider-disconnect-retry': { scope: 'tenant', run: (tenantId) => providerDisconnectRetryHandler({ tenantId }) },
+  // The sweep owns tenant enumeration and per-tenant advisory locking itself,
+  // so it runs once as a system job rather than being fanned out twice. Its
+  // per-tenant and per-line failures are aggregated so the maintenance result
+  // reports them instead of an unconditional success.
+  [CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME]: {
+    scope: 'system',
+    run: async () => {
+      const sweep = await replenishContractCadenceServicePeriodsSweep({
+        sourceRunPrefix: 'temporal-contract-cadence-replenishment',
+      });
+      const lineFailures = sweep.summaries.reduce(
+        (count, summary) => count + summary.failures.length,
+        0,
+      );
+      const failed = sweep.tenantsFailed + lineFailures;
+      return {
+        total: sweep.tenantsProcessed + failed,
+        succeeded: sweep.tenantsProcessed,
+        failed,
+      };
+    },
+  },
 };
 
 export type MaintenanceJobResult = {
@@ -202,9 +266,24 @@ export async function runMaintenanceJob(
   }
 
   if (def.scope === 'system') {
-    await def.run();
-    logger.info('[maintenance] system job complete', { jobName });
-    return { jobName, scope: 'system', total: 1, succeeded: 1, failed: 0 };
+    const raw = await def.run();
+    const outcome = raw && typeof raw === 'object'
+      ? (raw as Partial<MaintenanceJobExecutionOutcome>)
+      : undefined;
+    const total = typeof outcome?.total === 'number' ? outcome.total : 1;
+    const succeeded = typeof outcome?.succeeded === 'number' ? outcome.succeeded : 1;
+    const failed = typeof outcome?.failed === 'number' ? outcome.failed : 0;
+    if (failed > 0) {
+      logger.warn('[maintenance] system job completed with failures', {
+        jobName,
+        total,
+        succeeded,
+        failed,
+      });
+    } else {
+      logger.info('[maintenance] system job complete', { jobName, total, succeeded, failed });
+    }
+    return { jobName, scope: 'system', total, succeeded, failed };
   }
 
   const db = tenantDb(await getAdminConnection(), '__maintenance_job_fanout_tenant_enumeration__');

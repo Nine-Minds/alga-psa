@@ -441,7 +441,8 @@
       "boards": "Bacheche",
       "priorities": "Priorita",
       "categories": "Categorie",
-      "checklistTemplates": "Modelli di checklist"
+      "checklistTemplates": "Modelli di checklist",
+      "externalSystems": "Sistemi esterni"
     },
     "numbering": {
       "title": "Formato numerico",
@@ -549,7 +550,8 @@
       },
       "statusLabels": {
         "active": "Attivo",
-        "inactive": "Inattivo"
+        "inactive": "Inattivo",
+        "hiddenFromPortal": "Nascosta dal portale"
       },
       "actions": {
         "addBoard": "Aggiungi bacheca",
@@ -629,7 +631,8 @@
           "loading": "Caricamento stati ticket della bacheca…",
           "statusName": "Nome stato",
           "closed": "Chiuso",
-          "default": "Predefinito"
+          "default": "Predefinito",
+          "portalSelectable": "Gli utenti del portale clienti possono selezionare questo stato"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Riapri ticket chiusi in caso di risposte in arrivo",
@@ -645,6 +648,10 @@
         "liveTimer": {
           "label": "Attiva timer ticket in tempo reale",
           "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
+        },
+        "clientPortalVisible": {
+          "label": "Visibile nel portale clienti",
+          "help": "Se disattivato, questa bacheca e i suoi ticket sono nascosti a tutti gli utenti del portale clienti, indipendentemente dai gruppi di visibilità."
         },
         "defaultBoard": {
           "label": "Bacheca predefinita per i ticket del portale clienti",
@@ -985,6 +992,47 @@
           "updateStatusFailed": "Impossibile aggiornare lo stato del modello",
           "itemSaveFailed": "Impossibile salvare l'elemento della checklist",
           "ruleSaveFailed": "Impossibile salvare la regola di applicazione automatica"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Sistemi esterni",
+      "subtitle": "Aggiungi sistemi esterni personalizzati per consentire ai ticket di collegarsi a record esterni al catalogo integrato.",
+      "addButton": "Aggiungi sistema",
+      "builtInTitle": "Sistemi integrati",
+      "builtInSubtitle": "Disponibili per tutti i tenant; i relativi URL vengono generati dal modello del sistema.",
+      "table": {
+        "label": "Etichetta",
+        "key": "Chiave",
+        "urlTemplate": "Modello di URL",
+        "actions": "Azioni"
+      },
+      "actions": {
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "cancel": "Annulla",
+        "save": "Salva"
+      },
+      "fields": {
+        "key": "Chiave",
+        "keyHint": "Deve corrispondere a custom:<slug> usando lettere minuscole, cifre o trattini bassi.",
+        "label": "Etichetta",
+        "urlTemplate": "Modello di URL",
+        "urlTemplateHint": "Facoltativo. Usa i segnaposto {realm} e {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Aggiungi sistema esterno",
+        "editTitle": "Modifica sistema esterno"
+      },
+      "deleteDialog": {
+        "title": "Elimina sistema esterno",
+        "message": "Eliminare \"{{label}}\"? I sistemi ancora utilizzati dai collegamenti non possono essere eliminati."
+      },
+      "messages": {
+        "success": {
+          "created": "Sistema esterno creato.",
+          "updated": "Sistema esterno aggiornato.",
+          "deleted": "Sistema esterno eliminato."
         }
       }
     }
@@ -1473,6 +1521,9 @@
       "notice": "Stai visualizzando l’anteprima di un tema non salvato. Gli altri mantengono quello salvato finché non lo applichi.",
       "save": "Applica a tutti",
       "discard": "Annulla modifiche"
+    },
+    "upgrade": {
+      "pitch": "Le coppie di temi a livello di organizzazione, l'editor della tavolozza personalizzata e il white-label dell'app MSP fanno parte dell'edizione Enterprise."
     }
   },
   "mspLanguage": {
@@ -1500,6 +1551,7 @@
     "emailTabs": {
       "settings": "Impostazioni",
       "emailTemplates": "Modelli email",
+      "emailBranding": "Branding delle email",
       "categories": "Categorie",
       "telemetry": "Telemetria"
     },
@@ -1556,7 +1608,8 @@
       "preview": {
         "subjectLabel": "Anteprima oggetto",
         "iframeTitle": "Anteprima del modello di email",
-        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali."
+        "sampleDataNote": "L'anteprima utilizza dati di esempio. Le email reali conterranno valori reali.",
+        "sourceSyncNote": "Fai clic su un elemento dell’anteprima per selezionare il codice corrispondente; spostando il cursore nel codice, l’elemento viene evidenziato qui."
       },
       "errors": {
         "loadFailed": "Impossibile caricare i modelli"
@@ -1605,7 +1658,8 @@
       },
       "tabs": {
         "source": "Codice sorgente",
-        "preview": "Anteprima"
+        "preview": "Anteprima",
+        "variables": "Variabili"
       },
       "common": {
         "notAvailable": "N/D"
@@ -1622,6 +1676,110 @@
         "it": "Italiano",
         "pl": "Polacco",
         "pt": "Portoghese"
+      }
+    },
+    "emailBranding": {
+      "title": "Branding delle email",
+      "description": "Applica i tuoi colori a tutte le email in uscita. Guarda qui l'anteprima, poi scegli a quali modelli applicarli.",
+      "unsavedHint": "Salva la palette prima di applicarla.",
+      "source": {
+        "saved": "Salvata",
+        "custom-theme": "Dal tuo tema personalizzato",
+        "theme-pair": "Dal tuo tema",
+        "portal-branding": "Dal branding del tuo portale clienti",
+        "default": "Predefinito di AlgaPSA"
+      },
+      "fields": {
+        "primary": "Colore principale",
+        "secondary": "Colore secondario",
+        "singleColor": "Colore unico (il gradiente deriva dal colore principale)"
+      },
+      "tokens": {
+        "dark": "Accento scuro",
+        "outerBg": "Sfondo esterno",
+        "footerBg": "Sfondo del piè di pagina",
+        "cardBorder": "Bordo della scheda",
+        "infoBoxBg": "Sfondo del riquadro informativo",
+        "infoBoxBorder": "Bordo del riquadro informativo"
+      },
+      "preview": {
+        "title": "Anteprima"
+      },
+      "actions": {
+        "save": "Salva la palette",
+        "saving": "Salvataggio...",
+        "useSuggested": "Usa i colori suggeriti",
+        "adjust": "Regola i colori derivati",
+        "apply": "Applica ai modelli",
+        "applying": "Applicazione...",
+        "applyCount": "Applica a {{count}} modelli",
+        "applyToTemplate": "Applica la mia palette",
+        "remove": "Rimuovi il branding da tutti i modelli",
+        "removing": "Rimozione...",
+        "cancel": "Annulla",
+        "done": "Fatto"
+      },
+      "apply": {
+        "title": "Applica il branding ai modelli",
+        "languages": "Lingue",
+        "selectAll": "Seleziona tutto",
+        "selectNone": "Deseleziona tutto",
+        "differs": "Differisce per {{parts}}",
+        "differsParts": {
+          "colors": "colori",
+          "text": "testo",
+          "subject": "oggetto"
+        },
+        "overwrite": "Sovrascrivi",
+        "overwriteHint": "La sovrascrittura ricrea un modello da quello standard con la tua palette ed elimina le tue modifiche.",
+        "preview": {
+          "open": "Vedi il risultato in anteprima",
+          "title": "Anteprima: {{name}}",
+          "loading": "Creazione dell’anteprima...",
+          "captions": {
+            "create": "Verrà creata una copia con il suo marchio a partire dal modello standard.",
+            "update": "La sua copia con il marchio verrà ricreata dal modello standard con la palette salvata.",
+            "customized": "Le sue modifiche restano parola per parola. Vengono sostituiti solo i colori originali rimasti in questo modello.",
+            "overwrite": "Le tue modifiche a questo modello verranno eliminate. Sarà ricreato dal modello standard con la tua palette.",
+            "skipped": "Non verrà scritto nulla: {{reason}}. Questo è il modello così com’è oggi."
+          }
+        },
+        "summary": "{{written}} con il tuo branding, {{skipped}} ignorati, {{failed}} non riusciti",
+        "groups": {
+          "system": {
+            "title": "Non personalizzati",
+            "action": "Crea una copia con il tuo branding"
+          },
+          "branded": {
+            "title": "Con il tuo branding",
+            "action": "Aggiorna i colori"
+          },
+          "customized": {
+            "title": "Personalizzati",
+            "action": "Sostituisci solo i colori originali rimasti"
+          },
+          "no-stock-colors": {
+            "title": "Nessun colore originale",
+            "action": "Niente da sostituire"
+          }
+        },
+        "skipReasons": {
+          "customized": "Personalizzato: non selezionato",
+          "nothing-to-replace": "Niente da sostituire",
+          "unchanged": "Già aggiornato"
+        }
+      },
+      "newTemplates": {
+        "message": "Sono stati aggiunti {{count}} modelli dall'ultima volta che hai applicato la palette.",
+        "action": "Applica la palette ai nuovi modelli",
+        "dismiss": "Ignora"
+      },
+      "enterprise": {
+        "useLogo": "Usa il mio logo nell'intestazione delle email",
+        "logoWide": "Logo largo",
+        "logoDefault": "Logo quadrato",
+        "noLogo": "Carica un logo in Impostazioni → Portale clienti → Branding per usarlo qui.",
+        "showAttribution": "Mostra «Powered by AlgaPSA» nel piè di pagina"
       }
     },
     "categoriesUi": {
@@ -2019,7 +2177,17 @@
         "upload": "Carica pacchetto"
       },
       "errors": {
-        "noImportableRecords": "Questo pacchetto non conteneva record importabili."
+        "noImportableRecords": "Questo pacchetto non conteneva record importabili.",
+        "permissionDenied": "Non hai l'autorizzazione per importare o esportare dati.",
+        "invalidSpreadsheet": "Impossibile leggere questo foglio di calcolo. Verifica che sia un file CSV o XLSX valido e riprova.",
+        "notAmpPackage": "Questo file non è un pacchetto AMP. Carica un file .amp o .sqlite.",
+        "tooLarge": "Questo caricamento supera la dimensione massima consentita.",
+        "sizeMismatch": "Il caricamento non è stato completato. Riprova.",
+        "noRecognizedHeaders": "Nessuna delle colonne di questo foglio di calcolo è stata riconosciuta. Controlla la riga di intestazione e riprova.",
+        "storageRejected": "Il server ha rifiutato questo caricamento. Chiedi all'amministratore di verificare la configurazione dei tipi di file dello storage.",
+        "spreadsheetFailed": "Impossibile importare il foglio di calcolo. Riprova.",
+        "uploadFailed": "Impossibile caricare il pacchetto. Riprova.",
+        "unknown": "Caricamento non riuscito. Riprova."
       },
       "preflight": {
         "title": "Verifica preliminare"
@@ -2027,6 +2195,19 @@
       "run": {
         "queued": "Migrazione in coda",
         "applying": "Migrazione in corso"
+      },
+      "badges": {
+        "nothingImported": "Niente importato"
+      },
+      "results": {
+        "skippedSamePackage": "I record saltati erano già stati migrati da un'esecuzione precedente dello stesso pacchetto.",
+        "skippedOtherPackage": "I record saltati sono stati associati a entità create da una migrazione precedente di un pacchetto diverso: {{packages}}.",
+        "skippedExistingEntity": "I record saltati sono stati associati a entità esistenti.",
+        "nothingImportedTitle": "Niente importato",
+        "nothingImportedBody": "Questa esecuzione non ha creato nuovi record. Ogni riga corrispondeva a qualcosa che esisteva già, quindi non è stato modificato nulla.",
+        "claimedBySamePackage": "Già migrato da questo pacchetto",
+        "claimedByOtherPackage": "Già migrato da {{file}}",
+        "claimedByExistingEntity": "Associato a un'entità esistente"
       }
     },
     "jobDetails": {
@@ -2876,7 +3057,8 @@
         "fieldCount": "Campi",
         "order": "Ordine",
         "actions": "Azioni",
-        "openMenu": "Apri menu"
+        "openMenu": "Apri menu",
+        "searchPlaceholder": "Cerca tipi di asset…"
       },
       "actions": {
         "addType": "Aggiungi tipo di asset",

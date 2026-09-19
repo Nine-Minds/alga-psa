@@ -802,6 +802,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Mit Microsoft anmelden",
+      "signInWithKeycloak": "Mit Keycloak anmelden",
       "signInWithGoogle": "Mit Google anmelden",
       "redirecting": "Weiterleitung...",
       "startFailed": "Die SSO-Anmeldung konnte nicht gestartet werden. Bitte prüfen Sie die Anbieterkonfiguration und versuchen Sie es erneut."
@@ -1599,7 +1600,10 @@
     "defaultClosedHelp": "Ein abgeschlossener Status kann nicht der Standard für neue Einträge sein."
   },
   "callLink": {
-    "teamsCall": "In Microsoft Teams anrufen"
+    "teamsCall": "In Microsoft Teams anrufen",
+    "threecxCall": "Über 3CX anrufen",
+    "threecxDialing": "Wählvorgang von Ihrer 3CX-Nebenstelle",
+    "threecxFailed": "Die PBX konnte den Anruf nicht aufbauen"
   },
   "users": {
     "soloLicenseLimit": "Der Solo-Tarif unterstützt einen Techniker. Führen Sie ein Upgrade des Workspaces durch, bevor Sie einen weiteren Benutzer aktivieren.",

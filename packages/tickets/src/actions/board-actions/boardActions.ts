@@ -94,6 +94,7 @@ export async function copyBoardTicketStatuses(
     ...(hasStatusColumn('is_custom') ? { is_custom: status.is_custom } : {}),
     ...(hasStatusColumn('color') ? { color: status.color || null } : {}),
     ...(hasStatusColumn('icon') ? { icon: status.icon || null } : {}),
+    ...(hasStatusColumn('portal_selectable') ? { portal_selectable: status.portal_selectable ?? true } : {}),
     ...(hasStatusColumn('created_at') ? { created_at: status.created_at || now } : {}),
     ...(hasStatusColumn('updated_at') ? { updated_at: now } : {}),
   }));
@@ -360,6 +361,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           inbound_reply_reopen_status_id: boardData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: boardData.inbound_reply_ai_ack_suppression_enabled ?? false,
           enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
+          client_portal_visible: boardData.client_portal_visible ?? true,
           // A new board is pinned by default: it was just created deliberately,
           // so it earns a tab until an admin decides otherwise. list_view_settings
           // starts NULL — a new board inherits the tenant view rather than
@@ -804,6 +806,22 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         throw new Error('Board not found');
       }
 
+      // updateBoard is a second write path to the same two columns that
+      // saveBoardDefaultView/clearBoardDefaultView guard, and it is a write path
+      // to the board's ticket statuses (including portal_selectable). It has to
+      // enforce the same permission or the gates on those actions are
+      // decorative and a client-portal caller could re-enable a restricted
+      // status. Checked before ANY board or status mutation, including the
+      // unset-other-defaults step below.
+      const touchesViewConfig = 'is_pinned' in boardData || 'list_view_settings' in boardData;
+      const touchesTicketStatusConfig = Array.isArray(boardData.ticket_statuses);
+      if (
+        (touchesViewConfig || touchesTicketStatusConfig) &&
+        !await hasPermission(user, 'ticket_settings', 'update', trx)
+      ) {
+        throw new Error('Permission denied: Cannot update ticket settings');
+      }
+
       // If setting as default, unset all other defaults first
       if (boardData.is_default === true) {
         await tenantScopedTable('boards')
@@ -848,18 +866,11 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       if ('enable_live_ticket_timer' in sanitizedData) {
         sanitizedData.enable_live_ticket_timer = sanitizedData.enable_live_ticket_timer ?? true;
       }
+      if ('client_portal_visible' in sanitizedData) {
+        sanitizedData.client_portal_visible = sanitizedData.client_portal_visible ?? true;
+      }
       if ('is_pinned' in sanitizedData) {
         sanitizedData.is_pinned = Boolean(sanitizedData.is_pinned);
-      }
-
-      // updateBoard is a second write path to the same two columns that
-      // saveBoardDefaultView/clearBoardDefaultView guard, so it has to enforce
-      // the same permission — otherwise the gate on those actions is decorative.
-      // Scoped to the new fields deliberately: this action's existing lack of a
-      // permission check covers pre-existing fields and is its own change.
-      const touchesViewConfig = 'is_pinned' in sanitizedData || 'list_view_settings' in sanitizedData;
-      if (touchesViewConfig && !await hasPermission(user, 'ticket_settings', 'update', trx)) {
-        throw new Error('Permission denied: Cannot update ticket settings');
       }
 
       const { ticket_statuses: ticketStatuses, list_view_settings: listViewSettings, ...rest } =

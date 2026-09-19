@@ -169,7 +169,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'teams_integrations', 'microsoft_profiles',
 
   // Telephony (artifacts hang off call records; providers hold the subscription)
-  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_providers',
+  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_chat_records', 'telephony_providers',
 
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and
@@ -278,6 +278,10 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Appointment
   'appointment_requests',
+
+  // External references depend on tickets and their creating users. Purge them
+  // explicitly before either parent, along with the tenant's custom systems.
+  'external_entity_links', 'tenant_external_systems',
 
   // SLA leaf tables (must be before tickets, statuses, priorities, boards)
   // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,

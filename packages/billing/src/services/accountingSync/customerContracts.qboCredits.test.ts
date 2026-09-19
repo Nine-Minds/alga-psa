@@ -40,7 +40,12 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   QboClientService: {
     create: vi.fn(async () => ({ create: qboCreateMock, read: qboReadMock }))
   },
-  getDefaultQboRealmId: vi.fn(async () => 'realm-1')
+  getDefaultQboRealmId: vi.fn(async () => 'realm-1'),
+  getStoredQboCredentialsMap: vi.fn(async () => ({ 'realm-1': {} }))
+}));
+
+vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
+  getStoredXeroConnections: vi.fn(async () => ({}))
 }));
 
 vi.mock('./recordExternalPayment', () => ({
