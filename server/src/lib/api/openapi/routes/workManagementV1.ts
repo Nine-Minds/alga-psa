@@ -71,10 +71,14 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       title: zOpenApi.string().optional(),
       summary: zOpenApi.string().optional(),
+      url: zOpenApi.string().url().optional().describe('Optional link-out for the ticket; any URL accepted by the ticket create schema. Omit or supply a valid URL; null is rejected.'),
       client_id: zOpenApi.string().uuid().optional(),
       board_id: zOpenApi.string().uuid().optional(),
       priority_id: zOpenApi.string().uuid().optional(),
       status_id: zOpenApi.string().uuid().optional(),
+      severity_id: zOpenApi.string().uuid().optional().describe('Optional severity reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
+      urgency_id: zOpenApi.string().uuid().optional().describe('Optional urgency reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
+      impact_id: zOpenApi.string().uuid().optional().describe('Optional impact reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
       external_links: zOpenApi.array(zOpenApi.object({
         system: zOpenApi.string().min(1).describe('Built-in system key or custom:<slug>.'),
         external_id: zOpenApi.string().min(1).describe('Identifier of the record in the external system.'),
