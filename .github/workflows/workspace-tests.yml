@@ -61,7 +61,7 @@ jobs:
       # took out the EE ticket-response-state suite. Fixed in the lane; the
       # exports map is correct and must not be changed for this.
       - name: Build shared libraries
-        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/co-managed --parallel=3
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/licensing,@alga-psa/co-managed --parallel=3
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -148,7 +148,7 @@ jobs:
       # Same mechanism, and the same project set, as the build step unit-tests.yml
       # already runs.
       - name: Build shared libraries
-        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/co-managed --parallel=3
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/licensing,@alga-psa/co-managed --parallel=3
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -217,7 +217,7 @@ jobs:
       # Same mechanism, and the same project set, as the build step unit-tests.yml
       # already runs.
       - name: Build shared libraries
-        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/co-managed --parallel=3
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/licensing,@alga-psa/co-managed --parallel=3
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
