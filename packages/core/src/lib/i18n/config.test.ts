@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filterPseudoLocales, getBestMatchingLocale, INCOMPLETE_LOCALES, normalizeLocale, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
+import { filterPseudoLocales, getBestMatchingLocale, getTranslationLanguageCode, INCOMPLETE_LOCALES, normalizeLocale, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
 
 describe('filterPseudoLocales', () => {
   afterEach(() => {
@@ -101,5 +101,11 @@ describe('normalizeLocale', () => {
     expect(getBestMatchingLocale(['en-AU', 'fr-CA'])).toBe('en');
     expect(getBestMatchingLocale(['zh-CN', 'fr-CA'])).toBe('fr');
     expect(getBestMatchingLocale(['zh-CN'])).toBe(LOCALE_CONFIG.defaultLocale);
+  });
+
+  it('exposes the translation language code for region-tagged locales', () => {
+    expect(getTranslationLanguageCode('en-AU')).toBe('en');
+    expect(getTranslationLanguageCode('fr')).toBe('fr');
+    expect(getTranslationLanguageCode('xx')).toBe('xx');
   });
 });

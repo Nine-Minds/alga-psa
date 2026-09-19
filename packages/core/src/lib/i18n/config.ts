@@ -120,6 +120,26 @@ export function getBestMatchingLocale(
 /**
  * Configuration for i18next
  */
+/**
+ * The language-code key under which a locale's translation resources are stored.
+ *
+ * Translation packs are language-only: i18next runs with `load: 'languageOnly'`,
+ * so a region-tagged locale (`en-AU`) resolves its resources from the bare
+ * language code (`en`). Resource seeding, preload bookkeeping and
+ * `hasResourceBundle` checks must key on this code or the regional tag would
+ * appear "missing" and re-trigger fetches for every namespace. It is the
+ * mirror image of `normalizeLocale`: that preserves the tag for formatting,
+ * this points resource loading at the pack that actually exists.
+ */
+export function getTranslationLanguageCode(locale: SupportedLocale): SupportedLocale {
+  const hyphen = locale.indexOf('-');
+  if (hyphen === -1) {
+    return locale;
+  }
+  const languagePart = locale.slice(0, hyphen) as SupportedLocale;
+  return isSupportedLocale(languagePart) ? languagePart : locale;
+}
+
 export const I18N_CONFIG = {
   debug: process.env.NODE_ENV === 'development',
   fallbackLng: LOCALE_CONFIG.defaultLocale,
