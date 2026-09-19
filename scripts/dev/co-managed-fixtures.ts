@@ -995,6 +995,14 @@ async function reset(db: Knex): Promise<void> {
       .whereIn('actor_reference_id', [actorReference(RABBIT, 'user/oz/tech'), actorReference(RABBIT, 'user/oz/admin')]).del();
     const fixtureUserIds = USERS.filter(user => user.tenant !== MUNCHKIN).map(user => user.userId);
     await trx('user_roles').whereIn('user_id', fixtureUserIds).del();
+    // Signing in is what a reviewer is meant to do, and it writes rows the
+    // fixture never created: a NextAuth session and a user_preferences row.
+    // Both carry a real foreign key to users, so the reset only worked until
+    // the fixtures had actually been used once. These two tables are the whole
+    // set -- every other table referencing a fixture user id is fixture data
+    // already removed by FIXTURE_ROWS above.
+    await trx('sessions').whereIn('user_id', fixtureUserIds).del();
+    await trx('user_preferences').whereIn('user_id', fixtureUserIds).del();
     await trx('users').whereIn('user_id', fixtureUserIds).del();
 
     if (await trx('tenants').where({ tenant: MUNCHKIN }).first()) await purgeTenant(trx, MUNCHKIN);
