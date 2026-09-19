@@ -16,32 +16,77 @@ leftover unit is what produced the port-collision failures in earlier rounds.
 
 ## Registration commands
 
-Run these verbatim. `--readinessPath` matters: see *A port check is not
-readiness* below.
+Run these verbatim.
+
+Two things about them are load-bearing and are the reason they are written out
+rather than retyped from memory:
+
+* **Every service is registered through `scripts/dev/run-card-service.sh`, never
+  as the bare command.** A service registered bare is a child of a card-service
+  PTY and dies when the alga-dev agent swaps itself, which it does every ten to
+  twenty minutes. The wrapper's header explains all three ways that has happened
+  on this card.
+* **Each one passes `--health`.** That is what lets the wrapper's supervisor
+  restart a service that is still running but has stopped answering, which is
+  the standing failure mode here. Without it the supervisor only reacts to a
+  process that exits.
+
+The verb is `workflow-ensure-service`. (An earlier revision of this file said
+`workflow-register-service`; there is no such verb.)
 
 ```bash
 PROJECT=964ce5e0-45a5-41b2-8e2c-73903742a85a
 WORKTREE=/home/robert/alga-copies/feature-co-managed-it
+RUN="$WORKTREE/scripts/dev/run-card-service.sh"
 
-alga-dev workflow-register-service --projectId=$PROJECT --name=dev-server \
+# The dev server gets a longer grace and a longer probe timeout than the
+# default, because `next dev` compiles a route on its first request and a slow
+# answer must not be read as no answer.
+alga-dev workflow-ensure-service --projectId=$PROJECT --name=dev-server \
   --cwd="$WORKTREE/server" \
-  --command='../scripts/dev/run-co-managed-dev-server.sh' \
-  --readinessPort=3374 --readinessPath=/auth/signin
+  --command="CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 $RUN dev-server \
+    --health http://127.0.0.1:3374/auth/signin \
+    $WORKTREE/scripts/dev/run-co-managed-dev-server.sh --host 100.82.172.57 --port 3374"
 
-alga-dev workflow-register-service --projectId=$PROJECT --name=temporal-worker \
+alga-dev workflow-ensure-service --projectId=$PROJECT --name=temporal-worker \
   --cwd="$WORKTREE/ee/temporal-workflows" \
-  --command='node dist/ee/temporal-workflows/src/worker.js' \
-  --readinessPort=8375 --readinessPath=/health
+  --command="$RUN temporal-worker --health http://127.0.0.1:8375/health \
+    node dist/ee/temporal-workflows/src/worker.js"
 
-alga-dev workflow-register-service --projectId=$PROJECT --name=workflow-worker \
+alga-dev workflow-ensure-service --projectId=$PROJECT --name=workflow-worker \
   --cwd="$WORKTREE/services/workflow-worker" \
-  --command='node --env-file=.env .' \
-  --readinessPort=4374 --readinessPath=/health
+  --command="$RUN workflow-worker --health http://127.0.0.1:4374/health \
+    node --env-file=.env ."
 
-alga-dev workflow-register-service --projectId=$PROJECT --name=review-guide \
+alga-dev workflow-ensure-service --projectId=$PROJECT --name=review-guide \
   --cwd=/home/robert/card-reviews/co-managed-it-3363 \
-  --command='python3 -m http.server 8874 --bind 0.0.0.0' \
-  --readinessPort=8874 --readinessPath=/
+  --command="$RUN review-guide --health http://127.0.0.1:8874/ \
+    python3 -m http.server 8874 --bind 0.0.0.0"
+```
+
+### Two traps in `workflow-ensure-service`
+
+1. **It refuses a live service whose registered command differs**, with
+   `Service "X" is already live with a different command; conclude it first`.
+   Changing a command therefore means
+   `alga-dev workflow-conclude-service --projectId=$PROJECT --name=X --reason=...`
+   and then re-ensuring. It does *not* silently adopt the old command.
+2. **It is idempotent when the command matches**, returning `"created": false`.
+   That is the desired behaviour for reviving a dead PTY, but it means
+   re-ensuring is *not* a way to pick up new code.
+
+### Restarting is adoption, not a cold start
+
+`workflow-restart-service` kills the wrapper in the PTY; the wrapper relaunches
+and, finding the recorded supervisor alive, running the same command and
+answering its health probe, **adopts it instead of starting a second copy**.
+That is deliberate — it is what stops a relaunch from fighting a healthy
+process for its port — but it also means a restart alone keeps serving the old
+code. To actually cycle a service:
+
+```bash
+$WORKTREE/scripts/dev/run-card-service.sh dev-server --stop
+alga-dev workflow-restart-service --projectId=$PROJECT --name=dev-server
 ```
 
 ## The dev-origin environment is load-bearing
@@ -88,6 +133,47 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 20 http://100.82.172.57:3374
 
 That is also why each service above registers a `--readinessPath` and not just a
 port: the hub then probes the listener's HTTP response rather than the PTY.
+
+## When the whole stack dies at once
+
+On 2026-09-19 all four services stopped within the same minute at 18:59Z, three
+of them with no error and no exit marker, including a bare `python3 -m
+http.server`. That is not four coincidences; it is one shared failure domain.
+
+`run-card-service.sh` routes every service's stdout and stderr to a regular file
+under `.card-service-logs/`, and that directory lives on the same volume as the
+worktree: **`/home/robert/alga-copies` is btrfs inside a *sparse* 110 GiB
+loopback image, `/home/robert/alga-copies.img`, on a root ext4 that had 40 GiB
+free.** btrfs reported 35.8 GiB free inside the image, but that space only exists
+while the host can still grow the backing file, and the host is shared with
+everything else on the box. When writes to that volume started failing
+(`Unknown system error -122` — `EDQUOT`), every process whose stdout pointed at
+it died. The alga-dev agent service, unrelated to this card, hit the identical
+errno six minutes later.
+
+So: **if the stack dies all at once, check host disk first**, not the services.
+
+```bash
+df -h /                                  # the loopback image's own filesystem
+du -h  /home/robert/alga-copies.img      # allocated, vs 110G apparent
+btrfs filesystem usage /home/robert/alga-copies
+```
+
+The supervisor added to `run-card-service.sh` cannot prevent this — the cause is
+host-level — but it does mean the stack comes back by itself once the host
+recovers, instead of staying dead until a human notices. A service that exits is
+re-run with backoff (1s, 5s, 15s, then 30s), and a service that is still running
+but has stopped answering its `--health` probe is restarted. Restarts are
+recorded in the service's own log:
+
+```
+=== 2026-09-19T19:21:56Z run-card-service.sh: wedge (pid 1088752) stopped answering http://127.0.0.1:8899/health; restarting
+=== 2026-09-19T19:21:56Z run-card-service.sh: wedge exited (status 143); restarting in 1s
+```
+
+`<service>.pid` is the **supervisor**; `<service>.child` is the service it is
+currently running. `--stop` takes both down, and must be used rather than
+killing the pid file, or the supervisor simply restarts what you killed.
 
 ## Checks before declaring the stack healthy
 
