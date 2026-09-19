@@ -20,10 +20,13 @@ beforeAll(async () => { db = await createTestDbConnection(); }, 120_000);
 afterAll(async () => { await db?.destroy(); });
 beforeEach(async () => {
   state.db = await db.transaction();
-  const source = await state.db('tickets as t').join('statuses as s', function () {
+  const row = await state.db('tickets as t').join('statuses as s', function () {
     this.on('s.status_id', 't.status_id').andOn('s.tenant', 't.tenant');
   }).where('s.is_closed', false).select('t.*').first();
-  if (!source) throw new Error('Migrated fixture must contain an open ticket');
+  if (!row) throw new Error('Migrated fixture must contain an open ticket');
+  // tickets.title_index is GENERATED ALWAYS (EE ai-schema migration); copying a
+  // row verbatim means writing it back, which Postgres rejects.
+  const { title_index: _generated, ...source } = row;
   state.tenant = source.tenant;
   state.user = await state.db('users').where({ tenant: state.tenant, user_type: 'internal' }).first();
   const suffix = randomUUID();
