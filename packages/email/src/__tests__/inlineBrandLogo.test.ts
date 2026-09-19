@@ -82,11 +82,11 @@ const logoRows = (variant: string): FakeRows => ({
   documents: [{ document_id: `doc-${variant}`, file_id: `file-${variant}` }],
 });
 
-const files = (variant: string, size = 2048) => ({
+const files = (variant: string, size = 2048, mimeType = 'image/png') => ({
   [`file-${variant}`]: {
     file_id: `file-${variant}`,
     storage_path: `/logos/${variant}.png`,
-    mime_type: 'image/png',
+    mime_type: mimeType,
     file_size: size,
   },
 });
@@ -184,6 +184,64 @@ describe('embedBrandLogo', () => {
 
     expect(download).toHaveBeenCalledTimes(1);
     expect(knex.reads).toEqual(['document_associations', 'documents']);
+  });
+
+  it('removes an SVG logo, which no mail client renders', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' });
+    const knex = fakeKnex(logoRows('default'), files('default', 2048, 'image/svg+xml'));
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(result.html).not.toContain('data-alga-brand-logo');
+    expect(result.attachments).toHaveLength(0);
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('rewrites a single-quoted src instead of adding a second one', async () => {
+    const html = "<body><img data-alga-brand-logo src='cid:alga-brand-logo-wide' alt='Acme'/></body>";
+    const knex = fakeKnex(logoRows('wide'), files('wide'));
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(result.html).toContain('src="cid:alga-brand-logo-wide"');
+    expect(result.html.match(/src=/g)).toHaveLength(1);
+    expect(result.attachments).toHaveLength(1);
+  });
+
+  it('expires a miss far sooner than a hit, so a fresh upload shows up', async () => {
+    vi.useFakeTimers();
+    try {
+      const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' });
+      const empty = fakeKnex({});
+
+      expect((await embedBrandLogo(html, { tenantId: TENANT, knex: empty as any })).attachments).toHaveLength(0);
+
+      // Inside the miss TTL the lookup is not repeated...
+      vi.advanceTimersByTime(20 * 1000);
+      await embedBrandLogo(html, { tenantId: TENANT, knex: empty as any });
+      expect(empty.reads).toEqual(['document_associations']);
+
+      // ...but the tenant who just uploaded a logo does not wait out the hit TTL.
+      vi.advanceTimersByTime(45 * 1000);
+      const uploaded = fakeKnex(logoRows('default'), files('default'));
+      const result = await embedBrandLogo(html, { tenantId: TENANT, knex: uploaded as any });
+
+      expect(result.attachments).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sends without the logo rather than failing when the lookup throws', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' });
+    const knex = fakeKnex(logoRows('default'), files('default'));
+    download.mockRejectedValueOnce(new Error('storage unavailable'));
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(result.html).not.toContain('data-alga-brand-logo');
+    expect(result.html).toContain('<h1>Hi</h1>');
+    expect(result.attachments).toHaveLength(0);
   });
 
   it('reads the saved variant of a legacy row once, not once per message', async () => {

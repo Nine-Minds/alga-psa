@@ -3,8 +3,10 @@ import {
   applyBrandLogo,
   containsBrandAttribution,
   decorateBrandedHtml,
+  findBrandLogoCid,
   resolveBrandLogoForPreview,
   stripBrandAttribution,
+  withImgSrc,
   BRAND_LOGO_MARKER,
 } from '../brandAssets';
 import { loadSystemTemplate } from './systemTemplateFixtures';
@@ -100,6 +102,43 @@ describe('resolveBrandLogoForPreview', () => {
     const once = resolveBrandLogoForPreview(applyBrandLogo('<body><h1>Hi</h1></body>', LOGO), URLS);
 
     expect(resolveBrandLogoForPreview(once, URLS)).toBe(once);
+  });
+
+  it('resolves a hand-edited tag whose src is single-quoted', () => {
+    const singleQuoted = "<img data-alga-brand-logo src='cid:alga-brand-logo-wide' alt=''/>";
+
+    const resolved = resolveBrandLogoForPreview(singleQuoted, URLS);
+
+    expect(resolved).toContain(`src="${URLS.logoWideUrl}"`);
+    expect(resolved).not.toContain('cid:');
+  });
+});
+
+describe('withImgSrc', () => {
+  it('replaces the src whichever way the tag quotes it', () => {
+    expect(withImgSrc('<img src="cid:old" alt=""/>', 'cid:new')).toBe('<img src="cid:new" alt=""/>');
+    expect(withImgSrc("<img src='cid:old' alt=''/>", 'cid:new')).toBe('<img src="cid:new" alt=\'\'/>');
+    expect(withImgSrc('<img src=cid:old alt=""/>', 'cid:new')).toBe('<img src="cid:new" alt=""/>');
+  });
+
+  it('adds one to a tag that carries none, rather than a second attribute', () => {
+    const added = withImgSrc('<img data-alga-brand-logo alt=""/>', 'cid:alga-brand-logo');
+
+    expect(added).toBe('<img src="cid:alga-brand-logo" data-alga-brand-logo alt=""/>');
+    expect(added.match(/src=/g)).toHaveLength(1);
+  });
+});
+
+describe('findBrandLogoCid', () => {
+  it('names the content-id the template references', () => {
+    expect(findBrandLogoCid(applyBrandLogo('<body><h1>Hi</h1></body>', LOGO))).toBe('alga-brand-logo-wide');
+    expect(findBrandLogoCid(applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' })))
+      .toBe('alga-brand-logo');
+  });
+
+  it('has nothing to name for an unbranded or legacy template', () => {
+    expect(findBrandLogoCid('<body><h1>Hi</h1></body>')).toBeNull();
+    expect(findBrandLogoCid('<img data-alga-brand-logo src="/api/documents/view/old?t=3"/>')).toBeNull();
   });
 });
 

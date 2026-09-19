@@ -34,7 +34,9 @@ export function parseBrandLogoVariant(value: string | null | undefined): EmailBr
 
 const EXISTING_LOGO = new RegExp(`<img\\b[^>]*${BRAND_LOGO_MARKER}[^>]*>\\s*`, 'gi');
 const MARKER_TAG = new RegExp(`<img\\b[^>]*${BRAND_LOGO_MARKER}[^>]*>`, 'gi');
-const SRC_ATTRIBUTE = /\ssrc="([^"]*)"/i;
+const FIRST_MARKER_TAG = new RegExp(`<img\\b[^>]*${BRAND_LOGO_MARKER}[^>]*>`, 'i');
+/** A hand-edited template may quote src either way, or not at all. */
+const SRC_ATTRIBUTE = /\ssrc=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
 
 /** The gradient header cell of the shared layout. */
 const LAYOUT_HEADER_CELL = /<td\b[^>]*linear-gradient\([^>]*>/i;
@@ -47,6 +49,27 @@ const escapeAttribute = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+
+/** The src of an `<img>`, whatever quoting the tag uses. */
+export function readImgSrc(tag: string): string | undefined {
+  const match = SRC_ATTRIBUTE.exec(tag);
+  return match ? match[1] ?? match[2] ?? match[3] : undefined;
+}
+
+/** Replaces the src of an `<img>`, or adds one to a tag that carries none. */
+export function withImgSrc(tag: string, src: string): string {
+  const attribute = ` src="${escapeAttribute(src)}"`;
+  return SRC_ATTRIBUTE.test(tag)
+    ? tag.replace(SRC_ATTRIBUTE, () => attribute)
+    : tag.replace(/^<img\b/i, `<img${attribute}`);
+}
+
+/** The content-id the template's logo tag references, for the editor hint. */
+export function findBrandLogoCid(html: string): string | null {
+  const tag = html ? FIRST_MARKER_TAG.exec(html)?.[0] : null;
+  const variant = tag ? parseBrandLogoVariant(readImgSrc(tag)) : null;
+  return variant ? brandLogoCid(variant) : null;
+}
 
 export interface BrandLogo {
   variant: EmailBrandingLogoVariant;
@@ -117,14 +140,11 @@ export function resolveBrandLogoForPreview(html: string, urls: BrandLogoPreviewU
   if (!html || !html.includes(BRAND_LOGO_MARKER)) return html;
 
   return html.replace(MARKER_TAG, (tag) => {
-    const src = SRC_ATTRIBUTE.exec(tag)?.[1];
-    const variant = parseBrandLogoVariant(src);
+    const variant = parseBrandLogoVariant(readImgSrc(tag));
     if (!variant) return tag;
 
     const url = variant === 'wide' ? urls.logoWideUrl || urls.logoUrl : urls.logoUrl;
-    if (!url) return tag;
-
-    return tag.replace(SRC_ATTRIBUTE, () => ` src="${escapeAttribute(url)}"`);
+    return url ? withImgSrc(tag, url) : tag;
   });
 }
 

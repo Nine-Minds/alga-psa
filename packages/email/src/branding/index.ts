@@ -25,6 +25,7 @@ export {
   brandLogoCid,
   containsBrandAttribution,
   decorateBrandedHtml,
+  findBrandLogoCid,
   parseBrandLogoVariant,
   removeBrandLogo,
   resolveBrandLogoForPreview,

@@ -9,7 +9,6 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
-import { removeBrandLogo } from './branding/brandAssets';
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';
@@ -576,26 +575,19 @@ export abstract class BaseEmailService {
       const effectiveEntityType = params.entityType ?? (effectiveTicketId ? 'ticket' : undefined);
       const effectiveEntityId = params.entityId ?? effectiveTicketId;
 
-      // Every outbound path lands here after its template is rendered, so this
-      // is the one seam where the branded header logo becomes an inline
-      // attachment. A logo is never a reason to lose the mail: on failure the
-      // placeholder goes and the message still leaves.
+      // Every notification path lands here after its template is rendered, so
+      // this is where the branded header logo becomes an inline attachment.
+      // (The paths that render a tenant template and call a provider directly —
+      // invoice mail, project status updates — run the same pass themselves.)
       let attachments = params.attachments;
       if (params.tenantId && params.tenantId !== 'system') {
-        try {
-          const embedded = await embedBrandLogo(html, { tenantId: params.tenantId });
-          html = embedded.html;
-          if (embedded.attachments.length > 0) {
-            attachments = [...(attachments ?? []), ...embedded.attachments];
-          }
-        } catch (error) {
-          logger.error(`[${this.getServiceName()}] Failed to embed the brand logo:`, {
-            tenant: params.tenantId,
-            subject,
-            notificationSubtypeId: params.notificationSubtypeId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          html = removeBrandLogo(html);
+        const embedded = await embedBrandLogo(html, {
+          tenantId: params.tenantId,
+          context: { service: this.getServiceName(), subject, notificationSubtypeId: params.notificationSubtypeId },
+        });
+        html = embedded.html;
+        if (embedded.attachments.length > 0) {
+          attachments = [...(attachments ?? []), ...embedded.attachments];
         }
       }
 

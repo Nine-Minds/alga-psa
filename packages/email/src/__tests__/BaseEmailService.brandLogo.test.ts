@@ -62,7 +62,7 @@ describe('BaseEmailService brand logo embedding', () => {
       attachments: [{ filename: 'invoice.pdf', content: Buffer.from('pdf') }],
     });
 
-    expect(embedBrandLogo).toHaveBeenCalledWith(BRANDED_HTML, { tenantId: 'tenant-1' });
+    expect(embedBrandLogo).toHaveBeenCalledWith(BRANDED_HTML, expect.objectContaining({ tenantId: 'tenant-1' }));
     expect(sendEmail.mock.calls[0][0]).toMatchObject({
       html: BRANDED_HTML,
       attachments: [{ filename: 'invoice.pdf' }, logo],
@@ -70,7 +70,9 @@ describe('BaseEmailService brand logo embedding', () => {
   });
 
   it('still sends, minus the placeholder, when the logo cannot be embedded', async () => {
-    embedBrandLogo.mockRejectedValue(new Error('storage unavailable'));
+    // The pass swallows its own failures, so what arrives here is the stripped
+    // HTML — the send must not carry a dangling cid reference either way.
+    embedBrandLogo.mockResolvedValue({ html: '<p>Ticket updated</p>', attachments: [] });
     const { instance, sendEmail } = service();
 
     await expect(instance.sendEmail({

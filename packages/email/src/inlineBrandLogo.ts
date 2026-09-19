@@ -29,6 +29,9 @@ import type { EmailAttachment } from '@alga-psa/types';
 import {
   brandLogoCid,
   parseBrandLogoVariant,
+  readImgSrc,
+  removeBrandLogo,
+  withImgSrc,
   BRAND_LOGO_MARKER,
 } from './branding/brandAssets';
 import type { EmailBrandingLogoVariant } from './branding/types';
@@ -43,15 +46,20 @@ const MAX_LOGO_BYTES = 1024 * 1024;
  */
 const LOGO_CACHE_TTL_MS = 5 * 60 * 1000;
 
+/**
+ * A miss costs two indexed reads, so it expires far sooner: a tenant who
+ * uploads a logo and applies branding should see it on the next message, not
+ * once the hit TTL runs out.
+ */
+const LOGO_MISS_CACHE_TTL_MS = 30 * 1000;
+
 const MARKER_TAG = `<img\\b[^>]*${BRAND_LOGO_MARKER}[^>]*>`;
-const SRC_ATTRIBUTE = /\ssrc="([^"]*)"/i;
 
 const EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/gif': 'gif',
   'image/webp': 'webp',
-  'image/svg+xml': 'svg',
 };
 
 interface BrandLogoAsset {
@@ -63,6 +71,8 @@ interface BrandLogoAsset {
 export interface EmbedBrandLogoOptions {
   tenantId: string;
   knex?: Knex;
+  /** Logged beside the tenant when the pass cannot produce a logo. */
+  context?: Record<string, unknown>;
 }
 
 export interface EmbedBrandLogoResult {
@@ -125,6 +135,12 @@ async function readLogoAsset(
   const file = await runWithTenant(tenantId, () => FileStoreModel.findById(knex, document.file_id!));
   if (!file?.storage_path) return missing('The tenant logo file is gone from storage');
 
+  // Gmail, Outlook and Yahoo render no SVG in mail, inline or remote, so an SVG
+  // upload is treated as no logo rather than mailed as a broken image.
+  if ((file.mime_type ?? '').startsWith('image/svg')) {
+    return missing('The tenant logo is an SVG, which mail clients do not render');
+  }
+
   if (Number(file.file_size) > MAX_LOGO_BYTES) {
     return missing('The tenant logo is too large to embed', {
       bytes: Number(file.file_size),
@@ -149,12 +165,17 @@ async function readLogoAsset(
 }
 
 /** Keeps a worker that serves many tenants from holding every logo forever. */
-function cache<T>(store: Map<string, { value: T; expiresAt: number }>, key: string, value: T): T {
+function cache<T>(
+  store: Map<string, { value: T; expiresAt: number }>,
+  key: string,
+  value: T,
+  ttlMs: number = LOGO_CACHE_TTL_MS,
+): T {
   const now = Date.now();
   for (const [existing, entry] of store) {
     if (entry.expiresAt <= now) store.delete(existing);
   }
-  store.set(key, { value, expiresAt: now + LOGO_CACHE_TTL_MS });
+  store.set(key, { value, expiresAt: now + ttlMs });
   return value;
 }
 
@@ -172,7 +193,8 @@ async function loadLogoAsset(
   const hit = cached(logoCache, key);
   if (hit) return hit.value;
 
-  return cache(logoCache, key, await readLogoAsset(knex, tenantId, variant));
+  const asset = await readLogoAsset(knex, tenantId, variant);
+  return cache(logoCache, key, asset, asset ? LOGO_CACHE_TTL_MS : LOGO_MISS_CACHE_TTL_MS);
 }
 
 /**
@@ -191,15 +213,11 @@ async function loadSavedVariant(knex: Knex, tenantId: string): Promise<EmailBran
   return cache(variantCache, tenantId, row?.settings?.emailBranding?.logo?.variant === 'wide' ? 'wide' : 'default');
 }
 
-function withCidSrc(tag: string, cid: string): string {
-  const src = ` src="cid:${cid}"`;
-  return SRC_ATTRIBUTE.test(tag) ? tag.replace(SRC_ATTRIBUTE, () => src) : tag.replace(/^<img\b/i, `<img${src}`);
-}
-
 /**
  * Normalizes every brand-logo tag to its `cid:` form and returns the bytes to
  * attach alongside. A logo that cannot be read is dropped from the HTML rather
- * than left pointing at nothing.
+ * than left pointing at nothing, and a logo is never a reason to lose the mail:
+ * whatever fails in here, the caller gets sendable HTML back.
  */
 export async function embedBrandLogo(
   html: string,
@@ -207,6 +225,22 @@ export async function embedBrandLogo(
 ): Promise<EmbedBrandLogoResult> {
   if (!html || !html.includes(BRAND_LOGO_MARKER)) return { html, attachments: [] };
 
+  try {
+    return await embedResolvedBrandLogo(html, options);
+  } catch (error) {
+    logger.error('[BrandLogo] Failed to embed the brand logo; sending without it', {
+      tenant: options.tenantId,
+      ...options.context,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { html: removeBrandLogo(html), attachments: [] };
+  }
+}
+
+async function embedResolvedBrandLogo(
+  html: string,
+  options: EmbedBrandLogoOptions,
+): Promise<EmbedBrandLogoResult> {
   const knex = options.knex ?? (await createTenantKnex(options.tenantId)).knex;
   const attachments = new Map<string, EmailAttachment>();
   const tags = new RegExp(MARKER_TAG, 'gi');
@@ -217,7 +251,7 @@ export async function embedBrandLogo(
 
   while ((match = tags.exec(html)) !== null) {
     const tag = match[0];
-    const variant = parseBrandLogoVariant(SRC_ATTRIBUTE.exec(tag)?.[1])
+    const variant = parseBrandLogoVariant(readImgSrc(tag))
       ?? (savedVariant ??= await loadSavedVariant(knex, options.tenantId));
     const cid = brandLogoCid(variant);
     const asset = await loadLogoAsset(knex, options.tenantId, variant);
@@ -229,7 +263,7 @@ export async function embedBrandLogo(
     // fan-out must not repeat it per message.
     if (!asset) continue;
 
-    result += withCidSrc(tag, cid);
+    result += withImgSrc(tag, `cid:${cid}`);
     if (!attachments.has(cid)) {
       attachments.set(cid, {
         filename: asset.filename,
