@@ -253,67 +253,188 @@ async function purgeTenant(trx: Knex.Transaction, tenant: string): Promise<void>
 }
 
 /**
- * Delete one client row, and whatever has come to depend on it.
+ * One row a `--reset` has to be able to delete, named the way PostgreSQL names
+ * it: the table, the column its children point at, and the tenant everything
+ * is scoped to.
+ */
+interface PurgeTarget {
+  /** Parent table holding the row to delete. */
+  table: string;
+  /** The parent column referencing children point at (`tickets.ticket_id`). */
+  identityColumn: string;
+  /** The value of that column for the one row being deleted. */
+  identity: string;
+  /** The tenant that row belongs to. Every delete below is filtered on it. */
+  tenant: string;
+}
+
+/**
+ * Tables `purgeRow` refuses to clear, and refuses to let PostgreSQL cascade.
  *
- * The fixture creates the sponsor-side "Munchkin Country" client, but the
+ * A record of account is never collateral damage for a fixture reset. Today
+ * `invoices.ticket_id` is ON DELETE SET NULL and `invoices.client_id` is ON
+ * DELETE CASCADE, so an invoice raised against a fixture ticket would be
+ * silently unlinked and one raised against the fixture's sponsor-side client
+ * would be silently destroyed — by the schema, without this file ever issuing
+ * a DELETE. `purgeRow` therefore looks for such a row *before* the delete and
+ * stops. No documented journey raises an invoice (see the audit above
+ * `reset()`), so this should never fire; if it does, that is a finding about
+ * what the fixtures can reach, not something to purge quietly.
+ */
+const PURGE_PROTECTED_TABLES = ['invoices', 'invoice_items', 'transactions', 'credit_tracking'];
+
+/**
+ * Delete one row, and whatever has come to depend on it.
+ *
+ * Both rows this fixture has to be able to remove have the same problem. The
+ * fixture creates the sponsor-side "Munchkin Country" client, but the
  * application keeps adding rows to it after the fact: merely opening the Oz
  * clients screen lazily writes a system-managed default into
  * `client_billing_profiles`, whose foreign key carries no ON DELETE CASCADE.
- * So `--reset` worked right up until the fixtures had been used once — the
- * same trap already paid for with `sessions` and `user_preferences`.
+ * The fixture also creates two White Rabbit tickets for a reviewer to work,
+ * and working them writes rows the fixture never created: posting one shared
+ * IT note through the ticket screen appends a `ticket_audit_logs` row, whose
+ * foreign key is likewise NO ACTION. So `--reset` worked right up until the
+ * fixtures had been used once — the same trap already paid for with
+ * `sessions` and `user_preferences`.
  *
- * `clients` has more than forty referencing constraints, so enumerating the
- * ones that happen to block today would only move the trap a few months out.
- * Instead the delete is attempted and PostgreSQL is asked what stopped it:
- * only a table actually holding the client back is touched, and a dependent
- * the application starts writing next month needs no edit here.
+ * `clients` has more than forty referencing constraints and `tickets` has
+ * twenty-four, so enumerating the ones that happen to block today would only
+ * move the trap a few months out. Instead the delete is attempted and
+ * PostgreSQL is asked what stopped it: only a table actually holding the row
+ * back is touched, and a dependent the application starts writing next month
+ * needs no edit here.
+ *
+ * The blast radius is bounded by construction, which is the question to ask
+ * of it:
+ *
+ *  - Nothing is deleted speculatively. A table is touched only after
+ *    PostgreSQL has named it, and the constraint it named, as the blocker.
+ *  - The named constraint is re-read from `pg_constraint` and must actually
+ *    reference this target's identity column, or the purge throws.
+ *  - Every delete is filtered on the target's identity *and* on `tenant` —
+ *    from the constraint's own columns where it is composite, and from
+ *    `columnExists` where the foreign key is single-column.
+ *  - A record of account is never touched or cascaded over
+ *    (`PURGE_PROTECTED_TABLES`).
+ *  - A constraint that blocks twice throws rather than looping.
+ *  - Every path out that is not success is a throw, inside the single
+ *    `--reset` transaction, so a surprise rolls the whole reset back rather
+ *    than half-deleting the fixture.
  */
-async function purgeClient(trx: Knex.Transaction, tenant: string, clientId: string): Promise<void> {
+async function purgeRow(trx: Knex.Transaction, target: PurgeTarget): Promise<void> {
+  const subject = `${target.table} ${target.identity}`;
+  await assertNoProtectedReferences(trx, target);
   const cleared = new Set<string>();
   for (;;) {
-    await trx.raw('SAVEPOINT purge_client');
+    await trx.raw('SAVEPOINT purge_row');
     try {
-      await trx('clients').where({ tenant, client_id: clientId }).del();
-      await trx.raw('RELEASE SAVEPOINT purge_client');
+      await trx(target.table).where({ tenant: target.tenant, [target.identityColumn]: target.identity }).del();
+      await trx.raw('RELEASE SAVEPOINT purge_row');
       return;
     } catch (error) {
-      await trx.raw('ROLLBACK TO SAVEPOINT purge_client');
+      await trx.raw('ROLLBACK TO SAVEPOINT purge_row');
       const violation = error as { code?: string; table?: string; constraint?: string };
       if (violation.code !== '23503' || !violation.table || !violation.constraint) throw error;
       if (cleared.has(violation.constraint)) {
-        throw new Error(`Cannot delete client ${clientId}; ${violation.table} still blocks it via ${violation.constraint}`);
+        throw new Error(`Cannot delete ${subject}; ${violation.table} still blocks it via ${violation.constraint}`);
       }
       cleared.add(violation.constraint);
-      await deleteClientReferences(trx, tenant, clientId, violation.table, violation.constraint);
+      if (PURGE_PROTECTED_TABLES.includes(violation.table)) {
+        throw new Error(`Refusing to delete ${violation.table} rows to clear ${subject} `
+          + `(${violation.constraint}); a record of account is not fixture data. Resolve it by hand.`);
+      }
+      const match = await referenceMatch(trx, target, violation.table, violation.constraint);
+      await trx(violation.table).where(match).del();
     }
   }
 }
 
-/** Delete the rows one named foreign key holds against a client. */
-async function deleteClientReferences(trx: Knex.Transaction, tenant: string, clientId: string,
-  table: string, constraint: string): Promise<void> {
+/** `purgeRow` for a client, which is how this started. */
+function purgeClient(trx: Knex.Transaction, tenant: string, clientId: string): Promise<void> {
+  return purgeRow(trx, { table: 'clients', identityColumn: 'client_id', identity: clientId, tenant });
+}
+
+/** `purgeRow` for one of the fixture's White Rabbit tickets. */
+function purgeTicket(trx: Knex.Transaction, tenant: string, ticketId: string): Promise<void> {
+  return purgeRow(trx, { table: 'tickets', identityColumn: 'ticket_id', identity: ticketId, tenant });
+}
+
+/**
+ * The WHERE that pins one named foreign key to exactly this target's row.
+ *
+ * Columns are resolved by the *parent* column they point at, so a child that
+ * names its own column something else (`ticket_bundle_mirrors.child_ticket_id`
+ * → `tickets.ticket_id`) still binds correctly. A constraint that does not
+ * reference the identity column at all cannot be the reason this row is
+ * blocked, so it throws rather than deleting on a partial match.
+ *
+ * A foreign key may also carry parent columns that are neither the identity
+ * nor the tenant — `ticket_resources` points at
+ * `(tenant, ticket_id, assigned_to)`. Those are deliberately left unbound: the
+ * result is every row that table holds against this one ticket in this one
+ * tenant, which is what clearing the ticket means. It is wider than the single
+ * violating tuple and never wider than the target row.
+ */
+async function referenceMatch(trx: Knex.Transaction, target: PurgeTarget,
+  table: string, constraint: string): Promise<Record<string, string>> {
   const { rows } = await trx.raw<{ rows: { child_column: string; parent_column: string }[] }>(`
     SELECT child.attname AS child_column, parent.attname AS parent_column
       FROM pg_constraint c
       JOIN LATERAL unnest(c.conkey, c.confkey) AS pair(child_attnum, parent_attnum) ON TRUE
       JOIN pg_attribute child ON child.attrelid = c.conrelid AND child.attnum = pair.child_attnum
       JOIN pg_attribute parent ON parent.attrelid = c.confrelid AND parent.attnum = pair.parent_attnum
-     WHERE c.conname = ? AND c.conrelid = ?::regclass`, [constraint, table]);
+     WHERE c.conname = ? AND c.conrelid = ?::regclass AND c.confrelid = ?::regclass`,
+    [constraint, table, target.table]);
   const match: Record<string, string> = {};
+  let boundToIdentity = false;
+  let boundToTenant = false;
   for (const { child_column, parent_column } of rows) {
-    if (parent_column === 'client_id') match[child_column] = clientId;
-    else if (parent_column === 'tenant') match[child_column] = tenant;
+    if (parent_column === target.identityColumn) {
+      match[child_column] = target.identity;
+      boundToIdentity = true;
+    } else if (parent_column === 'tenant') {
+      match[child_column] = target.tenant;
+      boundToTenant = true;
+    }
   }
-  if (!Object.values(match).includes(clientId)) {
-    throw new Error(`${constraint} on ${table} does not reference clients.client_id`);
+  if (!boundToIdentity) {
+    throw new Error(`${constraint} on ${table} does not reference ${target.table}.${target.identityColumn}`);
   }
-  // A single-column foreign key to client_id alone would otherwise reach across
-  // tenants; client ids are uuids so it would not match, but the filter makes
-  // the blast radius of this delete explicit rather than incidental.
-  if (!Object.values(match).includes(tenant) && await columnExists(trx, table, 'tenant')) {
-    match.tenant = tenant;
+  // A single-column foreign key to the identity alone would otherwise reach
+  // across tenants; these ids are uuids so it would not match, but the filter
+  // makes the blast radius of this delete explicit rather than incidental.
+  if (!boundToTenant) {
+    if (!(await columnExists(trx, table, 'tenant'))) {
+      throw new Error(`${constraint} on ${table} is not tenant-scoped and ${table} has no tenant column; `
+        + `refusing to delete across tenants to clear ${target.table} ${target.identity}`);
+    }
+    match.tenant = target.tenant;
   }
-  await trx(table).where(match).del();
+  return match;
+}
+
+/**
+ * Stop before the delete if a record of account points at this row — whether
+ * it would block the delete or be silently swept up by ON DELETE CASCADE /
+ * SET NULL. Reads only; the loudest thing it can do is throw.
+ */
+async function assertNoProtectedReferences(trx: Knex.Transaction, target: PurgeTarget): Promise<void> {
+  const { rows } = await trx.raw<{ rows: { table_name: string; constraint_name: string }[] }>(`
+    SELECT c.conrelid::regclass::text AS table_name, c.conname AS constraint_name
+      FROM pg_constraint c
+     WHERE c.contype = 'f' AND c.confrelid = ?::regclass
+       AND c.conrelid::regclass::text = ANY(?)
+     ORDER BY 1, 2`, [target.table, PURGE_PROTECTED_TABLES]);
+  for (const { table_name, constraint_name } of rows) {
+    const match = await referenceMatch(trx, target, table_name, constraint_name);
+    const held = await trx(table_name).where(match).count({ n: '*' }).first();
+    if (Number(held?.n ?? 0) > 0) {
+      throw new Error(`Refusing to delete ${target.table} ${target.identity}: ${held?.n} ${table_name} row(s) `
+        + `reference it via ${constraint_name}. A record of account is not fixture data — `
+        + `resolve it by hand and report how a review journey created it.`);
+    }
+  }
 }
 
 async function columnExists(trx: Knex.Transaction, table: string, column: string): Promise<boolean> {
@@ -1063,6 +1184,80 @@ const FIXTURE_ROWS: { table: string; where: Record<string, unknown> }[] = [
   { table: 'co_managed_provisioning_operations', where: { tenant: OZ, operation_id: MUNCHKIN_PROVISIONING } },
 ];
 
+/**
+ * Every foreign-key child of `tickets.ticket_id`, read out of `pg_constraint`
+ * on this database, and what a reviewer following
+ * docs/dev/co-managed-fixtures.md can actually put in each one. This is the
+ * audit behind routing the two fixture tickets through `purgeRow`, not a list
+ * `purgeRow` consults — it asks PostgreSQL at the moment of the violation, so
+ * a child added next month needs no edit here.
+ *
+ * `d` is the constraint's ON DELETE action: `a` NO ACTION (blocks the delete —
+ * these are the ones that can break `--reset`), `c` CASCADE (goes with the
+ * ticket), `n` SET NULL.
+ *
+ *   d  child table                  reachable from a documented journey?
+ *   -  --------------------------   -----------------------------------------
+ *   a  ticket_audit_logs            YES. Every auditable ticket mutation --
+ *                                   post/edit/delete a note, edit a field,
+ *                                   close. Journey 3's shared IT note writes
+ *                                   TICKET_INTERNAL_NOTE_ADDED. This is the
+ *                                   reported crash.
+ *   a  ticket_resources             YES. "Add agents or a team…" on the ticket
+ *                                   screen; also reassigning the primary agent
+ *                                   (the previous one is demoted here). Three
+ *                                   -column key (tenant, ticket_id,
+ *                                   assigned_to) -- the widest shape here.
+ *   a  comments                     YES. The ticket conversation. Already
+ *                                   deleted explicitly below.
+ *   a  interactions                 YES, off-ticket: Quick Add Interaction
+ *                                   with a ticket selected.
+ *   a  project_ticket_links         YES: "Link to Task" / "Create Task" on the
+ *                                   ticket, and the task drawer's "Link
+ *                                   ticket". NOTE: the same row also blocks
+ *                                   the `project_tasks` delete in
+ *                                   FIXTURE_ROWS, which `purgeRow` does not
+ *                                   cover -- see the note at the end.
+ *   a  sla_audit_log                Only via the SLA engine. The fixture's
+ *                                   co-managed obligations do not drive it and
+ *                                   no journey has produced a row.
+ *   a  email_reply_tokens           Only when a notification email is sent;
+ *                                   no journey sends one.
+ *   a  sla_notifications_sent       No writer in the product (delete-only).
+ *   a  vectors                      No writer in the product at all.
+ *   c  comment_threads              YES, with comments. Deleted explicitly.
+ *   c  co_management_ticket_work    YES -- Journey 2's escalation. Fixture
+ *                                   data; in FIXTURE_ROWS.
+ *   c  ticket_checklist_items       YES: the ticket's Checklist card.
+ *   c  external_entity_links        YES: the ticket's External links card.
+ *   c  ticket_materials             YES: the ticket's Materials card.
+ *   c  ticket_entity_links          Workflow/automation only.
+ *   c  ticket_bundle_settings       YES: "Bundle tickets" / "Promote to
+ *   c  ticket_bundle_mirrors        master"; and comment mirroring under it.
+ *   c  ticket_auto_close_state      Background auto-close job.
+ *   c  survey_invitations           Background, on TICKET_CLOSED.
+ *   c  survey_responses             Public survey response page.
+ *   c  ghost_usage_reviews          Inventory -> Ghost Usage -> classify.
+ *   c  asset_ticket_associations    Dev seeds only; superseded by
+ *   c  asset_service_history        `asset_associations`.
+ *   n  invoices                     NO journey raises one. "Quick invoice" /
+ *                                   "Generate invoice" is on the ticket
+ *                                   screen, so it is *reachable*, and this
+ *                                   constraint is SET NULL: PostgreSQL would
+ *                                   quietly unlink the invoice from the
+ *                                   ticket rather than block. `purgeRow`
+ *                                   refuses to proceed at all in that case --
+ *                                   see PURGE_PROTECTED_TABLES.
+ *
+ * What this audit does NOT cover: the fixture's other parent rows. FIXTURE_ROWS
+ * deletes `projects`, `project_tasks` and `boards` with a plain WHERE, so a
+ * reviewer who links a fixture ticket to the shared task (Journey 7's task,
+ * from the ticket's own "Link to Task") leaves a `project_ticket_links` row
+ * that `purgeRow` clears off the ticket -- but the same row would have blocked
+ * `project_tasks` first, and no documented journey step asks for that link.
+ * Routing those through `purgeRow` too is the obvious next move if a journey
+ * ever grows one.
+ */
 async function reset(db: Knex): Promise<void> {
   await db.transaction(async trx => {
     // Comments and threads first: tickets and search rows depend on them.
@@ -1073,7 +1268,10 @@ async function reset(db: Knex): Promise<void> {
     await trx('app_search_index').where({ tenant: RABBIT })
       .whereIn('object_id', [READY_TICKET, ESCALATED_TICKET, SHARED_PROJECT, SHARED_TASK]).del();
     for (const row of FIXTURE_ROWS) await trx(row.table).where(row.where).del();
-    await trx('tickets').where({ tenant: RABBIT }).whereIn('ticket_id', [READY_TICKET, ESCALATED_TICKET]).del();
+    // Not a plain delete: a reviewer who works either ticket leaves rows behind
+    // that the fixture never wrote and no list here would stay ahead of. See
+    // the audit above this function.
+    for (const ticket of [READY_TICKET, ESCALATED_TICKET]) await purgeTicket(trx, RABBIT, ticket);
     await trx('sla_policy_targets').where({ tenant: RABBIT, sla_policy_id: id('sla-policy/rabbit/service-desk') }).del();
     await trx('sla_policies').where({ tenant: RABBIT, sla_policy_id: id('sla-policy/rabbit/service-desk') }).del();
     await trx('sla_policy_targets').where({ tenant: OZ, sla_policy_id: SLA_POLICY }).del();

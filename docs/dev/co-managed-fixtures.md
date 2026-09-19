@@ -272,19 +272,42 @@ pre-existing rows:
 | `co_managed_entitlements.capacity` (Oz) | 3, reference `smoke-fixture-sub-2026-09-09`, valid until 2026-10-09 |
 | White Rabbit allocation seats | 1 |
 
-**The reset has to survive the fixtures being used.** Two tables are written
-by the *application*, not by this script, and both carry a real foreign key
+**The reset has to survive the fixtures being used.** Several tables are
+written by the *application*, not by this script, and carry a real foreign key
 into rows the reset removes. Signing in writes a `sessions` row and a
 `user_preferences` row against a fixture user, so those are deleted before
 `users`. Merely opening the Oz clients screen lazily writes a system-managed
 default into `client_billing_profiles` against the sponsor-side "Munchkin
-Country" client, whose foreign key has no `ON DELETE CASCADE` — so the reset
-worked right up until anyone had actually used the fixtures once, then failed
-with `23503`. Because `clients` has more than forty referencing constraints,
-enumerating today's blockers would only move the trap: `purgeClient` attempts
-the delete and asks PostgreSQL which constraint stopped it, clearing only that
-one and retrying. A dependent the product starts writing next month needs no
-edit here.
+Country" client, whose foreign key has no `ON DELETE CASCADE`. Working a
+fixture ticket does the same to `tickets`: posting one shared IT note appends a
+`ticket_audit_logs` row, and adding an agent under "Add agents or a team…"
+appends a `ticket_resources` row — both `NO ACTION`. So the reset worked right
+up until anyone had actually used the fixtures once, then failed with `23503`
+and rolled the whole thing back, leaving the fixture data unrecoverable without
+hand-written SQL.
+
+Because `clients` has more than forty referencing constraints and `tickets` has
+twenty-four, enumerating today's blockers would only move the trap. `purgeRow`
+attempts the delete instead and asks PostgreSQL which constraint stopped it,
+clearing only that one and retrying; `purgeClient` and the two fixture tickets
+both go through it. A dependent the product starts writing next month needs no
+edit here. Its blast radius is bounded by construction — nothing is deleted
+until PostgreSQL has named the table and the constraint, the constraint is
+re-read from `pg_constraint` and must actually reference the row being deleted,
+every delete is filtered on both the row's id and its `tenant`, and a
+constraint that blocks twice throws rather than looping. The whole reset is one
+transaction, so anything unexpected rolls it back rather than half-deleting.
+
+**Reset refuses rather than touching a record of account.** `invoices`,
+`invoice_items`, `transactions` and `credit_tracking` are off limits, and
+`purgeRow` checks for them *before* the delete rather than waiting to be
+blocked — `invoices.ticket_id` is `ON DELETE SET NULL` and
+`invoices.client_id` is `ON DELETE CASCADE`, so PostgreSQL would quietly
+unlink or destroy an invoice without this script issuing a single `DELETE`. No
+documented journey raises one, so this should never fire. If it does, `--reset`
+stops with the table, the count and the constraint named, changes nothing, and
+the right response is to resolve it by hand and report how a review journey
+created it.
 
 After a reset the database holds three tenants again and `--verify` reports only
 the five pre-existing rows the fixture adopts rather than creates. The
@@ -293,6 +316,16 @@ capabilities really are gone: the Munchkin workspace no longer exists to hold a
 seat ceiling, and `cm.msp.admin@oz.test` no longer exists to open a delegated
 screen, which reports `unavailable to cm.msp.admin@oz.test`. That is the reset
 working, not a fault.
+
+**One documented journey `--reset` cannot undo.** Journey 1 step 4 invites you
+to add a technician to White Rabbit, and it is admitted. That user is not
+fixture data, so `--reset` leaves it in place — correctly; the reset removes
+what this script created, not what a reviewer did. But White Rabbit then holds
+four active technicians against a four-seat allocation, so after a re-apply
+`--verify` reports `White Rabbit seat admission -> CO_MANAGED_SEAT_LIMIT
+(expected admitted)` instead of 19/19. If you walk that step, delete the
+technician you created before resetting. This is arithmetic, not the `23503`
+trap above: `--reset` itself succeeds.
 
 **Reset followed by apply returns to the same state**, with one documented
 exception. Comparing a full dump across a reset-and-reapply cycle:
