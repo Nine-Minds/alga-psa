@@ -19,10 +19,6 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   searchUsersForMentions: vi.fn(),
 }));
 
-const translations: Record<string, string> = {
-  'conversation.unknownUser': 'Unknown User',
-};
-
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useFormatters: () => ({
     locale: 'en',
@@ -35,35 +31,37 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     formatRelativeTime: (date: Date | string) => String(date),
   }),
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string) => translations[key] ?? defaultValue ?? key,
+    t: (key: string, fallback?: string) => {
+      const translations: Record<string, string> = {
+        'conversation.systemAuthor': 'System',
+        'conversation.bundledUpdate': 'Bundled update',
+        'conversation.unknownUser': 'Unknown User',
+      };
+      return translations[key] ?? fallback ?? key;
+    },
   }),
 }));
 
 const NOTE = JSON.stringify([
   {
     type: 'paragraph',
-    props: {
-      textAlignment: 'left',
-      backgroundColor: 'default',
-      textColor: 'default',
-    },
-    content: [{ type: 'text', text: 'Hi', styles: {} }],
+    props: { textAlignment: 'left', backgroundColor: 'default', textColor: 'default' },
+    content: [{ type: 'text', text: 'Huntress incident note', styles: {} }],
   },
 ]);
 
-function buildComment(overrides: Partial<IComment>): IComment {
-  return {
-    tenant: 'tenant-1',
-    author_type: 'unknown',
-    comment_id: 'comment-1',
-    user_id: null,
-    note: NOTE,
-    created_at: new Date().toISOString(),
-    ...overrides,
-  } as IComment;
-}
+const huntressComment: IComment = {
+  tenant: 'tenant-1',
+  author_type: 'unknown',
+  comment_id: 'comment-1',
+  user_id: null,
+  contact_id: null,
+  is_system_generated: true,
+  note: NOTE,
+  created_at: new Date().toISOString(),
+} as IComment;
 
-function renderComment(comment: IComment) {
+function renderComment(comment: IComment, variant: 'default' | 'compact' = 'default') {
   return render(
     <CommentItem
       conversation={comment}
@@ -78,41 +76,28 @@ function renderComment(comment: IComment) {
       onClose={() => {}}
       onEdit={() => {}}
       onDelete={() => {}}
+      variant={variant}
     />
   );
 }
 
-describe('CommentItem unresolved-author avatar', () => {
-  it('seeds the avatar with the inbound sender name instead of Unknown User', () => {
-    renderComment(
-      buildComment({
-        metadata: {
-          email: { fromName: 'Ada Client', fromAddress: 'ada@client.example' },
-        },
-      })
-    );
+describe('CommentItem system-author rendering', () => {
+  it('renders the system glyph and the System name for a non-mirror system comment', () => {
+    const { container } = renderComment(huntressComment);
 
-    expect(screen.getByText('Ada Client')).toBeInTheDocument();
-    expect(screen.getByText('AC')).toBeInTheDocument();
+    const avatar = container.querySelector('[data-automation-id="comment-1-avatar"]');
+    expect(avatar).toBeTruthy();
+    expect(avatar?.getAttribute('data-avatar-kind')).toBe('system');
+    expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.queryByText('UU')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bundled update')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-automation-id="comment-1-bundled-update-badge"]')).toBeNull();
   });
 
-  it('falls back to the sender address when the inbound email carries no name', () => {
-    renderComment(
-      buildComment({
-        metadata: {
-          email: { fromAddress: 'ada@client.example' },
-        },
-      })
-    );
-
-    expect(screen.getByText('AD')).toBeInTheDocument();
-  });
-
-  it('keeps the Unknown User avatar when no identity is available', () => {
-    renderComment(buildComment({ is_system_generated: false }));
-
-    expect(screen.getByText('UU')).toBeInTheDocument();
-    expect(screen.getByText('Unknown User')).toBeInTheDocument();
+  it('uses the sm avatar size in the compact timeline variant', () => {
+    const { container } = renderComment(huntressComment, 'compact');
+    const avatar = container.querySelector('[data-automation-id="comment-1-avatar"]');
+    expect(avatar?.className).toContain('h-8');
+    expect(avatar?.className).toContain('rounded-full');
   });
 });

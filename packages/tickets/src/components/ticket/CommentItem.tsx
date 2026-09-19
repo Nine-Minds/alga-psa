@@ -6,6 +6,7 @@ import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import SystemAvatar from '@alga-psa/ui/components/SystemAvatar';
 import { IComment } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -73,12 +74,6 @@ interface CommentItemProps {
    * ticket-level links, so these come from the API/integration path.
    */
   externalLinks?: ITicketExternalLinkView[];
-  /**
-   * Reference to the bundle master when this comment is a mirrored copy from a
-   * sync-mode bundle. Supplied by the MSP portal only; the client portal omits
-   * it because a bundle may span clients and must not link to the master.
-   */
-  bundleMaster?: { ticketId: string; ticketNumber: string | null };
 }
 
 function getInboundSenderIdentity(
@@ -183,7 +178,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
   variant = 'default',
   accentBorderClassName,
   externalLinks = [],
-  bundleMaster,
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
@@ -229,12 +223,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation.metadata]
   );
 
+  const isBundleMirror = Boolean(conversation.bundle_mirror_source);
+  const isSystemAuthor = resolvedAuthor.source === 'system';
+
   const getAuthorName = () => {
-    // Legacy mirrored rows (author not yet backfilled, or source author since
-    // deleted) keep the label-as-name fallback; once the author resolves, the
-    // real name renders and the badge below marks the bundled origin.
-    if (conversation.is_system_generated && resolvedAuthor.source === 'unknown') {
-      return t('conversation.bundledUpdate');
+    if (isSystemAuthor) {
+      return isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System');
     }
     if (resolvedAuthor.source === 'user') {
       return `${resolvedAuthor.displayName}${resolvedAuthor.userType === 'client' ? t('conversation.clientSuffix') : ''}`;
@@ -247,15 +241,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   // An unmatched inbound email still names its sender, so the avatar shows those
   // initials; the Unknown User placeholder is kept only when nothing identifies
-  // the author.
+  // the author. System-authored comments never reach this branch.
   const inboundSenderLabel = inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
-  const unknownAuthorAvatarName =
-    !conversation.is_system_generated && inboundSenderLabel
-      ? inboundSenderLabel
-      : t('conversation.unknownUser');
+  const unknownAuthorAvatarName = inboundSenderLabel || t('conversation.unknownUser');
 
   const getAuthorEmail = () => {
-    if (conversation.is_system_generated && resolvedAuthor.source === 'unknown') return null;
+    if (isSystemAuthor) return null;
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
       return inboundSenderIdentity.fromAddress;
     }
@@ -483,8 +474,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
     >
       <div className={`flex items-start min-w-0 max-w-full ${isCompact ? 'mb-0.5' : 'mb-1'}`}>
         <div className={isCompact ? 'mr-2' : 'mr-2'}>
-          {/* Conditionally render UserAvatar or ContactAvatar */}
-          {resolvedAuthor.source === 'unknown' ? (
+          {/* Conditionally render SystemAvatar, UserAvatar or ContactAvatar */}
+          {isSystemAuthor ? (
+            <SystemAvatar
+              {...withDataAutomationId({ id: `${commentId}-avatar` })}
+              glyph={isBundleMirror ? 'bundle' : 'system'}
+              label={isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System')}
+              size={isCompact ? 'sm' : 'md'}
+            />
+          ) : resolvedAuthor.source === 'unknown' ? (
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId=""
@@ -525,22 +523,25 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] break-words min-w-0">
                   {getAuthorName()}
                 </p>
-                {conversation.is_system_generated && resolvedAuthor.source !== 'unknown' && (
-                  bundleMaster?.ticketId ? (
+                {isBundleMirror && (
+                  conversation.bundle_mirror_source?.master_ticket_id ? (
                     <a
                       {...withDataAutomationId({ id: `${commentId}-bundled-update-badge` })}
-                      href={`/msp/tickets/${bundleMaster.ticketId}`}
-                      title={bundleMaster.ticketNumber ?? undefined}
+                      href={`/msp/tickets/${conversation.bundle_mirror_source.master_ticket_id}`}
                       className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))] hover:underline"
                     >
-                      {t('conversation.bundledUpdate')}
+                      {conversation.bundle_mirror_source.master_ticket_number
+                        ? t('conversation.bundledUpdateFrom', { number: conversation.bundle_mirror_source.master_ticket_number })
+                        : t('conversation.bundledUpdate')}
                     </a>
                   ) : (
                     <span
                       {...withDataAutomationId({ id: `${commentId}-bundled-update-badge` })}
                       className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]"
                     >
-                      {t('conversation.bundledUpdate')}
+                      {conversation.bundle_mirror_source?.master_ticket_number
+                        ? t('conversation.bundledUpdateFrom', { number: conversation.bundle_mirror_source.master_ticket_number })
+                        : t('conversation.bundledUpdate')}
                     </span>
                   )
                 )}

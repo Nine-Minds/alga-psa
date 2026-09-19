@@ -335,6 +335,8 @@
     "deleteUploadedImages": "Afbeeldingen verwijderen",
     "keepUploadedImages": "Afbeeldingen behouden",
     "bundledUpdate": "Gebundelde update",
+    "bundledUpdateFrom": "Gebundelde update van {{number}}",
+    "systemAuthor": "Systeem",
     "clientSuffix": " (Klant)",
     "internalCommentTooltip": "Intern commentaar",
     "resolutionCommentTooltip": "Oplossingscommentaar",

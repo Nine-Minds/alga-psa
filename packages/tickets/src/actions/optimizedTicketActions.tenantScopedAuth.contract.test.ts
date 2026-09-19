@@ -102,6 +102,23 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).not.toContain("'mt.tenant': tenant");
   });
 
+  it('uses tenant-co-located joins for the consolidated comment bundle provenance', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const start = source.indexOf('// Comments, plus read-time bundle provenance');
+    const end = source.indexOf('// Documents', start);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+
+    const section = source.slice(start, end);
+
+    expect(section).toContain("tenantScopedTable(trx, 'comments', tenant)");
+    expect(section).toContain("tenantLeftJoin(trx, tenant, commentsQuery, 'ticket_bundle_mirrors as bm'");
+    expect(section).toContain("tenantLeftJoin(trx, tenant, commentsQuery, 'comments as src'");
+    expect(section).toContain("tenantLeftJoin(trx, tenant, commentsQuery, 'tickets as mt'");
+    expect(section).not.toContain('.leftJoin(');
+  });
+
   it('uses structural tenant scoping for ticket list and form option roots', () => {
     const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
     const listBaseStart = source.indexOf('async function buildTicketListBaseQuery');

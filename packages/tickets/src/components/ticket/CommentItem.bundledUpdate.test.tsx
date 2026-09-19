@@ -22,6 +22,8 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 const translations: Record<string, string> = {
   'conversation.unknownUser': 'Unknown User',
   'conversation.bundledUpdate': 'Bundled update',
+  'conversation.bundledUpdateFrom': 'Bundled update from {{number}}',
+  'conversation.systemAuthor': 'System',
 };
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -36,7 +38,16 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     formatRelativeTime: (date: Date | string) => String(date),
   }),
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string) => translations[key] ?? defaultValue ?? key,
+    t: (key: string, fallbackOrOptions?: string | Record<string, unknown>) => {
+      const fallback = typeof fallbackOrOptions === 'string' ? fallbackOrOptions : undefined;
+      const options = typeof fallbackOrOptions === 'object' && fallbackOrOptions !== null
+        ? fallbackOrOptions
+        : undefined;
+      const value = translations[key] ?? fallback ?? key;
+      return options
+        ? value.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options[name] ?? ''))
+        : value;
+    },
   }),
 }));
 
@@ -72,10 +83,7 @@ function buildComment(overrides: Partial<IComment>): IComment {
   } as IComment;
 }
 
-function renderComment(
-  comment: IComment,
-  bundleMaster?: { ticketId: string; ticketNumber: string | null }
-) {
+function renderComment(comment: IComment) {
   return render(
     <CommentItem
       conversation={comment}
@@ -90,51 +98,78 @@ function renderComment(
       onClose={() => {}}
       onEdit={() => {}}
       onDelete={() => {}}
-      bundleMaster={bundleMaster}
     />
   );
 }
 
 describe('CommentItem bundled-update rendering', () => {
-  it('renders the resolved author, real avatar and a Bundled update badge for mirrored comments', () => {
+  it('renders the bundle glyph, label name and linked chip for an authorless mirror (MSP shape)', () => {
     const { container } = renderComment(
-      buildComment({ user_id: AGENT_USER_ID, author_type: 'internal', is_system_generated: true })
+      buildComment({
+        user_id: null,
+        author_type: 'unknown',
+        is_system_generated: true,
+        bundle_mirror_source: {
+          source_comment_id: 'source-1',
+          master_ticket_id: 'master-9',
+          master_ticket_number: 'MSTR-9',
+        },
+      })
+    );
+
+    const avatar = container.querySelector('[data-automation-id="comment-1-avatar"]');
+    expect(avatar).toBeTruthy();
+    expect(avatar?.getAttribute('data-avatar-kind')).toBe('bundle');
+    expect(screen.queryByText('UU')).not.toBeInTheDocument();
+    expect(screen.getByText('Bundled update')).toBeInTheDocument();
+
+    const chip = container.querySelector('[data-automation-id="comment-1-bundled-update-badge"]');
+    expect(chip?.tagName).toBe('A');
+    expect(chip?.getAttribute('href')).toBe('/msp/tickets/master-9');
+    expect(chip?.textContent).toBe('Bundled update from MSTR-9');
+    expect(container.querySelector('[data-automation-id="comment-1-author-email"]')).toBeNull();
+  });
+
+  it('renders the bare labelled chip with no link for the portal mirror shape', () => {
+    const { container } = renderComment(
+      buildComment({
+        user_id: null,
+        author_type: 'unknown',
+        is_system_generated: true,
+        bundle_mirror_source: { source_comment_id: 'source-1' },
+      })
+    );
+
+    const avatar = container.querySelector('[data-automation-id="comment-1-avatar"]');
+    expect(avatar?.getAttribute('data-avatar-kind')).toBe('bundle');
+
+    const chip = container.querySelector('[data-automation-id="comment-1-bundled-update-badge"]');
+    expect(chip?.tagName).toBe('SPAN');
+    expect(chip?.textContent).toBe('Bundled update');
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('keeps the resolved author, real avatar and chip for a mirror with an author', () => {
+    const { container } = renderComment(
+      buildComment({
+        user_id: AGENT_USER_ID,
+        author_type: 'internal',
+        is_system_generated: true,
+        bundle_mirror_source: {
+          source_comment_id: 'source-1',
+          master_ticket_id: 'master-9',
+          master_ticket_number: 'MSTR-9',
+        },
+      })
     );
 
     expect(screen.getByText('Agent Sender')).toBeInTheDocument();
     expect(screen.getByText('AS')).toBeInTheDocument();
     expect(screen.getByText('agent.sender@example.com')).toBeInTheDocument();
-    expect(
-      container.querySelector('[data-automation-id="comment-1-bundled-update-badge"]')
-    ).toBeTruthy();
-    // No master reference supplied: the badge is not a link.
-    expect(screen.queryByRole('link', { name: 'Bundled update' })).not.toBeInTheDocument();
-  });
+    expect(container.querySelector('[data-avatar-kind]')).toBeNull();
 
-  it('links the badge to the master when bundleMaster is supplied (MSP)', () => {
-    renderComment(
-      buildComment({ user_id: AGENT_USER_ID, author_type: 'internal', is_system_generated: true }),
-      { ticketId: 'master-9', ticketNumber: 'MSTR-9' }
-    );
-
-    const link = screen.getByRole('link', { name: 'Bundled update' });
+    const link = screen.getByRole('link', { name: 'Bundled update from MSTR-9' });
     expect(link).toHaveAttribute('href', '/msp/tickets/master-9');
-    expect(link).toHaveAttribute('title', 'MSTR-9');
-  });
-
-  it('falls back to the label as the name and placeholder avatar for an unresolvable mirrored author', () => {
-    const { container } = renderComment(
-      buildComment({ user_id: null, author_type: 'unknown', is_system_generated: true })
-    );
-
-    expect(screen.getByText('Bundled update')).toBeInTheDocument();
-    expect(screen.getByText('UU')).toBeInTheDocument();
-    // Legacy fallback keeps today's rendering: no separate badge.
-    expect(
-      container.querySelector('[data-automation-id="comment-1-bundled-update-badge"]')
-    ).toBeNull();
-    // The placeholder author has no email line.
-    expect(screen.queryByText(/mailto:/)).not.toBeInTheDocument();
   });
 
   it('does not badge or relabel a normal, non-mirrored comment', () => {

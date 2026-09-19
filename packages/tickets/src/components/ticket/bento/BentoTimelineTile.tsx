@@ -120,8 +120,6 @@ interface BentoTimelineTileProps {
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   className?: string;
-  /** Bundle master reference for mirrored child comments (MSP portal only). */
-  bundleMaster?: { ticketId: string; ticketNumber: string | null };
 }
 
 const NO_STATUS_CHANGE = '__no_status_change__';
@@ -331,7 +329,6 @@ export function BentoTimelineTile({
   deleteDraftTicketAttachmentImagesAction,
   resolveTicketAttachmentViewUrl,
   className,
-  bundleMaster,
 }: BentoTimelineTileProps) {
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
@@ -727,7 +724,6 @@ export function BentoTimelineTile({
           onToggleReaction={handleToggleReaction}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
-          bundleMaster={bundleMaster}
         />
       </>
     );

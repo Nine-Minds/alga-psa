@@ -222,6 +222,9 @@ const Comment = {
         ...comment,
         updated_at: new Date().toISOString(),
       };
+      // bundle_mirror_source is read-time provenance from ticket_bundle_mirrors,
+      // not a comments column; strip it so a smuggled payload can never be written.
+      delete (updateData as { bundle_mirror_source?: unknown }).bundle_mirror_source;
 
       logger.info('Updating comment with data:', {
         ...updateData,
