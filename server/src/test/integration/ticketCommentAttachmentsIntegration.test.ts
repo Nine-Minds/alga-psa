@@ -607,7 +607,11 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
     const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
     const storage = vi.spyOn(StorageService, 'downloadFile').mockResolvedValue({ buffer: bytes } as any);
-    const event = { id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId: tenant, ticketId: ticket, actorUserId: actor,
+    // `timestamp` is stamped by the bus (eventBus.ts publishes `{...event, id, timestamp}` and
+    // validates against this same schema), so a TICKET_COMMENT_ADDED reaching a subscriber always
+    // carries one. This harness calls the handler directly, bypassing the bus, so it supplies it.
+    const event = { id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', timestamp: new Date().toISOString(),
+      payload: { tenantId: tenant, ticketId: ticket, actorUserId: actor,
       comment: { id: comment, content, author: 'Agent', isInternal: false } } } as any;
     try {
       const pending = { tenantId: tenant, to: childEmail, subject: 'Pending bundle update', template: 'ticket-comment-added', locale: 'en' as const,

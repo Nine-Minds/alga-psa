@@ -41,6 +41,11 @@ export async function loadEligibleTimeContractLines(
   effectiveDate?: string | Date,
   retain = false
 ): Promise<EligibleContractLine[]> {
+  // No client means no eligible lines. Without this the query below matches on
+  // client_contracts.client_id = '' and returns whatever an empty string joins
+  // to. The guard lived in contractLineDisambiguation before the query moved
+  // here and has to move with it.
+  if (typeof clientId !== 'string' || clientId.trim().length === 0) return [];
   const { rangeStart, rangeEnd } = resolveEffectiveDateRange(effectiveDate);
   const db = tenantDb(knex, tenant);
 

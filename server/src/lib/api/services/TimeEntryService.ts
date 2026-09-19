@@ -23,6 +23,7 @@ import {
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
+import { toCalendarDateString } from '@alga-psa/core';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
@@ -142,10 +143,14 @@ export class TimeEntryService extends BaseService<any> {
     const sheet = owner.table('time_sheets as sheet').where('sheet.id', source.time_sheet_id);
     owner.tenantJoin(sheet, 'time_periods as period', 'sheet.period_id', 'period.period_id');
     const period = await sheet.first('period.start_date', 'period.end_date');
-    const dateOnly = (value: Date | string) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+    // Period bounds are DATEs: pg hydrates them at local midnight, so they are compared as
+    // calendar dates rather than instants. A period missing either bound cannot contain
+    // anything, so it fails closed alongside a missing period.
+    const periodStart = period ? toCalendarDateString(period.start_date) : null;
+    const periodEnd = period ? toCalendarDateString(period.end_date) : null;
     const endDate = computeWorkDateFields(source.end_time, source.work_timezone).work_date;
-    if (!period || source.work_date < dateOnly(period.start_date) || source.work_date >= dateOnly(period.end_date) ||
-      endDate < dateOnly(period.start_date) || endDate >= dateOnly(period.end_date)) throw new ValidationError('Time entry must fall within the time sheet period');
+    if (!periodStart || !periodEnd || source.work_date < periodStart || source.work_date >= periodEnd ||
+      endDate < periodStart || endDate >= periodEnd) throw new ValidationError('Time entry must fall within the time sheet period');
   }
 
   private admittedPersistFields(admission: TimeApiAdmission) {
@@ -157,7 +162,9 @@ export class TimeEntryService extends BaseService<any> {
   private presentAdmittedTime(entry: any, admission: TimeApiAdmission) {
     const item = admission.access!.workItem;
     const minutes = entry.end_time ? Math.max(0, Math.round((new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / 60000)) : 0;
-    return { ...entry, duration_hours: Math.round(minutes / 60 * 100) / 100, is_billable: entry.billable_duration > 0,
+    // `entry` is an `INSERT/UPDATE ... RETURNING *` row, so work_date arrives as a pg-hydrated
+    // Date rather than through workDateProjection. Project it here or the response ships an instant.
+    return { ...entry, work_date: toCalendarDateString(entry.work_date), duration_hours: Math.round(minutes / 60 * 100) / 100, is_billable: entry.billable_duration > 0,
       work_item: { id: entry.work_item_id, type: entry.work_item_type, title: item.name }, work_item_title: item.name };
   }
 
@@ -752,7 +759,8 @@ export class TimeEntryService extends BaseService<any> {
     return this.withTimeErrors(() => stopNativeTimeTracking(knex, this.timeActor(context), sessionId, data, async completion => {
       const { trx, actor, clock, endTime, billingMode, serviceId, notes, billable } = completion;
       const service = new TimeEntryService({ knex: trx, tenant: context.tenant });
-      const startTime = new Date(clock.start_time), workDate = clock.work_date instanceof Date ? clock.work_date.toISOString().slice(0, 10) : clock.work_date;
+      const startTime = new Date(clock.start_time), workDate = toCalendarDateString(clock.work_date);
+      if (!workDate) throw new ValidationError('The running timer has no work date');
       const timeSheetId = await service.getOrCreateTimeSheetForWorkDate(workDate, clock.user_id, context);
       const source = { work_item_id: clock.work_item_id, work_item_type: clock.work_item_type, start_time: startTime,
         end_time: endTime, work_date: workDate, work_timezone: clock.work_timezone, time_sheet_id: timeSheetId };

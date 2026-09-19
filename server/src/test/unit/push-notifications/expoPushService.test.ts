@@ -160,7 +160,7 @@ describe('expoPushService', () => {
       ]);
       mockDeactivateInvalidTokens.mockResolvedValue(undefined);
 
-      const results = await sendPushNotifications(
+      const { results } = await sendPushNotifications(
         [
           { to: 'ExponentPushToken[good]', title: 'T', body: 'B' },
           { to: 'ExponentPushToken[gone]', title: 'T', body: 'B' },
@@ -179,7 +179,7 @@ describe('expoPushService', () => {
     it('names an unreachable Expo service in the outcome', async () => {
       mockSendPushNotificationsAsync.mockRejectedValue(new Error('getaddrinfo ENOTFOUND exp.host'));
 
-      const results = await sendPushNotifications(
+      const { results } = await sendPushNotifications(
         [{ to: 'ExponentPushToken[abc]', title: 'T', body: 'B' }],
         'tenant-1',
       );
@@ -210,12 +210,12 @@ it.each([
 ])('reports provider outcome %j to durable delivery', async (tickets, expected) => {
   mockSendPushNotificationsAsync.mockResolvedValue(tickets);
   mockDeactivateInvalidTokens.mockResolvedValue(undefined);
-  expect(await sendPushNotifications([{ to: 'ExponentPushToken[durable]', title: 'Test', body: 'Current body' }], 'tenant-1')).toEqual(expected);
+  expect((await sendPushNotifications([{ to: 'ExponentPushToken[durable]', title: 'Test', body: 'Current body' }], 'tenant-1')).delivery).toEqual(expected);
 });
 
 it('reports an uncertain provider request as retryable instead of acknowledging the channel', async () => {
   mockSendPushNotificationsAsync.mockRejectedValue(new Error('Connection lost'));
-  expect(await sendPushNotifications([{ to: 'ExponentPushToken[durable]', title: 'Test', body: 'Current body' }], 'tenant-1'))
+  expect((await sendPushNotifications([{ to: 'ExponentPushToken[durable]', title: 'Test', body: 'Current body' }], 'tenant-1')).delivery)
     .toEqual({ status: 'failed', errorCode: 'push_provider_failed', retryable: true });
 });
 

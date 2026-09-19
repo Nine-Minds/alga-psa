@@ -293,6 +293,7 @@ const baseScheduleEntrySchema = z.object({
   assigned_user_ids: z.array(uuidSchema).optional(),
   notes: z.string().nullable().optional(),
   is_private: z.boolean().optional().default(false),
+  is_all_day: z.boolean().optional(),
   recurrence_pattern: z.union([z.string(), z.record(z.unknown())]).nullable().optional()
 });
 

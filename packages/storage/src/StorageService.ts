@@ -486,6 +486,9 @@ export class StorageService {
             // self-deadlock. withCoManagedOperationalTransaction -> withTransaction
             // reuses a supplied trx as a nested frame; a bare pool handle owns a
             // new transaction as before.
+            // LEVERAGE: pattern comanaged-trx-threading — "use the caller's handle if there is one"
+            // is re-derived at ~15 sites in three dialects (`?? knex`, `context.db ??`,
+            // `trx ? work(trx) : withTransaction(knex, work)`). See docs/evidence/co-managed-transaction-audit.md.
             const db = transaction ?? knex;
             const { fileRecord, deletedRecord } = await withCoManagedOperationalTransaction(db, tenant, async trx => {
               const fileRecord = await FileStoreModel.findById(trx, file_id);

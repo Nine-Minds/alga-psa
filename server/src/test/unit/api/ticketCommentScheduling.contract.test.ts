@@ -58,7 +58,13 @@ describe('Ticket comment scheduling contract', () => {
     expect(body).toContain('scheduleBackgroundJobAt(\n            SCHEDULED_COMMENT_JOB,');
     expect(body).toContain('singletonKey: `publish-comment:${comment.comment_id}`');
     expect(body).toContain(".update({ schedule_job_id: scheduled.jobId });");
-    expect(body).toContain("} else {\n        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);");
+    // The durable publication intent is the fallback for tenants whose co-managed
+    // conversation did not take ownership of delivery, and it is reached only on
+    // the non-scheduled branch, so the two paths never both publish.
+    expect(body).toContain("} else if (!retainedByConversation) {\n        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);");
+    // Retention is skipped outright for a scheduled comment: retainCoManagedNativeCommentEvent
+    // only accepts a source whose publish_state is already 'published'.
+    expect(body).toContain('const retainedByConversation = scheduledPublication\n        ? false\n        : await retainNativeConversationEvent(');
 
     const service = readSource('../../../lib/api/services/TicketService.ts');
     expect(service).toContain("const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';");

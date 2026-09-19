@@ -789,7 +789,7 @@ describe('contact-scoped portal enforcement', () => {
       if (table === 'users') return makeUserQuery();
       if (table === 'tickets as t') return filteredTickets(rows);
       return makeChainable([]);
-    }, { raw: vi.fn() })));
+    }, { raw: vi.fn(), isTransaction: true })));
     const { getClientTickets } = await import('./client-tickets');
     const result = await getClientTickets('__status_filter__:all');
     expect((result as any[]).map((ticket) => ticket.ticket_id)).toEqual(scope === 'contact' ? ['own'] : ['own', 'sibling', 'null']);
@@ -806,7 +806,7 @@ describe('contact-scoped portal enforcement', () => {
       if (table === 'users') return makeUserQuery();
       if (table === 'tickets as t' || table === 'tickets') return filteredTickets([{ ticket_id: 'sibling', client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1' }]);
       return makeChainable([]);
-    }, { raw: vi.fn() })));
+    }, { raw: vi.fn(), isTransaction: true })));
     const actions = await import('./client-tickets');
     const result = path === 'detail' ? await actions.getClientTicketDetails('sibling')
       : path === 'documents' ? await actions.getClientTicketDocuments('sibling')

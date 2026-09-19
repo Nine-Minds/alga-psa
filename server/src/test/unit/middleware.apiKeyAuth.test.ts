@@ -65,6 +65,36 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
   });
 
+  it('allows the notification live token API to use browser session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/notifications/live-token')).toBe(true);
+  });
+
+  it('exempts the notification live token exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/notifications')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/notifications/live-token-evil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/notifications/live-token/mint')).toBe(false);
+  });
+
+  it('allows co-managed portal conversation attachment downloads to use the client session', () => {
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/attachment-123')).toBe(true);
+  });
+
+  it('exempts one conversation attachment id only, never a sibling or deeper path', () => {
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/attachment-123/raw')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments-evil/attachment-123')).toBe(false);
+  });
+
+  it('allows meeting artifact downloads to resolve their session or API-key actor in-route', () => {
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts/artifact-123')).toBe(true);
+  });
+
+  it('exempts one meeting artifact id only, never a sibling or deeper path', () => {
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts/artifact-123/content')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts-evil/artifact-123')).toBe(false);
+  });
+
   it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);

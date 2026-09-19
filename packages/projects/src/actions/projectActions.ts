@@ -1559,6 +1559,9 @@ export const createProject = withAuth(async (
         };
 
         // Execute using external transaction if provided, otherwise create a new one
+        // LEVERAGE: pattern comanaged-trx-threading — same rule again, and note the reads
+        // above (checkPermission, getProjectStatusesInternal) still run on the pool rather
+        // than on externalTrx; no caller passes options.trx today, so it is latent.
         const fullProject = externalTrx
             ? await createProjectInTransaction(externalTrx)
             : await withTransaction(knex, createProjectInTransaction);

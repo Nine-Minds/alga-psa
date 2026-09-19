@@ -50,7 +50,7 @@ async function readNativeTimeEntry(trx: Knex.Transaction, actor: CoManagedAuthen
     const result: any = { ...entry, date: new Date(entry.start_time), duration_hours: Math.round(minutes / 60 * 100) / 100, elapsed_minutes: minutes,
       is_billable: entry.billable_duration > 0, workItem: { ...access.workItem, is_billable: entry.billable_duration > 0 } };
     for (const field of ['start_time', 'end_time', 'created_at', 'updated_at']) result[field] = new Date(entry[field]).toISOString();
-    result.work_date = entry.work_date instanceof Date ? entry.work_date.toISOString().slice(0, 10) : entry.work_date;
+    result.work_date = toCalendarDateString(entry.work_date);
     const financial = new Set(['service_id', 'tax_region', 'tax_rate_id', 'tax_percentage', 'contract_line_id', 'contract_line_source', 'contract_line_unresolved_reason', 'billable_duration', 'is_billable', 'invoiced']);
     for (const field of Object.keys(entry)) if (hidden([field, ...(financial.has(field) ? ['billing'] : [])])) result[field] = field === 'notes' ? '' : null;
     if (hidden(['billing', 'billable_duration', 'is_billable'])) { result.is_billable = null; delete result.workItem.is_billable; }

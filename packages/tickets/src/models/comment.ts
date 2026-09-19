@@ -220,6 +220,14 @@ const Comment = {
             });
         }
 
+        // Claim the note's attachment drafts inside the insert's own transaction, so a
+        // comment is never visible without the files it references. Callers that build a
+        // comment through this model (commentActions.addCommentToTicket among them) rely
+        // on the model for this; only a few action paths reconcile again themselves, and
+        // reconciliation is idempotent. A foreign collaboration author carries no local
+        // user_id, so the claiming actor is the collaboration actor.
+        await reconcileCommentAttachments(trx, tenant, inserted.comment_id, comment.user_id ?? collaboration?.actorUserId ?? '');
+
         return inserted.comment_id as string;
       } catch (error) {
         logger.error('Error inserting comment:', error);
@@ -254,7 +262,7 @@ const Comment = {
     });
   },
 
-  update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>): Promise<void> => {
+  update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>, actorId?: string): Promise<void> => {
     return withCoManagedOperationalTransaction(knexOrTrx, tenant, async trx => {
       try {
         // Get existing comment first
@@ -320,6 +328,10 @@ const Comment = {
         await tenantScopedTable<IComment>(trx, 'comments', tenant)
           .where('comment_id', id)
           .update(updateData);
+
+        // An edited note can add or remove file references, so the claims must be
+        // re-derived from the new note in the same transaction as the edit.
+        if (comment.note !== undefined) await reconcileCommentAttachments(trx, tenant, id, actorId || existingComment.user_id || '');
       } catch (error) {
         console.error(`Error updating comment with id ${id}:`, error);
         throw error;
@@ -341,6 +353,11 @@ const Comment = {
 
         if ((existingComment as any).actor_reference_id) throw new Error('Qualified comment authors require a collaboration command');
         await assertCommentThreadAudience(trx, tenant, existingComment.thread_id!, {});
+
+        // Release the attachment claims before the comment is tombstoned: the row that
+        // grants read access is keyed on the comment, so leaving it attached would keep
+        // a deleted comment's files readable.
+        await withdrawCommentAttachments(trx, tenant, id);
 
         await tenantScopedTable(trx, 'comments', tenant).where('comment_id', id).forUpdate().first();
         await assertCoManagedOperationalWrite(trx, tenant);

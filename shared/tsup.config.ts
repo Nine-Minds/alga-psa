@@ -1,4 +1,19 @@
 import { defineConfig } from 'tsup';
+import { readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+/** Entry map for every buildable module directly under billingClients/. */
+function billingClientEntries(): Record<string, string> {
+  return Object.fromEntries(
+    readdirSync(join(here, 'billingClients'), { withFileTypes: true })
+      .filter(e => e.isFile() && e.name.endsWith('.ts') && !e.name.endsWith('.d.ts') && !e.name.includes('.test.'))
+      .map(e => e.name.slice(0, -3))
+      .map(name => [`billingClients/${name}`, `billingClients/${name}.ts`]),
+  );
+}
 
 export default defineConfig({
   entry: {
@@ -17,6 +32,7 @@ export default defineConfig({
     'utils/encryption': 'utils/encryption.ts',
     'utils/retryUtils': 'utils/retryUtils.ts',
     'utils/tenantSlug': 'utils/tenantSlug.ts',
+    'utils/appointmentDateTime': 'utils/appointmentDateTime.ts',
     'services/email/microsoftEmailProviderConfig': 'services/email/microsoftEmailProviderConfig.ts',
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',
     'services/diagnostics/index': 'services/diagnostics/index.ts',
@@ -72,18 +88,15 @@ export default defineConfig({
     'extensions/installs': 'extensions/installs.ts',
     'extensions/types': 'extensions/types.ts',
     'billingClients/resolveFixedLineRate': 'billingClients/resolveFixedLineRate.ts',
-    'billingClients/index': 'billingClients/index.ts',
-    // packages/jobs runs vitest from its own root, so this resolves through the
-    // exports map into dist/ rather than being transpiled from source the way
-    // the Next-built consumers are. Without an entry it is "Cannot find
-    // package" at test time.
-    'billingClients/hourBlockService': 'billingClients/hourBlockService.ts',
-    'billingClients/timeEntryWorkBillingContext': 'billingClients/timeEntryWorkBillingContext.ts',
-    'billingClients/bucketUsageService': 'billingClients/bucketUsageService.ts',
-    'billingClients/bucketUsageErrors': 'billingClients/bucketUsageErrors.ts',
-    'billingClients/weightedBurn': 'billingClients/weightedBurn.ts',
-    'billingClients/drawAdjustments': 'billingClients/drawAdjustments.ts',
-    'billingClients/templateClone': 'billingClients/templateClone.ts',
+    // Whole directory, not a hand-picked list. Every module under
+    // billingClients/ is reachable as a public subpath (package.json maps
+    // ./billingClients/* -> ./dist/billingClients/*.js), and consumers that
+    // resolve through the exports map rather than being transpiled from source
+    // -- packages/jobs' vitest run, the plain-Node workflow and temporal
+    // workers, packages/co-managed's dist build -- get "Cannot find package"
+    // for anything missing here. Enumerating by hand meant every new
+    // billingClients module was one more chance to forget.
+    ...billingClientEntries(),
     'lib/boardTicketDefaults': 'lib/boardTicketDefaults.ts',
     'lib/commentAudience': 'lib/commentAudience.ts',
     'lib/quoteTerms': 'lib/quoteTerms.ts',

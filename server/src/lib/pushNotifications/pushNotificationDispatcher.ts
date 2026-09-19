@@ -78,7 +78,9 @@ export async function triggerPushForNotification(
       priority,
       deviceCount: tokens.length,
     });
-    return;
+    // 'skipped', not 'failed': no device here will ever qualify for this
+    // priority, so a retryable failure would requeue the notification forever.
+    return { status: 'skipped', reason: 'below_priority_threshold' };
   }
 
   const messages = eligible.map((t) =>

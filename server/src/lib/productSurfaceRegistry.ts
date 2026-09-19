@@ -164,8 +164,10 @@ export const API_RULES: readonly ApiRule[] = [
     staticPrefixes: [
       '/api/v1/email/templates',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: true, algadesk: false },
+    // co_managed matches the adjacent PSA-only API rules: a co-managed tenant
+    // does not administer the sponsoring MSP's notification templates.
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: true, algadesk: false, co_managed: false },
   },
   {
     group: 'api_helpdesk_allowed',

@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
-import { applyVisibilityBoardFilter } from '@alga-psa/tickets/lib';
+import { applyTicketVisibilityFilter } from '@alga-psa/tickets/lib';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired,
   listPublishedCoManagedAttachments, readPublishedCoManagedAttachment, type CoManagedSessionActor, type CoManagedAttachmentReadContext } from '@alga-psa/co-managed';
 
@@ -31,7 +31,8 @@ async function withPortalComment<T>(db: Knex, inputActor: CoManagedSessionActor,
     if (!contact || contact.is_inactive === true) deny();
     const visibility = await getClientContactVisibilityContext(trx, actor.tenant, user.contact_id, { lock: true });
     if (!await owner.table('tickets as t').where({ 't.ticket_id': ticketId, 't.client_id': visibility.clientId })
-      .modify(query => applyVisibilityBoardFilter(query, visibility.visibleBoardIds)).forShare().first('t.ticket_id')) deny();
+      .modify(query => applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' }))
+      .forShare().first('t.ticket_id')) deny();
     const query = owner.table('comments as c').where({ 'c.ticket_id': ticketId, 'c.thread_id': threadId, 'c.comment_id': commentId });
     owner.tenantJoin(query, 'comment_threads as t', 'c.thread_id', 't.thread_id', { on: join => join.andOn('t.ticket_id', '=', 'c.ticket_id') });
     owner.tenantJoin(query, 'comments as root', 't.root_comment_id', 'root.comment_id', { on: join => join.andOn('root.ticket_id', '=', 'c.ticket_id').andOn('root.thread_id', '=', 't.thread_id') });

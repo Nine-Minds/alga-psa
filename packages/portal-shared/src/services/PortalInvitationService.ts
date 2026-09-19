@@ -434,6 +434,8 @@ export class PortalInvitationService {
       };
 
       // If transaction provided, use it; otherwise create a new one with withTransaction
+      // LEVERAGE: pattern comanaged-trx-threading — identical to PasswordResetService and
+      // UserInvitationService cleanupExpiredTokens.
       return trx ? cleanup(trx) : withTransaction(knex, cleanup);
 
     } catch (error) {
