@@ -440,7 +440,17 @@ type TicketCreateRowContext = {
  * field together with the reason.
  */
 type TicketCreateFieldHandling =
-  | { kind: 'column'; column: InputDrivenTicketColumn }
+  | {
+      kind: 'column';
+      column: InputDrivenTicketColumn;
+      /**
+       * When true, only `null`/`undefined` become SQL NULL (`??`); an empty
+       * string is preserved so it reaches validation and the insert exactly
+       * as supplied. The default keeps the model's existing `||` "unset"
+       * semantics for the other nullable string columns.
+       */
+      nullish?: boolean;
+    }
   | {
       kind: 'resolve';
       build: (ctx: TicketCreateRowContext) => Partial<Record<InputDrivenTicketColumn, unknown>>;
@@ -489,10 +499,10 @@ const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]-?: TicketCr
     }),
   },
   attributes: { kind: 'resolve', build: ({ attributes }) => ({ attributes }) },
-  url: { kind: 'column', column: 'url' },
-  severity_id: { kind: 'column', column: 'severity_id' },
-  urgency_id: { kind: 'column', column: 'urgency_id' },
-  impact_id: { kind: 'column', column: 'impact_id' },
+  url: { kind: 'column', column: 'url', nullish: true },
+  severity_id: { kind: 'column', column: 'severity_id', nullish: true },
+  urgency_id: { kind: 'column', column: 'urgency_id', nullish: true },
+  impact_id: { kind: 'column', column: 'impact_id', nullish: true },
   updated_by: { kind: 'excluded', reason: 'create leaves updated_by unset; set on update' },
   closed_by: { kind: 'excluded', reason: 'tickets are created open' },
   itil_impact: { kind: 'column', column: 'itil_impact' },
@@ -512,8 +522,11 @@ type TicketCreateRowBase = {
 
 /**
  * Assembles the insert row from the generated base columns plus every
- * input-driven column named by `CREATE_TICKET_FIELD_HANDLING`. Values use
- * `|| null` so an empty string keeps the model's existing "unset" semantics.
+ * input-driven column named by `CREATE_TICKET_FIELD_HANDLING`. Columns use
+ * `|| null` by default so an empty string keeps the model's existing "unset"
+ * semantics; the `nullish` flag switches a column to `?? null`, preserving a
+ * supplied empty string so final validation (UUID, etc.) can reject it
+ * instead of silently turning it into NULL.
  */
 export function buildTicketCreateRow(
   base: TicketCreateRowBase,
@@ -525,7 +538,9 @@ export function buildTicketCreateRow(
     const handling = CREATE_TICKET_FIELD_HANDLING[key];
     switch (handling.kind) {
       case 'column':
-        row[handling.column] = ctx.cleanedInput[key] || null;
+        row[handling.column] = handling.nullish
+          ? ctx.cleanedInput[key] ?? null
+          : ctx.cleanedInput[key] || null;
         break;
       case 'resolve':
         Object.assign(row, handling.build(ctx));

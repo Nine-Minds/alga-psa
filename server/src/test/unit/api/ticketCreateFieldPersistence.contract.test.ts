@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 
 import {
   buildTicketCreateRow,
@@ -8,6 +6,8 @@ import {
   validateData,
 } from '@alga-psa/shared/models/ticketModel';
 import { createTicketSchema, updateTicketSchema } from '../../../lib/api/schemas/ticket';
+import { createRegistry } from '../../../lib/api/openapi/registry';
+import { registerWorkManagementV1Routes } from '../../../lib/api/openapi/routes/workManagementV1';
 
 const UUID = {
   ticket: '11111111-1111-4111-8111-111111111111',
@@ -58,6 +58,44 @@ describe('shared ticket create row mapping', () => {
     expect(row.severity_id).toBeNull();
     expect(row.urgency_id).toBeNull();
     expect(row.impact_id).toBeNull();
+  });
+
+  it('preserves supplied empty strings for the four create fields through the row map', () => {
+    const row = buildTicketCreateRow(BASE, {
+      cleanedInput: {
+        title: 'Empty supplied values',
+        url: '',
+        severity_id: '',
+        urgency_id: '',
+        impact_id: '',
+      },
+      resolvedBillingProfileId: null,
+      attributes: null,
+    });
+
+    // `nullish` handling: only null/undefined become SQL NULL, so the empty
+    // values survive to final validation instead of silently persisting null.
+    expect(row.url).toBe('');
+    expect(row.severity_id).toBe('');
+    expect(row.urgency_id).toBe('');
+    expect(row.impact_id).toBe('');
+  });
+
+  it('keeps empty-string-to-null normalization for other nullable columns', () => {
+    const row = buildTicketCreateRow(BASE, {
+      cleanedInput: {
+        title: 'Other nullable columns',
+        location_id: '',
+        assigned_to: '',
+        assigned_team_id: '',
+      },
+      resolvedBillingProfileId: null,
+      attributes: null,
+    });
+
+    expect(row.location_id).toBeNull();
+    expect(row.assigned_to).toBeNull();
+    expect(row.assigned_team_id).toBeNull();
   });
 
   it('ignores arbitrary input keys so generated and non-input columns cannot be supplied', () => {
@@ -116,6 +154,17 @@ describe('shared ticket schema retention', () => {
     expect(parsed.urgency_id).toBe(UUID.urgency);
     expect(parsed.impact_id).toBe(UUID.impact);
   });
+
+  it('rejects an empty classification string rather than persisting it as null', () => {
+    const row = buildTicketCreateRow(BASE, {
+      cleanedInput: { title: 'Empty severity', severity_id: '' },
+      resolvedBillingProfileId: null,
+      attributes: null,
+    });
+
+    expect(row.severity_id).toBe('');
+    expect(() => validateData(ticketSchema.partial(), row)).toThrow(/severity_id/);
+  });
 });
 
 describe('REST create/update schema retention', () => {
@@ -162,23 +211,51 @@ describe('REST create/update schema retention', () => {
   });
 });
 
-describe('REST service forwarding contract', () => {
-  const serviceSource = readFileSync(
-    resolve(__dirname, '../../../lib/api/services/TicketService.ts'),
-    'utf8',
-  );
+describe('OpenAPI create body contract', () => {
+  const registry = createRegistry();
+  registerWorkManagementV1Routes(registry);
+  const document = registry.buildDocument({
+    title: 'Ticket create OpenAPI contract',
+    version: '1.0.0',
+    edition: 'ce',
+  });
+  const createBody = (document.components?.schemas as Record<string, any> | undefined)
+    ?.WorkV1CreateTicketBody;
+  const requiredRuntimeFields = {
+    title: 'API create',
+    board_id: UUID.tenant,
+    client_id: UUID.tenant,
+    status_id: UUID.tenant,
+    priority_id: UUID.tenant,
+  };
 
-  it('forwards url and the three classification UUIDs into the shared create input', () => {
-    const start = serviceSource.indexOf('const createTicketInput: CreateTicketInput = {');
-    const end = serviceSource.indexOf('};', start);
+  it('declares url as a non-nullable format=uri string matching createTicketSchema', () => {
+    const urlSchema = createBody?.properties?.url;
+    expect(urlSchema).toMatchObject({ type: 'string', format: 'uri' });
 
-    expect(start).toBeGreaterThanOrEqual(0);
-    expect(end).toBeGreaterThan(start);
+    // Runtime contract the declaration must mirror: omit or valid URL passes,
+    // null is rejected.
+    expect(createTicketSchema.safeParse(requiredRuntimeFields).success).toBe(true);
+    expect(
+      createTicketSchema.safeParse({ ...requiredRuntimeFields, url: UUID.url }).success,
+    ).toBe(true);
+    expect(
+      createTicketSchema.safeParse({ ...requiredRuntimeFields, url: null }).success,
+    ).toBe(false);
 
-    const createInput = serviceSource.slice(start, end);
-    expect(createInput).toContain('url: data.url');
-    expect(createInput).toContain('severity_id: data.severity_id');
-    expect(createInput).toContain('urgency_id: data.urgency_id');
-    expect(createInput).toContain('impact_id: data.impact_id');
+    expect(urlSchema.type).not.toContain('null');
+    expect(urlSchema.anyOf).toBeUndefined();
+    expect(String(urlSchema.description ?? '')).not.toMatch(/http\(s\)/i);
+  });
+
+  it('declares the three classification refs as optional, non-nullable UUIDs', () => {
+    expect(
+      createTicketSchema.safeParse({ ...requiredRuntimeFields, severity_id: null }).success,
+    ).toBe(false);
+
+    for (const key of ['severity_id', 'urgency_id', 'impact_id'] as const) {
+      expect(createBody?.properties?.[key]).toMatchObject({ type: 'string', format: 'uuid' });
+      expect(createBody?.required ?? []).not.toContain(key);
+    }
   });
 });

@@ -337,4 +337,56 @@ describe('Ticket create field persistence integration', () => {
     const tickets = await tenantTable(fixture.tenantId, 'tickets');
     expect(tickets).toHaveLength(0);
   }, HOOK_TIMEOUT);
+
+  it('rejects an empty classification string through the shared create path and leaves no ticket', async () => {
+    const fixture = await createFixture();
+
+    await expect(
+      db.transaction(async (trx) => {
+        await TicketModel.createTicket(
+          {
+            title: 'Empty classification',
+            client_id: fixture.clientId,
+            board_id: fixture.boardId,
+            status_id: fixture.statusId,
+            priority_id: fixture.priorityId,
+            entered_by: fixture.userId,
+            severity_id: '',
+          },
+          fixture.tenantId,
+          trx,
+        );
+      }),
+    ).rejects.toThrow(/severity_id/);
+
+    const tickets = await tenantTable(fixture.tenantId, 'tickets');
+    expect(tickets).toHaveLength(0);
+  }, HOOK_TIMEOUT);
+
+  it('keeps a supplied empty url consistent between the return value and the stored row', async () => {
+    const fixture = await createFixture();
+
+    const created = await db.transaction(async (trx) => {
+      return TicketModel.createTicket(
+        {
+          title: 'Empty url',
+          client_id: fixture.clientId,
+          board_id: fixture.boardId,
+          status_id: fixture.statusId,
+          priority_id: fixture.priorityId,
+          entered_by: fixture.userId,
+          url: '',
+        },
+        fixture.tenantId,
+        trx,
+      );
+    });
+
+    expect(created.url).toBe('');
+
+    const stored = await tenantTable(fixture.tenantId, 'tickets')
+      .where({ ticket_id: created.ticket_id })
+      .first('url');
+    expect(stored.url).toBe('');
+  }, HOOK_TIMEOUT);
 });
