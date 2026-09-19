@@ -50,6 +50,17 @@ export async function checkInternalUserLicenseLimit(
       else await trx.transaction(inner => assertCoManagedSeatAdmission(inner, tenant, options));
       return { ok: true };
     } catch (error) {
+      // LEVERAGE: friction admission-message-catalogue — CoManagedAdmissionError
+      // carries six distinct, user-facing reasons as English strings in
+      // packages/licensing, outside server/public/locales. There is no code here
+      // that a UI dictionary could map to a translated string, so this collapses
+      // all six onto LICENSE_LIMIT_REACHED and every screen prints "You've reached
+      // your MSP user license limit" — the wrong limit and the wrong remedy. The
+      // real message survives in `error` and every call site already passes it as
+      // i18next's defaultValue, but the code decides which key wins. Fixing it
+      // properly means moving those six messages into the locale catalogue across
+      // ten locales; recorded as a value-blocking blocker on PR #3363 rather than
+      // smuggled in here.
       if (error instanceof CoManagedAdmissionError) return { ok: false, code: 'LICENSE_LIMIT_REACHED', error: error.message };
       throw error;
     }
