@@ -398,6 +398,20 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       { type: 'ticket', table: 'tickets', foreignKey: 'assigned_to', label: 'assigned ticket' },
       { type: 'time_entry', table: 'time_entries', foreignKey: 'user_id', label: 'time entry' },
       { type: 'time_sheet', table: 'time_sheets', foreignKey: 'user_id', label: 'time sheet' },
+      // native_time_tracking_sessions.native_timer_user_fk references users(tenant, user_id)
+      // with no ON DELETE, and the row outlives the clock: stopNativeTimeTracking stamps
+      // completed_entry_id/stopped_at rather than deleting, and the
+      // preserve_native_time_tracking_session trigger makes that receipt immutable. Without
+      // this entry a user who ever ran a timer passes validation and then dies on the final
+      // users DELETE with a raw 23503, surfacing as "Failed to delete user" with no
+      // dependencies listed. Blocking is the right semantic -- the receipt is deliberate
+      // evidence, so it must be refused the way time_entries already is, not cascaded away.
+      {
+        type: 'time_tracking_session',
+        table: 'native_time_tracking_sessions',
+        foreignKey: 'user_id',
+        label: 'time tracking session'
+      },
       { type: 'comment', table: 'comments', foreignKey: 'user_id', label: 'comment' },
       { type: 'interaction', table: 'interactions', foreignKey: 'user_id', label: 'interaction' },
       { type: 'project_task', table: 'project_tasks', foreignKey: 'assigned_to', label: 'assigned project task' },
