@@ -19,6 +19,15 @@ describe('development launch wiring', () => {
     expect(pkg.scripts.dev).not.toContain('next:dev');
   });
 
+  it('routes dev:turbo through the custom dev entrypoint too', () => {
+    const pkg = JSON.parse(
+      readFileSync(path.join(serverDir, 'package.json'), 'utf8'),
+    ) as { scripts: Record<string, string> };
+
+    expect(pkg.scripts['dev:turbo']).toContain('dev-server.ts');
+    expect(pkg.scripts['dev:turbo']).not.toContain('next:dev');
+  });
+
   it('wires the real upgrade handler with HMR delegation in the dev entrypoint', () => {
     const source = readFileSync(
       path.join(serverDir, 'dev-server.ts'),

@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { createRequire } from 'node:module';
+import type { Socket } from 'node:net';
 import { pathToFileURL } from 'node:url';
 import {
   attachNextUpgradeHandler,
@@ -15,6 +16,7 @@ type CreateNext = (options: Record<string, unknown>) => NextUpgradeApp & {
     req: http.IncomingMessage,
     res: http.ServerResponse,
   ) => Promise<unknown>;
+  close?: () => Promise<void>;
 };
 const createNext = require('next') as CreateNext;
 
@@ -42,6 +44,13 @@ export interface DevServerOptions {
   /** Next project directory; defaults to this file's directory (`server/`). */
   dir?: string;
   delegateHmrToNext?: boolean;
+  /** Hocuspocus upstream; falls back to HOCUSPOCUS_HOST/PORT when omitted. */
+  hocuspocusHost?: string;
+  hocuspocusPort?: string | number;
+  /** Enable Turbopack (mirrors `next dev --turbo`). */
+  turbopack?: boolean;
+  /** Force the Webpack dev bundler; mainly for isolated fixture servers. */
+  webpack?: boolean;
 }
 
 export interface RunningDevServer {
@@ -58,18 +67,34 @@ export async function startDevServer(
   const port = options.port ?? Number.parseInt(process.env.PORT || '3000', 10);
   const hostname = options.hostname ?? process.env.HOSTNAME ?? '0.0.0.0';
   const dir = options.dir ?? import.meta.dirname;
+  const turbopack = options.turbopack ?? process.env.DEV_TURBOPACK === '1';
 
-  const app = createNext({ dev: true, hostname, port, dir });
+  const app = createNext({
+    dev: true,
+    hostname,
+    port,
+    dir,
+    ...(turbopack ? { turbopack: true } : {}),
+    ...(options.webpack ? { webpack: true } : {}),
+  });
   await app.prepare();
 
   const handle = app.getRequestHandler();
   const server = http.createServer((req, res) => handle(req, res));
 
+  // Track every TCP connection (including upgraded sockets, which leave the
+  // HTTP server's own accounting) so teardown can close them deterministically.
+  const sockets = new Set<Socket>();
+  server.on('connection', (socket: Socket) => {
+    sockets.add(socket);
+    socket.once('close', () => sockets.delete(socket));
+  });
+
   const nextApp = app as unknown as NextUpgradeApp;
   attachNextUpgradeHandler(server, nextApp, {
     delegateHmrToNext: options.delegateHmrToNext ?? true,
-    hocuspocusHost: process.env.HOCUSPOCUS_HOST,
-    hocuspocusPort: process.env.HOCUSPOCUS_PORT,
+    hocuspocusHost: options.hocuspocusHost ?? process.env.HOCUSPOCUS_HOST,
+    hocuspocusPort: options.hocuspocusPort ?? process.env.HOCUSPOCUS_PORT,
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -90,7 +115,7 @@ export async function startDevServer(
   const actualPort =
     typeof address === 'object' && address ? address.port : port;
   console.log(
-    `[dev-server] ready on http://${hostname}:${actualPort} (custom upgrade handler active)`,
+    `[dev-server] ready on http://${hostname}:${actualPort}${turbopack ? ' (turbopack)' : ''} (custom upgrade handler active)`,
   );
 
   return {
@@ -98,10 +123,23 @@ export async function startDevServer(
     server,
     port: actualPort,
     hostname,
-    close: () =>
-      new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-      }),
+    close: async () => {
+      // Close Next's own resources first, then upgraded sockets, then the
+      // listener. `server.close()` never closes sockets upgraded out of it, so
+      // without the explicit destroy the test/process would hang.
+      await app.close?.().catch(() => undefined);
+      for (const socket of sockets) socket.destroy();
+      sockets.clear();
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => {
+          if (error && (error as NodeJS.ErrnoException).code !== 'ERR_SERVER_NOT_RUNNING') {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      });
+    },
   };
 }
 

@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx tsx dev-server.ts",
-    "dev:turbo": "cd .. && npx nx build-deps server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx nx next:dev server -- --turbo",
+    "dev:turbo": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development DEV_TURBOPACK=1 npx tsx dev-server.ts",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
     "ngrok:start": "ngrok http 3000 --subdomain=alga-psa-dev",
