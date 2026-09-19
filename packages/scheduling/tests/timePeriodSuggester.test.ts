@@ -51,8 +51,10 @@ describe('TimePeriodSuggester', () => {
     const result = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
     expect(result.success).toBe(true);
     expect(result.data?.start_date).toBe('2026-02-01');
-    // Code uses half-open intervals; first period ends at end_day + 1 day.
-    expect(result.data?.end_date).toBe('2026-02-17');
+    // Half-open intervals with an exclusive end_day: the period runs
+    // [start_day, end_day), so a sibling profile starting on end_day tiles
+    // against it without overlap. See endOfConfiguredTimePeriod.
+    expect(result.data?.end_date).toBe('2026-02-16');
   });
 
   test('returns an error when no applicable setting matches', () => {

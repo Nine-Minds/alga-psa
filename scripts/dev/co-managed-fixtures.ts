@@ -335,10 +335,17 @@ async function munchkinWorkspace(trx: Knex.Transaction, runOnboardingSeeds: RunO
   });
   await ensure(trx, 'tenant_email_settings', { tenant: MUNCHKIN },
     { email_provider: 'resend', fallback_enabled: true, tracking_enabled: false, created_at: CREATED, updated_at: CREATED });
-  await put(trx, 'tenant_settings', ['tenant'], {
-    tenant: MUNCHKIN, onboarding_completed: true, onboarding_completed_at: CREATED, onboarding_skipped: false,
-    settings: JSON.stringify({ timezone: 'UTC' }), created_at: CREATED, updated_at: CREATED,
-  });
+  // Both customer workspaces must be past onboarding. MspLayoutClient forces
+  // /msp/onboarding whenever onboarding_completed and onboarding_skipped are
+  // both false, so a customer tenant without this row cannot reach ANY MSP
+  // screen -- which silently made every customer-side journey step
+  // unperformable for White Rabbit while Munchkin worked.
+  for (const customer of [MUNCHKIN, RABBIT]) {
+    await put(trx, 'tenant_settings', ['tenant'], {
+      tenant: customer, onboarding_completed: true, onboarding_completed_at: CREATED, onboarding_skipped: false,
+      settings: JSON.stringify({ timezone: 'UTC' }), created_at: CREATED, updated_at: CREATED,
+    });
+  }
   // Surrogate keys are derived rather than defaulted to gen_random_uuid(), so
   // these rows are byte-stable across a reset-and-reapply cycle.
   for (const [settings, catalogue, catalogueKey, key, surrogate] of [
