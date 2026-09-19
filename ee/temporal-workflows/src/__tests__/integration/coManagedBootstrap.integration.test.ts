@@ -67,6 +67,11 @@ vi.mock('@alga-psa/email', () => ({
   sendTeamInvitationEmail: delivery.send,
   SystemEmailProviderFactory: { createProvider: statusEmail.create },
   resolveTenantCompanyName: async () => 'Customer IT',
+  // Main's brand-logo embedder, which the status-update mail now runs through.
+  // Its own contract is that a logo is never a reason to lose the mail, so the
+  // double returns sendable HTML and no attachments -- the same result the real
+  // one produces for HTML carrying no brand-logo marker.
+  embedBrandLogo: async (html: string) => ({ html, attachments: [] }),
 }));
 vi.mock('@alga-psa/analytics', () => ({ ServerAnalyticsTracker: class {
   async trackTicketCreated() {}
@@ -6189,10 +6194,10 @@ it('recovers committed channels through the scheduled server job handler without
   await persist(db, event);
   expect(await sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(6);
   const { coManagedNotificationRecoveryJobHandler } = await import('../../../../../server/src/lib/jobs/handlers/coManagedNotificationRecoveryHandler');
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 6, processed: 6 } });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, workflowEmails: { examined: 0, processed: 0 }, routingNotifications: { examined: 0, processed: 0 }, routingEmails: { examined: 0, processed: 0 }, notifications: { examined: 6, processed: 6 } });
   expect(observed).toHaveLength(2); expect(observed.every(item => item.committed)).toBe(true);
   expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 0, processed: 0 } });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, workflowEmails: { examined: 0, processed: 0 }, routingNotifications: { examined: 0, processed: 0 }, routingEmails: { examined: 0, processed: 0 }, notifications: { examined: 0, processed: 0 } });
 }));
 
 it('honors preferences changed after queue creation without hiding the already authorized inbox history', async () => withInAppCommentFixture(async ({

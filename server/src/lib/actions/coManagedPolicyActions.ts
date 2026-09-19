@@ -26,6 +26,22 @@ function policySelection(input?: string | CoManagedManagementSelector): CoManage
   return input;
 }
 
+/** The management layer denies with CoManagedSharedWorkError. These actions
+ * publish a CoManagedPolicyError contract, so every call into that layer
+ * translates rather than leaking a second error shape — and a different code —
+ * to the policy UI. Wrapping only the target resolution was not enough: the
+ * sponsor-entry lookup below reaches the same layer, so an unqualified sponsor
+ * screen denied there answered CO_MANAGED_SHARED_WORK_FORBIDDEN while every
+ * other refusal on this surface answered FORBIDDEN. */
+async function asPolicyContract<T>(work: () => Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (error instanceof CoManagedSharedWorkError) throw new CoManagedPolicyError('FORBIDDEN');
+    throw error;
+  }
+}
+
 /** Customer identity comes from home; MSP discovery binds the authorized local
  * client to its exact qualified relationship through the shared selector. */
 async function resolveTarget(db: Knex, actor: CoManagedSessionActor, selection: CoManagedPolicySelectorInput) {
@@ -39,19 +55,11 @@ async function resolveTarget(db: Knex, actor: CoManagedSessionActor, selection: 
     return { side: 'sponsor' as const, target: { customerTenant: operation.customer_tenant as string, relationshipId: operation.relationship_id as string },
       otherTenant: operation.customer_tenant as string };
   }
-  // The management layer denies with CoManagedSharedWorkError. These actions
-  // publish a CoManagedPolicyError contract, so translate rather than leaking a
-  // second error shape (and a different code) to the policy UI.
   // Annotated rather than inferred: an implicit `any` here widened `side` to
   // `any` in this action's return type, which made the sponsor screen
   // indistinguishable from the workspace-choice branch for callers.
   let resolution: Awaited<ReturnType<typeof resolveCoManagedManagementTarget>>;
-  try {
-    resolution = await resolveCoManagedManagementTarget(db, actor, selection);
-  } catch (error) {
-    if (error instanceof CoManagedSharedWorkError) throw new CoManagedPolicyError('FORBIDDEN');
-    throw error;
-  }
+  resolution = await asPolicyContract(() => resolveCoManagedManagementTarget(db, actor, selection));
   if (resolution.kind !== 'resolved') throw new CoManagedPolicyError('FORBIDDEN');
   return { side: resolution.target.side, target: { customerTenant: resolution.target.customerTenant, relationshipId: resolution.target.relationshipId },
     otherTenant: resolution.target.otherTenant };
@@ -62,7 +70,7 @@ async function resolveTarget(db: Knex, actor: CoManagedSessionActor, selection: 
  * instead of collapsing a recoverable ambiguity into FORBIDDEN. */
 async function qualify(db: Knex, actor: CoManagedSessionActor, target?: string | CoManagedManagementSelector) {
   if (target !== undefined && target !== null) return { target };
-  const entry = await coManagedSponsorEntry(db, actor);
+  const entry = await asPolicyContract(() => coManagedSponsorEntry(db, actor));
   if (!entry) return { target };
   if (entry.side === 'directory') return { directory: entry };
   return { target: entry.operationId };
