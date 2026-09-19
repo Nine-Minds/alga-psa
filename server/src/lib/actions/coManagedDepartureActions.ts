@@ -6,6 +6,7 @@ import { departCoManagedRelationship, getCoManagedDepartureScreen, CoManagedShar
   type CoManagedDepartureRequest, type CoManagedDepartureQualifiedTarget } from '@alga-psa/co-managed';
 import { resolveCoManagedManagementTarget, type CoManagedManagementSelector } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
+import { coManagedSponsorEntry } from '../co-managed/sponsorWorkspaceDirectory';
 
 /** A legacy provisioning operation ID is a compatibility selector; an explicit
  * customer-home or sponsor-client selector resolves the same qualified target. */
@@ -22,8 +23,16 @@ async function resolveQualifiedTarget(knex: Awaited<ReturnType<typeof createTena
 
 export const getCoManagedDepartureScreenAction = withAuth(async (user, { tenant }, input?: string | CoManagedManagementSelector) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
-  return getCoManagedDepartureScreen(knex, actor, typeof input === 'string' ? input : undefined,
-    await resolveQualifiedTarget(knex, actor, input));
+  // A sponsor that named no workspace has no customer home to depart from.
+  // Offer the same choice the policy and SLA screens offer rather than throwing.
+  let qualified = input;
+  if (qualified === undefined) {
+    const entry = await coManagedSponsorEntry(knex, actor);
+    if (entry?.side === 'directory') return entry;
+    if (entry?.side === 'operation') qualified = entry.operationId;
+  }
+  return getCoManagedDepartureScreen(knex, actor, typeof qualified === 'string' ? qualified : undefined,
+    await resolveQualifiedTarget(knex, actor, qualified));
 });
 
 export const departCoManagedRelationshipAction = withAuth(async (user, { tenant }, input: CoManagedDepartureRequest & { selector?: CoManagedManagementSelector }) => {

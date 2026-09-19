@@ -983,7 +983,11 @@
       "selfHost": "This allocation exceeds verified self-host capacity. Update the signed license, then refresh.",
       "unavailable": "Hosted co-managed purchasing is not available in this deployment."
     },
-    "unavailable": "This co-managed link is unavailable."
+    "unavailable": "This co-managed link is unavailable.",
+    "directory": {
+      "prompt": "Select the co-managed workspace to manage.",
+      "empty": "No co-managed workspaces are available to manage."
+    }
   },
   "actions": {
     "cancel": "Cancel"

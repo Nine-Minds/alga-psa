@@ -985,7 +985,11 @@
       "selfHost": "Esta atribuição excede a capacidade self-host verificada. Atualize a licença assinada e, em seguida, atualize.",
       "unavailable": "A compra cogerida alojada não está disponível nesta implementação."
     },
-    "unavailable": "Este link de TI cogerida não está disponível."
+    "unavailable": "Este link de TI cogerida não está disponível.",
+    "directory": {
+      "prompt": "Selecione o espaço de trabalho cogerido que deseja gerir.",
+      "empty": "Não há espaços de trabalho cogeridos disponíveis para gerir."
+    }
   },
   "actions": {
     "cancel": "Cancelar"

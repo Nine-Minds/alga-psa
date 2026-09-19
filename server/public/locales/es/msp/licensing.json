@@ -985,7 +985,11 @@
       "selfHost": "Esta asignación supera la capacidad autoalojada verificada. Actualice la licencia firmada y luego actualice.",
       "unavailable": "La compra cogestionada alojada no está disponible en esta implementación."
     },
-    "unavailable": "Este enlace de TI cogestionada no está disponible."
+    "unavailable": "Este enlace de TI cogestionada no está disponible.",
+    "directory": {
+      "prompt": "Seleccione el espacio de trabajo cogestionado que desea administrar.",
+      "empty": "No hay espacios de trabajo cogestionados disponibles para administrar."
+    }
   },
   "actions": {
     "cancel": "Cancelar"

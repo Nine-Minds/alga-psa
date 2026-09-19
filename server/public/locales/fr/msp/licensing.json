@@ -985,7 +985,11 @@
       "selfHost": "Cette attribution dépasse la capacité auto-hébergée vérifiée. Mettez à jour la licence signée, puis actualisez.",
       "unavailable": "L'achat cogéré hébergé n'est pas disponible dans ce déploiement."
     },
-    "unavailable": "Ce lien d'informatique cogérée n'est pas disponible."
+    "unavailable": "Ce lien d'informatique cogérée n'est pas disponible.",
+    "directory": {
+      "prompt": "Sélectionnez l'espace de travail cogéré à gérer.",
+      "empty": "Aucun espace de travail cogéré n'est disponible pour la gestion."
+    }
   },
   "actions": {
     "cancel": "Annuler"

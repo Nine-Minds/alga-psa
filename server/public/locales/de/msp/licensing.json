@@ -983,7 +983,11 @@
       "selfHost": "Diese Zuweisung übersteigt die verifizierte Self-Host-Kapazität. Aktualisieren Sie die signierte Lizenz und aktualisieren Sie dann.",
       "unavailable": "Der gehostete Co-Managed-Kauf ist in dieser Bereitstellung nicht verfügbar."
     },
-    "unavailable": "Dieser Co-Managed-Link ist nicht verfügbar."
+    "unavailable": "Dieser Co-Managed-Link ist nicht verfügbar.",
+    "directory": {
+      "prompt": "Wählen Sie den zu verwaltenden Co-Managed-Workspace aus.",
+      "empty": "Es sind keine Co-Managed-Workspaces zur Verwaltung verfügbar."
+    }
   },
   "actions": {
     "cancel": "Abbrechen"

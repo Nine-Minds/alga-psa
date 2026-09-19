@@ -985,7 +985,11 @@
       "selfHost": "Questa assegnazione supera la capacità self-host verificata. Aggiorna la licenza firmata, poi aggiorna.",
       "unavailable": "L'acquisto cogestito ospitato non è disponibile in questa distribuzione."
     },
-    "unavailable": "Questo collegamento IT cogestita non è disponibile."
+    "unavailable": "Questo collegamento IT cogestita non è disponibile.",
+    "directory": {
+      "prompt": "Seleziona l'area di lavoro cogestita da gestire.",
+      "empty": "Nessuna area di lavoro cogestita disponibile per la gestione."
+    }
   },
   "actions": {
     "cancel": "Annulla"

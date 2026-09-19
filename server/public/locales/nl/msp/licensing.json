@@ -983,7 +983,11 @@
       "selfHost": "Deze toewijzing overschrijdt de geverifieerde self-host-capaciteit. Werk de ondertekende licentie bij en vernieuw.",
       "unavailable": "Gehoste gezamenlijk beheerde aankoop is niet beschikbaar in deze implementatie."
     },
-    "unavailable": "Deze link voor gezamenlijk beheerde IT is niet beschikbaar."
+    "unavailable": "Deze link voor gezamenlijk beheerde IT is niet beschikbaar.",
+    "directory": {
+      "prompt": "Selecteer de co-managed werkruimte die u wilt beheren.",
+      "empty": "Er zijn geen co-managed werkruimtes beschikbaar om te beheren."
+    }
   },
   "actions": {
     "cancel": "Annuleren"

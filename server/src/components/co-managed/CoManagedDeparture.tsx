@@ -9,8 +9,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@alga
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedDepartureScreenAction, departCoManagedRelationshipAction } from '@/lib/actions/coManagedDepartureActions';
+import CoManagedWorkspaceDirectory, { type CoManagedWorkspaceChoice, workspaceChoices } from './CoManagedWorkspaceDirectory';
 
-type Screen = Awaited<ReturnType<typeof getCoManagedDepartureScreenAction>>;
+type Screen = Exclude<Awaited<ReturnType<typeof getCoManagedDepartureScreenAction>>, { side: 'directory' }>;
 type Request = Parameters<typeof departCoManagedRelationshipAction>[0];
 
 export function CoManagedDepartureEntry({ operationId }: { operationId?: string }) {
@@ -31,6 +32,7 @@ export default function CoManagedDeparture({ operationId }: { operationId?: stri
 function DepartureContent({ operationId }: { operationId?: string }) {
   const { t } = useTranslation('msp/licensing');
   const [screen, setScreen] = useState<Screen | null>(null);
+  const [directory, setDirectory] = useState<CoManagedWorkspaceChoice[] | null>(null);
   const [error, setError] = useState<'loadError' | 'endError' | null>(null);
   const [busy, setBusy] = useState(false), [confirm, setConfirm] = useState(false);
   const command = useRef<Request | null>(null), generation = useRef(0), alive = useRef(true), submitting = useRef(false);
@@ -40,8 +42,11 @@ function DepartureContent({ operationId }: { operationId?: string }) {
     try {
       const next = await getCoManagedDepartureScreenAction(operationId);
       if (!alive.current || current !== generation.current) return;
-      setScreen(next);
-      if (next.departed || (command.current && next.revision !== command.current.expectedRevision)) {
+      const choices = workspaceChoices(next);
+      if (choices) { setDirectory(choices); setScreen(null); setConfirm(false); return; }
+      const departure = next as Screen;
+      setDirectory(null); setScreen(departure);
+      if (departure.departed || (command.current && departure.revision !== command.current.expectedRevision)) {
         command.current = null; setConfirm(false);
       }
     } catch { if (alive.current && current === generation.current) { setScreen(null); setConfirm(false); setError('loadError'); } }
@@ -66,7 +71,8 @@ function DepartureContent({ operationId }: { operationId?: string }) {
       <CardDescription>{t('coManaged.departure.description')}</CardDescription></CardHeader>
       <CardContent className="space-y-5">
         {error && <p role="alert" className="text-destructive">{t(`coManaged.departure.${error}`)}</p>}
-        {!screen && !error && <p role="status">{t('coManaged.loading')}</p>}
+        {directory && <CoManagedWorkspaceDirectory basePath="/msp/co-management/departure" idPrefix="co-departure-workspace" workspaces={directory} />}
+        {!screen && !directory && !error && <p role="status">{t('coManaged.loading')}</p>}
         {screen && <>
           {screen.counterpartName && <p className="font-medium">{screen.counterpartName}</p>}
           {screen.departed ? <p role="status">{t('coManaged.departure.completed')}</p> : <p>{t('coManaged.departure.immediate')}</p>}

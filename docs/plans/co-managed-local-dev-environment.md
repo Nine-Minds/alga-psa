@@ -12,8 +12,45 @@ here; secrets live in the gitignored `secrets/` directory and the gitignored
 | Database | `server_co_managed` on the shared `alga-psa-local-test` postgres, direct `127.0.0.1:5472` | Isolated per-branch DB. PgBouncer (`:6472`) only routes the shared `server` DB, so this branch connects to postgres directly. Full CE+EE chain (1130 migrations) + 89 dev seeds applied via `npm run migrate:ee` and `knex seed:run` (NODE_ENV=migration, admin creds). |
 | Redis | dedicated branch redis, docker container `co-managed-it-redis`, `127.0.0.1:6374` (password = `secrets/redis_password`) | A DEDICATED instance is required for isolation: the workflow runtime v2 stream client (`shared/workflow/streams/redisStreamClient.ts`) hardcodes `workflow:events:*` stream names and the `workflow-runtime-v2` consumer group, ignoring `WORKFLOW_REDIS_STREAM_PREFIX` — on a shared redis this branch's worker would consume other worktrees' events. Recreate with: `docker run -d --name co-managed-it-redis --restart unless-stopped -p 6374:6379 -e RP="$(cat secrets/redis_password)" redis:7-alpine sh -c 'exec redis-server --requirepass "$RP"'` (env-var passing avoids shell mangling of special characters in the password). |
 | Temporal | docker container `co-managed-it-temporal-dev` (`temporalio/temporal server start-dev`), gRPC `127.0.0.1:7374`, UI `http://localhost:8374`, namespace `default` | Persistence in `.dev-temporal/temporal-dev.db` (gitignored). Host port 7233 is occupied by another worktree's broken auto-setup container (waits forever for Cassandra) — do not use it. |
-| Temporal worker | Board card service `temporal-worker`, cwd `ee/temporal-workflows`, command `npm run start` | Polls `tenant-workflows`, `portal-domain-workflows`, `email-domain-workflows`, `alga-jobs`, `sla-workflows`. Health check `:8375`. |
-| Workflow worker | Board card service `workflow-worker`, cwd `services/workflow-worker`, command `sh -c "set -a; . ./.env; set +a; exec npm run start"` | Runtime v2: polls `workflow-runtime-v2` Temporal queue + redis event streams. Health `:4374`. The `.env` must be sourced by the shell because module-level code reads `REDIS_*` before `dotenv.config()` runs. |
+| Temporal worker | Board card service `temporal-worker`, cwd `ee/temporal-workflows`, command `node dist/ee/temporal-workflows/src/worker.js` | Polls `tenant-workflows`, `portal-domain-workflows`, `email-domain-workflows`, `alga-jobs`, `sla-workflows`. Health check `:8375`, gated on `ENABLE_HEALTH_CHECK=true` with the port from `HEALTH_CHECK_PORT` (both set by `scripts/dev/generate-co-managed-worker-env.sh`). `worker.ts` calls `dotenv.config()` itself, so no env wrapper is needed. |
+| Workflow worker | Board card service `workflow-worker`, cwd `services/workflow-worker`, command `node --env-file=.env .` | Runtime v2: polls `workflow-runtime-v2` Temporal queue + redis event streams. Health `:4374` (the port comes from `PORT` in `.env`, not `HEALTH_PORT`). Module-level code reads `REDIS_*` before `dotenv.config()` runs, so the environment must be present at process start — but do NOT use `sh -c "set -a; . ./.env; set +a; ..."` to do it: `DB_PASSWORD_SERVER` and `REDIS_PASSWORD` contain an unquoted `&`, which bash parses as the background operator, so both arrive **empty** and the worker authenticates with no password. `node --env-file` parses the file without a shell. |
+
+## Registering the services with readiness probes
+
+`workflow-ensure-service` accepts `--readinessPort` and `--readinessPath`. Neither
+appears in `--help`, and without them a service that has died still reports
+`live`, because the hub is then only watching the PTY. Register all four with a
+probe so liveness is an HTTP status rather than a registration status:
+
+```
+P=964ce5e0-45a5-41b2-8e2c-73903742a85a
+R=/home/robert/alga-copies/feature-co-managed-it
+alga-dev workflow-ensure-service --projectId=$P --name=dev-server --cwd=$R/server \
+  --command='PORT=3374 HOST=http://100.82.172.57:3374 NEXTAUTH_URL=http://100.82.172.57:3374 DEV_ALLOWED_ORIGINS=100.82.172.57,localhost NODE_ENV=development NODE_PATH=$R/node_modules node $R/node_modules/.bin/next dev -p 3374' \
+  --readinessPort=3374 --readinessPath=/auth/signin
+alga-dev workflow-ensure-service --projectId=$P --name=temporal-worker --cwd=$R/ee/temporal-workflows \
+  --command='node dist/ee/temporal-workflows/src/worker.js' --readinessPort=8375 --readinessPath=/health
+alga-dev workflow-ensure-service --projectId=$P --name=workflow-worker --cwd=$R/services/workflow-worker \
+  --command='node --env-file=.env .' --readinessPort=4374 --readinessPath=/health
+```
+
+`ensure-service` refuses to change the readiness of a service that already
+declares one — conclude it first, then re-register. It also will not revive a
+service whose PTY has died: after `ensure`, run
+`alga-dev workflow-restart-service --projectId=$P --name=<name>`.
+
+The `dev-server` command must keep `HOST`, `NEXTAUTH_URL` and
+`DEV_ALLOWED_ORIGINS` verbatim. Without them Next 403s `/_next/*`, HMR, font and
+RSC requests from a tailnet browser while `curl` still returns 200, so a port
+check passes and the page silently stalls.
+
+Verify with HTTP, never with the service list:
+
+```
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3374/auth/signin   # 307
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8375/health        # 200
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4374/health        # 200
+```
 
 ## Reproducible preparation (before server/worker start)
 

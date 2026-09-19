@@ -9,6 +9,7 @@ import { getCoManagedCollaborationPolicy, replaceCoManagedCustomerScope, replace
 import { getCoManagedSlaPriorityMappings, replaceCoManagedSlaPriorityMappings, type CoManagedSlaPriorityMapping } from '@alga-psa/co-managed';
 import type { CoManagedSessionActor } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
+import { coManagedSponsorEntry } from '../co-managed/sponsorWorkspaceDirectory';
 import type { Knex } from 'knex';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,7 +42,10 @@ async function resolveTarget(db: Knex, actor: CoManagedSessionActor, selection: 
   // The management layer denies with CoManagedSharedWorkError. These actions
   // publish a CoManagedPolicyError contract, so translate rather than leaking a
   // second error shape (and a different code) to the policy UI.
-  let resolution;
+  // Annotated rather than inferred: an implicit `any` here widened `side` to
+  // `any` in this action's return type, which made the sponsor screen
+  // indistinguishable from the workspace-choice branch for callers.
+  let resolution: Awaited<ReturnType<typeof resolveCoManagedManagementTarget>>;
   try {
     resolution = await resolveCoManagedManagementTarget(db, actor, selection);
   } catch (error) {
@@ -51,6 +55,17 @@ async function resolveTarget(db: Knex, actor: CoManagedSessionActor, selection: 
   if (resolution.kind !== 'resolved') throw new CoManagedPolicyError('FORBIDDEN');
   return { side: resolution.target.side, target: { customerTenant: resolution.target.customerTenant, relationshipId: resolution.target.relationshipId },
     otherTenant: resolution.target.otherTenant };
+}
+
+/** A sponsor that did not name a workspace has no customer home to resolve, so
+ * `customer-home` would deny it. Offer the choice the overview already publishes
+ * instead of collapsing a recoverable ambiguity into FORBIDDEN. */
+async function qualify(db: Knex, actor: CoManagedSessionActor, target?: string | CoManagedManagementSelector) {
+  if (target !== undefined && target !== null) return { target };
+  const entry = await coManagedSponsorEntry(db, actor);
+  if (!entry) return { target };
+  if (entry.side === 'directory') return { directory: entry };
+  return { target: entry.operationId };
 }
 
 export interface CoManagedPolicyOption { id: string; name: string; inactive?: boolean }
@@ -74,8 +89,10 @@ export const getCoManagedPolicyScreen = withAuth(async (user, { tenant }, target
   if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
+  const qualified = await qualify(knex, actor, target);
+  if (qualified.directory) return qualified.directory;
   return withTransaction(knex, async trx => {
-    const resolved = await resolveTarget(trx, actor, policySelection(target));
+    const resolved = await resolveTarget(trx, actor, policySelection(qualified.target));
     const policy = await getCoManagedCollaborationPolicy(trx, actor, resolved.target);
     const other = await tenantDb(trx, resolved.otherTenant).table('tenants').first('client_name');
     const lifecycle = await getCoManagedOperationalState(trx, resolved.target.customerTenant);
@@ -152,10 +169,12 @@ export const saveSponsorCoManagedAssignments = withAuth(async (user, { tenant },
   });
 });
 
-export const getCoManagedSlaPolicyScreen = withAuth(async (user, { tenant }, target: string | CoManagedManagementSelector) => {
+export const getCoManagedSlaPolicyScreen = withAuth(async (user, { tenant }, target?: string | CoManagedManagementSelector) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const qualified = await qualify(knex, actor, target);
+  if (qualified.directory) return qualified.directory;
   return withTransaction(knex, async trx => {
-    const resolved = await resolveTarget(trx, actor, policySelection(target));
+    const resolved = await resolveTarget(trx, actor, policySelection(qualified.target));
     if (resolved.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
     return getCoManagedSlaPriorityMappings(trx, actor, resolved.target);
   });
