@@ -307,8 +307,8 @@
     "header": {
       "title": "〖Ẏȯŭř Ƈȯḿƥȧƞẏ & Ȧḓḿīƞ Ȧƈƈȯŭƞŧ ············〗",
       "description": "〖Ŀḗŧ'ş şŧȧřŧ ẇīŧħ ẏȯŭř ḾŞƤ'ş ȯẇƞ ƈȯḿƥȧƞẏ ḓḗŧȧīŀş ȧƞḓ ẏȯŭř ȧḓḿīƞ ŀȯɠīƞ, ƞȯŧ ȧ ƈŀīḗƞŧ ẏȯŭ şŭƥƥȯřŧ. ······································〗",
-      "coManagedTitle": "Your Organization & Admin Account",
-      "coManagedDescription": "Let's start with your organization's details and your admin login."
+      "coManagedTitle": "〖Ẏȯŭř Ȯřɠȧƞīẑȧŧīȯƞ & Ȧḓḿīƞ Ȧƈƈȯŭƞŧ ··············〗",
+      "coManagedDescription": "〖Ŀḗŧ'ş şŧȧřŧ ẇīŧħ ẏȯŭř ȯřɠȧƞīẑȧŧīȯƞ'ş ḓḗŧȧīŀş ȧƞḓ ẏȯŭř ȧḓḿīƞ ŀȯɠīƞ. ···························〗"
     },
     "fields": {
       "firstName": {
@@ -360,7 +360,7 @@
           "placeholder": "〖Şḗŀḗƈŧ Ƈȯŭƞŧřẏ ······〗"
         }
       },
-      "coManagedDescription": "Your organization's address. Review and correct it if needed."
+      "coManagedDescription": "〖Ẏȯŭř ȯřɠȧƞīẑȧŧīȯƞ'ş ȧḓḓřḗşş. Řḗṽīḗẇ ȧƞḓ ƈȯřřḗƈŧ īŧ īƒ ƞḗḗḓḗḓ. ·························〗"
     },
     "password": {
       "resetRequired": {

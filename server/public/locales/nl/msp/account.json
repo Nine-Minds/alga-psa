@@ -427,5 +427,8 @@
       "loading": "Laden…",
       "loadMore": "Meer laden"
     }
+  },
+  "coManaged": {
+    "accountTitle": "Gezamenlijk beheerde IT"
   }
 }

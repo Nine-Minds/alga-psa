@@ -354,7 +354,8 @@
       "activateClaimCode": "No se pudo activar el código de activación.",
       "startTrial": "No se pudo iniciar la prueba.",
       "refreshLicense": "No se pudo actualizar la licencia."
-    }
+    },
+    "returnToClient": "Volver al cliente"
   },
   "errors": {
     "notSignedIn": "No autorizado. Inicie sesión para gestionar las licencias.",
@@ -760,7 +761,8 @@
         "unknownOutcome": "No pudimos confirmar si se guardó la modificación. Reintente el mismo guardado o descarte los cambios y vuelva a cargar."
       },
       "loadError": "No se pudo cargar este proyecto o tarea.",
-      "discard": "Descartar cambios y volver a cargar"
+      "discard": "Descartar cambios y volver a cargar",
+      "title": "Proyectos"
     },
     "sla": {
       "title": "Prioridades de SLA de TI cogestionada",
@@ -982,6 +984,19 @@
       "review": "Añada {{additional}} puestos al grupo del patrocinador (nuevo total {{total}}).",
       "selfHost": "Esta asignación supera la capacidad autoalojada verificada. Actualice la licencia firmada y luego actualice.",
       "unavailable": "La compra cogestionada alojada no está disponible en esta implementación."
+    },
+    "unavailable": "Este enlace de TI cogestionada no está disponible."
+  },
+  "actions": {
+    "cancel": "Cancelar"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Cancelar"
     }
-  }
+  },
+  "dashboard": {
+    "title": "Panel de tickets"
+  },
+  "resetFilters": "Restablecer"
 }

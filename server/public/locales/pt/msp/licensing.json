@@ -354,7 +354,8 @@
       "activateClaimCode": "Falha ao ativar o código de ativação.",
       "startTrial": "Falha ao iniciar a avaliação.",
       "refreshLicense": "Falha ao atualizar a licença."
-    }
+    },
+    "returnToClient": "Voltar ao cliente"
   },
   "errors": {
     "notSignedIn": "Não autorizado. Faça login para gerenciar o licenciamento.",
@@ -760,7 +761,8 @@
         "unknownOutcome": "Não foi possível confirmar se a edição foi salva. Tente salvar novamente ou descarte suas alterações e recarregue."
       },
       "loadError": "Não foi possível carregar este projeto ou tarefa.",
-      "discard": "Descartar alterações e recarregar"
+      "discard": "Descartar alterações e recarregar",
+      "title": "Projetos"
     },
     "sla": {
       "title": "Prioridades de SLA da cogestão",
@@ -982,6 +984,19 @@
       "review": "Adicione {{additional}} lugares ao conjunto do patrocinador (novo total {{total}}).",
       "selfHost": "Esta atribuição excede a capacidade self-host verificada. Atualize a licença assinada e, em seguida, atualize.",
       "unavailable": "A compra cogerida alojada não está disponível nesta implementação."
+    },
+    "unavailable": "Este link de TI cogerida não está disponível."
+  },
+  "actions": {
+    "cancel": "Cancelar"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Cancelar"
     }
-  }
+  },
+  "dashboard": {
+    "title": "Painel de tickets"
+  },
+  "resetFilters": "Reiniciar"
 }

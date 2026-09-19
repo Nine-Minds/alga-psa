@@ -354,7 +354,8 @@
       "activateClaimCode": "Impossibile attivare il codice di attivazione.",
       "startTrial": "Impossibile avviare il periodo di prova.",
       "refreshLicense": "Impossibile aggiornare la licenza."
-    }
+    },
+    "returnToClient": "Torna al cliente"
   },
   "errors": {
     "notSignedIn": "Non autorizzato. Accedi per gestire le licenze.",
@@ -760,7 +761,8 @@
         "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova con la stessa richiesta oppure scarta le modifiche e ricarica."
       },
       "loadError": "Impossibile caricare questo progetto o questa attività.",
-      "discard": "Scarta le modifiche e ricarica"
+      "discard": "Scarta le modifiche e ricarica",
+      "title": "Progetti"
     },
     "sla": {
       "title": "Priorità SLA della cogestione",
@@ -982,6 +984,19 @@
       "review": "Aggiungi {{additional}} posti al pool dello sponsor (nuovo totale {{total}}).",
       "selfHost": "Questa assegnazione supera la capacità self-host verificata. Aggiorna la licenza firmata, poi aggiorna.",
       "unavailable": "L'acquisto cogestito ospitato non è disponibile in questa distribuzione."
+    },
+    "unavailable": "Questo collegamento IT cogestita non è disponibile."
+  },
+  "actions": {
+    "cancel": "Annulla"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Annulla"
     }
-  }
+  },
+  "dashboard": {
+    "title": "Dashboard ticket"
+  },
+  "resetFilters": "Reimposta"
 }

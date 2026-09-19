@@ -352,7 +352,8 @@
       "activateClaimCode": "Kan de activeringscode niet activeren.",
       "startTrial": "Kan de proefperiode niet starten.",
       "refreshLicense": "Kan de licentie niet vernieuwen."
-    }
+    },
+    "returnToClient": "Terug naar klant"
   },
   "errors": {
     "notSignedIn": "Niet geautoriseerd. Meld u aan om licenties te beheren.",
@@ -758,7 +759,8 @@
         "unknownOutcome": "We konden niet bevestigen of de wijziging is opgeslagen. Probeer hetzelfde verzoek opnieuw of verwerp uw wijzigingen en vernieuw."
       },
       "loadError": "Dit project of deze taak kon niet worden geladen.",
-      "discard": "Wijzigingen verwerpen en opnieuw laden"
+      "discard": "Wijzigingen verwerpen en opnieuw laden",
+      "title": "Projecten"
     },
     "sla": {
       "title": "SLA-prioriteiten voor gezamenlijk beheer",
@@ -980,6 +982,19 @@
       "review": "Voeg {{additional}} plaatsen toe aan de sponsorpool (nieuw totaal {{total}}).",
       "selfHost": "Deze toewijzing overschrijdt de geverifieerde self-host-capaciteit. Werk de ondertekende licentie bij en vernieuw.",
       "unavailable": "Gehoste gezamenlijk beheerde aankoop is niet beschikbaar in deze implementatie."
+    },
+    "unavailable": "Deze link voor gezamenlijk beheerde IT is niet beschikbaar."
+  },
+  "actions": {
+    "cancel": "Annuleren"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Annuleren"
     }
-  }
+  },
+  "dashboard": {
+    "title": "Ticketdashboard"
+  },
+  "resetFilters": "Resetten"
 }

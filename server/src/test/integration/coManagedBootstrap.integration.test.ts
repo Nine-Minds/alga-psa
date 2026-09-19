@@ -3019,8 +3019,12 @@ it('co-managed admins cannot configure Teams or telephony through direct actions
     for (const call of [
       () => teams.saveTeamsIntegrationSettings({} as any),
       () => teams.getTeamsIntegrationStatus(),
-      () => telephony.setTelephonyProviderEnabled({ provider: 'teams_phone', enabled: true }),
-      () => telephony.setTelephonyAutoTicketPolicy({ provider: 'teams_phone', autoCreateTickets: true }),
+      // 'teams-phone' is the id in TELEPHONY_PROVIDER_REGISTRY. The underscore spelling
+      // used before the origin/main merge is rejected by requireManageableProvider's
+      // registry lookup with 'Unknown telephony provider', which short-circuits before the
+      // product check and so proved nothing about co-managed admission.
+      () => telephony.setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: true }),
+      () => telephony.setTelephonyAutoTicketPolicy({ provider: 'teams-phone', autoCreateTickets: true }),
     ]) expect(await f.asActor(f.actor, () => realAuth.runWithApiKeyUser(user, call))).toMatchObject({ success: false, error: expect.stringContaining('not available for this product') });
     expect(secretProvider).not.toHaveBeenCalled();
     expect(await availability.getTeamsAvailability({ tenantId: f.operation.tenant })).toEqual({ enabled: true, reason: 'enabled' });

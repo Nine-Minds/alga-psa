@@ -1188,6 +1188,10 @@ export class TimeSheetService extends BaseService<any> {
           work_item_type: workItemType,
           notes: data.notes ?? undefined,
           is_private: data.is_private,
+          // baseScheduleEntrySchema accepts is_all_day, so dropping it here would take the
+          // field from the caller and silently create a timed entry. ScheduleEntry.create
+          // validates the UTC-midnight boundaries.
+          is_all_day: data.is_all_day ?? false,
           recurrence_pattern: typeof data.recurrence_pattern === 'string' ? JSON.parse(data.recurrence_pattern) : data.recurrence_pattern ?? null,
           assigned_user_ids: data.assigned_user_ids || [],
           status: 'scheduled'

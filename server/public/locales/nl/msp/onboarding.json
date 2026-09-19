@@ -307,8 +307,8 @@
     "header": {
       "title": "Uw bedrijf en beheerdersaccount",
       "description": "We beginnen met de bedrijfsgegevens van uw eigen MSP en uw beheerderslogin, niet met een klant die u ondersteunt.",
-      "coManagedTitle": "Your Organization & Admin Account",
-      "coManagedDescription": "Let's start with your organization's details and your admin login."
+      "coManagedTitle": "Uw organisatie en beheerdersaccount",
+      "coManagedDescription": "We beginnen met de gegevens van uw organisatie en uw beheerderslogin."
     },
     "fields": {
       "firstName": {
@@ -360,7 +360,7 @@
           "placeholder": "Land selecteren"
         }
       },
-      "coManagedDescription": "Your organization's address. Review and correct it if needed."
+      "coManagedDescription": "Het adres van uw organisatie. Controleer en corrigeer indien nodig."
     },
     "password": {
       "resetRequired": {

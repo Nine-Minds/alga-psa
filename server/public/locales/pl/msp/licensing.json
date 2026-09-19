@@ -356,7 +356,8 @@
       "activateClaimCode": "Nie udało się aktywować kodu aktywacyjnego.",
       "startTrial": "Nie udało się uruchomić okresu próbnego.",
       "refreshLicense": "Nie udało się odświeżyć licencji."
-    }
+    },
+    "returnToClient": "Wróć do klienta"
   },
   "errors": {
     "notSignedIn": "Brak autoryzacji. Zaloguj się, aby zarządzać licencjami.",
@@ -762,7 +763,8 @@
         "unknownOutcome": "Nie udało się potwierdzić zapisu. Ponów to samo żądanie albo odrzuć zmiany i odśwież."
       },
       "loadError": "Nie udało się wczytać tego projektu lub zadania.",
-      "discard": "Odrzuć zmiany i odśwież"
+      "discard": "Odrzuć zmiany i odśwież",
+      "title": "Projekty"
     },
     "sla": {
       "title": "Priorytety SLA współzarządzania",
@@ -984,6 +986,19 @@
       "review": "Dodaj {{additional}} miejsc do puli sponsora (nowa suma {{total}}).",
       "selfHost": "Ten przydział przekracza zweryfikowaną pojemność self-host. Zaktualizuj podpisaną licencję, a następnie odśwież.",
       "unavailable": "Hostowany zakup współzarządzany nie jest dostępny w tym wdrożeniu."
+    },
+    "unavailable": "Ten link współzarządzanego IT jest niedostępny."
+  },
+  "actions": {
+    "cancel": "Anuluj"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Anuluj"
     }
-  }
+  },
+  "dashboard": {
+    "title": "Pulpit zgłoszeń"
+  },
+  "resetFilters": "Resetuj"
 }

@@ -91,32 +91,44 @@ consumers — precisely the ones that were broken.
 
 ## Proof
 
+All four proofs below were re-run **after** the `origin/main` merge was resolved
+and committed, against the tree at `c1ffe9dc5e`.
+
 **1. Builds**
 
 ```
 ESM dist/workflow/runtime/index.js     1.05 MB
-ESM ⚡️ Build success in 155ms
+ESM ⚡️ Build success in 130ms
 --- shared EXIT=0 ---
-ESM dist/index.js                      862.43 KB
-ESM ⚡️ Build success in 220ms
+ESM dist/index.js                      701.92 KB
+ESM ⚡️ Build success in 70ms
 --- co-managed EXIT=0 ---
 ```
 
 72 of 72 `shared/billingClients/*.ts` modules now emit to `dist`.
 
+The co-managed barrel is smaller than the pre-merge 862 KB because
+`@alga-psa/core` is now a declared dependency and therefore external rather than
+inlined — `packages/co-managed` had been importing it in `nativeTimeRead.ts`
+without declaring it.
+
 **2. Plain-Node dynamic import of the built barrel**
 
 ```
-$ node --input-type=module -e "await import('<abs>/packages/co-managed/dist/index.js'); console.log('ok')"
-ok
+$ node --input-type=module -e "const m = await import('<abs>/packages/co-managed/dist/index.js'); ..."
+import OK in 583 ms
+exported bindings: 283
 ```
 
 **3. Whole-graph audit**
 
 ```
 $ npm run check:dist-resolution
-OK: 224 built modules walked, every @alga-psa/* subpath resolves under plain Node.
+OK: 221 built modules walked, every @alga-psa/* subpath resolves under plain Node.
 ```
+
+(221 rather than the pre-merge 224 for the same reason: three `@alga-psa/core`
+modules are no longer bundled into the co-managed barrel.)
 
 Non-vacuous: re-pointing `@alga-psa/licensing`'s `import` back at `src/index.ts`
 makes it report that specifier and exit 1.
@@ -129,7 +141,7 @@ makes it report that specifier and exit 1.
 
 ## Regression guard
 
-`server/src/test/unit/build/workspaceDistResolution.contract.test.ts` (3 tests)
+`server/src/test/unit/workspace/workspaceDistResolution.contract.test.ts` (3 tests)
 shells out to the checker with `--json` and asserts zero failures, plus a
 `visited > 50` sanity bound so an empty build cannot make it vacuous.
 
@@ -138,5 +150,10 @@ edge to `@alga-psa/storage/StorageProviderFactory`, which would put Node
 filesystem builtins back on the conversation-event core path and break four jsdom
 suites in `packages/projects` at collection. Verified still clean — this round's
 changes did not make `portableBlobStaging.ts` reachable.
+
+It lived under `.../unit/build/` until this round, where `.gitignore`'s `build/`
+rule matched it — the guard for this instruction would have been silently absent
+from the PR. Moved to `.../unit/workspace/`, same depth, so its `REPO_ROOT`
+resolution is unchanged. 3/3 pass.
 
 Run manually: `npm run check:dist-resolution`.

@@ -309,8 +309,8 @@
     "header": {
       "title": "Twoja firma i konto administratora",
       "description": "Zacznijmy od danych Twojej własnej firmy MSP i Twojego loginu administratora, a nie od klienta, którego obsługujesz.",
-      "coManagedTitle": "Your Organization & Admin Account",
-      "coManagedDescription": "Let's start with your organization's details and your admin login."
+      "coManagedTitle": "Twoja organizacja i konto administratora",
+      "coManagedDescription": "Zacznijmy od danych Twojej organizacji i Twojego loginu administratora."
     },
     "fields": {
       "firstName": {
@@ -362,7 +362,7 @@
           "placeholder": "Wybierz kraj"
         }
       },
-      "coManagedDescription": "Your organization's address. Review and correct it if needed."
+      "coManagedDescription": "Adres Twojej organizacji. Sprawdź i popraw w razie potrzeby."
     },
     "password": {
       "resetRequired": {

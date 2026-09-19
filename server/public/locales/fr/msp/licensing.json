@@ -354,7 +354,8 @@
       "activateClaimCode": "Impossible d’activer le code d’activation.",
       "startTrial": "Impossible de démarrer l’essai.",
       "refreshLicense": "Impossible d’actualiser la licence."
-    }
+    },
+    "returnToClient": "Retour au client"
   },
   "errors": {
     "notSignedIn": "Non autorisé. Connectez-vous pour gérer les licences.",
@@ -760,7 +761,8 @@
         "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement. Réessayez avec la même demande ou abandonnez vos modifications et rechargez."
       },
       "loadError": "Impossible de charger ce projet ou cette tâche.",
-      "discard": "Abandonner les modifications et recharger"
+      "discard": "Abandonner les modifications et recharger",
+      "title": "Projets"
     },
     "sla": {
       "title": "Priorités SLA de la cogestion",
@@ -982,6 +984,19 @@
       "review": "Ajoutez {{additional}} sièges au pool du sponsor (nouveau total {{total}}).",
       "selfHost": "Cette attribution dépasse la capacité auto-hébergée vérifiée. Mettez à jour la licence signée, puis actualisez.",
       "unavailable": "L'achat cogéré hébergé n'est pas disponible dans ce déploiement."
+    },
+    "unavailable": "Ce lien d'informatique cogérée n'est pas disponible."
+  },
+  "actions": {
+    "cancel": "Annuler"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Annuler"
     }
-  }
+  },
+  "dashboard": {
+    "title": "Tableau de bord des tickets"
+  },
+  "resetFilters": "Réinitialiser"
 }

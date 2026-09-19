@@ -352,7 +352,8 @@
       "activateClaimCode": "Failed to activate claim code.",
       "startTrial": "Failed to start trial.",
       "refreshLicense": "Failed to refresh the license."
-    }
+    },
+    "returnToClient": "Return to client"
   },
   "errors": {
     "notSignedIn": "Unauthorized. Sign in to manage licensing.",
@@ -758,7 +759,8 @@
         "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload."
       },
       "loadError": "Could not load this project or task.",
-      "discard": "Discard changes and reload"
+      "discard": "Discard changes and reload",
+      "title": "Projects"
     },
     "sla": {
       "title": "Co-managed SLA priorities",
@@ -980,6 +982,19 @@
       "review": "Add {{additional}} seats to the sponsor pool (new total {{total}}).",
       "selfHost": "This allocation exceeds verified self-host capacity. Update the signed license, then refresh.",
       "unavailable": "Hosted co-managed purchasing is not available in this deployment."
+    },
+    "unavailable": "This co-managed link is unavailable."
+  },
+  "actions": {
+    "cancel": "Cancel"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Cancel"
     }
-  }
+  },
+  "dashboard": {
+    "title": "Ticketing Dashboard"
+  },
+  "resetFilters": "Reset"
 }

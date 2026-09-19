@@ -352,7 +352,8 @@
       "activateClaimCode": "Der Aktivierungscode konnte nicht aktiviert werden.",
       "startTrial": "Die Testversion konnte nicht gestartet werden.",
       "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden."
-    }
+    },
+    "returnToClient": "Zurück zum Kunden"
   },
   "errors": {
     "notSignedIn": "Nicht autorisiert. Melden Sie sich an, um die Lizenzierung zu verwalten.",
@@ -758,7 +759,8 @@
         "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu."
       },
       "loadError": "Projekt oder Aufgabe konnte nicht geladen werden.",
-      "discard": "Änderungen verwerfen und neu laden"
+      "discard": "Änderungen verwerfen und neu laden",
+      "title": "Projekte"
     },
     "sla": {
       "title": "SLA-Prioritäten für Co-Managed IT",
@@ -980,6 +982,19 @@
       "review": "Fügen Sie {{additional}} Plätze zum Sponsor-Pool hinzu (neue Gesamtzahl {{total}}).",
       "selfHost": "Diese Zuweisung übersteigt die verifizierte Self-Host-Kapazität. Aktualisieren Sie die signierte Lizenz und aktualisieren Sie dann.",
       "unavailable": "Der gehostete Co-Managed-Kauf ist in dieser Bereitstellung nicht verfügbar."
+    },
+    "unavailable": "Dieser Co-Managed-Link ist nicht verfügbar."
+  },
+  "actions": {
+    "cancel": "Abbrechen"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Abbrechen"
     }
-  }
+  },
+  "dashboard": {
+    "title": "Ticket-Dashboard"
+  },
+  "resetFilters": "Zurücksetzen"
 }
