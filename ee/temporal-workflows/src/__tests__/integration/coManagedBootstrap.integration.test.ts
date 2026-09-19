@@ -5592,10 +5592,15 @@ async function withInAppCommentFixture(work: (fixture: Parameters<Parameters<typ
   await withRoutedCommentFixture(async fixture => {
     const { request, customerPrincipal } = fixture;
     const subtype = await db('internal_notification_subtypes').where('name', 'ticket-comment-added').first();
+    // Take the row over rather than yielding to it. Migrations ship a
+    // `ticket-comment-added` template in all eight real locales and the
+    // bootstrap above copies that reference data in wholesale, so
+    // `.ignore()` here silently kept the shipped template and these tests
+    // asserted against rendered product copy instead of their own markers.
     await db('internal_notification_templates').insert([
       { name: 'ticket-comment-added', language_code: 'en', title: 'EN {{ticketId}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id },
       { name: 'ticket-comment-added', language_code: 'fr', title: 'FR {{ticketId}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id },
-    ]).onConflict(['name', 'language_code']).ignore();
+    ]).onConflict(['name', 'language_code']).merge(['title', 'message', 'subtype_id']);
     const { persistCoManagedCommentNotifications: persist } = await import('../../../../../server/src/lib/co-managed/persistCommentNotifications');
     const event = { id: request.eventId, timestamp: new Date().toISOString(), eventType: 'TICKET_COMMENT_ADDED', payload: {
       tenantId: request.ownerTenant, ticketId: request.ticketId, userId: customerPrincipal.userId,
@@ -12147,7 +12152,10 @@ async function withTaskNotificationFixture(work: (fixture: any) => Promise<void>
     const assignments = await import('../../../../../packages/co-managed/src/projectTaskAssignments');
     await assignments.assignCoManagedProjectTask(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: { tenant: principal.tenant, kind: 'user', id: principal.userId } });
     const subtype = await db('internal_notification_subtypes').where('name', 'task-comment-added').first();
-    await db('internal_notification_templates').insert({ name: 'task-comment-added', language_code: 'en', title: 'Task {{taskName}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id }).onConflict(['name', 'language_code']).ignore();
+    // Same reason as the ticket-comment-added seed above: the shipped
+    // `task-comment-added` template is copied in by the bootstrap, so this
+    // must overwrite it rather than defer to it.
+    await db('internal_notification_templates').insert({ name: 'task-comment-added', language_code: 'en', title: 'Task {{taskName}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id }).onConflict(['name', 'language_code']).merge(['title', 'message', 'subtype_id']);
     const { persistCoManagedTaskCommentNotifications: persist } = await import('../../../../../server/src/lib/co-managed/persistTaskCommentNotifications');
     const notify = async (comment: any) => {
       try { await persist(db, { ownerTenant: resource.tenant, taskId: resource.id, commentId: comment.commentId, eventId: comment.operationId }); }
