@@ -7,6 +7,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { bulkHandBackCoManagedTicketsAction } from '@/lib/actions/coManagedTicketQueueActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 const identity = (item: CoManagedTicketQueueItem) => `${item.tenant}:${item.relationshipId}:${item.ticketId}`;
 
@@ -25,7 +26,7 @@ export default function CoManagedTicketBulkHandback({ items, onDone }: { items: 
     if (!saved.current) {
       const chosen = eligible.filter(item => selected.includes(identity(item)));
       if (!chosen.length || !note.trim()) return;
-      saved.current = { labels: chosen.map(label), request: { note: note.trim(), items: chosen.map(item => ({ operationId: crypto.randomUUID(), expectedRevision: item.fields.work_revision!,
+      saved.current = { labels: chosen.map(label), request: { note: note.trim(), items: chosen.map(item => ({ operationId: newCoManagedOperationId(), expectedRevision: item.fields.work_revision!,
         resource: { kind: 'ticket', tenant: item.tenant, relationshipId: item.relationshipId!, id: item.ticketId } })) } };
     }
     inFlight.current = true; setBusy(true); setUncertain(false);

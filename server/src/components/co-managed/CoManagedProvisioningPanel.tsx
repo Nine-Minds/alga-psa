@@ -14,6 +14,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedProvisioningOptions, getCoManagedProvisioningStatus, changeCoManagedWorkspaceSeats } from '@/lib/actions/coManagedActions';
 import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction, cancelCoManagedProvisioningAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Request = Omit<CoManagedProvisioningRequest, 'sponsorTenant' | 'requestedBy'>;
 const emptyForm = (): Omit<Request, 'operationId'> => ({ clientId: '', workspaceName: '', seats: 1,
@@ -48,7 +49,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
   const openForm = useCallback(() => {
     if (!operationId.current) {
       setForm({ ...emptyForm(), clientId: initialClientId || '' }); setSubmitted(null); setError(null); setSearch('');
-      operationId.current = crypto.randomUUID();
+      operationId.current = newCoManagedOperationId();
     }
     setOpen(true);
   }, [initialClientId]);
@@ -72,7 +73,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
     finally { setBusy(false); }
   };
   const submit = async () => {
-    const request = submitted || { ...form, operationId: operationId.current || (operationId.current = crypto.randomUUID()) };
+    const request = submitted || { ...form, operationId: operationId.current || (operationId.current = newCoManagedOperationId()) };
     // Freeze the request across an ambiguous network failure. Retrying can only
     // recover this exact operation, never create a second customer workspace.
     setSubmitted(request); setBusy(true); setError(null);

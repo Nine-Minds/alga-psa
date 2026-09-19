@@ -12,6 +12,7 @@ import { changeCoManagedWorkspaceSeats, getCoManagedBillingState } from '@/lib/a
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '@enterprise/lib/actions/coManagedBillingActions';
 import CoManagedCheckout from '@enterprise/components/co-managed/CoManagedCheckout';
 import { readCoManagedClientDraft, writeCoManagedClientDraft, clearCoManagedClientDraft } from './coManagedClientDraft';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Billing = Awaited<ReturnType<typeof getCoManagedBillingState>>;
 type Quote = { target: number; baseline: number; monthlyTotal: number; amountDue: number; currency: string };
@@ -122,7 +123,7 @@ export default function CoManagedClientSeats({ operationId, clientId, relationsh
           defaultValue: 'The pool changed since this quote. Review the shortfall again.' }));
         return;
       }
-      const nextOperation = purchaseOperationId ?? crypto.randomUUID();
+      const nextOperation = purchaseOperationId ?? newCoManagedOperationId();
       if (!purchaseOperationId) setPurchaseOperationId(nextOperation);
       const result = await purchaseCoManagedSeatsAction({ quantity: quote.target, operationId: nextOperation });
       if (result.kind === 'checkout') {

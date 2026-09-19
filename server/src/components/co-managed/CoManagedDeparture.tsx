@@ -10,6 +10,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedDepartureScreenAction, departCoManagedRelationshipAction } from '@/lib/actions/coManagedDepartureActions';
 import CoManagedWorkspaceDirectory, { type CoManagedWorkspaceChoice, workspaceChoices } from './CoManagedWorkspaceDirectory';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Screen = Exclude<Awaited<ReturnType<typeof getCoManagedDepartureScreenAction>>, { side: 'directory' }>;
 type Request = Parameters<typeof departCoManagedRelationshipAction>[0];
@@ -56,7 +57,7 @@ function DepartureContent({ operationId }: { operationId?: string }) {
   const end = async () => {
     if (submitting.current || busy || !screen || screen.departed) return;
     command.current ??= { provisioningOperationId: operationId, relationshipId: screen.relationshipId,
-      expectedRevision: screen.revision, operationId: crypto.randomUUID() };
+      expectedRevision: screen.revision, operationId: newCoManagedOperationId() };
     submitting.current = true; setBusy(true); setError(null);
     try {
       const receipt = await departCoManagedRelationshipAction(command.current);

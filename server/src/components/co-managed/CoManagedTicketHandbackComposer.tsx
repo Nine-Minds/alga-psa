@@ -7,6 +7,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isQualifiedHandbackEligible } from '@alga-psa/tickets/lib';
 import { bulkHandBackCoManagedTicketsAction } from '@/lib/actions/coManagedTicketQueueActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 const STORAGE_VERSION = 1;
 const STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -111,7 +112,7 @@ export default function CoManagedTicketHandbackComposer({
       request: {
         note: note.trim(),
         items: chosen.map(item => ({
-          operationId: crypto.randomUUID(),
+          operationId: newCoManagedOperationId(),
           expectedRevision: item.fields.work_revision as number,
           resource: {
             kind: 'ticket',

@@ -18,6 +18,7 @@ import { saveCoManagedPrivateTicketCommentAction } from '@/lib/actions/coManaged
 import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
 import CoManagedCommentAttachments from './CoManagedCommentAttachments';
 import { conversationText, conversationDocument } from './conversationText';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 const Document = dynamic(() => import('./CoManagedConversationDocument'), { ssr: false });
 
@@ -79,7 +80,7 @@ function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved
     let dispatched = false;
     try {
       if (!submission.current) {
-        const operationId = crypto.randomUUID();
+        const operationId = newCoManagedOperationId();
         const privateStore = draft.kind === 'new' ? actor.tenant !== resource.tenant && audience === 'organization_private' : draft.item.storeTenant !== resource.tenant;
         if (draft.kind === 'new' || draft.kind === 'reply') {
           const parent = draft.kind === 'reply' ? reference(draft.item) : undefined;
@@ -123,7 +124,7 @@ function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved
       <Input id="co-conversation-files" type="file" multiple preserveCursor={false} label={t('coManaged.conversation.files.choose')} disabled={frozen}
         aria-describedby="co-conversation-files-help" onChange={event => {
           if (frozen) return;
-          const selected = Array.from(event.target.files ?? []).map(file => ({ key: crypto.randomUUID(), file }));
+          const selected = Array.from(event.target.files ?? []).map(file => ({ key: newCoManagedOperationId(), file }));
           setFiles(previous => [...previous, ...selected]); event.target.value = ''; setError(null); submission.current = null;
         }} />
       <p id="co-conversation-files-help" className="text-xs text-muted-foreground">{t('coManaged.conversation.files.help', {

@@ -10,6 +10,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedProvisioningOptions } from '@/lib/actions/coManagedActions';
 import { provisionCoManagedWorkspaceAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Draft = {
   workspaceName: string;
@@ -35,7 +36,7 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
     seats: 1, visibilityMode: 'board_scope', escalationBoardId: '' }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const operationId = useRef<string>(crypto.randomUUID());
+  const operationId = useRef<string>(newCoManagedOperationId());
   const submitted = useRef<(Draft & { clientId: string; operationId: string }) | null>(null);
   const firstRender = useRef(true);
 
@@ -68,7 +69,7 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
         return;
       }
       submitted.current = null;
-      operationId.current = crypto.randomUUID();
+      operationId.current = newCoManagedOperationId();
       onDirtyChange?.(false);
       if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable'));
       await onProvisioned();

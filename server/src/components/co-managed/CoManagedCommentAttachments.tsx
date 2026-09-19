@@ -9,6 +9,7 @@ import type { CoManagedSharedResource, CoManagedCommentReference, CoManagedConve
 import { getCoManagedAttachmentsScreenAction, uploadCoManagedAttachmentAction } from '@/lib/actions/coManagedAttachmentActions';
 
 import CoManagedAttachmentRemoval from './CoManagedAttachmentRemoval';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Screen = Awaited<ReturnType<typeof getCoManagedAttachmentsScreenAction>>;
 function downloadUrl(resource: CoManagedSharedResource, attachment: CoManagedConversationAttachment) {
@@ -67,7 +68,7 @@ function Attachments({ resource, comment, actor }: { resource: CoManagedSharedRe
   async function upload() {
     if (inFlight.current || removalTarget.current || rejected || !state?.canUpload || !file) return;
     if (file.size > state.maxBytes) { setError('invalid'); return; }
-    if (!submission.current) submission.current = { file, attachmentId: crypto.randomUUID() };
+    if (!submission.current) submission.current = { file, attachmentId: newCoManagedOperationId() };
     const currentDraft = draftGeneration.current;
     const saved = submission.current, form = new FormData(); form.append('file', saved.file);
     inFlight.current = true; setBusy(true); setError(null);

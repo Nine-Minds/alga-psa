@@ -13,6 +13,7 @@ import CoManagedProjectTaskAssignment from './CoManagedProjectTaskAssignment';
 import CoManagedProjectTaskConversation from './CoManagedProjectTaskConversation';
 import CoManagedProjectTaskHistory from './CoManagedProjectTaskHistory';
 import CoManagedTimeEntry from './CoManagedTimeEntry';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 function localTime(value: string | null | undefined) {
   if (!value) return '';
@@ -56,7 +57,7 @@ function TaskEditor({ resource }: { resource: CoManagedSharedResource }) {
     if (!state || busy) return;
     const expected: CoManagedTaskEditPatch = {}, patch: CoManagedTaskEditPatch = {};
     for (const field of state.editableFields) if (draft[field] !== state.values[field]) { expected[field] = state.values[field]; patch[field] = draft[field]; }
-    const request = pending ?? { operationId: crypto.randomUUID(), expected, patch };
+    const request = pending ?? { operationId: newCoManagedOperationId(), expected, patch };
     if (!Object.keys(request.patch).length) return;
     const current = generation.current; setPending(request); setBusy(true); setError(null);
     try {

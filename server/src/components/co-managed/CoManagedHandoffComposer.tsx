@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { escalateSharedTicketAction, handBackSharedTicketAction, revokeSharedTicketGrantAction } from '@/lib/actions/coManagedSharedWorkActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 export type HandoffAction = 'escalate' | 'handback' | 'revoke';
 export default function CoManagedHandoffComposer({ action, side, resource, revision, onSaved, onCancel, onReload }: {
@@ -24,7 +25,7 @@ export default function CoManagedHandoffComposer({ action, side, resource, revis
   const label = action === 'handback' && side === 'customer' ? 'takeBack' : action;
   async function submit() {
     if (inFlight.current || (!request.current && !note.trim())) return;
-    request.current ??= { action, resource: { ...resource }, input: { operationId: crypto.randomUUID(), expectedRevision: revision, note: note.trim() } };
+    request.current ??= { action, resource: { ...resource }, input: { operationId: newCoManagedOperationId(), expectedRevision: revision, note: note.trim() } };
     inFlight.current = true; setBusy(true); setUncertain(false); setSetupRequired(false);
     const saved = request.current;
     try {

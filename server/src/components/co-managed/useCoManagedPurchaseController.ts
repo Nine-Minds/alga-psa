@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { getCoManagedBillingState } from '@/lib/actions/coManagedActions';
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '@enterprise/lib/actions/coManagedBillingActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 export type CoManagedBillingState = Awaited<ReturnType<typeof getCoManagedBillingState>>;
 export interface CoManagedPurchaseQuote {
@@ -50,7 +51,7 @@ export function useCoManagedPurchaseController() {
 
   const purchase = useCallback(async (nextQuantity?: number) => {
     const quantityToBuy = nextQuantity ?? preview?.quantity ?? quantity;
-    operation.current ??= crypto.randomUUID();
+    operation.current ??= newCoManagedOperationId();
     setBusy(true); setError(null);
     try {
       const result = await purchaseCoManagedSeatsAction({ quantity: quantityToBuy, operationId: operation.current });
