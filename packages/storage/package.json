@@ -18,6 +18,10 @@
       "import": "./dist/StorageProviderFactory.mjs",
       "types": "./src/StorageProviderFactory.ts"
     },
+    "./models/storage": {
+      "import": "./dist/models/storage.mjs",
+      "types": "./src/models/storage.ts"
+    },
     "./types/storage": {
       "import": "./dist/types/storage.mjs",
       "types": "./src/types/storage.ts"

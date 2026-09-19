@@ -18,6 +18,10 @@ export default defineConfig({
       // Same reason: resolve the types package to its source so tests see the
       // current definitions rather than a stale dist/.
       { find: '@alga-psa/types', replacement: path.resolve(__dirname, '../types/src') },
+      {
+        find: /^@alga-psa\/core\/i18n\/countryDateFormat$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/i18n/countryDateFormat.ts'),
+      },
     ],
   },
 });

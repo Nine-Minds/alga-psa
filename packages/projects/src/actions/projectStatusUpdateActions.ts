@@ -9,7 +9,7 @@ import { getPortalDomain } from '@alga-psa/auth/lib/PortalDomainModel';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isValidEmail } from '@alga-psa/core';
 import logger from '@alga-psa/core/logger';
-import { SystemEmailProviderFactory, resolveTenantCompanyName } from '@alga-psa/email';
+import { embedBrandLogo, SystemEmailProviderFactory, resolveTenantCompanyName } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import {
   actionError,
@@ -478,13 +478,23 @@ export const sendProjectStatusUpdate = withAuth(
       const html = Handlebars.compile(template.html_content)(context);
       const text = Handlebars.compile(template.text_content, { noEscape: true })(context);
 
+      // The status update goes straight to the provider rather than through
+      // BaseEmailService, so the branded header logo is embedded here: a
+      // branded row references it by content-id and carries no URL to load.
+      const branded = await embedBrandLogo(html, {
+        tenantId: tenant,
+        knex,
+        context: { action: 'sendProjectStatusUpdate', projectId },
+      });
+
       const from: EmailAddress = { email: senderEmail(), name: companyName };
       const message: EmailMessage = {
         from,
         to: [{ email: recipientEmail, name: recipientName }],
         subject,
-        html,
+        html: branded.html,
         text,
+        attachments: branded.attachments.length > 0 ? branded.attachments : undefined,
       };
 
       // Keep admission through transport so a concurrent sponsorship change

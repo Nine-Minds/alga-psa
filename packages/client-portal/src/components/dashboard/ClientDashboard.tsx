@@ -17,7 +17,7 @@ import type { Asset, ProductCode } from '@alga-psa/types';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
 import { ClientAddTicket } from '../tickets/ClientAddTicket';
 import { PrepaidHoursCard } from './PrepaidHoursCard';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   Calendar,
   Clock,
@@ -188,7 +188,13 @@ function getGreeting(t: TranslateFn): string {
   return t('dashboard.greeting.evening', 'Good evening');
 }
 
-function timeAgo(value: string | Date | null | undefined, t: TranslateFn, locale?: string): string {
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
+function timeAgo(
+  value: string | Date | null | undefined,
+  t: TranslateFn,
+  formatDate: FormatDate,
+): string {
   if (!value) return '';
   const dt = value instanceof Date ? value : new Date(value);
   if (isNaN(dt.getTime())) return '';
@@ -200,7 +206,9 @@ function timeAgo(value: string | Date | null | undefined, t: TranslateFn, locale
   if (hrs < 24) return t('dashboard.timeAgo.hours', { defaultValue: '{{count}} h ago', count: hrs });
   const days = Math.floor(hrs / 24);
   if (days < 7) return t('dashboard.timeAgo.days', { defaultValue: '{{count}}d ago', count: days });
-  return dt.toLocaleDateString(locale);
+  // Older activity falls back to an absolute date: digits follow the portal
+  // client's country, never the reading language.
+  return formatDate(dt, { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 const DASHBOARD_PREVIEW_DEVICES = 4;
@@ -221,6 +229,7 @@ export function ClientDashboard({
     : '--color-primary-700';
   const isAlgaDeskPortal = productCode === 'algadesk';
   const locale = i18n.language || undefined;
+  const { formatDate } = useFormatters();
   const heroTextColor = useHeroTextColor(portalHeroGradient);
   const heroTextClass = heroTextColor === 'black' ? 'text-black' : 'text-white';
   const heroTextMutedClass = heroTextColor === 'black' ? 'text-black/70' : 'text-white/80';
@@ -573,7 +582,7 @@ export function ClientDashboard({
                             })}
                           </div>
                           <div className="text-xs text-[rgb(var(--color-text-500))] flex-shrink-0">
-                            {timeAgo(activity.timestamp, t, locale)}
+                            {timeAgo(activity.timestamp, t, formatDate)}
                           </div>
                         </div>
                         {activity.description && (
@@ -639,10 +648,7 @@ export function ClientDashboard({
                         <div className="mt-1 flex items-center gap-1 text-xs text-[rgb(var(--color-text-600))]">
                           <Clock className="h-3 w-3" />
                           {dt
-                            ? dt.toLocaleTimeString(locale, {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
+                            ? formatDate(dt, { hour: '2-digit', minute: '2-digit' })
                             : 'N/A'}
                           <span>· {appointment.requested_duration}m</span>
                         </div>

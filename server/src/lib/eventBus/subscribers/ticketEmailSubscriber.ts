@@ -37,6 +37,12 @@ import {
 } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import {
+  countryDateFormat,
+  SYSTEM_DATE_FORMAT,
+  type CountryDateFormat,
+} from '@alga-psa/core/i18n/countryDateFormat';
 import { resolveEffectiveTimeZone } from '../../utils/workDate';
 import { rewriteTicketCommentImagesToCid } from './ticketCommentInlineImageEmail';
 import {
@@ -939,14 +945,32 @@ function formatValue(value: unknown): string {
 }
 
 /**
+ * The tenant's date shape for emails. Emails are composed once for many
+ * recipients, so this is the tenant's country rather than any one reader's.
+ */
+async function getTenantDateFormat(tenantId: string): Promise<CountryDateFormat> {
+  try {
+    const knex = await getConnection(tenantId);
+    const country = await resolveTenantDefaultCountry(knex, tenantId);
+    return countryDateFormat(country?.code ?? null);
+  } catch (error) {
+    logger.warn('[TicketEmailSubscriber] Failed to resolve tenant date format', { tenantId, error });
+    return SYSTEM_DATE_FORMAT;
+  }
+}
+
+/**
  * Format a date/time value for display in ticket emails.
- * Uses the resolved timezone (user -> tenant -> UTC) and the resolved
- * locale (tenant default -> system default 'en').
+ * Uses the resolved timezone (user -> tenant -> UTC), the resolved locale
+ * (tenant default -> system default 'en') for month names, and the tenant's
+ * country for the clock — the language must not decide whether a US MSP's
+ * emails say 14:23 or 2:23 PM.
  */
 function formatTicketDateTime(
   value: Date | string | null | undefined,
   timeZone: string,
-  locale: string = 'en'
+  locale: string = 'en',
+  dateFormat: CountryDateFormat = SYSTEM_DATE_FORMAT
 ): string {
   if (!value) {
     return 'Not available';
@@ -961,6 +985,7 @@ function formatTicketDateTime(
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    hour12: dateFormat.hour12,
     timeZone,
     timeZoneName: 'short'
   }).format(date);
@@ -1035,7 +1060,13 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
 
     const clientName = safeString(ticket.client_name) || 'Unassigned Client';
 
-    const createdAt = formatTicketDateTime(ticket.entered_at as string | Date | null, emailTimeZone, emailLocale);
+    const emailDateFormat = await getTenantDateFormat(tenantId);
+    const createdAt = formatTicketDateTime(
+      ticket.entered_at as string | Date | null,
+      emailTimeZone,
+      emailLocale,
+      emailDateFormat
+    );
     const createdByName = safeString(ticket.created_by_name) || 'System';
     const createdDetails = `${createdAt} · ${createdByName}`;
 
