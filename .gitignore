@@ -258,6 +258,8 @@ tools/i18n/*/baseline.json
 # T013 gate writes this on a diff for inspection; never committed.
 server/src/test/integration/billing/goldenOutput/baseline.actual.json
 
+.dev-temporal/
+
 # Scoped mutation pilot's generated sandboxes and reports.
 .stryker-tmp/
 reports/mutation/
@@ -265,3 +267,11 @@ reports/mutation/
 # Per-process diagnostic journals; final execution evidence is uploaded by CI.
 /server/test-progress*.jsonl
 /test-progress*.jsonl
+
+# Scratch migration trees created by integration-test repro runs.
+server/.repro-migrations-*/
+server/.ci-combined-migrations/
+server/knexfile-overlay-probe.cjs
+
+# Card-service logs (see scripts/dev/run-card-service.sh)
+.card-service-logs/

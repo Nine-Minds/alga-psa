@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { withTransaction } from '@alga-psa/db';
+import { resolveRunActorUserId } from './businessOperations/shared';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import {
   findContactByEmail,
@@ -549,52 +551,57 @@ export function registerEmailWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Ticket + Initial Comment', category: 'Email' },
     handler: async (input, ctx) => {
-      const tenant = ctx.tenantId ?? '';
-      const emailData = input.emailData;
+      if (!ctx.tenantId || !ctx.knex) throw new Error('Email workflow requires tenant and database context');
+      return withTransaction(ctx.knex, async trx => {
+        const actorUserId = await resolveRunActorUserId(trx, ctx.tenantId!, ctx.runId) ?? undefined;
+        const executionOptions = { existingConnection: trx, workflowRunId: ctx.runId, workflowTicketAction: 'create' as const };
+        const tenant = ctx.tenantId ?? '';
+        const emailData = input.emailData;
 
-      const ticketResult = await createTicketFromEmail({
-        title: emailData.subject,
-        description: input.parsedEmail?.sanitizedText || emailData.body?.text || '',
-        client_id: input.targetClientId ?? undefined,
-        contact_id: input.targetContactId ?? undefined,
-        source: 'email',
-        board_id: input.ticketDefaults.board_id,
-        status_id: input.ticketDefaults.status_id,
-        priority_id: input.ticketDefaults.priority_id,
-        category_id: input.ticketDefaults.category_id,
-        subcategory_id: input.ticketDefaults.subcategory_id,
-        location_id: input.targetLocationId ?? undefined,
-        entered_by: input.ticketDefaults.entered_by ?? undefined,
-        email_metadata: {
-          messageId: emailData.id,
-          mailhogId: emailData.mailhogId,
-          threadId: emailData.threadId,
-          from: emailData.from,
-          inReplyTo: emailData.inReplyTo,
-          references: emailData.references,
-          providerId: emailData.providerId
-        }
-      }, tenant);
+        const ticketResult = await createTicketFromEmail({
+          title: emailData.subject,
+          description: input.parsedEmail?.sanitizedText || emailData.body?.text || '',
+          client_id: input.targetClientId ?? undefined,
+          contact_id: input.targetContactId ?? undefined,
+          source: 'email',
+          board_id: input.ticketDefaults.board_id,
+          status_id: input.ticketDefaults.status_id,
+          priority_id: input.ticketDefaults.priority_id,
+          category_id: input.ticketDefaults.category_id,
+          subcategory_id: input.ticketDefaults.subcategory_id,
+          location_id: input.targetLocationId ?? undefined,
+          entered_by: input.ticketDefaults.entered_by ?? undefined,
+          email_metadata: {
+            messageId: emailData.id,
+            mailhogId: emailData.mailhogId,
+            threadId: emailData.threadId,
+            from: emailData.from,
+            inReplyTo: emailData.inReplyTo,
+            references: emailData.references,
+            providerId: emailData.providerId
+          }
+        }, tenant, actorUserId, executionOptions);
 
-      const commentPayload = buildCommentPayload(input.parsedEmail, emailData);
-      const commentId = await createCommentFromEmail({
-        ticket_id: ticketResult.ticket_id,
-        content: commentPayload.content,
-        format: commentPayload.format,
-        source: 'email',
-        author_type: 'contact',
-        author_id: input.targetAuthorUserId ?? undefined,
-        contact_id: input.targetContactId ?? undefined,
-        // First comment on a new ticket: covered by the TICKET_CREATED email, so keep in-app only.
-        suppressTechEmailNotification: true,
-        metadata: commentPayload.metadata
-      }, tenant);
+        const commentPayload = buildCommentPayload(input.parsedEmail, emailData);
+        const commentId = await createCommentFromEmail({
+          ticket_id: ticketResult.ticket_id,
+          content: commentPayload.content,
+          format: commentPayload.format,
+          source: 'email',
+          author_type: 'contact',
+          author_id: input.targetAuthorUserId ?? undefined,
+          contact_id: input.targetContactId ?? undefined,
+          // First comment on a new ticket: covered by the TICKET_CREATED email, so keep in-app only.
+          suppressTechEmailNotification: true,
+          metadata: commentPayload.metadata
+        }, tenant, actorUserId, executionOptions);
 
-      return {
-        ticket_id: ticketResult.ticket_id,
-        ticket_number: ticketResult.ticket_number,
-        comment_id: commentId
-      };
+        return {
+          ticket_id: ticketResult.ticket_id,
+          ticket_number: ticketResult.ticket_number,
+          comment_id: commentId
+        };
+      });
     }
   });
 
@@ -635,28 +642,33 @@ export function registerEmailWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Comment from Email', category: 'Email' },
     handler: async (input, ctx) => {
-      const commentId = await createCommentFromEmail({
-        ticket_id: input.ticket_id,
-        content: input.content,
-        format: input.format,
-        source: input.source,
-        author_type: input.author_type,
-        author_id: input.author_id,
-        contact_id: input.contact_id,
-        // Cast to match createCommentFromEmail's expected type - zod validation ensures fields are present when object exists
-        inboundReplyEvent: input.inboundReplyEvent as {
-          messageId: string;
-          threadId?: string;
-          from: string;
-          to: string[];
-          subject?: string;
-          receivedAt?: string;
-          provider: string;
-          matchedBy: string;
-        } | undefined,
-        metadata: input.metadata
-      }, ctx.tenantId ?? '');
-      return { comment_id: commentId };
+      if (!ctx.tenantId || !ctx.knex) throw new Error('Email workflow requires tenant and database context');
+      return withTransaction(ctx.knex, async trx => {
+        const actorUserId = await resolveRunActorUserId(trx, ctx.tenantId!, ctx.runId) ?? undefined;
+        const executionOptions = { existingConnection: trx, workflowRunId: ctx.runId };
+        const commentId = await createCommentFromEmail({
+          ticket_id: input.ticket_id,
+          content: input.content,
+          format: input.format,
+          source: input.source,
+          author_type: input.author_type,
+          author_id: input.author_id,
+          contact_id: input.contact_id,
+          // Cast to match createCommentFromEmail's expected type - zod validation ensures fields are present when object exists
+          inboundReplyEvent: input.inboundReplyEvent as {
+            messageId: string;
+            threadId?: string;
+            from: string;
+            to: string[];
+            subject?: string;
+            receivedAt?: string;
+            provider: string;
+            matchedBy: string;
+          } | undefined,
+          metadata: input.metadata
+        }, ctx.tenantId!, actorUserId, executionOptions);
+        return { comment_id: commentId };
+      });
     }
   });
 
@@ -679,28 +691,33 @@ export function registerEmailWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Comment from Parsed Email', category: 'Email' },
     handler: async (input, ctx) => {
-      const tenant = ctx.tenantId ?? '';
-      const commentPayload = buildCommentPayload(input.parsedEmail, input.emailData);
-      const senderEmail = input.emailData?.from?.email;
-      const matchedContact =
-        !input.contact_id && senderEmail
-          ? await findContactByEmail(senderEmail, tenant, { ticketId: input.ticketId })
-          : null;
-      const resolvedContactId = input.contact_id ?? matchedContact?.contact_id;
-      const resolvedAuthorId = input.author_id ?? matchedContact?.user_id;
-      const resolvedAuthorType = input.author_type ?? 'contact';
+      if (!ctx.tenantId || !ctx.knex) throw new Error('Email workflow requires tenant and database context');
+      return withTransaction(ctx.knex, async trx => {
+        const actorUserId = await resolveRunActorUserId(trx, ctx.tenantId!, ctx.runId) ?? undefined;
+        const executionOptions = { existingConnection: trx, workflowRunId: ctx.runId };
+        const tenant = ctx.tenantId ?? '';
+        const commentPayload = buildCommentPayload(input.parsedEmail, input.emailData);
+        const senderEmail = input.emailData?.from?.email;
+        const matchedContact =
+          !input.contact_id && senderEmail
+            ? await findContactByEmail(senderEmail, tenant, { ticketId: input.ticketId })
+            : null;
+        const resolvedContactId = input.contact_id ?? matchedContact?.contact_id;
+        const resolvedAuthorId = input.author_id ?? matchedContact?.user_id;
+        const resolvedAuthorType = input.author_type ?? 'contact';
 
-      const commentId = await createCommentFromEmail({
-        ticket_id: input.ticketId,
-        content: commentPayload.content,
-        format: commentPayload.format,
-        source: input.source ?? 'email',
-        author_type: resolvedAuthorType,
-        author_id: resolvedAuthorId,
-        contact_id: resolvedContactId,
-        metadata: commentPayload.metadata
-      }, tenant);
-      return { comment_id: commentId };
+        const commentId = await createCommentFromEmail({
+          ticket_id: input.ticketId,
+          content: commentPayload.content,
+          format: commentPayload.format,
+          source: input.source ?? 'email',
+          author_type: resolvedAuthorType,
+          author_id: resolvedAuthorId,
+          contact_id: resolvedContactId,
+          metadata: commentPayload.metadata
+        }, tenant, actorUserId, executionOptions);
+        return { comment_id: commentId };
+      });
     }
   });
 

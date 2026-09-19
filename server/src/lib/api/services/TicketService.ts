@@ -1,5 +1,8 @@
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
+import { retainCoManagedConversationBeforeSourceChange, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
+import { retainNativeConversationEvent } from '@alga-psa/tickets/lib/nativeConversationEvents';
+import { assertCommentThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 /**
  * Ticket Service
  * Business logic for ticket-related operations
@@ -7,6 +10,7 @@ import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments'
 
 import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
@@ -284,6 +288,7 @@ function isPreviewableMime(mimeType: string | null | undefined): boolean {
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
+      mutationGuard: (trx, context) => assertCoManagedOperationalWrite(trx, context.tenant),
       tableName: 'tickets',
       primaryKey: 'ticket_id',
       tenantColumn: 'tenant',
@@ -355,27 +360,30 @@ export class TicketService extends BaseService<ITicket> {
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const result = await deleteEntityWithValidation(
-      'ticket',
-      id,
-      knex,
-      context.tenant,
-      async (trx, tenant) => {
-        const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ ticket_id: id })
-          .first();
+    const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
+      return deleteEntityWithValidation(
+        'ticket',
+        id,
+        trx,
+        context.tenant,
+        async (trx, tenant) => {
+          const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+            .where({ ticket_id: id })
+            .first();
 
-        if (!ticket) {
-          throw new NotFoundError('Ticket not found');
+          if (!ticket) {
+            throw new NotFoundError('Ticket not found');
+          }
+
+          await deleteTicketChildRecords(trx, id, tenant, ticket);
+
+          await tenantScopedTable(trx, 'tickets', tenant)
+            .where({ ticket_id: id })
+            .delete();
         }
-
-        await deleteTicketChildRecords(trx, id, tenant, ticket);
-
-        await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ ticket_id: id })
-          .delete();
-      }
-    );
+      );
+    });
 
     if (!result.deleted) {
       throw new ConflictError(
@@ -805,45 +813,48 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const ticket = await tenantScopedTable(knex, 'tickets', context.tenant)
-      .where({ ticket_id: ticketId })
-      .first();
-    if (!ticket) {
-      throw new NotFoundError('Ticket not found');
-    }
+    return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
+      const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
+        .first();
+      if (!ticket) {
+        throw new NotFoundError('Ticket not found');
+      }
 
-    const asset = await tenantScopedTable(knex, 'assets', context.tenant)
-      .where({ asset_id: data.asset_id })
-      .first();
-    if (!asset) {
-      throw new NotFoundError('Asset not found');
-    }
+      const asset = await tenantScopedTable(trx, 'assets', context.tenant)
+        .where({ asset_id: data.asset_id })
+        .first();
+      if (!asset) {
+        throw new NotFoundError('Asset not found');
+      }
 
-    const existing = await tenantScopedTable(knex, 'asset_associations', context.tenant)
-      .where({
-        asset_id: data.asset_id,
-        entity_id: ticketId,
-        entity_type: 'ticket'
-      })
-      .first();
-    if (existing) {
-      throw new ConflictError('Asset is already linked to this ticket');
-    }
+      const existing = await tenantScopedTable(trx, 'asset_associations', context.tenant)
+        .where({
+          asset_id: data.asset_id,
+          entity_id: ticketId,
+          entity_type: 'ticket'
+        })
+        .first();
+      if (existing) {
+        throw new ConflictError('Asset is already linked to this ticket');
+      }
 
-    const [created] = await tenantScopedTable(knex, 'asset_associations', context.tenant)
-      .insert({
-        tenant: context.tenant,
-        asset_id: data.asset_id,
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        relationship_type: data.relationship_type || 'affected',
-        notes: data.notes ?? null,
-        created_by: context.userId,
-        created_at: new Date().toISOString()
-      })
-      .returning('*');
+      const [created] = await tenantScopedTable(trx, 'asset_associations', context.tenant)
+        .insert({
+          tenant: context.tenant,
+          asset_id: data.asset_id,
+          entity_id: ticketId,
+          entity_type: 'ticket',
+          relationship_type: data.relationship_type || 'affected',
+          notes: data.notes ?? null,
+          created_by: context.userId,
+          created_at: new Date().toISOString()
+        })
+        .returning('*');
 
-    return created;
+      return created;
+    });
   }
 
   /**
@@ -853,17 +864,20 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const deleted = await tenantScopedTable(knex, 'asset_associations', context.tenant)
-      .where({
-        asset_id: assetId,
-        entity_id: ticketId,
-        entity_type: 'ticket'
-      })
-      .del();
+    return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
+      const deleted = await tenantScopedTable(trx, 'asset_associations', context.tenant)
+        .where({
+          asset_id: assetId,
+          entity_id: ticketId,
+          entity_type: 'ticket'
+        })
+        .del();
 
-    if (!deleted) {
-      throw new NotFoundError('Asset-ticket association not found');
-    }
+      if (!deleted) {
+        throw new NotFoundError('Asset-ticket association not found');
+      }
+    });
   }
 
   /**
@@ -901,6 +915,7 @@ export class TicketService extends BaseService<ITicket> {
     const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { response, event } = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const agentUser = await tenantScopedTable(trx, 'users', context.tenant)
         .where({ user_id: data.user_id })
         .first();
@@ -953,6 +968,7 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const resource = await tenantScopedTable(trx, 'ticket_resources', context.tenant)
         .where({ ticket_id: ticketId, additional_user_id: userId })
         .first();
@@ -975,6 +991,7 @@ export class TicketService extends BaseService<ITicket> {
     const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { ticket, assignedTo } = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       let resolvedAssignedTo: string;
       try {
         resolvedAssignedTo = await assignTeamToTicketCore(
@@ -1020,6 +1037,7 @@ export class TicketService extends BaseService<ITicket> {
     };
 
     return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       try {
         await removeTeamFromTicketCore(trx, context.tenant, context.userId, ticketId, options);
       } catch (error) {
@@ -1125,13 +1143,6 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadResult = await StorageService.uploadFile(context.tenant, buffer, file.name, {
-      mime_type: mimeType,
-      uploaded_by_id: context.userId,
-    });
-
-    let documentCommitted = false;
-    try {
     const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
       .where({
         entity_id: ticketId,
@@ -1143,73 +1154,91 @@ export class TicketService extends BaseService<ITicket> {
 
     const typeResult = await this.getDocumentTypeIdForMime(knex, context.tenant, mimeType);
     const documentId = uuidv4();
-    const document: IDocument = {
-      document_id: documentId,
-      document_name: file.name,
-      type_id: typeResult.isShared ? null : typeResult.typeId,
-      shared_type_id: typeResult.isShared ? typeResult.typeId : undefined,
-      user_id: context.userId,
-      order_number: 0,
-      created_by: context.userId,
-      tenant: context.tenant,
-      file_id: uploadResult.file_id,
-      storage_path: uploadResult.storage_path,
+    // uploadFile commits the document row inside its own transaction, so the
+    // row this callback builds is only reachable afterwards through a hoisted
+    // reference. Preview generation needs it once that commit has landed.
+    let document: IDocument | undefined;
+    await StorageService.uploadFile(context.tenant, buffer, file.name, {
       mime_type: mimeType,
-      file_size: file.size,
-      folder_path: folderRecord?.folder_path,
-      ...(commentAttachmentDraft ? { is_client_visible: true } : {}),
-    };
-
-    await withTransaction(knex, async (trx) => {
-      await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
-      if (commentAttachmentDraft) await tenantDb(trx, context.tenant).table('ticket_comment_attachments').insert({
-        tenant: context.tenant, ticket_id: ticketId, document_id: documentId,
-        created_by: context.userId, state: 'draft', expires_at: new Date(Date.now() + 86400000),
-      });
-      await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
-        association_id: uuidv4(),
-        document_id: documentId,
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        tenant: context.tenant,
-      });
-
-      // Activity-timeline entry for the document attachment. Stored inside
-      // the same transaction so the timeline row never appears unless the
-      // document and its association were also persisted.
-      await writeTicketActivity(trx, {
-        tenant: context.tenant,
-        ticketId,
-        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
-        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
-        entityId: documentId,
-        actor: {
-          actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: context.userId,
-        },
-        source: TICKET_ACTIVITY_SOURCE.API,
-        details: {
+      uploaded_by_id: context.userId,
+      persistRelatedRecords: async (trx, uploadResult) => {
+        const documentRecord: IDocument = {
+          document_id: documentId,
           document_name: file.name,
+          type_id: typeResult.isShared ? null : typeResult.typeId,
+          shared_type_id: typeResult.isShared ? typeResult.typeId : undefined,
+          user_id: context.userId,
+          order_number: 0,
+          created_by: context.userId,
+          tenant: context.tenant,
+          file_id: uploadResult.file_id,
+          storage_path: uploadResult.storage_path,
           mime_type: mimeType,
           file_size: file.size,
-        },
-      });
+          folder_path: folderRecord?.folder_path,
+          // A comment attachment is authored to be published with the comment,
+          // so it is client-visible from the start; the draft row below is what
+          // withholds it until the comment is actually posted.
+          ...(commentAttachmentDraft ? { is_client_visible: true } : {}),
+        };
+
+        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await tenantScopedTable(trx, 'documents', context.tenant).insert(documentRecord);
+        document = documentRecord;
+        // The draft row is what reconcileCommentAttachments later promotes to
+        // 'published'. Without it the canAccessAttachmentTicket guard above
+        // protects nothing and the attachment silently never attaches.
+        if (commentAttachmentDraft) await tenantDb(trx, context.tenant).table('ticket_comment_attachments').insert({
+          tenant: context.tenant, ticket_id: ticketId, document_id: documentId,
+          created_by: context.userId, state: 'draft', expires_at: new Date(Date.now() + 86400000),
+        });
+        await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
+          association_id: uuidv4(),
+          document_id: documentId,
+          entity_id: ticketId,
+          entity_type: 'ticket',
+          tenant: context.tenant,
+        });
+
+        // Activity-timeline entry for the document attachment. Stored inside
+        // the same transaction so the timeline row never appears unless the
+        // document and its association were also persisted.
+        await writeTicketActivity(trx, {
+          tenant: context.tenant,
+          ticketId,
+          eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
+          entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
+          entityId: documentId,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.USER,
+            userId: context.userId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          details: {
+            document_name: file.name,
+            mime_type: mimeType,
+            file_size: file.size,
+          },
+        });
+      },
     });
 
-    documentCommitted = true;
-    await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
+    // No unclaimed-storage cleanup here: uploadFile persists the document and
+    // its association inside its own transaction via persistRelatedRecords, so
+    // a failed upload leaves nothing to delete. The earlier manual rollback
+    // guarded a version that inserted the rows after the upload had committed.
+    // Previews are generated once that transaction has committed: they rewrite
+    // the documents row on the outer connection, and a failure here is logged
+    // rather than thrown so it can never undo a durable upload.
+    if (document) {
+      await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
+    }
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
     }
 
     return createdDocument;
-    } finally {
-      if (commentAttachmentDraft && !documentCommitted) {
-        try { await StorageService.deleteFile(uploadResult.file_id, context.userId); }
-        catch (error) { console.error('Unable to remove unclaimed comment attachment storage', error); }
-      }
-    }
   }
 
   async downloadTicketDocument(
@@ -1339,23 +1368,24 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const scopedDb = tenantDb(knex, context.tenant);
-    const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
-    scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
-    const doc = await docQuery
-      .where({
-        'da.entity_id': ticketId,
-        'da.entity_type': 'ticket',
-        'd.document_id': documentId,
-      })
-      .select('d.document_id', 'd.file_id', 'da.association_id')
-      .first();
-
-    if (!doc) {
-      throw new NotFoundError('Document not found');
-    }
-
     await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
+      const scopedDb = tenantDb(trx, context.tenant);
+      const docQuery = tenantScopedTable(trx, 'documents as d', context.tenant);
+      scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+      const doc = await docQuery
+        .where({
+          'da.entity_id': ticketId,
+          'da.entity_type': 'ticket',
+          'd.document_id': documentId,
+        })
+        .select('d.document_id', 'd.file_id', 'da.association_id')
+        .first();
+
+      if (!doc) {
+        throw new NotFoundError('Document not found');
+      }
+
       await tenantScopedTable(trx, 'document_associations', context.tenant)
         .where({ association_id: doc.association_id })
         .del();
@@ -1596,6 +1626,7 @@ export class TicketService extends BaseService<ITicket> {
       const { knex } = await this.getKnex();
   
       const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
+        await assertCoManagedOperationalWrite(trx, context.tenant);
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -1747,10 +1778,11 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       // Get current ticket for event comparison
       const currentTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: id })
-        .first();
+        .forUpdate().first();
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
@@ -1832,15 +1864,19 @@ export class TicketService extends BaseService<ITicket> {
       // safe; it lets the denormalized close fields be folded into the same
       // UPDATE that produces the returned row. Mirrors the "keep is_closed in
       // sync" handling in updateTicketWithCache / ticketBundleUtils.
+      // forShare pins both rows for the life of the transaction: the close
+      // decision, the is_closed denormalization and the co-managed
+      // resolution/reopen records below all read is_closed, and a concurrent
+      // edit of a status row would otherwise let them disagree.
       const nextStatus = statusChanged
         ? await tenantScopedTable(trx, 'statuses', context.tenant)
           .where({ status_id: cleanedData.status_id })
-          .first()
+          .forShare().first()
         : null;
       const previousStatus = statusChanged
         ? await tenantScopedTable(trx, 'statuses', context.tenant)
           .where({ status_id: currentTicket.status_id })
-          .first()
+          .forShare().first()
         : null;
 
       // Pre-close validation gates: when this update flips the ticket from an
@@ -1848,6 +1884,9 @@ export class TicketService extends BaseService<ITicket> {
       // writes. Surfaces as a 422 with structured failure details.
       if (statusChanged) {
         if (nextStatus?.is_closed && !previousStatus?.is_closed) {
+          // Closing clears the canonical response state, including a conflicting
+          // value supplied in the same API update.
+          cleanedData.response_state = null;
           const merged = { ...currentTicket, ...cleanedData };
           try {
             await enforceTicketCloseRules(trx, context.tenant, {
@@ -1930,6 +1969,8 @@ export class TicketService extends BaseService<ITicket> {
         )
         : null;
 
+      if (isBoardChange) await retainCoManagedConversationBeforeSourceChange(trx, context.tenant, 'ticket', id);
+
       // Update ticket
       const [ticket] = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: id })
@@ -1949,6 +1990,17 @@ export class TicketService extends BaseService<ITicket> {
 
       // Publish appropriate events
       if (statusChanged) {
+        // is_closed / closed_at / closed_by are already folded into updateData
+        // above, so they ride the single UPDATE that produced `ticket` instead
+        // of the follow-up writes this branch used to issue. What remains here
+        // is the co-managed ledger, keyed off the same hoisted, share-locked
+        // status rows the close decision used.
+        if (nextStatus?.is_closed && !previousStatus?.is_closed) {
+          await recordCoManagedTicketResolution(trx, context.tenant, id);
+        } else if (!nextStatus?.is_closed && previousStatus?.is_closed) {
+          await recordCoManagedTicketReopened(trx, context.tenant, id);
+        }
+
         if (nextStatus?.is_closed) {
           await this.safePublishEvent('TICKET_CLOSED', context, {
             ticketId: ticket.ticket_id,
@@ -1956,6 +2008,18 @@ export class TicketService extends BaseService<ITicket> {
             closedAt: (closedAt ?? new Date()).toISOString(),
             suppressContactNotifications,
             suppressInternalNotifications,
+          });
+        }
+      }
+
+      if ('response_state' in cleanedData) {
+        await syncCoManagedTicketAwaitingClientSla(trx, context.tenant, id);
+        if (ticket.response_state !== currentTicket.response_state) {
+          await this.safePublishEvent('TICKET_RESPONSE_STATE_CHANGED', context, {
+            ticketId: id, userId: context.userId,
+            previousResponseState: currentTicket.response_state ?? null, newResponseState: ticket.response_state ?? null,
+            previousState: currentTicket.response_state ?? null, newState: ticket.response_state ?? null,
+            trigger: ticket.is_closed ? 'close' : 'manual',
           });
         }
       }
@@ -1971,6 +2035,7 @@ export class TicketService extends BaseService<ITicket> {
         'category_id',
         'subcategory_id',
         'due_date',
+        'response_state',
       ];
       for (const field of trackedChangeFields) {
         const nextValue = (cleanedData as Record<string, unknown>)[field as string];
@@ -2031,6 +2096,7 @@ export class TicketService extends BaseService<ITicket> {
         });
       }
 
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       return this.withDescriptionHtml(ticket as ITicket);
     });
   }
@@ -2084,6 +2150,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     const fullTicket = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       // Verify asset exists
       const asset = await tenantScopedTable(trx, 'assets', context.tenant)
         .where({ asset_id: data.asset_id })
@@ -2317,6 +2384,7 @@ export class TicketService extends BaseService<ITicket> {
     let createdExternalLinks: IExternalEntityLink[] = [];
 
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       // Verify ticket exists
       const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: ticketId })
@@ -2428,6 +2496,7 @@ export class TicketService extends BaseService<ITicket> {
           : {}),
       };
 
+      await assertCommentThreadAudience(trx, context.tenant, apiThreadId, { ticketId, isInternal: apiIsInternal, parentCommentId: apiParentCommentId });
       const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
 
       await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
@@ -2494,6 +2563,22 @@ export class TicketService extends BaseService<ITicket> {
         comment: { id: comment.comment_id, content: comment.note, author: authorName, isInternal: comment.is_internal },
         ...notificationSuppression,
       };
+      // Nothing announces a scheduled comment now. retainCoManagedNativeCommentEvent
+      // only accepts a source whose publish_state is already 'published', and the
+      // web composer gates its native event on `!isScheduled` for the same reason;
+      // the worker emits TICKET_COMMENT_ADDED when it flips publish_state.
+      // Otherwise retention runs first and reports whether the co-managed
+      // conversation took ownership of delivery. When it did not, this tenant has
+      // no co-managed conversation and the durable publication intent is what
+      // delivers the event, so the two never both publish.
+      const retainedByConversation = scheduledPublication
+        ? false
+        : await retainNativeConversationEvent(
+          trx,
+          { tenant: context.tenant, ticketId, commentId: comment.comment_id },
+          { kind: 'event', eventType: 'TICKET_COMMENT_ADDED', payload: { ...eventPayload, tenantId: context.tenant } },
+          { legacyPublish: async () => {} },
+        );
       if (scheduledPublication) {
         // Never arm the worker before the row is committed; the boot
         // reconciler repairs a post-commit scheduling failure.
@@ -2508,7 +2593,7 @@ export class TicketService extends BaseService<ITicket> {
             .where({ comment_id: comment.comment_id, publish_state: 'scheduled' })
             .update({ schedule_job_id: scheduled.jobId });
         }, `schedule comment publication ${comment.comment_id}`);
-      } else {
+      } else if (!retainedByConversation) {
         await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
       }
       return { response, externalLinks: createdExternalLinks };
@@ -2598,6 +2683,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const comment = await tenantScopedTable(trx, 'comments', context.tenant)
         .where({ comment_id: commentId, ticket_id: ticketId })
         .first();
@@ -2608,6 +2694,10 @@ export class TicketService extends BaseService<ITicket> {
 
       if (comment.is_system_generated) {
         throw new ValidationError('System-generated comments cannot be edited');
+      }
+
+      if (comment.actor_reference_id) {
+        throw new ValidationError('Qualified comment authors require a collaboration command');
       }
 
       let operatorRepair = false;
@@ -2652,8 +2742,15 @@ export class TicketService extends BaseService<ITicket> {
         .update(update)
         .returning('*');
 
+      // Editing the note body changes which attachments it references. Without
+      // this, an attachment dropped from the text is never marked removed, so
+      // it stays readable and email-deliverable, and a newly referenced draft
+      // is never promoted and silently expires.
       await reconcileCommentAttachments(trx, context.tenant, commentId, context.userId);
 
+      await retainNativeConversationEvent(trx, { tenant: context.tenant, ticketId, commentId },
+        { kind: 'event', eventType: 'TICKET_COMMENT_UPDATED', payload: { tenantId: context.tenant, ticketId, commentId, userId: context.userId } },
+        { legacyPublish: async () => {} });
       return {
         ...updated,
         comment_text: updated.note,
@@ -3167,6 +3264,7 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const tickets = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'ticket_number', 'master_ticket_id')
         .whereIn('ticket_id', [params.masterTicketId, ...uniqueChildIds]);
@@ -3244,6 +3342,7 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
         .where({ ticket_id: params.masterTicketId })
@@ -3301,6 +3400,7 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const oldMaster = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
         .where({ ticket_id: params.oldMasterTicketId })
@@ -3370,6 +3470,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
         .where({ master_ticket_id: params.masterTicketId })
         .first();
@@ -3402,6 +3503,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<{ masterTicketId: string; childTicketId: string; remainingChildren: number }> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const child = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
         .where({ ticket_id: params.childTicketId })
@@ -3445,6 +3547,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<{ masterTicketId: string; childTicketIds: string[] }> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
         .where({ ticket_id: params.masterTicketId })

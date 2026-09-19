@@ -435,4 +435,29 @@ describe('useTicketLive', () => {
     expect(payload).not.toHaveProperty('role');
     expect(payload).not.toHaveProperty('permissions');
   });
+  it('keeps foreign actor IDs qualified and rejects references outside the connected owner tenant', async () => {
+    const { useTicketLive } = await loadHook();
+    const tenantId = '00000000-0000-4000-8000-000000000001';
+    const actorReference = { ownerTenantId: tenantId, referenceId: '00000000-0000-4000-8000-000000000002',
+      tenantId: '00000000-0000-4000-8000-000000000003', userId: '00000000-0000-4000-8000-000000000004',
+      displayName: 'Morgan', organizationName: 'Partner' };
+    const onRemoteUpdate = vi.fn();
+    renderHook(() => useTicketLive({ tenantId, ticketId: 'ticket-1',
+      currentUser: { userId: actorReference.userId, displayName: 'Different customer user with the same UUID' }, onRemoteUpdate }));
+    await flushAsyncWork();
+    const update = { updatedFields: ['title'], updatedAt: '2026-09-06T20:00:00.000Z',
+      updatedBy: { userId: null, displayName: 'Forged local label', actorReference } };
+    await act(async () => { providers[0]?.emit('stateless', { payload: JSON.stringify(update) }); });
+    expect(onRemoteUpdate).toHaveBeenCalledWith({ ...update, updatedBy: { ...update.updatedBy, displayName: 'Morgan (Partner)' } });
+    onRemoteUpdate.mockClear();
+    for (const updatedBy of [
+      { ...update.updatedBy, userId: actorReference.userId },
+      { ...update.updatedBy, actorReference: { ...actorReference, ownerTenantId: actorReference.tenantId } },
+      { userId: null, displayName: 'Missing reference' },
+    ]) {
+      await act(async () => { providers[0]?.emit('stateless', { payload: JSON.stringify({ ...update, updatedBy }) }); });
+    }
+    expect(onRemoteUpdate).not.toHaveBeenCalled();
+  });
+
 });

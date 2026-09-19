@@ -1,3 +1,6 @@
+import { withCoManagedWorkflowTicketMutation } from '@alga-psa/co-managed/workflowTicketMutation';
+import { registerWorkflowConversationRetainer, registerWorkflowTicketMutationAdapter } from '@alga-psa/shared/workflow/runtime';
+import { retainCoManagedWorkflowCommentEvent } from '@alga-psa/co-managed/workflowConversationEvents';
 /**
  * Workflow Worker Entry Point
  *
@@ -51,6 +54,8 @@ async function startServices() {
 
     // Workflow actions resolve email integrations through a runtime registry.
     // The API server registers this during app bootstrap; the worker must do the same.
+    registerWorkflowConversationRetainer(retainCoManagedWorkflowCommentEvent);
+    registerWorkflowTicketMutationAdapter(withCoManagedWorkflowTicketMutation);
     registerWorkflowEmailProvider({
       TenantEmailService: TenantEmailService as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,

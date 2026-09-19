@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
 
@@ -133,7 +133,8 @@ export async function resolveRunActorUserId(trx: Knex.Transaction, tenantId: str
   const query = db.table('workflow_runs as wr');
   db.tenantJoin(query, 'workflow_definition_versions as wdv', 'wr.workflow_id', 'wdv.workflow_id', {
     type: 'left',
-    rootTenantColumn: 'wr.tenant'
+    rootTenantColumn: 'wr.tenant',
+    on: join => join.andOn('wr.workflow_version', '=', 'wdv.version')
   });
   db.tenantJoin(query, 'workflow_definitions as wd', 'wr.workflow_id', 'wd.workflow_id', {
     type: 'left',
@@ -238,7 +239,7 @@ export async function withTenantTransaction<T>(
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
   }
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     await setTenantContext(trx, tenantId);
     const actorUserId = await resolveRunActorUserId(trx, tenantId, ctx.runId);
     if (!actorUserId) {

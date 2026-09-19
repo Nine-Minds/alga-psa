@@ -19,6 +19,10 @@ COPY services/email-service/package.json ./services/email-service/
 COPY server/package.json ./server/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
+COPY packages/licensing/package.json ./packages/licensing/
+COPY packages/co-managed/package.json ./packages/co-managed/
+COPY packages/authorization/package.json ./packages/authorization/
+COPY packages/validation/package.json ./packages/validation/
 COPY packages/ee/package.json ./packages/ee/
 COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
@@ -31,6 +35,10 @@ RUN npm config set legacy-peer-deps true && npm install --include-workspace-root
   --workspace=server \
   --workspace=@alga-psa/core \
   --workspace=@alga-psa/db \
+  --workspace=@alga-psa/licensing \
+  --workspace=@alga-psa/co-managed \
+  --workspace=@alga-psa/authorization \
+  --workspace=@alga-psa/validation \
   --workspace=@alga-psa/ee-stubs \
   --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
@@ -54,6 +62,15 @@ WORKDIR /app/packages/event-bus
 RUN npm run build
 
 WORKDIR /app/shared
+RUN npm run build
+
+WORKDIR /app/packages/authorization
+RUN npm run build
+
+WORKDIR /app/packages/licensing
+RUN npm run build
+
+WORKDIR /app/packages/co-managed
 RUN npm run build
 
 WORKDIR /app/packages/storage

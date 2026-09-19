@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { assertTenantProductCapability, ProductAccessError } from '@shared/services/productAccessGuard';
 import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { syncTacticalSingleAgentForTenant } from '@alga-psa/integrations/lib/rmm/tacticalrmm/syncSingleAgent';
@@ -50,6 +51,8 @@ export async function POST(req: Request) {
     if (!expectedSecret || providedSecret !== expectedSecret) {
       return NextResponse.json({ error: 'Unauthorized: invalid webhook secret' }, { status: 401 });
     }
+
+    await assertTenantProductCapability(tenant, 'rmm');
 
     const body = await req.json().catch(() => null) as any;
     if (!body || typeof body !== 'object') {
@@ -157,6 +160,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, recorded: true, outcome: result.outcome }, { status: 200 });
   } catch (err: any) {
+    if (err instanceof ProductAccessError) return NextResponse.json({ error: 'Product access denied', code: err.code }, { status: 403 });
     console.error('[TacticalRMM webhook] Failed to process webhook:', err);
     return NextResponse.json({ error: 'Webhook could not be processed.' }, { status: 500 });
   }

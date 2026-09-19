@@ -55,7 +55,8 @@
     "settings": "Instellingen",
     "profile": "Profiel",
     "logout": "Afmelden",
-    "help": "Hulp"
+    "help": "Hulp",
+    "coManagedDelegation": "Gedelegeerd beheer"
   },
   "actions": {
     "save": "Opslaan",
@@ -1603,6 +1604,10 @@
     "threecxCall": "Bellen via 3CX",
     "threecxDialing": "Bellen vanaf uw 3CX-toestel",
     "threecxFailed": "De PBX kon de oproep niet plaatsen"
+  },
+  "users": {
+    "soloLicenseLimit": "Het Solo-abonnement ondersteunt één technicus. Waardeer de werkruimte op voordat u nog een gebruiker activeert.",
+    "technicianLicenseLimit": "Deze werkruimte kan geen extra technicus activeren. Controleer de activeringsstatus en de beschikbare licentietoewijzing."
   },
   "editor": {
     "attachFiles": "Bestanden bijvoegen",

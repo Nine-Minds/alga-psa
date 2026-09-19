@@ -55,7 +55,8 @@
     "settings": "Einstellungen",
     "profile": "Profil",
     "logout": "Abmelden",
-    "help": "Hilfe"
+    "help": "Hilfe",
+    "coManagedDelegation": "Delegierte Verwaltung"
   },
   "actions": {
     "save": "Speichern",
@@ -1603,6 +1604,10 @@
     "threecxCall": "Über 3CX anrufen",
     "threecxDialing": "Wählvorgang von Ihrer 3CX-Nebenstelle",
     "threecxFailed": "Die PBX konnte den Anruf nicht aufbauen"
+  },
+  "users": {
+    "soloLicenseLimit": "Der Solo-Tarif unterstützt einen Techniker. Führen Sie ein Upgrade des Workspaces durch, bevor Sie einen weiteren Benutzer aktivieren.",
+    "technicianLicenseLimit": "In diesem Workspace kann kein weiterer Techniker aktiviert werden. Prüfen Sie seinen Aktivierungsstatus und die verfügbare Lizenzzuteilung."
   },
   "editor": {
     "attachFiles": "Dateien anhängen",

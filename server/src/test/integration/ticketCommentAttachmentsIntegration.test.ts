@@ -226,6 +226,63 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     expect(intents.every(row => row.scheduled_publish_event_id && row.comment_publication_payload)).toBe(true);
     expect(intents.every(row => !row.scheduled_publish_dispatched_at)).toBe(true);
   });
+  // Regression: the origin/main merge kept uploadTicketDocument's
+  // canAccessAttachmentTicket guard but dropped the draft row and the
+  // is_client_visible flag it guards, and dropped reconcileCommentAttachments
+  // from updateComment. Both compile and pass a typecheck, so only behaviour
+  // catches them: without the draft row an API comment attachment silently
+  // never attaches, and without the edit reconciliation a file removed from a
+  // comment body stays downloadable.
+  it('REST draft upload records the draft row and client visibility, and an edit dropping the file revokes it', async () => {
+    const { TicketService } = await import('@/lib/api/services/TicketService');
+    const service = new TicketService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: trx, tenant });
+    vi.spyOn(service as any, 'safePublishEvent').mockResolvedValue(undefined);
+    vi.spyOn(service as any, 'getDocumentTypeIdForMime').mockResolvedValue({ typeId: null, isShared: false });
+    // Only the StorageService spies are module-global; restore exactly those so
+    // this test cannot disturb the sibling suites' own spies.
+    const validateSpy = vi.spyOn(StorageService, 'validateFileUpload').mockResolvedValue(undefined as any);
+    const fileId = randomUUID();
+    const uploadSpy = vi.spyOn(StorageService, 'uploadFile').mockImplementation(async (...args: any[]) => {
+      const options = args[3] ?? {};
+      const result = { file_id: fileId, storage_path: `/test/${fileId}` };
+      await table('external_files').insert({ tenant, file_id: fileId, file_name: 'draft.pdf', original_name: 'draft.pdf',
+        mime_type: 'application/pdf', file_size: 9, storage_path: result.storage_path, uploaded_by_id: actor });
+      // The real uploadFile persists the caller's rows inside its transaction.
+      if (options.persistRelatedRecords) await options.persistRelatedRecords(trx, result);
+      return result as any;
+    });
+    const context = { tenant, userId: actor } as any;
+    try {
+      const uploaded = await service.uploadTicketDocument(
+        ticket, new File([Buffer.from('%PDF-draft')], 'draft.pdf', { type: 'application/pdf' }), context, true);
+      expect(uploadSpy).toHaveBeenCalled();
+
+      // 1. The draft row exists and the document is client-visible.
+      const draft = await table('ticket_comment_attachments').where({ document_id: uploaded.document_id }).first();
+      expect(draft).toMatchObject({ state: 'draft', ticket_id: ticket, created_by: actor });
+      expect(draft.comment_id).toBeFalsy();
+      expect(new Date(draft.expires_at).getTime()).toBeGreaterThan(Date.now());
+      expect((await table('documents').where({ document_id: uploaded.document_id }).first()).is_client_visible).toBe(true);
+      // Its creator can read it while it is still an unexpired draft.
+      expect(await canReadCommentAttachment(trx, tenant, actor, uploaded.document_id)).toBe(true);
+
+      // 2. Posting the comment promotes the draft to attached.
+      await table('comments').where({ comment_id: comment }).update({ note: note(fileId) });
+      await reconcileCommentAttachments(trx, tenant, comment, actor);
+      expect((await table('ticket_comment_attachments').where({ document_id: uploaded.document_id }).first()).state).toBe('attached');
+      expect(await canReadCommentAttachment(trx, tenant, actor, uploaded.document_id)).toBe(true);
+
+      // 3. Editing the body to drop the file must revoke it, not orphan it.
+      await service.updateComment(ticket, comment, { comment_text: '[]' } as any, context);
+      expect((await table('ticket_comment_attachments').where({ document_id: uploaded.document_id }).first()).state).toBe('removed');
+      expect(await canReadCommentAttachment(trx, tenant, actor, uploaded.document_id)).toBe(false);
+      expect(await listPublishedCommentAttachments(trx, tenant, ticket, comment)).toEqual([]);
+    } finally {
+      uploadSpy.mockRestore();
+      validateSpy.mockRestore();
+    }
+  });
   it('rejects other actors, expired uploads, another ticket and a second comment claim', async () => {
     const {document,file} = await upload();
     await table('comments').where({comment_id:comment}).update({note:note(file)});
@@ -550,7 +607,11 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
     const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
     const storage = vi.spyOn(StorageService, 'downloadFile').mockResolvedValue({ buffer: bytes } as any);
-    const event = { id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId: tenant, ticketId: ticket, actorUserId: actor,
+    // `timestamp` is stamped by the bus (eventBus.ts publishes `{...event, id, timestamp}` and
+    // validates against this same schema), so a TICKET_COMMENT_ADDED reaching a subscriber always
+    // carries one. This harness calls the handler directly, bypassing the bus, so it supplies it.
+    const event = { id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', timestamp: new Date().toISOString(),
+      payload: { tenantId: tenant, ticketId: ticket, actorUserId: actor,
       comment: { id: comment, content, author: 'Agent', isInternal: false } } } as any;
     try {
       const pending = { tenantId: tenant, to: childEmail, subject: 'Pending bundle update', template: 'ticket-comment-added', locale: 'en' as const,

@@ -18,16 +18,45 @@ const createMigration = require(
 const assignmentMigration = require(
   path.join(MIGRATION_DIR, '20260816010000_add_billing_profile_assignment_columns.cjs')
 );
-// Later slices add tables that reference client_billing_profiles. A real
-// rollback runs migrations down in reverse order, so this test has to as well
-// — otherwise it would be asserting that S1 can be dropped out from under its
-// own dependants, which no rollback ever does.
-const dependentMigrationsNewestFirst = [
-  '20260818060000_add_billing_profile_to_payments_and_ar.cjs',
-  '20260818050000_add_billing_profile_to_cycles_and_invoices.cjs',
-  '20260818040000_add_billing_profile_bill_to_and_tax.cjs',
-  '20260818030000_create_portal_user_billing_profile_access.cjs',
-].map((file) => require(path.join(MIGRATION_DIR, file)));
+// Later slices add tables and columns that reference client_billing_profiles.
+// A real rollback runs migrations down in reverse order, so this test has to as
+// well — otherwise it would be asserting that S1 can be dropped out from under
+// its own dependants, which no rollback ever does.
+//
+// Discovered rather than listed: every later slice that references the table is
+// a dependant, and a hand-kept list silently goes stale the next time one is
+// added (it did, for the co-managed time work references).
+const CREATE_MIGRATION_FILE = '20260816000000_create_client_billing_profiles.cjs';
+const ASSIGNMENT_MIGRATION_FILE = '20260816010000_add_billing_profile_assignment_columns.cjs';
+
+/** Table names a migration creates, so a dependant of a dependant is found too.
+ * A migration that only alters a table is not what holds that table up. */
+function tablesCreatedBy(source: string): string[] {
+  if (!source.includes('createTable')) return [];
+  return [...source.matchAll(/createTable(?:IfNotExists)?\(\s*['"`]([a-z0-9_]+)['"`]/g)].map((match) => match[1])
+    .concat([...source.matchAll(/TABLE\s*=\s*['"`]([a-z0-9_]+)['"`]/g)].map((match) => match[1]));
+}
+
+const laterMigrations = fs.readdirSync(MIGRATION_DIR)
+  .filter((file) => file.endsWith('.cjs') && file > CREATE_MIGRATION_FILE && file !== ASSIGNMENT_MIGRATION_FILE)
+  .sort()
+  .map((file) => ({ file, source: fs.readFileSync(path.join(MIGRATION_DIR, file), 'utf8') }));
+
+// Transitive closure: a slice that references client_billing_profiles is a
+// dependant, and so is anything referencing a table that slice created.
+const blocking = new Set(['client_billing_profiles']);
+const dependentFiles = new Set<string>();
+for (let changed = true; changed; ) {
+  changed = false;
+  for (const { file, source } of laterMigrations) {
+    if (dependentFiles.has(file) || ![...blocking].some((table) => source.includes(table))) continue;
+    dependentFiles.add(file);
+    for (const table of tablesCreatedBy(source)) blocking.add(table);
+    changed = true;
+  }
+}
+const dependentMigrationsNewestFirst = [...dependentFiles].sort().reverse()
+  .map((file) => require(path.join(MIGRATION_DIR, file)));
 
 // Column matrix for F006–F012 (the assignment columns S1 adds).
 const ASSIGNMENT_COLUMNS: Array<[string, string]> = [

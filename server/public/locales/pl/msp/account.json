@@ -427,5 +427,8 @@
       "loading": "Ładowanie…",
       "loadMore": "Załaduj więcej"
     }
+  },
+  "coManaged": {
+    "accountTitle": "Współzarządzane IT"
   }
 }

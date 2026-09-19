@@ -4,7 +4,8 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite, isCoManagedWorkspaceNotFoundError } from '@alga-psa/licensing';
 import { 
   IProject, 
   IProjectPhase, 
@@ -105,9 +106,22 @@ async function resolveProjectStatusInfo(
   return { status: row.status_name, isClosed: Boolean(row.is_closed) };
 }
 
+/** Lifecycle admission, plus the one admission failure that carries an HTTP
+ * meaning of its own: a workspace that does not exist holds no project to act
+ * on, which is a 404 rather than a server fault. */
+async function admitOperationalWrite(trx: Knex.Transaction, tenant: string): Promise<void> {
+  try {
+    await assertCoManagedOperationalWrite(trx, tenant);
+  } catch (error) {
+    if (isCoManagedWorkspaceNotFoundError(error)) throw new NotFoundError('Project not found');
+    throw error;
+  }
+}
+
 export class ProjectService extends BaseService<IProject> {
   constructor() {
     super({
+      mutationGuard: (trx, context) => admitOperationalWrite(trx, context.tenant),
       tableName: 'projects',
       primaryKey: 'project_id',
       tenantColumn: 'tenant',
@@ -124,7 +138,7 @@ export class ProjectService extends BaseService<IProject> {
   }
 
   async list(options: ListOptions, context: ServiceContext, filters?: ProjectFilterData): Promise<ListResult<IProject>> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       const query = scopedTable<IProject>(knex, context.tenant, this.tableName);
   
       // Apply filters
@@ -206,7 +220,7 @@ export class ProjectService extends BaseService<IProject> {
 
 
   async getById(id: string, context: ServiceContext): Promise<IProject | null> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       const tableName = this.tableName;
 
       const db = tenantDb(knex, context.tenant);
@@ -263,9 +277,10 @@ export class ProjectService extends BaseService<IProject> {
   }
 
   async createProject(data: CreateProjectData, context: ServiceContext): Promise<IProject> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
     
     const project = await withTransaction(knex, async (trx) => {
+      await admitOperationalWrite(trx, context.tenant);
       const db = tenantDb(trx, context.tenant);
       const projectNumber = data.project_number ?? await SharedNumberingService.getNextNumber('PROJECT', { knex: trx, tenant: context.tenant });
 
@@ -276,7 +291,7 @@ export class ProjectService extends BaseService<IProject> {
       let status = data.status;
       if (!data.status) {
         try {
-          const defaultStatus = await this.getDefaultProjectStatus(context);
+          const defaultStatus = await this.getDefaultProjectStatus({ ...context, db: trx });
           status = defaultStatus?.status_id;
         } catch (error) {
           // If status lookup fails, throw error since status is required
@@ -285,7 +300,7 @@ export class ProjectService extends BaseService<IProject> {
         }
       } else if (!this.isUUID(data.status)) {
         // Convert status name to UUID
-        status = await this.resolveStatusNameToId(data.status, context);
+        status = await this.resolveStatusNameToId(data.status, { ...context, db: trx });
       }
       
       // Remove fields that don't belong in the database
@@ -302,6 +317,8 @@ export class ProjectService extends BaseService<IProject> {
       };
 
       const [project] = await db.table(this.tableName).insert(projectData).returning('*');
+      // Runs in this transaction so a project is never persisted without the
+      // task-status mappings its board depends on.
       await this.setupDefaultStatusMappings(project.project_id, context, trx);
 
       // Create initial phase if needed
@@ -323,19 +340,20 @@ export class ProjectService extends BaseService<IProject> {
         });
       }
 
+      registerAfterCommit(trx, async () => {
+        await publishEvent({
+          eventType: 'PROJECT_CREATED',
+          payload: {
+            tenantId: context.tenant,
+            projectId: project.project_id,
+            projectName: project.project_name,
+            clientId: project.client_id,
+            userId: context.userId,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }, `PROJECT_CREATED tenant=${context.tenant} project=${project.project_id}`);
       return project;
-    });
-
-    await publishEvent({
-      eventType: 'PROJECT_CREATED',
-      payload: {
-        tenantId: context.tenant,
-        projectId: project.project_id,
-        projectName: project.project_name,
-        clientId: project.client_id,
-        userId: context.userId,
-        timestamp: new Date().toISOString()
-      }
     });
 
     return project;
@@ -349,9 +367,10 @@ export class ProjectService extends BaseService<IProject> {
   }
 
   async update(id: string, data: UpdateProjectData, context: ServiceContext): Promise<IProject> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       const result = await withTransaction(knex, async (trx) => {
+        await admitOperationalWrite(trx, context.tenant);
         const db = tenantDb(trx, context.tenant);
         const beforeProject = await db.table(this.tableName)
           .where({ [this.primaryKey]: id })
@@ -363,7 +382,7 @@ export class ProjectService extends BaseService<IProject> {
         // Handle status name to UUID conversion if needed
         let statusId = data.status;
         if (data.status && !this.isUUID(data.status)) {
-          statusId = await this.resolveStatusNameToId(data.status, context);
+          statusId = await this.resolveStatusNameToId(data.status, { ...context, db: trx });
         }
 
         const updateData = {
@@ -381,60 +400,62 @@ export class ProjectService extends BaseService<IProject> {
           throw new NotFoundError('Project not found');
         }
         
-        return { beforeProject, project, occurredAt: updateData.updated_at };
-      });
-
-      const occurredAt = result.occurredAt instanceof Date ? result.occurredAt : new Date();
-      const ctx = {
-        tenantId: context.tenant,
-        occurredAt,
-        actor: { actorType: 'USER' as const, actorUserId: context.userId },
-      };
-
-      if (
-        'assigned_to' in data &&
-        result.beforeProject.assigned_to !== result.project.assigned_to &&
-        result.project.assigned_to
-      ) {
-        await publishEvent({
-          eventType: 'PROJECT_ASSIGNED',
-          payload: {
+        const mutation = { beforeProject, project, occurredAt: updateData.updated_at };
+        registerAfterCommit(trx, async () => {
+          const occurredAt = mutation.occurredAt instanceof Date ? mutation.occurredAt : new Date();
+          const ctx = {
             tenantId: context.tenant,
-            projectId: id,
-            userId: context.userId,
-            assignedTo: result.project.assigned_to,
-            timestamp: new Date().toISOString()
+            occurredAt,
+            actor: { actorType: 'USER' as const, actorUserId: context.userId },
+          };
+
+          if (
+            'assigned_to' in data &&
+            mutation.beforeProject.assigned_to !== mutation.project.assigned_to &&
+            mutation.project.assigned_to
+          ) {
+            await publishEvent({
+              eventType: 'PROJECT_ASSIGNED',
+              payload: {
+                tenantId: context.tenant,
+                projectId: id,
+                userId: context.userId,
+                assignedTo: mutation.project.assigned_to,
+                timestamp: new Date().toISOString()
+              }
+            });
           }
-        });
-      }
 
-      if ('status' in data && result.beforeProject.status !== result.project.status) {
-        await publishWorkflowEvent({
-          eventType: 'PROJECT_STATUS_CHANGED',
-          ctx,
-          payload: buildProjectStatusChangedPayload({
-            projectId: id,
-            previousStatus: result.beforeProject.status,
-            newStatus: result.project.status,
-            changedAt: occurredAt,
-          }),
-        });
-      }
+          if ('status' in data && mutation.beforeProject.status !== mutation.project.status) {
+            await publishWorkflowEvent({
+              eventType: 'PROJECT_STATUS_CHANGED',
+              ctx,
+              payload: buildProjectStatusChangedPayload({
+                projectId: id,
+                previousStatus: mutation.beforeProject.status,
+                newStatus: mutation.project.status,
+                changedAt: occurredAt,
+              }),
+            });
+          }
 
-      await publishWorkflowEvent({
-        eventType: 'PROJECT_UPDATED',
-        ctx,
-        payload: buildProjectUpdatedPayload({
-          projectId: id,
-          before: result.beforeProject as unknown as Record<string, unknown> & { project_id: string },
-          after: result.project as unknown as Record<string, unknown> & { project_id: string },
-          updatedFieldKeys: Object.keys(data),
-          updatedAt: occurredAt,
-        }),
+          await publishWorkflowEvent({
+            eventType: 'PROJECT_UPDATED',
+            ctx,
+            payload: buildProjectUpdatedPayload({
+              projectId: id,
+              before: mutation.beforeProject as unknown as Record<string, unknown> & { project_id: string },
+              after: mutation.project as unknown as Record<string, unknown> & { project_id: string },
+              updatedFieldKeys: Object.keys(data),
+              updatedAt: occurredAt,
+            }),
+          });
+        }, `PROJECT_UPDATED tenant=${context.tenant} project=${id}`);
+        return mutation;
       });
 
-      // Keep events based on the persisted UUID. Named API inputs retain their
-      // response compatibility without changing the row used by subscribers.
+      // Events keep the persisted UUID (see the payloads above); a named API
+      // input only retains its response compatibility, and must not reach them.
       return {
         ...result.project,
         ...(data.status && !this.isUUID(data.status) ? { status: data.status } : {}),
@@ -442,36 +463,49 @@ export class ProjectService extends BaseService<IProject> {
     }
 
 
+  /** Dependency-validated delete: blocking records yield a 409 rather than an
+   * FK crash, and the child rows that are safe to remove are cleaned up in the
+   * same transaction. The co-managed write guard runs inside that transaction
+   * so a paused or read-only relationship cannot delete through the API. */
   async delete(id: string, context: ServiceContext): Promise<void> {
-    const { knex } = await this.getKnex();
-    const project = await scopedTable(knex, context.tenant, this.tableName)
-      .where({ [this.primaryKey]: id }).first(this.primaryKey);
-    if (!project) throw new NotFoundError('Project not found');
+      const knex = await this.getDbForContext(context);
+      // Lifecycle admission runs before anything else. A paused, expired or
+      // not-yet-accepted co-managed relationship must be refused outright, not
+      // told whether the project exists — so this cannot sit behind the
+      // existence probe or behind dependency validation.
+      await withTransaction(knex, async (trx) => {
+        await admitOperationalWrite(trx, context.tenant);
+        const project = await scopedTable(trx, context.tenant, this.tableName)
+          .where({ [this.primaryKey]: id }).first(this.primaryKey);
+        if (!project) throw new NotFoundError('Project not found');
+      });
 
-    const result = await deleteEntityWithValidation('project', id, knex, context.tenant, async (trx, tenant) => {
-      const db = tenantDb(trx, tenant);
-      const phaseIds = db.table('project_phases').where({ project_id: id }).select('phase_id');
-      const taskIds = db.table('project_tasks').whereIn('phase_id', phaseIds).select('task_id');
-      await db.table('tag_mappings').where({ tagged_type: 'project_task' }).whereIn('tagged_id', taskIds).delete();
-      await db.table('tag_mappings').where({ tagged_type: 'project', tagged_id: id }).delete();
-      await db.table('project_ticket_links').where({ project_id: id }).delete();
-      await db.table('email_reply_tokens').where({ project_id: id }).delete();
-      await db.table('user_preferences').where({ setting_name: projectKanbanHiddenStatusesKey(id) }).delete();
-      await ProjectModel.delete(trx, tenant, id);
-    });
-    if (!result.deleted) {
-      throw new ConflictError(result.message ?? 'Project has blocking dependencies', { dependencies: result.dependencies });
+      const result = await deleteEntityWithValidation('project', id, knex, context.tenant, async (trx, tenant) => {
+        await admitOperationalWrite(trx, tenant);
+        const db = tenantDb(trx, tenant);
+        const phaseIds = db.table('project_phases').where({ project_id: id }).select('phase_id');
+        const taskIds = db.table('project_tasks').whereIn('phase_id', phaseIds).select('task_id');
+        await db.table('tag_mappings').where({ tagged_type: 'project_task' }).whereIn('tagged_id', taskIds).delete();
+        await db.table('tag_mappings').where({ tagged_type: 'project', tagged_id: id }).delete();
+        await db.table('project_ticket_links').where({ project_id: id }).delete();
+        await db.table('email_reply_tokens').where({ project_id: id }).delete();
+        await db.table('user_preferences').where({ setting_name: projectKanbanHiddenStatusesKey(id) }).delete();
+        await ProjectModel.delete(trx, tenant, id);
+      });
+      if (!result.deleted) {
+        throw new ConflictError(result.message ?? 'Project has blocking dependencies', { dependencies: result.dependencies });
+      }
+
+      await publishEvent({
+        eventType: 'PROJECT_DELETED',
+        payload: { tenantId: context.tenant, projectId: id, userId: context.userId, timestamp: new Date().toISOString() },
+      });
     }
 
-    await publishEvent({
-      eventType: 'PROJECT_DELETED',
-      payload: { tenantId: context.tenant, projectId: id, userId: context.userId, timestamp: new Date().toISOString() },
-    });
-  }
 
   // Project phases
   async getPhases(projectId: string, context: ServiceContext): Promise<IProjectPhase[]> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       return scopedTable<IProjectPhase>(knex, context.tenant, 'project_phases')
         .where({ project_id: projectId })
@@ -483,15 +517,16 @@ export class ProjectService extends BaseService<IProject> {
 
 
   async createPhase(projectId: string, data: CreateProjectPhaseData, context: ServiceContext): Promise<IProjectPhase> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       return withTransaction(knex, async (trx) => {
-        const project = await this.getById(projectId, context);
+        await admitOperationalWrite(trx, context.tenant);
+        const project = await this.getById(projectId, { ...context, db: trx });
         if (!project) {
           throw new NotFoundError('Project not found');
         }
   
-        const phases = await this.getPhases(projectId, context);
+        const phases = await this.getPhases(projectId, { ...context, db: trx });
         const nextOrderNumber = phases.length + 1;
   
         // Generate WBS code
@@ -542,9 +577,10 @@ export class ProjectService extends BaseService<IProject> {
 
 
   async updatePhase(phaseId: string, data: UpdateProjectPhaseData, context: ServiceContext): Promise<IProjectPhase> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       return withTransaction(knex, async (trx) => {
+        await admitOperationalWrite(trx, context.tenant);
         const updateData = {
           ...data,
           updated_at: new Date()
@@ -565,21 +601,24 @@ export class ProjectService extends BaseService<IProject> {
 
 
   async deletePhase(phaseId: string, context: ServiceContext): Promise<void> {
-      const { knex } = await this.getKnex();
-      
-      const result = await scopedTable(knex, context.tenant, 'project_phases')
-        .where({ phase_id: phaseId })
-        .del();
-  
-      if (result === 0) {
-        throw new NotFoundError('Project phase not found');
-      }
+      const knex = await this.getDbForContext(context);
+      return withTransaction(knex, async (trx) => {
+        await admitOperationalWrite(trx, context.tenant);
+
+        const result = await scopedTable(trx, context.tenant, 'project_phases')
+          .where({ phase_id: phaseId })
+          .del();
+
+        if (result === 0) {
+          throw new NotFoundError('Project phase not found');
+        }
+      });
     }
 
 
   // Project tasks
   async getTasks(projectId: string, context: ServiceContext): Promise<IProjectTask[]> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       // First check if the project exists
       const project = await this.getById(projectId, context);
@@ -613,9 +652,10 @@ export class ProjectService extends BaseService<IProject> {
 
 
   async createTask(phaseId: string, data: CreateProjectTaskData, context: ServiceContext): Promise<IProjectTask> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       const result = await withTransaction(knex, async (trx) => {
+        await admitOperationalWrite(trx, context.tenant);
         const db = tenantDb(trx, context.tenant);
         const phase = await db.table('project_phases')
           .where({ phase_id: phaseId })
@@ -731,25 +771,28 @@ export class ProjectService extends BaseService<IProject> {
           });
         }
 
-        return { task, ctx, workflowEvents };
+        const mutation = { task, ctx, workflowEvents };
+        registerAfterCommit(trx, async () => {
+          for (const event of mutation.workflowEvents) {
+            await publishWorkflowEvent({
+              eventType: event.eventType,
+              ctx: mutation.ctx,
+              payload: event.payload,
+            });
+          }
+        }, `PROJECT_TASK_EVENTS tenant=${context.tenant} task=${task.task_id}`);
+        return mutation;
       });
-
-      for (const event of result.workflowEvents) {
-        await publishWorkflowEvent({
-          eventType: event.eventType,
-          ctx: result.ctx,
-          payload: event.payload,
-        });
-      }
 
       return result.task as IProjectTask;
     }
 
 
   async updateTask(taskId: string, data: InternalUpdateProjectTaskData, context: ServiceContext): Promise<IProjectTask> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       const result = await withTransaction(knex, async (trx) => {
+        await admitOperationalWrite(trx, context.tenant);
         const db = tenantDb(trx, context.tenant);
         const beforeTask = await db.table('project_tasks')
           .where({ task_id: taskId })
@@ -841,39 +884,44 @@ export class ProjectService extends BaseService<IProject> {
           }
         }
   
-        return { task, ctx, workflowEvents };
+        const mutation = { task, ctx, workflowEvents };
+        registerAfterCommit(trx, async () => {
+          if (mutation.ctx) {
+            for (const event of mutation.workflowEvents) {
+              await publishWorkflowEvent({
+                eventType: event.eventType,
+                ctx: mutation.ctx,
+                payload: event.payload,
+              });
+            }
+          }
+        }, `PROJECT_TASK_EVENTS tenant=${context.tenant} task=${task.task_id}`);
+        return mutation;
       });
-
-      if (result.ctx) {
-        for (const event of result.workflowEvents) {
-          await publishWorkflowEvent({
-            eventType: event.eventType,
-            ctx: result.ctx,
-            payload: event.payload,
-          });
-        }
-      }
 
       return result.task as IProjectTask;
     }
 
 
   async deleteTask(taskId: string, context: ServiceContext): Promise<void> {
-      const { knex } = await this.getKnex();
-      
-      const result = await scopedTable(knex, context.tenant, 'project_tasks')
-        .where({ task_id: taskId })
-        .del();
-  
-      if (result === 0) {
-        throw new NotFoundError('Project task not found');
-      }
+      const knex = await this.getDbForContext(context);
+      return withTransaction(knex, async (trx) => {
+        await admitOperationalWrite(trx, context.tenant);
+
+        const result = await scopedTable(trx, context.tenant, 'project_tasks')
+          .where({ task_id: taskId })
+          .del();
+
+        if (result === 0) {
+          throw new NotFoundError('Project task not found');
+        }
+      });
     }
 
 
   // Task checklist items
   async getTaskChecklistItems(taskId: string, context: ServiceContext): Promise<ITaskChecklistItem[]> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       return scopedTable<ITaskChecklistItem>(knex, context.tenant, 'task_checklist_items')
         .where({ task_id: taskId })
@@ -882,10 +930,11 @@ export class ProjectService extends BaseService<IProject> {
 
 
   async createChecklistItem(taskId: string, data: CreateTaskChecklistItemData, context: ServiceContext): Promise<ITaskChecklistItem> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       return withTransaction(knex, async (trx) => {
-        const items = await this.getTaskChecklistItems(taskId, context);
+        await admitOperationalWrite(trx, context.tenant);
+        const items = await this.getTaskChecklistItems(taskId, { ...context, db: trx });
         const nextOrderNumber = data.order_number ?? items.length + 1;
   
         const itemData = {
@@ -908,7 +957,7 @@ export class ProjectService extends BaseService<IProject> {
 
   // Project ticket links
   async getProjectTicketLinks(projectId: string, context: ServiceContext): Promise<IProjectTicketLink[]> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       const db = tenantDb(knex, context.tenant);
       const query = db.table('project_ticket_links');
@@ -929,26 +978,29 @@ export class ProjectService extends BaseService<IProject> {
 
 
   async createTicketLink(projectId: string, data: CreateProjectTicketLinkData, context: ServiceContext): Promise<IProjectTicketLink> {
-      const { knex } = await this.getKnex();
-      
-      const linkData = {
-        ...data,
-        project_id: projectId,
-        tenant: context.tenant,
-        created_at: new Date()
-      };
-  
-      const [link] = await tenantDb(knex, context.tenant).table('project_ticket_links')
-        .insert(linkData)
-        .returning('*');
-  
-      return link;
+      const knex = await this.getDbForContext(context);
+      return withTransaction(knex, async (trx) => {
+        await admitOperationalWrite(trx, context.tenant);
+
+        const linkData = {
+          ...data,
+          project_id: projectId,
+          tenant: context.tenant,
+          created_at: new Date()
+        };
+
+        const [link] = await tenantDb(trx, context.tenant).table('project_ticket_links')
+          .insert(linkData)
+          .returning('*');
+
+        return link;
+      });
     }
 
 
   // Search and export
   async search(searchData: ProjectSearchData, context: ServiceContext): Promise<IProject[]> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       const tableName = this.tableName; // Capture tableName in scope
       
       const db = tenantDb(knex, context.tenant);
@@ -1001,7 +1053,7 @@ export class ProjectService extends BaseService<IProject> {
 
   // Statistics
   async getStatistics(context: ServiceContext): Promise<any> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       const tableName = this.tableName;
       const db = tenantDb(knex, context.tenant);
       
@@ -1060,7 +1112,7 @@ export class ProjectService extends BaseService<IProject> {
 
   // Helper methods
   private async getDefaultProjectStatus(context: ServiceContext): Promise<any> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       // First try to find a status marked as default
       let status = await this.buildProjectStatusQuery(knex, context)
@@ -1096,7 +1148,7 @@ export class ProjectService extends BaseService<IProject> {
 
   // Helper method to resolve status names to UUIDs
   private async resolveStatusNameToId(statusName: string, context: ServiceContext): Promise<string> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
     
     // Map common status names to database names
     const statusNameMap: Record<string, string> = {
@@ -1122,6 +1174,10 @@ export class ProjectService extends BaseService<IProject> {
   }
 
 
+  /** Prefers the tenant's own project-task statuses and only falls back to the
+   * standard catalog, so a tenant that curated its statuses does not get the
+   * generic set. Takes the caller's transaction: the mappings must land with
+   * the project row or not at all. */
   private async setupDefaultStatusMappings(
     projectId: string,
     context: ServiceContext,
@@ -1140,8 +1196,9 @@ export class ProjectService extends BaseService<IProject> {
     }
   }
 
+
   private async getProjectStatistics(projectId: string, context: ServiceContext): Promise<any> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       const [phaseCount, taskStats] = await Promise.all([
         scopedTable(knex, context.tenant, 'project_phases')
@@ -1196,7 +1253,7 @@ export class ProjectService extends BaseService<IProject> {
 
 
   private async getProjectClient(clientId: string, context: ServiceContext): Promise<any> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       return scopedTable(knex, context.tenant, 'clients')
         .where({ client_id: clientId })
@@ -1206,7 +1263,7 @@ export class ProjectService extends BaseService<IProject> {
 
 
   private async getProjectContact(contactId: string, context: ServiceContext): Promise<any> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       return scopedTable(knex, context.tenant, 'contacts')
         .where({ contact_name_id: contactId })
@@ -1216,7 +1273,7 @@ export class ProjectService extends BaseService<IProject> {
 
 
   private async getProjectAssignedUser(userId: string, context: ServiceContext): Promise<any> {
-      const { knex } = await this.getKnex();
+      const knex = await this.getDbForContext(context);
       
       return scopedTable(knex, context.tenant, 'users')
         .where({ user_id: userId })
@@ -1234,7 +1291,7 @@ export class ProjectService extends BaseService<IProject> {
   }
 
   async exportProjects(filters: any, format: string, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
     const tableName = this.tableName;
     const db = tenantDb(knex, context.tenant);
     const query = db.table(tableName);
@@ -1291,7 +1348,7 @@ export class ProjectService extends BaseService<IProject> {
     projectId: string,
     context: ServiceContext,
   ): Promise<IProjectStatusMapping[]> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
 
     const project = await this.getById(projectId, context);
     if (!project) {
@@ -1316,7 +1373,7 @@ export class ProjectService extends BaseService<IProject> {
   }
 
   async getProjectTickets(projectId: string, pagination: any, context: ServiceContext): Promise<{data: any[], total: number}> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
     
     // Get tickets related to this project through project_ticket_links
     const db = tenantDb(knex, context.tenant);
@@ -1379,13 +1436,14 @@ export class ProjectService extends BaseService<IProject> {
    * Bulk update projects - custom implementation
    */
   async bulkUpdateProjects(projectIds: string[], updates: any, context: ServiceContext): Promise<IProject[]> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
     
     return withTransaction(knex, async (trx) => {
+      await admitOperationalWrite(trx, context.tenant);
       const results: IProject[] = [];
       
       for (const projectId of projectIds) {
-        const project = await this.update(projectId, updates, context);
+        const project = await this.update(projectId, updates, { ...context, db: trx });
         results.push(project);
       }
       
@@ -1418,7 +1476,7 @@ export class ProjectService extends BaseService<IProject> {
    * List tasks for a phase
    */
   async listPhaseTasks(phaseId: string, context: ServiceContext): Promise<IProjectTask[]> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
     
     const tasks = await scopedTable<IProjectTask>(knex, context.tenant, 'project_tasks')
       .where({
@@ -1436,7 +1494,7 @@ export class ProjectService extends BaseService<IProject> {
    * Get task by ID
    */
   async getTaskById(taskId: string, context: ServiceContext): Promise<IProjectTask | null> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
     
     const task = await scopedTable<IProjectTask>(knex, context.tenant, 'project_tasks')
       .where({

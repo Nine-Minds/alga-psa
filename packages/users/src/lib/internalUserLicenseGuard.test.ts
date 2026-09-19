@@ -1,4 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const admission = vi.hoisted(() => vi.fn());
+vi.mock('@alga-psa/licensing', () => ({ assertCoManagedSeatAdmission: admission, CoManagedAdmissionError: class extends Error {} }));
+beforeEach(() => admission.mockReset());
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, _tenant: string) => ({
@@ -108,4 +112,14 @@ describe('checkInternalUserLicenseLimit', () => {
       'Tenant not found: missing-tenant'
     );
   });
+});
+
+it('uses customer allocation admission even when the ordinary MSP limit is zero or Solo', async () => {
+  admission.mockResolvedValue({ managed: true });
+  const trx: any = (table: string) => {
+    if (table === 'tenants') return { first: async () => ({ product_code: 'co_managed', plan: 'solo', licensed_user_count: 0 }) };
+    throw new Error('Customer admission must not use the ordinary MSP counter');
+  };
+  trx.isTransaction = true;
+  expect(await checkInternalUserLicenseLimit(trx, 'customer', { email: 'tech@example.test' })).toEqual({ ok: true });
 });

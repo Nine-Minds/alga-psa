@@ -179,6 +179,50 @@ const hostParallelism = (os.availableParallelism?.() ?? os.cpus().length) || 8;
 const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS) ?? Math.min(4, hostParallelism);
 const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
+const devAllowedOrigins = (process.env.DEV_ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+/**
+ * Next silently 403s /_next/* HMR, font and RSC requests from an origin it does
+ * not recognise. The page still returns 200 to curl, so a curl-only check
+ * passes while the browser hangs at "Loading translations...". Serving a dev
+ * server on a LAN/tailnet address without listing it is therefore a
+ * configuration error we can detect, and the only way a reviewer finds out
+ * otherwise is a blank page.
+ *
+ * Only non-loopback hosts are checked: a plain `next dev` on localhost needs no
+ * DEV_ALLOWED_ORIGINS and must keep working untouched.
+ */
+function assertDevOriginsCoverAdvertisedHost() {
+  if (process.env.NODE_ENV === 'production') return;
+
+  const advertised = [process.env.HOST, process.env.NEXTAUTH_URL]
+    .filter(Boolean)
+    .map((value) => {
+      try {
+        return new URL(value.includes('://') ? value : `http://${value}`).hostname;
+      } catch {
+        return null;
+      }
+    })
+    .filter((hostname) => hostname && !['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(hostname));
+
+  const uncovered = [...new Set(advertised)].filter((hostname) => !devAllowedOrigins.includes(hostname));
+  if (uncovered.length === 0) return;
+
+  throw new Error(
+    `This dev server advertises itself at ${uncovered.join(', ')} but DEV_ALLOWED_ORIGINS=` +
+      `"${process.env.DEV_ALLOWED_ORIGINS ?? ''}" does not list ${uncovered.length > 1 ? 'those hosts' : 'that host'}. ` +
+      'Next would 403 every /_next/* HMR, font and RSC request from a browser on that address and the page would ' +
+      'stall at "Loading translations..." while curl still returned 200. ' +
+      `Set DEV_ALLOWED_ORIGINS=${uncovered.join(',')} (see scripts/dev/run-co-managed-dev-server.sh).`,
+  );
+}
+
+assertDevOriginsCoverAdvertisedHost();
+
 const nextConfig = {
   // Permit isolated dev/test servers to coexist with the normal worktree server.
   // Production and ordinary development retain Next's default `.next` directory.
@@ -187,10 +231,7 @@ const nextConfig = {
   // and RSC requests from origins it does not recognize, which stalls
   // hydration when a phone/tablet loads the dev server by LAN IP.
   // Comma-separated hostnames, e.g. DEV_ALLOWED_ORIGINS=192.168.1.20,my-mac.local
-  allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  allowedDevOrigins: devAllowedOrigins,
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
     // Propagate edition to client-side code

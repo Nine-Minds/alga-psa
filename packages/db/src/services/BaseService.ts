@@ -23,6 +23,8 @@ export interface ListOptions {
 export interface ServiceContext {
   userId: string;
   tenant: string;
+  /** Set by the verified API transport, never from a request body. */
+  apiKeyId?: string;
   user?: any;
   db?: Knex;
 }
@@ -47,6 +49,10 @@ export interface ServiceOptions {
   searchableFields?: string[];
   defaultSort?: string;
   defaultOrder?: 'asc' | 'desc';
+  /** Domain admission inside each inherited mutation's transaction, before
+   * row access. Custom mutation overrides must retain their own admission.
+   * Keeping this injected avoids a database-to-licensing dependency cycle. */
+  mutationGuard?: (trx: Knex.Transaction, context: ServiceContext) => Promise<void>;
 }
 
 export abstract class BaseService<T = any> {
@@ -63,6 +69,7 @@ export abstract class BaseService<T = any> {
   protected searchableFields: string[];
   protected defaultSort: string;
   protected defaultOrder: 'asc' | 'desc';
+  protected mutationGuard?: ServiceOptions['mutationGuard'];
 
   constructor(options: ServiceOptions) {
     this.tableName = options.tableName;
@@ -79,6 +86,7 @@ export abstract class BaseService<T = any> {
     this.searchableFields = options.searchableFields || [];
     this.defaultSort = options.defaultSort || this.auditFields.createdAt;
     this.defaultOrder = options.defaultOrder || 'desc';
+    this.mutationGuard = options.mutationGuard;
   }
 
   /**
@@ -96,6 +104,8 @@ export abstract class BaseService<T = any> {
   /**
    * Get database connection for a context (backward compatibility)
    */
+  // LEVERAGE: pattern comanaged-trx-threading — the same choose-the-caller's-handle rule
+  // as StorageService.deleteFile and the cleanupExpiredTokens services, spelled a third way.
   protected async getDbForContext(context: ServiceContext): Promise<Knex> {
     if (context.db) {
       return context.db;
@@ -318,6 +328,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       const auditedData = await this.filterAuditFields(
         trx,
         this.addCreateAuditFields(data, context)
@@ -336,6 +347,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       const auditedData = await this.filterAuditFields(
         trx,
         this.addUpdateAuditFields(data, context)
@@ -361,6 +373,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       if (this.softDelete) {
         const auditedData = await this.filterAuditFields(
           trx,
@@ -401,7 +414,9 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const auditedData = data.map(item => this.addCreateAuditFields(item, context));
+      await this.mutationGuard?.(trx, context);
+      const auditedData = await Promise.all(data.map(item =>
+        this.filterAuditFields(trx, this.addCreateAuditFields(item, context))));
       const results = await this.buildTenantScopedQuery(trx, context)
         .insert(auditedData)
         .returning('*');
@@ -413,10 +428,11 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       const results: any[] = [];
 
       for (const update of updates) {
-        const auditedData = this.addUpdateAuditFields(update.data, context);
+        const auditedData = await this.filterAuditFields(trx, this.addUpdateAuditFields(update.data, context));
 
         const [result] = await this.buildTenantScopedQuery(trx, context)
           .where(this.primaryKey, update.id)
@@ -436,11 +452,10 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       if (this.softDelete) {
-        const auditedData = this.addUpdateAuditFields(
-          { deleted_at: new Date().toISOString() },
-          context
-        );
+        const auditedData = await this.filterAuditFields(trx, this.addUpdateAuditFields(
+          { deleted_at: new Date().toISOString() }, context));
 
         await this.buildTenantScopedQuery(trx, context)
           .whereIn(this.primaryKey, ids)

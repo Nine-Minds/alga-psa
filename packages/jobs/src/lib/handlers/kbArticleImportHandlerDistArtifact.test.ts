@@ -51,6 +51,12 @@ const fakeKnex: any = {
   transaction: async (callback: (trx: unknown) => Promise<unknown>) => callback(fakeKnex),
 };
 
+// Real lifecycle/locking behavior is covered against PostgreSQL.
+vi.mock('@alga-psa/licensing/lifecycle', () => ({
+  assertCoManagedOperationalWrite: vi.fn(),
+  CoManagedLifecycleError: class extends Error {},
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async (tenantId: string) => ({ knex: fakeKnex, tenant: tenantId }),
   tenantDb: () => ({ table: (name: string) => makeQuery(name) }),

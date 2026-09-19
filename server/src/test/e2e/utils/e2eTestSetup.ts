@@ -88,6 +88,11 @@ export async function setupE2ETestEnvironment(options: {
         // Clean up API keys
         await tenantTable('api_keys').delete();
         
+        // Running/completed native timers reference both users and time_entries
+        // (completed_entry_id), so they must go before either. Matches the product's
+        // own ordering in tenant-deletion-activities.ts.
+        await tenantTable('native_time_tracking_sessions').delete();
+
         // Clean up time entries first
         await tenantTable('time_entries').delete();
           

@@ -1,9 +1,11 @@
 import type { IEventPublisher } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { registerAfterCommit } from '@alga-psa/db';
+import { retainNativeConversationEvent } from '../nativeConversationEvents';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 export class TicketModelEventPublisher implements IEventPublisher {
+  readonly transactionalCommentEvents = true as const;
   /**
    * When constructed with the creating transaction, publishes are deferred
    * until that transaction commits (via registerAfterCommit), so subscribers
@@ -53,13 +55,18 @@ export class TicketModelEventPublisher implements IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishEvent('TICKET_COMMENT_ADDED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      commentId: data.commentId,
-      userId: data.userId,
-      ...data.metadata,
-    });
+    if (!this.trx?.isTransaction) throw new Error('Comment publication requires its owning transaction');
+    await retainNativeConversationEvent(this.trx, { tenant: data.tenantId, ticketId: data.ticketId, commentId: data.commentId }, {
+      kind: 'event', eventType: 'TICKET_COMMENT_ADDED', payload: {
+        tenantId: data.tenantId, ticketId: data.ticketId, commentId: data.commentId, userId: data.userId,
+        comment: { id: data.commentId, content: data.metadata?.content ?? '', author: data.metadata?.author ?? 'System',
+          authorType: data.metadata?.author_type, isInternal: data.metadata?.isInternal ?? false },
+      },
+    }, { legacyPublish: () => publishWorkflowEvent({
+      eventType: 'TICKET_COMMENT_ADDED',
+      payload: { tenantId: data.tenantId, ticketId: data.ticketId, commentId: data.commentId, userId: data.userId, ...data.metadata },
+      ctx: { tenantId: data.tenantId, actor: data.userId ? { actorType: 'USER', actorUserId: data.userId } : { actorType: 'SYSTEM' } },
+    } as any) });
   }
 
   async publishTicketAssigned(data: { tenantId: string; ticketId: string; userId: string; assignedByUserId?: string }): Promise<void> {

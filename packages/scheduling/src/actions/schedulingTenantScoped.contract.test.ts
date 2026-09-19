@@ -12,7 +12,10 @@ const metadataSource = readFileSync(resolve(__dirname, '../../../db/src/lib/tena
 
 describe('scheduling tenant-scoped query contract', () => {
   it('uses tenantDb roots for time period models and settings actions', () => {
-    expect(timePeriodSource).toContain("import { tenantDb } from '@alga-psa/db'");
+    // Match the imported binding, not the whole import line: the guarded
+    // invariant is that timePeriod.ts roots its queries in the tenant facade,
+    // which survives any other name joining the same import specifier.
+    expect(timePeriodSource).toMatch(/import\s*\{[^}]*\btenantDb\b[^}]*\}\s*from\s*'@alga-psa\/db'/);
     expect(timePeriodSource).toContain("tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)");
     expect(timePeriodSource).toContain("tenantScopedTable(knexOrTrx, 'time_sheets', tenant)");
     expect(timePeriodSettingsSource).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");

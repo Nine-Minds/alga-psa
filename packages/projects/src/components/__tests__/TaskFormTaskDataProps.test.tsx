@@ -1,8 +1,10 @@
 /* @vitest-environment jsdom */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, screen } from '@testing-library/react';
 import TaskForm from '../TaskForm';
+import { ProjectEffortIntegrationProvider } from '../../context/ProjectEffortIntegrationContext';
+const effort = { TaskEffort: ({ taskId }: { taskId: string }) => <div data-testid="task-effort">{taskId}</div> };
 import type { IProjectPhase, ProjectStatus } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';
@@ -211,7 +213,7 @@ describe('TaskForm taskData prop', () => {
 
   it('passes taskData to TaskTicketLinks in edit mode', () => {
     render(
-      <TicketIntegrationProvider value={mockCtx}>
+      <ProjectEffortIntegrationProvider value={effort}><TicketIntegrationProvider value={mockCtx}>
         <TaskForm
           task={{
             task_id: 'task-1',
@@ -238,16 +240,17 @@ describe('TaskForm taskData prop', () => {
           onPhaseChange={() => undefined}
           inDrawer={true}
         />
-      </TicketIntegrationProvider>
+      </TicketIntegrationProvider></ProjectEffortIntegrationProvider>
     );
 
     expect(lastTaskTicketLinksProps.taskData).toBeDefined();
     expect(lastTaskTicketLinksProps.taskData.task_name).toBe('Existing Task');
+    expect(screen.getByTestId('task-effort').textContent).toBe('task-1');
   });
 
   it('does not pass taskData to TaskTicketLinks in create mode', () => {
     render(
-      <TicketIntegrationProvider value={mockCtx}>
+      <ProjectEffortIntegrationProvider value={effort}><TicketIntegrationProvider value={mockCtx}>
         <TaskForm
           phase={phase}
           onClose={() => undefined}
@@ -258,9 +261,10 @@ describe('TaskForm taskData prop', () => {
           onPhaseChange={() => undefined}
           inDrawer={true}
         />
-      </TicketIntegrationProvider>
+      </TicketIntegrationProvider></ProjectEffortIntegrationProvider>
     );
 
     expect(lastTaskTicketLinksProps.taskData).toBeUndefined();
+    expect(screen.queryByTestId('task-effort')).toBeNull();
   });
 });

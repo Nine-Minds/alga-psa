@@ -13,7 +13,7 @@ describe('PSA preservation contract', () => {
     const clientsDetail = readFileSync(join(repoRoot, 'server/src/app/msp/clients/[id]/page.tsx'), 'utf8');
 
     expect(dashboard).toContain("=== 'algadesk'");
-    expect(settings).toContain("=== 'algadesk'");
+    expect(settings).toContain("productCode !== 'psa'");
     expect(ticketsList).toContain("=== 'algadesk'");
     expect(ticketsDetail).toContain("=== 'algadesk'");
     expect(clientsDetail).toContain("=== 'algadesk'");

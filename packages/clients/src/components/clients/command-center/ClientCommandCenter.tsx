@@ -37,6 +37,8 @@ interface ClientCommandCenterProps {
   tabs: TabContent[];
   /** ?tab= value present when the page loaded (deep link, D3). */
   initialTabId?: string | null;
+  /** Open a registered tab in place (e.g. a header summary action) without a server navigation. */
+  openTabRequest?: { tabId: string; nonce: number } | null;
   /** Sync the focus-view state back into the URL (?tab=). */
   onTabUrlChange: (tabId: string | null) => void;
   /** Dirty state of the shared client-record edit buffer (Details / Additional Info). */
@@ -76,6 +78,7 @@ export default function ClientCommandCenter({
   clientId,
   tabs,
   initialTabId,
+  openTabRequest,
   onTabUrlChange,
   hasUnsavedRecordChanges,
   onDiscardRecordChanges,
@@ -94,21 +97,25 @@ export default function ClientCommandCenter({
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
 
   // Deep-link consumption (D3). Some tabs join the registry asynchronously
-  // (e.g. Equipment appears after its permission check resolves), so the
-  // ?tab= deep link must wait for its tab instead of being decided at mount.
-  // Consumed exactly once; any user interaction cancels a pending deep link.
+  // (e.g. Equipment appears after its permission check resolves, the co-managed
+  // view after flag and authority resolve), so the ?tab= deep link must wait for
+  // its tab instead of being decided at mount. A URL value that changes later
+  // (a summary action) opens that view once; a tab removed from the registry
+  // closes in place and never reopens on its own.
   const deepLinkConsumedRef = useRef(false);
+  const lastDeepLinkRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (deepLinkConsumedRef.current) return;
-    if (!initialTabId) {
-      deepLinkConsumedRef.current = true;
-      return;
-    }
+    if (!initialTabId) { deepLinkConsumedRef.current = true; return; }
+    if (lastDeepLinkRef.current === initialTabId) return;
     if (tabIds.has(initialTabId)) {
+      lastDeepLinkRef.current = initialTabId;
       deepLinkConsumedRef.current = true;
       setFocusTabId(initialTabId);
     }
   }, [initialTabId, tabIds]);
+  useEffect(() => {
+    setFocusTabId((current) => (current && !tabIds.has(current) ? null : current));
+  }, [tabIds]);
 
   // Bumped when a drawer edit changed data the cards summarize (e.g. a contact
   // saved from the quick view) — refetches in place, keeping the current cards.
@@ -137,19 +144,34 @@ export default function ClientCommandCenter({
     onTabUrlChange(tabId);
   }, [tabIds, onTabUrlChange]);
 
+  // Header summary actions ask for a tab by nonce. This keeps the focus view
+  // open in place instead of navigating the route (which would re-render the
+  // server tree and reset the client).
+  const lastOpenTabRequestRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!openTabRequest || lastOpenTabRequestRef.current === openTabRequest.nonce) return;
+    lastOpenTabRequestRef.current = openTabRequest.nonce;
+    if (tabIds.has(openTabRequest.tabId)) openFocus(openTabRequest.tabId);
+  }, [openTabRequest, tabIds, openFocus]);
+
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+
+  const focusedTab = useMemo(() => (focusTabId ? tabs.find((tab) => tab.id === focusTabId) ?? null : null), [focusTabId, tabs]);
+  const focusedTabDirty = useCallback(() => Boolean(focusedTab?.hasUnsavedChanges?.()), [focusedTab]);
+  const focusedRecordDirty = Boolean(hasUnsavedRecordChanges && focusTabId && RECORD_FORM_TAB_IDS.has(focusTabId));
 
   const closeFocus = useCallback(() => {
     // Closing a record form with pending edits reads as "done" while the edits
-    // sit unsaved — confirm the discard instead of losing them silently.
-    if (hasUnsavedRecordChanges && focusTabId && RECORD_FORM_TAB_IDS.has(focusTabId)) {
+    // sit unsaved — confirm the discard instead of losing them silently. Feature
+    // drafts (e.g. a co-managed setup form) report their own dirty state.
+    if (focusedRecordDirty || focusedTabDirty()) {
       setConfirmDiscardOpen(true);
       return;
     }
     deepLinkConsumedRef.current = true;
     setFocusTabId(null);
     onTabUrlChange(null);
-  }, [onTabUrlChange, hasUnsavedRecordChanges, focusTabId]);
+  }, [onTabUrlChange, focusedRecordDirty, focusedTabDirty]);
 
   /** First existing tab id from a preference list (AlgaDesk filters some out). */
   const resolveTab = useCallback((...preferred: string[]): string | null => {
@@ -442,15 +464,20 @@ export default function ClientCommandCenter({
         onClose={() => setConfirmDiscardOpen(false)}
         onConfirm={() => {
           setConfirmDiscardOpen(false);
-          onDiscardRecordChanges();
+          if (focusedRecordDirty) onDiscardRecordChanges();
+          focusedTab?.onDiscardUnsavedChanges?.();
           deepLinkConsumedRef.current = true;
           setFocusTabId(null);
           onTabUrlChange(null);
         }}
         title={t('clientCommandCenter.discardTitle', { defaultValue: 'Unsaved changes' })}
-        message={t('clientCommandCenter.discardMessage', {
-          defaultValue: 'You have unsaved client record changes. Close and discard them?',
-        })}
+        message={focusedRecordDirty
+          ? t('clientCommandCenter.discardMessage', {
+            defaultValue: 'You have unsaved client record changes. Close and discard them?',
+          })
+          : t('clientCommandCenter.discardFeatureMessage', {
+            defaultValue: 'You have unsaved changes in this view. Close and discard them?',
+          })}
         confirmLabel={t('clientCommandCenter.discardConfirm', { defaultValue: 'Discard changes' })}
         cancelLabel={t('clientCommandCenter.discardCancel', { defaultValue: 'Keep editing' })}
       />

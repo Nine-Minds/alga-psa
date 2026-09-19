@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { coManagedLifecycleMock } from '@alga-psa/db/testing';
 
 const sharpMocks = vi.hoisted(() => {
   const toBuffer = vi.fn(async () => Buffer.from('processed-image'));
@@ -11,8 +12,17 @@ const sharpMocks = vi.hoisted(() => {
 
 vi.mock('sharp', () => ({ default: sharpMocks.sharp }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
+}));
+
+// StorageService does not open transactions itself, but the lifecycle guard it
+// calls does. Keep the real licensing module and swap only the lifecycle
+// surface, so this suite never needs a database to upload a favicon.
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  ...coManagedLifecycleMock({ fn: vi.fn }),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({

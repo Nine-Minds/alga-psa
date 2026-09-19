@@ -57,9 +57,19 @@ vi.mock('@alga-psa/db', async () => {
     ...actual,
     createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
     getConnection: vi.fn(async () => db),
-    withTransaction: vi.fn(async (knexOrTrx: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
-      callback(knexOrTrx as unknown as Knex.Transaction),
-    ),
+    // Must actually open a transaction, not pass the connection straight
+    // through. Co-managed lifecycle admission refuses a bare connection
+    // (`assertCoManagedOperationalWrite` checks `trx.isTransaction`), and this
+    // journey writes a stored PDF through `FileStoreModel.create`, which goes
+    // via `withCoManagedOperationalTransaction`. A passthrough double made that
+    // guard fire on a path that is genuinely transactional in production.
+    withTransaction: vi.fn(async (knexOrTrx: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) => {
+      const maybeTrx = knexOrTrx as unknown as { commit?: unknown; rollback?: unknown };
+      if (typeof maybeTrx?.commit === 'function' && typeof maybeTrx?.rollback === 'function') {
+        return callback(knexOrTrx as unknown as Knex.Transaction);
+      }
+      return knexOrTrx.transaction((trx) => callback(trx));
+    }),
     requireTenantId: vi.fn(async () => tenantId),
     runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
   };

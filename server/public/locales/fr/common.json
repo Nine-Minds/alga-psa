@@ -55,7 +55,8 @@
     "settings": "Paramètres",
     "profile": "Profil",
     "logout": "Déconnexion",
-    "help": "Aide"
+    "help": "Aide",
+    "coManagedDelegation": "Administration déléguée"
   },
   "actions": {
     "save": "Enregistrer",
@@ -1603,6 +1604,10 @@
     "threecxCall": "Appeler via 3CX",
     "threecxDialing": "Numérotation depuis votre extension 3CX",
     "threecxFailed": "Le PBX n'a pas pu passer l'appel"
+  },
+  "users": {
+    "soloLicenseLimit": "L’offre Solo permet un seul technicien. Faites évoluer l’espace de travail avant d’activer un autre utilisateur.",
+    "technicianLicenseLimit": "Cet espace de travail ne peut pas activer de technicien supplémentaire. Vérifiez son état d’activation et les licences encore disponibles."
   },
   "editor": {
     "attachFiles": "Joindre des fichiers",

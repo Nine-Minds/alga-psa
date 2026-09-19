@@ -102,7 +102,10 @@
       "forms": "Formularios",
       "channels": "Canales"
     },
-    "passwords": "Contraseñas"
+    "passwords": "Contraseñas",
+    "coManaged": "TI cogestionada",
+    "coManagedDelegation": "Administración delegada",
+    "coManagedAccess": "Acceso cogestionado"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",

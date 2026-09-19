@@ -6,16 +6,18 @@
  * best-effort artifact machinery provides the deterministic idempotency guard
  * (`email_processed_attachments` PK) and the legacy compatibility mirror; the
  * durable `inbound_email_artifacts` rows track resumable state on top. A
- * storage-success/DB-failure retry reuses the deterministic object and never
- * generates another file/document for an already-successful artifact.
+ * successful compatibility mirror prevents another file/document on replay.
  *
  * Artifact failure never recreates or erases the core ticket/comment.
  */
 
 import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from '../../interfaces/inbound-email.interfaces';
 import type { InboundV2JobContext } from './unifiedInboundEmailQueueJobProcessorV2';
+import { isCoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
 import {
   claimArtifact,
+  deferArtifactForCoManagedLifecycle,
+  deferInboundArtifact,
   getArtifact,
   getDurableLeaseTtlMs,
   getDurableMaxAttempts,
@@ -29,13 +31,16 @@ import {
   readStagedSourceMime,
 } from './inboundEmailSourceStager';
 import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArtifacts';
-import { ORIGINAL_EMAIL_ATTACHMENT_ID } from './inboundEmailArtifactHelpers';
+import { ORIGINAL_EMAIL_ATTACHMENT_ID, extractEmbeddedImageAttachments, sanitizeGeneratedFileName } from './inboundEmailArtifactHelpers';
+import { qualifiedReplyTokenFromBody } from './qualifiedReplyAdmission';
+import type { QualifiedReplyArtifactProcessor, QualifiedReplyArtifactInput } from './qualifiedReplyArtifacts';
 
 const TERMINAL_ARTIFACT_STATUSES = new Set(['succeeded', 'skipped', 'terminal_failed']);
 
 export async function processInboundArtifactJob(
   job: UnifiedInboundEmailQueueJobV2,
-  ctx: InboundV2JobContext
+  ctx: InboundV2JobContext,
+  qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor
 ): Promise<InboundEmailQueueDisposition> {
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
   const owner = `artifact-worker-${job.jobId}`;
@@ -45,6 +50,16 @@ export async function processInboundArtifactJob(
 
   if (!inboxId) {
     return { disposition: 'retry', error: 'artifact_job_missing_inbox_id' };
+  }
+
+  const existing = await getArtifact(db, job.tenantId, inboxId, artifactKey);
+  if (existing && TERMINAL_ARTIFACT_STATUSES.has(existing.status)) return { disposition: 'ack' };
+  if (!existing) return { disposition: 'retry', error: 'artifact_missing' };
+  const lifecycle = await getCoManagedOperationalState(db, job.tenantId);
+  if (!lifecycle.canWrite) {
+    const until = new Date(Date.now() + 60_000);
+    await deferArtifactForCoManagedLifecycle(db, { tenant: job.tenantId, inboxId, artifactKey, until });
+    return { disposition: 'defer', untilIso: until.toISOString(), reason: `co_managed_${lifecycle.state}` };
   }
 
   const claim = await claimArtifact(db, {
@@ -87,7 +102,7 @@ export async function processInboundArtifactJob(
         }
         return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'artifact_reclaim_race' };
       }
-    } else if (current?.status === 'retryable_failed') {
+    } else if (current?.status === 'retryable_failed' || current?.status === 'pending') {
       const next = current.next_attempt_at ? new Date(current.next_attempt_at).getTime() : Date.now();
       return { disposition: 'defer', untilIso: new Date(Math.max(Date.now(), next)).toISOString(), reason: 'artifact_not_due' };
     } else {
@@ -148,6 +163,40 @@ export async function processInboundArtifactJob(
     return { disposition: 'retry', error: message };
   }
 
+  // Use the digest-verified original MIME, not editable comment metadata, to
+  // select the protected artifact path. Its conversation adapter must preserve
+  // current thread authority; native folder defaults cannot decide visibility.
+  if (/^cm2:/i.test(qualifiedReplyTokenFromBody(parsed.emailData.body) ?? '')) {
+    let reason = 'co_managed_artifact_admission_pending';
+    if (qualifiedReplyArtifacts) {
+      try {
+        await qualifiedReplyArtifacts(db, { tenant: job.tenantId, inboxId, artifactKey, sourceSha256: inbox.source_sha256!,
+          claim: { owner, token, version }, payload: qualifiedArtifactPayload(artifact, parsed.emailData) }, async (path, content, mimeType) => {
+          // LEVERAGE: pattern conversation-object-upload — worker and interactive composition share storage validation/confirmation, without generic file rows.
+          const { StorageService } = await import('@alga-psa/storage/StorageService');
+          const { StorageProviderFactory } = await import('@alga-psa/storage/StorageProviderFactory');
+          await StorageService.validateFileUpload(inbox.tenant, mimeType, content.length);
+          const provider = await StorageProviderFactory.createProvider();
+          const result = await provider.upload(Buffer.from(content), path, { mime_type: mimeType });
+          if (result.path !== path || result.size !== content.length) throw new Error('Attachment storage did not confirm the complete object');
+        });
+        return { disposition: 'ack' };
+      } catch (error: any) {
+        if (isCoManagedLifecycleError(error)) reason = `co_managed_${error.lifecycle.state}`;
+        else if (error?.code === 'CO_MANAGED_SHARED_WORK_FORBIDDEN') reason = 'co_managed_artifact_authority_unavailable';
+        else {
+          const message = error?.message || String(error);
+          const failure = await markArtifactRetryable(db, artifact, { owner, token, version }, message);
+          return failure.terminal ? { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' } : { disposition: 'retry', error: message };
+        }
+      }
+    }
+    const until = new Date(Date.now() + 60_000);
+    await deferInboundArtifact(db, { tenant: job.tenantId, inboxId, artifactKey, until,
+      claim: { owner, token, version, refundAttempt: claim.claimed } });
+    return { disposition: 'defer', untilIso: until.toISOString(), reason };
+  }
+
   let processError: string | null = null;
   try {
     await processInboundEmailArtifactsBestEffort({
@@ -159,6 +208,12 @@ export async function processInboundArtifactJob(
       clientVisibleAttachments: true,
     });
   } catch (error: any) {
+    if (isCoManagedLifecycleError(error)) {
+      const until = new Date(Date.now() + 60_000);
+      await deferArtifactForCoManagedLifecycle(db, { tenant: job.tenantId, inboxId, artifactKey, until,
+        claim: { owner, token, version, refundAttempt: claim.claimed } });
+      return { disposition: 'defer', untilIso: until.toISOString(), reason: `co_managed_${error.lifecycle.state}` };
+    }
     processError = error?.message || String(error);
   }
 
@@ -274,3 +329,26 @@ async function readLegacyMirror(
 }
 
 export { TERMINAL_ARTIFACT_STATUSES };
+
+/** Select only this durable manifest entry from the verified staged MIME.
+ * No provider fetch or native document/folder processing can widen its audience. */
+function qualifiedArtifactPayload(artifact: InboundArtifactRecord,
+  emailData: Awaited<ReturnType<typeof parseStagedMimeIntoEmailDetails>>['emailData']): QualifiedReplyArtifactInput['payload'] {
+  if (artifact.artifact_type === 'original_email') return { kind: 'original_email' };
+  const attachments = emailData.attachments ?? [];
+  let attachment: import('./inboundEmailArtifactHelpers').EmailAttachmentLike | undefined;
+  if (artifact.artifact_type === 'attachment') {
+    attachment = attachments.find((item, index) => (item.id || `att-${index}`) === artifact.source_attachment_id);
+  } else if (artifact.artifact_type === 'embedded_image') {
+    const embedded = extractEmbeddedImageAttachments({ emailId: emailData.id, html: emailData.body?.html, attachments }).attachments
+      .find(item => item.id === artifact.source_attachment_id);
+    if (embedded) attachment = { ...embedded, content: embedded.content ?? attachments.find(item => item.id === embedded.providerAttachmentId)?.content };
+  }
+  if (!attachment || typeof attachment.content !== 'string') throw new Error('Qualified artifact bytes are absent from the retained MIME');
+  const encoded = attachment.content.replace(/\s+/g, '');
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) throw new Error('Qualified artifact has invalid base64 content');
+  const content = Buffer.from(encoded, 'base64');
+  if (attachment.size !== undefined && attachment.size !== content.length) throw new Error('Qualified artifact size disagrees with retained MIME');
+  return { kind: artifact.artifact_type as 'attachment' | 'embedded_image', fileName: sanitizeGeneratedFileName(attachment.name ?? ''),
+    mimeType: attachment.contentType || 'application/octet-stream', content };
+}

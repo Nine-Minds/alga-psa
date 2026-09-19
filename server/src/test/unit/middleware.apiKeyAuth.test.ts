@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { shouldSkipApiKeyAuth } from 'server/src/middleware';
 
 describe('shouldSkipApiKeyAuth', () => {
-  it('lets recipient-bound attachment links authenticate in their session-aware handler', () => {
-    expect(shouldSkipApiKeyAuth('/api/ticket-comment-attachments/download')).toBe(true);
-    expect(shouldSkipApiKeyAuth('/api/ticket-comment-attachments/download-malicious')).toBe(false);
+  it('lets only the co-managed browser export and file routes perform their tracked session admission', () => {
+    for (const path of ['/api/co-management/export', '/api/co-management/attachments/file-id', '/api/co-management/archive-files/file-id']) expect(shouldSkipApiKeyAuth(path)).toBe(true);
+    for (const path of ['/api/co-management/export-admin', '/api/co-management/export/extra', '/api/co-management/attachments/file-id/extra', '/api/co-management/unknown']) expect(shouldSkipApiKeyAuth(path)).toBe(false);
   });
   it('allows SCIM routes to perform Bearer authentication in the route handler', () => {
     expect(shouldSkipApiKeyAuth('/api/scim/v2/connection-id/Users')).toBe(true);
@@ -63,6 +63,36 @@ describe('shouldSkipApiKeyAuth', () => {
 
   it('allows ticket live token APIs to use MSP session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
+  });
+
+  it('allows the notification live token API to use browser session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/notifications/live-token')).toBe(true);
+  });
+
+  it('exempts the notification live token exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/notifications')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/notifications/live-token-evil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/notifications/live-token/mint')).toBe(false);
+  });
+
+  it('allows co-managed portal conversation attachment downloads to use the client session', () => {
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/attachment-123')).toBe(true);
+  });
+
+  it('exempts one conversation attachment id only, never a sibling or deeper path', () => {
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/attachment-123/raw')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments-evil/attachment-123')).toBe(false);
+  });
+
+  it('allows meeting artifact downloads to resolve their session or API-key actor in-route', () => {
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts/artifact-123')).toBe(true);
+  });
+
+  it('exempts one meeting artifact id only, never a sibling or deeper path', () => {
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts/artifact-123/content')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts-evil/artifact-123')).toBe(false);
   });
 
   it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {

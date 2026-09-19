@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeTable, type FakeTenantDbOptions } from '@alga-psa/db/testing';
 
 let currentUser: any;
 
@@ -18,6 +19,11 @@ const ticketUpdates: Record<string, unknown>[] = [];
 // via registerAfterCommit during a transaction run after the (mocked)
 // transaction resolves, matching production's flush-after-commit semantics.
 const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
+
+vi.mock('@alga-psa/co-managed/nativeConversationEvents', () => ({ retainCoManagedNativeCommentEvent: vi.fn(async () => false) }));
+
+// Real lifecycle admission and lock waits are exercised in the PostgreSQL suite.
+vi.mock('@alga-psa/licensing', () => ({ assertCoManagedOperationalWrite: vi.fn(async () => {}) }));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -166,19 +172,10 @@ function makeStatus(status_id: string, is_closed = false) {
   return {
     status_id,
     tenant: 'tenant-1',
+    // Bundled child propagation refuses a status from another board, so every
+    // status in the fixture belongs to the one board the tickets sit on.
+    board_id: 'board-1',
     is_closed: is_closed || status_id.startsWith('closed-'),
-  };
-}
-
-function makeUpdateResult(awaitValue: unknown, returningValue: unknown) {
-  return {
-    returning: vi.fn(async () => returningValue),
-    then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
-      Promise.resolve(awaitValue).then(resolve, reject),
-    catch: (reject: (reason: unknown) => unknown) =>
-      Promise.resolve(awaitValue).catch(reject),
-    finally: (handler: () => void) =>
-      Promise.resolve(awaitValue).finally(handler),
   };
 }
 
@@ -188,143 +185,62 @@ function buildTrx(params: {
   childTickets?: Array<Record<string, unknown>>;
 }) {
   const currentTicket = { ...makeTicket(), ...(params.currentTicket ?? {}) };
-  let childTickets = (params.childTickets ?? []).map((child) => ({ ...child }));
+  const childTickets = (params.childTickets ?? []).map((child) => ({ ...child }));
   const bundleSettings = params.bundleSettings;
 
-  const ticketsTable = {
-    select() {
-      return {
-        where: vi.fn(() => ({
-          first: vi.fn(async () => ({ response_state: currentTicket.response_state ?? null })),
-        })),
-      };
-    },
-    where(whereArgs: Record<string, unknown>) {
-      if ('ticket_id' in whereArgs) {
-        return {
-          first: vi.fn(async () => currentTicket),
-          update: vi.fn((data: Record<string, unknown>) => {
-            ticketUpdates.push(data);
-            return makeUpdateResult(1, [{ ...currentTicket, ...data, updated_at: '2026-05-07T12:00:00.000Z' }]);
-          }),
-        };
-      }
-
-      if ('master_ticket_id' in whereArgs) {
-        return {
-          select: vi.fn(async (columns: string[]) =>
-            childTickets.map((child) =>
-              columns.reduce<Record<string, unknown>>((acc, column) => {
-                acc[column] = child[column];
-                return acc;
-              }, {})
-            )
-          ),
-          update: vi.fn((data: Record<string, unknown>) => {
-            childTickets = childTickets.map((child) => ({ ...child, ...data }));
-            return makeUpdateResult(childTickets.length, childTickets.length);
-          }),
-        };
-      }
-
-      throw new Error(`Unexpected tickets.where args: ${JSON.stringify(whereArgs)}`);
-    },
-  };
-
-  const statusesTable = {
-    where(whereArgs: Record<string, unknown>) {
-      return {
-        first: vi.fn(async () => {
-          if (whereArgs.status_id === currentTicket.status_id) {
-            return makeStatus(String(currentTicket.status_id), false);
-          }
-
-          return makeStatus(String(whereArgs.status_id), false);
-        }),
-      };
-    },
-  };
-
-  const bundleSettingsTable = {
-    where: vi.fn(() => ({
-      first: vi.fn(async () => bundleSettings),
-    })),
-  };
+  // Every status these scenarios name, plus whatever the tickets already sit on.
+  const statusIds = new Set<string>([
+    'status-1',
+    'status-2',
+    'closed-status-1',
+    String(currentTicket.status_id),
+    ...childTickets.map((child) => String(child.status_id)),
+  ]);
 
   // The inserted comment row: attachment reconciliation locks it, the
   // publication intent is written onto it, and after commit the dispatch
   // re-reads it (jsonb payload) and marks it dispatched.
   const commentRow: Record<string, any> = { comment_id: 'comment-1', ticket_id: 'ticket-1', note: '', publish_state: 'published' };
-  const commentRowQuery: any = {
-    whereNull: () => commentRowQuery,
-    forUpdate: () => commentRowQuery,
-    first: async () => commentRow,
-    update: async (row: Record<string, unknown>) => {
-      Object.assign(commentRow, row);
-      if (typeof commentRow.comment_publication_payload === 'string') {
-        commentRow.comment_publication_payload = JSON.parse(commentRow.comment_publication_payload);
-      }
-      return 1;
+
+  const tables: FakeTenantDbOptions = {
+    tables: {
+      tickets: [currentTicket, ...childTickets],
+      statuses: [...statusIds].map((statusId) => makeStatus(statusId)),
+      ticket_bundle_settings: bundleSettings ? [bundleSettings] : [],
+      comments: [commentRow],
+    },
+    perTable: {
+      tickets: {
+        onUpdate: (data, selected) => {
+          ticketUpdates.push(data);
+          // The bundle loop diffs each child against the row it selected
+          // before the write, so the stored rows are deliberately not patched.
+          return selected.length;
+        },
+      },
+      ticket_audit_logs: {
+        onInsert: (rows) => {
+          auditLogInserts.push(...rows);
+          return rows;
+        },
+      },
+      comments: {
+        onInsert: (rows) => {
+          Object.assign(commentRow, rows[0]);
+          return rows.map((row) => ({ ...row, comment_id: 'comment-1' }));
+        },
+        onUpdate: (data) => {
+          Object.assign(commentRow, data);
+          if (typeof commentRow.comment_publication_payload === 'string') {
+            commentRow.comment_publication_payload = JSON.parse(commentRow.comment_publication_payload);
+          }
+          return 1;
+        },
+      },
     },
   };
 
-  const trx = ((table: string) => {
-    if (table === 'tickets') {
-      return ticketsTable;
-    }
-
-    if (table === 'statuses') {
-      return statusesTable;
-    }
-
-    if (table === 'ticket_bundle_settings') {
-      return bundleSettingsTable;
-    }
-
-    if (table === 'ticket_resources') {
-      return {
-        where: vi.fn(() => ({
-          delete: vi.fn(async () => 0),
-          select: vi.fn(async () => []),
-        })),
-      };
-    }
-
-    if (table === 'ticket_audit_logs') {
-      return {
-        insert: vi.fn(async (row: Record<string, unknown>) => {
-          auditLogInserts.push(row);
-          return undefined;
-        }),
-      };
-    }
-
-    if (table === 'comment_threads') {
-      return {
-        insert: vi.fn(async () => undefined),
-      };
-    }
-
-    if (table === 'comments') {
-      return {
-        insert: vi.fn((row: Record<string, unknown>) => {
-          Object.assign(commentRow, row);
-          return { returning: vi.fn(async () => [{ ...row, comment_id: 'comment-1' }]) };
-        }),
-        where: vi.fn(() => commentRowQuery),
-      };
-    }
-
-    if (table === 'ticket_comment_attachments') {
-      // No draft uploads in these scenarios.
-      const builder: any = {};
-      for (const method of ['where', 'whereIn', 'orderBy', 'forUpdate']) builder[method] = vi.fn(() => builder);
-      builder.then = (resolve: any, reject?: any) => Promise.resolve([]).then(resolve, reject);
-      return builder;
-    }
-
-    throw new Error(`Unexpected table: ${table}`);
-  }) as any;
+  const trx = ((table: string) => fakeTable(tables, 'tenant-1', table.split(' ')[0])) as any;
   trx.isTransaction = true;
   trx.fn = { now: () => 'now()' };
   lastTrx = trx;

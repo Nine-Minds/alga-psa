@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { fakeTable } from '@alga-psa/db/testing';
 
 const enqueueUnifiedInboundEmailQueueJobMock = vi.fn();
 const getAdminConnectionMock = vi.fn();
@@ -75,67 +76,35 @@ describe('Google unified inbound pointer queue ingress', () => {
       }),
     });
 
+    // The table doubles come from the shared db test layer. This handler reads
+    // whatever provider mapping, product access, and the co-managed inbound
+    // policy need; a hand-rolled chainable goes stale (missing `.update`, an
+    // undeclared `co_management_relationships`) every time that set grows.
     getAdminConnectionMock.mockImplementation(async () => {
-      const knex = (table: string) => {
-        const predicates: Array<{ column: string; value: unknown }> = [];
-        const builder = {
-          select() {
-            return builder;
-          },
-          where(column: string, value: unknown) {
-            predicates.push({ column, value });
-            return builder;
-          },
-          andWhere(column: string, value: unknown) {
-            predicates.push({ column, value });
-            return builder;
-          },
-          whereNull(column: string) {
-            predicates.push({ column, value: null });
-            return builder;
-          },
-          async first() {
-            if (table === 'google_email_provider_config') {
-              const bySubscription = predicates.find((p) => p.column === 'pubsub_subscription_name');
-              if (bySubscription) {
-                return { email_provider_id: 'provider-g-1' };
-              }
-              const byProvider = predicates.find((p) => p.column === 'email_provider_id');
-              if (byProvider) {
-                return {
-                  email_provider_id: 'provider-g-1',
-                  tenant: 'tenant-g-1',
-                  project_id: 'example-project',
-                  pubsub_subscription_name: 'sub-google-1',
-                  history_id: '17',
-                };
-              }
-            }
-
-            if (table === 'email_providers') {
-              if (providerPaused && predicates.some((predicate) => predicate.column === 'inbound_paused_at')) {
-                return null;
-              }
-              return {
-                id: 'provider-g-1',
-                tenant: 'tenant-g-1',
-                mailbox: 'support@example.com',
-                provider_type: 'google',
-                is_active: true,
-              };
-            }
-
-            // Product gate: getTenantProduct reads tenants.product_code.
-            if (table === 'tenants') {
-              return { product_code: 'psa' };
-            }
-
-            throw new Error(`Unexpected table lookup in test: ${table}`);
-          },
-        };
-        return builder;
+      const tables: Record<string, Record<string, unknown>[]> = {
+        google_email_provider_config: [{
+          tenant: 'tenant-g-1',
+          email_provider_id: 'provider-g-1',
+          project_id: 'example-project',
+          pubsub_subscription_name: 'sub-google-1',
+          history_id: '17',
+          last_push_received_at: null,
+        }],
+        email_providers: [{
+          id: 'provider-g-1',
+          tenant: 'tenant-g-1',
+          mailbox: 'support@example.com',
+          provider_type: 'google',
+          is_active: true,
+          inbound_paused_at: providerPaused ? '2026-01-01T00:00:00.000Z' : null,
+        }],
+        // An independent PSA workspace with no co-management: that is what a
+        // suite about Google pointer ingress means, and it keeps the durable
+        // intake policy on the installation default.
+        tenants: [{ tenant: 'tenant-g-1', product_code: 'psa' }],
+        co_management_relationships: [],
       };
-      return knex;
+      return (table: string) => fakeTable({ tables, strict: true }, undefined, table);
     });
   });
 

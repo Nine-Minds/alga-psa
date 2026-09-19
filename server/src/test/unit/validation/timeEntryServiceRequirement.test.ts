@@ -28,10 +28,9 @@ describe('time entry service requirement validation', () => {
     approval_status: 'DRAFT',
   } as const;
 
-  it('rejects API time entry creation without service_id', () => {
+  it('leaves product-dependent API service requirements to retained save admission', () => {
     const result = createTimeEntrySchema.safeParse(baseCreatePayload);
-    expect(result.success).toBe(false);
-    expect(result.error?.issues.some(issue => issue.path[0] === 'service_id')).toBe(true);
+    expect(result.success).toBe(true);
   });
 
   it('rejects scheduling time entry saves without service_id', () => {
@@ -48,13 +47,12 @@ describe('time entry service requirement validation', () => {
     expect(result.error?.issues.some(issue => issue.path[0] === 'service_id')).toBe(true);
   });
 
-  it('rejects starting time tracking without service_id', () => {
+  it('leaves timer service selection to the current billing mode', () => {
     const result = startTimeTrackingSchema.safeParse({
       work_item_id: '00000000-0000-0000-0000-000000000000',
       work_item_type: 'ticket',
       notes: 'Track time',
     });
-    expect(result.success).toBe(false);
-    expect(result.error?.issues.some(issue => issue.path[0] === 'service_id')).toBe(true);
+    expect(result.success).toBe(true);
   });
 });

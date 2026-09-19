@@ -399,11 +399,6 @@ describe('CredentialsScreen — reveal-state lifecycle', () => {
 });
 
 describe('CredentialsScreen — filters and flags', () => {
-  it('loads the released vault independently of the retired release flag', async () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false });
-    await renderScreen();
-    expect(listCredentialsMock).toHaveBeenCalled();
-  });
 
   it('shows the tier upgrade notice when the tier gate is closed', async () => {
     getCredentialsContextMock.mockResolvedValue({
@@ -730,58 +725,6 @@ describe('TotpCountdown — countdown re-request', () => {
   });
 });
 
-describe('AssetCredentialsSection — released vault and tier access', () => {
-  it('EE section loads the released vault independently of the retired release flag', async () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false });
-
-    const { container } = render(
-      <EeAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />
-    );
-
-    await waitFor(() => expect(document.getElementById('asset-credentials-section')).toBeTruthy());
-    await waitFor(() => expect(listCredentialsMock).toHaveBeenCalled());
-  });
-
-  it('EE section renders the upgrade teaser (not the vault) below the Pro tier', async () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: true });
-    hasTierFeatureMock.mockReturnValue(false);
-
-    render(<EeAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />);
-
-    expect(document.getElementById('asset-credentials-tier-teaser')).toBeTruthy();
-    expect(document.getElementById('asset-credentials-view-plans')).toBeTruthy();
-    expect(document.getElementById('asset-credentials-section')).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
-  });
-
-  it('EE section renders the vault card when the release flag is on', async () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: true });
-    getCredentialsContextMock.mockResolvedValue({
-      tierOk: true,
-      huduConnected: false,
-      flagIrrelevantHere: true,
-    });
-    listCredentialsMock.mockResolvedValue([]);
-
-    render(<EeAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />);
-
-    await waitFor(() => {
-      expect(document.getElementById('asset-credentials-section')).toBeTruthy();
-    });
-  });
-
-  it('shared assets wrapper loads its edition section without the retired release flag', async () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false });
-
-    const { container } = render(
-      <AssetsWrapperAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />
-    );
-
-    await waitFor(() => expect(container.querySelector('#edition-asset-credentials')?.textContent).toBe('asset-1'));
-    expect(document.body.textContent).not.toContain('Secure password management coming soon.');
-  });
-});
-
 
 describe('CredentialsScreen — entity-scoped (association-driven) lists', () => {
   it('scopes listCredentials to the entity (both sources)', async () => {
@@ -925,16 +868,6 @@ describe('CredentialFormDialog — read-only associations summary on edit', () =
 });
 
 describe('EntityCredentialsSection — generic entity section gating', () => {
-  it('loads entity credentials independently of the retired release flag', async () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false });
-
-    const { container } = render(
-      <EeEntityCredentialsSection entityType="ticket" entityId="ticket-1" defaultClientId={CLIENT_ID} />
-    );
-
-    await waitFor(() => expect(document.getElementById('ticket-credentials-section')).toBeTruthy());
-    await waitFor(() => expect(listCredentialsMock).toHaveBeenCalled());
-  });
 
   it('renders the tier teaser (not the vault) below Pro', async () => {
     useFeatureFlagMock.mockReturnValue({ enabled: true });
@@ -968,42 +901,10 @@ describe('EntityCredentialsSection — generic entity section gating', () => {
   });
 });
 
-describe('per-entity section wrappers — flag-off regression (legacy surface preserved)', () => {
-  it('ticket section renders nothing when the flag is off', () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false });
+describe('per-entity section wrappers — EE vault mounting', () => {
 
-    const { container } = render(<TicketCredentialsSection ticketId="ticket-1" clientId={CLIENT_ID} />);
 
-    expect(container.firstChild).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
-  });
 
-  it('contact section renders nothing when the flag is off', () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false });
-
-    const { container } = render(<ContactCredentialsSection contactId="contact-1" clientId={CLIENT_ID} />);
-
-    expect(container.firstChild).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
-  });
-
-  it('document section renders nothing when the flag is off', () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false });
-
-    const { container } = render(<DocumentCredentialsSection documentId="doc-1" />);
-
-    expect(container.firstChild).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
-  });
-
-  it('project task section renders nothing when the flag is off', () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false });
-
-    const { container } = render(<TaskCredentialsSection taskId="task-1" />);
-
-    expect(container.firstChild).toBeNull();
-    expect(getCredentialsContextMock).not.toHaveBeenCalled();
-  });
 
   it('ticket section mounts the EE vault scoped to the ticket when the flag is on', async () => {
     useFeatureFlagMock.mockReturnValue({ enabled: true });

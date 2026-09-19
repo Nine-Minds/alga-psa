@@ -535,6 +535,15 @@ export class EventBus {
       // are bypassed to let incomplete consumer deliveries re-run. Consumers
       // that already completed are skipped by their own ledger.
       const forceRedelivery = message.message.force === '1';
+      const targetSubscriber = message.message.targetSubscriber;
+      if (targetSubscriber !== undefined && (!forceRedelivery || !/^[a-zA-Z0-9:_-]{1,128}$/.test(targetSubscriber))) {
+        throw new Error('Invalid targeted event recovery');
+      }
+      const selectedHandlers = targetSubscriber
+        ? handlers.filter(handler => this.getHandlerKey(handler) === targetSubscriber) : handlers;
+      // Keep a targeted message pending when this process has not registered
+      // its consumer. An unrelated handler cannot acknowledge its recovery.
+      if (targetSubscriber && selectedHandlers.length === 0) return;
 
       if (handlers.length > 0) {
         const isProcessed = forceRedelivery ? false : await this.isEventProcessed(event, subscription.channel);
@@ -544,7 +553,7 @@ export class EventBus {
           // failing handler's redelivery never re-runs co-subscribers that
           // already succeeded.
           let anyFailure = false;
-          for (const handler of handlers) {
+          for (const handler of selectedHandlers) {
             const handlerKey = this.getHandlerKey(handler);
             try {
               if (!forceRedelivery && await this.isHandlerProcessed(event, handlerKey, subscription.channel)) {
@@ -798,8 +807,14 @@ export class EventBus {
        * inbound-email outbox recovery sweeper.
        */
       force?: boolean;
+      /** Replay only this stable subscriber on the selected channel. Requires
+       * force and a stable event ID; never emits another workflow trigger. */
+      targetSubscriber?: string;
     }
   ): Promise<void> {
+    if (options?.targetSubscriber !== undefined && (!options.force || !options.eventId || !/^[a-zA-Z0-9:_-]{1,128}$/.test(options.targetSubscriber))) {
+      throw new Error('Targeted event recovery requires force, a stable event ID and a valid subscriber');
+    }
     if (eventBusDisabled) {
       logger.debug('[EventBus] Skipping publish because the event bus is disabled');
       if (options?.strict) {
@@ -838,7 +853,7 @@ export class EventBus {
       const client = await getClient();
 
       // Publish to the workflow stream only when using the default channel; channel-specific events stay isolated.
-      if (channel === this.defaultChannel) {
+      if (channel === this.defaultChannel && !options?.targetSubscriber) {
         const globalStream = 'workflow:events:global';
         await this.ensureStreamAndGroup(globalStream);
 
@@ -898,6 +913,7 @@ export class EventBus {
           event: JSON.stringify(fullEvent),
           channel,
           ...(options?.force ? { force: '1' } : {}),
+          ...(options?.targetSubscriber ? { targetSubscriber: options.targetSubscriber } : {}),
         },
         {
           TRIM: {

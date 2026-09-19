@@ -102,8 +102,8 @@ describe('MetadataService product OpenAPI metadata', () => {
       'tenant-a',
     );
 
-    expect(spec.data.paths['/api/v1/tickets'].get['x-alga-products']).toEqual(['psa', 'algadesk']);
-    expect(spec.data.paths['/api/v1/projects'].get['x-alga-products']).toEqual(['psa']);
-    expect(spec.data.paths['/api/v1/tickets/{id}/time-entries'].get['x-alga-products']).toEqual(['psa']);
+    expect(spec.data.paths['/api/v1/tickets'].get['x-alga-products']).toEqual(['psa', 'algadesk', 'co_managed']);
+    expect(spec.data.paths['/api/v1/projects'].get['x-alga-products']).toEqual(['psa', 'co_managed']);
+    expect(spec.data.paths['/api/v1/tickets/{id}/time-entries'].get['x-alga-products']).toEqual(['psa', 'co_managed']);
   });
 });

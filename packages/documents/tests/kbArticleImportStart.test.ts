@@ -16,9 +16,15 @@ let failNextUpdate = false;
 
 const makeQuery = (table: string) => {
   const predicates: FakePredicate[] = [];
+  const alternatives: FakePredicate[] = [];
+  const match = (row: FakeRow) => matches(row, predicates) || alternatives.some(predicate => predicate(row));
   const query: any = {
-    where(criteria: Record<string, any> | string, operatorOrValue?: any, maybeValue?: any) {
-      if (typeof criteria === 'string') {
+    where(criteria: Record<string, any> | string | ((query: any) => void), operatorOrValue?: any, maybeValue?: any) {
+      if (typeof criteria === 'function') {
+        const nested = makeQuery(table);
+        criteria(nested);
+        predicates.push(nested.matches);
+      } else if (typeof criteria === 'string') {
         const [operator, value] =
           maybeValue === undefined ? ['=', operatorOrValue] : [operatorOrValue, maybeValue];
         predicates.push((row) =>
@@ -31,14 +37,23 @@ const makeQuery = (table: string) => {
       }
       return query;
     },
+    matches: match,
+    orWhere(criteria: Record<string, any>) {
+      alternatives.push(row => Object.entries(criteria).every(([key, value]) => row[key] === value));
+      return query;
+    },
+    whereIn(column: string, values: any[]) {
+      predicates.push(row => values.includes(row[column]));
+      return query;
+    },
     select() {
       return query;
     },
     orderBy() {
-      return Promise.resolve(tables[table].filter((row) => matches(row, predicates)));
+      return Promise.resolve(tables[table].filter((row) => match(row)));
     },
     async first() {
-      return tables[table].find((row) => matches(row, predicates));
+      return tables[table].find((row) => match(row));
     },
     async insert(rows: FakeRow | FakeRow[]) {
       tables[table].push(...(Array.isArray(rows) ? rows : [rows]));
@@ -49,12 +64,12 @@ const makeQuery = (table: string) => {
         failNextUpdate = false;
         throw new Error('connection terminated unexpectedly');
       }
-      const rows = tables[table].filter((row) => matches(row, predicates));
+      const rows = tables[table].filter((row) => match(row));
       rows.forEach((row) => Object.assign(row, values));
       return rows.length;
     },
     del() {
-      const remaining = tables[table].filter((row) => !matches(row, predicates));
+      const remaining = tables[table].filter((row) => !match(row));
       const removed = tables[table].length - remaining.length;
       tables[table] = remaining;
       return Object.assign(Promise.resolve(removed), { catch: () => Promise.resolve(removed) });
@@ -62,6 +77,8 @@ const makeQuery = (table: string) => {
   };
   return query;
 };
+
+const afterCommit: Array<() => Promise<void>> = [];
 
 const hasPermissionMock = vi.fn(async () => true);
 
@@ -75,8 +92,20 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: {}, tenant: 'tenant-1' }),
-  tenantDb: () => ({ table: (name: string) => makeQuery(name.split(' as ')[0]) }),
+  tenantDb: (_db: unknown, tenant: string) => ({ table: (name: string) => makeQuery(name.split(' as ')[0]).where({ tenant }) }),
+  registerAfterCommit: (_trx: unknown, hook: () => Promise<void>) => afterCommit.push(hook),
   withTransaction: async (_knex: unknown, fn: any) => fn({}),
+}));
+
+vi.mock('@alga-psa/licensing/lifecycle', () => ({
+  getCoManagedOperationalState: async () => ({ canWrite: true, state: 'independent' }),
+  withCoManagedOperationalTransaction: async (_db: unknown, _tenant: string, fn: any) => {
+    const result = await fn({});
+    for (const hook of afterCommit.splice(0)) {
+      try { await hook(); } catch (error) { console.warn('After commit failed', error); }
+    }
+    return result;
+  },
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
@@ -100,7 +129,7 @@ vi.mock('@alga-psa/core', () => ({
   enqueueImmediateJob: (...args: unknown[]) => enqueueMock(...(args as [])),
 }));
 
-import { getArticleImportStatus, startArticleImport } from '../src/actions/kbArticleActions';
+import { getArticleImportStatus, startArticleImport, getUnfinishedArticleImports, resumeArticleImport } from '../src/actions/kbArticleActions';
 import {
   KB_IMPORT_MAX_FILES,
   KB_IMPORT_MAX_FILE_BYTES,
@@ -125,7 +154,8 @@ describe('startArticleImport', () => {
   it('stages the files and enqueues the import job by reference, not by content', async () => {
     const result = (await startArticleImport({ files: [file(), file({ filename: 'vpn.html' })] })) as any;
 
-    expect(result).toEqual({ jobId: 'job-1', total: 2 });
+    expect(result).toEqual({ jobId: expect.any(String), total: 2 });
+    expect(result.jobId).toBe(tables.kb_import_files[0].batch_id);
     expect(tables.kb_import_files).toHaveLength(2);
     expect(tables.kb_import_files[0]).toMatchObject({
       tenant: 'tenant-1',
@@ -197,14 +227,13 @@ describe('startArticleImport', () => {
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it('leaves the staged rows for the sweep when the job cannot be enqueued', async () => {
+  it('returns a stable batch identity and preserves source when scheduling acknowledgement fails', async () => {
     enqueueMock.mockImplementationOnce(async () => {
       throw new Error('Job enqueuer has not been registered');
     });
 
-    await expect(startArticleImport({ files: [file()] })).rejects.toThrow(
-      'Job enqueuer has not been registered',
-    );
+    const result = await startArticleImport({ files: [file()] }) as any;
+    expect(result.jobId).toBe(tables.kb_import_files[0].batch_id);
     // Deleting here would be unsafe: on EE the enqueue can throw after the
     // workflow has started, and the handler would lose the content mid-import.
     expect(tables.kb_import_files).toHaveLength(1);
@@ -232,14 +261,14 @@ describe('startArticleImport', () => {
     }
   });
 
-  it('sweeps staging rows past the TTL whatever their status', async () => {
+  it('retains old pending source while sweeping expired terminal rows', async () => {
     const dayAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
     tables.kb_import_files = [
-      { tenant: 'tenant-1', job_id: 'old-job', filename: 'orphan.md', content: 'x'.repeat(64), status: 'pending', created_at: dayAgo },
+      { tenant: 'tenant-1', job_id: 'old-job', filename: 'orphan.md', content: 'x'.repeat(64), status: 'pending', created_at: dayAgo, updated_at: dayAgo },
       // Settled rows outlive the article otherwise: one per imported file, kept
       // for the life of the tenant, still answering status polls for dead jobs.
-      { tenant: 'tenant-1', job_id: 'old-job', filename: 'done.md', content: null, status: 'imported', created_at: dayAgo },
-      { tenant: 'tenant-1', job_id: 'old-job', filename: 'broken.md', content: null, status: 'failed', created_at: dayAgo },
+      { tenant: 'tenant-1', job_id: 'old-job', filename: 'done.md', content: null, status: 'imported', created_at: dayAgo, updated_at: dayAgo },
+      { tenant: 'tenant-1', job_id: 'old-job', filename: 'broken.md', content: null, status: 'failed', created_at: dayAgo, updated_at: dayAgo },
       { tenant: 'tenant-1', job_id: 'recent-job', filename: 'fresh.md', content: 'y', status: 'pending', created_at: new Date() },
     ];
 
@@ -247,8 +276,16 @@ describe('startArticleImport', () => {
 
     expect(tables.kb_import_files.map((row) => row.filename).sort()).toEqual([
       'fresh.md',
+      'orphan.md',
       'printer-guide.md',
     ]);
+  });
+
+  it('denies recovery discovery and resumption without document create permission', async () => {
+    hasPermissionMock.mockImplementation(async () => false);
+    expect(await getUnfinishedArticleImports()).toMatchObject({ _type: 'permission-error' });
+    expect(await resumeArticleImport('batch-1')).toMatchObject({ _type: 'permission-error' });
+    expect(enqueueMock).not.toHaveBeenCalled();
   });
 
   it('refuses callers without document create permission', async () => {
@@ -280,6 +317,14 @@ describe('getArticleImportStatus', () => {
     expect(status).toEqual({ status: 'processing', total: 2, imported: 1, failed: [] });
   });
 
+  it('finds job progress through the stable batch ID after job assignment', async () => {
+    tables.kb_import_files = [
+      { tenant: 'tenant-1', batch_id: 'batch-1', job_id: 'job-1', filename: 'a.md', status: 'pending', error: null },
+      { tenant: 'other', batch_id: 'batch-1', job_id: 'other-job', filename: 'secret.md', status: 'failed' },
+    ];
+    expect(await getArticleImportStatus('batch-1')).toEqual({ status: 'processing', total: 1, imported: 0, failed: [] });
+  });
+
   it('reports completion with per-file failures once every row is settled', async () => {
     tables.kb_import_files = [
       { tenant: 'tenant-1', job_id: 'job-1', filename: 'a.md', status: 'imported', error: null },
@@ -302,7 +347,7 @@ describe('getArticleImportStatus', () => {
     });
   });
 
-  it('surfaces a failed job even when rows never reached a terminal state', async () => {
+  it('offers retry without treating retained pending files as failures', async () => {
     tables.jobs = [{ tenant: 'tenant-1', job_id: 'job-1', status: 'failed' }];
     tables.kb_import_files = [
       { tenant: 'tenant-1', job_id: 'job-1', filename: 'a.md', status: 'pending', error: null },
@@ -311,10 +356,10 @@ describe('getArticleImportStatus', () => {
     const status = (await getArticleImportStatus('job-1')) as any;
 
     expect(status).toEqual({
-      status: 'failed',
+      status: 'retry_required',
       total: 1,
       imported: 0,
-      failed: [{ filename: 'a.md', error: 'Failed to import article' }],
+      failed: [],
     });
   });
 });

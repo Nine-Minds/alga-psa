@@ -1,4 +1,7 @@
-import { reconcileScheduledCommentPublications } from './handlers/publishScheduledCommentHandler';
+import { portableRestoreUploadCleanupJobHandler, PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB } from './handlers/portableRestoreUploadCleanupHandler';
+import { coManagedSlaObservationJobHandler, CO_MANAGED_SLA_OBSERVATION_JOB, type CoManagedSlaObservationJobData } from './handlers/coManagedSlaObservationHandler';
+import { coManagedUploadCleanupJobHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB, type CoManagedUploadCleanupJobData } from './handlers/coManagedUploadCleanupHandler';
+import { coManagedNotificationRecoveryJobHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB, type CoManagedNotificationRecoveryJobData } from './handlers/coManagedNotificationRecoveryHandler';
 import { Job } from 'pg-boss';
 import logger from '@alga-psa/core/logger';
 import { JobHandlerRegistry } from './jobHandlerRegistry';
@@ -179,6 +182,7 @@ import {
 import {
   PUBLISH_SCHEDULED_COMMENT_JOB,
   publishScheduledCommentHandler,
+  reconcileScheduledCommentPublications,
   PublishScheduledCommentJobData,
 } from './handlers/publishScheduledCommentHandler';
 import {
@@ -819,6 +823,30 @@ export async function registerAllJobHandlers(
   // ============================================================================
   // INBOUND EMAIL RECOVERY (per-tenant durable sweep/backfill/mirror)
   // ============================================================================
+
+  JobHandlerRegistry.register<BaseJobData>({
+    name: PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB,
+    handler: async () => { await portableRestoreUploadCleanupJobHandler(); },
+    retry: { maxAttempts: 3 }, timeoutMs: 300000,
+  }, registerOpts);
+
+  JobHandlerRegistry.register<CoManagedUploadCleanupJobData & BaseJobData>({
+    name: CO_MANAGED_UPLOAD_CLEANUP_JOB,
+    handler: async (_jobId, data) => { await coManagedUploadCleanupJobHandler({ data } as any); },
+    retry: { maxAttempts: 3 }, timeoutMs: 300000,
+  }, registerOpts);
+
+  JobHandlerRegistry.register<CoManagedNotificationRecoveryJobData & BaseJobData>({
+    name: CO_MANAGED_NOTIFICATION_RECOVERY_JOB,
+    handler: async (_jobId, data) => { await coManagedNotificationRecoveryJobHandler({ data } as any); },
+    retry: { maxAttempts: 3 }, timeoutMs: 300000,
+  }, registerOpts);
+
+  JobHandlerRegistry.register<CoManagedSlaObservationJobData & BaseJobData>({
+    name: CO_MANAGED_SLA_OBSERVATION_JOB,
+    handler: async (_jobId, data) => { await coManagedSlaObservationJobHandler({ data } as any); },
+    retry: { maxAttempts: 3 }, timeoutMs: 300000,
+  }, registerOpts);
 
   JobHandlerRegistry.register<InboundEmailRecoveryJobData & BaseJobData>(
     {

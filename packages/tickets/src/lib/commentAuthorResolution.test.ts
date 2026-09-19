@@ -108,3 +108,18 @@ describe('resolveCommentAuthor', () => {
     expect(resolved.email).toBeUndefined();
   });
 });
+
+it('uses saved foreign labels and initials without a local directory or avatar identity', () => {
+  const resolved = resolveCommentAuthor({ actor_reference_id: 'owner-reference', actor_display_name: 'Morgan Provider', actor_organization_name: 'Historical MSP' }, { userMap: {} });
+  expect(resolved).toEqual({ source: 'collaborator', displayName: 'Morgan Provider (Historical MSP)', avatarName: 'Morgan Provider', avatarKind: 'user', avatarUrl: null });
+  expect(resolved.userId).toBeUndefined(); expect(resolved.contactId).toBeUndefined(); expect(resolved.email).toBeUndefined();
+});
+
+it.each([{ user_id: 'collision' }, { contact_id: 'collision' }, { actor_display_name: null }, { actor_organization_name: '' }, { actor_reference_id: null }])('does not fall back to a local identity for malformed foreign attribution', alteration => {
+  const resolved = resolveCommentAuthor({ actor_reference_id: 'owner-reference', actor_display_name: 'Morgan Provider', actor_organization_name: 'MSP', ...alteration }, {
+    userMap: { collision: { user_id: 'collision', first_name: 'Local', last_name: 'Person', email: 'private@example.test', user_type: 'internal', avatarUrl: '/private-avatar' } },
+    contactMap: { collision: { contact_id: 'collision', full_name: 'Local Contact', email: 'contact@example.test', avatarUrl: '/private-contact-avatar' } },
+  });
+  expect(resolved.source).toBe('collaborator'); expect(resolved.displayName).toBe('Unknown User');
+  expect(resolved.email).toBeUndefined(); expect(resolved.avatarUrl).toBeNull(); expect(resolved.userId).toBeUndefined(); expect(resolved.contactId).toBeUndefined();
+});

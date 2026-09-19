@@ -10,7 +10,7 @@
  * on react-day-picker's calendar DOM.
  */
 import React from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { WorkItemType } from '../../interfaces/workItem.interfaces';
 import { TimeSheetStatus } from '../../interfaces/timeEntry.interfaces';
@@ -120,6 +120,24 @@ describe('TimeEntryEditForm date field (alga0002002)', () => {
     expect(maxDate.getFullYear()).toBe(2026);
     expect(maxDate.getMonth()).toBe(1);
     expect(maxDate.getDate()).toBe(15);
+  });
+
+  test('operational effort hides commercial controls and saves without a service', () => {
+    const save = vi.fn();
+    renderForm({ entry: { ...baseEntry, billing_mode: 'operational', service_id: undefined, billable_duration: 0 }, services: [], onSave: save });
+    expect(screen.queryByText('Service')).toBeNull();
+    expect(screen.queryByRole('switch')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save).toHaveBeenCalledWith(0);
+  });
+
+  test('commercial effort still requires a service before saving', () => {
+    const save = vi.fn();
+    renderForm({ entry: { ...baseEntry, service_id: undefined }, services: [], onSave: save });
+    expect(screen.getByRole('switch')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByText('Service is required for time entries')).toBeTruthy();
   });
 
   test('leaves the picker unbounded when no time period is supplied', () => {

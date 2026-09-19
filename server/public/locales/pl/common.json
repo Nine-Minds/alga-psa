@@ -67,7 +67,8 @@
     "settings": "Ustawienia",
     "profile": "Profil",
     "logout": "Wyloguj",
-    "help": "Pomoc"
+    "help": "Pomoc",
+    "coManagedDelegation": "Administracja delegowana"
   },
   "actions": {
     "save": "Zapisz",
@@ -1637,6 +1638,10 @@
     "threecxCall": "Zadzwoń przez 3CX",
     "threecxDialing": "Wybieranie numeru z Twojego numeru wewnętrznego 3CX",
     "threecxFailed": "Centrala nie mogła nawiązać połączenia"
+  },
+  "users": {
+    "soloLicenseLimit": "Plan Solo obsługuje jednego technika. Podnieś plan obszaru roboczego, zanim aktywujesz kolejnego użytkownika.",
+    "technicianLicenseLimit": "W tym obszarze roboczym nie można aktywować kolejnego technika. Sprawdź jego stan aktywacji i dostępny przydział licencji."
   },
   "editor": {
     "attachFiles": "Załącz pliki",

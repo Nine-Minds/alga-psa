@@ -9,7 +9,8 @@ const dbRef = vi.hoisted(() => ({
 }));
 
 const userRef = vi.hoisted(() => ({
-  user: null as { user_id: string; user_type: 'internal' | 'client' } | null,
+  // `tenant` is part of a real session user, and hasPermission requires it.
+  user: null as { user_id: string; tenant: string; user_type: 'internal' | 'client' } | null,
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
@@ -69,7 +70,7 @@ describe('project task comment threading model', () => {
     expect(context).toBeTruthy();
     dbRef.knex = knex;
     dbRef.tenant = context.tenant;
-    userRef.user = { user_id: context.user_id, user_type: 'internal' };
+    userRef.user = { user_id: context.user_id, tenant: context.tenant, user_type: 'internal' };
   });
 
   afterAll(async () => {
@@ -494,7 +495,7 @@ describe('project task comment threading model', () => {
         },
       ]);
 
-      userRef.user = { user_id: generated.client_user_id, user_type: 'client' };
+      userRef.user = { user_id: generated.client_user_id, tenant: context.tenant, user_type: 'client' };
       await deleteTaskComment(generated.own_reply_id);
 
       const ownReply = await scopedDb(context.tenant).table('project_task_comments')

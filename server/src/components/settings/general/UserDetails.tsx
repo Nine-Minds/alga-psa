@@ -322,6 +322,8 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         const result = await updateUser(user.user_id, updatedUserData);
         if (!result.success) {
           const errorKeys: Record<typeof result.code, string> = {
+            SOLO_PLAN_LIMIT: 'common:users.soloLicenseLimit',
+            LICENSE_LIMIT_REACHED: 'common:users.technicianLicenseLimit',
             EMAIL_ALREADY_EXISTS: 'userDetails.messages.error.emailAlreadyExists',
             REPORTS_TO_SELF: 'userDetails.messages.error.reportsToSelf',
             REPORTS_TO_CYCLE: 'userDetails.messages.error.reportsToCycle',

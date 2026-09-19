@@ -17,7 +17,7 @@ export { default as Knex } from './lib/knex-turbopack';
 export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, withAdminTransactionRetryReadOnly, retryOnAdminReadOnly } from './lib/admin';
 
 // Tenant Connection
-export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
+export { getConnection, withTransaction, withSavepoint, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
 export { isTenantScopedQuery } from './lib/tenantScopedQuery';
 export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
@@ -26,7 +26,7 @@ export { getTenantTableScope, parseTableExpression, requireTenantTableScope, ten
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
 
 // After-commit hooks (flushed by the transaction-owning withTransaction frame)
-export { registerAfterCommit } from './lib/afterCommit';
+export { registerAfterCommit, registerAfterCommitWithConnection } from './lib/afterCommit';
 export type { AfterCommitHook } from './lib/afterCommit';
 
 // Read-only error helpers (for callers building their own retry strategies)
@@ -38,6 +38,7 @@ export { auditLog } from './lib/auditLog';
 export { writeAccountingAudit } from './lib/accountingAudit';
 export type { AccountingAuditOperation, AccountingAuditProvider, AccountingAuditParams } from './lib/accountingAudit';
 export * from './lib/workDate';
+export * from './lib/timePeriodCalendar';
 
 // Shared invoice external-sync row lock (billing adapters + integrations
 // mapping CRUD + invoice void serialize on the same invoice row lock)
@@ -84,7 +85,7 @@ async function runOwnedTransaction<T>(
     return callback(trx);
   });
   if (owned) {
-    await flushAfterCommitHooks(owned);
+    await flushAfterCommitHooks(owned, knex);
   }
   return result;
 }

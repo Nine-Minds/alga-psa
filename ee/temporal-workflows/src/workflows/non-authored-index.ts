@@ -27,5 +27,7 @@ export * from './appliance-check-in-workflow.js';
 export * from './appliance-license-redeem-workflow.js';
 export * from './appliance-essentials-registration-workflow.js';
 export * from './tenant-product-upgrade-workflow.js';
+
+export * from './co-managed-provisioning-workflow.js';
 export * from './trial-payment-reminder-workflow.js';
 export * from './threecx-call-control-workflow.js';

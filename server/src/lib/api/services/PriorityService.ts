@@ -4,11 +4,13 @@
  */
 
 import { IPriority } from '@alga-psa/types';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { BaseService, ServiceContext, ListResult, ListOptions } from '@alga-psa/db';
 
 export class PriorityService extends BaseService<IPriority> {
   constructor() {
     super({
+      mutationGuard: (trx, context) => assertCoManagedOperationalWrite(trx, context.tenant),
       tableName: 'priorities',
       primaryKey: 'priority_id',
       tenantColumn: 'tenant',

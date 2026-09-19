@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite, CoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
 import { buildMicrosoftEmailProviderConfig as resolveMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
 import type {
   EmailMessageDetails,
@@ -524,6 +525,7 @@ async function persistDocumentForBuffer(args: {
 
   try {
     await args.knex.transaction(async (trx: any) => {
+      await assertCoManagedOperationalWrite(trx, args.tenantId);
       const trxDb = tenantDb(trx, args.tenantId);
       const ticketFolder = await resolveTicketAttachmentFolder(trx, {
         tenantId: args.tenantId,
@@ -591,6 +593,16 @@ async function persistDocumentForBuffer(args: {
 
     return { success: true, documentId, fileId };
   } catch (dbErr: any) {
+    // The lifecycle guard failed before any document write. This attempt owns
+    // a unique uploaded object, so removing it cannot erase an earlier success.
+    if (dbErr instanceof CoManagedLifecycleError) {
+      try {
+        await storageProvider.delete(uploadResult.path);
+      } catch (cleanupError) {
+        console.warn('Failed to remove uncommitted inbound attachment', { tenantId: args.tenantId,
+          storagePath: uploadResult.path, error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError) });
+      }
+    }
     await markProcessedAttachment(args.knex, {
       tenantId: args.tenantId,
       providerId: args.providerId,
@@ -599,6 +611,7 @@ async function persistDocumentForBuffer(args: {
       status: 'failed',
       errorMessage: dbErr?.message || String(dbErr),
     });
+    if (dbErr instanceof CoManagedLifecycleError) throw dbErr;
     return { success: false, message: dbErr?.message || String(dbErr) };
   }
 }
@@ -996,6 +1009,9 @@ async function persistInboundOriginalEmail(input: PersistOriginalEmailInput): Pr
 export async function processInboundEmailArtifactsBestEffort(
   input: ProcessInboundEmailArtifactsInput
 ): Promise<ProcessInboundEmailArtifactsResult> {
+  const lifecycle = await getCoManagedOperationalState(await getAdminKnex(), input.tenantId);
+  if (!lifecycle.canWrite) throw new CoManagedLifecycleError(lifecycle);
+  let lifecycleError: CoManagedLifecycleError | undefined;
   const result: ProcessInboundEmailArtifactsResult = {
     embeddedImageUrlMappings: [],
   };
@@ -1073,6 +1089,7 @@ export async function processInboundEmailArtifactsBestEffort(
 
   const attachmentConcurrency = resolveAttachmentConcurrency(input.maxAttachmentConcurrency);
   await runWithConcurrency(allAttachments, attachmentConcurrency, async (attachment) => {
+    if (lifecycleError) return;
     try {
       const persistResult = await persistInboundEmailAttachment({
         tenantId: input.tenantId,
@@ -1141,6 +1158,10 @@ export async function processInboundEmailArtifactsBestEffort(
         url: `/api/documents/view/${fileId}`,
       });
     } catch (error) {
+      if (error instanceof CoManagedLifecycleError) {
+        lifecycleError = error;
+        return;
+      }
       console.warn(`processInboundEmailInApp:[${input.scopeLabel}] attachment processing failed (continuing)`, {
         emailId: input.emailData.id,
         attachmentId: attachment?.id,
@@ -1149,6 +1170,9 @@ export async function processInboundEmailArtifactsBestEffort(
     }
   });
 
+  // Wait for all concurrent attachment attempts before releasing the durable
+  // claim. Each attempt also checks lifecycle inside its document transaction.
+  if (lifecycleError) throw lifecycleError;
   try {
     const originalResult = await persistInboundOriginalEmail({
       tenantId: input.tenantId,
@@ -1164,6 +1188,7 @@ export async function processInboundEmailArtifactsBestEffort(
       });
     }
   } catch (error) {
+    if (error instanceof CoManagedLifecycleError) throw error;
     console.warn(
       `processInboundEmailInApp:[${input.scopeLabel}] original-email persistence errored (continuing)`,
       {

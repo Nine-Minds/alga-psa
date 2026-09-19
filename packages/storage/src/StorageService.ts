@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
 import { FileStoreModel } from './models/storage';
 import type { FileStore } from './types/storage';
-import { StorageError } from './providers/StorageProvider';
+import { StorageError, type StorageProviderInterface } from './providers/StorageProvider';
 import fs from 'fs';
 import type { Knex } from 'knex';
 
@@ -40,7 +40,8 @@ async function validateUpload(origin: StorageArtifactOrigin | undefined, mimeTyp
     await validateFileConfig(mimeType, fileSize);
 }
 import { LocalProviderConfig, S3ProviderConfig } from './types/storage';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { CoManagedLifecycleError, getCoManagedOperationalState, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { isValidUUID } from '@alga-psa/validation';
 import {
@@ -61,6 +62,42 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
 
 /** Square canvas every raster favicon is rendered onto. */
 const FAVICON_DIMENSION = 32;
+
+async function assertUploadAdmission(db: Knex, tenant: string): Promise<void> {
+  const lifecycle = await getCoManagedOperationalState(db, tenant);
+  if (!lifecycle.canWrite) throw new CoManagedLifecycleError(lifecycle);
+}
+
+/** Upload transport is outside the database transaction. Recheck admission
+ * when recording the file; a lifecycle rejection owns no metadata and may
+ * safely remove this attempt's uniquely named object. */
+async function persistUploadedFile(
+  db: Knex,
+  tenant: string,
+  provider: StorageProviderInterface,
+  data: Parameters<typeof FileStoreModel.create>[1],
+  metadata?: Record<string, unknown>,
+  persistRelatedRecords?: (trx: Knex.Transaction, file: FileStore) => Promise<void>,
+): Promise<FileStore> {
+  try {
+    return await runWithTenant(tenant, () => withCoManagedOperationalTransaction(db, tenant, async trx => {
+      const file = await FileStoreModel.create(trx, data);
+      if (metadata) await FileStoreModel.updateMetadata(trx, file.file_id, metadata);
+      if (persistRelatedRecords) await persistRelatedRecords(trx, file);
+      return file;
+    }));
+  } catch (error) {
+    if (error instanceof CoManagedLifecycleError) {
+      try {
+        await provider.delete(data.storage_path);
+      } catch (cleanupError) {
+        console.warn('[StorageService] Failed to remove uncommitted upload', { tenant, storagePath: data.storage_path,
+          error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError) });
+      }
+    }
+    throw error;
+  }
+}
 
 function changeFileExtension(filename: string, newExtension: string): string {
   const nameParts = filename.split('.');
@@ -116,22 +153,21 @@ export class StorageService {
       }
     ): Promise<FileStore> {
       if (!options.uploaded_by_id) throw new Error('uploaded_by_id is required');
+      const { knex } = await createTenantKnex(tenant);
+      await assertUploadAdmission(knex, tenant);
       await validateUpload(options.origin, options.mime_type || 'application/octet-stream', options.size);
       const provider = await StorageProviderFactory.createProvider();
       const storagePath = generateStoragePath(tenant, '', originalName);
-      const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream' });
+      const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream', content_length: options.size });
       if (uploaded.size !== options.size) {
         await provider.delete(uploaded.path);
         throw new Error('Uploaded stream size did not match the declared size');
       }
-      const { knex } = await createTenantKnex(tenant);
-      const file = await FileStoreModel.create(knex, {
+      return persistUploadedFile(knex, tenant, provider, {
         fileId: uuidv4(), file_name: uploaded.path.split('/').pop()!, original_name: originalName,
         mime_type: uploaded.mime_type, file_size: uploaded.size, storage_path: uploaded.path,
         uploaded_by_id: options.uploaded_by_id,
-      });
-      if (options.metadata) await FileStoreModel.updateMetadata(knex, file.file_id, options.metadata);
-      return file;
+      }, options.metadata);
     }
 
     static async uploadFile(
@@ -152,6 +188,10 @@ export class StorageService {
       // MEDIA_PROCESSING_SUCCEEDED so a preview upload can't re-trigger the
       // workflow that produced it. FILE_UPLOADED still fires (unchanged).
       isDerivedArtifact?: boolean;
+      /** Internal database writes that must commit with the file record.
+       * Workflow events publish only after this callback and the transaction
+       * succeed. Do not perform transport or other external effects here. */
+      persistRelatedRecords?: (trx: Knex.Transaction, file: FileStore) => Promise<void>;
       /** Who chose the MIME type. Defaults to `'user-upload'`. */
       origin?: StorageArtifactOrigin;
     }
@@ -160,6 +200,8 @@ export class StorageService {
       if (!options.uploaded_by_id) {
         throw new Error('uploaded_by_id is required');
       }
+      const { knex } = await createTenantKnex(tenant);
+      await assertUploadAdmission(knex, tenant);
 
       const uploadStartedAtMs = Date.now();
 
@@ -281,8 +323,7 @@ export class StorageService {
         mime_type: processedMimeType,
       });
 
-      const { knex } = await createTenantKnex(tenant);
-      const fileRecord = await FileStoreModel.create(knex, {
+      const fileRecord = await persistUploadedFile(knex, tenant, provider, {
         fileId: uuidv4(),
         file_name: storagePath.split('/').pop()!,
         original_name: processedOriginalName,
@@ -291,7 +332,7 @@ export class StorageService {
         storage_path: uploadResult.path,
         uploaded_by_id: options.uploaded_by_id,
         metadata: options.metadata
-      });
+      }, undefined, options.persistRelatedRecords);
 
       if (!options.isDerivedArtifact) {
         try {
@@ -377,7 +418,7 @@ export class StorageService {
       return fileRecord;
     } catch (error) {
       console.error("Error in uploadFile:", error);
-      if (error instanceof StorageError) {
+      if (error instanceof StorageError || error instanceof CoManagedLifecycleError) {
         throw error; // Re-throw specific storage errors
       }
       // Add specific error handling for sharp errors if needed
@@ -436,27 +477,34 @@ export class StorageService {
     static async deleteFile(file_id: string, deleted_by_id: string, transaction?: Knex.Transaction): Promise<void> {
         try {
             // Get file record
-            const { knex: connection, tenant } = await createTenantKnex();
-            const knex = transaction ?? connection;
-            const fileRecord = await FileStoreModel.findById(knex, file_id);
-            if (!fileRecord) {
-                throw new Error('File not found');
-            }
-
-            const config = await getStorageConfig();
-            const providerConfig = await this.getTypedProviderConfig<LocalProviderConfig | S3ProviderConfig>(config.defaultProvider);
-
-            // Get storage provider
-            const provider = await StorageProviderFactory.createProvider();
-
-            // Delete file from storage provider
-            await provider.delete(fileRecord.storage_path);
-
-            // Soft delete file record
-            await FileStoreModel.softDelete(knex, file_id, deleted_by_id);
+            const { knex, tenant } = await createTenantKnex();
+            if (!tenant) throw new Error('Tenant is required');
+            // A caller may already hold operational row locks (e.g. the comment-
+            // attachment sweep locks external_files FOR UPDATE before deleting).
+            // Reuse that transaction rather than opening a second one on a fresh
+            // pool connection, which would block on the caller's own lock and
+            // self-deadlock. withCoManagedOperationalTransaction -> withTransaction
+            // reuses a supplied trx as a nested frame; a bare pool handle owns a
+            // new transaction as before.
+            // LEVERAGE: pattern comanaged-trx-threading — "use the caller's handle if there is one"
+            // is re-derived at ~15 sites in three dialects (`?? knex`, `context.db ??`,
+            // `trx ? work(trx) : withTransaction(knex, work)`). See docs/evidence/co-managed-transaction-audit.md.
+            const db = transaction ?? knex;
+            const { fileRecord, deletedRecord } = await withCoManagedOperationalTransaction(db, tenant, async trx => {
+              const fileRecord = await FileStoreModel.findById(trx, file_id);
+              if (!fileRecord) throw new Error('File not found');
+              const config = await getStorageConfig();
+              await this.getTypedProviderConfig<LocalProviderConfig | S3ProviderConfig>(config.defaultProvider);
+              const provider = await StorageProviderFactory.createProvider();
+              const deletedRecord = await FileStoreModel.softDelete(trx, file_id, deleted_by_id);
+              // Keep admission locked through the destructive provider call.
+              // An advisory check followed by deletion could remove a retained
+              // file after expiry even though its metadata update is rejected.
+              await provider.delete(fileRecord.storage_path);
+              return { fileRecord, deletedRecord };
+            });
 
             try {
-              const deletedRecord = await FileStoreModel.findById(knex, file_id);
               const deletedAt = deletedRecord?.deleted_at ?? new Date().toISOString();
               const deletedByUserId = isValidUUID(deleted_by_id) ? deleted_by_id : undefined;
 
@@ -480,7 +528,7 @@ export class StorageService {
               console.error('[StorageService] Failed to publish DOCUMENT_DELETED workflow event', error);
             }
         } catch (error) {
-            if (error instanceof StorageError) {
+            if (error instanceof StorageError || error instanceof CoManagedLifecycleError) {
                 throw error;
             }
             throw new Error('Failed to delete file: ' + (error as Error).message);
@@ -504,6 +552,7 @@ export class StorageService {
         const { knex } = await createTenantKnex();
         await FileStoreModel.createDocumentSystemEntry(knex, options);
       } catch (error) {
+        if (error instanceof CoManagedLifecycleError) throw error;
         throw new Error('Failed to create document system entry: ' + (error as Error).message);
       }
     }
@@ -526,6 +575,7 @@ export class StorageService {
         const { knex } = await createTenantKnex();
         await FileStoreModel.updateMetadata(knex, fileId, metadata);
       } catch (error) {
+        if (error instanceof CoManagedLifecycleError) throw error;
         throw new Error('Failed to update file metadata: ' + (error as Error).message);
       }
     }

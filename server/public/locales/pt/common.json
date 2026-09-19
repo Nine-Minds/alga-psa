@@ -55,7 +55,8 @@
     "settings": "Configurações",
     "profile": "Perfil",
     "logout": "Sair",
-    "help": "Ajuda"
+    "help": "Ajuda",
+    "coManagedDelegation": "Administração delegada"
   },
   "actions": {
     "save": "Salvar",
@@ -1603,6 +1604,10 @@
     "threecxCall": "Ligar via 3CX",
     "threecxDialing": "Discando a partir do seu ramal 3CX",
     "threecxFailed": "O PBX não conseguiu fazer a chamada"
+  },
+  "users": {
+    "soloLicenseLimit": "O plano Solo permite um técnico. Faça o upgrade do espaço de trabalho antes de ativar outro usuário.",
+    "technicianLicenseLimit": "Este espaço de trabalho não pode ativar outro técnico. Verifique o status de ativação e a alocação de licenças disponível."
   },
   "editor": {
     "attachFiles": "Anexar arquivos",

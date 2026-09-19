@@ -45,7 +45,8 @@
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/ui": "*",
-    "swr": "^2.3.0"
+    "swr": "^2.3.0",
+    "@alga-psa/licensing": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

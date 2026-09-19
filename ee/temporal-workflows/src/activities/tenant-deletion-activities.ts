@@ -53,7 +53,7 @@ export {
  *
  * Synced from cli/cleanup-tenant.nu
  */
-const TENANT_TABLES_DELETION_ORDER: string[] = [
+export const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 
@@ -134,6 +134,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'hour_blocks',
 
   // Time tracking
+  'native_time_tracking_sessions',
   'time_sheet_comments', 'time_entry_change_requests', 'time_entries', 'time_sheets',
   'user_cost_rates',
 
@@ -286,6 +287,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,
   // delete before ticket/user rows are removed.
   'sla_notifications_sent', 'sla_audit_log', 'ticket_audit_logs',
+  'collaboration_actor_references',
   'sla_notification_thresholds', 'sla_policy_targets',
   'status_sla_pause_config',
   'business_hours_entries', 'holidays',
@@ -387,6 +389,59 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_definition_versions', 'service_request_definitions',
 
   // === LEVEL 3: Mid-level entities ===
+  'co_management_board_scopes', 'co_management_project_scopes', 'co_management_staff_assignments',
+  'co_management_delegated_receipts', 'co_management_delegated_grants',
+  'co_management_ticket_routing_recipients', 'co_management_ticket_routing_events',
+  'co_managed_sla_priority_mappings',
+  'sla_organization_notification_recipients', 'sla_organization_notification_events', 'sla_organization_events', 'sla_organization_obligations',
+  'co_management_ticket_handoffs', 'co_management_ticket_work', 'co_managed_ticket_references',
+  'co_management_conversation_attachments',
+  'co_management_event_consumers',
+  'co_management_event_outbox',
+  'co_management_conversation_drafts',
+  'co_management_private_command_receipts',
+  'co_management_email_deliveries',
+  'co_management_customer_email_deliveries',
+  'co_management_requester_reply_tokens',
+  'co_management_customer_reply_tokens',
+  'co_management_inbound_reply_receipts',
+  'co_management_requester_email_deliveries',
+  'co_management_workflow_ticket_emails',
+  'co_managed_time_work_references',
+  'co_managed_relationship_closures',
+  'co_managed_participation_evidence',
+  'co_managed_archive_files',
+  'co_managed_archive_manifests',
+  'tenant_license_state',
+  'co_managed_independent_upgrades',
+  'portable_workspace_activations',
+  // Portable upload recovery tombstones outlive tenant deletion: an abandoned
+  // provider request can finish late and still needs its destination cleanup.
+  'portable_workspace_restore_uploads',
+  'portable_workspace_restores',
+  'co_managed_upgrade_purchases',
+  'co_management_notification_deliveries',
+  'co_management_in_app_receipts',
+  'co_management_private_comments',
+  'co_management_private_threads',
+  'co_management_thread_transfers',
+  'co_management_command_receipts',
+  // Seat pool and purchase/provisioning operations. None of these carry a foreign key
+  // (Citus distributed tables drop them), so they are ordered by ownership: the
+  // allocations that spend a pool before the entitlement that holds it, and the
+  // operations that produced them alongside.
+  'co_managed_allocations',
+  'co_managed_entitlements',
+  'co_managed_purchase_operations',
+  'co_managed_provisioning_operations',
+  'co_managed_meeting_creation_operations',
+  // co_management_relationships is the root of the co-managed graph. Every table with a
+  // real FK to it -- co_management_command_receipts, co_management_delegated_grants,
+  // co_management_project_scopes, co_management_ticket_work -- is listed above, so it
+  // must stay after them.
+  'co_management_relationship_events',
+  'co_management_relationships',
+  'co_managed_project_task_references',
   // Document-related leaf tables (must come before documents)
   'document_share_access_log', 'document_share_links',
   // KB import staging rows: a leaf (article_id / job_id are soft refs, no FK), so
@@ -612,6 +667,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Time period settings (tenant_time_period_settings must come BEFORE time_period_types)
   'tenant_time_period_settings',
+  'time_period_calendar_locks',
   'time_periods', 'time_period_types', 'time_period_settings',
 
   // External entity mappings and tax

@@ -7,6 +7,8 @@ export * from './actions/integrations/teamsSetupValidationActions';
 export * from './auth/teamsMicrosoftProviderResolution';
 export * from './graphAuth';
 export * from './meetings/createTeamsMeeting';
+export { getTeamsMeetingCreationTarget, recoverTeamsMeetingCreation } from './meetings/meetingCreationRecovery';
+export type { TeamsMeetingCreationIdentity, TeamsMeetingCreationTarget, CreatedTeamsEventReceipt, TeamsMeetingCreationTargetOutcome, RecoverTeamsMeetingCreationOutcome } from './meetings/meetingCreationRecovery';
 export * from './meetings/deleteTeamsMeeting';
 export * from './meetings/fetchMeetingArtifacts';
 export * from './meetings/transcriptTicketSummary';
@@ -40,3 +42,5 @@ export * from './teams/resolveTeamsTabDestination';
 export * from './teams/resolveTeamsTenantContext';
 export * from './teams/teamsAvailabilityResponses';
 export * from './teams/teamsDeepLinks';
+
+export { getMicrosoftGraphBaseUrl } from './teams/microsoftEndpoints';

@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import {
   IProjectMaterial,
   IServicePrice,
@@ -12,10 +13,10 @@ import { collectDefaultLocationStockLowSignalAfterConsume } from './stockLowSign
 import { resolveTenantCurrency } from './tenantCurrency';
 
 /**
- * Lib-layer transaction helper (this file must stay importable without the
- * server-action stack, so no @alga-psa/db here). Reuses a passed-in transaction
- * (savepoint-free, caller owns commit) or opens one on a plain knex handle —
- * the same reuse semantics as @alga-psa/db withTransaction.
+ * Runtime-only transaction helper. Reuses a passed-in transaction (caller
+ * owns commit) or opens one on a plain knex handle. Lifecycle admission and
+ * material/stock writes must retain the same transaction. Keep server actions
+ * out of this module's static imports.
  */
 function runInTransaction<T>(db: Knex, fn: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
   const maybe = db as unknown as { commit?: unknown; rollback?: unknown };
@@ -165,6 +166,7 @@ export async function addMaterial(
   }
 
   const { row, pendingAsset, pendingStockLow } = await runInTransaction(db, async (trx: Knex.Transaction) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     const parent = await trx(cfg.parentTable)
       .where({ tenant, [cfg.parentPk]: input.parent_id })
       .select(cfg.parentPk, 'client_id')
@@ -315,6 +317,7 @@ export async function updateProjectMaterialBilling(
   }
 
   return runInTransaction(db, async (trx) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     const material = await trx('project_materials as material')
       .innerJoin('projects as project', function joinProject() {
         this.on('project.tenant', '=', 'material.tenant')
@@ -395,6 +398,7 @@ export async function deleteMaterial(
 ): Promise<boolean> {
   const cfg = PARENTS[parentType];
   return runInTransaction(db, async (trx: Knex.Transaction) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     const row = await trx(cfg.table)
       .where({ tenant, [cfg.pk]: materialId })
       .select('is_billed', 'service_id', 'quantity')

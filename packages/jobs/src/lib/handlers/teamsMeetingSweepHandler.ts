@@ -1,3 +1,6 @@
+import { recoverCoManagedAppointmentMeetings } from '@alga-psa/scheduling/lib/appointmentMeetingCreation';
+import { getConnection, tenantDb } from '@alga-psa/db';
+import { synchronizeCoManagedScheduleMeetings } from '@alga-psa/scheduling/lib/scheduleMeetingSynchronization';
 import logger from '@alga-psa/core/logger';
 import { OnlineMeetingModel } from '@alga-psa/clients/models';
 import {
@@ -56,10 +59,16 @@ async function loadEeTeamsMeetingConfigModule(): Promise<EeTeamsMeetingConfigMod
  * 2. Cleanup retry: re-attempt Graph deletion for cancel_pending meetings a
  *    dead one-off cleanup job left behind.
  *
- * Skips entirely when the tenant has no ready Teams Graph config (add-on
- * inactive / not configured) — the config resolver performs those gates.
+ * Co-managed pending operations are reconciled first; unavailable provider
+ * configuration leaves their intent pending. Artifact capture and legacy
+ * cleanup then skip when Teams Graph configuration is unavailable.
  */
 export async function teamsMeetingSweepHandler(data: TeamsMeetingSweepJobData): Promise<void> {
+  await recoverCoManagedAppointmentMeetings(await getConnection(data.tenantId), data.tenantId);
+  // Suspended workspaces retain compensation authority only.
+  const workspace = await tenantDb(await getConnection(data.tenantId), data.tenantId).table('tenants').first('suspended_at');
+  if (!workspace || workspace.suspended_at) return;
+  await synchronizeCoManagedScheduleMeetings(await getConnection(data.tenantId), data.tenantId);
   const eeModule = await loadEeTeamsMeetingConfigModule();
   if (!eeModule) {
     return;

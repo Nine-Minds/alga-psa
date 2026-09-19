@@ -55,7 +55,8 @@
     "settings": "Impostazioni",
     "profile": "Profilo",
     "logout": "Esci",
-    "help": "Aiuto"
+    "help": "Aiuto",
+    "coManagedDelegation": "Amministrazione delegata"
   },
   "actions": {
     "save": "Salva",
@@ -1603,6 +1604,10 @@
     "threecxCall": "Chiama tramite 3CX",
     "threecxDialing": "Chiamata in corso dal tuo interno 3CX",
     "threecxFailed": "Il centralino non è riuscito a effettuare la chiamata"
+  },
+  "users": {
+    "soloLicenseLimit": "Il piano Solo prevede un solo tecnico. Aggiorna il piano dello spazio di lavoro prima di attivare un altro utente.",
+    "technicianLicenseLimit": "Questo spazio di lavoro non può attivare un altro tecnico. Controlla il suo stato di attivazione e le licenze ancora disponibili."
   },
   "editor": {
     "attachFiles": "Allega file",

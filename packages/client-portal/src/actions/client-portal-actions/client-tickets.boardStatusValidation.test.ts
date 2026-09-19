@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeTable, fakeTransaction, type FakeTenantDbOptions } from '@alga-psa/db/testing';
 
 let currentUser: any;
 
@@ -95,145 +96,45 @@ function createClientPortalTrx(overrides: {
   portalStatusRows?: Array<Record<string, unknown>>;
 }) {
   const ticketUpdates: Array<Record<string, unknown>> = [];
+  const ticket = overrides.ticket ?? null;
+  const boardId = (ticket?.board_id as string | undefined)
+    ?? (overrides.defaultBoard?.board_id as string | undefined)
+    ?? 'board-1';
+
+  // Every status lookup proves board membership and the ticket status type in
+  // the same query, so a status the scenario names has to carry both.
+  const statusRow = (status: Record<string, unknown>) => ({ status_type: 'ticket', board_id: boardId, ...status });
+
+  const tables: FakeTenantDbOptions = {
+    tables: {
+      users: [{ user_id: currentUser.user_id, contact_id: 'contact-1' }],
+      contacts: [{ contact_name_id: 'contact-1', client_id: 'client-1' }],
+      // Board resolution filters on the active/default flags, and portal
+      // visibility subtracts boards hidden from the portal.
+      boards: overrides.defaultBoard
+        ? [{ is_inactive: false, is_default: true, client_portal_visible: true, ...overrides.defaultBoard }]
+        : [],
+      // The portal only ever reaches a ticket owned by the requester's client.
+      tickets: ticket ? [{ client_id: 'client-1', ...ticket }] : [],
+      statuses: [
+        ...(overrides.portalStatusRows ?? []),
+        ...(overrides.statusForBoard ? [statusRow(overrides.statusForBoard)] : []),
+        ...(overrides.oldStatus ? [statusRow(overrides.oldStatus)] : []),
+      ],
+    },
+    perTable: {
+      tickets: {
+        onUpdate: (updateData) => {
+          ticketUpdates.push({ updateData });
+          return 1;
+        },
+      },
+    },
+  };
 
   const trx = Object.assign(
-    (table: string) => {
-      if (table === 'users') {
-        return {
-          where: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue({ user_id: currentUser.user_id, contact_id: 'contact-1' }),
-          }),
-        };
-      }
-
-      if (table === 'contacts') {
-        return {
-          where: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue({ contact_name_id: 'contact-1', client_id: 'client-1' }),
-          }),
-        };
-      }
-
-      if (table === 'boards') {
-        const builder: any = {
-          select: vi.fn().mockResolvedValue([]),
-          where: vi.fn(() => builder),
-          whereIn: vi.fn(() => builder),
-          modify: vi.fn((callback: (query: any) => void) => {
-            callback(builder);
-            return builder;
-          }),
-          orderBy: vi.fn(() => builder),
-          first: vi.fn().mockResolvedValue(overrides.defaultBoard ?? null),
-        };
-        return builder;
-      }
-
-      if (table === 'tickets as t') {
-        const builder: any = {
-          select: vi.fn(() => builder),
-          where: vi.fn(() => builder),
-          modify: vi.fn((cb: (query: any) => void) => {
-            cb(builder);
-            return builder;
-          }),
-          first: vi.fn().mockResolvedValue(overrides.ticket ?? null),
-        };
-        return builder;
-      }
-
-      if (table === 'tickets') {
-        let whereClause: Record<string, unknown> = {};
-        return {
-          where: vi.fn((value: Record<string, unknown>) => {
-            whereClause = value;
-            return {
-              first: vi.fn().mockResolvedValue(overrides.ticket ?? null),
-              update: vi.fn(async (updateData: Record<string, unknown>) => {
-                ticketUpdates.push({ where: whereClause, updateData });
-                return 1;
-              }),
-            };
-          }),
-        };
-      }
-
-      if (table === 'statuses') {
-        let whereObj: Record<string, unknown> = {};
-        let directSelectable: boolean | null = null;
-        let callbackFilter: ((builder: any) => void) | null = null;
-
-        const builder: any = {
-          select: vi.fn(() => builder),
-          orderBy: vi.fn(() => builder),
-          where: vi.fn((arg1: any, arg2?: any) => {
-            if (typeof arg1 === 'function') {
-              callbackFilter = arg1;
-            } else if (typeof arg1 === 'string') {
-              if (arg1 === 'portal_selectable') {
-                directSelectable = arg2;
-              } else {
-                whereObj = { ...whereObj, [arg1]: arg2 };
-              }
-            } else if (arg1 && typeof arg1 === 'object') {
-              whereObj = { ...whereObj, ...arg1 };
-            }
-            return builder;
-          }),
-          first: vi.fn(async () => {
-            if ('board_id' in whereObj) {
-              return overrides.statusForBoard ?? null;
-            }
-            if ('status_id' in whereObj) {
-              return overrides.oldStatus ?? overrides.statusForBoard ?? null;
-            }
-            return null;
-          }),
-          then: (resolve: any, reject: any) => {
-            let rows = (overrides.portalStatusRows ?? []).filter((status) => {
-              if ('board_id' in whereObj && status.board_id !== whereObj.board_id) return false;
-              if (status.status_type !== undefined && status.status_type !== 'ticket') return false;
-              return true;
-            });
-
-            if (directSelectable === true) {
-              rows = rows.filter((status) => status.portal_selectable === true);
-            }
-
-            if (callbackFilter) {
-              let requireSelectable = false;
-              let currentStatusId: unknown;
-              const inner: any = {
-                where: vi.fn(() => {
-                  requireSelectable = true;
-                  return inner;
-                }),
-                orWhere: vi.fn((_column: string, value: unknown) => {
-                  currentStatusId = value;
-                  return inner;
-                }),
-              };
-              callbackFilter(inner);
-              rows = rows.filter(
-                (status) =>
-                  (requireSelectable && status.portal_selectable === true) ||
-                  status.status_id === currentStatusId
-              );
-            }
-
-            return Promise.resolve(rows).then(resolve, reject);
-          },
-        };
-
-        return builder;
-      }
-
-      throw new Error(`Unexpected table: ${table}`);
-    },
-    {
-      fn: { now: () => 'now()' },
-      raw: vi.fn().mockResolvedValue({ rows: [] }),
-    }
+    (table: string) => fakeTable(tables, currentUser.tenant, table.split(' ')[0]),
+    fakeTransaction({ raw: vi.fn().mockResolvedValue({ rows: [] }) }),
   ) as any;
 
   return { trx, ticketUpdates };

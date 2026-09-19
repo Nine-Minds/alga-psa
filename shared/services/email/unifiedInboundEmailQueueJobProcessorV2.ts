@@ -4,10 +4,14 @@
  * both the Redis claim and the Postgres lease together.
  */
 
+import type { InboundConversationEventRetainer } from './inboundConversationEvents';
+import type { QualifiedReplyArtifactProcessor } from './qualifiedReplyArtifacts';
+import type { EmailReplyAdmission } from './qualifiedReplyAdmission';
 import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from '../../interfaces/inbound-email.interfaces';
+import type { InboundEmailDurableMode } from '../../interfaces/inbound-email.interfaces';
 import type { InboundPostgresLease } from './unifiedInboundEmailQueueConsumerV2';
 import {
-  getInboundDurableMode,
+  getInboundDurableModeForTenant,
   getDurableLeaseTtlMs,
 } from './inboundEmailDurableStore';
 import {
@@ -43,15 +47,23 @@ export async function renewPostgresLeaseForV2Job(
 
 export async function processUnifiedInboundEmailDurableJob(
   job: UnifiedInboundEmailQueueJobV2,
-  ctx: InboundV2JobContext
+  ctx: InboundV2JobContext,
+  options: { qualifiedReplyAdmission?: EmailReplyAdmission; qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor; retainConversationEvent?: InboundConversationEventRetainer } = {}
 ): Promise<InboundEmailQueueDisposition> {
+  const mode = await getInboundDurableModeForTenant(job.tenantId);
+  if (mode === 'off') {
+    // The consumer stays live for co-managed tenants. Preserve ordinary tenants'
+    // rollout choice across every V2 work type, including cursor updates and
+    // artifact/outbox effects, without dropping their existing queued work.
+    return { disposition: 'defer', untilIso: new Date(Date.now() + 60_000).toISOString(), reason: 'durable_mode_off' };
+  }
   switch (job.workType) {
     case 'process_inbox':
-      return handleProcessInbox(job, ctx);
+      return handleProcessInbox(job, ctx, mode, options.qualifiedReplyAdmission, options.retainConversationEvent);
     case 'stage_ingress':
       return handleStageIngress(job, ctx);
     case 'process_artifact':
-      return handleProcessArtifact(job, ctx);
+      return handleProcessArtifact(job, ctx, options.qualifiedReplyArtifacts);
     case 'publish_outbox':
       return handlePublishOutbox(job, ctx);
     case 'republish_outbox_event':
@@ -61,18 +73,15 @@ export async function processUnifiedInboundEmailDurableJob(
   }
 }
 
-async function handleProcessInbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext): Promise<InboundEmailQueueDisposition> {
-  const mode = getInboundDurableMode();
-  if (mode === 'off') {
-    // Enforce/off plumbing: without a durable processor, nothing to do here —
-    // the V1 path remains authoritative.
-    return { disposition: 'ack' };
-  }
+async function handleProcessInbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext,
+  mode: Exclude<InboundEmailDurableMode, 'off'>, qualifiedReplyAdmission?: EmailReplyAdmission, retainConversationEvent?: InboundConversationEventRetainer): Promise<InboundEmailQueueDisposition> {
   const owner = newInboundProcessorOwner();
   return processInboundInbox({
     tenantId: job.tenantId,
     inboxId: job.recordId,
     owner,
+    qualifiedReplyAdmission,
+    retainConversationEvent,
     leaseTtlMs: getDurableLeaseTtlMs(),
     mode: mode === 'enforce' ? 'enforce' : 'shadow',
     onClaim: (lease) => ctx.registerPostgresLease(lease),
@@ -87,9 +96,9 @@ async function handleStageIngress(job: UnifiedInboundEmailQueueJobV2, ctx: Inbou
   return processIngressStageJob(job, ctx);
 }
 
-async function handleProcessArtifact(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext): Promise<InboundEmailQueueDisposition> {
+async function handleProcessArtifact(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext, qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor): Promise<InboundEmailQueueDisposition> {
   const { processInboundArtifactJob } = await import('./inboundEmailArtifactWorker');
-  return processInboundArtifactJob(job, ctx);
+  return processInboundArtifactJob(job, ctx, qualifiedReplyArtifacts);
 }
 
 async function handlePublishOutbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext): Promise<InboundEmailQueueDisposition> {

@@ -44,6 +44,8 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: hasPermissionMock }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  withTransaction: withTransactionMock,
+  registerAfterCommit: vi.fn(),
   tenantDb: () => ({
     table: () => stubQuery(),
     // Callers use tenantJoin for its side effect on the passed query builder.
@@ -51,7 +53,8 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/shared/db', () => ({ withTransaction: withTransactionMock }));
+// Lifecycle admission has real PostgreSQL coverage; this suite isolates RBAC.
+vi.mock('@alga-psa/licensing', () => ({ assertCoManagedOperationalWrite: vi.fn() }));
 vi.mock('@alga-psa/core', () => ({ unparseCSV: vi.fn(() => '') }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getAllUsersBasic: getAllUsersBasicMock,

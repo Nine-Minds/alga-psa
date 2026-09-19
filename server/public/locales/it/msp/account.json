@@ -427,5 +427,8 @@
       "loading": "Caricamento…",
       "loadMore": "Carica altro"
     }
+  },
+  "coManaged": {
+    "accountTitle": "IT cogestita"
   }
 }

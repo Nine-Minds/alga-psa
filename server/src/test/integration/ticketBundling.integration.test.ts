@@ -671,20 +671,23 @@ describe('Ticket bundling integration', () => {
       } as any);
     });
 
-    // The reopen utility resets the master to the tenant's default open ticket
-    // status (tenant-wide, not board-scoped), so compute that expectation the
-    // same way rather than assuming it matches this suite's chosen status.
-    const tenantDefaultOpenStatus = await scopedDb.table('statuses')
-      .where({ is_closed: false })
+    // The reopen utility resets the master to the default open ticket status of
+    // the master's own board. It must be board-scoped: every other status write
+    // goes through TicketModel.validateStatusBelongsToBoard, so a tenant-wide
+    // pick can leave the master on a status its own board rejects.
+    const boardDefaultOpenStatus = await scopedDb.table('statuses')
+      .where({ is_closed: false, board_id: boardId })
       .andWhere(function () {
         this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
       })
       .orderBy('is_default', 'desc')
       .orderBy('order_number', 'asc')
+      .orderBy('status_id')
       .first<{ status_id: string }>('status_id');
 
     const reopenedMaster = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
-    expect(reopenedMaster?.status_id).toBe(tenantDefaultOpenStatus?.status_id);
+    expect(boardDefaultOpenStatus?.status_id).toBeTruthy();
+    expect(reopenedMaster?.status_id).toBe(boardDefaultOpenStatus?.status_id);
     expect(reopenedMaster?.closed_at).toBeNull();
     expect(reopenedMaster?.is_closed).toBe(false);
   });

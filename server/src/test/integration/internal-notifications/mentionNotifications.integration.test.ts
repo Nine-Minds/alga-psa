@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
+import { fakeTable } from '@alga-psa/db/testing';
 
 type QueryQueue = Array<any>;
 type JoinHelpers = {
@@ -143,9 +144,23 @@ function createQueryBuilder(queue: QueryQueue) {
   return builder;
 }
 
+/**
+ * The co-managed conversation consumer probes its retained outbox in its own
+ * transaction before the native notification path runs. These tenants hold no
+ * co-managed event, which is an empty table rather than a missing stub.
+ */
+const CO_MANAGED_CONSUMER_TABLES = new Set([
+  'co_management_event_outbox',
+  'co_management_event_consumers',
+  'co_management_relationships',
+]);
+
 function createConnectionStub(responses: Record<string, any | any[]>) {
   const builders = new Map<string, ReturnType<typeof createQueryBuilder>>();
   const knexStub: any = vi.fn((table: string) => {
+    if (CO_MANAGED_CONSUMER_TABLES.has(table.split(' ')[0])) {
+      return fakeTable({ strict: true, tables: { [table.split(' ')[0]]: [] } }, undefined, table.split(' ')[0]);
+    }
     const response = responses[table];
     if (response === undefined) {
       throw new Error(`No stub configured for table "${table}"`);
@@ -157,6 +172,15 @@ function createConnectionStub(responses: Record<string, any | any[]>) {
     return builders.get(table);
   });
   knexStub.raw = vi.fn(() => '');
+  // A connection this subscriber can open a transaction on. The transaction
+  // resolves the same tables; only `commit`/`rollback` tell withTransaction
+  // that this frame owns the transaction.
+  const trxStub: any = vi.fn((table: string) => knexStub(table));
+  trxStub.raw = knexStub.raw;
+  trxStub.isTransaction = true;
+  trxStub.commit = vi.fn(async () => undefined);
+  trxStub.rollback = vi.fn(async () => undefined);
+  knexStub.transaction = vi.fn(async (callback: (trx: any) => any) => callback(trxStub));
   return knexStub;
 }
 
@@ -222,11 +246,15 @@ describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
         }
       ],
       users: [
-        {
-          user_id: authorId,
-          first_name: 'Alice',
-          last_name: 'Author'
-        },
+        // Actor display names are resolved in one batched lookup per
+        // notification, so this read answers with rows, not a single user.
+        [
+          {
+            user_id: authorId,
+            first_name: 'Alice',
+            last_name: 'Author'
+          }
+        ],
         [
           {
             user_id: mentionedUserId,

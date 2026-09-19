@@ -130,11 +130,14 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
+  const coManagedFlag = useFeatureFlag('release-v1-6-feature', { defaultValue: false });
+  const coManagedEnabled = coManagedFlag?.enabled === true && !coManagedFlag.loading && !coManagedFlag.error;
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
-  const { hasFeature } = useTier();
+  const [tenantLicenseScope, setTenantLicenseScope] = useState(false);
+  const { hasFeature, isPro } = useTier();
   // Mirrors the menuConfig tier gate so the vault nav item tracks the tenant tier.
   const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
   const { productCode, edition } = useProduct();
@@ -146,6 +149,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       .then((result) => {
         if (isMounted && !isActionPermissionError(result)) {
           setSelfHostMode(result.selfHostMode);
+          setTenantLicenseScope(result.scope === 'tenant');
         }
       })
       .catch(() => {});
@@ -193,6 +197,12 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items
+        .filter((item) => !['/msp/co-managed', '/msp/co-management'].includes(item.href ?? '') ||
+          !item.requiredPermission || userPermissions.includes(item.requiredPermission))
+        .filter((item) => item.href !== '/msp/co-managed' || (coManagedEnabled && isPro))
+        .filter((item) => item.href !== '/msp/co-management' || (coManagedEnabled && productCode === 'co_managed'))
+        .filter((item) => item.href !== '/msp/co-management/administration' || (coManagedEnabled &&
+          (productCode === 'co_managed' ? userPermissions.includes('co_management:manage') : isPro)))
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
         .map((item) => {
@@ -214,7 +224,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       productCode,
       filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedEnabled, isPro, userPermissions]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
@@ -222,9 +232,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     return filterNavigationSectionsBySelfHost(
       productSections,
-      selfHostMode,
+      selfHostMode && (!tenantLicenseScope || coManagedEnabled),
     );
-  }, [edition, productCode, selfHostMode]);
+  }, [edition, productCode, selfHostMode, tenantLicenseScope, coManagedEnabled]);
 
   const billingSections = useMemo(
     () => filterNavigationSectionsByPermission(

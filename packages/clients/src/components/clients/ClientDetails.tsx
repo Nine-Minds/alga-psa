@@ -40,6 +40,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
+import type { ClientCoManagedSlots } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
@@ -215,6 +216,7 @@ const TextDetailItem: React.FC<{
 };
 
 interface ClientDetailsProps {
+  headerActions?: React.ReactNode;
   id?: string;
   client: IClient;
   documents?: IDocument[];
@@ -234,11 +236,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   quickView = false,
   surveySummary = null,
   isAlgaDeskMode = false,
+  headerActions,
 }) => {
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails, renderClientCoManagedIntegration } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -246,6 +249,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   // Bumped after quick-adds so the command center refetches the pulse cards.
   const [pulseRefreshNonce, setPulseRefreshNonce] = useState(0);
+  // In-place tab requests from a header summary action (no server navigation).
+  const [coManagedTabRequest, setCoManagedTabRequest] = useState<{ tabId: string; nonce: number } | null>(null);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
@@ -1763,7 +1768,17 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     return baseTabContent.filter((tab) => !excludedTabs.has(tab.id));
   }, [baseTabContent, isAlgaDeskMode]);
 
-  return (
+  // The app-owned co-managed integration supplies a summary and a stable
+  // `co-managed` tab once the release flag and client read authority resolve.
+  // Until then (and when unavailable) the ordinary client renders unchanged.
+  const renderClientBody = (coManagedSlots: ClientCoManagedSlots | null) => {
+    // Co-managed clients combine native and authorized shared work in the
+    // Tickets tab before paging/counts/export; otherwise the native list stays.
+    const scopedTabs = coManagedSlots?.ticketsContent
+      ? tabContent.map((tab) => (tab.id === 'tickets' ? { ...tab, content: coManagedSlots.ticketsContent } : tab))
+      : tabContent;
+    const clientTabs = coManagedSlots?.tab ? [...scopedTabs, coManagedSlots.tab] : scopedTabs;
+    return (
     <ReflectionContainer id={id} label={t('clientDetails.title', { defaultValue: 'Client Details' })}>
       <div className="flex items-center space-x-5 mb-4 pt-2">
         {!quickView && (
@@ -1820,6 +1835,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <div className="flex items-center gap-2 mr-8" data-print-hide>
+            {coManagedSlots?.summary}
+            {headerActions}
             {showEntraSyncAction && (
               <div className="flex flex-col items-end gap-1">
                 <Button
@@ -1900,7 +1917,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
         {(quickView || isInDrawer) ? (
           <CustomTabs
-            tabs={quickView ? [tabContent[0]] : tabContent}
+            tabs={quickView ? [clientTabs[0]] : clientTabs}
             // In quick view we only render the Details tab. Force default to details
             // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
             defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
@@ -1912,7 +1929,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           <ClientCommandCenter
             idPrefix={`${id}-cc`}
             clientId={client.client_id}
-            tabs={tabContent}
             initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
             onTabUrlChange={handleFocusTabUrlChange}
             hasUnsavedRecordChanges={hasUnsavedChanges}
@@ -1925,9 +1941,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             onAddContact={() => setIsAddContactOpen(true)}
             onOpenTicketDetails={openTicketDetails ?? null}
             refreshNonce={pulseRefreshNonce}
+            openTabRequest={coManagedTabRequest}
             surveySummary={surveySummary}
             renderSurveySummaryCard={renderSurveySummaryCard}
             isAlgaDeskMode={isAlgaDeskMode}
+            tabs={clientTabs}
             t={t}
           />
         )}
@@ -2067,7 +2085,21 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         />
       </div>
     </ReflectionContainer>
-  );
+    );
+  };
+
+  if (renderClientCoManagedIntegration) {
+    return renderClientCoManagedIntegration({
+      clientId: client.client_id,
+      clientName: client.client_name,
+      idPrefix: `${id}-co-managed`,
+      relationshipId: searchParams?.get('relationshipId') ?? null,
+      section: searchParams?.get('section') ?? null,
+      onOpenTab: (tabId: string) => setCoManagedTabRequest({ tabId, nonce: Date.now() }),
+      children: renderClientBody,
+    });
+  }
+  return renderClientBody(null);
 };
 
 const FieldContainer: React.FC<{

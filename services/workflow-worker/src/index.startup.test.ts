@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
+  registerWorkflowConversationRetainerMock,
+  registerWorkflowTicketMutationAdapterMock,
   dotenvConfigMock,
   initializeWorkflowRuntimeV2Mock,
   registerWorkflowEmailProviderMock,
@@ -19,6 +21,8 @@ const {
   registerFeatureFlagCheckerMock,
   featureFlagIsEnabledMock
 } = vi.hoisted(() => ({
+  registerWorkflowConversationRetainerMock: vi.fn(),
+  registerWorkflowTicketMutationAdapterMock: vi.fn(),
   dotenvConfigMock: vi.fn(),
   initializeWorkflowRuntimeV2Mock: vi.fn(),
   registerWorkflowEmailProviderMock: vi.fn(),
@@ -37,6 +41,10 @@ const {
   registerFeatureFlagCheckerMock: vi.fn(),
   featureFlagIsEnabledMock: vi.fn(async () => false)
 }));
+
+vi.mock('@alga-psa/shared/workflow/runtime', () => ({ registerWorkflowConversationRetainer: registerWorkflowConversationRetainerMock, registerWorkflowTicketMutationAdapter: registerWorkflowTicketMutationAdapterMock }));
+vi.mock('@alga-psa/co-managed/workflowTicketMutation', () => ({ withCoManagedWorkflowTicketMutation: async (_trx: unknown, _input: unknown, write: () => Promise<unknown>) => write() }));
+vi.mock('@alga-psa/co-managed/workflowConversationEvents', () => ({ retainCoManagedWorkflowCommentEvent: async () => true }));
 
 vi.mock('dotenv', () => ({
   default: {
@@ -139,6 +147,8 @@ describe('workflow worker startup', () => {
     delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_DB_POLLING;
     delete process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING;
 
+    registerWorkflowConversationRetainerMock.mockReset();
+    registerWorkflowTicketMutationAdapterMock.mockReset();
     dotenvConfigMock.mockReset();
     initializeWorkflowRuntimeV2Mock.mockReset();
     registerWorkflowEmailProviderMock.mockReset();
@@ -167,6 +177,8 @@ describe('workflow worker startup', () => {
         expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
         expect(registerFeatureFlagCheckerMock).toHaveBeenCalledTimes(1);
         expect(registerWorkflowEmailProviderMock).toHaveBeenCalledTimes(1);
+        expect(registerWorkflowConversationRetainerMock).toHaveBeenCalledWith(expect.any(Function));
+        expect(registerWorkflowTicketMutationAdapterMock).toHaveBeenCalledWith(expect.any(Function));
         expect(registerEnterpriseStorageProvidersMock).toHaveBeenCalledTimes(1);
         expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
         expect(eventWorkerCtorMock).toHaveBeenCalledTimes(1);

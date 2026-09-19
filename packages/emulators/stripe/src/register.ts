@@ -69,7 +69,35 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
       name: z.string().optional(),
       id: z.string().optional(),
     }),
-    run: ({ email, name }) => core.createCustomer({ email, name }),
+    run: ({ email, name, id }) => core.createCustomer({ id, email, name }),
+  });
+
+  reg.seeder({
+    name: 'price',
+    description: 'Create a recurring or one-time price for subscription checkout (deterministic test setup)',
+    params: z.object({
+      id: z.string().optional(),
+      unitAmount: z.number().int().nonnegative(),
+      currency: z.string().optional(),
+      interval: z.enum(['month', 'year']).optional(),
+      product: z.string().optional(),
+    }),
+    run: ({ id, unitAmount, currency, interval, product }) => core.createPrice({ id, unitAmount, currency, interval, product }),
+  });
+
+  reg.seeder({
+    name: 'subscription',
+    description: 'Create a subscription directly for a customer (deterministic test setup)',
+    params: z.object({
+      customer: z.string(),
+      priceId: z.string(),
+      quantity: z.number().int().positive().default(1),
+      metadata: z.record(z.string()).optional(),
+      status: z.enum(['active', 'trialing', 'past_due', 'canceled', 'incomplete', 'incomplete_expired']).optional(),
+      cancelAtPeriodEnd: z.boolean().optional(),
+    }),
+    run: ({ customer, priceId, quantity, metadata, status, cancelAtPeriodEnd }) =>
+      core.createSubscription({ customer, priceId, quantity, metadata, status, cancelAtPeriodEnd }),
   });
 
   reg.action({
@@ -157,6 +185,18 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
     name: 'payment-intents',
     description: 'Payment intents',
     get: () => [...core.paymentIntents.values()],
+  });
+
+  reg.stateView({
+    name: 'prices',
+    description: 'Prices',
+    get: () => [...core.prices.values()],
+  });
+
+  reg.stateView({
+    name: 'subscriptions',
+    description: 'Subscriptions',
+    get: () => [...core.subscriptions.values()],
   });
 
   reg.stateView({

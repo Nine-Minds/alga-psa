@@ -427,5 +427,8 @@
       "loading": "Chargement…",
       "loadMore": "Charger plus"
     }
+  },
+  "coManaged": {
+    "accountTitle": "Informatique cogérée"
   }
 }

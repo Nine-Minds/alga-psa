@@ -495,6 +495,10 @@ export async function setupSchedules() {
       { jobName: 'cleanup-ai-session-keys', cron: '*/10 * * * *' },
       { jobName: 'workflow-quota-resume-scan', cron: '*/5 * * * *' },
       { jobName: 'inbound-email-recovery', cron: '*/1 * * * *' },
+      { jobName: 'co-managed-upload-cleanup', cron: '*/15 * * * *' },
+      { jobName: 'portable-restore-upload-cleanup', cron: '*/15 * * * *' },
+      { jobName: 'co-managed-notification-recovery', cron: '*/1 * * * *' },
+      { jobName: 'co-managed-sla-observation', cron: '*/1 * * * *' },
       // Nightly contract-cadence service-period replenishment. Runs on the
       // durable Temporal schedule for Essentials/Solo/Pro; the handler is
       // executed server-side via the maintenance subscriber because the worker

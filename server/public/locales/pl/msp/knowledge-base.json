@@ -325,6 +325,18 @@
     "results": {
       "summary": "Zaimportowano {{imported}} z {{total}} artykułów",
       "failedCount": "{{count}} nie powiodło się:"
+    },
+    "recovery": {
+      "title": "Niedokończone importy",
+      "refresh": "Odśwież",
+      "paused": "Importy w tym obszarze roboczym są wstrzymane. Twoje pliki zostały zapisane.",
+      "retry": "Twoje pliki zostały zapisane. Wznów import bez ponownego przesyłania plików.",
+      "resume": "Wznów import",
+      "remaining": "Pozostało {{pending}} z {{total}} plików",
+      "open": "Zobacz postęp",
+      "previous": "Poprzednia",
+      "next": "Następna",
+      "loadError": "Nie udało się wczytać niedokończonych importów"
     }
   },
   "staleness": {

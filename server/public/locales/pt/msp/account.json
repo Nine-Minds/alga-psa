@@ -427,5 +427,8 @@
       "loading": "Carregando…",
       "loadMore": "Carregar mais"
     }
+  },
+  "coManaged": {
+    "accountTitle": "TI cogerida"
   }
 }

@@ -102,7 +102,10 @@
       "forms": "Moduli",
       "channels": "Canali"
     },
-    "passwords": "Password"
+    "passwords": "Password",
+    "coManaged": "IT cogestita",
+    "coManagedDelegation": "Amministrazione delegata",
+    "coManagedAccess": "Accesso cogestito"
   },
   "sidebar": {
     "backToMain": "Torna al principale",

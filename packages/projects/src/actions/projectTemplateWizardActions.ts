@@ -2,6 +2,7 @@
 
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUser } from '@alga-psa/types';
@@ -102,6 +103,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'create', trx);
 
     // 1. Create the template
@@ -287,6 +289,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify template exists
@@ -485,6 +488,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'create', trx);
 
     // Get source template with all details

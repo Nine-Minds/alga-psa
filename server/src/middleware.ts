@@ -204,12 +204,29 @@ const exactApiKeySkipPaths = [
   // the ninjaone/tacticalrmm entries, but Level has no sub-routes.
   '/api/webhooks/levelio',
   '/api/webhooks/levelio/',
+  // Notification live-stream token: the MSP shell and the client portal both
+  // mint a short-lived Hocuspocus token from their browser session (no
+  // x-api-key). The route re-checks the session and the session id itself, and
+  // `/api/notifications` has no other route to exempt.
+  '/api/notifications/live-token',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return pathname === '/api/ticket-comment-attachments/download' ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
+    // These co-managed browser routes bind and revalidate the tracked home session in-handler.
+    pathname === '/api/co-management/export' ||
+    /^\/api\/co-management\/(attachments|archive-files)\/[^/]+$/.test(pathname) ||
+    // Co-managed portal attachment downloads: plain browser <a download> links
+    // that require a `client` session in-handler. One dynamic id, no deeper
+    // route, so the pattern is anchored the same way as the co-management
+    // attachment routes above.
+    /^\/api\/client-portal\/conversation-attachments\/[^/]+$/.test(pathname) ||
+    // Meeting recording/transcript downloads: the handler resolves either an
+    // x-api-key actor or a browser-session actor, so it must be reachable
+    // without the header for the session branch to exist at all.
+    /^\/api\/online-meetings\/artifacts\/[^/]+$/.test(pathname) ||
     (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||

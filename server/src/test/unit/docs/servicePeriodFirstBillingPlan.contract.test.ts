@@ -120,9 +120,9 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   'server/src/test/integration/contractLineBucketsMigration.integration.test.ts',
   'shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts',
   'shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts',
-  // Explicit usage-contract semantics work split ContractLines authoring into
-  // CreateCustomContractLineDialog and added the fixed pricing-basis coverage
-  // after the pass-0 snapshot.
+  // Active contract line authoring now exposes and persists the fixed-pricing
+  // billing semantics (alignment included) from the create dialog and its
+  // pricing-basis suite; both landed after the pass-0 snapshot.
   'packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',
   'packages/billing/tests/ContractLineServiceForm.fixedPricingBasis.test.tsx',
 ]);
@@ -281,6 +281,21 @@ const servicePeriodPostInventoryRefs = new Set([
   // snapshot; its baseline fixtures assert persisted service-period columns.
   'server/src/test/integration/billing/goldenOutput/baseline.json',
   'server/src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts',
+  // Quantity/usage finalization semantics (seat revisions and usage-period
+  // total identity) key their revision and dedupe identities off the persisted
+  // service-period boundaries; the cluster landed after the pass-0 snapshot.
+  'packages/billing/src/actions/contractLineUnitPricingActions.ts',
+  'packages/billing/src/components/billing-dashboard/UsagePeriodTotalQuickEntry.tsx',
+  'packages/billing/src/components/billing-dashboard/UsageTracking.tsx',
+  'packages/billing/src/lib/billing/seatRevisions.ts',
+  'packages/billing/src/lib/billing/usagePeriodTotalIdentity.ts',
+  'packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx',
+  'packages/billing/tests/contractBilling.workIdentity.test.ts',
+  'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
+  // The co-managed shared-work invoice journey asserts that MSP invoices keep
+  // covering the customer's persisted service period; it landed after the
+  // pass-0 snapshot and lives with the Temporal worker's integration suites.
+  'ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvoiceJourneyCases.ts',
   // Contract-cadence replenishment regression suites landed after the pass-0
   // snapshot and seed persisted service-period columns in their fixtures.
   'server/src/test/infrastructure/billing/invoices/contractCadenceServicePeriodReplenishment.test.ts',
@@ -331,7 +346,11 @@ describe('service-period-first billing plan artifacts', () => {
       'service_period_start|service_period_end|servicePeriodStart|servicePeriodEnd',
       'packages',
       'server',
-      'shared'
+      'shared',
+      // The co-managed shared-work invoice journey reads persisted boundaries
+      // and runs from the Temporal worker's integration directory, which the
+      // server integration runner also collects.
+      'ee/temporal-workflows/src/__tests__/integration'
     ).filter((file) =>
       file !== 'packages/billing/src/lib/billing/billingEngine.ts'
       && !persistedReaderExclusions.has(file)

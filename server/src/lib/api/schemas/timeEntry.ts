@@ -14,7 +14,7 @@ import {
 } from './common';
 
 // Work item type schema
-export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction']);
+export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'co_managed', 'non_billable_category', 'ad_hoc', 'interaction']);
 
 // Approval status schema
 export const approvalStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']);
@@ -28,22 +28,15 @@ const baseTimeEntrySchema = z.object({
   notes: z.string().optional(),
   service_id: uuidSchema.optional(),
   tax_region: z.string().optional(),
+  contract_line_id: uuidSchema.nullable().optional(),
   is_billable: z.boolean().optional().default(true)
 });
 
 function validateTimeEntryWrite(
   data: { start_time?: string; end_time?: string; service_id?: string },
   ctx: z.RefinementCtx,
-  options: { requireServiceId: boolean; rejectClearingServiceId?: boolean }
+  options: { rejectClearingServiceId?: boolean } = {}
 ): void {
-  if (options.requireServiceId && !data.service_id) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['service_id'],
-      message: 'service_id is required for time entries'
-    });
-  }
-
   if (options.rejectClearingServiceId && Object.prototype.hasOwnProperty.call(data, 'service_id') && !data.service_id) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -63,12 +56,13 @@ function validateTimeEntryWrite(
 
 // Create time entry schema
 export const createTimeEntrySchema = baseTimeEntrySchema.superRefine((data, ctx) => {
-  validateTimeEntryWrite(data, ctx, { requireServiceId: true });
+  // Product-dependent requirements belong to the retained service admission.
+  validateTimeEntryWrite(data, ctx);
 });
 
 // Update time entry schema (all fields optional except validation)
 export const updateTimeEntrySchema = createUpdateSchema(baseTimeEntrySchema).superRefine((data, ctx) => {
-  validateTimeEntryWrite(data, ctx, { requireServiceId: false, rejectClearingServiceId: true });
+  validateTimeEntryWrite(data, ctx, { rejectClearingServiceId: true });
 });
 
 // Time entry filter schema
@@ -97,6 +91,7 @@ export const timeEntryListQuerySchema = createListQuerySchema(timeEntryFilterSch
 
 // Time entry response schema
 export const timeEntryResponseSchema = z.object({
+  billing_mode: z.enum(['commercial', 'operational']).optional(),
   entry_id: uuidSchema,
   work_item_id: uuidSchema.nullable(),
   work_item_type: workItemTypeSchema,
@@ -104,27 +99,29 @@ export const timeEntryResponseSchema = z.object({
   end_time: z.string().datetime(),
   work_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   work_timezone: z.string().optional(),
-  billable_duration: z.number(), // in minutes
+  billable_duration: z.number().nullable(), // in minutes
   notes: z.string().nullable(),
   user_id: uuidSchema,
   time_sheet_id: uuidSchema.nullable(),
-  approval_status: approvalStatusSchema,
+  approval_status: approvalStatusSchema.nullable(),
   service_id: uuidSchema.nullable(),
   tax_region: z.string().nullable(),
   contract_line_id: uuidSchema.nullable(),
   tax_rate_id: uuidSchema.nullable(),
-  tax_percentage: z.number().nullable(),
+  tax_percentage: z.number().nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
   
   // Computed/joined fields
-  user_name: z.string().optional(),
+  user_name: z.string().nullable().optional(),
   work_item_title: z.string().optional(),
-  service_name: z.string().optional(),
+  service_name: z.string().nullable().optional(),
   client_name: z.string().optional(),
   duration_hours: z.number().optional(),
-  is_billable: z.boolean().optional()
+  elapsed_minutes: z.number().optional(),
+  client_id: uuidSchema.nullable().optional(),
+  is_billable: z.boolean().nullable().optional()
 });
 
 // Time entry with details response schema
@@ -137,7 +134,7 @@ export const timeEntryWithDetailsResponseSchema = timeEntryResponseSchema.extend
   }).optional(),
   
   work_item: z.object({
-    id: uuidSchema,
+    id: uuidSchema.nullable(),
     title: z.string(),
     type: workItemTypeSchema,
     client_id: uuidSchema.optional(),
@@ -215,14 +212,15 @@ export const timeTemplateResponseSchema = z.object({
 // Time entry statistics
 export const timeEntryStatsResponseSchema = z.object({
   total_entries: z.number(),
-  total_billable_hours: z.number(),
-  total_non_billable_hours: z.number(),
-  billable_percentage: z.number(),
+  total_hours: z.number().optional(),
+  total_billable_hours: z.number().nullable(),
+  total_non_billable_hours: z.number().nullable(),
+  billable_percentage: z.number().nullable(),
   entries_by_type: z.record(z.number()),
   entries_by_status: z.record(z.number()),
   entries_by_user: z.record(z.number()),
   entries_by_service: z.record(z.number()),
-  total_revenue: z.number(),
+  total_revenue: z.number().nullable(),
   average_entry_duration: z.number(),
   entries_this_week: z.number(),
   entries_this_month: z.number(),
@@ -275,10 +273,11 @@ export const startTimeTrackingSchema = z.object({
   work_item_id: uuidSchema.optional(),
   work_item_type: workItemTypeSchema,
   notes: z.string().optional(),
-  service_id: uuidSchema
+  service_id: uuidSchema.optional()
 });
 
 export const activeTimeSessionResponseSchema = z.object({
+  billing_mode: z.enum(['commercial', 'operational']),
   session_id: uuidSchema,
   work_item_id: uuidSchema.nullable(),
   work_item_type: workItemTypeSchema,

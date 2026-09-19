@@ -73,9 +73,9 @@ describe('product surface registry', () => {
   });
 
   it('T003: exposes API metadata product availability for OpenAPI extensions', () => {
-    expect(getApiMetadataProducts('/api/v1/tickets')).toEqual(['psa', 'algadesk']);
-    expect(getApiMetadataProducts('/api/v1/projects')).toEqual(['psa']);
-    expect(getApiMetadataProducts('/api/v1/tickets/{id}/time-entries')).toEqual(['psa']);
+    expect(getApiMetadataProducts('/api/v1/tickets')).toEqual(['psa', 'algadesk', 'co_managed']);
+    expect(getApiMetadataProducts('/api/v1/projects')).toEqual(['psa', 'co_managed']);
+    expect(getApiMetadataProducts('/api/v1/tickets/{id}/time-entries')).toEqual(['psa', 'co_managed']);
     expect(getApiMetadataProducts('/api/v1/unknown-area')).toEqual(['psa']);
   });
 

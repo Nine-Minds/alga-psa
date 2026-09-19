@@ -2,6 +2,8 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
+import { recordCoManagedTicketReopened } from '@alga-psa/co-managed';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -22,16 +24,17 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
-async function findOpenTicketStatusId(trx: Knex.Transaction, tenant: string): Promise<string | null> {
+async function findOpenTicketStatusId(trx: Knex.Transaction, tenant: string, boardId: string): Promise<string | null> {
   const row = await tenantScopedTable(trx, 'statuses', tenant)
     .select('status_id')
-    .where({ is_closed: false })
+    .where({ is_closed: false, board_id: boardId })
     .andWhere(function () {
       this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
     })
     .orderBy('is_default', 'desc')
     .orderBy('order_number', 'asc')
-    .first();
+    .orderBy('status_id')
+    .forShare().first();
   return row?.status_id ?? null;
 }
 
@@ -41,42 +44,35 @@ export async function maybeReopenBundleMasterFromChildReply(
   childTicketId: string,
   updatedByUserId: string | null
 ): Promise<{ reopened: boolean; masterTicketId: string | null }> {
+  await assertCoManagedOperationalWrite(trx, tenant);
   const child = await tenantScopedTable(trx, 'tickets', tenant)
     .select('ticket_id', 'master_ticket_id')
     .where({ ticket_id: childTicketId })
-    .first();
+    .forShare().first();
 
   const masterTicketId = child?.master_ticket_id ?? null;
   if (!masterTicketId) {
     return { reopened: false, masterTicketId: null };
   }
 
+  // Lock the master before its settings, matching bundle mutation ordering.
+  // Read its status only after retaining the row: concurrent child replies must
+  // not both infer a closed-to-open transition from an earlier join snapshot.
+  const master = await tenantScopedTable(trx, 'tickets', tenant)
+    .select('ticket_id', 'board_id', 'status_id', 'closed_at')
+    .where({ ticket_id: masterTicketId }).forUpdate().first();
+  if (!master?.board_id) return { reopened: false, masterTicketId };
+  const status = await tenantScopedTable(trx, 'statuses', tenant)
+    .where({ status_id: master.status_id }).forShare().first('is_closed');
+  if (!status?.is_closed) return { reopened: false, masterTicketId };
+
   const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
     .select('reopen_on_child_reply')
     .where({ master_ticket_id: masterTicketId })
-    .first();
+    .forShare().first();
+  if (!settings?.reopen_on_child_reply) return { reopened: false, masterTicketId };
 
-  if (!settings?.reopen_on_child_reply) {
-    return { reopened: false, masterTicketId };
-  }
-
-  const master = await tenantDb(trx, tenant)
-    .tenantJoin(
-      tenantScopedTable(trx, 'tickets as t', tenant),
-      'statuses as s',
-      't.status_id',
-      's.status_id',
-      { type: 'left' }
-    )
-    .select('t.ticket_id', 't.status_id', 's.is_closed')
-    .where({ 't.ticket_id': masterTicketId })
-    .first();
-
-  if (!master || !master.is_closed) {
-    return { reopened: false, masterTicketId };
-  }
-
-  const openStatusId = await findOpenTicketStatusId(trx, tenant);
+  const openStatusId = await findOpenTicketStatusId(trx, tenant, master.board_id);
   if (!openStatusId) {
     return { reopened: false, masterTicketId };
   }
@@ -100,6 +96,8 @@ export async function maybeReopenBundleMasterFromChildReply(
       updated_at: reopenedAt,
     });
 
+  await recordCoManagedTicketReopened(trx, tenant, masterTicketId);
+
   // Activity row for the master ticket so the dispatcher can see that the
   // bundle reopen was system-triggered by a child reply (not a user click).
   // We classify the actor as SYSTEM because no human directly performed the
@@ -119,7 +117,7 @@ export async function maybeReopenBundleMasterFromChildReply(
     occurredAt: reopenedAt,
     changes: {
       status_id: { old: previousStatusId, new: openStatusId },
-      closed_at: { old: null, new: null },
+      closed_at: { old: master.closed_at, new: null },
     },
     details: {
       reopen_trigger: 'child_reply',
@@ -127,5 +125,6 @@ export async function maybeReopenBundleMasterFromChildReply(
     },
   });
 
+  await assertCoManagedOperationalWrite(trx, tenant);
   return { reopened: true, masterTicketId };
 }

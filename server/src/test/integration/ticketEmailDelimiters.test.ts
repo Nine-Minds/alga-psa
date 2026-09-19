@@ -486,9 +486,13 @@ function projectTableBuilder() {
 }
 
 function userTableBuilder() {
-  let result = currentUser;
+  let result: UserRecord | UserRecord[] | null = currentUser;
   const builder = createQuery(() => result);
   builder.where = () => builder;
+  builder.whereIn = (column: string, ids: string[]) => {
+    result = currentUser && column === 'user_id' && ids.includes(currentUser.user_id) ? [currentUser] : [];
+    return builder;
+  };
   return builder;
 }
 
@@ -927,6 +931,8 @@ function createMockKnex() {
         return userNotificationPreferencesTableBuilder();
       case 'notification_logs':
         return notificationLogsTableBuilder();
+      case 'co_management_event_outbox':
+        return { where() { return this; }, first: async () => undefined };
       default:
         throw new Error(`Unhandled table: ${tableName}`);
     }
@@ -1702,6 +1708,80 @@ describe('ticket email subscriber deduplication', () => {
       });
     }
   });
+
+  it('keeps requester email and reply tokens while durable customer delivery owns assigned technicians', async () => {
+    seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const commentId = randomUUID();
+    const authorId = randomUUID();
+    const assignedUserId = randomUUID();
+    const additionalUserId = randomUUID();
+    const sharedEmail = 'shared-comment@example.com';
+    const contactEmail = 'contact@example.com';
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0305',
+      title: 'Comment Dedup Ticket',
+      contact_email: contactEmail,
+      client_email: null,
+      assigned_to_email: sharedEmail,
+      assigned_to: assignedUserId,
+      email_metadata: { threadId: 'thread-comment-dedup' },
+    });
+
+    setUser({
+      user_id: authorId,
+      first_name: 'Agent',
+      last_name: 'User',
+      email: 'agent@example.com',
+      user_type: 'internal',
+    } as any);
+
+    setResources([
+      { email: sharedEmail, user_id: additionalUserId },
+    ] as any);
+
+    const customerEmail = await import('../../lib/eventBus/subscribers/coManagedCustomerCommentEmailSubscriber');
+    const durable = vi.spyOn(customerEmail, 'handleCoManagedCustomerCommentEmailEvent').mockResolvedValue(true);
+    try { await handlerFor('TICKET_COMMENT_ADDED')({
+      id: randomUUID(),
+      eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: authorId,
+        comment: {
+          id: commentId,
+          content: 'Follow up',
+          author: 'agent@example.com',
+          isInternal: false,
+        },
+      },
+    });
+
+    } finally { durable.mockRestore(); }
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
+    const recipients = sendEmailMock.mock.calls.map((call) => call[0].to);
+    expect(recipients.filter((email) => email === contactEmail).length).toBe(1);
+    expect(recipients.filter((email) => email === sharedEmail).length).toBe(0);
+
+    const tokenRows = Array.from(tokenStore.values()).filter((row) => row.comment_id === commentId);
+    expect(tokenRows).toHaveLength(1);
+    expect(tokenRows.map((row) => row.recipient_email).sort()).toEqual([contactEmail]);
+    expect(new Set(tokenRows.map((row) => row.token)).size).toBe(1);
+    for (const row of tokenRows) {
+      expect(row).toMatchObject({
+        tenant: tenantId,
+        ticket_id: ticketId,
+        comment_id: commentId,
+        entity_type: 'ticket',
+      });
+    }
+  });
 });
 
 describe('ticket email subscriber notification gating (known gap)', () => {
@@ -2234,5 +2314,33 @@ describe('project email subscriber rich text formatting', () => {
     const processed = await processedCall(0);
     expect(processed.html).toContain('Assigned project rich text');
     expect(processed.html).not.toContain('[{');
+  });
+});
+
+describe('durable caller email outcomes', () => {
+  it('preserves caller retry policy and reports accepted, queued and intentionally skipped outcomes', async () => {
+    const { sendEventEmailWithOutcome } = await import('../../lib/notifications/sendEventEmail');
+    const template = `template-${randomUUID()}`;
+    seedTemplate(template, 'Notice {{body}}', '<p>{{body}}</p>');
+    const params = { tenantId: randomUUID(), to: 'recipient@example.test', subject: 'Notice', template, context: { body: 'Current authorized content' }, retryPolicy: 'caller' as const };
+    sendEmailMock.mockResolvedValueOnce({ success: true });
+    expect(await sendEventEmailWithOutcome(params)).toBe('sent');
+    expect(sendEmailMock.mock.calls[0][0]).toMatchObject({ retryPolicy: 'caller' });
+    sendEmailMock.mockResolvedValueOnce({ success: true, queued: true } as any);
+    const token = randomUUID();
+    expect(await sendEventEmailWithOutcome({ ...params, retryPolicy: 'queue', replyContext: { ticketId: randomUUID(), conversationToken: token } })).toBe('queued');
+    expect(tokenStore.has(token)).toBe(true);
+    sendEmailMock.mockResolvedValueOnce({ success: false, error: 'Email service is disabled or not configured' } as any);
+    expect(await sendEventEmailWithOutcome(params)).toBe('skipped');
+  });
+  it('propagates the retryable provider result for the durable caller without recording a reply token', async () => {
+    const { sendEventEmailWithOutcome } = await import('../../lib/notifications/sendEventEmail');
+    const template = `template-${randomUUID()}`;
+    seedTemplate(template, 'Notice', '<p>{{body}}</p>');
+    sendEmailMock.mockResolvedValueOnce({ success: false, error: 'Rate limit exceeded: tenant_limit', metadata: { retryable: true, errorCode: 'rate_limited', retryAfterMs: 45000 } } as any);
+    const token = randomUUID();
+    await expect(sendEventEmailWithOutcome({ tenantId: randomUUID(), to: 'recipient@example.test', subject: 'Notice', template, context: { body: 'Authorized now' },
+      retryPolicy: 'caller', replyContext: { ticketId: randomUUID(), conversationToken: token } })).rejects.toMatchObject({ name: 'EmailProviderError', isRetryable: true, errorCode: 'rate_limited' });
+    expect(tokenStore.has(token)).toBe(false);
   });
 });

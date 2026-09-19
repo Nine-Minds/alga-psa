@@ -51,6 +51,16 @@ export default defineConfig({
       // "./tenant" export lives at src/lib/tenant.ts (mirrors the package's
       // exports map), so it needs resolving before the catch-all.
       { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../db/src/lib/tenant.ts') },
+      // LEVERAGE: pattern vitest-workspace-src-aliases — 19 vitest configs now
+      // hand-transcribe @alga-psa/db's exports map into src aliases, and each
+      // one rediscovers the lib/ subpaths the hard way when a new import lands.
+      // The map is data the package already publishes; the alias list should be
+      // derived from it, not retyped per package.
+      // Same story for "./admin": @alga-psa/co-managed pulls in
+      // @alga-psa/licensing, whose built lib/license-state.js imports
+      // @alga-psa/db/admin. The catch-all below would rewrite that to the
+      // nonexistent src/admin, so the real src/lib/admin.ts is named here.
+      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
       { find: /^@alga-psa\/db(.*)$/, replacement: path.resolve(__dirname, '../db/src$1') },
       { find: /^@alga-psa\/types(.*)$/, replacement: path.resolve(__dirname, '../types/src$1') },
       { find: /^@alga-psa\/ui(.*)$/, replacement: path.resolve(__dirname, '../ui/src$1') },

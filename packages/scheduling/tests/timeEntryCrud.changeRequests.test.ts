@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ZodError } from 'zod';
+import { fakeTable } from '@alga-psa/db/testing';
 
 const createTenantKnexMock = vi.fn();
 const hasPermissionMock = vi.fn();
@@ -9,20 +10,17 @@ const computeWorkDateFieldsMock = vi.fn();
 const createTimeEntryChangeRequestRecordMock = vi.fn();
 const fetchTimeEntryChangeRequestsForEntryIdsFromDbMock = vi.fn();
 const markTimeEntryChangeRequestsHandledMock = vi.fn();
-const resolveContractLineSelectionMock = vi.fn(async () => ({
-  selectedContractLineId: null,
-  decision: 'ambiguous_or_unresolved' as const,
-  reason: 'no_match' as const,
-  overlayCount: 0,
-  candidateCount: 0,
-}));
+// resolveTimeEntryContract loads the lines eligible on the entry's effective
+// work date and then picks deterministically; the load is where the date lands.
+const loadEligibleTimeContractLinesMock = vi.fn(async () => [] as any[]);
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   createTenantKnex: createTenantKnexMock,
   resolveUserTimeZone: (...args: any[]) => resolveUserTimeZoneMock(...args),
   computeWorkDateFields: (...args: any[]) => computeWorkDateFieldsMock(...args),
@@ -38,12 +36,30 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// An independent PSA workspace: the co-managed native-time seam reports "not
+// mine" and billing-mode admission answers with the commercial mode a `psa`
+// product yields. Without this the real guards run against this suite's
+// bespoke connection stub and reject its non-UUID fixture ids.
+vi.mock('@alga-psa/co-managed', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  lockTimeEntryBillingMode: vi.fn(async () => 'commercial'),
+  readCoManagedNativeTimeSheet: vi.fn(async () => ({ handled: false })),
+  readCoManagedNativeTimeEntry: vi.fn(async () => ({ handled: false })),
+  reviewCoManagedNativeTimeEntry: vi.fn(async () => false),
+  deleteCoManagedNativeTimeEntry: vi.fn(async () => false),
+}));
+
+vi.mock('@alga-psa/co-managed/nativeConversationEvents', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  hasCoManagedConversationOwnership: vi.fn(async () => false),
+}));
+
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
   assertCanActOnBehalf: (...args: any[]) => assertCanActOnBehalfMock(...args),
 }));
 
-vi.mock('../src/lib/contractLineDisambiguation', () => ({
-  resolveContractLineSelection: (...args: any[]) => resolveContractLineSelectionMock(...args),
+vi.mock('../src/lib/timeContractCandidates', () => ({
+  loadEligibleTimeContractLines: (...args: any[]) => loadEligibleTimeContractLinesMock(...args),
 }));
 
 vi.mock('@alga-psa/shared/billingClients/bucketUsageService', () => ({
@@ -75,11 +91,38 @@ function createDbStub(config: DbStubConfig) {
   };
 
   const db: any = (table: string) => {
+    if (table === 'tickets') {
+      // The work item the commercial scenarios bill against: the save path both
+      // derives its client from this row and re-reads it to hydrate the saved
+      // entry, so the shared double serves it rather than a second stub.
+      return fakeTable({
+        tables: {
+          tickets: [{
+            tenant: 'tenant-1',
+            ticket_id: 'ticket-1',
+            client_id: 'client-1',
+            billing_profile_id: null,
+            title: 'Kickoff call',
+            url: null,
+            ticket_number: 'T-1',
+          }],
+        },
+      }, 'tenant-1', table);
+    }
+
     const state: { criteria?: Record<string, any>; selectColumns?: string[] } = {};
 
     const builder: any = {
-      where(criteria: Record<string, any>) {
-        state.criteria = criteria;
+      where(criteria: Record<string, any> | string, value?: any) {
+        state.criteria = typeof criteria === 'string' ? { [criteria]: value } : criteria;
+        return builder;
+      },
+      // Row locks are part of every native write path; the stub has a single
+      // in-memory row per table, so holding one is a no-op.
+      forShare() {
+        return builder;
+      },
+      forUpdate() {
         return builder;
       },
       select(...columns: string[]) {
@@ -89,6 +132,12 @@ function createDbStub(config: DbStubConfig) {
       first(...columns: string[]) {
         if (columns.length > 0) {
           state.selectColumns = columns;
+        }
+
+        if (table === 'service_catalog') {
+          // Commercial entries resolve their contract line from a current local
+          // service; every fixture here names one.
+          return Promise.resolve({ service_id: state.criteria?.service_id ?? 'service-1' });
         }
 
         if (table === 'time_entries') {
@@ -102,10 +151,6 @@ function createDbStub(config: DbStubConfig) {
         if (table === 'time_sheets') {
           return Promise.resolve({ approval_status: config.timeSheetStatus ?? 'CHANGES_REQUESTED' });
         }
-        if (table === 'tickets') {
-          return Promise.resolve({ client_id: 'client-1' });
-        }
-
         throw new Error(`Unexpected first() call for table ${table}`);
       },
       update(payload: Record<string, any>) {
@@ -135,6 +180,10 @@ function createDbStub(config: DbStubConfig) {
   };
 
   db.transaction = async (callback: (trx: any) => Promise<any>) => callback(db);
+  // The stub is handed to the callback as the transaction, and the write paths
+  // refuse a bare connection ("requires its owning transaction"), so it has to
+  // say so -- same reason `fakeTransaction()` in @alga-psa/db/testing does.
+  db.isTransaction = true;
   db.fn = { now: () => 'NOW' };
   db.raw = (value: string) => value;
 
@@ -440,7 +489,7 @@ describe('time entry change-request action integration', () => {
     ];
 
     for (const scenario of scenarios) {
-      resolveContractLineSelectionMock.mockClear();
+      loadEligibleTimeContractLinesMock.mockClear();
       const { db } = createDbStub({
         existingEntry: {
           entry_id: `entry-${scenario.label}`,
@@ -450,8 +499,8 @@ describe('time entry change-request action integration', () => {
         },
         updatedEntry: {
           entry_id: `entry-${scenario.label}`,
-          work_item_id: 'non-billable',
-          work_item_type: 'non_billable_category',
+          work_item_id: 'ticket-1',
+          work_item_type: 'ticket',
           start_time: scenario.startTime,
           end_time: scenario.startTime.replace('09:00:00.000Z', '10:00:00.000Z'),
           created_at: scenario.startTime,
@@ -474,8 +523,8 @@ describe('time entry change-request action integration', () => {
         { tenant: 'tenant-1' },
         {
           entry_id: `entry-${scenario.label}`,
-          work_item_id: 'non-billable',
-          work_item_type: 'non_billable_category',
+          work_item_id: 'ticket-1',
+          work_item_type: 'ticket',
           start_time: scenario.startTime,
           end_time: scenario.startTime.replace('09:00:00.000Z', '10:00:00.000Z'),
           created_at: scenario.startTime,
@@ -488,12 +537,15 @@ describe('time entry change-request action integration', () => {
         },
       );
 
-      expect(resolveContractLineSelectionMock).toHaveBeenCalledWith(
-        null,
+      expect(loadEligibleTimeContractLinesMock).toHaveBeenCalledWith(
+        expect.anything(),
+        'tenant-1',
+        // The work item's own client and the entry's service scope the field...
+        'client-1',
         'service-1',
+        // ...and the effective work date, never "today", bounds it.
         scenario.expectedEffectiveDate,
-        // The work item's billing profile narrows a multi-candidate field.
-        { billingProfileId: null },
+        true,
       );
     }
   });
