@@ -61,6 +61,12 @@ export const ticketSchema = z.object({
   ticket_number: z.string(),
   title: z.string(),
   url: z.string().nullable(),
+  // Optional classification references. Nullable so a create that omits them
+  // still validates; retained here so the shared create parse cannot silently
+  // strip supplied values before the insert.
+  severity_id: z.string().uuid().nullable().optional(),
+  urgency_id: z.string().uuid().nullable().optional(),
+  impact_id: z.string().uuid().nullable().optional(),
   board_id: z.string().uuid(),
   client_id: z.string().uuid(),
   location_id: z.string().uuid().nullable().optional(),
@@ -92,13 +98,18 @@ export const ticketSchema = z.object({
   itil_subcategory: z.string().nullable().optional()
 });
 
-// Ticket update schema
+// Ticket update schema. Classification references (severity/urgency/impact)
+// are create-only in this model: they are declared on `ticketSchema` so create
+// parsing retains them, but update must keep its existing accepted-request set.
 export const ticketUpdateSchema = ticketSchema.partial().omit({
   tenant: true,
   ticket_id: true,
   ticket_number: true,
   entered_by: true,
-  entered_at: true
+  entered_at: true,
+  severity_id: true,
+  urgency_id: true,
+  impact_id: true,
 });
 
 // Comment validation schema
@@ -227,6 +238,10 @@ export interface CreateTicketOutput {
   status_id?: string;
   priority_id?: string;
   board_id?: string;
+  url?: string | null;
+  severity_id?: string | null;
+  urgency_id?: string | null;
+  impact_id?: string | null;
   entered_at: string;
   tenant: string;
 }
@@ -369,6 +384,158 @@ export function cleanNullableFields(data: Record<string, any>): Record<string, a
   }
   
   return cleaned;
+}
+
+// =============================================================================
+// CREATE ROW FIELD HANDLING
+// =============================================================================
+
+/**
+ * Columns `TicketModel.createTicket` derives from `CreateTicketInput`.
+ *
+ * Generated identity/timestamp columns (`ticket_id`, `tenant`,
+ * `ticket_number`, `entered_at`, `updated_at`) are deliberately absent: they
+ * stay under model control and no input key can target them.
+ */
+export const INPUT_DRIVEN_TICKET_COLUMNS = [
+  'title',
+  'url',
+  'client_id',
+  'contact_name_id',
+  'location_id',
+  'billing_profile_id',
+  'status_id',
+  'assigned_to',
+  'assigned_team_id',
+  'priority_id',
+  'category_id',
+  'subcategory_id',
+  'board_id',
+  'source',
+  'ticket_origin',
+  'entered_by',
+  'email_metadata',
+  'attributes',
+  'severity_id',
+  'urgency_id',
+  'impact_id',
+  'itil_impact',
+  'itil_urgency',
+  'due_date',
+] as const;
+
+type InputDrivenTicketColumn = (typeof INPUT_DRIVEN_TICKET_COLUMNS)[number];
+
+/** Everything a resolver may read while assembling an input-driven row. */
+type TicketCreateRowContext = {
+  cleanedInput: CreateTicketInput;
+  resolvedBillingProfileId: string | null;
+  attributes: Record<string, unknown> | null;
+};
+
+/**
+ * How one `CreateTicketInput` key becomes (or deliberately does not become) a
+ * ticket column: `column` copies the key straight through, `resolve` derives
+ * one or more columns, and `excluded` records an intentional non-persisted
+ * field together with the reason.
+ */
+type TicketCreateFieldHandling =
+  | { kind: 'column'; column: InputDrivenTicketColumn }
+  | {
+      kind: 'resolve';
+      build: (ctx: TicketCreateRowContext) => Partial<Record<InputDrivenTicketColumn, unknown>>;
+    }
+  | { kind: 'excluded'; reason: string };
+
+/**
+ * Exhaustive field-handling declaration for `CreateTicketInput`.
+ *
+ * The mapped type turns a new input key into a compile error until it is
+ * classified, so a supplied value cannot silently fail to reach (or be
+ * intentionally kept from) the insert. This declaration drives row
+ * construction in `buildTicketCreateRow`; it is not a detached list of names.
+ */
+const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]: TicketCreateFieldHandling } = {
+  title: { kind: 'column', column: 'title' },
+  description: { kind: 'excluded', reason: 'merged into attributes.description' },
+  client_id: { kind: 'column', column: 'client_id' },
+  contact_id: {
+    kind: 'resolve',
+    build: ({ cleanedInput }) => ({ contact_name_id: cleanedInput.contact_id || null }),
+  },
+  location_id: { kind: 'column', column: 'location_id' },
+  billing_profile_id: {
+    kind: 'resolve',
+    build: ({ resolvedBillingProfileId }) => ({ billing_profile_id: resolvedBillingProfileId }),
+  },
+  status_id: { kind: 'column', column: 'status_id' },
+  assigned_to: { kind: 'column', column: 'assigned_to' },
+  assigned_team_id: { kind: 'column', column: 'assigned_team_id' },
+  priority_id: { kind: 'column', column: 'priority_id' },
+  category_id: { kind: 'column', column: 'category_id' },
+  subcategory_id: { kind: 'column', column: 'subcategory_id' },
+  board_id: { kind: 'column', column: 'board_id' },
+  source: { kind: 'column', column: 'source' },
+  ticket_origin: {
+    kind: 'resolve',
+    build: ({ cleanedInput }) => ({ ticket_origin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL }),
+  },
+  entered_by: { kind: 'column', column: 'entered_by' },
+  email_metadata: {
+    kind: 'resolve',
+    build: ({ cleanedInput }) => ({
+      email_metadata: cleanedInput.email_metadata ? JSON.stringify(cleanedInput.email_metadata) : null,
+    }),
+  },
+  attributes: { kind: 'resolve', build: ({ attributes }) => ({ attributes }) },
+  url: { kind: 'column', column: 'url' },
+  severity_id: { kind: 'column', column: 'severity_id' },
+  urgency_id: { kind: 'column', column: 'urgency_id' },
+  impact_id: { kind: 'column', column: 'impact_id' },
+  updated_by: { kind: 'excluded', reason: 'create leaves updated_by unset; set on update' },
+  closed_by: { kind: 'excluded', reason: 'tickets are created open' },
+  itil_impact: { kind: 'column', column: 'itil_impact' },
+  itil_urgency: { kind: 'column', column: 'itil_urgency' },
+  closed_at: { kind: 'excluded', reason: 'tickets are created open' },
+  is_closed: { kind: 'excluded', reason: 'tickets are created open' },
+  due_date: { kind: 'column', column: 'due_date' },
+};
+
+type TicketCreateRowBase = {
+  ticket_id: string;
+  tenant: string;
+  ticket_number: string;
+  entered_at: string;
+  updated_at: string;
+};
+
+/**
+ * Assembles the insert row from the generated base columns plus every
+ * input-driven column named by `CREATE_TICKET_FIELD_HANDLING`. Values use
+ * `|| null` so an empty string keeps the model's existing "unset" semantics.
+ */
+export function buildTicketCreateRow(
+  base: TicketCreateRowBase,
+  ctx: TicketCreateRowContext,
+): Record<string, unknown> {
+  const row: Record<string, unknown> = { ...base };
+
+  for (const key of Object.keys(CREATE_TICKET_FIELD_HANDLING) as (keyof CreateTicketInput)[]) {
+    const handling = CREATE_TICKET_FIELD_HANDLING[key];
+    if (!handling) continue;
+    switch (handling.kind) {
+      case 'column':
+        row[handling.column] = ctx.cleanedInput[key] || null;
+        break;
+      case 'resolve':
+        Object.assign(row, handling.build(ctx));
+        break;
+      case 'excluded':
+        break;
+    }
+  }
+
+  return row;
 }
 
 // =============================================================================
@@ -746,42 +913,26 @@ export class TicketModel {
       attributes.description = cleanedInput.description;
     }
 
-    // Prepare ticket data
-    const ticketData = {
-      ticket_id: ticketId,
-      tenant,
-      title: cleanedInput.title,
-      ticket_number: ticketNumber,
-      client_id: cleanedInput.client_id || null,
-      contact_name_id: cleanedInput.contact_id || null, // Map contact_id to contact_name_id
-      location_id: cleanedInput.location_id || null,
-      billing_profile_id: resolvedBillingProfileId,
-      status_id: cleanedInput.status_id || null,
-      assigned_to: cleanedInput.assigned_to || null,
-      assigned_team_id: cleanedInput.assigned_team_id || null,
-      priority_id: cleanedInput.priority_id || null,
-      category_id: cleanedInput.category_id || null,
-      subcategory_id: cleanedInput.subcategory_id || null,
-      board_id: cleanedInput.board_id || null,
-      source: cleanedInput.source || null,
-      ticket_origin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
-      entered_by: cleanedInput.entered_by || null,
-      entered_at: now.toISOString(),
-      updated_at: now.toISOString(),
-      due_date: cleanedInput.due_date || null,
-      // ITIL-specific fields (for priority calculation)
-      itil_impact: cleanedInput.itil_impact || null,
-      itil_urgency: cleanedInput.itil_urgency || null,
-      // Store attributes and email_metadata as JSON
-      attributes: Object.keys(attributes).length > 0 ? JSON.stringify(attributes) : null,
-      email_metadata: cleanedInput.email_metadata ? JSON.stringify(cleanedInput.email_metadata) : null
-    };
+    // Assemble the insert row through the exhaustive field-handling map so
+    // every CreateTicketInput key is either persisted, transformed, or
+    // explicitly excluded. Generated identity/timestamp columns stay here.
+    const ticketData = buildTicketCreateRow(
+      {
+        ticket_id: ticketId,
+        tenant,
+        ticket_number: ticketNumber,
+        entered_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      },
+      {
+        cleanedInput,
+        resolvedBillingProfileId,
+        attributes: Object.keys(attributes).length > 0 ? attributes : null,
+      },
+    );
 
-    // Create validation data with object attributes
-    const validationData = {
-      ...ticketData,
-      attributes: Object.keys(attributes).length > 0 ? attributes : null
-    };
+    // Validation data uses the object attributes form; the insert stringifies.
+    const validationData = { ...ticketData };
 
     // Custom validation: priority_id is required for all tickets (unified system)
     if (!validationData.priority_id) {
@@ -875,6 +1026,10 @@ export class TicketModel {
       status_id: cleanedInput.status_id,
       priority_id: cleanedInput.priority_id,
       board_id: cleanedInput.board_id,
+      url: cleanedInput.url ?? null,
+      severity_id: cleanedInput.severity_id ?? null,
+      urgency_id: cleanedInput.urgency_id ?? null,
+      impact_id: cleanedInput.impact_id ?? null,
       entered_at: now.toISOString(),
       tenant
     };
