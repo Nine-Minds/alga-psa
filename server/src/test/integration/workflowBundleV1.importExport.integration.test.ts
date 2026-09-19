@@ -143,6 +143,20 @@ beforeEach(async () => {
   await resetWorkflowRuntimeTables(db);
   tenantId = uuidv4();
   userId = uuidv4();
+  // The bundle actions call assertPsaOnlyTenantAccess, which reads
+  // tenants.product_code off the ADMIN pool and now fails closed when the row is
+  // absent. It previously treated a missing row as a valid PSA tenant, which let
+  // this suite pass while naming a tenant that never existed. Create the row the
+  // guard is entitled to expect.
+  await db('tenants')
+    .insert({
+      tenant: tenantId,
+      client_name: `workflow-bundle-${tenantId.slice(0, 8)}`,
+      email: `workflow-bundle-${tenantId.slice(0, 8)}@example.test`,
+      product_code: 'psa',
+    })
+    .onConflict('tenant')
+    .ignore();
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
   mockedGetCurrentTenantId.mockReturnValue(tenantId);
   mockedCreateCompatibilityTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
