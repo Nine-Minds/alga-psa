@@ -96,44 +96,45 @@ echo "  hocuspocus  : $NEXT_PUBLIC_HOCUSPOCUS_URL -> \${HOCUSPOCUS_HOST}:\${HOCU
 echo "  readiness   : curl -s -o /dev/null -w '%{http_code}' $HOST/auth/signin  # expect 200 or 307"
 echo
 
-# `server/.next` is a symlink onto scratch storage outside the repo on this
-# host, which keeps several GB of hot build churn out of the btrfs loopback
+# `.next` must be a real directory INSIDE the repo, and the guard below is
+# load-bearing rather than defensive.
+#
+# This worktree carried `server/.next` as a symlink onto scratch storage under
+# /tmp, to keep several gigabytes of build churn out of the btrfs loopback
 # image whose exhaustion once killed every card service at once (EDQUOT; see
-# scripts/dev/run-card-service.sh, FAILURE MODE 3). Two things about that
-# arrangement do not survive a reboot, and both present as an application
-# fault rather than as missing scratch storage:
+# scripts/dev/run-card-service.sh, FAILURE MODE 3). Under Next 16's Turbopack
+# that arrangement cannot work, and it fails in a way nothing else detects.
 #
-#   1. The link target is gone, and Next -- which mkdirs `.next/dev`
-#      non-recursively -- dies on every launch with
-#      `ENOENT ... mkdir .../server/.next/dev` in a restart loop.
+# Turbopack writes each externalised package as a RELATIVE symlink,
+# `<.next>/dev/node_modules/<pkg>-<hash> -> ../../../../<path from repo root>`,
+# which the kernel resolves against the link's PHYSICAL path. With `.next` on
+# scratch storage, four levels up is the scratch root rather than the repo, so
+# every external resolves into nothing and the route that imports it 500s with
+# `Cannot find module '<pkg>-<hash>'`. Shadowing the scratch root does not fix
+# it either: the targets are not confined to the root `node_modules`. This tree
+# alone emits links into `packages/ee/node_modules`,
+# `ee/packages/calendar/node_modules` and `packages/jobs/node_modules`, so the
+# scratch root would have to reproduce the whole repo layout, and each new
+# nested dependency would break it again.
 #
-#   2. Turbopack's externals are RELATIVE symlinks. It writes each one as
-#      `<.next>/dev/node_modules/<pkg>-<hash> -> ../../../../node_modules/<pkg>`,
-#      resolved by the kernel against the link's PHYSICAL path -- that is,
-#      against the scratch root, not against `server/`. So the scratch root
-#      needs its own `node_modules` pointing at the workspace's, or every
-#      externalised package (knex, @aws-sdk/*, @opentelemetry/*, @temporalio/*)
-#      fails at require time and every route 500s with
-#      `Cannot find module 'knex-<hash>'`. The listener answers throughout, so
-#      a port check and even an HTTP status check both pass while the app is
-#      entirely broken.
-#
-# Restore both here so a reboot costs a recompile and nothing else.
+# What makes it worth a hard stop is that no probe catches it. The process is
+# healthy, the port is bound, `/auth/signin` answers a real HTTP status, and
+# `/msp/dashboard` renders -- it is only the routes whose server actions touch
+# an externalised package that fail, and they fail as a 500 POST behind an
+# ordinary-looking "Unable to load tickets. Refresh to check your current
+# access." A reviewer would read that as the feature being broken.
 NEXT_DIR="$SERVER_DIR/.next"
-NEXT_TARGET="$NEXT_DIR"
 if [ -L "$NEXT_DIR" ]; then
-  # -m, not -f: after a reboot every component of the target is missing, and
-  # `readlink -f` prints nothing when an intermediate directory does not exist.
-  NEXT_TARGET="$(readlink -m "$NEXT_DIR")"
-  [ -n "$NEXT_TARGET" ] || { echo "cannot resolve $NEXT_DIR" >&2; exit 1; }
+  echo "$NEXT_DIR is a symlink to $(readlink -m "$NEXT_DIR")." >&2
+  echo "Turbopack's externals are relative symlinks resolved against the link's" >&2
+  echo "physical path, so an out-of-tree .next makes every externalised package" >&2
+  echo "unresolvable and every server action that touches one returns 500 while" >&2
+  echo "the server still answers. Replace it with a real directory:" >&2
+  echo "    rm '$NEXT_DIR' && mkdir -p '$NEXT_DIR'" >&2
+  exit 1
 fi
-mkdir -p "$NEXT_TARGET"
-# The directory Turbopack's `../../../../node_modules` lands in.
-SCRATCH_ROOT="$(cd "$NEXT_TARGET/../.." && pwd)"
-if [ "$SCRATCH_ROOT" != "$REPO_ROOT" ] && [ ! -e "$SCRATCH_ROOT/node_modules" ]; then
-  echo "  scratch root : linking $SCRATCH_ROOT/node_modules -> $REPO_ROOT/node_modules"
-  ln -s "$REPO_ROOT/node_modules" "$SCRATCH_ROOT/node_modules"
-fi
+# Next mkdirs `.next/dev` non-recursively, so `.next` has to exist first.
+mkdir -p "$NEXT_DIR"
 
 cd "$SERVER_DIR"
 exec node "$TSX_BIN" dev-server.ts
