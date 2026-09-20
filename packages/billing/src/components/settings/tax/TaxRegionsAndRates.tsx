@@ -77,7 +77,7 @@ const rateStatusBadge: Record<TaxRateStatus, 'success' | 'info' | 'warning' | 'd
  * number. Rates are always created inside a region, so there is no region picker.
  */
 export function TaxRegionsAndRates() {
-  const { t } = useTranslation('msp/billing-settings');
+  const { t } = useTranslation(['msp/billing-settings', 'msp/service-catalog']);
   const { formatDate } = useFormatters();
   const today = useMemo(() => Temporal.Now.plainDateISO(), []);
   // Rates carry calendar dates; format them in the app locale so they read the
@@ -458,7 +458,7 @@ export function TaxRegionsAndRates() {
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="py-1 pr-3 font-medium">{t('tax.regions.rates.columns.rate', { defaultValue: 'Rate' })}</th>
-              <th className="py-1 pr-3 font-medium">{t('taxRates.cap.title', { defaultValue: 'Tax cap' })}</th>
+              <th className="py-1 pr-3 font-medium">{t('msp/service-catalog:taxRates.cap.title')}</th>
               <th className="py-1 pr-3 font-medium">{t('tax.regions.rates.columns.description', { defaultValue: 'Description' })}</th>
               <th className="py-1 pr-3 font-medium">{t('tax.regions.rates.columns.effective', { defaultValue: 'Effective' })}</th>
               <th className="py-1 pr-3 font-medium">{t('common.columns.status', { defaultValue: 'Status' })}</th>
