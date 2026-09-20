@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "candidate": "98976ce344909cc164d76a9ff889986e7113a034",
+  "candidate": "4879aa8d63ce603fafe8e666add409cdeb566a11",
   "base": "8120314513cb27ea5e61d8c80beccb709e03e437",
-  "collectedAt": "2026-09-20T16:55:39.073Z",
+  "collectedAt": "2026-09-20T17:23:49.051Z",
   "pr": {
     "number": 3363,
-    "head": "fb2e696645023b24371a93805ed1fe3ae94e036b"
+    "head": "b17b7a80b4d022f0e372e68b744e636bfe069c05"
   },
   "provenance": {
     "app": {
@@ -22,476 +22,476 @@
   "mergeability": {
     "mergeable": "MERGEABLE",
     "mergeStateStatus": "BLOCKED",
-    "checkedAtSha": "fb2e696645023b24371a93805ed1fe3ae94e036b"
+    "checkedAtSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05"
   },
   "ci": {
-    "runId": "35522723445",
+    "runId": "35524282543",
     "status": "in_progress",
     "conclusion": "",
     "checks": [
       {
         "name": "selection",
-        "jobId": 106110152351,
+        "jobId": 106113945093,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "node / Appliance Node execution complete",
-        "jobId": 106110152474,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "workspace / workspace-runtime execution complete",
-        "jobId": 106110152479,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "integration / Check for relevant changes",
-        "jobId": 106110152515,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "mobile / Mobile reproducibility checks",
-        "jobId": 106110152519,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "unit / Nx affected unit tests",
-        "jobId": 106110152523,
-        "status": "completed",
-        "conclusion": "failure",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "workspace / server-colocated execution complete",
-        "jobId": 106110152533,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "node / Browser test discovery",
-        "jobId": 106110152538,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "unit / Server unit shard 3",
-        "jobId": 106110152545,
-        "status": "completed",
-        "conclusion": "failure",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "workspace / nx-tooling execution complete",
-        "jobId": 106110152547,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "workspace / AI gateway execution complete",
-        "jobId": 106110152551,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "unit / Server unit shard 4",
-        "jobId": 106110152554,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "workspace / ui-kit-showcase execution complete",
-        "jobId": 106110152559,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "node / Node tooling execution complete",
-        "jobId": 106110152564,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "unit / Skipped-test budget",
-        "jobId": 106110152567,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "mobile / Mobile dependency audit (report)",
-        "jobId": 106110152609,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "workspace / Enterprise unit shard 1",
-        "jobId": 106110152612,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "workspace / workspace-unit execution complete",
-        "jobId": 106110152617,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "unit / Server unit shard 1",
-        "jobId": 106110152625,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "unit / Server unit shard 2",
-        "jobId": 106110152627,
-        "status": "completed",
-        "conclusion": "failure",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "browser / changes",
-        "jobId": 106110152648,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "mobile / Mobile lint + typecheck",
-        "jobId": 106110152653,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "workspace / Enterprise integration execution complete",
-        "jobId": 106110152701,
+        "jobId": 106113945174,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
-        "name": "workspace / Enterprise unit shard 3",
-        "jobId": 106110152707,
+        "name": "unit / Skipped-test budget",
+        "jobId": 106113945209,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
-        "name": "workspace / Enterprise unit shard 2",
-        "jobId": 106110152723,
+        "name": "unit / Nx affected unit tests",
+        "jobId": 106113945225,
+        "status": "completed",
+        "conclusion": "failure",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "browser / changes",
+        "jobId": 106113945228,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "mobile / Mobile reproducibility checks",
+        "jobId": 106113945240,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Server unit shard 4",
+        "jobId": 106113945242,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "mobile / Mobile unit tests",
-        "jobId": 106110152881,
+        "jobId": 106113945256,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "node / Node tooling execution complete",
+        "jobId": 106113945260,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "mobile / Mobile dependency audit (report)",
+        "jobId": 106113945299,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Server unit shard 3",
+        "jobId": 106113945301,
+        "status": "completed",
+        "conclusion": "failure",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / AI gateway execution complete",
+        "jobId": 106113945306,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Server unit shard 1",
+        "jobId": 106113945308,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "node / Browser test discovery",
+        "jobId": 106113945312,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / workspace-runtime execution complete",
+        "jobId": 106113945319,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Server unit shard 2",
+        "jobId": 106113945333,
+        "status": "completed",
+        "conclusion": "failure",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "mobile / Mobile lint + typecheck",
+        "jobId": 106113945334,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "node / Appliance Node execution complete",
+        "jobId": 106113945335,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / server-colocated execution complete",
+        "jobId": 106113945366,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / Enterprise unit shard 2",
+        "jobId": 106113945376,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / Enterprise unit shard 1",
+        "jobId": 106113945378,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / ui-kit-showcase execution complete",
+        "jobId": 106113945383,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / nx-tooling execution complete",
+        "jobId": 106113945392,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / Enterprise unit shard 3",
+        "jobId": 106113945405,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / workspace-unit execution complete",
+        "jobId": 106113945421,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "integration / Check for relevant changes",
+        "jobId": 106113945544,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "browser / Standalone browser collection",
-        "jobId": 106110217197,
+        "jobId": 106113998030,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "integration / Workspace database tests",
-        "jobId": 106110228011,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "integration / Integration shard 3",
-        "jobId": 106110228018,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": true
-      },
-      {
-        "name": "integration / Integration shard 2",
-        "jobId": 106110228032,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": true
-      },
-      {
-        "name": "integration / Integration shard 1",
-        "jobId": 106110228049,
-        "status": "completed",
-        "conclusion": "failure",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": true
-      },
-      {
-        "name": "integration / Infrastructure shard 1",
-        "jobId": 106110228052,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "integration / Infrastructure shard 3",
-        "jobId": 106110228059,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "integration / Integration shard 4",
-        "jobId": 106110228069,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": true
-      },
-      {
-        "name": "integration / Infrastructure shard 2",
-        "jobId": 106110228108,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "citus / Combined migrations on single-node Citus",
-        "jobId": 106110232109,
+        "jobId": 106114009152,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "temporal / fast-readiness",
-        "jobId": 106110232137,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "temporal / Temporal engine execution complete",
-        "jobId": 106110232153,
+        "jobId": 106114009184,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "temporal / fast-readiness",
+        "jobId": 106114009189,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "temporal / docker-parity",
-        "jobId": 106110232761,
+        "jobId": 106114009979,
         "status": "completed",
         "conclusion": "skipped",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
-        "name": "browser / build-images (hocuspocus, hocuspocus/Dockerfile, alga-e2e-test-hocuspocus:latest, true)",
-        "jobId": 106110258446,
+        "name": "integration / Workspace database tests",
+        "jobId": 106114010225,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "integration / Infrastructure shard 1",
+        "jobId": 106114010241,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "integration / Infrastructure shard 3",
+        "jobId": 106114010247,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "integration / Integration shard 1",
+        "jobId": 106114010249,
+        "status": "completed",
+        "conclusion": "failure",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": true
+      },
+      {
+        "name": "integration / Integration shard 3",
+        "jobId": 106114010256,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": true
+      },
+      {
+        "name": "integration / Integration shard 4",
+        "jobId": 106114010278,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": true
+      },
+      {
+        "name": "integration / Integration shard 2",
+        "jobId": 106114010291,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": true
+      },
+      {
+        "name": "integration / Infrastructure shard 2",
+        "jobId": 106114010295,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "browser / build-images (setup, setup/Dockerfile.ubuntu, alga-setup:ubuntu, true)",
-        "jobId": 106110258450,
+        "jobId": 106114053326,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "browser / build-images (workflow-worker, services/workflow-worker/Dockerfile, alga-e2e-test-workflow-worker...",
-        "jobId": 106110258456,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "browser / build-images (redis, redis/Dockerfile, alga-e2e-test-redis:latest, true)",
-        "jobId": 106110258458,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "browser / build-images (algasim, ./packages/emulators, packages/emulators/Dockerfile, alga-e2e-test-algasim...",
-        "jobId": 106110258463,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "browser / build-images (pgbouncer, ./pgbouncer, pgbouncer/Dockerfile, alga-e2e-test-pgbouncer:latest, true)",
-        "jobId": 106110258466,
+        "jobId": 106114053332,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
-        "name": "browser / build-images (server-ee, ee/server/Dockerfile.build, alga-e2e-test_server_ee_local:latest, fresh-...",
-        "jobId": 106110258470,
-        "status": "in_progress",
-        "conclusion": "",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "name": "browser / build-images (workflow-worker, services/workflow-worker/Dockerfile, alga-e2e-test-workflow-worker...",
+        "jobId": 106114053345,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "browser / build-images (email-service, services/email-service/Dockerfile, alga-e2e-test-email-service:lates...",
-        "jobId": 106110258509,
+        "jobId": 106114053355,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "browser / build-images (server, Dockerfile.build, alga-e2e-test_server_ce_local:latest, fresh-install-serve...",
-        "jobId": 106110258511,
+        "jobId": 106114053367,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "browser / build-images (temporal-worker, ee/temporal-workflows/Dockerfile, alga-e2e-test-temporal-worker:la...",
-        "jobId": 106110258552,
+        "jobId": 106114053369,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (redis, redis/Dockerfile, alga-e2e-test-redis:latest, true)",
+        "jobId": 106114053374,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (hocuspocus, hocuspocus/Dockerfile, alga-e2e-test-hocuspocus:latest, true)",
+        "jobId": 106114053378,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (server-ee, ee/server/Dockerfile.build, alga-e2e-test_server_ee_local:latest, fresh-...",
+        "jobId": 106114053431,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (algasim, ./packages/emulators, packages/emulators/Dockerfile, alga-e2e-test-algasim...",
+        "jobId": 106114053453,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "temporal / Temporal execution gate",
-        "jobId": 106110863314,
+        "jobId": 106114656178,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "workspace / Enterprise unit execution complete",
-        "jobId": 106111008877,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "node / Node workflow execution gate",
-        "jobId": 106111035110,
+        "jobId": 106114828830,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / Enterprise unit execution complete",
+        "jobId": 106114942001,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "workspace / Workspace execution gate",
-        "jobId": 106111048361,
+        "jobId": 106114984769,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
+      },
+      {
+        "name": "citus / Citus execution complete",
+        "jobId": 106115409852,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "integration / Infrastructure execution complete",
-        "jobId": 106111397568,
+        "jobId": 106115505975,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": true
       },
       {
-        "name": "citus / Citus execution complete",
-        "jobId": 106111667563,
-        "status": "completed",
-        "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
         "name": "integration / Workspace database execution complete",
-        "jobId": 106111881626,
+        "jobId": 106115757510,
         "status": "completed",
         "conclusion": "success",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
-        "mandatory": false
-      },
-      {
-        "name": "unit / Server unit execution complete",
-        "jobId": 106112710905,
-        "status": "completed",
-        "conclusion": "failure",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": false
       },
       {
         "name": "integration / Integration execution complete",
-        "jobId": 106112819887,
+        "jobId": 106116738886,
         "status": "completed",
         "conclusion": "failure",
-        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
         "mandatory": true
+      },
+      {
+        "name": "unit / Server unit execution complete",
+        "jobId": 106116785635,
+        "status": "completed",
+        "conclusion": "failure",
+        "headSha": "b17b7a80b4d022f0e372e68b744e636bfe069c05",
+        "mandatory": false
       }
     ]
   },
@@ -565,7 +565,7 @@
     },
     "provider-route-regression": {
       "type": "automated",
-      "sha": "98976ce344909cc164d76a9ff889986e7113a034",
+      "sha": "4879aa8d63ce603fafe8e666add409cdeb566a11",
       "command": "server: vitest run src/test/unit/product + src/test/unit/email (125 files) at the round-2 candidate, after the release-flag gate was removed from the provider route",
       "result": "859 passed. Mutation checks: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page fails 2 of 7 provider cases; re-adding CoManagedFeatureBoundary to the route fails 1 of 7.",
       "artifact": "cf005-provider-setup.md",
@@ -573,7 +573,7 @@
     },
     "provider-route-browser": {
       "type": "browser",
-      "sha": "98976ce344909cc164d76a9ff889986e7113a034",
+      "sha": "4879aa8d63ce603fafe8e666add409cdeb566a11",
       "command": "Real dev app at http://100.82.172.57:3374 as cm.rabbit.admin@whiterabbit.test (tenant 51ac6952-6d6f-4600-aace-b71a9b2a5e73, product_code co_managed): Settings -> Email -> Inbound -> Open Providers; plus direct URLs for four excluded surfaces",
       "result": "Open Providers now lands on /msp/co-management/providers (\"Email and Identity Providers\") with the Microsoft app-registration surface rendered. /msp/settings/integrations (providers and accounting), /msp/settings/integrations/entra, /msp/billing and /msp/settings/extensions all still render \"Page not available in your current product experience\". PSA admin unchanged: /msp/go/providers redirects to /msp/settings/integrations?category=providers. Re-walked at the round-2 candidate after the locale keys and the release-flag change: /msp/go/providers renders the workbench (main innerText 1697 chars, #provider-credentials-selector present).",
       "artifact": "screenshots/cf005-co-managed-providers.png",
@@ -581,7 +581,7 @@
     },
     "release-flag-off-walk": {
       "type": "browser",
-      "sha": "98976ce344909cc164d76a9ff889986e7113a034",
+      "sha": "4879aa8d63ce603fafe8e666add409cdeb566a11",
       "command": "Dev server restarted with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false; walked as cm.rabbit.admin@whiterabbit.test",
       "result": "The blanking is shell-wide, not route-specific: /msp/dashboard, /msp/tickets, /msp/settings/email, /msp/co-management/ticket-access and /msp/co-management/providers all render main innerText length 0. MspLayoutClient wraps the whole shell in CoManagedWorkspaceBoundary for product_code co_managed. Restored afterwards and re-verified the route renders (1697 chars).",
       "artifact": "cf005-provider-setup.md",
@@ -589,7 +589,7 @@
     },
     "admission-adapter-callsites": {
       "type": "automated",
-      "sha": "98976ce344909cc164d76a9ff889986e7113a034",
+      "sha": "4879aa8d63ce603fafe8e666add409cdeb566a11",
       "command": "server: vitest run src/test/unit/email/coManagedAdmissionAdapters.test.ts",
       "result": "8 passed. Mutation runs, each adapter independently: inboundRequesterReply -> instanceof fails 2 of 8; inboundEmailReply -> instanceof fails 1 of 8. The unrelated-infrastructure-error cases stay green under both, so the repair does not broaden quarantine.",
       "artifact": "cf002-requester-deferral.md",
@@ -597,7 +597,7 @@
     },
     "inbound-diagnostics-regression": {
       "type": "automated",
-      "sha": "98976ce344909cc164d76a9ff889986e7113a034",
+      "sha": "4879aa8d63ce603fafe8e666add409cdeb566a11",
       "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts (rerun at the round-2 candidate as part of the 125-file product+email sweep)",
       "result": "10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the separately-compiled-copy case.",
       "artifact": "cf002-requester-deferral.md",
@@ -639,7 +639,7 @@
     {
       "key": "T01",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -647,7 +647,7 @@
     {
       "key": "T02",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -655,7 +655,7 @@
     {
       "key": "T03",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -663,7 +663,7 @@
     {
       "key": "T04",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -671,7 +671,7 @@
     {
       "key": "T05",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -679,7 +679,7 @@
     {
       "key": "T06",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -687,7 +687,7 @@
     {
       "key": "T07",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -695,7 +695,7 @@
     {
       "key": "T08",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -703,7 +703,7 @@
     {
       "key": "T09",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -711,7 +711,7 @@
     {
       "key": "T10",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -719,7 +719,7 @@
     {
       "key": "T11",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -727,7 +727,7 @@
     {
       "key": "T12",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -735,7 +735,7 @@
     {
       "key": "T13",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -743,7 +743,7 @@
     {
       "key": "T14",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -751,7 +751,7 @@
     {
       "key": "T15",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -759,7 +759,7 @@
     {
       "key": "T16",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -767,7 +767,7 @@
     {
       "key": "T17",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -775,7 +775,7 @@
     {
       "key": "T18",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -783,7 +783,7 @@
     {
       "key": "T19",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -791,7 +791,7 @@
     {
       "key": "T20",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -799,7 +799,7 @@
     {
       "key": "T21",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -807,7 +807,7 @@
     {
       "key": "T22",
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 98976ce344, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 4879aa8d63, so it stays implemented-unverified.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -815,7 +815,7 @@
     {
       "key": "clientIntegration:F001",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -823,7 +823,7 @@
     {
       "key": "clientIntegration:F002",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -831,7 +831,7 @@
     {
       "key": "clientIntegration:F003",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -839,7 +839,7 @@
     {
       "key": "clientIntegration:F004",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -847,7 +847,7 @@
     {
       "key": "clientIntegration:F005",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -855,7 +855,7 @@
     {
       "key": "clientIntegration:F006",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -863,7 +863,7 @@
     {
       "key": "clientIntegration:F007",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -871,7 +871,7 @@
     {
       "key": "clientIntegration:F008",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -879,7 +879,7 @@
     {
       "key": "clientIntegration:F009",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -887,7 +887,7 @@
     {
       "key": "clientIntegration:F010",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -895,7 +895,7 @@
     {
       "key": "clientIntegration:F011",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -903,7 +903,7 @@
     {
       "key": "clientIntegration:F012",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -911,7 +911,7 @@
     {
       "key": "clientIntegration:F013",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -919,7 +919,7 @@
     {
       "key": "clientIntegration:F014",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -927,7 +927,7 @@
     {
       "key": "clientIntegration:F015",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -935,7 +935,7 @@
     {
       "key": "clientIntegration:F016",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -943,7 +943,7 @@
     {
       "key": "clientIntegration:F017",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -951,7 +951,7 @@
     {
       "key": "clientIntegration:F018",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -959,7 +959,7 @@
     {
       "key": "clientIntegration:F019",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -967,7 +967,7 @@
     {
       "key": "clientIntegration:F020",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -975,7 +975,7 @@
     {
       "key": "clientIntegration:F021",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -983,7 +983,7 @@
     {
       "key": "clientIntegration:F022",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -991,7 +991,7 @@
     {
       "key": "clientIntegration:F023",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -999,7 +999,7 @@
     {
       "key": "clientIntegration:F024",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1007,7 +1007,7 @@
     {
       "key": "clientIntegration:F025",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1015,7 +1015,7 @@
     {
       "key": "clientIntegration:F026",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1023,7 +1023,7 @@
     {
       "key": "clientIntegration:F027",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1031,7 +1031,7 @@
     {
       "key": "clientIntegration:F028",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1039,7 +1039,7 @@
     {
       "key": "clientIntegration:F029",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1047,7 +1047,7 @@
     {
       "key": "clientIntegration:F030",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1055,7 +1055,7 @@
     {
       "key": "clientIntegration:F031",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1063,7 +1063,7 @@
     {
       "key": "clientIntegration:F032",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1071,7 +1071,7 @@
     {
       "key": "clientIntegration:F033",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1079,7 +1079,7 @@
     {
       "key": "clientIntegration:T001",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1087,7 +1087,7 @@
     {
       "key": "clientIntegration:T002",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1095,7 +1095,7 @@
     {
       "key": "clientIntegration:T003",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1103,7 +1103,7 @@
     {
       "key": "clientIntegration:T004",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1111,7 +1111,7 @@
     {
       "key": "clientIntegration:T005",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1119,7 +1119,7 @@
     {
       "key": "clientIntegration:T006",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1127,7 +1127,7 @@
     {
       "key": "clientIntegration:T007",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1135,7 +1135,7 @@
     {
       "key": "clientIntegration:T008",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1143,7 +1143,7 @@
     {
       "key": "clientIntegration:T009",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1151,7 +1151,7 @@
     {
       "key": "clientIntegration:T010",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1159,7 +1159,7 @@
     {
       "key": "clientIntegration:T011",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1167,7 +1167,7 @@
     {
       "key": "clientIntegration:T012",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1175,7 +1175,7 @@
     {
       "key": "clientIntegration:T013",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1183,7 +1183,7 @@
     {
       "key": "clientIntegration:T014",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1191,7 +1191,7 @@
     {
       "key": "clientIntegration:T015",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1199,7 +1199,7 @@
     {
       "key": "clientIntegration:T016",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1207,7 +1207,7 @@
     {
       "key": "clientIntegration:T017",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1233,7 +1233,7 @@
     {
       "key": "clientIntegration:T020",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1241,7 +1241,7 @@
     {
       "key": "clientIntegration:T021",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1249,7 +1249,7 @@
     {
       "key": "ticketList:F001",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1257,7 +1257,7 @@
     {
       "key": "ticketList:F002",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1265,7 +1265,7 @@
     {
       "key": "ticketList:F003",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1273,7 +1273,7 @@
     {
       "key": "ticketList:F004",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1281,7 +1281,7 @@
     {
       "key": "ticketList:F005",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1289,7 +1289,7 @@
     {
       "key": "ticketList:F006",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1297,7 +1297,7 @@
     {
       "key": "ticketList:F007",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1305,7 +1305,7 @@
     {
       "key": "ticketList:F008",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1313,7 +1313,7 @@
     {
       "key": "ticketList:F009",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1321,7 +1321,7 @@
     {
       "key": "ticketList:F010",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1329,7 +1329,7 @@
     {
       "key": "ticketList:F011",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1337,7 +1337,7 @@
     {
       "key": "ticketList:F012",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1345,7 +1345,7 @@
     {
       "key": "ticketList:F013",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1353,7 +1353,7 @@
     {
       "key": "ticketList:F014",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1361,7 +1361,7 @@
     {
       "key": "ticketList:F015",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1369,7 +1369,7 @@
     {
       "key": "ticketList:F016",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1377,7 +1377,7 @@
     {
       "key": "ticketList:F017",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1385,7 +1385,7 @@
     {
       "key": "ticketList:F018",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1393,7 +1393,7 @@
     {
       "key": "ticketList:F019",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1401,7 +1401,7 @@
     {
       "key": "ticketList:F020",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1409,7 +1409,7 @@
     {
       "key": "ticketList:F021",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1417,7 +1417,7 @@
     {
       "key": "ticketList:F022",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1425,7 +1425,7 @@
     {
       "key": "ticketList:F023",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1433,7 +1433,7 @@
     {
       "key": "ticketList:F024",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1441,7 +1441,7 @@
     {
       "key": "ticketList:F025",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1449,7 +1449,7 @@
     {
       "key": "ticketList:F026",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1457,7 +1457,7 @@
     {
       "key": "ticketList:F027",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1465,7 +1465,7 @@
     {
       "key": "ticketList:F028",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1473,7 +1473,7 @@
     {
       "key": "ticketList:F029",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1481,7 +1481,7 @@
     {
       "key": "ticketList:F030",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1489,7 +1489,7 @@
     {
       "key": "ticketList:F031",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1497,7 +1497,7 @@
     {
       "key": "ticketList:F032",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1505,7 +1505,7 @@
     {
       "key": "ticketList:F033",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1513,7 +1513,7 @@
     {
       "key": "ticketList:F034",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1521,7 +1521,7 @@
     {
       "key": "ticketList:F035",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1529,7 +1529,7 @@
     {
       "key": "ticketList:F036",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1537,7 +1537,7 @@
     {
       "key": "ticketList:F037",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1545,7 +1545,7 @@
     {
       "key": "ticketList:F038",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1553,7 +1553,7 @@
     {
       "key": "ticketList:F039",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1561,7 +1561,7 @@
     {
       "key": "ticketList:T001",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1569,7 +1569,7 @@
     {
       "key": "ticketList:T002",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1577,7 +1577,7 @@
     {
       "key": "ticketList:T003",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1585,7 +1585,7 @@
     {
       "key": "ticketList:T004",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1593,7 +1593,7 @@
     {
       "key": "ticketList:T005",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1601,7 +1601,7 @@
     {
       "key": "ticketList:T006",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1609,7 +1609,7 @@
     {
       "key": "ticketList:T007",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1617,7 +1617,7 @@
     {
       "key": "ticketList:T008",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1625,7 +1625,7 @@
     {
       "key": "ticketList:T009",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1633,7 +1633,7 @@
     {
       "key": "ticketList:T010",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1641,7 +1641,7 @@
     {
       "key": "ticketList:T011",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1649,7 +1649,7 @@
     {
       "key": "ticketList:T012",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1657,7 +1657,7 @@
     {
       "key": "ticketList:T013",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1665,7 +1665,7 @@
     {
       "key": "ticketList:T014",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1673,7 +1673,7 @@
     {
       "key": "ticketList:T015",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1681,7 +1681,7 @@
     {
       "key": "ticketList:T016",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1689,7 +1689,7 @@
     {
       "key": "ticketList:T017",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1697,7 +1697,7 @@
     {
       "key": "ticketList:T018",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1705,7 +1705,7 @@
     {
       "key": "ticketList:T019",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1713,7 +1713,7 @@
     {
       "key": "ticketList:T020",
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1831,7 +1831,7 @@
     {
       "key": "CF007",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1839,7 +1839,7 @@
     {
       "key": "CF008",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1847,7 +1847,7 @@
     {
       "key": "CF009",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -1855,7 +1855,7 @@
     {
       "key": "CF010",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2040,7 +2040,7 @@
     {
       "key": "CT001",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2048,7 +2048,7 @@
     {
       "key": "CT002",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2056,7 +2056,7 @@
     {
       "key": "CT003",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2064,7 +2064,7 @@
     {
       "key": "CT004",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2072,7 +2072,7 @@
     {
       "key": "CT005",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2080,7 +2080,7 @@
     {
       "key": "CT006",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2088,7 +2088,7 @@
     {
       "key": "CT007",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2096,7 +2096,7 @@
     {
       "key": "CT008",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2104,7 +2104,7 @@
     {
       "key": "CT009",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2112,7 +2112,7 @@
     {
       "key": "CT010",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2120,7 +2120,7 @@
     {
       "key": "CT011",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2128,7 +2128,7 @@
     {
       "key": "CT012",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2136,7 +2136,7 @@
     {
       "key": "CT013",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2144,7 +2144,7 @@
     {
       "key": "CT014",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2152,7 +2152,7 @@
     {
       "key": "CT015",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2160,7 +2160,7 @@
     {
       "key": "CT016",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2168,7 +2168,7 @@
     {
       "key": "CT017",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2176,7 +2176,7 @@
     {
       "key": "CT018",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2184,7 +2184,7 @@
     {
       "key": "CT019",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2192,7 +2192,7 @@
     {
       "key": "CT020",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2200,7 +2200,7 @@
     {
       "key": "CT021",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2208,7 +2208,7 @@
     {
       "key": "CT022",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2216,7 +2216,7 @@
     {
       "key": "CT023",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2224,7 +2224,7 @@
     {
       "key": "CT024",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2232,7 +2232,7 @@
     {
       "key": "CT025",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
@@ -2240,7 +2240,7 @@
     {
       "key": "CT026",
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 98976ce344.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 4879aa8d63.",
       "ownerRole": "implementing-ood",
       "requiredInCard": true,
       "evidence": []
