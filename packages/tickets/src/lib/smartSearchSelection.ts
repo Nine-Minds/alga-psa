@@ -7,10 +7,37 @@
  * reads `tickets`. These helpers resolve a selection against every
  * authoritative source (the ordinary list, streamed smart rows, and by-id
  * hydration) so bulk actions and printing see the same rows the user selected.
- * They are pure so the behavior is testable without mounting the dashboard.
+ * Enumeration also checks the initiating run before applying a selection or
+ * fallback, so late responses cannot restore a superseded run's selection.
  */
 
 import type { ITicketListFilters, ITicketListItem } from '@alga-psa/types';
+
+/** Apply enumeration or its fallback only while the initiating search is current. */
+export async function selectMatchingTickets({
+  loadIds,
+  isCurrent,
+  fallbackIds,
+  onSelect,
+  onError,
+}: {
+  loadIds: () => Promise<string[]>;
+  isCurrent: () => boolean;
+  fallbackIds: string[];
+  onSelect: (ids: string[]) => void;
+  onError: (error: unknown) => void;
+}): Promise<void> {
+  let ids: string[];
+  try {
+    ids = await loadIds();
+  } catch (error) {
+    if (!isCurrent()) return;
+    onError(error);
+    onSelect(fallbackIds);
+    return;
+  }
+  if (isCurrent()) onSelect(ids);
+}
 
 /**
  * One smart search run's streamed rows. `generation` and `runKey` identify the

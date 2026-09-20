@@ -67,7 +67,13 @@ describe('ticketing dashboard smart search wiring contract', () => {
     expect(source).toContain("} else if (e.key === 'Escape' && smartSearch.active) {");
     const resetStart = source.indexOf('const handleResetFilters = useCallback(() => {');
     const resetSlice = source.slice(resetStart, resetStart + 400);
-    expect(resetSlice).toContain('setSmartSearch((prev) => (prev.active ? { ...prev, active: false } : prev));');
+    expect(resetSlice).toContain('exitSmartSearch();');
+    const exitStart = source.indexOf('const exitSmartSearch = useCallback(');
+    const exitEnd = source.indexOf('}, [clearSelection]);', exitStart);
+    const exit = source.slice(exitStart, exitEnd);
+    expect(exit).toContain('smartSearchGenerationRef.current += 1;');
+    expect(exit).toContain("createSmartSearchRunCache<ITicketListItem>('', smartSearchGenerationRef.current)");
+    expect(exit).toContain('clearSelection();');
   });
 
   it('does not mirror smart mode into the URL', () => {
@@ -85,6 +91,9 @@ describe('ticketing dashboard smart search wiring contract', () => {
     expect(body).not.toContain('boardIds: selectedBoards');
     // The Jev text must never be the enumerated keyword filter.
     expect(body).not.toContain('getAllMatchingTicketIds(exportFilters)');
+    expect(body).toContain('const generation = smartSearchGenerationRef.current;');
+    expect(body).toContain('await selectMatchingTickets({');
+    expect(body).toContain('isCurrent: () => generation === smartSearchGenerationRef.current');
   });
 
   it('resolves selected rows from streamed smart results, not only the paginated list', () => {

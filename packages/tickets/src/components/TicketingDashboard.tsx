@@ -20,6 +20,7 @@ import {
   pruneSelectedTicketIds,
   selectAllMatchingFallbackIds,
   selectAllMatchingScope,
+  selectMatchingTickets,
   smartSearchRunCandidateIds,
   smartSearchRunRows,
   type SmartSearchRunCache,
@@ -1244,23 +1245,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     // and select far fewer tickets than the panel is scoring.
     const scope = selectAllMatchingScope(smartSearch.active, smartSearchFilters, exportFilters);
     const fallbackIds = selectAllMatchingFallbackIds(smartSearch.active, smartCandidateIds, selectableTicketIds);
-    const selectFallback = () => {
-      setSelectedTicketIds(new Set(fallbackIds));
-      setAllMatchingMode(true);
-    };
-    try {
-      const allIds = await getAllMatchingTicketIds(scope);
-      if (isActionMessageError(allIds) || isActionPermissionError(allIds)) {
-        toast.error(getErrorMessage(allIds));
-        selectFallback();
-        return;
-      }
-      setSelectedTicketIds(new Set(allIds));
-      setAllMatchingMode(true);
-    } catch (error) {
-      console.error('Failed to fetch all matching ticket IDs:', error);
-      selectFallback();
-    }
+    const generation = smartSearchGenerationRef.current;
+    await selectMatchingTickets({
+      loadIds: async () => {
+        const allIds = await getAllMatchingTicketIds(scope);
+        if (isActionMessageError(allIds) || isActionPermissionError(allIds)) {
+          throw new Error(getErrorMessage(allIds));
+        }
+        return allIds;
+      },
+      // Both successful enumeration and fallback must belong to this run.
+      isCurrent: () => generation === smartSearchGenerationRef.current,
+      fallbackIds,
+      onSelect: (ids) => {
+        setSelectedTicketIds(new Set(ids));
+        setAllMatchingMode(true);
+      },
+      onError: (error) => {
+        console.error('Failed to fetch all matching ticket IDs:', error);
+        toast.error(getErrorMessage(error));
+      },
+    });
   }, [
     smartSearch.active,
     smartSearchFilters,
@@ -2154,10 +2159,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const handleResetFilters = useCallback(() => {
     setSearchQuery('');
     lastEmittedSearchRef.current = '';
-    setSmartSearch((prev) => (prev.active ? { ...prev, active: false } : prev));
+    exitSmartSearch();
     setClientFilterState('active');
     setClientTypeFilter('all');
-    clearSelection();
 
     onFilterChange({
       boardId: undefined,
@@ -2183,7 +2187,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       slaStatusFilter: undefined,
       bundleView: 'bundled',
     });
-  }, [onFilterChange, clearSelection]);
+  }, [onFilterChange, exitSmartSearch]);
 
   // LEVERAGE: pattern filter-descriptor-table — per-dimension "is-active / label / clear" logic is
   // now duplicated three ways (toolbar controls, activeFilterCount, activeFilterChips). One

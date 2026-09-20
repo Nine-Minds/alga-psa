@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ITicketListFilters, ITicketListItem } from '@alga-psa/types';
 
 import {
@@ -9,6 +9,7 @@ import {
   pruneSelectedTicketIds,
   selectAllMatchingFallbackIds,
   selectAllMatchingScope,
+  selectMatchingTickets,
   smartSearchRunCandidateIds,
   smartSearchRunRows,
 } from './smartSearchSelection';
@@ -24,6 +25,62 @@ function ticket(id: string, overrides: Partial<ITicketListItem> = {}): ITicketLi
     ...overrides,
   } as unknown as ITicketListItem;
 }
+
+describe('pending select-all enumeration', () => {
+  function pendingSelection() {
+    let resolve!: (ids: string[]) => void;
+    let reject!: (error: unknown) => void;
+    const request = new Promise<string[]>((yes, no) => { resolve = yes; reject = no; });
+    const generation = { current: 1 };
+    const startedGeneration = generation.current;
+    const onSelect = vi.fn();
+    const onError = vi.fn();
+    const done = selectMatchingTickets({
+      loadIds: () => request,
+      isCurrent: () => generation.current === startedGeneration,
+      fallbackIds: ['board-a-streamed'],
+      onSelect,
+      onError,
+    });
+    return { resolve, reject, generation, onSelect, onError, done };
+  }
+
+  it.each(['rerun', 'exit', 'reset'])('ignores old enumeration after %s invalidates the generation', async () => {
+    const pending = pendingSelection();
+    pending.generation.current += 1;
+    pending.resolve(['board-a-ticket']);
+    await pending.done;
+    expect(pending.onSelect).not.toHaveBeenCalled();
+    expect(pending.onError).not.toHaveBeenCalled();
+  });
+
+  it('does not restore the old fallback or show its error after a disjoint-filter rerun', async () => {
+    const pending = pendingSelection();
+    pending.generation.current += 1;
+    pending.reject(new Error('Board A enumeration failed'));
+    await pending.done;
+    expect(pending.onSelect).not.toHaveBeenCalled();
+    expect(pending.onError).not.toHaveBeenCalled();
+  });
+
+  it('applies the whole candidate set while the initiating run remains current', async () => {
+    const pending = pendingSelection();
+    // Ordinary page refreshes do not change this generation.
+    pending.resolve(['board-a-streamed', 'board-a-not-yet-scored']);
+    await pending.done;
+    expect(pending.onSelect).toHaveBeenCalledExactlyOnceWith(['board-a-streamed', 'board-a-not-yet-scored']);
+    expect(pending.onError).not.toHaveBeenCalled();
+  });
+
+  it('uses the current run fallback and reports a current enumeration failure', async () => {
+    const pending = pendingSelection();
+    const error = new Error('Enumeration failed');
+    pending.reject(error);
+    await pending.done;
+    expect(pending.onSelect).toHaveBeenCalledExactlyOnceWith(['board-a-streamed']);
+    expect(pending.onError).toHaveBeenCalledExactlyOnceWith(error);
+  });
+});
 
 describe('smart search selection', () => {
   it('resolves a streamed row the ordinary list never held', () => {
