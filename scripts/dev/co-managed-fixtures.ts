@@ -325,15 +325,65 @@ const PURGE_PROTECTED_TABLES = ['invoices', 'invoice_items', 'transactions', 'cr
 async function purgeRow(trx: Knex.Transaction, target: PurgeTarget): Promise<void> {
   const subject = `${target.table} ${target.identity}`;
   await assertNoProtectedReferences(trx, target);
+  await purgeBlocked(
+    trx,
+    target.table,
+    query => query.where({ tenant: target.tenant, [target.identityColumn]: target.identity }),
+    subject,
+    0,
+    async (table, constraint) => referenceMatch(trx, target, table, constraint),
+  );
+}
+
+/**
+ * How deep the blocker chain may go before this gives up and says so. A
+ * dependent of a dependent is ordinary (a lazily written
+ * `client_billing_profiles` row acquires a `client_billing_cycles` child); a
+ * chain longer than this is a schema surprise worth a human reading it rather
+ * than a script deleting further.
+ */
+const MAX_PURGE_DEPTH = 4;
+
+/**
+ * Delete the rows a filter selects, clearing whatever blocks them, recursively.
+ *
+ * `purgeRow` used to clear a direct blocker with a plain delete. That delete
+ * can itself be blocked — and because it ran *inside the catch block*, its
+ * violation escaped and aborted the whole `--reset` transaction. That is
+ * exactly what happened once the fixtures had been reviewed: opening the Oz
+ * clients screen lazily writes a `client_billing_profiles` row, and that row
+ * had since acquired a `client_billing_cycles` child, so clearing the profile
+ * to delete the client failed one level down.
+ *
+ * So the loop is the same at every level. Each level keeps the properties the
+ * one-level version had: nothing is deleted until PostgreSQL has named the
+ * table and the constraint holding the delete back, a record of account is
+ * never touched, a constraint that blocks twice throws rather than looping, and
+ * every failure is a throw inside the single `--reset` transaction so a
+ * surprise rolls the whole reset back rather than half-deleting the fixture.
+ *
+ * Deeper levels are filtered by subquery against the rows being cleared above
+ * them, which is what keeps the blast radius tied to the original target
+ * instead of widening to "every row in the blocking table".
+ */
+async function purgeBlocked(
+  trx: Knex.Transaction,
+  table: string,
+  applyWhere: (query: Knex.QueryBuilder) => Knex.QueryBuilder,
+  subject: string,
+  depth: number,
+  directMatch?: (table: string, constraint: string) => Promise<Record<string, string>>,
+): Promise<void> {
   const cleared = new Set<string>();
+  const savepoint = `purge_depth_${depth}`;
   for (;;) {
-    await trx.raw('SAVEPOINT purge_row');
+    await trx.raw(`SAVEPOINT ${savepoint}`);
     try {
-      await trx(target.table).where({ tenant: target.tenant, [target.identityColumn]: target.identity }).del();
-      await trx.raw('RELEASE SAVEPOINT purge_row');
+      await applyWhere(trx(table)).del();
+      await trx.raw(`RELEASE SAVEPOINT ${savepoint}`);
       return;
     } catch (error) {
-      await trx.raw('ROLLBACK TO SAVEPOINT purge_row');
+      await trx.raw(`ROLLBACK TO SAVEPOINT ${savepoint}`);
       const violation = error as { code?: string; table?: string; constraint?: string };
       if (violation.code !== '23503' || !violation.table || !violation.constraint) throw error;
       if (cleared.has(violation.constraint)) {
@@ -344,10 +394,55 @@ async function purgeRow(trx: Knex.Transaction, target: PurgeTarget): Promise<voi
         throw new Error(`Refusing to delete ${violation.table} rows to clear ${subject} `
           + `(${violation.constraint}); a record of account is not fixture data. Resolve it by hand.`);
       }
-      const match = await referenceMatch(trx, target, violation.table, violation.constraint);
-      await trx(violation.table).where(match).del();
+      if (depth >= MAX_PURGE_DEPTH) {
+        throw new Error(`Gave up clearing ${subject}: ${violation.table} blocks it via ${violation.constraint} `
+          + `more than ${MAX_PURGE_DEPTH} levels below the target. Read the chain by hand rather than deleting deeper.`);
+      }
+
+      // At the top level the blocker can be filtered directly by the target's
+      // own identity, which is the tightest possible filter and the one the
+      // existing audit reasons about. Below that there is no single identity to
+      // match, so the blocker is filtered by subquery against the rows being
+      // cleared at this level.
+      const nextWhere = directMatch
+        ? await directMatch(violation.table, violation.constraint).then(
+            match => (query: Knex.QueryBuilder) => query.where(match))
+        : await subqueryMatch(trx, violation.table, violation.constraint, table, applyWhere);
+
+      await purgeBlocked(trx, violation.table, nextWhere, subject, depth + 1);
     }
   }
+}
+
+/**
+ * A filter selecting the blocking table's rows that point at the parent rows
+ * currently being cleared: `WHERE (child cols) IN (SELECT parent cols FROM
+ * parent WHERE <parent filter>)`. Composite foreign keys (every tenant-scoped
+ * one here) are handled as a whole, so the tenant column travels with the
+ * identity and the delete cannot reach across tenants.
+ */
+async function subqueryMatch(
+  trx: Knex.Transaction,
+  table: string,
+  constraint: string,
+  parentTable: string,
+  parentWhere: (query: Knex.QueryBuilder) => Knex.QueryBuilder,
+): Promise<(query: Knex.QueryBuilder) => Knex.QueryBuilder> {
+  const { rows } = await trx.raw<{ rows: { child_column: string; parent_column: string }[] }>(`
+    SELECT child.attname AS child_column, parent.attname AS parent_column
+      FROM pg_constraint c
+      JOIN LATERAL unnest(c.conkey, c.confkey) AS pair(child_attnum, parent_attnum) ON TRUE
+      JOIN pg_attribute child ON child.attrelid = c.conrelid AND child.attnum = pair.child_attnum
+      JOIN pg_attribute parent ON parent.attrelid = c.confrelid AND parent.attnum = pair.parent_attnum
+     WHERE c.conname = ? AND c.conrelid = ?::regclass AND c.confrelid = ?::regclass`,
+    [constraint, table, parentTable]);
+  if (rows.length === 0) {
+    throw new Error(`${constraint} on ${table} does not reference ${parentTable}`);
+  }
+  const childColumns = rows.map(row => row.child_column);
+  const parentColumns = rows.map(row => row.parent_column);
+  return (query: Knex.QueryBuilder) =>
+    query.whereIn(childColumns, parentWhere(trx(parentTable)).select(parentColumns));
 }
 
 /** `purgeRow` for a client, which is how this started. */
@@ -1284,11 +1379,55 @@ async function reset(db: Knex): Promise<void> {
     // Signing in is what a reviewer is meant to do, and it writes rows the
     // fixture never created: a NextAuth session and a user_preferences row.
     // Both carry a real foreign key to users, so the reset only worked until
-    // the fixtures had actually been used once. These two tables are the whole
-    // set -- every other table referencing a fixture user id is fixture data
-    // already removed by FIXTURE_ROWS above.
+    // the fixtures had actually been used once.
     await trx('sessions').whereIn('user_id', fixtureUserIds).del();
     await trx('user_preferences').whereIn('user_id', fixtureUserIds).del();
+
+    // Logging time is also something a reviewer is meant to do (the shared-time
+    // journey), and it writes a THIRD such table. `time_entries` is in
+    // FIXTURE_ROWS, but only the two deterministic fixture entries are; saving
+    // a Log time form creates an entry with a random id *and* the owning
+    // `time_sheets` row, which nothing here removed. The sheet's foreign key to
+    // users then blocked the whole reset:
+    //
+    //   delete from "users" ... violates foreign key constraint
+    //   "time_sheets_tenant_user_id_foreign" on table "time_sheets"
+    //
+    // and because this runs in one transaction, that surprise rolled the entire
+    // reset back — leaving the fixtures permanently at 18/19 with a "STALE
+    // shared work" escalation row that re-applying cannot clear.
+    //
+    // Children before parents: `time_sheet_comments` and `time_entries` both
+    // reference `time_sheets`. Deleting entries by `user_id` (ownership) also
+    // clears the reviewer-created one, and is idempotent with FIXTURE_ROWS.
+    //
+    // Deliberately NOT deleted by `created_by`/`updated_by`: those columns also
+    // reference users, but a row *owned by someone else* that a fixture user
+    // merely touched is not fixture data, and removing it to unblock a reset
+    // would be the collateral damage `purgeRow` exists to refuse. No such row
+    // exists today; if one ever does, this delete will fail loudly and that is
+    // a finding about what the fixtures can reach, not something to purge.
+    const fixtureSheets = trx('time_sheets').select('id').whereIn('user_id', fixtureUserIds);
+    await trx('time_sheet_comments').whereIn('time_sheet_id', fixtureSheets.clone()).del();
+    await trx('time_entries').whereIn('time_sheet_id', fixtureSheets.clone()).del();
+    await trx('time_entries').whereIn('user_id', fixtureUserIds).del();
+    await trx('time_sheets').whereIn('user_id', fixtureUserIds).del();
+
+    // Fourth table, same class: work a reviewer does can enqueue a background
+    // job stamped with the acting user (an `e7338609...` /
+    // `recover-comment-publications` row survived one review session here).
+    // `job_details` and `import_jobs` both reference `jobs`, so children first.
+    const fixtureJobs = trx('jobs').select('job_id').whereIn('user_id', fixtureUserIds);
+    await trx('job_details').whereIn('job_id', fixtureJobs.clone()).del();
+    await trx('import_jobs').whereIn('job_id', fixtureJobs.clone()).del();
+    await trx('jobs').whereIn('user_id', fixtureUserIds).del();
+
+    // The complete set was established empirically, not guessed: every foreign
+    // key into `users` was enumerated from pg_constraint and counted against
+    // the four fixture user ids. Beyond the fixture data FIXTURE_ROWS already
+    // removes, the only tables holding fixture-user rows are the ones handled
+    // above plus `internal_notifications`, which is ON DELETE CASCADE and needs
+    // no statement. Re-run that scan if a fifth ever appears.
     await trx('users').whereIn('user_id', fixtureUserIds).del();
 
     if (await trx('tenants').where({ tenant: MUNCHKIN }).first()) await purgeTenant(trx, MUNCHKIN);

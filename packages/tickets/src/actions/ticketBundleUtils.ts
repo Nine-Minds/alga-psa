@@ -1363,6 +1363,7 @@ export async function propagateBundleMasterStatus(
   // rules a direct close would, and honour the same override/bypass. Evaluated
   // for every affected child before any row is written, so a blocked child
   // aborts the whole master status change rather than closing a subset.
+  // LEVERAGE: pattern ticket-close-transition — child notification ownership prevents using the full primary update as-is.
   if (crossesBoundary === 'close') {
     for (const child of affected) {
       await enforceTicketCloseRules(trx, ctx.tenant, {
