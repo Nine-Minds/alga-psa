@@ -123,6 +123,18 @@ const EVIDENCE = {
       + '"Failed to fully serialize error: Maximum call stack size exceeded" in place of the original exception.',
     artifact: 'cf002-requester-deferral.md',
   },
+  'requester-deferral-control-run': {
+    type: 'automated',
+    sha: 'ROUND2_CANDIDATE',
+    command: 'The faithful 78-file shard (INTEGRATION_SHARD_TOTAL=4, INDEX=1, TIER1_BASE_SHA empty, '
+      + 'VITEST_SEED=20260610) rerun with isCoManagedSharedWorkError reverted to `instanceof` in both source '
+      + 'and the tsup dist the integration lane resolves',
+    result: 'CONTROL PASSED: coManagedBootstrap 1416/1416 in 284s, 0 skipped. The fixed arm also passed '
+      + '(1416/1416, 265s). Both arms pass, so the local shard cannot discriminate: the repair is NOT '
+      + 'demonstrated to be the cause, and is not refuted either because the divergence never reproduces '
+      + 'locally. The divergence lives in the CI environment.',
+    artifact: 'cf002-requester-deferral.md',
+  },
   'requester-deferral-local-pass': {
     type: 'automated',
     sha: 'b96b4c2ae0',
@@ -158,21 +170,24 @@ const OVERRIDES = {
     status: 'failed',
     why: 'Bounded primitive diagnostics and finite error reporting landed this round '
       + '(shared/services/email/inboundErrorDiagnostics.ts, wired at rollback / lifecycle-classification / '
-      + 'disposition), with independent tests. The requirement is not met until the instrumented candidate '
-      + 'actually reports the first error in the real shard. Still failing at the last observed CI candidate.',
-    evidence: ['requester-deferral-ci-failure', 'inbound-diagnostics-regression', 'requester-deferral-local-pass'],
+      + 'disposition), with independent tests. Five local reproduction attempts -- including the correct shard '
+      + 'composition and a control with the fix reverted -- all pass, so the first error still has not been '
+      + 'captured. The requirement is not met until an instrumented CI candidate reports it.',
+    evidence: ['requester-deferral-ci-failure', 'inbound-diagnostics-regression', 'requester-deferral-local-pass',
+      'requester-deferral-control-run'],
   },
   CF003: {
     status: 'failed',
-    why: 'A structurally confirmed cause was repaired at its owner: the two separately compiled worker admission '
-      + 'adapters classified CoManagedSharedWorkError by `instanceof`, which cannot hold across this package\'s '
-      + 'split export map (root and some modules resolve to source, worker-facing subpaths to the tsup bundle), '
-      + 'so an authorization rejection was rethrown unclassified and the durable inbox reported `retry`. '
-      + 'That is a real defect and is now duck-typed like its sibling isCoManagedLifecycleError. It is NOT yet '
-      + 'established as THE cause of the CI failure -- no local reproduction of the shard failure exists, so the '
-      + 'causal claim is unproven and this row stays failed.',
+    why: 'A real latent defect was repaired at its owner: the two separately compiled worker admission adapters '
+      + 'classified CoManagedSharedWorkError by `instanceof`, which cannot hold across this package\'s split '
+      + 'export map, so an authorization rejection was rethrown unclassified and the durable inbox reported '
+      + '`retry`. It is now duck-typed like its sibling isCoManagedLifecycleError and pinned at both call sites. '
+      + 'The CONTROL RUN REFUTES THE CAUSAL CLAIM: the faithful 78-file shard passes with the predicate reverted '
+      + 'to `instanceof` just as it passes with the fix, so the repair is not demonstrated to be the cause of the '
+      + 'CI failure -- and is not refuted either, because the divergence never reproduces locally in either arm. '
+      + 'The defect is fixed on its own merits; the CI divergence remains unexplained. Row stays failed.',
     evidence: ['requester-deferral-ci-failure', 'inbound-diagnostics-regression', 'requester-deferral-local-pass',
-      'admission-adapter-callsites'],
+      'requester-deferral-control-run', 'admission-adapter-callsites'],
   },
   CF004: {
     status: 'failed',
@@ -217,8 +232,10 @@ const OPEN_DEFECTS = [
   {
     id: 'CF002-requester-deferral',
     kind: 'functional',
-    summary: 'Integration shard 1 reports `retry` where `defer` is required for the separately compiled '
-      + 'admission adapter case. Cause not established; see cf002-requester-deferral.md.',
+    summary: 'Integration shard 1 reported `retry` where `defer` is required for the separately compiled '
+      + 'admission adapter case. Cause NOT established: five local attempts, including the correct 78-file '
+      + 'shard composition and a control with the candidate fix reverted, all pass. The divergence is '
+      + 'CI-environment-specific. See cf002-requester-deferral.md.',
   },
   {
     id: 'algadesk-provider-dead-end',

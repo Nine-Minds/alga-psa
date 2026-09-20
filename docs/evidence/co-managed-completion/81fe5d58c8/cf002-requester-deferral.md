@@ -33,7 +33,8 @@ standing in for what a dist-compiled worker adapter throws. It asserts
 | 1 | The single case, standalone, `VITEST_SEED=20260610`, CE+EE overlay, `DB_NAME_SERVER=server_co_managed` | **passed** |
 | 2 | The whole `coManagedBootstrap.integration.test.ts` file at the same seed, full intra-file shuffle | **1416/1416 passed** |
 | 3 | "Real shard" with `INTEGRATION_SHARD_TOTAL=1`, `TIER1_BASE_SHA=<merge base>` — **312 files** | bootstrap suite **passed**; see below, this was not the failing shard |
-| 4 | Faithful shard: `INTEGRATION_SHARD_TOTAL=4`, `INTEGRATION_SHARD_INDEX=1`, `TIER1_BASE_SHA=''` — **78 files** | bootstrap suite **1416/1416 passed** (265s); see "What attempt 4 does and does not establish" |
+| 4 | Faithful shard: `INTEGRATION_SHARD_TOTAL=4`, `INTEGRATION_SHARD_INDEX=1`, `TIER1_BASE_SHA=''` — **78 files** | bootstrap suite **1416/1416 passed** (265s) |
+| 5 | **CONTROL**: attempt 4 rerun with `isCoManagedSharedWorkError` reverted to `instanceof` | bootstrap suite **1416/1416 passed** (284s) — see "The control run settles it" |
 
 Attempts 1 and 2 rule out intra-file ordering and the migration overlay. The documented harness
 rules were followed throughout: the CE+EE overlay was built from `server/migrations` +
@@ -118,6 +119,55 @@ reverted to `instanceof`, so a pass here is equally consistent with:
 
 CF002-CF004 therefore stay **`failed`** in the inventory. Until the control run distinguishes those
 two, the causal claim is unproven, and the authoritative signal is mandatory CI at the new head.
+
+### The control run settles it: the local shard is not a discriminating experiment
+
+Attempt 4 passing was not attributable to the fix without a control, so the control was run: the
+identical 78-file shard, same seed, same services, with `isCoManagedSharedWorkError` reverted to
+
+```js
+return error instanceof CoManagedSharedWorkError;
+```
+
+in **both** `packages/co-managed/src/sharedWorkIdentity.ts` and the tsup `dist` the integration lane
+actually resolves (rebuilt before the run; verified in `dist/chunk-QBUECOF2.js`).
+
+```
+ ✓ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1416 tests) 284350ms
+```
+
+**The control passed too**, and it genuinely executed: 0 skip markers for the case, 0 `skipped` in the
+file summary.
+
+Both arms pass. So:
+
+- The duck-typing repair is **not demonstrated to be the cause** of the CI failure. CF002-CF004 stay
+  `failed`, and CF003's causal claim is now explicitly unsupported rather than merely unproven.
+- It is **not refuted** either. The local shard never reproduces the divergence in the first place,
+  so it cannot distinguish the two arms - nothing in this environment throws a
+  `CoManagedSharedWorkError` across the compiled-module boundary during that case. A test that
+  cannot fail under the defect cannot exonerate the fix.
+- What **is** established: this workstation cannot discriminate, at the correct shard composition,
+  with the correct seed. The divergence lives in the CI environment - GitHub runner timing, or the
+  `packages/co-managed` dist that `npm ci` produces there versus the explicit `npx tsup` build here.
+  Four local attempts have now failed to reproduce it. **Stop trying to reproduce it locally.**
+
+The repair itself remains correct and is kept: the split export map really can put two
+`CoManagedSharedWorkError` constructors in one process, `instanceof` really does silently report
+false across that boundary, and `@alga-psa/licensing` already solved the identical problem for its
+sibling error. It is a latent defect fixed on its merits, not a fix for the observed failure.
+
+The call sites are now pinned too. `coManagedAdmissionAdapters.test.ts` drives both adapters with a
+foreign-constructor rejection, a same-realm one, and an unrelated infrastructure error. Mutation runs,
+each adapter independently:
+
+| Mutation | Result |
+| --- | --- |
+| `inboundRequesterReply` -> `instanceof` | 2 failed / 6 passed |
+| `inboundEmailReply` -> `instanceof` | 1 failed / 7 passed |
+
+The infrastructure-error cases stay green under both, so the repair is not broadening quarantine -
+unknown database failures still propagate to `retry`.
 
 ### Unrelated local failures in the same run — reported, not diagnosed
 
@@ -238,11 +288,8 @@ resolves carries the duck-typed predicate (`dist/chunk-HLLCNPFH.js:31`).
 
 ## What is next
 
-0. **Run the control.** Attempt 4 passed; rerun that exact 78-file shard with
-   `isCoManagedSharedWorkError` reverted to `instanceof`. If it fails, the repair is the cause and
-   CF003 can move. If it also passes, the divergence is CI-environment-specific and the diagnostics
-   in the CI log are the only way forward. Nothing else about CF002-CF004 should be attempted before
-   this, because every other reading depends on which of those two it is.
+0. ~~Run the control.~~ **Done - it passed.** The local shard cannot discriminate, so no further
+   local reproduction attempt is worth making.
 1. Read the `[inbound-email-diagnostic]` lines from the next CI shard-1 log. The `rollback` and
    `lifecycle_classification` stages name the first exception and say precisely which contract field
    declined. `admission.sharedWorkConstructorMatched: false` would confirm the dual-constructor
