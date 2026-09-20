@@ -143,6 +143,36 @@ describe('provider setup reachability', () => {
     expect(setup).not.toContain('IntegrationsSettingsPage');
   });
 
+  it('does not put the release flag between the customer and its own provider credentials', () => {
+    // CoManagedFeatureBoundary renders `fallback ?? null`, and its contract says
+    // a caller that replaces a whole route must supply a fallback "or the route
+    // renders blank when the flag is off". The entry point that leads here --
+    // the Open Providers button on Settings -> Email -> Inbound -- is gated only
+    // on enterprise edition, so gating the destination and not the entry point
+    // turns the flag into a blank-page dead end that is strictly worse than the
+    // product boundary card this route replaced.
+    // Comments are stripped: explaining the decision in prose is fine, using the
+    // flag is not.
+    const code = (file: string) => fs.readFileSync(path.join(repoRoot, file), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+    const page = code('server/src/app/msp/co-management/providers/page.tsx');
+    const entry = code('packages/integrations/src/components/email/EmailProviderConfiguration.tsx');
+
+    for (const flagReference of ['release-v1-6-feature', 'useFeatureFlag', 'CoManagedFeatureBoundary']) {
+      expect(
+        entry.includes(flagReference),
+        `the Open Providers entry point references ${flagReference}; if the entry point becomes `
+        + 'flag-gated, revisit whether the destination should be too',
+      ).toBe(false);
+      expect(
+        page.includes(flagReference),
+        `the provider route references ${flagReference} while its entry point does not — with the flag `
+        + 'off this renders a blank page instead of the provider workbench',
+      ).toBe(false);
+    }
+  });
+
   it('has no source link left that sends a user straight at a product-specific provider page', () => {
     const offenders = sourceFiles()
       .filter((file) => {
