@@ -1924,6 +1924,7 @@
     "exit": "Back to list",
     "notConfigured": "Smart search is not configured on this server",
     "failedCount": "{{count}} tickets could not be scored",
-    "unscored": "Could not be scored"
+    "unscored": "Could not be scored",
+    "addOnRequired": "Smart search requires the AI Assistant add-on"
   }
 }

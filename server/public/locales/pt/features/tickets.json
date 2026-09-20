@@ -1924,6 +1924,7 @@
     "exit": "Voltar à lista",
     "notConfigured": "A pesquisa inteligente não está configurada neste servidor",
     "failedCount": "Não foi possível pontuar {{count}} tickets",
-    "unscored": "Não pontuados"
+    "unscored": "Não pontuados",
+    "addOnRequired": "A pesquisa inteligente requer o complemento Assistente de IA"
   }
 }

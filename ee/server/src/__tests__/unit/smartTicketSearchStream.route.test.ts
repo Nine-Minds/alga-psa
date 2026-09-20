@@ -4,27 +4,22 @@ import { NextRequest } from 'next/server';
 import type { SmartSearchEvent } from '@alga-psa/tickets/lib/smartTicketSearch/types';
 
 const getCurrentUserMock = vi.hoisted(() => vi.fn());
-const hasPermissionMock = vi.hoisted(() => vi.fn());
-const isConfiguredMock = vi.hoisted(() => vi.fn());
+const evaluateAccessMock = vi.hoisted(() => vi.fn());
 const runSmartTicketSearchMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
 }));
 
-vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: hasPermissionMock,
-}));
-
 vi.mock('@alga-psa/db', () => ({
   runWithTenant: async (_tenant: string, fn: () => Promise<unknown>) => fn(),
 }));
 
-vi.mock('@ee/services/smartTicketSearch/typesafeClient', () => ({
-  isSmartTicketSearchConfigured: isConfiguredMock,
+vi.mock('../../services/smartTicketSearch/smartSearchAccess', () => ({
+  evaluateSmartTicketSearchAccess: evaluateAccessMock,
 }));
 
-vi.mock('@ee/services/smartTicketSearch/runSmartTicketSearch', () => ({
+vi.mock('../../services/smartTicketSearch/runSmartTicketSearch', () => ({
   runSmartTicketSearch: runSmartTicketSearchMock,
 }));
 
@@ -61,40 +56,21 @@ const parseFrames = (raw: string) =>
       return { event, data };
     });
 
-describe('POST /api/tickets/smart-search/stream', () => {
-  const originalEdition = process.env.EDITION;
-  const originalPublicEdition = process.env.NEXT_PUBLIC_EDITION;
-
+describe('POST /api/tickets/smart-search/stream (enterprise handler)', () => {
   beforeEach(() => {
     vi.resetModules();
     getCurrentUserMock.mockReset();
-    hasPermissionMock.mockReset();
-    isConfiguredMock.mockReset();
+    evaluateAccessMock.mockReset();
     runSmartTicketSearchMock.mockReset();
     getCurrentUserMock.mockResolvedValue({ tenant: 'tenant-1', user_id: 'user-1' });
-    hasPermissionMock.mockResolvedValue(true);
-    isConfiguredMock.mockResolvedValue(true);
-    process.env.EDITION = 'ee';
-    delete process.env.NEXT_PUBLIC_EDITION;
+    evaluateAccessMock.mockResolvedValue({ allowed: true });
   });
 
   afterEach(() => {
-    if (originalEdition === undefined) delete process.env.EDITION;
-    else process.env.EDITION = originalEdition;
-    if (originalPublicEdition === undefined) delete process.env.NEXT_PUBLIC_EDITION;
-    else process.env.NEXT_PUBLIC_EDITION = originalPublicEdition;
+    vi.restoreAllMocks();
   });
 
-  const load = async () => (await import('@/app/api/tickets/smart-search/stream/route')).POST;
-
-  it('answers 404 in community edition before touching auth', async () => {
-    process.env.EDITION = 'ce';
-    const POST = await load();
-    const response = await POST(makeRequest(validBody));
-    expect(response.status).toBe(404);
-    expect(await response.json()).toMatchObject({ code: 'ENTERPRISE_EDITION_REQUIRED' });
-    expect(getCurrentUserMock).not.toHaveBeenCalled();
-  });
+  const load = async () => (await import('../../app/api/tickets/smart-search/stream/route')).POST;
 
   it('answers 400 for a blank or over-long query', async () => {
     const POST = await load();
@@ -102,23 +78,26 @@ describe('POST /api/tickets/smart-search/stream', () => {
     expect((await POST(makeRequest({ ...validBody, query: 'x'.repeat(501) }))).status).toBe(400);
   });
 
-  it('answers 401 without a session and 403 without ticket read', async () => {
+  it('answers 401 without a session and never evaluates access', async () => {
     const POST = await load();
     getCurrentUserMock.mockResolvedValueOnce(null);
     expect((await POST(makeRequest(validBody))).status).toBe(401);
-    hasPermissionMock.mockResolvedValueOnce(false);
-    const forbidden = await POST(makeRequest(validBody));
-    expect(forbidden.status).toBe(403);
-    expect(await forbidden.json()).toMatchObject({ code: 'FORBIDDEN' });
+    expect(evaluateAccessMock).not.toHaveBeenCalled();
   });
 
-  it('answers 503 when no TypeSafe key is configured', async () => {
-    isConfiguredMock.mockResolvedValue(false);
+  it.each([
+    ['FORBIDDEN', 403],
+    ['FEATURE_FLAG_OFF', 404],
+    ['ADD_ON_REQUIRED', 402],
+    ['SMART_SEARCH_NOT_CONFIGURED', 503],
+  ] as const)('maps the %s denial to %i before spending a token', async (reason, status) => {
+    evaluateAccessMock.mockResolvedValue({ allowed: false, reason, message: `denied: ${reason}` });
     const POST = await load();
     const response = await POST(makeRequest(validBody));
-    expect(response.status).toBe(503);
-    expect(await response.json()).toMatchObject({ code: 'SMART_SEARCH_NOT_CONFIGURED' });
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual({ code: reason, error: `denied: ${reason}` });
     expect(runSmartTicketSearchMock).not.toHaveBeenCalled();
+    expect(evaluateAccessMock).toHaveBeenCalledWith(expect.objectContaining({ tenant: 'tenant-1', user_id: 'user-1' }));
   });
 
   it('turns a runner failure before the first event into a status code, not a stream', async () => {

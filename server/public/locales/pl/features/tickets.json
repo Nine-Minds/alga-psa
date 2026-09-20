@@ -2066,6 +2066,7 @@
     "exit": "Wróć do listy",
     "notConfigured": "Inteligentne wyszukiwanie nie jest skonfigurowane na tym serwerze",
     "failedCount": "Nie udało się ocenić {{count}} zgłoszeń",
-    "unscored": "Nieocenione"
+    "unscored": "Nieocenione",
+    "addOnRequired": "Inteligentne wyszukiwanie wymaga dodatku Asystent AI"
   }
 }

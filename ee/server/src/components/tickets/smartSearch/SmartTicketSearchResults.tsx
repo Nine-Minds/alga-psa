@@ -277,7 +277,9 @@ export function SmartTicketSearchResults({
             <AlertDescription>
               {state.error.code === 'SMART_SEARCH_NOT_CONFIGURED'
                 ? t('smartSearch.notConfigured', 'Smart search is not configured on this server')
-                : state.error.message}
+                : state.error.code === 'ADD_ON_REQUIRED'
+                  ? t('smartSearch.addOnRequired', 'Smart search requires the AI Assistant add-on')
+                  : state.error.message}
             </AlertDescription>
           </Alert>
         )}

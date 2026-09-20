@@ -2,14 +2,14 @@
 
 /**
  * Availability probe for the Tickets page: is smart ticket search usable for
- * this caller right now? True only when a TypeSafe key is configured and the
- * caller can read tickets. The page hides the affordance otherwise, and the
- * SSE route re-checks both before spending a token.
+ * this caller right now? The page hides the affordance when not. The decision
+ * (permission, release flag, AI add-on, key) is shared with the SSE route
+ * through evaluateSmartTicketSearchAccess, so the two never disagree.
  */
 
-import { hasPermission, withAuth } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth';
 
-import { isSmartTicketSearchConfigured } from '../../services/smartTicketSearch/typesafeClient';
+import { evaluateSmartTicketSearchAccess } from '../../services/smartTicketSearch/smartSearchAccess';
 
 export interface SmartTicketSearchAvailability {
   available: boolean;
@@ -17,11 +17,7 @@ export interface SmartTicketSearchAvailability {
 
 export const getSmartTicketSearchAvailability = withAuth(
   async (user): Promise<SmartTicketSearchAvailability> => {
-    const configured = await isSmartTicketSearchConfigured();
-    if (!configured) {
-      return { available: false };
-    }
-    const canRead = await hasPermission(user, 'ticket', 'read');
-    return { available: canRead };
+    const access = await evaluateSmartTicketSearchAccess(user);
+    return { available: access.allowed };
   }
 );

@@ -1924,6 +1924,7 @@
     "exit": "Zurück zur Liste",
     "notConfigured": "Die intelligente Suche ist auf diesem Server nicht konfiguriert",
     "failedCount": "{{count}} Tickets konnten nicht bewertet werden",
-    "unscored": "Nicht bewertet"
+    "unscored": "Nicht bewertet",
+    "addOnRequired": "Die intelligente Suche erfordert das KI-Assistent-Add-on"
   }
 }

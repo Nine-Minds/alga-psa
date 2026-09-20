@@ -1924,6 +1924,7 @@
     "exit": "Terug naar lijst",
     "notConfigured": "Slim zoeken is niet geconfigureerd op deze server",
     "failedCount": "{{count}} tickets konden niet worden beoordeeld",
-    "unscored": "Niet beoordeeld"
+    "unscored": "Niet beoordeeld",
+    "addOnRequired": "Slim zoeken vereist de AI-assistent-add-on"
   }
 }

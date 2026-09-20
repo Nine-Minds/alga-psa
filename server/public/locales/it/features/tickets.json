@@ -1924,6 +1924,7 @@
     "exit": "Torna all’elenco",
     "notConfigured": "La ricerca intelligente non è configurata su questo server",
     "failedCount": "{{count}} ticket non sono stati valutati",
-    "unscored": "Non valutati"
+    "unscored": "Non valutati",
+    "addOnRequired": "La ricerca intelligente richiede il componente aggiuntivo Assistente IA"
   }
 }
