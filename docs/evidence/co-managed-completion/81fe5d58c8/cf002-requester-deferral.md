@@ -745,3 +745,94 @@ the expected disposition was not relaxed; requester admission was not loosened; 
 clone-source pin and `ALGA_SCHEMA_SOURCE_DB` were not reintroduced. Unknown infrastructure and
 database failures still `retry` and authorization/token failures still quarantine — this round adds
 observation only and changes no disposition on any path.
+
+---
+
+# Round 2026-09-20b — the discriminator shipped and the test went green
+
+## The blocking fact
+
+Established shard-1 history for the separately-compiled requester lifecycle-pause case:
+
+| head | shard 1 | note |
+|---|---|---|
+| `bda945b640` | pass | |
+| `7b0b52c6c3` | fail | |
+| `618019c3e3` | fail | job `106030872598` |
+| `fb2e696645` | fail | |
+| `b17b7a80b4` | fail | job `106114010249` |
+| `023076a648` | **pass** | job `106117870494` — first head carrying `commit_body` |
+
+Five consecutive failures, then a pass. The `commit_body` discriminator shipped at `4879aa8d63`
+and `023076a648` is the first run that carried it — and that run passed, so it emitted nothing,
+because `server/vitest.config.ts` sets `silent: "passed-only"` and vitest discards console output
+for passing tests.
+
+**The prior round's instrumentation can only speak when the test fails, and the test has stopped
+failing.** Every "read `commit_body` from the next log" next-action in the section above is
+unreachable until that is fixed. That — not a new hypothesis — is what this round addressed.
+
+This also retires the dossier's own framing of flake as "effectively refuted". Three consecutive
+failures justified that reading at the time; six runs now show pass-fail×5-pass, which is not a
+deterministic regression in a fixed window. The failure is **not currently explained**, and this
+round does not claim to explain it.
+
+## What changed (observation only — no disposition on any path changed)
+
+1. **The record survives a pass.** `shared/services/email/inboundErrorDiagnostics.ts` gained a file
+   sink: with `ALGA_INBOUND_DIAGNOSTIC_FILE` set, every record is appended as NDJSON independent of
+   pass/fail and independent of the reporter's console handling. `.github/workflows/integration-tests.yml`
+   points it at `test-results/integration/inbound-diagnostics-shard-N.ndjson`, which rides the
+   existing `server-integration-shard-N` artifact (uploaded `if: always()`). The sink is capped at
+   2000 records per process and can never throw — it runs inside a catch block on the inbound path.
+
+   This works on a green run specifically because the `commit_body` stage sits in the
+   `withAdminTransaction` callback's own catch (`inboundEmailCoreProcessor.ts:271`), and the
+   *passing* path of this test throws a `CoManagedLifecycleError` through exactly that catch. A
+   green shard therefore now produces the very line the previous round needed and did not get.
+
+2. **The error report names its own recursion site.** `summarizeInboundError` now derives
+   `recursionCycle` / `recursionRepetitions`: the shortest repeating frame cycle at the top of the
+   stack, with its repetition count. `frames` could already show a cycle, but only to a human who
+   reads fourteen lines and spots the repeat; for `RangeError: Maximum call stack size exceeded`
+   the question is always "what recursed", so it is computed rather than left as an exercise.
+   Shortest-cycle-first, so direct self-recursion reports as one frame; at least three consecutive
+   repetitions required, so an ordinary stack that calls one helper twice is not mistaken for
+   recursion. Bounded scan window (240 frames), string comparison only.
+
+   Covered by `server/src/test/unit/email/inboundErrorDiagnostics.test.ts` (29 tests): a
+   self-recursive frame, a mutually-recursive pair, a negative case that must not invent a cycle,
+   the emitted payload, and the sink's create/no-op/never-throw behaviour.
+
+## What this round did NOT establish
+
+- **No causal explanation.** Readings (A) — `withAdminTransaction`'s unguarded `.stack` read in
+  `packages/db/src/index.ts:137-140` manufactured the `RangeError` — and (B) — the commit body
+  genuinely overflowed — remain open and untested. No local reproduction was attempted; per PRD C2
+  and the five prior failed attempts, repeating unchanged local runs is not closure.
+- **No mutation-verified regression for CF002 itself**, because there is no established cause to
+  reintroduce. The mutation proof in this round's other workstreams (the PSA nav mapping) is
+  unrelated to CF002 and must not be read as covering it.
+- The reporter-level serialization overflow is still **not** described as fixed, and it remains
+  confirmed independent of the product-path `RangeError`.
+
+## The next single action
+
+Read `inbound-diagnostics-shard-1.ndjson` from the `server-integration-shard-1` artifact of the
+next full integration run, pass or fail, and find the `commit_body` record.
+
+- `commit_body` with `classifiedAsLifecycle: true` followed by `rollback` with `RangeError`
+  ⇒ reading (A); the repair belongs in `packages/db`, bounding the `.stack` read the way this
+  module already bounds every other read of a thrown value.
+- `commit_body` with `RangeError` ⇒ reading (B); bisect the commit body, and
+  `errorRecursionCycle` should now name the recursion site directly.
+- `commit_body` with `classifiedAsLifecycle: true` and a `defer` disposition on a green run
+  ⇒ the pass path is intact and the failure is intermittent; the varying input is then the thing
+  to name, and the artifact gives a per-run record to compare across runs.
+
+## Forbidden shortcuts — none taken (unchanged)
+
+No error was turned into `defer`; the test was not skipped or moved out of its shard; the expected
+disposition was not relaxed; requester admission was not bypassed. Unknown infrastructure and
+database failures still `retry`, authorization/token failures still quarantine. This round adds
+observation only.

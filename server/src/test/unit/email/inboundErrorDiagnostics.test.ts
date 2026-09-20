@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {
   inboundErrorMessage,
   recordInboundDiagnostic,
@@ -68,6 +71,10 @@ describe('inbound error diagnostics are finite', () => {
       cause: null,
       frames: expect.any(Array),
       framesUnavailable: null,
+      // Derived from `frames` by string comparison only; an ordinary rejection
+      // has no repeating cycle, so both stay null.
+      recursionCycle: null,
+      recursionRepetitions: null,
     });
     expect(summary.frames.every(frame => typeof frame === 'string')).toBe(true);
     expect(JSON.stringify(summary)).not.toContain('hunter2');
@@ -324,5 +331,130 @@ describe('an error can be described without reading its stack', () => {
     expect(payload).not.toHaveProperty('errorFrames');
     expect(payload.errorFramesUnavailable).toBe('stack_not_read');
     warn.mockRestore();
+  });
+
+  /**
+   * CF002. The two properties the round added, for the same reason: the
+   * existing instrumentation could only speak when the test failed, and could
+   * only say "RangeError" without saying what recursed.
+   */
+  describe('a stack overflow names its own recursion site', () => {
+    /** A stack shaped like a real overflow: one cycle, repeated. */
+    function overflowStack(cycle: string[], repetitions: number): string {
+      const frames: string[] = [];
+      for (let i = 0; i < repetitions; i++) frames.push(...cycle);
+      return ['RangeError: Maximum call stack size exceeded', ...frames.map((f) => `    ${f}`)].join('\n');
+    }
+
+    it('names a directly self-recursive frame as a one-frame cycle', () => {
+      const error = new Error('Maximum call stack size exceeded');
+      error.name = 'RangeError';
+      Object.defineProperty(error, 'stack', {
+        value: overflowStack(['at isCompleted (/app/node_modules/knex/lib/execution/transaction.js:97:44)'], 400),
+      });
+      const summary = summarizeInboundError(error);
+      expect(summary.recursionCycle).toEqual([
+        'at isCompleted (/app/node_modules/knex/lib/execution/transaction.js:97:44)',
+      ]);
+      // Bounded by the scan window, not by the true depth: the point is to name
+      // the site, not to count to thousands.
+      expect(summary.recursionRepetitions).toBe(240);
+    });
+
+    it('names a mutually recursive pair as a two-frame cycle', () => {
+      const error = new Error('Maximum call stack size exceeded');
+      Object.defineProperty(error, 'stack', {
+        value: overflowStack([
+          'at collectBlockLines (/app/packages/tickets/src/lib/ticketRichText.ts:657:5)',
+          'at extractInlineTextFromBlockNote (/app/packages/tickets/src/lib/ticketRichText.ts:609:9)',
+        ], 60),
+      });
+      const summary = summarizeInboundError(error);
+      expect(summary.recursionCycle).toHaveLength(2);
+      expect(summary.recursionCycle?.[0]).toContain('collectBlockLines');
+      expect(summary.recursionCycle?.[1]).toContain('extractInlineTextFromBlockNote');
+      expect(summary.recursionRepetitions).toBe(60);
+    });
+
+    it('does not invent a cycle for an ordinary stack that repeats a helper twice', () => {
+      const error = new Error('insert failed');
+      Object.defineProperty(error, 'stack', {
+        value: [
+          'Error: insert failed',
+          '    at query (/app/db.ts:1:1)',
+          '    at helper (/app/h.ts:2:2)',
+          '    at query (/app/db.ts:1:1)',
+          '    at caller (/app/c.ts:3:3)',
+        ].join('\n'),
+      });
+      const summary = summarizeInboundError(error);
+      expect(summary.recursionCycle).toBeNull();
+      expect(summary.recursionRepetitions).toBeNull();
+    });
+
+    it('reports the recursion site on the emitted diagnostic line', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const error = new Error('Maximum call stack size exceeded');
+      error.name = 'RangeError';
+      Object.defineProperty(error, 'stack', {
+        value: overflowStack(['at boom (/app/x.ts:9:9)'], 50),
+      });
+      recordInboundDiagnostic('rollback', { tenant: 't1' }, error);
+      const payload = JSON.parse((warn.mock.calls[0] as [string, string])[1]);
+      expect(payload.errorRecursionCycle).toEqual(['at boom (/app/x.ts:9:9)']);
+      expect(payload.errorRecursionRepetitions).toBe(50);
+      warn.mockRestore();
+    });
+  });
+
+  describe('the file sink survives a passing run', () => {
+    // This is the CF002 crux: server/vitest.config.ts sets
+    // `silent: "passed-only"`, so the console line above is discarded when the
+    // test passes. The five-failures-then-a-pass history means the run that
+    // finally carried the discriminator emitted nothing a human could read.
+    const sinkPath = path.join(
+      os.tmpdir(),
+      `inbound-diagnostic-sink-${process.pid}-${Math.random().toString(16).slice(2)}`,
+      'records.ndjson',
+    );
+
+    afterEach(() => {
+      delete process.env.ALGA_INBOUND_DIAGNOSTIC_FILE;
+      fs.rmSync(path.dirname(sinkPath), { recursive: true, force: true });
+    });
+
+    it('appends NDJSON regardless of the console, creating the directory', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      process.env.ALGA_INBOUND_DIAGNOSTIC_FILE = sinkPath;
+
+      recordInboundDiagnostic('commit_body', { tenant: 't1', classifiedAsLifecycle: true });
+      recordInboundDiagnostic('disposition', { tenant: 't1', disposition: 'retry', reason: 'commit_failure' });
+
+      const lines = fs.readFileSync(sinkPath, 'utf8').trim().split('\n');
+      expect(lines).toHaveLength(2);
+      const first = JSON.parse(lines[0]);
+      expect(first.stage).toBe('commit_body');
+      expect(first.classifiedAsLifecycle).toBe(true);
+      // Timestamped so records from one shard can be ordered against the log.
+      expect(typeof first.at).toBe('string');
+      expect(JSON.parse(lines[1]).disposition).toBe('retry');
+      warn.mockRestore();
+    });
+
+    it('writes nothing when the sink is not configured', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      recordInboundDiagnostic('disposition', { tenant: 't1', disposition: 'retry' });
+      expect(fs.existsSync(sinkPath)).toBe(false);
+      warn.mockRestore();
+    });
+
+    it('never throws when the sink path is unwritable', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      // A diagnostic that can fail the path it observes is worse than none: this
+      // runs inside a catch block on the inbound email path.
+      process.env.ALGA_INBOUND_DIAGNOSTIC_FILE = '/proc/self/mem/nope/records.ndjson';
+      expect(() => recordInboundDiagnostic('rollback', { tenant: 't1' }, new Error('x'))).not.toThrow();
+      warn.mockRestore();
+    });
   });
 });

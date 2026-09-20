@@ -224,6 +224,14 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=8192'
           TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/.ci-combined-migrations
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          # CF002: the inbound-email diagnostics also append here, on pass and
+          # on failure alike. vitest's `silent: "passed-only"` discards console
+          # output for passing tests, so the console-only instrumentation went
+          # silent the moment the flaky requester-lifecycle case went green and
+          # a passing run produced no evidence at all. This file rides the
+          # existing `server-integration-shard-N` artifact, which uploads
+          # `if: always()`, so every run yields the disposition record.
+          ALGA_INBOUND_DIAGNOSTIC_FILE: ${{ github.workspace }}/test-results/integration/inbound-diagnostics-shard-${{ matrix.shard }}.ndjson
 
       - name: Run full integration suite
         id: full
@@ -237,6 +245,14 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=8192'
           TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/.ci-combined-migrations
           TIER1_BASE_SHA: ''
+          # CF002: the inbound-email diagnostics also append here, on pass and
+          # on failure alike. vitest's `silent: "passed-only"` discards console
+          # output for passing tests, so the console-only instrumentation went
+          # silent the moment the flaky requester-lifecycle case went green and
+          # a passing run produced no evidence at all. This file rides the
+          # existing `server-integration-shard-N` artifact, which uploads
+          # `if: always()`, so every run yields the disposition record.
+          ALGA_INBOUND_DIAGNOSTIC_FILE: ${{ github.workspace }}/test-results/integration/inbound-diagnostics-shard-${{ matrix.shard }}.ndjson
 
       - name: Upload integration execution diagnostics
         if: always()

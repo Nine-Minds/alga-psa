@@ -19,7 +19,23 @@
  * primitives here first. Nothing in this module reads `sql`, `bindings`,
  * `client`, a transaction, or any credential-bearing field, and the cause chain
  * is followed exactly one level.
+ *
+ * 3. The instrumentation only spoke when the test failed. `server/vitest.config.ts`
+ *    sets `silent: 'passed-only'`, so console output is retained for failing
+ *    tests and discarded for passing ones. CF002's shard-1 case failed five runs
+ *    in a row, then passed on the first run that carried the `commit_body`
+ *    discriminator -- so the discriminator shipped and emitted nothing, and a
+ *    green run yielded no evidence at all. A diagnostic that is only legible on
+ *    the runs you cannot reproduce is not instrumentation.
+ *
+ *    So there is also a file sink: set `ALGA_INBOUND_DIAGNOSTIC_FILE` and every
+ *    record is appended as NDJSON regardless of pass/fail and regardless of the
+ *    reporter's console handling. CI points it at an uploaded artifact, so one
+ *    green run still produces the disposition record.
  */
+
+import { appendFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 /** Generous enough that realistic messages are verbatim; bounded regardless. */
 const MAX_MESSAGE_LENGTH = 2000;
@@ -31,6 +47,17 @@ const MAX_CODE_LENGTH = 120;
  */
 const MAX_FRAMES = 14;
 const MAX_FRAME_LENGTH = 200;
+/**
+ * How far down an overflow stack to look for a repeating cycle, and the longest
+ * cycle to consider. A stack overflow repeats its cycle thousands of times, so a
+ * few hundred frames is ample; bounding the scan keeps this finite on a stack
+ * that is, by construction, enormous.
+ */
+const CYCLE_SCAN_FRAMES = 240;
+const MAX_CYCLE_LENGTH = 8;
+/** Enough repetitions that a genuine recursion is not confused with a loop that
+ * happens to call the same helper twice. */
+const MIN_CYCLE_REPETITIONS = 3;
 
 export interface InboundErrorSummary {
   /** Constructor-independent discriminator. Empty string when absent. */
@@ -58,6 +85,19 @@ export interface InboundErrorSummary {
    * unreadable" and "the stack was readable and had no frames".
    */
   framesUnavailable: string | null;
+  /**
+   * The recursion site, when the frames repeat: the shortest frame cycle at the
+   * top of the stack, named once.
+   *
+   * `frames` can show a cycle, but only to a human who reads fourteen lines and
+   * spots the repeat. For `RangeError: Maximum call stack size exceeded` the
+   * question is always "what recursed", so the answer is computed here instead
+   * of left as an exercise. This is the difference between an error report that
+   * is finite and one that is actionable.
+   */
+  recursionCycle: string[] | null;
+  /** How many consecutive times `recursionCycle` repeats within the scan window. */
+  recursionRepetitions: number | null;
 }
 
 function boundedString(value: unknown, limit: number): string | null {
@@ -93,7 +133,12 @@ export function inboundErrorMessage(error: unknown): string {
  * a reporter. The message line is dropped (it is already reported separately)
  * and each frame is trimmed and truncated.
  */
-function boundedFrames(error: unknown): { frames: string[]; unavailable: string | null } {
+function boundedFrames(error: unknown): {
+  frames: string[];
+  unavailable: string | null;
+  cycle: string[] | null;
+  repetitions: number | null;
+} {
   let stack: unknown;
   // A hostile or exotic thrown value can throw from a `stack` getter -- and so
   // can an ordinary one. V8 formats `.stack` lazily on first access, vite-node
@@ -106,14 +151,19 @@ function boundedFrames(error: unknown): { frames: string[]; unavailable: string 
     stack = (error as { stack?: unknown } | null | undefined)?.stack;
   } catch (stackError) {
     const thrown = (stackError as { name?: unknown } | null)?.name;
-    return { frames: [], unavailable: `stack_getter_threw:${typeof thrown === 'string' ? thrown : 'unknown'}` };
+    return {
+      frames: [],
+      unavailable: `stack_getter_threw:${typeof thrown === 'string' ? thrown : 'unknown'}`,
+      cycle: null,
+      repetitions: null,
+    };
   }
-  if (typeof stack !== 'string') return { frames: [], unavailable: `stack_absent:${typeof stack}` };
-  if (stack === '') return { frames: [], unavailable: 'stack_empty' };
-  const frames = stack
+  if (typeof stack !== 'string') return { frames: [], unavailable: `stack_absent:${typeof stack}`, cycle: null, repetitions: null };
+  if (stack === '') return { frames: [], unavailable: 'stack_empty', cycle: null, repetitions: null };
+  const allFrames = stack
     .split('\n')
     .filter((line) => /^\s*at\s/.test(line))
-    .slice(0, MAX_FRAMES)
+    .slice(0, CYCLE_SCAN_FRAMES)
     .map((line) => {
       const trimmed = line.trim();
       return trimmed.length > MAX_FRAME_LENGTH ? `${trimmed.slice(0, MAX_FRAME_LENGTH)}…` : trimmed;
@@ -122,11 +172,54 @@ function boundedFrames(error: unknown): { frames: string[]; unavailable: string 
   // something -- a message-only stack, or a custom format -- rather than
   // failing. Record its length so the next reader knows there was text to look
   // at without putting the text itself into a reporter.
-  if (frames.length === 0) return { frames: [], unavailable: `no_frame_lines:${stack.length}` };
-  return { frames, unavailable: null };
+  if (allFrames.length === 0) {
+    return { frames: [], unavailable: `no_frame_lines:${stack.length}`, cycle: null, repetitions: null };
+  }
+  const detected = detectRecursionCycle(allFrames);
+  return {
+    frames: allFrames.slice(0, MAX_FRAMES),
+    unavailable: null,
+    cycle: detected?.cycle ?? null,
+    repetitions: detected?.repetitions ?? null,
+  };
 }
 
-function summarizeShallow(error: unknown): Omit<InboundErrorSummary, 'cause' | 'frames' | 'framesUnavailable'> {
+/**
+ * The shortest frame cycle that repeats at the top of the stack, with its
+ * repetition count -- i.e. the recursion site of a stack overflow.
+ *
+ * Scans cycle lengths shortest-first so direct self-recursion (`f -> f`) is
+ * reported as one frame rather than as a longer multiple of itself. Requires
+ * several consecutive repetitions so an ordinary stack that calls one helper
+ * twice is not mistaken for recursion. Purely comparisons over an already
+ * bounded array: this cannot itself become the unbounded walk the module exists
+ * to prevent.
+ */
+function detectRecursionCycle(frames: string[]): { cycle: string[]; repetitions: number } | null {
+  for (let length = 1; length <= MAX_CYCLE_LENGTH; length++) {
+    if (frames.length < length * MIN_CYCLE_REPETITIONS) break;
+    let repetitions = 1;
+    while ((repetitions + 1) * length <= frames.length) {
+      let matches = true;
+      for (let offset = 0; offset < length; offset++) {
+        if (frames[offset] !== frames[repetitions * length + offset]) {
+          matches = false;
+          break;
+        }
+      }
+      if (!matches) break;
+      repetitions++;
+    }
+    if (repetitions >= MIN_CYCLE_REPETITIONS) {
+      return { cycle: frames.slice(0, length), repetitions };
+    }
+  }
+  return null;
+}
+
+function summarizeShallow(
+  error: unknown,
+): Omit<InboundErrorSummary, 'cause' | 'frames' | 'framesUnavailable' | 'recursionCycle' | 'recursionRepetitions'> {
   const record = (error && typeof error === 'object' ? error : {}) as Record<string, unknown>;
   return {
     name: boundedString(record.name, MAX_CODE_LENGTH) ?? (typeof error === 'object' && error !== null ? '' : typeof error),
@@ -148,10 +241,16 @@ export interface SummarizeInboundErrorOptions {
 }
 
 export function summarizeInboundError(error: unknown, options: SummarizeInboundErrorOptions = {}): InboundErrorSummary {
-  const { frames, unavailable } = options.readStack === false
-    ? { frames: [] as string[], unavailable: 'stack_not_read' }
+  const { frames, unavailable, cycle, repetitions } = options.readStack === false
+    ? { frames: [] as string[], unavailable: 'stack_not_read', cycle: null, repetitions: null }
     : boundedFrames(error);
-  const shallow = { ...summarizeShallow(error), frames, framesUnavailable: unavailable };
+  const shallow = {
+    ...summarizeShallow(error),
+    frames,
+    framesUnavailable: unavailable,
+    recursionCycle: cycle,
+    recursionRepetitions: repetitions,
+  };
   const rawCause = error && typeof error === 'object' ? (error as { cause?: unknown }).cause : undefined;
   if (rawCause === undefined || rawCause === null) return { ...shallow, cause: null };
   // Exactly one level. A cause that points back at its own error -- or at a
@@ -182,6 +281,43 @@ export type InboundDiagnosticStage =
  * `context` is caller-supplied and must already be primitive; it is spread as
  * given and never traversed.
  */
+/**
+ * Cap on records appended to the file sink per process. The sink exists to
+ * survive a passing run, not to transcribe a retry storm; a bounded file is
+ * also a bounded artifact upload.
+ */
+const MAX_SINK_RECORDS = 2000;
+let sinkRecordsWritten = 0;
+let sinkDirectoryPrepared = false;
+
+/**
+ * Append one record to `ALGA_INBOUND_DIAGNOSTIC_FILE` as NDJSON.
+ *
+ * Deliberately independent of the console: vitest's `silent: 'passed-only'`
+ * discards console output for passing tests, which is exactly why CF002's
+ * discriminator shipped and produced nothing. This writes on pass and on
+ * failure alike.
+ *
+ * Never throws. A diagnostic that can fail the path it observes is worse than
+ * no diagnostic, and this runs inside a catch block on the inbound email path.
+ */
+function appendToDiagnosticSink(line: string): void {
+  try {
+    const target = process.env.ALGA_INBOUND_DIAGNOSTIC_FILE;
+    if (!target) return;
+    if (sinkRecordsWritten >= MAX_SINK_RECORDS) return;
+    if (!sinkDirectoryPrepared) {
+      mkdirSync(dirname(target), { recursive: true });
+      sinkDirectoryPrepared = true;
+    }
+    appendFileSync(target, `${line}\n`);
+    sinkRecordsWritten += 1;
+  } catch {
+    // Sink failures are not the product's problem, and reporting one here would
+    // need the very reporting path under investigation.
+  }
+}
+
 export function recordInboundDiagnostic(
   stage: InboundDiagnosticStage,
   context: Record<string, string | number | boolean | null | undefined>,
@@ -205,6 +341,17 @@ export function recordInboundDiagnostic(
     // Only meaningful alongside a frame failure, and cheap: a limit of 0 turns
     // every stack into the empty string and would explain the whole thing.
     if (summary.frames.length === 0) payload.stackTraceLimit = Error.stackTraceLimit ?? null;
+    // The whole point of reading frames on an overflow. Names the recursion
+    // site directly rather than leaving a reader to spot the repeat.
+    if (summary.recursionCycle) {
+      payload.errorRecursionCycle = summary.recursionCycle;
+      payload.errorRecursionRepetitions = summary.recursionRepetitions;
+    }
   }
-  console.warn('[inbound-email-diagnostic]', JSON.stringify(payload));
+  const line = JSON.stringify(payload);
+  // Two independent sinks on purpose. The console line is what a human reads in
+  // a failing job's log; the file survives a passing run and vitest's console
+  // suppression, so a green shard still yields the disposition record.
+  console.warn('[inbound-email-diagnostic]', line);
+  appendToDiagnosticSink(JSON.stringify({ at: new Date().toISOString(), ...payload }));
 }
