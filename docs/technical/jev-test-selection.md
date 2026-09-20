@@ -2,10 +2,13 @@
 
 CI asks TypeSafe's Jev model, for every integration suite and every browser
 journey, whether it would plausibly fail if the change under test introduced a
-bug. The answers are probabilities, recorded per PR. Today they change nothing:
-the pipeline runs in **shadow mode**, and a second job scores the judgments
-against the tests that actually ran and failed. Enforcement is a policy switch
-that stays off until the shadow evidence justifies it.
+bug. The answers are probabilities, recorded per PR. `JEV_SELECTION_MODE`
+(workflow env, overridable by a repository variable) picks the mode:
+
+- **shadow**: judgments are recorded and scored; nothing that runs changes.
+- **enforce**: the integration runner and the production browser gate read the
+  judgment for the exact revision under test and act on it, as described under
+  *Enforcement policy*.
 
 ## Why a model, and where it sits
 
@@ -62,6 +65,38 @@ downloaded artifacts:
 node scripts/evaluate-jev-selection.mjs --selection=path/to/jev-selection.json --inputs=path/to/artifacts
 ```
 
+## Enforcement policy
+
+Both runners load the judgment through `scripts/lib/jev-enforcement.mjs`, which
+applies only when the artifact is present, `judged`, recorded in `enforce`
+mode, and made for the revision being tested. Anything else runs everything.
+
+**Integration** (`scripts/run-tier1-integration.mjs`):
+
+- Harness changes (vitest config, test setup, test-utils, package and
+  tsconfig files, scripts, workflows, `.env`) still run the full directory.
+  No judgment about product behavior can narrow them.
+- Otherwise the run is the manifest floor, plus every suite the import graph
+  reaches, plus every suite Jev rates at or above the run threshold (0.5).
+  Graph-reached suites Jev rates below the prune threshold (0.2, set
+  `JEV_PRUNE_THRESHOLD=0` to disable) are deferred. Changed test files always run.
+- Migrations, seeds and service changes, which used to force the full
+  directory, now take this path too. Nightly and explicit full runs still force
+  the directory (`INTEGRATION_FORCE_FULL`).
+- The evidence records `selection.jev` with what was added and pruned.
+
+**Browser** (`e2e-tests/run.mjs`):
+
+- Collection is still the whole directory; execution is narrowed with
+  Playwright `file:line` filters.
+- Always run: every journey the provider-readiness policy names for the
+  edition, `login.spec.ts`, changed spec files, and any collected case with no
+  judgment (parameterized titles fall back to the file's strongest judgment).
+- Deferred cases are recorded with their probability in `selection.jev.deferred`.
+  The fresh-install gate accepts a `jev` selection only when every deferred
+  identity exists in the collection, sits below the threshold, and the judgment
+  revision matches; otherwise it fails as a filtered run, exactly as before.
+
 ## Graduating from shadow to enforcing
 
 The number that matters is **recall against real failures**: of the suites and
@@ -86,8 +121,8 @@ Any TypeSafe failure (missing key, 429, 529, timeout after retries) records
 - Vitest per-test selection is deliberately not attempted. Measured on the
   nightly, about 60% of integration runtime is per-file overhead, and 131 of
   294 suites hold module-level state that later tests may depend on.
-- The evidence gate (`scripts/lib/test-execution-evidence.mjs`) requires every
-  collected test to execute. Enforcing mode must record deferred tests as
-  deliberately deferred with their probability, which is not yet implemented.
+- Recall among deferred tests is only observable in the nightly full run,
+  which never reads a judgment. The evaluation job measures recall among the
+  tests that executed.
 - Table extraction is regex-based. A suite that reaches tables only through
   shared fixtures is described by its titles and imports instead.

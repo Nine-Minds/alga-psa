@@ -4,6 +4,7 @@
 // the decision; scripts/evaluate-jev-selection.mjs scores it against what the
 // real run executed and failed. Enforcing mode is gated on that evidence.
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readChangedFiles } from './lib/integration-selection.mjs';
@@ -11,11 +12,16 @@ import { digestChange, readChangeContext, readUnifiedDiff } from './lib/change-d
 import { digestTestPath, findTestFiles } from './lib/test-digest.mjs';
 import { createTypeSafeClient } from './lib/typesafe-client.mjs';
 import { buildRequests, decideSelection, judgeCandidates, DEFAULT_THRESHOLD } from './lib/jev-test-selection.mjs';
+import { providerFloorFiles } from './lib/jev-enforcement.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const INTEGRATION_DIRS = ['server/src/test/integration', 'ee/temporal-workflows/src/__tests__/integration'];
 const BROWSER_DIRS = ['e2e-tests/tests'];
 const manifestPath = 'server/src/test/integration/tier1.manifest.json';
+const providerPolicyPath = 'scripts/browser-provider-requirements.json';
+// Sign-in is the boot smoke for the browser lane; everything else the browser
+// floor contains is what provider readiness already requires.
+const BROWSER_FLOOR = ['e2e-tests/tests/login.spec.ts'];
 const mode = process.env.JEV_SELECTION_MODE || 'shadow';
 const dryRun = process.env.JEV_DRY_RUN === '1';
 const threshold = Number(process.env.JEV_THRESHOLD || DEFAULT_THRESHOLD);
@@ -32,14 +38,18 @@ function summarize(lines) {
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
 }
 
-function finish(selection, exitCode = 0) {
+// The artifact carries the outcome; the job itself never fails, because a
+// failed judgment must degrade to "run everything", not block the pipeline.
+function finish(selection) {
   selection.elapsed_ms = Date.now() - started;
   writeFileSync(path.join(output, 'jev-selection.json'), JSON.stringify(selection, null, 2) + '\n');
-  process.exit(mode === 'shadow' ? 0 : exitCode);
+  process.exit(0);
 }
 
 const base = process.env.JEV_BASE_SHA || process.env.TIER1_BASE_SHA || '';
-const head = process.env.JEV_HEAD_SHA || process.env.TIER1_HEAD_SHA || 'HEAD';
+const headRef = process.env.JEV_HEAD_SHA || process.env.TIER1_HEAD_SHA || 'HEAD';
+// Record the resolved revision: the runners bind a judgment to the exact SHA they test.
+const head = spawnSync('git', ['rev-parse', '--verify', '--end-of-options', `${headRef}^{commit}`], { cwd: root, encoding: 'utf8' }).stdout.trim() || headRef;
 const selection = { schemaVersion: 1, mode, status: 'pending', base: base || null, head, threshold };
 
 try {
@@ -66,6 +76,9 @@ try {
   const floor = paths.map(entry => path.posix.normalize(path.posix.join('server', entry)));
   const always = new Set(changed.filter(file => suiteFiles.includes(file) || file.startsWith('e2e-tests/tests/')));
   for (const file of suiteFiles) if (floor.some(entry => file === entry || file.startsWith(`${entry}/`))) always.add(file);
+  const providerPolicy = JSON.parse(readFileSync(path.join(root, providerPolicyPath), 'utf8'));
+  for (const edition of Object.keys(providerPolicy.editions ?? {})) for (const file of providerFloorFiles(providerPolicy, edition)) always.add(file);
+  for (const file of BROWSER_FLOOR) always.add(file);
   selection.always = [...always].sort();
 
   const requests = { suite: buildRequests({ change, candidates: suites, kind: 'suite' }), 'browser-test': buildRequests({ change, candidates: browser, kind: 'browser-test' }) };
@@ -119,5 +132,5 @@ try {
   selection.status = 'failed';
   selection.reason = error.message;
   warn(`Jev selection failed: ${error.message}`);
-  finish(selection, 1);
+  finish(selection);
 }

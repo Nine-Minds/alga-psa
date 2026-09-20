@@ -61,3 +61,22 @@ test('a filtered or unspecified run cannot become full execution through an empt
     }
   }
 });
+
+test('a judged browser run is accepted only with its threshold, deferred cases and matching revision', t => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'candidate-jev-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const revision = 'a'.repeat(40);
+  for (const file of ['collected.json', 'results.json', 'collected-tests.json']) writeFileSync(path.join(directory, file), '{}');
+  const write = selection => writeFileSync(path.join(directory, 'evidence.json'), JSON.stringify({ schemaVersion: 1, status: 'passed',
+    source: { before: { revision, dirty: false, changes: [] }, after: { revision, dirty: false, changes: [] } }, selection }));
+  const jev = { threshold: 0.5, revision, deferred: [{ identity: ['e2e-tests/tests/a.spec.ts', 'p', 'p', ['t']], probability: 0.1 }] };
+  write({ mode: 'jev', filters: ['tests/b.spec.ts:3'], jev });
+  const bundle = readCandidateExecutionBundle({ id: 'playwright-enterprise', format: 'playwright', directory, sourceRoot: '/repo', outcome: 'success' });
+  assert.deepEqual(bundle.jev, jev);
+  assert.deepEqual(bundle.filters, ['tests/b.spec.ts:3']);
+  assert.throws(() => readCandidateExecutionBundle({ id: 'vitest-enterprise', format: 'vitest', directory, sourceRoot: '/repo' }), /full selection/);
+  for (const broken of [{ ...jev, revision: 'b'.repeat(40) }, { ...jev, threshold: '0.5' }, { ...jev, deferred: null }, undefined]) {
+    write({ mode: 'jev', filters: [], jev: broken });
+    assert.throws(() => readCandidateExecutionBundle({ id: 'playwright-enterprise', format: 'playwright', directory, sourceRoot: '/repo' }), /Judged execution must record/);
+  }
+});

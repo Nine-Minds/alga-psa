@@ -40,12 +40,14 @@ jobs:
         env:
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           TIER1_HEAD_SHA: ${{ github.sha }}
-  # Shadow: Jev judges every integration suite and browser test against the
-  # change and records probabilities. Nothing reads the decision yet; the
-  # evaluation job below scores it against what really ran and failed.
-  # Without TYPESAFE_API_KEY the job records "unavailable" and passes.
+  # Jev judges every integration suite and browser journey against the change.
+  # JEV_SELECTION_MODE below chooses between "shadow" (record only; the
+  # evaluation job scores it) and "enforce" (the integration runner and the
+  # production browser gate read the judgment for this exact revision).
+  # The job never fails: without a key, or on any API error, it records
+  # "unavailable" and every downstream lane runs everything.
   jev-selection:
-    name: Jev test selection (shadow)
+    name: Jev test selection
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

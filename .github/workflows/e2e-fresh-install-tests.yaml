@@ -274,6 +274,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The Jev judgment for this revision narrows the browser run to the
+      # provider floor, sign-in, changed journeys and confident matches.
+      # Absent, the gate runs every journey as before.
+      - name: Download Jev judgment
+        if: needs.changes.outputs.run_tests == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: jev-selection
+          path: test-results/jev-selection
+
       - name: Set up test environment secrets and .env
         if: needs.changes.outputs.run_tests == 'true'
         run: |

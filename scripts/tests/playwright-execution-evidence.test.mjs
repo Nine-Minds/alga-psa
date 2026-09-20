@@ -106,3 +106,21 @@ test('absent, empty, cancelled and malformed browser reports fail explicitly', (
   }
   assert.throws(() => playwrightTests(null, '/repo'), /invalid Playwright report/);
 });
+
+test('deferred cases are excused from execution only when they exist in the collection', () => {
+  const collected = report();
+  collected.suites[0].suites[0].specs.push({ title: 'exports ledger', file: 'invoice.spec.ts', tests: [{
+    projectId: 'ce', projectName: 'community', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed', retry: 0, errors: [] }] }] });
+  const identity = ['e2e-tests/tests/invoice.spec.ts', 'ce', 'community', ['invoice', 'exports ledger']];
+  const deferredRun = check({ collected, deferred: [{ identity, probability: 0.1 }] });
+  assert.equal(deferredRun.status, 'passed', deferredRun.failures.join('\n'));
+  assert.equal(deferredRun.counts.deferred, 1);
+  assert.equal(deferredRun.expectedTests.length, 1);
+  assert.match(check({ collected }).failures.join('\n'), /Collected\/executed browser count differs/);
+  assert.match(check({ deferred: [{ identity: ['e2e-tests/tests/other.spec.ts', 'ce', 'community', ['x']], probability: 0.1 }] }).failures.join('\n'), /not in the collection/);
+  assert.match(check({ deferred: [{ identity, probability: 'low' }] }).failures.join('\n'), /Invalid deferred entry/);
+  const all = check({ collected, report: { ...report(), suites: [], stats: { expected: 0, unexpected: 0, skipped: 0, flaky: 0 } },
+    deferred: [{ identity, probability: 0.1 }, { identity: ['e2e-tests/tests/invoice.spec.ts', 'ce', 'community', ['invoice', 'retains balance']], probability: 0.2 }] });
+  assert.match(all.failures.join('\n'), /Every collected browser case was deferred/);
+  assert.equal(playwrightTests(report(), '/repo')[0].line, undefined, 'line is carried only when the report has one');
+});

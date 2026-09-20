@@ -173,9 +173,21 @@ jobs:
           echo -n "test_password" > secrets/db_password_server
           chmod 600 secrets/*
 
+      # The Jev judgment for this revision, when the calling workflow produced
+      # one. Absent (nightly, dispatch, or an unavailable key) the runner keeps
+      # its deterministic selection.
+      - name: Download Jev judgment
+        if: github.event_name != 'schedule'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: jev-selection
+          path: test-results/jev-selection
+
       # Manifest floor + every suite whose import graph reaches the diff
-      # (scripts/run-tier1-integration.mjs). Schema/harness changes widen this
-      # to the full directory; unavailable change evidence also requires full coverage.
+      # (scripts/run-tier1-integration.mjs), pruned and extended by the Jev
+      # judgment. Harness changes widen this to the full directory; unavailable
+      # change evidence also requires full coverage.
       - name: Run Tier-1 integration subset
         id: tier1
         if: github.event_name != 'schedule' && github.event.inputs.suite != 'full' && needs.check-changes.outputs.full != 'true'
@@ -185,6 +197,7 @@ jobs:
           TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          JEV_SELECTION_PATH: ${{ github.workspace }}/test-results/jev-selection/jev-selection.json
 
       - name: Run full integration suite
         id: full
@@ -192,11 +205,16 @@ jobs:
         working-directory: ./server
         # Use the same runner as Tier-1 so the mandatory floor is validated
         # against actual collection even when the entire directory is selected.
+        # Nightly and explicit full runs force the directory. A PR whose change
+        # sits outside the import graph keeps its base so a Jev judgment can
+        # narrow schema and service changes; harness changes still run everything.
         run: npm run test:integration:tier1 -- --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results-integration.json
         env:
           TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
-          TIER1_BASE_SHA: ''
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          INTEGRATION_FORCE_FULL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full') && 'true' || 'false' }}
+          JEV_SELECTION_PATH: ${{ github.workspace }}/test-results/jev-selection/jev-selection.json
 
       - name: Upload integration execution diagnostics
         if: always()
