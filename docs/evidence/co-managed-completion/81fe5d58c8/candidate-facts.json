@@ -1,0 +1,417 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-09-20T16:35:11.373Z",
+  "candidate": "7bf732fd3f4107d06c129969c632a46d32d3b04b",
+  "worktreeClean": true,
+  "pr": {
+    "number": 3363,
+    "head": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+    "state": "OPEN",
+    "isDraft": false
+  },
+  "mergeability": {
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "BLOCKED",
+    "checkedAtSha": "fb2e696645023b24371a93805ed1fe3ae94e036b"
+  },
+  "ci": {
+    "runId": "35522723445",
+    "status": "in_progress",
+    "conclusion": "",
+    "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+    "checks": [
+      {
+        "name": "selection",
+        "jobId": 106110152351,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "node / Appliance Node execution complete",
+        "jobId": 106110152474,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / workspace-runtime execution complete",
+        "jobId": 106110152479,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "integration / Check for relevant changes",
+        "jobId": 106110152515,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "mobile / Mobile reproducibility checks",
+        "jobId": 106110152519,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Nx affected unit tests",
+        "jobId": 106110152523,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / server-colocated execution complete",
+        "jobId": 106110152533,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "node / Browser test discovery",
+        "jobId": 106110152538,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Server unit shard 3",
+        "jobId": 106110152545,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / nx-tooling execution complete",
+        "jobId": 106110152547,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / AI gateway execution complete",
+        "jobId": 106110152551,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Server unit shard 4",
+        "jobId": 106110152554,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / ui-kit-showcase execution complete",
+        "jobId": 106110152559,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "node / Node tooling execution complete",
+        "jobId": 106110152564,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Skipped-test budget",
+        "jobId": 106110152567,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "mobile / Mobile dependency audit (report)",
+        "jobId": 106110152609,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / Enterprise unit shard 1",
+        "jobId": 106110152612,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / workspace-unit execution complete",
+        "jobId": 106110152617,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Server unit shard 1",
+        "jobId": 106110152625,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "unit / Server unit shard 2",
+        "jobId": 106110152627,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / changes",
+        "jobId": 106110152648,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "mobile / Mobile lint + typecheck",
+        "jobId": 106110152653,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / Enterprise integration execution complete",
+        "jobId": 106110152701,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / Enterprise unit shard 3",
+        "jobId": 106110152707,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "workspace / Enterprise unit shard 2",
+        "jobId": 106110152723,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "mobile / Mobile unit tests",
+        "jobId": 106110152881,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / Standalone browser collection",
+        "jobId": 106110217197,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "integration / Workspace database tests",
+        "jobId": 106110228011,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "integration / Integration shard 3",
+        "jobId": 106110228018,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": true
+      },
+      {
+        "name": "integration / Integration shard 2",
+        "jobId": 106110228032,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": true
+      },
+      {
+        "name": "integration / Integration shard 1",
+        "jobId": 106110228049,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": true
+      },
+      {
+        "name": "integration / Infrastructure shard 1",
+        "jobId": 106110228052,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "integration / Infrastructure shard 3",
+        "jobId": 106110228059,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "integration / Integration shard 4",
+        "jobId": 106110228069,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": true
+      },
+      {
+        "name": "integration / Infrastructure shard 2",
+        "jobId": 106110228108,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "citus / Combined migrations on single-node Citus",
+        "jobId": 106110232109,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "temporal / fast-readiness",
+        "jobId": 106110232137,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "temporal / Temporal engine execution complete",
+        "jobId": 106110232153,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "temporal / docker-parity",
+        "jobId": 106110232761,
+        "status": "completed",
+        "conclusion": "skipped",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (hocuspocus, hocuspocus/Dockerfile, alga-e2e-test-hocuspocus:latest, true)",
+        "jobId": 106110258446,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (setup, setup/Dockerfile.ubuntu, alga-setup:ubuntu, true)",
+        "jobId": 106110258450,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (workflow-worker, services/workflow-worker/Dockerfile, alga-e2e-test-workflow-worker...",
+        "jobId": 106110258456,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (redis, redis/Dockerfile, alga-e2e-test-redis:latest, true)",
+        "jobId": 106110258458,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (algasim, ./packages/emulators, packages/emulators/Dockerfile, alga-e2e-test-algasim...",
+        "jobId": 106110258463,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (pgbouncer, ./pgbouncer, pgbouncer/Dockerfile, alga-e2e-test-pgbouncer:latest, true)",
+        "jobId": 106110258466,
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (server-ee, ee/server/Dockerfile.build, alga-e2e-test_server_ee_local:latest, fresh-...",
+        "jobId": 106110258470,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (email-service, services/email-service/Dockerfile, alga-e2e-test-email-service:lates...",
+        "jobId": 106110258509,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (server, Dockerfile.build, alga-e2e-test_server_ce_local:latest, fresh-install-serve...",
+        "jobId": 106110258511,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      },
+      {
+        "name": "browser / build-images (temporal-worker, ee/temporal-workflows/Dockerfile, alga-e2e-test-temporal-worker:la...",
+        "jobId": 106110258552,
+        "status": "in_progress",
+        "conclusion": "",
+        "headSha": "fb2e696645023b24371a93805ed1fe3ae94e036b",
+        "mandatory": false
+      }
+    ]
+  }
+}
