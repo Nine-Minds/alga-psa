@@ -249,13 +249,23 @@ describe('Ticket bundling client portal author resolution', () => {
       path.resolve(__dirname, '../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets.ts'),
       'utf8'
     );
-    const start = source.indexOf('const conversationsQuery = scopedDb.table(');
+    // Anchor on the requester-visibility base query, not on the conversation
+    // query alone: the portal conversation list is a clone of that base query,
+    // so the base table, its audience filter and the bundle mirror join must
+    // all fall inside the guarded region for the assertions below to mean
+    // anything. This region is a superset of the one this test guarded when the
+    // conversation query still opened its own `comments` scan.
+    const start = source.indexOf("const visibleCommentsQuery = scopedDb.table('comments');");
     const end = source.indexOf('const [ticket, conversations, documents, users, linkedAssets]', start);
 
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
 
     const section = source.slice(start, end);
+    // Requester isolation: conversations must stay a clone of the audience
+    // filtered base query rather than reopening an unfiltered `comments` scan.
+    expect(section).toContain('const conversationsQuery = visibleCommentsQuery.clone();');
+    expect(section).toContain("commentAudienceSql(trx, 'ct', 'root', 'comments'), 'requester'");
     expect(section).toContain("scopedDb.tenantJoin(conversationsQuery, 'ticket_bundle_mirrors as bm'");
     expect(section).toContain("'bm.source_comment_id as bundle_mirror_source_comment_id'");
     expect(section).not.toContain('tickets as mt');
