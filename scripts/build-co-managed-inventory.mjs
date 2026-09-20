@@ -113,7 +113,7 @@ const EVIDENCE = {
   },
   'inbound-diagnostics-regression': {
     type: 'automated',
-    sha: 'pending-commit',
+    sha: '57987f45c3',
     command: 'server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts',
     result: '10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the '
       + 'separately-compiled-copy case.',
