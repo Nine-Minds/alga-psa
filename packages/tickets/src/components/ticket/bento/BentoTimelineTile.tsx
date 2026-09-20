@@ -219,6 +219,40 @@ function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string 
   const activity = entry.activity;
   if (!activity) return t('bento.timeline.ticketUpdated', 'Ticket updated');
   const actor = activity.actor_display_name || t('bento.timeline.systemActor', 'System');
+
+  // Bundle propagation carries its own outcome in `details`; a bare event label
+  // ("bundle status propagated") cannot say whether children were touched.
+  // Mirrors TicketActivityTimeline.describeActivity.
+  // LEVERAGE: pattern propagation-event-labels — this branch duplicates the
+  // TICKET_BUNDLE_STATUS_PROPAGATED wording in TicketActivityTimeline.tsx; the
+  // two timeline renderers could share one event-label function.
+  if (activity.event_type === 'TICKET_BUNDLE_STATUS_PROPAGATED') {
+    const details = (activity.details ?? {}) as {
+      action?: string;
+      propagated?: boolean;
+      child_ticket_ids?: string[];
+    };
+    if (details.propagated === false) {
+      return t(
+        'bento.timeline.bundleStatusNotPropagated',
+        '{{actor}} changed the bundle master status (children not updated)',
+        { actor },
+      );
+    }
+    const count = details.child_ticket_ids?.length ?? 0;
+    return details.action === 'reopen'
+      ? t(
+          'bento.timeline.bundleStatusReopened',
+          '{{actor}} reopened the bundle master and {{count}} child ticket(s)',
+          { actor, count },
+        )
+      : t(
+          'bento.timeline.bundleStatusClosed',
+          '{{actor}} closed the bundle master and {{count}} child ticket(s)',
+          { actor, count },
+        );
+  }
+
   const changes = activity.changes ?? {};
   const changeLines = Object.entries(changes).map(([field, change]) => {
     const from = change?.oldLabel ?? null;

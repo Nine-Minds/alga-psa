@@ -12374,6 +12374,155 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_clients_id_notes",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/notes",
+    "displayName": "Get client notes",
+    "summary": "Get client notes",
+    "description": "Returns the BlockNote content of the client notes document (the rich-text notes shown on the client page), or null fields when no notes exist.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "document": {
+              "description": "The linked notes document row, or null when the client has no notes."
+            },
+            "blockData": {
+              "description": "BlockNote block array for the notes body, or null."
+            },
+            "lastUpdated": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ISO timestamp of the last notes update, or null."
+            }
+          },
+          "required": [
+            "lastUpdated"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_clients_id_notes",
+    "method": "put",
+    "path": "/api/v1/clients/{id}/notes",
+    "displayName": "Update client notes",
+    "summary": "Update client notes",
+    "description": "Creates or replaces the BlockNote notes document linked to the client. Send the full block array; partial updates are not merged. Returns the document id.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "blockData": {
+          "description": "Full BlockNote block array (or its JSON string). Replaces the existing notes document."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "document_id"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_clients_id_notes",
+    "method": "delete",
+    "path": "/api/v1/clients/{id}/notes",
+    "displayName": "Delete client notes",
+    "summary": "Delete client notes",
+    "description": "Unlinks the notes document from the client. Pass delete_document=true to also hard-delete the document and its block content.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "delete_document",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_contacts",
     "method": "get",
     "path": "/api/v1/contacts",
@@ -19575,9 +19724,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_financial_tax_rates",
     "method": "get",
     "path": "/api/v1/financial/tax/rates",
-    "displayName": "List financial tax rates (transaction list wiring)",
-    "summary": "List financial tax rates (transaction list wiring)",
-    "description": "Route file currently maps to ApiFinancialController.list(), so the response is the generic financial transaction list rather than a tax-rate list.",
+    "displayName": "List tax rates",
+    "summary": "List tax rates",
+    "description": "Returns tenant-scoped tax rates. cap_amount is a safe integer in currency_code minor units, or null for no cap; zero is intentional. A null currency applies to all invoice currencies, including unresolved legacy caps. Caps apply per rate contribution and per period segment, not to component-based composite calculations. Requires financial:read, billing:read and PSA product access. This route exposes GET only; no tax-rate mutation endpoints are added.",
     "tags": [
       "Financial"
     ],
@@ -19604,7 +19753,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "created_at",
+            "updated_at",
+            "region_code",
+            "tax_percentage",
+            "start_date",
+            "end_date",
+            "cap_amount",
+            "currency_code"
+          ],
+          "default": "created_at"
         }
       },
       {
@@ -19616,7 +19776,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "enum": [
             "asc",
             "desc"
-          ]
+          ],
+          "default": "desc"
         }
       },
       {
@@ -19632,7 +19793,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -19640,7 +19802,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -19648,7 +19811,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -19656,29 +19820,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "client_id",
-        "in": "query",
-        "required": false,
-        "schema": {
           "type": "string",
-          "format": "uuid"
+          "format": "date-time"
         }
       },
       {
-        "name": "invoice_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "type",
+        "name": "is_active",
         "in": "query",
         "required": false,
         "schema": {
@@ -19686,7 +19833,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "status",
+        "name": "region_code",
         "in": "query",
         "required": false,
         "schema": {
@@ -19694,116 +19841,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "amount_min",
+        "name": "effective_date",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_max",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "include_expired",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
           ]
-        }
-      },
-      {
-        "name": "expiring_soon",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
         }
       }
     ],
@@ -19814,23 +19865,108 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
+            "properties": {
+              "tax_rate_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "region_code": {
+                "type": "string"
+              },
+              "tax_percentage": {
+                "type": "number"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "start_date": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                ]
+              },
+              "end_date": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cap_amount": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Tax cap in currency_code minor units; null is uncapped, zero charges zero on supported calculation paths."
+              },
+              "currency_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_active": {
+                "type": "boolean"
+              },
+              "is_composite": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "tax_rate_id",
+              "region_code",
+              "tax_percentage",
+              "cap_amount",
+              "currency_code",
+              "tenant"
+            ]
           }
         },
         "pagination": {
           "type": "object",
           "properties": {
             "page": {
-              "type": "integer"
+              "type": "number"
             },
             "limit": {
-              "type": "integer"
+              "type": "number"
             },
             "total": {
-              "type": "integer"
+              "type": "number"
             },
             "totalPages": {
-              "type": "integer"
+              "type": "number"
             },
             "hasNext": {
               "type": "boolean"
@@ -19850,7 +19986,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "properties": {}
         }
       },
       "required": [
@@ -33943,6 +34079,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "enable_live_ticket_timer": {
           "type": "boolean"
+        },
+        "client_portal_visible": {
+          "type": "boolean"
         }
       },
       "description": "Payload for updating a board. All fields are optional."
@@ -45798,6 +45937,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ]
         },
+        "propagateToChildren": {
+          "type": "boolean",
+          "description": "Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children."
+        },
         "suppressContactNotifications": {
           "type": "boolean",
           "description": "When true, suppresses customer-facing email and portal notifications for this operation."
@@ -45960,7 +46103,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/bundle",
     "displayName": "Create ticket bundle",
     "summary": "Create ticket bundle",
-    "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates.",
+    "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
     "tags": [
       "Work Management v1"
     ],
@@ -46069,7 +46212,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/bundle/children",
     "displayName": "Add bundle children",
     "summary": "Add bundle children",
-    "description": "Adds child tickets to the existing bundle mastered by {id}.",
+    "description": "Adds child tickets to the existing bundle mastered by {id}. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
     "tags": [
       "Work Management v1"
     ],
@@ -49695,6 +49838,69 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "delete-_api_v1_tickets_id_comments_commentid_schedule",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/comments/{commentId}/schedule",
+    "displayName": "Cancel a scheduled comment",
+    "summary": "Cancel a scheduled comment",
+    "description": "Cancels a comment that was created with scheduled_publish_at and has not published yet. The row is retained with publish_state=canceled (soft-deleted) and its publication job is removed. Returns 400 for comments that are not scheduled.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "commentId",
+        "in": "path",
+        "required": true,
+        "description": "Comment UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Comment UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_documents",
     "method": "get",
     "path": "/api/v1/tickets/{id}/documents",
@@ -50567,6 +50773,132 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "displayName": "Delete a ticket document",
     "summary": "Delete a ticket document",
     "description": "Removes a document from a ticket.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "description": "Document UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Document UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_documents_documentid_thumbnail",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/documents/{documentId}/thumbnail",
+    "displayName": "Get a ticket document thumbnail image",
+    "summary": "Get a ticket document thumbnail image",
+    "description": "Serves the cached 200x200 cover-cropped JPEG thumbnail for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no thumbnail.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "description": "Document UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Document UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_documents_documentid_preview",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/documents/{documentId}/preview",
+    "displayName": "Get a ticket document preview image",
+    "summary": "Get a ticket document preview image",
+    "description": "Serves the cached 800x600 fit-inside JPEG preview for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no preview.",
     "tags": [
       "Work Management v1"
     ],
@@ -56495,6 +56827,29 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "status_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "is_closed",
+        "in": "query",
+        "required": false,
+        "description": "Filter by status closure; 'false' also matches interactions with no status.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Filter by status closure; 'false' also matches interactions with no status."
+        }
+      },
+      {
         "name": "date_from",
         "in": "query",
         "required": false,
@@ -57279,6 +57634,314 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "is_status_closed",
             "visibility"
           ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_interactions_id",
+    "method": "put",
+    "path": "/api/v1/interactions/{id}",
+    "displayName": "Update an interaction status or notes",
+    "summary": "Update an interaction status or notes",
+    "description": "Closes/reopens an interaction (status_id must be an interaction status) or replaces its notes. Title and timing are not editable here because they also re-sync the linked calendar entry.",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "status_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 10000
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "interaction_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "icon": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "contact_name_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "contact_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ticket_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "project_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "opportunity_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "interaction_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "start_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "end_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "status_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "is_status_closed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "internal",
+                "client_visible"
+              ]
+            }
+          },
+          "required": [
+            "tenant",
+            "interaction_id",
+            "type_id",
+            "type_name",
+            "icon",
+            "contact_name_id",
+            "contact_name",
+            "client_id",
+            "client_name",
+            "user_id",
+            "user_name",
+            "ticket_id",
+            "project_id",
+            "opportunity_id",
+            "title",
+            "notes",
+            "interaction_date",
+            "start_time",
+            "end_time",
+            "duration",
+            "status_id",
+            "status_name",
+            "is_status_closed",
+            "visibility"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_interactionstatuses",
+    "method": "get",
+    "path": "/api/v1/interaction-statuses",
+    "displayName": "List interaction statuses",
+    "summary": "List interaction statuses",
+    "description": "Tenant statuses of type interaction, in display order.",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "is_closed": {
+                "type": "boolean"
+              },
+              "is_default": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "order_number": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "status_id",
+              "name",
+              "is_closed",
+              "is_default",
+              "order_number"
+            ]
+          }
         },
         "meta": {
           "type": "object",

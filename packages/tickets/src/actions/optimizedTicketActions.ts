@@ -83,6 +83,14 @@ import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCom
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
+  propagateBundleMasterStatus,
+  previewBundleStatusPropagation,
+} from './ticketBundleUtils';
+import {
+  BundlePropagationConfirmationRequiredError,
+  type BundleStatusPropagationPreview,
+} from '../lib/ticketBundlePropagation';
+import {
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
   TICKET_STATUS_FILTER_ALL,
@@ -2467,6 +2475,12 @@ export interface UpdateTicketInTransactionOptions {
   /** Automation exemption from close rules (workflow/import/auto-close/portal); audit-logged. */
   bypassCloseRules?: { source: CloseRuleBypassSource };
   /**
+   * Sync-mode bundle master status changes that cross the open/closed boundary
+   * must choose: true propagates to affected children, false changes the master
+   * only, undefined raises BundlePropagationConfirmationRequiredError.
+   */
+  propagateToChildren?: boolean;
+  /**
    * Attribute the change to the system rather than `user` (auto-close engine):
    * closed_by stays null, events carry a SYSTEM actor, and the audit row is
    * system-sourced. `user` is still required for the call signature but is not
@@ -2655,6 +2669,27 @@ export async function updateTicketInTransaction(
       updateData.response_state = null;
     }
     const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
+
+    // Sync-mode bundle masters require an explicit propagation choice before a
+    // boundary-crossing status write. Nothing is written when we bail here.
+    if (
+      typeof updateData.status_id === 'string' &&
+      updateData.status_id !== currentTicket.status_id
+    ) {
+      const propagationPreview: BundleStatusPropagationPreview = await previewBundleStatusPropagation(
+        trx,
+        tenant,
+        id,
+        updateData.status_id,
+      );
+      if (
+        propagationPreview.crossesBoundary !== null &&
+        propagationPreview.affectedChildren.length > 0 &&
+        options?.propagateToChildren === undefined
+      ) {
+        throw new BundlePropagationConfirmationRequiredError(propagationPreview);
+      }
+    }
 
     let updatedTicket;
     
@@ -3080,69 +3115,31 @@ export async function updateTicketInTransaction(
       );
     }
 
-    // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
-    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: id })
-      .first();
-
-    if (bundleSettings?.mode === 'sync_updates') {
-      const propagateFields: Record<string, any> = {};
-      for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
-        if (Object.prototype.hasOwnProperty.call(updateData, key)) {
-          propagateFields[key] = (updateData as any)[key];
-        }
-      }
-      // Live updates diff the user-facing fields only; is_closed mirrors
-      // status_id and is added to the write below, not to the diff.
-      const liveUpdateFields = { ...propagateFields };
-      // is_closed is written to the master outside updateData (see above);
-      // children need the same denormalized flag or they read as open.
-      if (Object.prototype.hasOwnProperty.call(propagateFields, 'status_id')) {
-        propagateFields.is_closed = !!newStatus?.is_closed;
-      }
-
-      if (Object.keys(propagateFields).length > 0) {
-        const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ master_ticket_id: id })
-          .select(['ticket_id', ...Object.keys(liveUpdateFields)]);
-
-        const childPublishes = childTickets
-          .map((childTicket: Record<string, unknown>) => ({
-            ticketId: childTicket.ticket_id as string,
-            updatedFields: diffTicketFields(childTicket, liveUpdateFields),
-          }))
-          .filter((childPublish: { ticketId: string; updatedFields: ReturnType<typeof diffTicketFields> }) =>
-            childPublish.updatedFields.length > 0);
-
-        const propagate: Record<string, any> = { ...propagateFields };
-        propagate.updated_by = user.user_id;
-        propagate.updated_at = new Date().toISOString();
-        await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ master_ticket_id: id })
-          .update(propagate);
-
-        for (const childPublish of childPublishes) {
-          registerAfterCommit(trx, () =>
-            publishTicketUpdate({
-              tenantId: tenant,
-              ticketId: childPublish.ticketId,
-              updatedFields: childPublish.updatedFields,
-              updatedBy: {
-                userId: user.user_id,
-                displayName: formatLiveUpdateDisplayName(user),
-              },
-              updatedAt: propagate.updated_at,
-            }),
-            `ticket-live-update ticket=${childPublish.ticketId}`
-          );
-        }
-        // Child closes publish no TICKET_CLOSED of their own — silent or not.
-        // The master's TICKET_CLOSED carries the suppression flags, and the
-        // close subscriber both emails and (when suppressed) skips child
-        // requesters from that single event. Publishing per-child events only
-        // on silent closes made the silent path noisier than a normal close.
-      }
-    }
+    // If this is a bundle master in sync_updates mode, propagate selected
+    // workflow updates to children. Boundary-crossing changes are limited to
+    // the affected set and record/revert propagation rows; non-boundary changes
+    // keep the legacy mirror-to-all-children behaviour. Child closes publish no
+    // TICKET_CLOSED of their own — silent or not. The master's TICKET_CLOSED
+    // carries the suppression flags, and the close subscriber both emails and
+    // (when suppressed) skips child requesters from that single event.
+    await propagateBundleMasterStatus(
+      trx,
+      {
+        tenant,
+        user: {
+          user_id: user.user_id,
+          first_name: user.first_name ?? null,
+          last_name: user.last_name ?? null,
+          username: user.username ?? null,
+        },
+        isSystemActor,
+        source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
+        previousMasterStatusId: currentTicket.status_id,
+      },
+      id,
+      updateData as Record<string, unknown>,
+      { propagateToChildren: options?.propagateToChildren },
+    );
 
     // Revalidate paths to update UI
     revalidatePath(`/msp/tickets/${id}`);
@@ -3169,6 +3166,7 @@ export const updateTicketWithCache = withAuth(async (
     | 'overrideCloseRulesReason'
     | 'suppressContactNotifications'
     | 'suppressInternalNotifications'
+    | 'propagateToChildren'
   >,
 ): Promise<'success' | TicketActionError> => {
   try {
