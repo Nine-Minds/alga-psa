@@ -15,6 +15,18 @@ function candidate(id: string, approxTokens: number): SmartSearchCandidate {
     ticketNumber: `T-${id}`,
     title: `Ticket ${id}`,
     clientName: 'Acme',
+    facts: {
+      status: 'Open',
+      isClosed: false,
+      priority: 'High',
+      board: 'Support',
+      assignedTo: 'Sam Tech',
+      assignedTeam: null,
+      enteredAt: '2026-09-01T10:00:00.000Z',
+      updatedAt: '2026-09-02T10:00:00.000Z',
+      closedAt: null,
+      dueDate: null,
+    },
     description: 'desc',
     comments: [{ author: 'technician', text: 'hello' }],
     approxTokens,
@@ -72,9 +84,29 @@ describe('buildRelevanceRequest', () => {
       ticket_number: 'T-a',
       title: 'Ticket a',
       client: 'Acme',
+      status: 'Open',
+      is_closed: false,
+      priority: 'High',
+      board: 'Support',
+      assigned_to: 'Sam Tech',
+      assigned_team: null,
+      entered_at: '2026-09-01T10:00:00.000Z',
+      updated_at: '2026-09-02T10:00:00.000Z',
+      closed_at: null,
+      due_date: null,
       description: 'desc',
       comments: [{ author: 'technician', text: 'hello' }],
     });
+  });
+
+  it('names the ticket facts in the question so a literal reader knows when to use them', () => {
+    const request = buildRelevanceRequest('q', [candidate('a', 1)]);
+    const question = JSON.stringify(request.questions.c0.instructions);
+    for (const field of ['status', 'is_closed', 'priority', 'board', 'assigned_to', 'assigned_team', 'due_date', 'closed_at']) {
+      expect(question).toContain(field);
+    }
+    expect(question).toContain('only when `query` refers to such things');
+    expect(JSON.stringify(request.questions.c0.criteria?.false)).toContain('does not\nmatch'.replace('\n', ' '));
   });
 
   it('keeps the question wording stable', () => {
@@ -82,11 +114,11 @@ describe('buildRelevanceRequest', () => {
     expect(request.questions.c0).toMatchInlineSnapshot(`
       {
         "criteria": {
-          "false": "The ticket is about a different problem, request, or subject. Sharing a client, a technician, a device type, or a few incidental words does not make it relevant.",
-          "true": "The ticket concerns what the query describes, even when it uses different words, names a specific product or vendor where the query names a category, or describes a symptom of the same underlying problem.",
+          "false": "The ticket is about a different problem, request, or subject, or the query names a status, closed state, priority, board, assignee, team, or time that the ticket does not match. Sharing a client, a technician, a device type, or a few incidental words the query does not ask about does not make it relevant.",
+          "true": "The ticket concerns what the query describes, even when it uses different words, names a specific product or vendor where the query names a category, or describes a symptom of the same underlying problem. When the query mentions a status, whether the ticket is closed, a priority, a board, an assignee or team, or a time such as a due date or when it was opened, updated, or closed, the ticket matches on those too.",
         },
         "instructions": {
-          "question": "Is the support ticket at \`candidates[0]\` about the problem, request, person, device, or subject described by \`query\`?",
+          "question": "Is the support ticket at \`candidates[0]\` about the problem, request, person, device, or subject described by \`query\`? The candidate carries its current status, is_closed flag, priority, board, assigned_to, assigned_team, and entered_at, updated_at, closed_at, and due_date as ISO 8601 date-times; use them only when \`query\` refers to such things.",
         },
         "type": "noul",
       }

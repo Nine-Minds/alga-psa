@@ -1,8 +1,10 @@
 /**
  * Builds the per-ticket text Jev sees.
  *
- * Title, number, client, and description come from `tickets` (the description
- * lives in `attributes.description` and is not in the search index). Comments
+ * Title, number, client, description, and the ticket's current facts (status,
+ * closed flag, priority, board, assignee, team, dates) come from `tickets` and
+ * its lookups (the description lives in `attributes.description` and is not in
+ * the search index). Comments
  * come from `app_search_index` rows of type `ticket_comment`, already flattened
  * to plain text and carrying the same visibility columns keyword search filters
  * on, so a client-portal user's smart search never sees an internal note.
@@ -27,11 +29,32 @@ export interface SmartSearchCandidateComment {
   text: string;
 }
 
+/**
+ * Current facts about the ticket, as named text so Jev reads them the way a
+ * technician would (a status name, not an id; an ISO date, not an epoch). The
+ * chips already filter on these; they are here so a query like "closed last
+ * week by Sam" or "urgent on the Projects board" can be judged against them.
+ */
+export interface SmartSearchCandidateFacts {
+  status: string | null;
+  isClosed: boolean;
+  priority: string | null;
+  board: string | null;
+  assignedTo: string | null;
+  assignedTeam: string | null;
+  /** ISO 8601 date-times, or null. */
+  enteredAt: string | null;
+  updatedAt: string | null;
+  closedAt: string | null;
+  dueDate: string | null;
+}
+
 export interface SmartSearchCandidate {
   ticketId: string;
   ticketNumber: string;
   title: string;
   clientName: string | null;
+  facts: SmartSearchCandidateFacts;
   /** Plain text, already trimmed to budget. */
   description: string;
   /** Newest first, already trimmed to budget. */
@@ -50,6 +73,44 @@ export interface TicketTextRow {
   title: string | null;
   description: string | null;
   client_name: string | null;
+  status_name: string | null;
+  is_closed: boolean | null;
+  priority_name: string | null;
+  board_name: string | null;
+  assigned_to_name: string | null;
+  assigned_team_name: string | null;
+  entered_at: Date | string | null;
+  updated_at: Date | string | null;
+  closed_at: Date | string | null;
+  due_date: Date | string | null;
+}
+
+function toIso(value: Date | string | null | undefined): string | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function nonEmpty(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function toCandidateFacts(row: TicketTextRow): SmartSearchCandidateFacts {
+  return {
+    status: nonEmpty(row.status_name),
+    isClosed: row.is_closed === true,
+    priority: nonEmpty(row.priority_name),
+    board: nonEmpty(row.board_name),
+    assignedTo: nonEmpty(row.assigned_to_name),
+    assignedTeam: nonEmpty(row.assigned_team_name),
+    enteredAt: toIso(row.entered_at),
+    updatedAt: toIso(row.updated_at),
+    closedAt: toIso(row.closed_at),
+    dueDate: toIso(row.due_date),
+  };
 }
 
 interface CommentIndexRow {
@@ -102,7 +163,13 @@ export function assembleCandidate(
     charsForTokens(budgets.descriptionMaxTokens)
   );
 
-  let used = approxTokens(title) + approxTokens(ticketNumber) + approxTokens(clientName ?? '') + approxTokens(description);
+  const facts = toCandidateFacts(row);
+  let used =
+    approxTokens(title) +
+    approxTokens(ticketNumber) +
+    approxTokens(clientName ?? '') +
+    approxTokens(JSON.stringify(facts)) +
+    approxTokens(description);
   const kept: SmartSearchCandidateComment[] = [];
 
   for (const comment of comments) {
@@ -135,6 +202,7 @@ export function assembleCandidate(
     ticketNumber,
     title,
     clientName,
+    facts,
     description,
     comments: kept,
     approxTokens: used,
@@ -149,6 +217,14 @@ async function loadTicketTextRows(
   const db = tenantDb(trx, tenant);
   const query = db.table('tickets as t');
   db.tenantJoin(query, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
+  db.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+  db.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', {
+    type: 'left',
+    on: (join) => join.andOnVal('p.item_type', '=', 'ticket'),
+  });
+  db.tenantJoin(query, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
+  db.tenantJoin(query, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
+  db.tenantJoin(query, 'teams as tm', 't.assigned_team_id', 'tm.team_id', { type: 'left' });
   return query
     .whereIn('t.ticket_id', ticketIds)
     .select(
@@ -156,7 +232,17 @@ async function loadTicketTextRows(
       't.ticket_number',
       't.title',
       trx.raw("t.attributes->>'description' as description"),
-      'comp.client_name'
+      'comp.client_name',
+      's.name as status_name',
+      's.is_closed',
+      'p.priority_name',
+      'b.board_name',
+      trx.raw("NULLIF(TRIM(CONCAT(au.first_name, ' ', au.last_name)), '') as assigned_to_name"),
+      'tm.team_name as assigned_team_name',
+      't.entered_at',
+      't.updated_at',
+      't.closed_at',
+      't.due_date'
     );
 }
 

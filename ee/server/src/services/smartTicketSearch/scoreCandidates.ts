@@ -21,6 +21,16 @@ export type CandidateState = {
   ticket_number: string;
   title: string;
   client: string | null;
+  status: string | null;
+  is_closed: boolean;
+  priority: string | null;
+  board: string | null;
+  assigned_to: string | null;
+  assigned_team: string | null;
+  entered_at: string | null;
+  updated_at: string | null;
+  closed_at: string | null;
+  due_date: string | null;
   description: string;
   /** Newest first. */
   comments: Array<{ author: string; text: string }>;
@@ -65,10 +75,21 @@ export function packCandidateBatches(
 }
 
 export function toCandidateState(candidate: SmartSearchCandidate): CandidateState {
+  const { facts } = candidate;
   return {
     ticket_number: candidate.ticketNumber,
     title: candidate.title,
     client: candidate.clientName,
+    status: facts.status,
+    is_closed: facts.isClosed,
+    priority: facts.priority,
+    board: facts.board,
+    assigned_to: facts.assignedTo,
+    assigned_team: facts.assignedTeam,
+    entered_at: facts.enteredAt,
+    updated_at: facts.updatedAt,
+    closed_at: facts.closedAt,
+    due_date: facts.dueDate,
     description: candidate.description,
     comments: candidate.comments.map((comment) => ({ author: comment.author, text: comment.text })),
   };
@@ -78,10 +99,14 @@ export const RELEVANCE_CRITERIA = {
   true:
     'The ticket concerns what the query describes, even when it uses different words, ' +
     'names a specific product or vendor where the query names a category, or describes ' +
-    'a symptom of the same underlying problem.',
+    'a symptom of the same underlying problem. When the query mentions a status, whether ' +
+    'the ticket is closed, a priority, a board, an assignee or team, or a time such as a ' +
+    'due date or when it was opened, updated, or closed, the ticket matches on those too.',
   false:
-    'The ticket is about a different problem, request, or subject. Sharing a client, a ' +
-    'technician, a device type, or a few incidental words does not make it relevant.',
+    'The ticket is about a different problem, request, or subject, or the query names a ' +
+    'status, closed state, priority, board, assignee, team, or time that the ticket does not ' +
+    'match. Sharing a client, a technician, a device type, or a few incidental words the ' +
+    'query does not ask about does not make it relevant.',
 } as const;
 
 export function relevanceQuestion(index: number): NoulQuestion {
@@ -90,7 +115,10 @@ export function relevanceQuestion(index: number): NoulQuestion {
     instructions: {
       question:
         `Is the support ticket at \`candidates[${index}]\` about the problem, request, ` +
-        'person, device, or subject described by `query`?',
+        'person, device, or subject described by `query`? The candidate carries its ' +
+        'current status, is_closed flag, priority, board, assigned_to, assigned_team, and ' +
+        'entered_at, updated_at, closed_at, and due_date as ISO 8601 date-times; use them ' +
+        'only when `query` refers to such things.',
     },
     criteria: { ...RELEVANCE_CRITERIA },
   };
