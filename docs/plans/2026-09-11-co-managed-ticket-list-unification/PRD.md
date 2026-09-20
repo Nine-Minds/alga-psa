@@ -1,7 +1,15 @@
 # Co-managed tickets in the existing ticket list
 
+## Current acceptance status — 2026-09-20
+
+**Draft implementation; acceptance incomplete.** The [whole-card completion PRD](../2026-09-20-co-managed-it-completion/PRD.md) now governs completion alongside this document's detailed requirements. Existing implementation flags record code presence; they do not certify current tests, complete user journeys or review readiness. Every ID must be reconciled into the candidate evidence manifest. Known blockers, stale/missing evidence and unchecked requirements keep human-review readiness false. Board transitions remain the XO/captain's responsibility.
+
+The historical checklist records 18/39 implemented features and 2/20 implemented tests. Reconcile all 21 unchecked features and tests T002–T019 through C1/C4; close missing behavior and attach current proof for behavior already implemented. Source-state recovery, qualified identity/export, uncertain handback recovery, error redaction and UI boundaries remain required.
+
+## Original design baseline
+
 - Date: 2026-09-11
-- Status: Draft for implementation review
+- Original status: Draft for implementation review; current acceptance is stated above
 - Slug: `co-managed-ticket-list-unification`
 
 ## Summary

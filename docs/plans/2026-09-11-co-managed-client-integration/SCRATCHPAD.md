@@ -1,5 +1,11 @@
 # Co-managed client integration notes
 
+## Current completion authority — 2026-09-20
+
+The [whole-card correction plan](../2026-09-20-co-managed-it-completion/PRD.md) governs readiness. Historical implementation/test flags below are preserved and now carry a separate pending candidate-acceptance status. No product tests were run in this documentation revision. Required open rows must be reconciled and verified; a finished assignment or older smoke does not close this plan. Follow C1–C8 and the final candidate verifier before requesting XO review eligibility. Existing live-provider exclusions remain explicit production prerequisites, with in-card simulator/signed-test-license journeys still required.
+
+## Historical working notes
+
 ## Decisions
 
 - Use `docs/plans/` for this follow-on to the [original implementation plan](../2026-09-06-co-managed-it-plan.md).

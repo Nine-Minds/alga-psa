@@ -1,5 +1,7 @@
 # Co-managed IT requirement audit: T08–T15
 
+> Current status, 2026-09-20: this is historical source/validation evidence. The [completion and correction PRD](2026-09-20-co-managed-it-completion/PRD.md) requires current-candidate acceptance for every T01–T22 contract and both UI follow-ons. “Implemented” below does not certify current CI or complete browser/provider/runtime journeys. Human-review readiness remains blocked.
+
 Reviewed 2026-09-08 against the approved opening requirements and behavioral table in `2026-09-06-co-managed-it-plan.md`; updated after the routing, billing, requester portal/email and task disclosure follow-ups. Evidence below combines source review with focused Node and isolated migrated-PG runs. No full build, complete suite, live provider send or browser journey is claimed.
 
 The previously identified routing notification, billing-profile selection, actual invoice-generation, requester task portal/email and posted task attachment gaps are closed. Explicit task disclosure is committed in `a29642ce49`, with seven task PG journeys, five ticket regressions and 51 UI/action checks passing. Remaining release validation includes browser journeys and actual scheduler execution; it does not indicate a newly discovered implementation defect.

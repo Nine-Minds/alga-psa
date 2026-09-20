@@ -6,7 +6,9 @@
     "milestone": "M1",
     "prdRefs": [
       "PRD.md#target-resolution-and-api-changes"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F002",
@@ -15,7 +17,9 @@
     "milestone": "M1",
     "prdRefs": [
       "PRD.md#re-key-resolvetarget"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F003",
@@ -24,7 +28,9 @@
     "milestone": "M1",
     "prdRefs": [
       "PRD.md#cardinality-and-stale-selection"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F004",
@@ -33,7 +39,9 @@
     "milestone": "M1",
     "prdRefs": [
       "PRD.md#cardinality-and-stale-selection"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F005",
@@ -42,7 +50,9 @@
     "milestone": "M1",
     "prdRefs": [
       "PRD.md#consumers-and-operation-identities"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F006",
@@ -51,7 +61,9 @@
     "milestone": "M1",
     "prdRefs": [
       "PRD.md#consumers-and-operation-identities"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F007",
@@ -60,7 +72,9 @@
     "milestone": "M1",
     "prdRefs": [
       "PRD.md#legacy-links"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F008",
@@ -70,7 +84,9 @@
     "prdRefs": [
       "PRD.md#summary-and-state",
       "PRD.md#consumers-and-operation-identities"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F009",
@@ -79,7 +95,9 @@
     "milestone": "M2",
     "prdRefs": [
       "PRD.md#entry-and-composition"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F010",
@@ -88,7 +106,9 @@
     "milestone": "M2",
     "prdRefs": [
       "PRD.md#summary-and-state"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F011",
@@ -97,7 +117,9 @@
     "milestone": "M2",
     "prdRefs": [
       "PRD.md#entry-and-composition"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F012",
@@ -107,7 +129,9 @@
     "prdRefs": [
       "PRD.md#entry-and-composition",
       "PRD.md#boundary-inventory"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F013",
@@ -116,7 +140,9 @@
     "milestone": "M2",
     "prdRefs": [
       "PRD.md#entry-and-composition"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F014",
@@ -125,7 +151,9 @@
     "milestone": "M3",
     "prdRefs": [
       "PRD.md#summary-and-state"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F015",
@@ -135,7 +163,9 @@
     "prdRefs": [
       "PRD.md#summary-and-state",
       "PRD.md#consumers-and-operation-identities"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F016",
@@ -145,7 +175,9 @@
     "prdRefs": [
       "PRD.md#summary-and-state",
       "PRD.md#purchasing-and-allocation"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F017",
@@ -154,7 +186,9 @@
     "milestone": "M3",
     "prdRefs": [
       "PRD.md#summary-and-state"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F018",
@@ -164,7 +198,9 @@
     "prdRefs": [
       "PRD.md#summary-and-state",
       "PRD.md#cardinality-and-stale-selection"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F019",
@@ -173,7 +209,9 @@
     "milestone": "M4",
     "prdRefs": [
       "PRD.md#separate-relationship-state-from-billing-readiness"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F020",
@@ -183,7 +221,9 @@
     "prdRefs": [
       "PRD.md#separate-relationship-state-from-billing-readiness",
       "PRD.md#purchase-degradation-matrix"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F021",
@@ -192,7 +232,9 @@
     "milestone": "M4",
     "prdRefs": [
       "PRD.md#client-shortfall-flow"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F022",
@@ -202,7 +244,9 @@
     "prdRefs": [
       "PRD.md#client-shortfall-flow",
       "PRD.md#purchase-degradation-matrix"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F023",
@@ -212,7 +256,9 @@
     "prdRefs": [
       "PRD.md#client-shortfall-flow",
       "PRD.md#purchase-degradation-matrix"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F024",
@@ -222,7 +268,9 @@
     "prdRefs": [
       "PRD.md#client-shortfall-flow",
       "PRD.md#full-pool-management"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F025",
@@ -231,7 +279,9 @@
     "milestone": "M4",
     "prdRefs": [
       "PRD.md#full-pool-management"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F026",
@@ -240,7 +290,9 @@
     "milestone": "M4",
     "prdRefs": [
       "PRD.md#purchase-degradation-matrix"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F027",
@@ -249,7 +301,9 @@
     "milestone": "M5",
     "prdRefs": [
       "PRD.md#global-overview-and-work-integration"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F028",
@@ -259,7 +313,9 @@
     "prdRefs": [
       "PRD.md#global-overview-and-work-integration",
       "PRD.md#legacy-links"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F029",
@@ -268,7 +324,9 @@
     "milestone": "M5",
     "prdRefs": [
       "PRD.md#global-overview-and-work-integration"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F030",
@@ -277,7 +335,9 @@
     "milestone": "M5",
     "prdRefs": [
       "PRD.md#global-overview-and-work-integration"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F031",
@@ -287,7 +347,9 @@
     "prdRefs": [
       "PRD.md#t21-boundary-and-evidence-updates",
       "PRD.md#boundary-inventory"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F032",
@@ -298,7 +360,9 @@
       "PRD.md#entry-and-composition",
       "PRD.md#required-evidence",
       "PRD.md#verification-and-rollout"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "F033",
@@ -308,6 +372,8 @@
     "prdRefs": [
       "PRD.md#required-evidence",
       "PRD.md#milestones"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   }
 ]

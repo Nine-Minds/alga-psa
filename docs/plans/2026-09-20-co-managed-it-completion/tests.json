@@ -1,0 +1,315 @@
+[
+  {
+    "id": "CT001",
+    "description": "Inventory all foundation T01-T22 and every feature/test ID in both follow-on plans; fail on absent/duplicate/unmapped IDs, silently removed scope or true flags without acceptance records. Preserve T018/T019 real-provider requirements as external evidence, not simulator passes.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "plan-and-evidence-audit",
+    "featureIds": [
+      "CF001",
+      "CF032"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT002",
+    "description": "Reproduce or capture in instrumented CI the original-seed requester failure; preserve safe first-error diagnostics and identify the causal difference. Original full shard must pass after the fix and a targeted regression or mutation must detect its removal.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "integration-ci",
+    "featureIds": [
+      "CF002",
+      "CF003",
+      "CF029"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT003",
+    "description": "Migrated DB: pause after tentative requester admission writes; expect defer/co_managed_read_only, unchanged comments, zero effects/outbox, received inbox, refunded attempt and retained source. Cover separate compiled constructors and both worker compositions; unknown error remains retry and unauthorized/malformed requester remains quarantined without native fallback.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "integration",
+    "featureIds": [
+      "CF003",
+      "CF004"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT004",
+    "description": "Run deferred requester delivery through the real worker, renew entitlement and replay the same inbox twice; assert one reply/effect and no lost source or inflated attempts. Include native/non-requester regression.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "worker-integration",
+    "featureIds": [
+      "CF004",
+      "CF020"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT005",
+    "description": "Run requester tests in standalone, original CI shard seed 20260610 and one additional shuffled order with the CE+EE overlay, clean built artifacts and CI runtime DB selection. Prove finite first-error reporting and no weakened lane/collection/expectation or clone-source pin.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "integration-ci",
+    "featureIds": [
+      "CF002",
+      "CF003",
+      "CF029"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT006",
+    "description": "Browser plus migrated actions: customer Email/Open Providers and identity/directory links open allowed configuration and return correctly; save/reload tenant-owned settings. Deny unrelated integration categories, direct URLs/actions, foreign tenant callbacks, secret reads and ungranted delegated roles. Preserve native PSA/AlgaDesk configuration.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-integration",
+    "featureIds": [
+      "CF005",
+      "CF006"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT007",
+    "description": "Fresh client through real provisioning/invitation/setup/acceptance: capture send completion outside the retaining transaction, one retained activation/allocation, retry recovery and stale-token acknowledgment denial. Cover last-seat invitation/acceptance concurrency and failed/cancelled setup using disposable fixtures.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-and-integration",
+    "featureIds": [
+      "CF010"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT008",
+    "description": "Real application Microsoft sign-in against approved OIDC simulation: discovery, authorization callback, signature/state/nonce/audience/tenant validation and session binding. Reject forged/wrong-tenant/wrong-issuer callbacks; verify server-only test configuration and production/default native authentication behavior.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-provider-integration",
+    "featureIds": [
+      "CF007"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT009",
+    "description": "Configure customer inbound mail and directory through normal UI, then deliver vendor events to running workers. Assert customer-owned ticket/reply and directory membership with seat enforcement; duplicates, expired/revoked credentials, cross-tenant sender/provider, paused intake and renewal cannot leak or duplicate. Distinguish calendar sync and SMTP from these flows.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-provider-integration",
+    "featureIds": [
+      "CF008",
+      "CF009"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT010",
+    "description": "Exercise native\u2192working\u2192oversight\u2192native and browser Back/Forward/detail return/create navigation with native boards/defaults/bundles/filters/columns/selection preserved. Cover global, client page/drawer, legacy and qualified initial URLs. Map follow-on T002/T005/T008/T009/T016/T018.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-and-component",
+    "featureIds": [
+      "CF011",
+      "CF012",
+      "CF015"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT011",
+    "description": "Migrated DB and actual list: multiple workspaces with duplicate record numbers/IDs; authorized working/oversight membership, client/workspace/search/state/sort/page/count and full CSV. Revoke scope during delayed reads/export; deny hidden rows/counts/options and retain correct owner routes. Map follow-on T003/T004/T007/T009/T010/T015.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "integration-and-browser",
+    "featureIds": [
+      "CF012",
+      "CF013",
+      "CF015"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT012",
+    "description": "Create an MSP-owned ticket from a customer-narrowed view with explicit out-of-scope success link. Submit partial qualified handback, interrupt after a committed item, reload and retry exact intent; assert immutable IDs/notes/revisions, one receipt per success, stale/denied outcomes, actor/expiry cleanup and no automatic resubmit. Map follow-on T011-T014.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-and-integration",
+    "featureIds": [
+      "CF013",
+      "CF014"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT013",
+    "description": "Real translated/light/dark/narrow client and list presentation with long qualified titles, keyboard/focus, supported columns and native fitting retained. Toggle disabled/loading/unknown/error UI flag while dialog/read/export/handback is pending; no stale shared UI/read and native fallback works. Map follow-on T006/T017/T019 and client T021.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-and-component",
+    "featureIds": [
+      "CF015"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT014",
+    "description": "Real task assignment through the team picker and new empty-sheet Log time/save/reload; native grid/detail/export entries match totals. Exercise customer service-free effort, MSP commercial effort, edit/delete/move/approval/on-behalf denial and invoice generation/replay. Trace any absent-column workflow API use and prove privacy/operational nonbilling.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-and-integration",
+    "featureIds": [
+      "CF016",
+      "CF017",
+      "CF018"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT015",
+    "description": "Two-session revocation with open ticket/project/portal, cached search, file download, API write and queued notifications/mail: after authority is revoked, no new protected data/effect is admitted. Shared/private/requester audience, unshared project and delegated-scope guards remain intact.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-worker-integration",
+    "featureIds": [
+      "CF019",
+      "CF004",
+      "CF006"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT016",
+    "description": "Hosted and signed-test-license self-host lapse with real workers: growth denied immediately, writes stop at original 30-day deadline, reads/export/recovery remain allowed, reduced capacity deletes no users, renewal resumes same retained inbox/artifact once.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "worker-integration",
+    "featureIds": [
+      "CF020"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT017",
+    "description": "Real escalation/handback/re-escalation/reply/close/reopen across different priorities/calendars in both SLA backends: customer clock independent, MSP starts only at escalation, qualifying authors/audiences honored, duplicate jobs add no transitions or breaches.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "integration-and-worker",
+    "featureIds": [
+      "CF021"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT018",
+    "description": "Hosted application/simulator journey: shortfall preview, checkout, verified webhook/reconciliation, allocation and independent upgrade. Verify purchased quantity, ordinary seats unchanged, duplicate/out-of-order events, interrupted payment/seed recovery and exactly one activation/allocation release. Explicitly label any vendor control completion and exclude real payment-UI/price claims.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-provider-integration",
+    "featureIds": [
+      "CF022",
+      "CF010"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT019",
+    "description": "Self-host normal license controls: signed test sponsor capacity, shortfall recovery, expiry/wrong-audience/missing-claim denial, renewal and independent customer upgrade. Verify offline validity, independent seats and exactly one release without sponsor-license fallback; raw entitlement fixtures alone do not pass.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-license-integration",
+    "featureIds": [
+      "CF023",
+      "CF010"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT020",
+    "description": "Export customer workspace and restore through native UI into an isolated target with source unavailable. Compare permitted records/files/configuration/attribution/credential manifests; reject tampering/wrong key, recover interruption, exclude MSP-private data/live sessions/OAuth secrets/old grants and verify usable restored work.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-storage-integration",
+    "featureIds": [
+      "CF024"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT021",
+    "description": "After departure and hosted/self-host upgrade, execute actual customer deletion on disposable data; render MSP invoice and download retained participation archive/files. Verify bounded history, preserved MSP time/commercial records, independent customer data and denied old trust.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "browser-and-integration",
+    "featureIds": [
+      "CF025",
+      "CF022",
+      "CF023"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT022",
+    "description": "Candidate fresh install/populated upgrade and supported rollback/reapply on PostgreSQL/Citus. Inventory all 17 trigger-skipping migrations and execute happy/guard/concurrent mutation tests on distributed production write paths, including immutable history and operational time preservation. DDL-only or PG trigger proofs do not pass Citus invariants.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "migration-integration",
+    "featureIds": [
+      "CF026"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT023",
+    "description": "Candidate app/worker/dist/schema provenance and authenticated complete walkthrough followed by 30-minute observation plus queued-job consumption; no restart/healing. Capture first cause of any interruption and repeat only after correction.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "environment-browser-worker",
+    "featureIds": [
+      "CF027"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT024",
+    "description": "Capture fixture version, apply/reset/verify/reapply commands, exit codes, raw stdout and DB counts, including real composite-FK/audit rows; match screenshots to claims and distinguish SQL-seeded from UI-created evidence. Preserve unrelated accounting/claimed workspace records and refresh time periods.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "fixture-integration",
+    "featureIds": [
+      "CF028"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT025",
+    "description": "Run affected CE/EE builds/types and native PSA/AlgaDesk regressions, mandatory exact-candidate CI aggregates and real flag-off authorized/denied APIs/actions/workers. Confirm required jobs collected/executed, mergeability/base current, candidate equals app/worker/PR and no lane bypass.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "build-ci-browser",
+    "featureIds": [
+      "CF029",
+      "CF004",
+      "CF006",
+      "CF015"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CT026",
+    "description": "Readiness verifier negative cases: missing/duplicate/unmapped requirement, open false flag, stale SHA, missing artifact, skipped/cancelled/pending/failed CI, conflicting/unknown mergeability, unhealthy or wrong-revision worker and prose-only completion all fail. One complete fixture passes review readiness while unresolved external provider dependencies keep production false. Final actual-candidate invocation and packet reconciliation must pass before XO review eligibility.",
+    "implemented": false,
+    "status": "not-run",
+    "type": "verifier-and-final-acceptance",
+    "featureIds": [
+      "CF030",
+      "CF031",
+      "CF032"
+    ],
+    "evidence": []
+  }
+]

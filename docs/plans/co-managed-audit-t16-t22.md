@@ -1,5 +1,7 @@
 # Co-managed IT coherence audit: T16–T22
 
+> Current status, 2026-09-20: this is historical source/validation evidence. The [completion and correction PRD](2026-09-20-co-managed-it-completion/PRD.md) requires current-candidate acceptance for every T01–T22 contract and both UI follow-ons. “Implemented” below does not certify current CI or complete browser/provider/runtime journeys. Human-review readiness remains blocked.
+
 Reviewed 2026-09-08 against the approved requirements near the beginning of [the implementation plan](2026-09-06-co-managed-it-plan.md), and subsequently refreshed through `46e01f6c02` plus the task-disclosure work. Initial review inspected source and existing tests. Follow-up implementation ran focused PostgreSQL and Node/UI cases as noted below; it did not run builds, browser journeys or Citus. Later checkpoint lists are not treated as additional approved requirements.
 
 ## T16 — Revocation race

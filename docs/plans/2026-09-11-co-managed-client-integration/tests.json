@@ -9,7 +9,9 @@
       "F002",
       "F005",
       "F008"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T002",
@@ -23,7 +25,9 @@
       "F005",
       "F006",
       "F008"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T003",
@@ -34,7 +38,9 @@
       "F003",
       "F006",
       "F018"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T004",
@@ -45,7 +51,9 @@
       "F004",
       "F014",
       "F015"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T005",
@@ -58,7 +66,9 @@
       "F015",
       "F017",
       "F018"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T006",
@@ -68,7 +78,9 @@
     "featureIds": [
       "F008",
       "F016"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T007",
@@ -81,7 +93,9 @@
       "F011",
       "F012",
       "F031"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T008",
@@ -94,7 +108,9 @@
       "F012",
       "F013",
       "F031"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T009",
@@ -108,7 +124,9 @@
       "F016",
       "F017",
       "F018"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T010",
@@ -120,7 +138,9 @@
       "F020",
       "F025",
       "F026"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T011",
@@ -131,7 +151,9 @@
       "F016",
       "F021",
       "F022"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T012",
@@ -143,7 +165,9 @@
       "F022",
       "F023",
       "F026"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T013",
@@ -155,7 +179,9 @@
       "F023",
       "F026",
       "F031"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T014",
@@ -166,7 +192,9 @@
       "F024",
       "F025",
       "F026"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T015",
@@ -179,7 +207,9 @@
       "F020",
       "F027",
       "F028"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T016",
@@ -190,7 +220,9 @@
       "F029",
       "F030",
       "F031"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T017",
@@ -202,7 +234,9 @@
       "F012",
       "F028",
       "F031"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T018",
@@ -222,7 +256,9 @@
       "F028",
       "F031",
       "F033"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T019",
@@ -236,7 +272,9 @@
       "F026",
       "F031",
       "F033"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T020",
@@ -250,7 +288,9 @@
       "F023",
       "F031",
       "F033"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   },
   {
     "id": "T021",
@@ -265,6 +305,8 @@
       "F031",
       "F032",
       "F033"
-    ]
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
   }
 ]

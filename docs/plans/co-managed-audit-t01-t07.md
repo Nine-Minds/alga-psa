@@ -1,5 +1,7 @@
 # Co-managed IT: T01–T07 implementation audit
 
+> Current status, 2026-09-20: this is historical source/validation evidence. The [completion and correction PRD](2026-09-20-co-managed-it-completion/PRD.md) requires current-candidate acceptance for every T01–T22 contract and both UI follow-ons. “Implemented” below does not certify current CI or complete browser/provider/runtime journeys. Human-review readiness remains blocked.
+
 Reviewed 2026-09-08 against the approved scope and behavioral requirements in [the implementation plan](2026-09-06-co-managed-it-plan.md). Evidence below comes from the current branch's source and existing tests. Existing tests were inspected; focused checks were also run for the implementation findings closed during this review. Historical checkpoint claims are not treated as proof of completion.
 
 | Requirement | Current implementation | Remaining acceptance evidence |

@@ -1,6 +1,14 @@
 # Client-integrated co-managed IT
 
-Status: planned. Date: 2026-09-11.
+## Current acceptance status — 2026-09-20
+
+**Draft implementation; acceptance incomplete.** The [whole-card completion PRD](../2026-09-20-co-managed-it-completion/PRD.md) now governs completion alongside this document's detailed requirements. Existing implementation flags record code presence; they do not certify current tests, complete user journeys or review readiness. Every ID must be reconciled into the candidate evidence manifest. Known blockers, stale/missing evidence and unchecked requirements keep human-review readiness false. Board transitions remain the XO/captain's responsibility.
+
+The historical checklist records 33/33 implemented features, with T018/T019/T021 still open. C1/C3/C4/C6 in the completion PRD require full provisioning/provider/client journeys and presentation proof. Preserve the real-provider wording in T018/T019 as external production evidence under the existing scope decision; separately prove in-card simulator/signed-test-license acceptance. Neither obligation is automatically passed by historical component tests.
+
+## Original design baseline
+
+Original design date: 2026-09-11. Current status is stated above.
 
 ## Outcome
 

@@ -1,8 +1,14 @@
 # Co-managed IT implementation plan
 
-## Current implementation and review status — 2026-09-08
+## Current implementation and review status — 2026-09-20
 
-The repository implementation and final coherence fixes are committed. The final source review found no remaining demonstrated implementation gap in the agreed scope. Milestone details follow below. The final requirement review is captured in [T01–T07](co-managed-audit-t01-t07.md), [T08–T15](co-managed-audit-t08-t15.md), and [T16–T22](co-managed-audit-t16-t22.md). These current audits supersede historical checkpoint paragraphs that describe work subsequently completed.
+**Draft implementation; human-review readiness blocked.** The [completion and correction PRD](2026-09-20-co-managed-it-completion/PRD.md) is the current acceptance authority, with synchronized [implementation checklist](2026-09-20-co-managed-it-completion/features.json), [tests](2026-09-20-co-managed-it-completion/tests.json) and [working notes](2026-09-20-co-managed-it-completion/SCRATCHPAD.md). It covers this foundation and both September 11 follow-ons.
+
+At candidate `618019c3e3563f729684163c1abd8f5ad312e5dd`, exact-HEAD CI run 35492001110 failed the requester lifecycle-pause case; customer Email → Open Providers is blocked; customer identity/directory/inbound acceptance and other required journeys remain incomplete. PR #3363 is currently MERGEABLE, but this does not establish readiness. The new plan requires causal repair, full requirement reconciliation and a fail-closed candidate evidence gate before XO review eligibility. A successful bounded smoke or preparation assignment cannot close the whole product.
+
+## Historical implementation and validation — September 8–11
+
+The following checkpoints record implementation and validation at their stated revisions. They do not establish acceptance of the current candidate. The historical source audits are [T01–T07](co-managed-audit-t01-t07.md), [T08–T15](co-managed-audit-t08-t15.md), and [T16–T22](co-managed-audit-t16-t22.md). Their implementation findings remain useful inputs to the current completion inventory.
 
 The user's later instructions authorize implementation and milestone commits, and prioritize focused Node/dev validation while deferring most broader testing. Validation reported here uses fast Node/UI checks and isolated, migrated PostgreSQL journeys. Fresh-install and Citus migration chains, full browser/light/dark/locale journeys, live SMTP/Stripe/Temporal/PG Boss execution, and source-unavailable restore through native screens are **not claimed complete**. Production price configuration and the external self-host signed-capacity issuer remain the deployment dependencies specified below.
 
@@ -370,7 +376,11 @@ These sources informed the separation of visibility, responsibility, licensing, 
 
 ## Completion criteria
 
-### Implementation progress
+The [current correction plan](2026-09-20-co-managed-it-completion/PRD.md#c8--enforce-completion-before-requesting-human-review) defines the required implementation, human-review and production predicates. All foundation T01–T22 and both follow-on checklists must have current implementation/evidence records; required failures, missing artifacts, incomplete flows or stale verification keep review readiness false. The final candidate must have mandatory green CI, matching app/worker/PR provenance, current mergeability and a stable reproducible review environment. External real-provider production prerequisites retain their existing separate scope and must never be reported as simulator passes.
+
+Only the XO/captain controls workflow movement and approval. The milestones below are historical progress, not completion certificates.
+
+### Historical implementation progress
 
 - 2026-09-06: Added signed, sponsor-bound `co_managed_seats` capacity independent of MSP seats. Corrected signature verification to preserve the existing tenant audience claim, with malformed-claim rejection and cached-expiry checks for capacity. Licensing tests pass (39 tests across four files), as does the licensing package typecheck. Provisioning and capacity allocation are not connected yet.
 - 2026-09-06: Added the `co_managed` product/capability registry, session preservation, operational route/API metadata, commercial and unknown-surface denial, and restricted settings. Both customer UI shells use the client-only `release-v1-6-feature` boundary. Focused product/UI regressions pass (135 tests across 20 files, including targeted reruns); types, auth, and server typechecks pass (server needs a 12 GiB Node heap). This is boundary preparation: database product support, provisioning, operational server-action conversion, restricted integration configuration, and sponsorship enforcement are still pending. No customer workspace can be provisioned through this checkpoint.

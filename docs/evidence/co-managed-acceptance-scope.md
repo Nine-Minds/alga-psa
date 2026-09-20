@@ -1,5 +1,7 @@
 # Instruction 7c — Stripe / licensing / Microsoft Graph acceptance scope
 
+> Scope clarification, 2026-09-20: the [completion and correction PRD](../plans/2026-09-20-co-managed-it-completion/PRD.md#external-prerequisites-and-rollout) preserves the exclusion of live Stripe/licensing/Graph acceptance from this card. Complete customer email/identity/directory, purchase and upgrade application journeys through approved simulators or signed test licenses remain required. The statements below describe the earlier acceptance/configuration snapshot; they are not a current environment inventory. Real-provider prerequisites remain unverified production work with an explicit owner and evidence requirement.
+
 This has been left ambiguous three times. It is stated plainly here, and the
 same statement appears in `draftSummary`, in the PR description, and in the
 review guide's blocker section.
