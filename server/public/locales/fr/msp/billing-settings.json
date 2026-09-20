@@ -1293,7 +1293,10 @@
       "regionInvalid": "La région fiscale sélectionnée n’est plus valide. Veuillez actualiser la page et choisir une autre région.",
       "duplicate": "Un taux de taxes existe déjà pour cette région et cette période.",
       "missingField": "Un champ obligatoire du taux de taxes est manquant.",
-      "missingFieldNamed": "Un champ obligatoire du taux de taxes est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire du taux de taxes est manquant : {{field}}.",
+      "capInvalid": "Le plafond doit être un entier positif ou nul représentable exactement, en unités minimales.",
+      "capCurrencyRequired": "Choisissez une devise avant de définir ou de modifier un plafond de taxe.",
+      "currencyInvalid": "Choisissez une devise prise en charge pour le taux."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configurez au moins un taux de taxes actif avant de créer les paramètres fiscaux par défaut.",

@@ -59,6 +59,34 @@
     "deleteEntity": {
       "fallback": "tę stawkę podatku",
       "withRegion": "{{regionName}} stawka podatku"
+    },
+    "cap": {
+      "title": "Limit podatku",
+      "label": "Limit podatku ({{currencyCode}})",
+      "currency": "Waluta stawki",
+      "universal": "Wszystkie waluty faktur",
+      "optional": "Opcjonalne",
+      "noCap": "Bez limitu",
+      "clear": "Wyczyść limit podatku",
+      "hint": "Maksymalny podatek z tej stawki dla każdego obliczenia. Pozostaw puste pole, aby nie stosować limitu. Wpisz 0, aby nie naliczać podatku w obliczeniach używających tego limitu.",
+      "scopeTitle": "Jak działają limity podatku",
+      "scope": "Obliczenie regionalne ogranicza udział każdej stawki przed zsumowaniem podatku, a nie sumę regionalną. Obliczenia okresowe stosują limit do każdej stawki w każdym przedziale dat; suma wielu przedziałów może przekroczyć limit. Faktura może obejmować wiele obliczeń. Nie jest to limit na fakturę, klienta, projekt ani cały okres. Limity rozliczeń projektów ograniczają kwoty podlegające rozliczeniu, a limity podatku ograniczają obliczony podatek. Zewnętrzni dostawcy podatkowi używają własnej konfiguracji.",
+      "applicability": "Ta stawka dotyczy tylko faktur w {{currencyCode}}. Nie będzie już wybierana dla innych walut.",
+      "composite": "Ten limit obowiązuje, gdy stawka uczestniczy w obliczeniu regionalnym. Obliczenia oparte na składnikach nie stosują tego limitu.",
+      "legacy": "Nie określono waluty · {{amount}} najmniejszych jednostek",
+      "legacyHelp": "Ten zapisany limit jest obecnie stosowany w najmniejszych jednostkach waluty każdej faktury. Wybierz walutę i potwierdź zachowanie zapisanej kwoty lub wpisz nowy limit. Inne zmiany zachowują tę wartość; możesz ją też wyczyścić bez wybierania waluty.",
+      "resolve": "Użyj zapisanej kwoty w najmniejszych jednostkach {{currencyCode}}",
+      "reenter": "Przed zapisaniem wpisz ponownie limit w nowej walucie.",
+      "example": "Przykład: {{amount}}; bez separatorów tysięcy.",
+      "errors": {
+        "negative": "Wpisz limit podatku równy zero lub większy.",
+        "precision": "Limit ma więcej miejsc po przecinku, niż dopuszcza ta waluta.",
+        "invalid": "Wpisz kwotę z separatorem dziesiętnym pokazanym w przykładzie, bez znaków, separatorów tysięcy ani symboli waluty.",
+        "overflow": "Limit przekracza maksymalną obsługiwaną kwotę.",
+        "currency": "Wybierz obsługiwaną walutę przed ustawieniem limitu podatku.",
+        "reenter": "Przed zapisaniem wpisz ponownie limit w nowej walucie."
+      },
+      "compositeIndicator": "Tylko obliczenia regionalne"
     }
   },
   "taxRateDetail": {

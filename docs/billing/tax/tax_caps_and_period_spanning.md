@@ -9,14 +9,14 @@ before treating any of this as production-ready.
 
 - `tax_rates.cap_amount` is a nullable `bigint` in the same unit as the net
   amount (the smallest currency unit used by invoices). `NULL` means uncapped;
-  a stored `0` is a real cap that charges no tax.
+  a stored `0` is a real cap that charges no tax on paths that apply the cap.
 - A database check constraint (`tax_rates_cap_amount_check`) rejects negative
   caps, and `normalizeTaxCapAmount` validates every cap the service reads or
   the actions write: it must be a non-negative, finite, safely representable
   whole number. Numeric strings are accepted because PostgreSQL `bigint`
   hydrates as a string. Malformed or negative values throw instead of silently
   disabling the cap or producing negative tax.
-- Caps apply on every path that resolves rates:
+- Caps apply on these rate calculation paths:
   - **Simple and progressive default-rate paths**: `min(taxAmount, cap)` on the
     rate's single calculation, as before.
   - **Single-date regional path**: each rate's contribution is capped at that
@@ -33,10 +33,32 @@ before treating any of this as production-ready.
     each segment's day-share is computed exactly as a rational before capped
     contributions are summed, so a period crossing several rate intervals
     charges each interval's cap without proration drift.
-- No UI reads or writes `cap_amount`. It can be set through the
-  `addTaxRate`/`updateTaxRate` actions (which validate it and spread the full
-  row) or directly in the database. The API tax-rate Zod schemas do not expose
-  it.
+- **Component-based composite calculations do not apply the row cap.** A
+  composite row can still contribute to a regional calculation, where its row
+  percentage and cap apply. There are no per-component caps. A zero row cap
+  therefore does not promise zero tax from component-based calculations.
+- Configure caps in **Billing > Tax Rates**. The add/edit dialog, table, and
+  advanced details use the same amount and currency contract. See
+  [Configure tax caps](configuring_tax_caps.md) for the administrator workflow.
+- A newly set or changed cap requires an explicit supported
+  `tax_rates.currency_code`. This existing nullable column restricts the entire
+  rate to that invoice currency. The UI accepts major units; persistence and
+  API schemas use minor units. No base currency is inferred and no exchange
+  conversion occurs. Precision follows the selected currency, including zero-
+  and three-decimal currencies.
+- Older capped rows with NULL currency retain their calculation behavior. The
+  UI identifies them as currency-unspecified minor units. Unrelated edits
+  preserve them; assigning a currency requires explicit confirmation, and
+  clearing remains available without currency resolution.
+- `addTaxRate`/`updateTaxRate` validate the effective cap/currency pair. Omitted
+  update fields preserve stored values; explicit cap NULL clears it. Read
+  boundaries normalize PostgreSQL bigint strings without accepting fractional
+  strings or unsafe values. The supported range ends at 9007199254740991 minor
+  units, even though PostgreSQL bigint can store larger values.
+- Public create, update, response, and advanced schemas expose `cap_amount`
+  and `currency_code`. The tax-rates GET route returns tenant-scoped rate rows.
+  It does not add public mutation endpoints. See the
+  [API field contract](../../api/tax_rates.md).
 
 ## Period-spanning tax
 
@@ -106,8 +128,10 @@ regionCode?, is_taxable?, currencyCode?)` returns
 1. **Cap scope.** Caps are per rate per calculation/segment. Whether a
    jurisdiction intends a per-period cap across all rates and segments is not
    resolved.
-2. **Cap units and currency.** `cap_amount` is assumed to be in the same unit as
-   the net amount and the invoice currency. There is no per-currency cap.
+2. **Legacy cap currency.** New or changed caps use an explicit rate currency.
+   Older currency-unspecified caps still use each invoice's minor units until
+   an administrator deliberately resolves or clears them. Their intended
+   original currency cannot be inferred from the stored integer.
 3. **Progressive thresholds across a split period.** Applying brackets to the
    whole covered default amount (current, single segment) versus resetting per
    segment is a guess for any future multi-segment default path.
@@ -117,7 +141,10 @@ regionCode?, is_taxable?, currencyCode?)` returns
 5. **Regional cap interaction.** Capping each rate's contribution before
    summing preserves uncapped rounding, but jurisdictions that define a
    combined-rate cap (rather than per-rate caps) would need different behavior.
-6. **Rounding.** Per-segment `ceil` is deliberately conservative but may not
+6. **Composite totals.** Component-based calculations do not apply the row
+   cap. Capping their combined component total requires a separate decision;
+   the configuration UI does not change this arithmetic.
+7. **Rounding.** Per-segment `ceil` is deliberately conservative but may not
    match jurisdiction-specific rounding (e.g. round-half-up, per-invoice, or
    banker's rounding).
 

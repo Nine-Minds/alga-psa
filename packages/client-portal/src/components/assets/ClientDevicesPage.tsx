@@ -35,7 +35,7 @@ import {
   type ClientAssetSortField,
   type ListClientAssetsResponse,
 } from '@alga-psa/client-portal/actions';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useSetClientPortalHeader } from '../layout/ClientPortalPageContext';
 import { AssetDetails } from './AssetDetails';
@@ -86,6 +86,7 @@ const PAGE_SIZE = 10;
 
 export function ClientDevicesPage() {
   const { t } = useTranslation('client-portal');
+  const { formatDate } = useFormatters();
 
   // Set the dynamic page header for routes that want to override the default.
   useSetClientPortalHeader(
@@ -211,7 +212,11 @@ export function ClientDevicesPage() {
       render: (value: string) => {
         try {
           const d = new Date(value);
-          return isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+          // A bare toLocaleDateString() follows the browser; the column has to
+          // follow the portal client's country like every other date.
+          return isNaN(d.getTime())
+            ? '—'
+            : formatDate(d, { year: 'numeric', month: '2-digit', day: '2-digit' });
         } catch {
           return '—';
         }

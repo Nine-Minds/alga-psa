@@ -335,6 +335,8 @@
     "deleteUploadedImages": "Excluir imagens",
     "keepUploadedImages": "Manter imagens",
     "bundledUpdate": "Atualização agrupada",
+    "bundledUpdateFrom": "Atualização agrupada de {{number}}",
+    "systemAuthor": "Sistema",
     "clientSuffix": "(Cliente)",
     "internalCommentTooltip": "Comentário interno",
     "resolutionCommentTooltip": "Comentário de resolução",
@@ -1076,7 +1078,8 @@
       "responseStateTrackingDisabled": "Rastreamento de estado de resposta desativado",
       "title": "Preferências de exibição de tickets",
       "description": "Configure como seu painel de tickets exibe colunas e carimbos de data/hora para sua equipe.",
-      "dateTimeFormat": "Formato de data/hora",
+      "showWeekday": "Mostrar o dia da semana nos carimbos de data/hora",
+      "countryDrivesFormat": "O formato de data e hora segue o país da sua empresa. Defina-o em Configurações → Geral.",
       "ticketListColumns": "Colunas da lista de tickets",
       "showTags": "Mostrar tags",
       "displayUnderTitle": "Exibir sob o título",
@@ -1374,7 +1377,13 @@
       "alreadyBundled": "O ticket já está agrupado: {{ticket}}",
       "masterAsChild": "O ticket principal não pode ser também um ticket filho.",
       "noChildren": "Nenhum ticket filho informado.",
-      "childrenOnBundledChild": "Não é possível adicionar tickets filhos a um ticket filho já agrupado."
+      "childrenOnBundledChild": "Não é possível adicionar tickets filhos a um ticket filho já agrupado.",
+      "concurrent": "Um ou mais tickets selecionados foram agrupados simultaneamente. Atualize a página e tente novamente.",
+      "closedMasterChoiceRequired": "O ticket principal deste pacote está fechado. Escolha como adicionar o ticket filho: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Essa opção não é permitida para este ticket principal. Escolha uma destas: {{choices}}.",
+      "choiceOnOpenMaster": "Essa opção só se aplica quando o ticket principal do pacote está fechado.",
+      "closeRuleFailed": "Este ticket ainda não pode ser fechado: {{reason}}",
+      "reopenUnavailable": "Não é possível reabrir o ticket principal porque nenhum status de ticket aberto está configurado."
     },
     "ticket": {
       "validationDetails": "Corrija os dados do ticket: {{details}}",
@@ -1481,7 +1490,21 @@
       "remove": "Remover",
       "noChildren": "Nenhum filho neste pacote.",
       "addChildMultiClientMessage": "Isso adicionará {{ticket}} de um cliente diferente ao pacote. Confirme que deseja continuar.",
-      "thisTicket": "este ticket"
+      "thisTicket": "este ticket",
+      "openChildrenBadge": "{{count}} filhos abertos",
+      "openChildrenBadgeShort": "{{count}} abertos",
+      "childOpenStatus": "Aberto",
+      "childClosedStatus": "Fechado",
+      "closedMasterDialogTitle": "O ticket principal deste pacote está fechado",
+      "closedMasterDialogIntro": "O ticket principal está fechado. Escolha o que deve acontecer com o ticket filho quando ele for adicionado.",
+      "keepClosedLabel": "Adicionar e manter o ticket principal fechado",
+      "keepClosedHelp": "O ticket filho permanece aberto com o próprio cronômetro de SLA. O pacote será exibido como inconsistente até que o ticket filho seja resolvido.",
+      "applyResolutionLabel": "Adicionar e aplicar a resolução do ticket principal a este ticket filho",
+      "applyResolutionHelp": "Fecha o ticket filho com o status {{status}} e publica a resolução do ticket principal no ticket filho como comentário público.",
+      "applyResolutionHelpNoComment": "Fecha o ticket filho com o status {{status}}. O ticket principal não tem nenhum comentário de resolução público para publicar.",
+      "reopenMasterLabel": "Adicionar e reabrir o ticket principal",
+      "reopenMasterHelp": "Reabre apenas o ticket principal. Os tickets filhos já fechados neste pacote permanecem fechados; as notificações de reabertura e o SLA se aplicam ao ticket principal.",
+      "closedMasterGating": "As regras de fechamento do quadro não permitem tickets filhos abertos sob um ticket principal fechado, portanto manter o ticket principal fechado não é uma opção."
     },
     "autoClose": "Será fechado automaticamente em {{date}}, a menos que haja nova atividade.",
     "autoCloseWarned": "O cliente foi avisado."
@@ -1787,7 +1810,8 @@
         "checklist_template_applied": "modelo de lista de verificação aplicado",
         "close_rules_overridden": "regras de fechamento substituídas",
         "close_rules_bypassed": "regras de fechamento ignoradas",
-        "auto_close_warning_sent": "aviso de fechamento automático enviado"
+        "auto_close_warning_sent": "aviso de fechamento automático enviado",
+        "bundle_child_added": "ticket filho adicionado ao pacote"
       },
       "closeStatus": "Status de fechamento",
       "noStatusChange": "Não alterar o status",

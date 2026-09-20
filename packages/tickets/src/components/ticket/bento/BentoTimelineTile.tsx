@@ -129,9 +129,12 @@ const defaultNotificationSuppression = (): TicketNotificationSuppressionValue =>
   suppressInternalNotifications: false,
 });
 
-function formatClock(iso: string, locale: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
+// The clock is 12h or 24h by COUNTRY, not by reading language, so this goes
+// through the central formatter rather than handing the locale tag to Intl.
+function formatClock(iso: string, formatDate: FormatDate): string {
+  return formatDate(new Date(iso), { hour: 'numeric', minute: '2-digit' });
 }
 
 function formatMinutes(minutes: number): string {
@@ -1112,7 +1115,7 @@ export function BentoTimelineTile({
 // Compact single-line rows for the non-comment lanes. The lane icon is drawn
 // by the spine pin in the gutter, so these render just the text + timestamp.
 function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: Translator }) {
-  const { locale } = useFormatters();
+  const { formatDate } = useFormatters();
   if (node.lane === 'time' && node.entry?.timeEntry) {
     const timeEntry = node.entry.timeEntry;
     return (
@@ -1128,7 +1131,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           {timeEntry.notes ? <> — {timeEntry.notes}</> : null}
         </p>
         <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-          {formatClock(node.occurredAt, locale)}
+          {formatClock(node.occurredAt, formatDate)}
         </span>
       </div>
     );
@@ -1148,7 +1151,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           ) : null}
         </p>
         <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-          {formatClock(node.occurredAt, locale)}
+          {formatClock(node.occurredAt, formatDate)}
         </span>
       </div>
     );
@@ -1161,7 +1164,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
         {node.entry ? describeSystemEntry(node.entry, t) : t('bento.timeline.ticketUpdated', 'Ticket updated')}
       </p>
       <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-        {formatClock(node.occurredAt, locale)}
+        {formatClock(node.occurredAt, formatDate)}
       </span>
     </div>
   );

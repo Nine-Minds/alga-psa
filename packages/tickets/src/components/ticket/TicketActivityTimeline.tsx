@@ -363,11 +363,23 @@ export function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] 
   });
 }
 
-function formatTimestamp(value: string, locale: string): string {
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
+// A bare toLocaleString() lets the language pick BOTH the digit order and the
+// 12/24h clock; both belong to the country, so this runs through the central
+// formatter with the parts spelled out.
+function formatTimestamp(value: string, formatDate: FormatDate): string {
   try {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleString(locale);
+    return formatDate(d, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   } catch {
     return value;
   }
@@ -446,7 +458,7 @@ function sourceBadge(source: string): { label: string; className: string } {
 
 export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActivityTimelineProps) {
   const { t: tCommon } = useTranslation('common');
-  const { locale } = useFormatters();
+  const { formatDate } = useFormatters();
   const [entries, setEntries] = useState<TicketTimelineEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -527,7 +539,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
             dateTime={typeof value === 'string' ? value : undefined}
             title={typeof value === 'string' ? value : undefined}
           >
-            {formatTimestamp(String(value), locale)}
+            {formatTimestamp(String(value), formatDate)}
           </time>
         ),
       },

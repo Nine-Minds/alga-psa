@@ -223,7 +223,7 @@ describe('TicketProperties live timer board policy', () => {
     vi.clearAllMocks();
     getScheduledHoursForTicketMock.mockResolvedValue({ scheduledHours: 0 });
     getTicketAppointmentRequestsMock.mockResolvedValue({ success: true, data: [] });
-    getTicketingDisplaySettingsMock.mockResolvedValue({ dateTimeFormat: 'MMM d, yyyy h:mm a' });
+    getTicketingDisplaySettingsMock.mockResolvedValue({ showWeekday: false });
   });
 
   it('T004: hides tracked intervals on disabled boards while keeping Add Time Entry available', async () => {

@@ -108,11 +108,17 @@ RUN npx tsup
 # @alga-psa/core/secrets and /logger at runtime.
 # Known-latent, deliberately NOT built here (never hit in prod traffic): the
 # shared/dist and @alga-psa/workflows runtime bundles also carry lazy bare
-# imports of @alga-psa/{event-bus,authorization,types,storage}. If one of
-# those paths ever fires ERR_MODULE_NOT_FOUND, add the same two lines for it.
+# imports of @alga-psa/{event-bus,authorization,types}. If one of those paths
+# ever fires ERR_MODULE_NOT_FOUND, add the same two lines for it.
 WORKDIR /app/packages/core
 RUN npm install --ignore-scripts && npm run build
 WORKDIR /app/packages/db
+RUN npm install --ignore-scripts && npm run build
+
+# storage before email: email/dist imports @alga-psa/storage/{models/storage,
+# StorageProviderFactory} to attach the branded header logo, and the marketing
+# export check below loads the email index.
+WORKDIR /app/packages/storage
 RUN npm install --ignore-scripts && npm run build
 
 WORKDIR /app/packages/email
@@ -229,6 +235,9 @@ COPY --from=development /app/packages/event-schemas/dist /app/packages/event-sch
 COPY --from=development /app/packages/types/dist /app/packages/types/dist
 COPY --from=development /app/packages/event-bus/dist /app/packages/event-bus/dist
 COPY --from=development /app/packages/formatting/dist /app/packages/formatting/dist
+# email/dist imports @alga-psa/storage/{models/storage,StorageProviderFactory}
+# to attach the branded header logo inline.
+COPY --from=development /app/packages/storage/dist /app/packages/storage/dist
 # Copy the runtime-resolved @alga-psa package dists built above (base-stage
 # packages/ came from the build context, where .dockerignore strips **/dist)
 COPY --from=development /app/packages/core/dist /app/packages/core/dist

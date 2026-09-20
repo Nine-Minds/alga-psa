@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TemplateAst } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { countryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { evaluateTemplateAst } from './evaluator';
 import { renderTemplateAstHtmlDocument } from './server-render';
 
@@ -144,19 +145,37 @@ describe('renderTemplateAstHtmlDocument label localization', () => {
     expect(html).toContain('<html lang="de">');
   });
 
-  it('formats dates and currency in the same locale as the labels', async () => {
+  it('formats currency in the locale but leaves the date to the country', async () => {
     const ast = buildTranslatableAst();
     const evaluation = evaluateTemplateAst(ast, sampleData);
 
     const german = await renderTemplateAstHtmlDocument(ast, evaluation, { locale: 'de' });
     const english = await renderTemplateAstHtmlDocument(ast, evaluation, { locale: 'en' });
 
-    // 2026-03-04 reads day-first in German, month-first in English.
-    expect(german).toContain('4.3.2026');
-    expect(english).toContain('3/4/2026');
     // 1234.56 uses a comma as the decimal separator in German.
     expect(german).toContain('1.234,56');
     expect(english).toContain('1,234.56');
+    // The date does not move with the language. With no country supplied both
+    // documents fall to the fixed system default, so switching a tenant's UI to
+    // German must not renumber 2026-03-04 into 4.3.2026.
+    expect(german).toContain('03/04/2026');
+    expect(english).toContain('03/04/2026');
+    expect(german).not.toContain('4.3.2026');
+  });
+
+  it('takes the date shape from the country it is handed', async () => {
+    const ast = buildTranslatableAst();
+    const evaluation = evaluateTemplateAst(ast, sampleData);
+
+    const html = await renderTemplateAstHtmlDocument(ast, evaluation, {
+      locale: 'de',
+      dateFormat: countryDateFormat('GB'),
+    });
+
+    // German labels, UK numbering: the two travel independently through the
+    // document renderer.
+    expect(html).toContain('Zwischensumme');
+    expect(html).toContain('04/03/2026');
   });
 
   it('lets the recipient locale win over the template metadata locale', async () => {
@@ -167,8 +186,9 @@ describe('renderTemplateAstHtmlDocument label localization', () => {
 
     expect(html).toContain('Zwischensumme');
     expect(html).not.toContain('>Subtotal<');
-    // Formatting follows the same winner — one locale per document.
-    expect(html).toContain('4.3.2026');
+    // Only the labels are at stake: neither locale numbers the date, so the
+    // metadata tag cannot smuggle a date shape in either.
+    expect(html).toContain('03/04/2026');
   });
 
   it('falls back to English when no recipient locale resolves', async () => {

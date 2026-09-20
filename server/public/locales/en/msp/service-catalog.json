@@ -59,6 +59,34 @@
       },
       "activeHint": "Inactive rates are ignored when invoices are taxed.",
       "regionDescription": "This rate applies to invoices taxed in {{region}}."
+    },
+    "cap": {
+      "title": "Tax cap",
+      "label": "Tax cap ({{currencyCode}})",
+      "currency": "Rate currency",
+      "universal": "All invoice currencies",
+      "optional": "Optional",
+      "noCap": "No cap",
+      "clear": "Clear tax cap",
+      "hint": "Maximum tax from this rate for each calculation. Leave blank for no cap. Enter 0 to charge no tax in calculations that use this cap.",
+      "scopeTitle": "How tax caps apply",
+      "scope": "A regional calculation caps each rate’s contribution before combining tax, not the combined regional total. Period calculations apply the cap to each rate in each date segment; several segments can exceed the cap. An invoice may run several calculations. This is not an invoice, client, project, or whole-period limit. Project billing caps limit billable amounts; tax caps limit calculated tax. External tax providers use their own configuration.",
+      "applicability": "This rate applies only to invoices in {{currencyCode}}. Other currencies will no longer select it.",
+      "composite": "This cap applies when this rate contributes to a regional calculation. Component-based calculations do not apply this cap.",
+      "legacy": "Currency not specified · {{amount}} minor units",
+      "legacyHelp": "This stored cap currently applies in each invoice’s minor units. Select a currency and explicitly keep the stored amount or enter a new cap. An unrelated edit preserves it; you can also clear it without choosing a currency.",
+      "resolve": "Use stored minor amount in {{currencyCode}}",
+      "reenter": "Re-enter the cap in the new currency before saving.",
+      "example": "Example: {{amount}}; no grouping separators.",
+      "errors": {
+        "negative": "Enter a tax cap of zero or more.",
+        "precision": "The tax cap has more decimal places than this currency allows.",
+        "invalid": "Enter an amount using the decimal separator shown in the example, without signs, grouping separators, or currency symbols.",
+        "overflow": "The tax cap exceeds the maximum supported amount.",
+        "currency": "Choose a supported rate currency before setting a tax cap.",
+        "reenter": "Re-enter the cap in the new currency before saving."
+      },
+      "compositeIndicator": "Regional calculations only"
     }
   },
   "taxRateDetail": {

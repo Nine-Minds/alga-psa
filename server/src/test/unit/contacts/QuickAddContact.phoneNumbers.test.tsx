@@ -6,6 +6,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import QuickAddContact from '../../../../../packages/clients/src/components/contacts/QuickAddContact';
+import { getTenantDefaultCountry } from '@alga-psa/clients/actions/countryActions';
 
 const { addContactMock, createTagsForEntityMock } = vi.hoisted(() => ({
   addContactMock: vi.fn(),
@@ -88,10 +89,16 @@ vi.mock('@alga-psa/ui/components/Switch', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/PhoneInput', () => ({
-  PhoneInput: ({ id, label, value, onChange }: any) => (
+  PhoneInput: ({ id, label, value, onChange, countryCode }: any) => (
     <label htmlFor={id}>
       {label}
-      <input id={id} aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} />
+      <input
+        id={id}
+        aria-label={label}
+        value={value}
+        data-country-code={countryCode ?? ''}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   ),
 }));
@@ -109,12 +116,13 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({
-  default: ({ id, value, onChange, placeholder }: any) => (
+  default: ({ id, value, onChange, placeholder, options }: any) => (
     <input
       id={id}
       aria-label={id}
       placeholder={placeholder}
       value={value}
+      data-options={(options ?? []).map((option: { value: string }) => option.value).join(',')}
       onChange={(event) => onChange(event.target.value)}
     />
   ),
@@ -139,6 +147,7 @@ afterEach(() => {
 describe('QuickAddContact hybrid email and phone payloads', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getTenantDefaultCountry).mockResolvedValue(null);
     addContactMock.mockResolvedValue({
       success: true,
       contact: {
@@ -259,6 +268,46 @@ describe('QuickAddContact hybrid email and phone payloads', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('field-warnings')).toBeNull();
     });
+  });
+
+  it('types the first phone row against the tenant country', async () => {
+    vi.mocked(getTenantDefaultCountry).mockResolvedValue({ code: 'GB', name: 'United Kingdom' });
+
+    render(
+      <QuickAddContact
+        isOpen={true}
+        onClose={vi.fn()}
+        onContactAdded={vi.fn()}
+        clients={[]}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Phone').getAttribute('data-country-code')).toBe('GB');
+    });
+  });
+
+  it('keeps the phone metadata when the tenant country cannot be resolved', async () => {
+    const user = userEvent.setup();
+    vi.mocked(getTenantDefaultCountry).mockRejectedValue(new Error('no default client'));
+
+    render(
+      <QuickAddContact
+        isOpen={true}
+        onClose={vi.fn()}
+        onContactAdded={vi.fn()}
+        clients={[]}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('quick-add-contact-phone-type-0'), 'custom');
+
+    // The suggestions share the failed fetch, so they are the proof it fails soft.
+    await waitFor(() => {
+      expect(screen.getByLabelText('quick-add-contact-phone-custom-type-0').getAttribute('data-options'))
+        .toBe('Desk Line');
+    });
+    expect(screen.getByLabelText('Phone').getAttribute('data-country-code')).toBe('');
   });
 
   it('shows a validation toast when addContact returns a handled duplicate-email error', async () => {

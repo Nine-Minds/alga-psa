@@ -335,6 +335,8 @@
     "deleteUploadedImages": "Supprimer des images",
     "keepUploadedImages": "Conserver les images",
     "bundledUpdate": "Mise à jour groupée",
+    "bundledUpdateFrom": "Mise à jour groupée de {{number}}",
+    "systemAuthor": "Système",
     "clientSuffix": " (Client)",
     "internalCommentTooltip": "Commentaire interne",
     "resolutionCommentTooltip": "Commentaire de résolution",
@@ -1080,7 +1082,8 @@
       "responseStateTrackingDisabled": "Suivi de l'état de réponse désactivé",
       "title": "Préférences d'affichage du ticket",
       "description": "Configurez la façon dont votre tableau de bord de tickets affiche les colonnes et les horodatages pour votre équipe.",
-      "dateTimeFormat": "Format date/heure",
+      "showWeekday": "Afficher le jour de la semaine dans les horodatages",
+      "countryDrivesFormat": "Le format de date et d'heure suit le pays de votre entreprise. Définissez-le dans Paramètres → Général.",
       "ticketListColumns": "Colonnes de la liste des tickets",
       "showTags": "Afficher les balises",
       "displayUnderTitle": "Afficher sous le titre",
@@ -1378,7 +1381,13 @@
       "alreadyBundled": "Le ticket est déjà regroupé : {{ticket}}",
       "masterAsChild": "Le ticket principal ne peut pas être aussi un ticket enfant.",
       "noChildren": "Aucun ticket enfant fourni.",
-      "childrenOnBundledChild": "Impossible d’ajouter des tickets enfants à un ticket enfant déjà regroupé."
+      "childrenOnBundledChild": "Impossible d’ajouter des tickets enfants à un ticket enfant déjà regroupé.",
+      "concurrent": "Un ou plusieurs tickets sélectionnés ont été regroupés simultanément. Actualisez la page et réessayez.",
+      "closedMasterChoiceRequired": "Le ticket principal de ce groupe est clôturé. Choisissez comment ajouter le ticket enfant : {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Ce choix n’est pas autorisé pour ce ticket principal. Choisissez l’une des options suivantes : {{choices}}.",
+      "choiceOnOpenMaster": "Ce choix s’applique uniquement lorsque le ticket principal du groupe est clôturé.",
+      "closeRuleFailed": "Ce ticket ne peut pas encore être clôturé : {{reason}}",
+      "reopenUnavailable": "Le ticket principal ne peut pas être rouvert car aucun statut de ticket ouvert n’est configuré."
     },
     "ticket": {
       "validationDetails": "Veuillez corriger les informations du ticket : {{details}}",
@@ -1497,7 +1506,21 @@
         "reopenConfirm": "Rouvrir le maître et {{count}} enfants",
         "masterOnlyClose": "Fermer le maître uniquement",
         "masterOnlyReopen": "Rouvrir le maître uniquement"
-      }
+      },
+      "openChildrenBadge": "{{count}} enfants ouverts",
+      "openChildrenBadgeShort": "{{count}} ouverts",
+      "childOpenStatus": "Ouvert",
+      "childClosedStatus": "Clôturé",
+      "closedMasterDialogTitle": "Le ticket principal de ce groupe est clôturé",
+      "closedMasterDialogIntro": "Le ticket principal est clôturé. Choisissez ce qui doit arriver au ticket enfant lors de son ajout.",
+      "keepClosedLabel": "Ajouter et laisser le ticket principal clôturé",
+      "keepClosedHelp": "Le ticket enfant reste ouvert avec sa propre horloge SLA. Le groupe sera signalé comme incohérent tant que le ticket enfant n’est pas résolu.",
+      "applyResolutionLabel": "Ajouter et appliquer la résolution du ticket principal à ce ticket enfant",
+      "applyResolutionHelp": "Clôture le ticket enfant avec le statut {{status}} et publie la résolution du ticket principal dans le ticket enfant sous forme de commentaire public.",
+      "applyResolutionHelpNoComment": "Clôture le ticket enfant avec le statut {{status}}. Le ticket principal n’a aucun commentaire de résolution public à publier.",
+      "reopenMasterLabel": "Ajouter et rouvrir le ticket principal",
+      "reopenMasterHelp": "Rouvre uniquement le ticket principal. Les tickets enfants déjà clôturés de ce groupe restent clôturés ; les notifications de réouverture et le SLA s’appliquent au ticket principal.",
+      "closedMasterGating": "Les règles de clôture du tableau n’autorisent pas de tickets enfants ouverts sous un ticket principal clôturé ; il n’est donc pas possible de laisser le ticket principal clôturé."
     },
     "autoClose": "Sera fermé automatiquement le {{date}} en l'absence de nouvelle activité.",
     "autoCloseWarned": "Le client a été prévenu."
@@ -1806,7 +1829,8 @@
         "checklist_template_applied": "modèle de checklist appliqué",
         "close_rules_overridden": "règles de clôture outrepassées",
         "close_rules_bypassed": "règles de clôture contournées",
-        "auto_close_warning_sent": "avertissement de clôture automatique envoyé"
+        "auto_close_warning_sent": "avertissement de clôture automatique envoyé",
+        "bundle_child_added": "ticket enfant ajouté au lot"
       },
       "closeStatus": "Statut de fermeture",
       "noStatusChange": "Ne pas modifier le statut",

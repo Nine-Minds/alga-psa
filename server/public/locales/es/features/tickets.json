@@ -335,6 +335,8 @@
     "deleteUploadedImages": "Eliminar imágenes",
     "keepUploadedImages": "Conservar imágenes",
     "bundledUpdate": "Actualización agrupada",
+    "bundledUpdateFrom": "Actualización agrupada de {{number}}",
+    "systemAuthor": "Sistema",
     "clientSuffix": " (Cliente)",
     "internalCommentTooltip": "Comentario interno",
     "resolutionCommentTooltip": "Comentario de resolución",
@@ -1080,7 +1082,8 @@
       "responseStateTrackingDisabled": "Seguimiento del estado de respuesta deshabilitado",
       "title": "Preferencias de visualización de tickets",
       "description": "Configure cómo el panel de tickets muestra las columnas y las marcas de tiempo para su equipo.",
-      "dateTimeFormat": "Formato de fecha y hora",
+      "showWeekday": "Mostrar el día de la semana en las marcas de tiempo",
+      "countryDrivesFormat": "El formato de fecha y hora sigue el país de su empresa. Configúrelo en Configuración → General.",
       "ticketListColumns": "Columnas de la lista de tickets",
       "showTags": "Mostrar etiquetas",
       "displayUnderTitle": "Mostrar debajo del título",
@@ -1378,7 +1381,13 @@
       "alreadyBundled": "El ticket ya está agrupado: {{ticket}}",
       "masterAsChild": "El ticket principal no puede ser también un ticket secundario.",
       "noChildren": "No se proporcionaron tickets secundarios.",
-      "childrenOnBundledChild": "No se pueden añadir tickets secundarios a un ticket secundario ya agrupado."
+      "childrenOnBundledChild": "No se pueden añadir tickets secundarios a un ticket secundario ya agrupado.",
+      "concurrent": "Uno o más tickets seleccionados se agruparon simultáneamente. Actualice la página e inténtelo de nuevo.",
+      "closedMasterChoiceRequired": "El ticket principal de este paquete está cerrado. Elija cómo agregar el ticket secundario: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Esa opción no está permitida para este ticket principal. Elija una de estas: {{choices}}.",
+      "choiceOnOpenMaster": "Esa opción solo se aplica cuando el ticket principal del paquete está cerrado.",
+      "closeRuleFailed": "Este ticket aún no se puede cerrar: {{reason}}",
+      "reopenUnavailable": "No se puede reabrir el ticket principal porque no hay ningún estado de ticket abierto configurado."
     },
     "ticket": {
       "validationDetails": "Corrija los datos del ticket: {{details}}",
@@ -1497,7 +1506,21 @@
         "reopenConfirm": "Reabrir maestro y {{count}} hijos",
         "masterOnlyClose": "Cerrar solo el maestro",
         "masterOnlyReopen": "Reabrir solo el maestro"
-      }
+      },
+      "openChildrenBadge": "{{count}} secundarios abiertos",
+      "openChildrenBadgeShort": "{{count}} abiertos",
+      "childOpenStatus": "Abierto",
+      "childClosedStatus": "Cerrado",
+      "closedMasterDialogTitle": "El ticket principal de este paquete está cerrado",
+      "closedMasterDialogIntro": "El ticket principal está cerrado. Elija qué debe ocurrir con el ticket secundario cuando se agregue.",
+      "keepClosedLabel": "Agregar y mantener cerrado el ticket principal",
+      "keepClosedHelp": "El ticket secundario permanece abierto con su propio reloj de SLA. El paquete se mostrará como inconsistente hasta que se resuelva el ticket secundario.",
+      "applyResolutionLabel": "Agregar y aplicar la resolución del ticket principal a este ticket secundario",
+      "applyResolutionHelp": "Cierra el ticket secundario con el estado {{status}} y publica la resolución del ticket principal en el ticket secundario como comentario público.",
+      "applyResolutionHelpNoComment": "Cierra el ticket secundario con el estado {{status}}. El ticket principal no tiene ningún comentario de resolución público para publicar.",
+      "reopenMasterLabel": "Agregar y reabrir el ticket principal",
+      "reopenMasterHelp": "Reabre solo el ticket principal. Los tickets secundarios ya cerrados de este paquete permanecen cerrados; las notificaciones de reapertura y el SLA se aplican al ticket principal.",
+      "closedMasterGating": "Las reglas de cierre del tablero no permiten tickets secundarios abiertos bajo un ticket principal cerrado, por lo que mantener cerrado el ticket principal no es una opción."
     },
     "autoClose": "Se cerrará automáticamente el {{date}} salvo que haya nueva actividad.",
     "autoCloseWarned": "Se ha avisado al cliente."
@@ -1806,7 +1829,8 @@
         "checklist_template_applied": "plantilla de lista aplicada",
         "close_rules_overridden": "reglas de cierre anuladas",
         "close_rules_bypassed": "reglas de cierre omitidas",
-        "auto_close_warning_sent": "aviso de cierre automático enviado"
+        "auto_close_warning_sent": "aviso de cierre automático enviado",
+        "bundle_child_added": "ticket secundario agregado al paquete"
       },
       "closeStatus": "Estado de cierre",
       "noStatusChange": "No cambiar el estado",

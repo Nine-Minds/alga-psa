@@ -43,6 +43,29 @@ export type TicketListItem = {
   entered_at?: string | null;
   closed_at?: string | null;
   tags?: TicketListTag[] | null;
+  /** Set on bundle children; the master's number rides along for the badge. */
+  master_ticket_id?: string | null;
+  bundle_master_ticket_number?: string | null;
+  /** Number of children bundled under this ticket (0 unless it is a master). */
+  bundle_child_count?: number | null;
+};
+
+export type TicketBundleMode = "link_only" | "sync_updates";
+
+export type TicketBundleMember = {
+  ticket_id: string;
+  ticket_number: string;
+  title: string;
+  status_id?: string | null;
+  client_id?: string | null;
+};
+
+export type TicketBundleView = {
+  role: "standalone" | "master" | "child";
+  master_ticket_id: string;
+  master: TicketBundleMember | null;
+  children: TicketBundleMember[];
+  settings: { mode: TicketBundleMode; reopen_on_child_reply: boolean } | null;
 };
 
 export type TicketRichAttributes = {
@@ -137,6 +160,7 @@ export type ListTicketsParams = {
     priority_name?: string;
     status_ids?: string;
     updated_from?: string;
+    bundle_view?: "bundled" | "individual";
   };
 };
 
@@ -170,6 +194,20 @@ export function getTicketById(
   return client.request<SuccessResponse<TicketDetail>>({
     method: "GET",
     path: `/api/v1/tickets/${params.ticketId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+export function getTicketBundle(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<TicketBundleView>>> {
+  return client.request<SuccessResponse<TicketBundleView>>({
+    method: "GET",
+    path: `/api/v1/tickets/${params.ticketId}/bundle`,
+    signal: params.signal,
     headers: {
       "x-api-key": params.apiKey,
     },

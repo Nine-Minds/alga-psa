@@ -24,7 +24,7 @@ import {
   updateClientQuoteSelections,
   type ClientPortalLocationSummary,
 } from '@alga-psa/client-portal/actions';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
@@ -140,19 +140,22 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
     return money(amountInCents, currencyCode);
   }, [money]);
 
+  // Central formatter: the client's own country sets the digit order, their
+  // language names the month. The hand-rolled 'en-US' build this replaces did
+  // neither, and pinned every portal user to US order.
+  const { formatDate: formatLocalizedDate } = useFormatters();
   const formatDate = useCallback((date: string | { toString(): string } | undefined | null) => {
     if (!date) return 'N/A';
     try {
       const dateStr = typeof date === 'string' ? date : date.toString();
-      const dateObj = new Date(dateStr);
-      const year = dateObj.getFullYear();
-      const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(dateObj);
-      const day = dateObj.getDate();
-      return `${month} ${day}, ${year}`;
+      if (Number.isNaN(new Date(dateStr).getTime())) {
+        return 'Invalid date';
+      }
+      return formatLocalizedDate(dateStr);
     } catch {
       return 'Invalid date';
     }
-  }, []);
+  }, [formatLocalizedDate]);
 
   useEffect(() => {
     const fetchQuote = async () => {

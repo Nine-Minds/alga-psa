@@ -8,7 +8,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { getAnalyticsAsync } from '../lib/authHelpers';
+import { isSupportedCurrency } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import {
@@ -44,7 +44,11 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
       case 'Tax rate not found':
         return actionError('Tax rate not found.', 'msp/billing-settings:errors.taxRate.notFound');
       case 'Tax rate cap amount must be a non-negative whole number.':
-        return actionError('Tax rate cap amount must be a non-negative whole number.');
+        return actionError('Tax rate cap amount must be a non-negative whole number.', 'msp/billing-settings:errors.taxRate.capInvalid');
+      case 'Tax rate cap requires an explicit currency.':
+        return actionError('Choose a rate currency before setting or changing a tax cap.', 'msp/billing-settings:errors.taxRate.capCurrencyRequired');
+      case 'Tax rate currency is unsupported.':
+        return actionError('Choose a supported rate currency.', 'msp/billing-settings:errors.taxRate.currencyInvalid');
       // Thrown by deleteTaxRate's in-transaction guards; intentionally
       // user-visible, so keep the wording rather than degrading to the
       // generic delete fallback.
@@ -79,6 +83,37 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
   return null;
 }
 
+function normalizeRate(row: ITaxRate): ITaxRate {
+  return { ...row, cap_amount: normalizeTaxCapAmount(row.cap_amount), currency_code: row.currency_code ?? null };
+}
+
+function validateCurrency(currency: unknown): asserts currency is string | null {
+  if (currency !== null && (typeof currency !== 'string' || !isSupportedCurrency(currency))) {
+    throw new Error('Tax rate currency is unsupported.');
+  }
+}
+
+export const getTaxRatePermissions = withAuth(async (user, { tenant }): Promise<{
+  canCreate: boolean; canUpdate: boolean; canDelete: boolean;
+} | TaxRateActionError> => {
+  try {
+    await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: Cannot read tax rates', 'msp/billing-settings:errors.permissions.readTaxRates');
+    }
+    const [canCreate, canUpdate, canDelete] = await Promise.all([
+      hasPermission(user, 'billing', 'create'),
+      hasPermission(user, 'billing', 'update'),
+      hasPermission(user, 'billing', 'delete'),
+    ]);
+    return { canCreate, canUpdate, canDelete };
+  } catch (error) {
+    const expected = taxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
 export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[] | TaxRateActionError> => {
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
@@ -87,9 +122,9 @@ export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      return await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-        .select('*');
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const rates = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates').select('*');
+      return rates.map(normalizeRate);
     });
   } catch (error) {
     const expected = taxRateActionErrorFrom(error);
@@ -133,11 +168,16 @@ export const addTaxRate = withAuth(async (
       // Validate the cap before it reaches the database; throws the mapped
       // "cap amount" action error for negative/fractional/non-numeric values.
       const cap_amount = normalizeTaxCapAmount(taxRateData.cap_amount);
+      const currency_code = taxRateData.currency_code ?? null;
+      validateCurrency(currency_code);
+      if (cap_amount !== null && currency_code === null) {
+        throw new Error('Tax rate cap requires an explicit currency.');
+      }
 
       const [newTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-        .insert({ ...taxRateData, cap_amount, tax_rate_id, tenant: tenant! })
+        .insert({ ...taxRateData, cap_amount, currency_code, tax_rate_id, tenant: tenant! })
         .returning('*');
-      return newTaxRate;
+      return normalizeRate(newTaxRate);
     });
   } catch (error: any) {
     console.error('Error adding tax rate:', error);
@@ -168,27 +208,17 @@ export const updateTaxRate = withAuth(async (
         throw new Error('Tax rate ID is required for updates');
       }
 
-      // Validate date range before update, excluding current tax rate
-      if (taxRateData.start_date || taxRateData.end_date) {
-        const existingRate = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-          .where({
-            tax_rate_id: taxRateData.tax_rate_id,
-            tenant
-          })
-          .first();
+      // Lock and validate the effective pair in the authenticated tenant. Omission
+      // preserves either field, and unrelated edits preserve unresolved legacy caps.
+      const existingRate = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
+        .where({ tax_rate_id: taxRateData.tax_rate_id }).forUpdate().first();
+      if (!existingRate) throw new Error('Tax rate not found');
 
-        if (!existingRate) {
-          throw new Error('Tax rate not found');
-        }
-
-        if (!taxRateData.region_code) {
-          throw new Error('Region is required');
-        }
-
+      if (taxRateData.start_date !== undefined || taxRateData.end_date !== undefined || taxRateData.region_code !== undefined) {
         await taxService.validateTaxRateDateRange(
-          taxRateData.region_code,
-          taxRateData.start_date,
-          taxRateData.end_date || null,
+          taxRateData.region_code ?? existingRate.region_code,
+          taxRateData.start_date ?? existingRate.start_date,
+          taxRateData.end_date === undefined ? existingRate.end_date ?? null : taxRateData.end_date || null,
           taxRateData.tax_rate_id
         );
       }
@@ -198,10 +228,21 @@ export const updateTaxRate = withAuth(async (
       if (updateData.end_date === '') {
         updateData.end_date = null;
       }
-      // Validate only when the caller supplied a cap; an update that omits it
-      // must not silently clear an existing cap.
-      if (Object.prototype.hasOwnProperty.call(taxRateData, 'cap_amount')) {
-        updateData.cap_amount = normalizeTaxCapAmount(taxRateData.cap_amount);
+      const hasCap = taxRateData.cap_amount !== undefined;
+      const hasCurrency = taxRateData.currency_code !== undefined;
+      if (hasCap) updateData.cap_amount = normalizeTaxCapAmount(taxRateData.cap_amount);
+      else delete updateData.cap_amount;
+      if (hasCurrency) validateCurrency(updateData.currency_code);
+      else delete updateData.currency_code;
+
+      const oldCap = normalizeTaxCapAmount(existingRate.cap_amount);
+      const oldCurrency = existingRate.currency_code ?? null;
+      const effectiveCap = hasCap ? updateData.cap_amount : oldCap;
+      const effectiveCurrency = hasCurrency ? updateData.currency_code : oldCurrency;
+      const unchangedPair = effectiveCap === oldCap && effectiveCurrency === oldCurrency;
+      if (!unchangedPair && effectiveCap !== null) {
+        if (effectiveCurrency == null) throw new Error('Tax rate cap requires an explicit currency.');
+        validateCurrency(effectiveCurrency);
       }
 
       const [updatedTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
@@ -214,7 +255,7 @@ export const updateTaxRate = withAuth(async (
       if (!updatedTaxRate) {
         throw new Error('Tax rate not found');
       }
-      return updatedTaxRate;
+      return normalizeRate(updatedTaxRate);
     });
   } catch (error: any) {
     console.error('Error updating tax rate:', error);

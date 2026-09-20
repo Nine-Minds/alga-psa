@@ -16393,7 +16393,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "enum": [
             "en",
-            "en-AU",
             "fr",
             "es",
             "de",
@@ -16546,7 +16545,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "enum": [
             "en",
-            "en-AU",
             "fr",
             "es",
             "de",
@@ -16622,7 +16620,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "enum": [
             "en",
-            "en-AU",
             "fr",
             "es",
             "de",
@@ -16720,7 +16717,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "enum": [
             "en",
-            "en-AU",
             "fr",
             "es",
             "de",
@@ -19728,9 +19724,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_financial_tax_rates",
     "method": "get",
     "path": "/api/v1/financial/tax/rates",
-    "displayName": "List financial tax rates (transaction list wiring)",
-    "summary": "List financial tax rates (transaction list wiring)",
-    "description": "Route file currently maps to ApiFinancialController.list(), so the response is the generic financial transaction list rather than a tax-rate list.",
+    "displayName": "List tax rates",
+    "summary": "List tax rates",
+    "description": "Returns tenant-scoped tax rates. cap_amount is a safe integer in currency_code minor units, or null for no cap; zero is intentional. A null currency applies to all invoice currencies, including unresolved legacy caps. Caps apply per rate contribution and per period segment, not to component-based composite calculations. Requires financial:read, billing:read and PSA product access. This route exposes GET only; no tax-rate mutation endpoints are added.",
     "tags": [
       "Financial"
     ],
@@ -19757,7 +19753,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "created_at",
+            "updated_at",
+            "region_code",
+            "tax_percentage",
+            "start_date",
+            "end_date",
+            "cap_amount",
+            "currency_code"
+          ],
+          "default": "created_at"
         }
       },
       {
@@ -19769,7 +19776,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "enum": [
             "asc",
             "desc"
-          ]
+          ],
+          "default": "desc"
         }
       },
       {
@@ -19785,7 +19793,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -19793,7 +19802,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -19801,7 +19811,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -19809,29 +19820,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "client_id",
-        "in": "query",
-        "required": false,
-        "schema": {
           "type": "string",
-          "format": "uuid"
+          "format": "date-time"
         }
       },
       {
-        "name": "invoice_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "type",
+        "name": "is_active",
         "in": "query",
         "required": false,
         "schema": {
@@ -19839,7 +19833,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "status",
+        "name": "region_code",
         "in": "query",
         "required": false,
         "schema": {
@@ -19847,116 +19841,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "amount_min",
+        "name": "effective_date",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_max",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "include_expired",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
           ]
-        }
-      },
-      {
-        "name": "expiring_soon",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
         }
       }
     ],
@@ -19967,23 +19865,108 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
+            "properties": {
+              "tax_rate_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "region_code": {
+                "type": "string"
+              },
+              "tax_percentage": {
+                "type": "number"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "start_date": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                ]
+              },
+              "end_date": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cap_amount": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Tax cap in currency_code minor units; null is uncapped, zero charges zero on supported calculation paths."
+              },
+              "currency_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_active": {
+                "type": "boolean"
+              },
+              "is_composite": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "tax_rate_id",
+              "region_code",
+              "tax_percentage",
+              "cap_amount",
+              "currency_code",
+              "tenant"
+            ]
           }
         },
         "pagination": {
           "type": "object",
           "properties": {
             "page": {
-              "type": "integer"
+              "type": "number"
             },
             "limit": {
-              "type": "integer"
+              "type": "number"
             },
             "total": {
-              "type": "integer"
+              "type": "number"
             },
             "totalPages": {
-              "type": "integer"
+              "type": "number"
             },
             "hasNext": {
               "type": "boolean"
@@ -20003,7 +19986,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "properties": {}
         }
       },
       "required": [
@@ -46120,7 +46103,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/bundle",
     "displayName": "Create ticket bundle",
     "summary": "Create ticket bundle",
-    "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates.",
+    "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
     "tags": [
       "Work Management v1"
     ],
@@ -46229,7 +46212,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/bundle/children",
     "displayName": "Add bundle children",
     "summary": "Add bundle children",
-    "description": "Adds child tickets to the existing bundle mastered by {id}.",
+    "description": "Adds child tickets to the existing bundle mastered by {id}. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
     "tags": [
       "Work Management v1"
     ],
@@ -58850,7 +58833,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/mobile/me/capabilities",
     "displayName": "Get current mobile feature capabilities",
     "summary": "Get current mobile feature capabilities",
-    "description": "Returns tenant-product and RBAC-derived mobile feature availability for the authenticated API-key user.",
+    "description": "Returns tenant-product and RBAC-derived mobile feature availability, plus the country-derived date format, for the authenticated API-key user.",
     "tags": [
       "Mobile v1"
     ],
@@ -58879,6 +58862,48 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "inventory",
                 "opportunities",
                 "opportunitiesCreate"
+              ]
+            },
+            "formatting": {
+              "type": "object",
+              "properties": {
+                "country": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "order": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "day",
+                      "month",
+                      "year"
+                    ]
+                  }
+                },
+                "separator": {
+                  "type": "string"
+                },
+                "hour12": {
+                  "type": "boolean"
+                },
+                "datePattern": {
+                  "type": "string"
+                },
+                "dateTimePattern": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "country",
+                "order",
+                "separator",
+                "hour12",
+                "datePattern",
+                "dateTimePattern"
               ]
             },
             "theme": {
@@ -58915,6 +58940,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "required": [
             "features",
+            "formatting",
             "theme"
           ]
         }

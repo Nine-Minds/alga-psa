@@ -50,6 +50,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -61,7 +62,7 @@ import {
 } from '@alga-psa/shared/lib/ticketActivity';
 import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
-import { maybeReopenBundleMasterFromChildReply } from './ticketBundleUtils';
+import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -510,12 +511,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       priorities,
       categories
     ] = await Promise.all([
-      // Comments
-      tenantScopedTable(trx, 'comments', tenant)
-        .where({
-          ticket_id: ticketId
-        })
-        .orderBy('created_at', 'asc'),
+      // Comments, with read-time bundle provenance owned by the shared read
+      // layer so this load and every refresh path return identical shapes.
+      Comment.getAllbyTicketId(trx, tenant, ticketId),
       
       // Documents
       tenantLeftJoin(
@@ -986,6 +984,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.contact_name_id',
         'comp.client_name',
         'ct.status_id',
+        'ct.is_closed',
+        'ct.closed_at',
         'ct.entered_at',
         'ct.updated_at',
         'ct.entered_by',
@@ -1095,7 +1095,10 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         mode: bundleSettings?.mode ?? null,
         reopenOnChildReply: Boolean(bundleSettings?.reopen_on_child_reply),
         masterTicket: bundleMaster,
-        children: bundleChildren
+        children: bundleChildren,
+        // Authorization-filtered children only; "open" is closed_at IS NULL,
+        // the same predicate the close rule and attach policy use.
+        openChildrenCount: bundleChildren.filter((child: any) => child.closed_at == null).length
       },
       aggregatedChildClientComments: filteredAggregatedChildClientComments,
       comments,
@@ -1847,6 +1850,7 @@ function buildTicketListItemsQuery(
       'tc.master_ticket_id',
       'tc.tenant',
       trx.raw('COUNT(*)::int as bundle_child_count'),
+      trx.raw('COUNT(*) FILTER (WHERE tc.closed_at IS NULL)::int as bundle_open_child_count'),
       trx.raw('array_agg(DISTINCT tc.client_id) FILTER (WHERE tc.client_id IS NOT NULL) as child_client_ids')
     )
     .whereNotNull('tc.master_ticket_id')
@@ -1903,6 +1907,7 @@ function buildTicketListItemsQuery(
       't.sla_paused_at', 't.sla_total_pause_minutes',
       // Bundle stats from pre-aggregated JOIN
       trx.raw('COALESCE(bs.bundle_child_count, 0) as bundle_child_count'),
+      trx.raw('COALESCE(bs.bundle_open_child_count, 0) as bundle_open_child_count'),
       trx.raw(`COALESCE(
         (SELECT COUNT(DISTINCT cid) FROM unnest(
           array_append(COALESCE(bs.child_client_ids, ARRAY[]::uuid[]), t.client_id)
@@ -1946,6 +1951,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       additional_agent_count,
       additional_agents,
       bundle_child_count,
+      bundle_open_child_count,
       bundle_distinct_client_count,
       bundle_master_ticket_number,
       // NOTE: Legacy ITIL fields removed - now using unified system
@@ -1985,6 +1991,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       additional_agent_count: additional_agent_count || 0,
       additional_agents: additional_agents || [],
       bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
+      bundle_open_child_count: typeof bundle_open_child_count === 'number' ? bundle_open_child_count : Number.parseInt(String(bundle_open_child_count ?? '0'), 10) || 0,
       bundle_distinct_client_count: typeof bundle_distinct_client_count === 'number' ? bundle_distinct_client_count : Number.parseInt(String(bundle_distinct_client_count ?? '0'), 10) || 0,
       bundle_master_ticket_number: bundle_master_ticket_number ?? null
     };
@@ -3111,7 +3118,10 @@ export async function updateTicketInTransaction(
     // If this is a bundle master in sync_updates mode, propagate selected
     // workflow updates to children. Boundary-crossing changes are limited to
     // the affected set and record/revert propagation rows; non-boundary changes
-    // keep the legacy mirror-to-all-children behaviour.
+    // keep the legacy mirror-to-all-children behaviour. Child closes publish no
+    // TICKET_CLOSED of their own — silent or not. The master's TICKET_CLOSED
+    // carries the suppression flags, and the close subscriber both emails and
+    // (when suppressed) skips child requesters from that single event.
     await propagateBundleMasterStatus(
       trx,
       {
@@ -3311,6 +3321,10 @@ export const addTicketCommentWithCache = withAuth(async (
       thread_id: threadId,
       ticket_id: ticketId,
       user_id: user.user_id,
+      // Record the author's linked contact when present so the row is a
+      // faithful source for downstream copies (bundle mirrors) and author
+      // resolution can fall back to the contact map.
+      contact_id: user.contact_id ?? null,
       author_type: authorType,
       note: content,
       is_internal: effectiveIsInternal,
@@ -3361,66 +3375,23 @@ export const addTicketCommentWithCache = withAuth(async (
           .select('ticket_id')
           .where({ master_ticket_id: ticketId });
 
-        const now = new Date().toISOString();
         for (const child of children) {
-          const existingMirror = await tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)
-            .where({
-              source_comment_id: newComment.comment_id,
-              child_ticket_id: child.ticket_id,
-            })
-            .first();
-
-          if (existingMirror) {
-            continue;
-          }
-
-          const childIds = await trx.raw(
-            'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-          );
-          const childGenerated = childIds.rows?.[0] as
-            | { comment_id: string; thread_id: string }
-            | undefined;
-          if (!childGenerated?.comment_id || !childGenerated?.thread_id) {
-            throw new Error('Database UUID generation did not return mirrored comment/thread identifiers.');
-          }
-
-          await tenantDb(trx, tenant).table('comment_threads').insert({
-            tenant,
-            thread_id: childGenerated.thread_id,
-            ticket_id: child.ticket_id,
-            project_task_id: null,
-            root_comment_id: childGenerated.comment_id,
-            is_internal: false,
-            reply_count: 0,
-            last_activity_at: now,
-            created_at: now,
-            created_by: null,
+          // The mirror write lives in ticketBundleUtils.mirrorCommentToChild so
+          // the sync_updates shape is defined once. Carry the source author
+          // (user, contact, author_type) so the mirrored child comment resolves
+          // to the real author instead of showing as unknown.
+          await mirrorCommentToChild(trx, tenant, {
+            sourceComment: {
+              comment_id: newCommentId,
+              note: content,
+              markdown_content: markdownContent,
+              user_id: newComment.user_id ?? null,
+              contact_id: newComment.contact_id ?? null,
+              author_type: newComment.author_type,
+            },
+            childTicketId: child.ticket_id,
+            isResolution,
           });
-
-          await tenantDb(trx, tenant).table('comments').insert({
-            tenant,
-            comment_id: childGenerated.comment_id,
-            thread_id: childGenerated.thread_id,
-            ticket_id: child.ticket_id,
-            user_id: null,
-            author_type: 'unknown',
-            note: content,
-            is_internal: false,
-            is_resolution: isResolution,
-            is_system_generated: true,
-            markdown_content: markdownContent,
-            created_at: now,
-          });
-
-          await tenantDb(trx, tenant).table('ticket_bundle_mirrors')
-            .insert({
-              tenant,
-              source_comment_id: newComment.comment_id,
-              child_ticket_id: child.ticket_id,
-              child_comment_id: childGenerated.comment_id,
-            })
-            .onConflict()
-            .ignore();
         }
       }
     }

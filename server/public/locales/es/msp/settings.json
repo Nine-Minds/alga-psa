@@ -1876,6 +1876,11 @@
         "normal": "Normal",
         "low": "Baja"
       }
+    },
+    "emailTemplates": {
+      "editor": {
+        "inlineLogoHint": "Su logotipo se incrusta en el mensaje al enviarlo. Conserve la referencia src=\"cid:{{cid}}\" tal cual: si la sustituye por una URL, los destinatarios tendrán que autorizar la descarga de la imagen."
+      }
     }
   },
   "timeEntry": {

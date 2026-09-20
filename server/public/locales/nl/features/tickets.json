@@ -335,6 +335,8 @@
     "deleteUploadedImages": "Afbeeldingen verwijderen",
     "keepUploadedImages": "Afbeeldingen behouden",
     "bundledUpdate": "Gebundelde update",
+    "bundledUpdateFrom": "Gebundelde update van {{number}}",
+    "systemAuthor": "Systeem",
     "clientSuffix": " (Klant)",
     "internalCommentTooltip": "Intern commentaar",
     "resolutionCommentTooltip": "Oplossingscommentaar",
@@ -1080,7 +1082,8 @@
       "responseStateTrackingDisabled": "Reactiestatusbewaking uitgeschakeld",
       "title": "Ticketweergavevoorkeuren",
       "description": "Configureer hoe het ticketdashboard kolommen en tijdstempels voor uw team weergeeft.",
-      "dateTimeFormat": "Datum/tijd-notatie",
+      "showWeekday": "Weekdag in tijdstempels tonen",
+      "countryDrivesFormat": "De datum- en tijdnotatie volgt het land van uw bedrijf. Stel dit in bij Instellingen → Algemeen.",
       "ticketListColumns": "Kolommen ticketlijst",
       "showTags": "Tags tonen",
       "displayUnderTitle": "Onder titel weergeven",
@@ -1378,7 +1381,13 @@
       "alreadyBundled": "Ticket is al gebundeld: {{ticket}}",
       "masterAsChild": "Het hoofdticket kan niet ook een onderliggend ticket zijn.",
       "noChildren": "Geen onderliggende tickets opgegeven.",
-      "childrenOnBundledChild": "Er kunnen geen onderliggende tickets worden toegevoegd aan een gebundeld onderliggend ticket."
+      "childrenOnBundledChild": "Er kunnen geen onderliggende tickets worden toegevoegd aan een gebundeld onderliggend ticket.",
+      "concurrent": "Een of meer geselecteerde tickets zijn gelijktijdig gebundeld. Vernieuw de pagina en probeer het opnieuw.",
+      "closedMasterChoiceRequired": "Het hoofdticket van deze bundel is gesloten. Kies hoe het onderliggende ticket wordt toegevoegd: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Die keuze is niet toegestaan voor dit hoofdticket. Kies een van de volgende opties: {{choices}}.",
+      "choiceOnOpenMaster": "Die keuze geldt alleen wanneer het hoofdticket van de bundel gesloten is.",
+      "closeRuleFailed": "Dit ticket kan nog niet worden gesloten: {{reason}}",
+      "reopenUnavailable": "Het hoofdticket kan niet worden heropend omdat er geen open ticketstatus is geconfigureerd."
     },
     "ticket": {
       "validationDetails": "Corrigeer de ticketgegevens: {{details}}",
@@ -1497,7 +1506,21 @@
         "reopenConfirm": "Master en {{count}} kinderen heropenen",
         "masterOnlyClose": "Alleen master sluiten",
         "masterOnlyReopen": "Alleen master heropenen"
-      }
+      },
+      "openChildrenBadge": "{{count}} open onderliggende tickets",
+      "openChildrenBadgeShort": "{{count}} open",
+      "childOpenStatus": "Open",
+      "childClosedStatus": "Gesloten",
+      "closedMasterDialogTitle": "Het hoofdticket van deze bundel is gesloten",
+      "closedMasterDialogIntro": "Het hoofdticket is gesloten. Kies wat er met het onderliggende ticket moet gebeuren wanneer het wordt toegevoegd.",
+      "keepClosedLabel": "Toevoegen en hoofdticket gesloten houden",
+      "keepClosedHelp": "Het onderliggende ticket blijft open met een eigen SLA-klok. De bundel wordt als inconsistent weergegeven totdat het onderliggende ticket is opgelost.",
+      "applyResolutionLabel": "Toevoegen en de oplossing van het hoofdticket op dit onderliggende ticket toepassen",
+      "applyResolutionHelp": "Sluit het onderliggende ticket met status {{status}} en plaatst de oplossing van het hoofdticket als openbare opmerking bij het onderliggende ticket.",
+      "applyResolutionHelpNoComment": "Sluit het onderliggende ticket met status {{status}}. Het hoofdticket heeft geen openbare oplossingsopmerking om te plaatsen.",
+      "reopenMasterLabel": "Toevoegen en hoofdticket heropenen",
+      "reopenMasterHelp": "Heropent alleen het hoofdticket. Al gesloten onderliggende tickets in deze bundel blijven gesloten; heropeningsmeldingen en SLA gelden voor het hoofdticket.",
+      "closedMasterGating": "De sluitregels van het bord staan geen open onderliggende tickets onder een gesloten hoofdticket toe, dus het hoofdticket gesloten houden is geen optie."
     },
     "autoClose": "Wordt automatisch gesloten op {{date}}, tenzij er nieuwe activiteit is.",
     "autoCloseWarned": "De klant is gewaarschuwd."
@@ -1806,7 +1829,8 @@
         "checklist_template_applied": "checklistsjabloon toegepast",
         "close_rules_overridden": "afsluitregels overschreven",
         "close_rules_bypassed": "afsluitregels omzeild",
-        "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden"
+        "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden",
+        "bundle_child_added": "onderliggend ticket toegevoegd aan bundel"
       },
       "closeStatus": "Sluitstatus",
       "noStatusChange": "Status niet wijzigen",

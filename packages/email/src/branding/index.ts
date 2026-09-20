@@ -22,13 +22,19 @@ export {
 export { suggestEmailPalette, type SuggestEmailPaletteInput } from './suggestEmailPalette';
 export {
   applyBrandLogo,
+  brandLogoCid,
   containsBrandAttribution,
   decorateBrandedHtml,
+  findBrandLogoCid,
+  parseBrandLogoVariant,
   removeBrandLogo,
+  resolveBrandLogoForPreview,
   stripBrandAttribution,
+  BRAND_LOGO_CIDS,
   BRAND_LOGO_MARKER,
   type BrandDecorationOptions,
   type BrandLogo,
+  type BrandLogoPreviewUrls,
 } from './brandAssets';
 export {
   planEmailBrandingApply,

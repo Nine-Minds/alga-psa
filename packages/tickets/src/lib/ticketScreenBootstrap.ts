@@ -46,7 +46,7 @@ export interface TicketScreenBootstrap {
   autoCloseState: ITicketAutoCloseState | null;
   canViewCommentMetadataDebug: boolean | null;
   teams: ITeam[] | null;
-  displaySettings: { dateTimeFormat?: string; responseStateTrackingEnabled?: boolean } | null;
+  displaySettings: { showWeekday?: boolean; responseStateTrackingEnabled?: boolean } | null;
   tags: ITag[] | null;
   streams: {
     /** Non-comment timeline entries (system/time/alert lanes). */
