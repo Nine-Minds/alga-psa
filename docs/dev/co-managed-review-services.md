@@ -14,6 +14,16 @@ leftover unit is what produced the port-collision failures in earlier rounds.
 
 `<worktree>` is `/home/robert/alga-copies/feature-co-managed-it`.
 
+**What the app's readiness path can and cannot prove.** `/auth/msp/signin` is
+three segments and renders a page, which is strictly more than the `/auth/signin`
+it replaced could establish — but the route-table truncation described below was
+observed on `/msp/*`, at four segments and deeper, while this probe sits on
+`/auth/*` at three. That a three-segment `/auth` route would also have gone
+missing is an **inference about the failure mode, not an observed catch**: the
+broken state could not be re-induced, so the new path was never watched failing.
+Treat a green readiness probe as "the server renders pages", not as "every route
+resolves".
+
 ## Registration commands
 
 Run these verbatim.
@@ -164,24 +174,38 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 20 http://100.82.172.57:3374
 That is also why each service above registers a `--readinessPath` and not just a
 port: the hub then probes the listener's HTTP response rather than the PTY.
 
-### …and neither is a redirect
+### …and neither is a route shallower than the failure
 
-The path used to be `/auth/signin`, and that was not a readiness check either.
-`/auth/signin` never reaches the App Router — `proxy.ts` answers it with a 307 to
-the portal-specific sign-in — so it returns the same 307 whether the router can
-resolve anything or nothing.
+The path used to be `/auth/signin`, and that could not have detected human
+review blocker 6 whatever status it returned.
 
-Human review blocker 6 is what that costs. The registered app was serving the
-root **"404 - Page Not Found"** for every `/msp` URL three or more segments deep
-— the co-managed shared task, ticket and project detail routes, but equally
-`/msp/projects/<id>/tasks/<taskId>`, `/msp/workflows/runs/<id>`,
-`/msp/time-entry/timesheet/<id>` and `/msp/settings/integrations/entra`. Shallower
-routes were fine. Throughout, `/auth/signin` answered 307, the port was bound,
-the supervisor's probe passed and the service record said live.
+The registered app was serving the root **"404 - Page Not Found"** for every
+`/msp` URL **four or more path segments long** — the co-managed shared task,
+ticket and project detail routes, but equally `/msp/projects/<id>/tasks/<taskId>`,
+`/msp/workflows/runs/<id>`, `/msp/time-entry/timesheet/<id>` and
+`/msp/settings/integrations/entra`. Three-segment routes — `/msp/tickets/import`,
+`/msp/tickets/<id>`, `/msp/co-management/tasks` — were fine throughout, and so
+was everything shallower. Meanwhile the port was bound, the supervisor's probe
+passed and the service record said live.
 
-`/auth/msp/signin` is the shallowest public URL that resolves a page three
-segments deep and renders it, so the probe fails when the router's deeper
-entries are missing.
+`/auth/signin` is **two segments**. It sat two levels shallower than the
+shallowest route that failed, so its status carried no information about whether
+anything deeper resolved.
+
+> An earlier revision of this section, and of the commit that introduced it,
+> claimed `/auth/signin` "never reaches the App Router" and that "`proxy.ts`
+> answers it with a 307". **Both are false.** There is no `proxy.ts` in this
+> repo. `/auth/signin` is a real App Router page,
+> `server/src/app/auth/signin/page.tsx`, and its 307 is that page's own
+> server-side `redirect()` to `/auth/msp/signin` (or
+> `/auth/client-portal/signin` when `callbackUrl` names the portal). It resolves
+> and renders. The redirect was never what made it a bad probe; the depth was.
+> (`proxy.ts` is a stage label Next 16 prints in its own dev request log —
+> `next.js: 3ms, proxy.ts: 3ms, application-code: 126ms` — not a file here.)
+
+`/auth/msp/signin` is **three segments** — the deepest any public route in this
+app goes, since every page under `server/src/app/auth` bottoms out at three — and
+it renders a page instead of redirecting.
 
 ## When routes that exist render "404 - Page Not Found"
 
@@ -212,9 +236,10 @@ carrier.
 If a route that exists renders the root 404:
 
 ```bash
-# 1. Confirm it is the whole depth band, not one route. Any /msp URL three or
-#    more segments deep will show it; a two-segment one will not.
-#    (Needs a session cookie — /msp bounces at the proxy otherwise.)
+# 1. Confirm it is the whole depth band, not one route. Any /msp URL four or
+#    more path segments long will show it; a three-segment one will not.
+#    (Needs a session cookie: server/src/middleware.ts redirects unauthenticated
+#     /msp/* to /auth/signin, so an anonymous probe 307s either way.)
 # 2. Force Turbopack to re-derive the route tree.
 touch server/src/app/msp/layout.tsx
 # 3. Re-probe. If it persists, stop the service and clear the dev cache:

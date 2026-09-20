@@ -56,23 +56,35 @@ fi
 # repeatedly on this host even at 32GB. The workspace dists are prebuilt, so
 # invoke the entrypoint directly and skip nx entirely.
 
-# READINESS MUST RENDER A PAGE, NOT BOUNCE AT THE PROXY
+# READINESS MUST BE AS DEEP AS WE CAN GET IT
 #
 # This service was registered with `/auth/signin` as its readiness and health
-# path. `/auth/signin` never reaches the App Router: proxy.ts answers it with a
-# 307 to the portal-specific sign-in. It answers that 307 whether or not the
-# router can resolve anything at all, which is how it certified a dev server as
-# healthy while every /msp route three or more segments deep rendered the root
-# "404 - Page Not Found" -- the state human review hit on the shared
-# project-task detail route, and the state in which the supervisor's probe, the
-# bound port and the process record all still looked correct. (The truncation
-# was in the running Turbopack dev server's app route table, not in the tree:
-# the same files, untouched, serve those routes before and after. See
-# docs/dev/co-managed-review-services.md.)
+# path, and that path could not have detected what human review blocker 6 hit,
+# whatever status it returned.
 #
-# `/auth/msp/signin` is the shallowest public URL that actually resolves a page
-# three segments deep and renders it, so a probe against it fails when the
-# router's deeper entries are missing instead of reporting a green port.
+# The app was serving the root "404 - Page Not Found" for every /msp URL FOUR or
+# more path segments long -- the co-managed shared task, ticket and project
+# detail routes, but equally /msp/projects/<id>/tasks/<taskId>,
+# /msp/workflows/runs/<id>, /msp/time-entry/timesheet/<id> and
+# /msp/settings/integrations/entra. Three-segment routes like
+# /msp/tickets/import and /msp/co-management/tasks were fine throughout. The
+# truncation was in the running Turbopack dev server's app route table, not in
+# the tree: the same files, untouched, serve those routes before and after. See
+# docs/dev/co-managed-review-services.md.
+#
+# `/auth/signin` is TWO segments, so it sat two levels shallower than the
+# shallowest route that failed -- structurally blind to the failure. (It is a
+# perfectly real App Router page, server/src/app/auth/signin/page.tsx, and its
+# 307 is that page's own server-side redirect() to the portal-specific sign-in.
+# The redirect was never the problem; the depth was.) That is why the probe, the
+# bound port and the process record all looked correct for the whole window,
+# and the failure surfaced only when a human clicked a link.
+#
+# `/auth/msp/signin` is THREE segments -- the deepest any public route in this
+# app goes, since every page under src/app/auth bottoms out at three -- and it
+# renders a page rather than redirecting. It is the best a session-less probe
+# can do here, and it is an improvement, not a proof: it is still one level
+# shallower than the shallowest observed failure. The doc records that caveat.
 READINESS_PATH=/auth/msp/signin
 
 # Next blocks /_next/* asset, HMR and RSC requests from unrecognised origins.
