@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "collectedAt": "2026-09-20T19:57:35.801Z",
-  "candidate": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+  "collectedAt": "2026-09-20T20:58:57.343Z",
+  "candidate": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
   "worktreeClean": true,
   "pr": {
     "number": 3363,
-    "head": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+    "head": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
     "state": "OPEN",
     "isDraft": false
   },
   "mergeability": {
     "mergeable": "MERGEABLE",
     "mergeStateStatus": "BLOCKED",
-    "checkedAtSha": "c422b945170aa629ff6ac7d23016f50571d3ac9f"
+    "checkedAtSha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742"
   },
   "ci": null
 }

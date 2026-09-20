@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "candidate": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
-  "generatedAt": "2026-09-20T19:57:35.875Z",
+  "candidate": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
+  "generatedAt": "2026-09-20T20:58:57.431Z",
   "plans": {
     "foundation": "docs/plans/2026-09-06-co-managed-it-plan.md",
     "clientIntegration": "docs/plans/2026-09-11-co-managed-client-integration",
@@ -47,7 +47,7 @@
     },
     "provider-route-regression": {
       "type": "automated",
-      "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+      "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
       "command": "server: vitest run src/test/unit/product + src/test/unit/email (125 files) at the round-2 candidate, after the release-flag gate was removed from the provider route",
       "result": "859 passed. Mutation checks: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page fails 2 of 7 provider cases; re-adding CoManagedFeatureBoundary to the route fails 1 of 7.",
       "artifact": "cf005-provider-setup.md",
@@ -55,7 +55,7 @@
     },
     "provider-route-browser": {
       "type": "browser",
-      "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+      "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
       "command": "Real dev app at http://100.82.172.57:3374 as cm.rabbit.admin@whiterabbit.test (tenant 51ac6952-6d6f-4600-aace-b71a9b2a5e73, product_code co_managed): Settings -> Email -> Inbound -> Open Providers; plus direct URLs for four excluded surfaces",
       "result": "Open Providers now lands on /msp/co-management/providers (\"Email and Identity Providers\") with the Microsoft app-registration surface rendered. /msp/settings/integrations (providers and accounting), /msp/settings/integrations/entra, /msp/billing and /msp/settings/extensions all still render \"Page not available in your current product experience\". PSA admin unchanged: /msp/go/providers redirects to /msp/settings/integrations?category=providers. Re-walked at the round-2 candidate after the locale keys and the release-flag change: /msp/go/providers renders the workbench (main innerText 1697 chars, #provider-credentials-selector present).",
       "artifact": "screenshots/cf005-co-managed-providers.png",
@@ -63,7 +63,7 @@
     },
     "release-flag-off-walk": {
       "type": "browser",
-      "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+      "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
       "command": "Dev server restarted with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false; walked as cm.rabbit.admin@whiterabbit.test",
       "result": "The blanking is shell-wide, not route-specific: /msp/dashboard, /msp/tickets, /msp/settings/email, /msp/co-management/ticket-access and /msp/co-management/providers all render main innerText length 0. MspLayoutClient wraps the whole shell in CoManagedWorkspaceBoundary for product_code co_managed. Restored afterwards and re-verified the route renders (1697 chars).",
       "artifact": "cf005-provider-setup.md",
@@ -71,7 +71,7 @@
     },
     "base-reconciliation-round3": {
       "type": "automated",
-      "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+      "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
       "command": "git merge origin/main (2dc8454a4c, 19 commits: sync-mode bundle status propagation); node scripts/audit-merge-drops.mjs --added-by origin/main --against 023076a648 --result worktree; byte-identity diff of every file main touched that the branch did not; vitest over the suites main added",
       "result": "Four conflicts, all in ticket-bundle / client-portal code where the co-managed audience guards live; all four resolved by keeping BOTH sides, none by taking a side. audit-merge-drops: 22 contested files, 7 flagged lines, every one a line this resolution deliberately rewrote. 49 files main touched that the branch did not are byte-identical to origin/main; the single exception is ticketBundlePropagation.ts, whose types this resolution extends. Main's new suites pass: 14 server unit, 26 tickets-package, 3 temporal, 1 TicketDetails confirm. PR #3363 reports mergeable=MERGEABLE.",
       "artifact": "base-reconciliation-round3.md",
@@ -79,7 +79,7 @@
     },
     "nav-contract-reanchored": {
       "type": "automated",
-      "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+      "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
       "command": "server: vitest run src/test/unit/api/microsoftEmailSetupCallback.test.ts src/test/unit/product/uiReachabilityCoherence.contract.test.ts src/test/unit/product/providerSetupReachability.test.ts; packages/integrations: vitest run (whole project)",
       "result": "37 passed across the 6 targeted suites; 115 files / 959 tests pass for @alga-psa/integrations. MUTATION-VERIFIED both halves: pointing the psa rows of PRODUCT_NAV_DESTINATIONS at /msp/settings/MUTATED turns microsoftEmailSetupCallback and MicrosoftIntegrationSettings.contract red. uiReachabilityCoherence now runs for co_managed as well as algadesk/psa; MUTATION-VERIFIED by adding a co_managed-allowed route prefix with no nav entry, which the orphan assertion reports by name. /msp/settings/integrations remains not_found for co_managed.",
       "artifact": "cf005-provider-setup.md",
@@ -87,7 +87,7 @@
     },
     "integration-shard-apt-repair": {
       "type": "automated",
-      "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+      "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
       "command": "Read GitHub Actions job 106117870496 (Integration shard 4) and repaired .github/workflows/integration-tests.yml:145 and citus-migration-smoke.yml:137",
       "result": "Shard 4 died before running a single test: apt-get update exited 100 because packages.microsoft.com returned HTTP 403 for the Ubuntu noble InRelease file. poppler-utils is a genuine dependency (invoiceTicketImmutable/invoiceTicketProduction shell out to pdftotext) and is kept. The step now drops the vendor sources the runner ships, tolerates a residual update error, and hard-verifies pdftotext -v; the install is not `|| true`.",
       "artifact": "base-reconciliation-round3.md",
@@ -95,15 +95,23 @@
     },
     "cf002-diagnostic-survives-pass": {
       "type": "automated",
-      "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+      "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
       "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts",
       "result": "29 passed (was 22). Adds a file sink (ALGA_INBOUND_DIAGNOSTIC_FILE, NDJSON, capped, never throws) wired in integration-tests.yml to the existing server-integration-shard-N artifact, and derives recursionCycle/recursionRepetitions so a stack overflow names its own recursion site. New cases cover self-recursion, mutual recursion, a negative case that must not invent a cycle, the emitted payload, and the sink's create / no-op / never-throw behaviour.",
       "artifact": "cf002-requester-deferral.md",
       "artifactNote": "ESTABLISHES observation only. It does NOT establish a cause for CF002, and there is no mutation-verified CF002 regression because there is no established cause to reintroduce."
     },
+    "cf002-cause-established": {
+      "type": "automated",
+      "sha": "603a74c5757a56f2a3a5c75d07e347603beb3ecd",
+      "command": "GitHub Actions run 35534035281, job 106141697370, Integration shard 1; read inbound-diagnostics-shard-1.ndjson from the server-integration-shard-1 artifact; then packages/db: vitest run src/withAdminTransaction.errorFidelity.test.ts (+ mutation)",
+      "result": "CAUSE ESTABLISHED. 34 records. The failing case reports commit_body = CoManagedLifecycleError / CO_MANAGED_READ_ONLY with classifiedAsLifecycle TRUE, then rollback = RangeError, then disposition retry/commit_failure. commit_body reports RangeError 0 times out of 8, so the overflow is NOT raised by the product commit body: it is manufactured by withAdminTransaction's unguarded lazy error.stack read (packages/db/src/index.ts:137-140), whose getter throws inside the catch block and propagates in place of the `throw error` below it. Two further messages show the same substitution, one over an ordinary Error, so the mechanism is general. Reading (A) confirmed; reading (B) refuted. Repaired at its owner; regression is 4 cases in withAdminTransaction.errorFidelity.test.ts, MUTATION-VERIFIED: reverting the guard fails 3 of 4 with the exact CI signature (RangeError where CoManagedLifecycleError is expected).",
+      "artifact": "raw-logs/inbound-diagnostics-shard1-35534035281.ndjson",
+      "artifactNote": "The raw NDJSON the shard uploaded, verbatim. NOT established: the original shard has not yet been rerun at a candidate carrying the repair, so CF002 stays `failed`. The independent reporter-level serialization overflow is still not fixed."
+    },
     "admission-adapter-callsites": {
       "type": "automated",
-      "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+      "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
       "command": "server: vitest run src/test/unit/email/coManagedAdmissionAdapters.test.ts",
       "result": "8 passed. Mutation runs, each adapter independently: inboundRequesterReply -> instanceof fails 2 of 8; inboundEmailReply -> instanceof fails 1 of 8. The unrelated-infrastructure-error cases stay green under both, so the repair does not broaden quarantine.",
       "artifact": "cf002-requester-deferral.md",
@@ -111,7 +119,7 @@
     },
     "inbound-diagnostics-regression": {
       "type": "automated",
-      "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+      "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
       "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts (rerun at the round-2 candidate as part of the 125-file product+email sweep)",
       "result": "10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the separately-compiled-copy case.",
       "artifact": "cf002-requester-deferral.md",
@@ -168,7 +176,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -185,7 +193,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -202,7 +210,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -221,7 +229,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -238,7 +246,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -260,7 +268,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -278,7 +286,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -297,7 +305,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -317,7 +325,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -335,7 +343,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -353,7 +361,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -371,7 +379,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -388,7 +396,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -405,7 +413,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -422,7 +430,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -439,7 +447,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -458,7 +466,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -476,7 +484,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -495,7 +503,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -513,7 +521,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -531,7 +539,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -550,7 +558,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate c422b94517, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 899ae2e1cc, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -565,7 +573,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -580,7 +588,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -595,7 +603,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -610,7 +618,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -625,7 +633,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -640,7 +648,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -655,7 +663,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -670,7 +678,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -685,7 +693,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -700,7 +708,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -715,7 +723,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -730,7 +738,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -745,7 +753,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -760,7 +768,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -775,7 +783,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -790,7 +798,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -805,7 +813,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -820,7 +828,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -835,7 +843,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -850,7 +858,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -865,7 +873,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -880,7 +888,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -895,7 +903,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -910,7 +918,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -925,7 +933,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -940,7 +948,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -955,7 +963,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -970,7 +978,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -985,7 +993,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1000,7 +1008,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1015,7 +1023,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1030,7 +1038,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1045,7 +1053,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1065,7 +1073,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1087,7 +1095,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1106,7 +1114,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1125,7 +1133,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1146,7 +1154,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1164,7 +1172,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1185,7 +1193,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1206,7 +1214,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1228,7 +1236,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1248,7 +1256,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1267,7 +1275,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1287,7 +1295,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1307,7 +1315,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1326,7 +1334,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1347,7 +1355,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1366,7 +1374,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1386,7 +1394,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1458,7 +1466,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1481,7 +1489,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1496,7 +1504,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1511,7 +1519,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1526,7 +1534,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1541,7 +1549,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1556,7 +1564,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1571,7 +1579,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1586,7 +1594,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1601,7 +1609,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1616,7 +1624,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1631,7 +1639,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1646,7 +1654,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1661,7 +1669,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1676,7 +1684,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1691,7 +1699,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1706,7 +1714,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1721,7 +1729,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1736,7 +1744,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1751,7 +1759,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1766,7 +1774,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1781,7 +1789,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1796,7 +1804,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1811,7 +1819,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1826,7 +1834,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1841,7 +1849,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1856,7 +1864,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1871,7 +1879,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1886,7 +1894,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1901,7 +1909,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1916,7 +1924,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1931,7 +1939,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1946,7 +1954,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1961,7 +1969,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1976,7 +1984,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -1991,7 +1999,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2006,7 +2014,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2021,7 +2029,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2036,7 +2044,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2051,7 +2059,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2066,7 +2074,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2086,7 +2094,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2109,7 +2117,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2133,7 +2141,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2154,7 +2162,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2175,7 +2183,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2194,7 +2202,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2215,7 +2223,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2233,7 +2241,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2254,7 +2262,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2273,7 +2281,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2292,7 +2300,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2311,7 +2319,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2331,7 +2339,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2351,7 +2359,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2372,7 +2380,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2392,7 +2400,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2415,7 +2423,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2436,7 +2444,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2467,7 +2475,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2496,7 +2504,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2528,7 +2536,7 @@
       ],
       "foundationNote": false,
       "status": "failed",
-      "justification": "STILL UNEXPLAINED, and this round corrects the previous round's framing rather than advancing the row. Shard-1 history for the separately-compiled requester lifecycle-pause case is now pass (bda945b640), fail x5 (7b0b52c6c3, 618019c3e3, fb2e696645, b17b7a80b4), then PASS at 023076a648 (job 106117870494). That retires the earlier \"deterministic regression in a fixed window\" reading: six runs show pass-fail-pass, which is not deterministic. It also exposes the blocking fact: the commit_body discriminator shipped at 4879aa8d63 and 023076a648 is the FIRST head that carried it -- and that run passed, so it emitted nothing, because server/vitest.config.ts sets silent:\"passed-only\". The prior round's instrumentation can only speak when the test fails, and the test had stopped failing, so every \"read commit_body from the next log\" next-action was unreachable. This round fixes that and nothing else: a file sink writes every record as NDJSON to the existing server-integration-shard-N artifact regardless of pass/fail, and the report now names its own recursion cycle. A green run therefore now yields the discriminator, because the commit_body stage sits in the withAdminTransaction callback's own catch and the PASSING path of this test throws CoManagedLifecycleError through exactly that catch. Readings (A) (withAdminTransaction's unguarded .stack read manufactured the RangeError) and (B) (the commit body genuinely overflowed) both remain open and untested. No causal explanation, and no mutation-verified regression, because there is no established cause to reintroduce. Row stays failed.",
+      "justification": "CAUSE NOW ESTABLISHED; row stays `failed` only because the confirming shard has not run. The file sink added this round worked on its first CI run: shard 1 failed at 603a74c575 (run 35534035281, job 106141697370) and uploaded 34 diagnostic records. They show the commit body raising a CORRECTLY FORMED CoManagedLifecycleError / CO_MANAGED_READ_ONLY with classifiedAsLifecycle TRUE, and the very next stage reporting RangeError. commit_body reports RangeError 0/8 times, so the overflow is not the product's: it is manufactured by withAdminTransaction's unguarded lazy `error.stack` read (packages/db/src/index.ts), whose getter throws INSIDE the catch block and propagates in place of the `throw error` below it, so the caller never receives the transaction's error. Two other messages show the same substitution, one over an ordinary Error - the mechanism is general, not co-managed specific. This also explains the intermittency: whether the read overflows depends on stack depth at the moment of failure, which varies with shard composition and order. Reading (A) confirmed, reading (B) refuted. Repaired at its owner with a MUTATION-VERIFIED regression (withAdminTransaction.errorFidelity.test.ts; reverting the guard fails 3 of 4 with the exact CI signature). Exit still requires the original shard to pass at a candidate carrying the repair, which has not been run, and the independent reporter-level serialization overflow is still NOT fixed. Superseded framing retained below for provenance: Shard-1 history for the separately-compiled requester lifecycle-pause case is now pass (bda945b640), fail x5 (7b0b52c6c3, 618019c3e3, fb2e696645, b17b7a80b4), then PASS at 023076a648 (job 106117870494). That retires the earlier \"deterministic regression in a fixed window\" reading: six runs show pass-fail-pass, which is not deterministic. It also exposes the blocking fact: the commit_body discriminator shipped at 4879aa8d63 and 023076a648 is the FIRST head that carried it -- and that run passed, so it emitted nothing, because server/vitest.config.ts sets silent:\"passed-only\". The prior round's instrumentation can only speak when the test fails, and the test had stopped failing, so every \"read commit_body from the next log\" next-action was unreachable. This round fixes that and nothing else: a file sink writes every record as NDJSON to the existing server-integration-shard-N artifact regardless of pass/fail, and the report now names its own recursion cycle. A green run therefore now yields the discriminator, because the commit_body stage sits in the withAdminTransaction callback's own catch and the PASSING path of this test throws CoManagedLifecycleError through exactly that catch. Readings (A) (withAdminTransaction's unguarded .stack read manufactured the RangeError) and (B) (the commit body genuinely overflowed) both remain open and untested. No causal explanation, and no mutation-verified regression, because there is no established cause to reintroduce. Row stays failed.",
       "evidence": [
         {
           "id": "requester-deferral-ci-diagnosed",
@@ -2549,7 +2557,7 @@
         {
           "id": "inbound-diagnostics-regression",
           "type": "automated",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts (rerun at the round-2 candidate as part of the 125-file product+email sweep)",
           "result": "10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the separately-compiled-copy case.",
           "artifact": "cf002-requester-deferral.md",
@@ -2577,11 +2585,20 @@
         {
           "id": "cf002-diagnostic-survives-pass",
           "type": "automated",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts",
           "result": "29 passed (was 22). Adds a file sink (ALGA_INBOUND_DIAGNOSTIC_FILE, NDJSON, capped, never throws) wired in integration-tests.yml to the existing server-integration-shard-N artifact, and derives recursionCycle/recursionRepetitions so a stack overflow names its own recursion site. New cases cover self-recursion, mutual recursion, a negative case that must not invent a cycle, the emitted payload, and the sink's create / no-op / never-throw behaviour.",
           "artifact": "cf002-requester-deferral.md",
           "artifactNote": "ESTABLISHES observation only. It does NOT establish a cause for CF002, and there is no mutation-verified CF002 regression because there is no established cause to reintroduce."
+        },
+        {
+          "id": "cf002-cause-established",
+          "type": "automated",
+          "sha": "603a74c5757a56f2a3a5c75d07e347603beb3ecd",
+          "command": "GitHub Actions run 35534035281, job 106141697370, Integration shard 1; read inbound-diagnostics-shard-1.ndjson from the server-integration-shard-1 artifact; then packages/db: vitest run src/withAdminTransaction.errorFidelity.test.ts (+ mutation)",
+          "result": "CAUSE ESTABLISHED. 34 records. The failing case reports commit_body = CoManagedLifecycleError / CO_MANAGED_READ_ONLY with classifiedAsLifecycle TRUE, then rollback = RangeError, then disposition retry/commit_failure. commit_body reports RangeError 0 times out of 8, so the overflow is NOT raised by the product commit body: it is manufactured by withAdminTransaction's unguarded lazy error.stack read (packages/db/src/index.ts:137-140), whose getter throws inside the catch block and propagates in place of the `throw error` below it. Two further messages show the same substitution, one over an ordinary Error, so the mechanism is general. Reading (A) confirmed; reading (B) refuted. Repaired at its owner; regression is 4 cases in withAdminTransaction.errorFidelity.test.ts, MUTATION-VERIFIED: reverting the guard fails 3 of 4 with the exact CI signature (RangeError where CoManagedLifecycleError is expected).",
+          "artifact": "raw-logs/inbound-diagnostics-shard1-35534035281.ndjson",
+          "artifactNote": "The raw NDJSON the shard uploaded, verbatim. NOT established: the original shard has not yet been rerun at a candidate carrying the repair, so CF002 stays `failed`. The independent reporter-level serialization overflow is still not fixed."
         }
       ]
     },
@@ -2620,7 +2637,7 @@
         {
           "id": "inbound-diagnostics-regression",
           "type": "automated",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts (rerun at the round-2 candidate as part of the 125-file product+email sweep)",
           "result": "10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the separately-compiled-copy case.",
           "artifact": "cf002-requester-deferral.md",
@@ -2648,7 +2665,7 @@
         {
           "id": "admission-adapter-callsites",
           "type": "automated",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "server: vitest run src/test/unit/email/coManagedAdmissionAdapters.test.ts",
           "result": "8 passed. Mutation runs, each adapter independently: inboundRequesterReply -> instanceof fails 2 of 8; inboundEmailReply -> instanceof fails 1 of 8. The unrelated-infrastructure-error cases stay green under both, so the repair does not broaden quarantine.",
           "artifact": "cf002-requester-deferral.md",
@@ -2709,7 +2726,7 @@
         {
           "id": "provider-route-browser",
           "type": "browser",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "Real dev app at http://100.82.172.57:3374 as cm.rabbit.admin@whiterabbit.test (tenant 51ac6952-6d6f-4600-aace-b71a9b2a5e73, product_code co_managed): Settings -> Email -> Inbound -> Open Providers; plus direct URLs for four excluded surfaces",
           "result": "Open Providers now lands on /msp/co-management/providers (\"Email and Identity Providers\") with the Microsoft app-registration surface rendered. /msp/settings/integrations (providers and accounting), /msp/settings/integrations/entra, /msp/billing and /msp/settings/extensions all still render \"Page not available in your current product experience\". PSA admin unchanged: /msp/go/providers redirects to /msp/settings/integrations?category=providers. Re-walked at the round-2 candidate after the locale keys and the release-flag change: /msp/go/providers renders the workbench (main innerText 1697 chars, #provider-credentials-selector present).",
           "artifact": "screenshots/cf005-co-managed-providers.png",
@@ -2718,7 +2735,7 @@
         {
           "id": "provider-route-regression",
           "type": "automated",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "server: vitest run src/test/unit/product + src/test/unit/email (125 files) at the round-2 candidate, after the release-flag gate was removed from the provider route",
           "result": "859 passed. Mutation checks: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page fails 2 of 7 provider cases; re-adding CoManagedFeatureBoundary to the route fails 1 of 7.",
           "artifact": "cf005-provider-setup.md",
@@ -2727,7 +2744,7 @@
         {
           "id": "release-flag-off-walk",
           "type": "browser",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "Dev server restarted with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false; walked as cm.rabbit.admin@whiterabbit.test",
           "result": "The blanking is shell-wide, not route-specific: /msp/dashboard, /msp/tickets, /msp/settings/email, /msp/co-management/ticket-access and /msp/co-management/providers all render main innerText length 0. MspLayoutClient wraps the whole shell in CoManagedWorkspaceBoundary for product_code co_managed. Restored afterwards and re-verified the route renders (1697 chars).",
           "artifact": "cf005-provider-setup.md",
@@ -2754,7 +2771,7 @@
         {
           "id": "provider-route-browser",
           "type": "browser",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "Real dev app at http://100.82.172.57:3374 as cm.rabbit.admin@whiterabbit.test (tenant 51ac6952-6d6f-4600-aace-b71a9b2a5e73, product_code co_managed): Settings -> Email -> Inbound -> Open Providers; plus direct URLs for four excluded surfaces",
           "result": "Open Providers now lands on /msp/co-management/providers (\"Email and Identity Providers\") with the Microsoft app-registration surface rendered. /msp/settings/integrations (providers and accounting), /msp/settings/integrations/entra, /msp/billing and /msp/settings/extensions all still render \"Page not available in your current product experience\". PSA admin unchanged: /msp/go/providers redirects to /msp/settings/integrations?category=providers. Re-walked at the round-2 candidate after the locale keys and the release-flag change: /msp/go/providers renders the workbench (main innerText 1697 chars, #provider-credentials-selector present).",
           "artifact": "screenshots/cf005-co-managed-providers.png",
@@ -2763,7 +2780,7 @@
         {
           "id": "provider-route-regression",
           "type": "automated",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "server: vitest run src/test/unit/product + src/test/unit/email (125 files) at the round-2 candidate, after the release-flag gate was removed from the provider route",
           "result": "859 passed. Mutation checks: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page fails 2 of 7 provider cases; re-adding CoManagedFeatureBoundary to the route fails 1 of 7.",
           "artifact": "cf005-provider-setup.md",
@@ -2772,7 +2789,7 @@
         {
           "id": "release-flag-off-walk",
           "type": "browser",
-          "sha": "c422b945170aa629ff6ac7d23016f50571d3ac9f",
+          "sha": "899ae2e1cc3a8e239c99c12bdb8925dbf645b742",
           "command": "Dev server restarted with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false; walked as cm.rabbit.admin@whiterabbit.test",
           "result": "The blanking is shell-wide, not route-specific: /msp/dashboard, /msp/tickets, /msp/settings/email, /msp/co-management/ticket-access and /msp/co-management/providers all render main innerText length 0. MspLayoutClient wraps the whole shell in CoManagedWorkspaceBoundary for product_code co_managed. Restored afterwards and re-verified the route renders (1697 chars).",
           "artifact": "cf005-provider-setup.md",
@@ -2794,7 +2811,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2812,7 +2829,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2829,7 +2846,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -2846,7 +2863,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3262,7 +3279,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3281,7 +3298,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3299,7 +3316,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3317,7 +3334,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3336,7 +3353,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3354,7 +3371,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3371,7 +3388,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3388,7 +3405,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3406,7 +3423,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3425,7 +3442,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3444,7 +3461,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3462,7 +3479,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3479,7 +3496,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3498,7 +3515,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3517,7 +3534,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3534,7 +3551,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3551,7 +3568,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3569,7 +3586,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3587,7 +3604,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3604,7 +3621,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3623,7 +3640,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3640,7 +3657,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3657,7 +3674,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3674,7 +3691,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3694,7 +3711,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     },
     {
@@ -3713,7 +3730,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate c422b94517.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 899ae2e1cc.",
       "evidence": []
     }
   ]
