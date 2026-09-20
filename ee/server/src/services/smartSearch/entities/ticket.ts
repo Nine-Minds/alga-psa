@@ -218,12 +218,14 @@ export async function loadTicketCandidates(
 }
 
 export const TICKET_RELEVANCE: RelevancePrompt = {
-  question: (index) =>
-    `Is the support ticket at \`candidates[${index}]\` about the problem, request, ` +
-    'person, device, or subject described by `query`? The candidate carries its ' +
-    'current status, is_closed flag, priority, board, assigned_to, assigned_team, and ' +
-    'entered_at, updated_at, closed_at, and due_date as ISO 8601 date-times; use them ' +
-    'only when `query` refers to such things.',
+  question: (ref, index) =>
+    `Is the support ticket with ref \`${ref}\` (at \`candidates[${index}]\`) about the ` +
+    'problem, request, person, device, or subject described by `query`, judging from its ' +
+    'title, description, and comments? Judge only that candidate. A ticket whose title, ' +
+    'description, and comments say nothing about what `query` describes is not about it. ' +
+    'The candidate also carries its current status, is_closed flag, priority, board, ' +
+    'assigned_to, assigned_team, and entered_at, updated_at, closed_at, and due_date as ' +
+    'ISO 8601 date-times; use those only when `query` refers to such things.',
   criteria: {
     true:
       'The ticket concerns what the query describes, even when it uses different words, ' +
@@ -232,10 +234,12 @@ export const TICKET_RELEVANCE: RelevancePrompt = {
       'the ticket is closed, a priority, a board, an assignee or team, or a time such as a ' +
       'due date or when it was opened, updated, or closed, the ticket matches on those too.',
     false:
-      'The ticket is about a different problem, request, or subject, or the query names a ' +
-      'status, closed state, priority, board, assignee, team, or time that the ticket does not ' +
-      'match. Sharing a client, a technician, a device type, or a few incidental words the ' +
-      'query does not ask about does not make it relevant.',
+      'The ticket is about a different problem, request, or subject, or its title, description, ' +
+      'and comments say nothing about what the query describes, or the query names a status, ' +
+      'closed state, priority, board, assignee, team, or time that the ticket does not match. ' +
+      'An empty description with no comments is not evidence of relevance. Sharing a client, a ' +
+      'technician, a device type, or a few incidental words the query does not ask about does ' +
+      'not make it relevant.',
   },
 };
 

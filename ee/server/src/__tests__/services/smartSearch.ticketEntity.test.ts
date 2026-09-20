@@ -104,6 +104,8 @@ describe('ticketSmartSearch definition', () => {
       expect(question).toContain(field);
     }
     expect(question).toContain('only when `query` refers to such things');
+    expect(question).toContain('with ref `c0` (at `candidates[0]`)');
+    expect(question).toContain('Judge only that candidate.');
   });
 
   it('keeps the question wording stable', () => {
@@ -111,11 +113,11 @@ describe('ticketSmartSearch definition', () => {
     expect(request.questions.c0).toMatchInlineSnapshot(`
       {
         "criteria": {
-          "false": "The ticket is about a different problem, request, or subject, or the query names a status, closed state, priority, board, assignee, team, or time that the ticket does not match. Sharing a client, a technician, a device type, or a few incidental words the query does not ask about does not make it relevant.",
+          "false": "The ticket is about a different problem, request, or subject, or its title, description, and comments say nothing about what the query describes, or the query names a status, closed state, priority, board, assignee, team, or time that the ticket does not match. An empty description with no comments is not evidence of relevance. Sharing a client, a technician, a device type, or a few incidental words the query does not ask about does not make it relevant.",
           "true": "The ticket concerns what the query describes, even when it uses different words, names a specific product or vendor where the query names a category, or describes a symptom of the same underlying problem. When the query mentions a status, whether the ticket is closed, a priority, a board, an assignee or team, or a time such as a due date or when it was opened, updated, or closed, the ticket matches on those too.",
         },
         "instructions": {
-          "question": "Is the support ticket at \`candidates[0]\` about the problem, request, person, device, or subject described by \`query\`? The candidate carries its current status, is_closed flag, priority, board, assigned_to, assigned_team, and entered_at, updated_at, closed_at, and due_date as ISO 8601 date-times; use them only when \`query\` refers to such things.",
+          "question": "Is the support ticket with ref \`c0\` (at \`candidates[0]\`) about the problem, request, person, device, or subject described by \`query\`, judging from its title, description, and comments? Judge only that candidate. A ticket whose title, description, and comments say nothing about what \`query\` describes is not about it. The candidate also carries its current status, is_closed flag, priority, board, assigned_to, assigned_team, and entered_at, updated_at, closed_at, and due_date as ISO 8601 date-times; use those only when \`query\` refers to such things.",
         },
         "type": "noul",
       }

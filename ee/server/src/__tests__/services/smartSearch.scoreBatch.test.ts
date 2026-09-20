@@ -15,7 +15,7 @@ function candidate(id: string, approxTokens: number): SmartSearchCandidate {
 }
 
 const prompt: RelevancePrompt = {
-  question: (index) => `Is \`candidates[${index}]\` about \`query\`?`,
+  question: (ref, index) => `Is \`${ref}\` (\`candidates[${index}]\`) about \`query\`?`,
   criteria: { true: 'yes when about it', false: 'no when not' },
 };
 
@@ -54,14 +54,16 @@ describe('buildRelevanceRequest', () => {
     expect(Object.keys(request.questions)).toEqual(['c0', 'c1']);
     expect(request.questions.c1).toEqual({
       type: 'noul',
-      instructions: { question: 'Is `candidates[1]` about `query`?' },
+      instructions: { question: 'Is `c1` (`candidates[1]`) about `query`?' },
       criteria: { true: 'yes when about it', false: 'no when not' },
     });
     expect(request.state.query).toBe('printer offline');
+    // Each candidate carries its ref first, so the question has a second anchor besides the index.
     expect(request.state.candidates).toEqual([
-      { title: 'Row a', description: 'desc' },
-      { title: 'Row b', description: 'desc' },
+      { ref: 'c0', title: 'Row a', description: 'desc' },
+      { ref: 'c1', title: 'Row b', description: 'desc' },
     ]);
+    expect(Object.keys(request.state.candidates[0])[0]).toBe('ref');
   });
 
   it('never leaks ids or token estimates into the state', () => {

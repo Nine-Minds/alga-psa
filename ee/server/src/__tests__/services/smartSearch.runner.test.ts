@@ -61,7 +61,7 @@ const definition: SmartSearchEntityDefinition<Scope, Row, Metadata> = {
   loadCandidates: mocks.loadCandidates,
   hydrateRows: mocks.hydrateRows,
   rowId: (row) => row.widget_id,
-  relevance: { question: (i) => `q${i}`, criteria: { true: 't', false: 'f' } },
+  relevance: { question: (ref) => `q-${ref}`, criteria: { true: 't', false: 'f' } },
 };
 
 function candidatesFor(ids: string[]) {
@@ -160,7 +160,7 @@ describe('runSmartSearch', () => {
     mocks.enumerate.mockResolvedValue(['s1']);
     await collect();
     const request = mocks.systemOne.mock.calls[0][0] as { questions: Record<string, { instructions: { question: string } }> };
-    expect(request.questions.c0.instructions.question).toBe('q0');
+    expect(request.questions.c0.instructions.question).toBe('q-c0');
   });
 
   it('reports a batch that fails after retries and keeps scoring the rest', async () => {

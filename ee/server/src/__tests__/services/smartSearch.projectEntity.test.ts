@@ -146,6 +146,9 @@ describe('projectSmartSearch definition', () => {
       expect(question).toContain(field);
     }
     expect(question).toContain('only when `query` refers to such things');
-    expect(request.questions.c0.criteria?.true).toContain('tasks or comments');
+    expect(question).toContain('with ref `c0` (at `candidates[0]`)');
+    expect(question).toContain('Judge only that candidate.');
+    expect(request.questions.c0.criteria?.true).toContain('tasks, or comments');
+    expect(request.questions.c0.criteria?.false).toContain('An empty description with no tasks or comments is not evidence of relevance.');
   });
 });

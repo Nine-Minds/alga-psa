@@ -16,9 +16,16 @@ import type { SmartSearchBucket } from '@alga-psa/ui/lib/smartSearch/types';
 import { SMART_SEARCH_BUCKETS, SMART_SEARCH_BUDGETS, type PackingBudgets } from './budgets';
 import type { JsonObject, SmartSearchCandidate } from './candidate';
 
-/** How an entity phrases the relevance question. `question` names `candidates[i]` and `query`. */
+/**
+ * How an entity phrases the relevance question. `question` receives the
+ * candidate's `ref` (`c0`, `c1`, …) and its index and must name both: each
+ * candidate in the state carries `ref` as its first field, because with large
+ * candidates Jev's reading of `candidates[i]` alone drifts to a neighbour
+ * (verified on the dev tenant's projects: an empty project scored 77% until
+ * the ref anchored the question).
+ */
 export interface RelevancePrompt {
-  question: (index: number) => string;
+  question: (ref: string, index: number) => string;
   criteria: { true: string; false: string };
 }
 
@@ -57,10 +64,14 @@ export function packCandidateBatches(
   return batches;
 }
 
+export function candidateRef(index: number): string {
+  return `c${index}`;
+}
+
 export function relevanceQuestion(prompt: RelevancePrompt, index: number): NoulQuestion {
   return {
     type: 'noul',
-    instructions: { question: prompt.question(index) },
+    instructions: { question: prompt.question(candidateRef(index), index) },
     criteria: { ...prompt.criteria },
   };
 }
@@ -72,10 +83,13 @@ export function buildRelevanceRequest(
 ): RelevanceRequest {
   const questions: RelevanceQuestions = {};
   batch.forEach((_, index) => {
-    questions[`c${index}`] = relevanceQuestion(prompt, index);
+    questions[candidateRef(index)] = relevanceQuestion(prompt, index);
   });
   return {
-    state: { query, candidates: batch.map((candidate) => candidate.state) },
+    state: {
+      query,
+      candidates: batch.map((candidate, index) => ({ ref: candidateRef(index), ...candidate.state })),
+    },
     questions,
   };
 }
@@ -116,9 +130,10 @@ export async function scoreBatch(
   const request = buildRelevanceRequest(prompt, query, batch);
   const result = await client.systemOne(request, { signal });
   const scores: BatchScore[] = batch.map((candidate, index) => {
-    const answer = result.answers[`c${index}`];
+    const ref = candidateRef(index);
+    const answer = result.answers[ref];
     if (!answer || answer.type !== 'noul' || typeof answer.noul !== 'number') {
-      throw new Error(`TypeSafe answer for c${index} missing or not a noul (candidate ${candidate.id})`);
+      throw new Error(`TypeSafe answer for ${ref} missing or not a noul (candidate ${candidate.id})`);
     }
     const score = Math.min(1, Math.max(0, answer.noul));
     return { id: candidate.id, score, bucket: bucketFor(score) };

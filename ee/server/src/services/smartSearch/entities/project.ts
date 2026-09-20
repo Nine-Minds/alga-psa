@@ -211,21 +211,31 @@ async function loadVisibleCommentRows(
   projectIds: string[]
 ): Promise<ProjectCommentRow[]> {
   const acl = aclPredicateSql(principal);
-  // Task comments index under their task; two joins climb back to the project.
   const db = tenantDb(trx, tenant);
+  // Task comments index under their task, and the index stores `parent_id` as
+  // text while `project_tasks.task_id` is a uuid. A derived table of the
+  // scoped projects' tasks carries the id as text so the join needs no cast
+  // on the indexed column, and climbs task → phase → project once.
+  const tasks = db.subquery('project_tasks as pt');
+  db.tenantJoin(tasks, 'project_phases as ph', 'pt.phase_id', 'ph.phase_id');
+  const taskKeys = tasks
+    .whereIn('ph.project_id', projectIds)
+    .select('pt.tenant', 'ph.project_id', trx.raw('pt.task_id::text as task_key'))
+    .as('tk');
   const query = db.table('app_search_index as si');
-  db.tenantJoin(query, 'project_tasks as pt', 'si.parent_id', 'pt.task_id');
-  db.tenantJoin(query, 'project_phases as ph', 'pt.phase_id', 'ph.phase_id');
+  db.tenantJoinSubquery(query, taskKeys, 'si.parent_id', 'tk.task_key', {
+    rootTenantColumn: 'si.tenant',
+    joinedTenantColumn: 'tk.tenant',
+  });
   const ranked = query
     .where('si.object_type', 'project_task_comment')
-    .whereIn('ph.project_id', projectIds)
     .whereRaw(acl.sql, acl.bindings)
     .select(
-      'ph.project_id',
+      'tk.project_id',
       'si.title as task_name',
       'si.body',
       'si.source_updated_at',
-      trx.raw('ROW_NUMBER() OVER (PARTITION BY ph.project_id ORDER BY si.source_updated_at DESC) AS rn')
+      trx.raw('ROW_NUMBER() OVER (PARTITION BY tk.project_id ORDER BY si.source_updated_at DESC) AS rn')
     )
     .as('ranked');
 
@@ -280,26 +290,30 @@ export async function loadProjectCandidates(
 }
 
 export const PROJECT_RELEVANCE: RelevancePrompt = {
-  question: (index) =>
-    `Is the project at \`candidates[${index}]\` about the work, deliverable, client, ` +
-    'person, or subject described by `query`? The candidate carries its current status, ' +
-    'is_closed and is_inactive flags, project_manager, contact, client, and start_date, ' +
-    'end_date, created_at, and updated_at as ISO 8601 date-times, plus its tasks (each with ' +
-    'phase, status, assigned_to, priority, and due_date) and recent task comments; use the ' +
-    'facts only when `query` refers to such things.',
+  question: (ref, index) =>
+    `Is the project with ref \`${ref}\` (at \`candidates[${index}]\`) about the work, ` +
+    'deliverable, client, person, or subject described by `query`, judging from its ' +
+    'project_name, description, tasks, and comments? Judge only that candidate. A project ' +
+    'whose name, description, tasks, and comments say nothing about what `query` describes ' +
+    'is not about it. The candidate also carries its current status, is_closed and ' +
+    'is_inactive flags, project_manager, contact, client, and start_date, end_date, ' +
+    'created_at, and updated_at as ISO 8601 date-times, and each task carries its phase, ' +
+    'status, assigned_to, priority, and due_date; use those only when `query` refers to ' +
+    'such things.',
   criteria: {
     true:
-      'The project concerns what the query describes, even when it uses different words, ' +
-      'names a specific product or vendor where the query names a category, or when the match ' +
-      'is in one of its tasks or comments rather than the project name. When the query mentions ' +
-      'a status, whether the project is closed or inactive, a manager, contact, or client, or a ' +
-      'time such as a deadline or when it started, was created, or was updated, the project ' +
-      'matches on those too.',
+      'The project name, description, tasks, or comments concern what the query describes, ' +
+      'even when they use different words, name a specific product or vendor where the query ' +
+      'names a category, or when the match is in one task or comment rather than the project ' +
+      'name. When the query mentions a status, whether the project is closed or inactive, a ' +
+      'manager, contact, or client, or a time such as a deadline or when it started, was ' +
+      'created, or was updated, the project matches on those too.',
     false:
-      'The project is about different work, or the query names a status, closed or inactive ' +
-      'state, manager, contact, client, or time that the project does not match. Sharing a ' +
-      'client, a manager, or a few incidental words the query does not ask about does not make ' +
-      'it relevant.',
+      'The project name, description, tasks, and comments are about different work or say ' +
+      'nothing about what the query describes, or the query names a status, closed or inactive ' +
+      'state, manager, contact, client, or time that the project does not match. An empty ' +
+      'description with no tasks or comments is not evidence of relevance. Sharing a client, a ' +
+      'manager, or a few incidental words the query does not ask about does not make it relevant.',
   },
 };
 
