@@ -510,6 +510,9 @@
       }
     },
     "coManagement": {
+      "providers": {
+        "title": "Fournisseurs de messagerie et d'identité"
+      },
       "title": "Accès cogéré",
       "administration": {
         "title": "Administration déléguée"

@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "Fournisseurs de messagerie et d'identité",
+      "description": "Enregistrez votre propre application Google ou Microsoft pour les e-mails entrants, la connexion du personnel et la configuration de l'annuaire. Ces identifiants appartiennent à votre espace de travail.",
+      "backToEmail": "Retour aux paramètres de messagerie"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} modification non enregistrée",
     "unsavedChanges_other": "{{count}} modifications non enregistrées"

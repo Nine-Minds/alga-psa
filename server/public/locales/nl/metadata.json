@@ -510,6 +510,9 @@
       }
     },
     "coManagement": {
+      "providers": {
+        "title": "E-mail- en identiteitsproviders"
+      },
       "title": "Toegang voor gezamenlijk beheer",
       "administration": {
         "title": "Gedelegeerd beheer"

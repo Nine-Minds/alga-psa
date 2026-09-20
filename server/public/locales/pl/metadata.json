@@ -510,6 +510,9 @@
       }
     },
     "coManagement": {
+      "providers": {
+        "title": "Dostawcy poczty e-mail i tożsamości"
+      },
       "title": "Dostęp do współzarządzania",
       "administration": {
         "title": "Administracja delegowana"

@@ -510,6 +510,9 @@
       }
     },
     "coManagement": {
+      "providers": {
+        "title": "E-Mail- und Identitätsanbieter"
+      },
       "title": "Co-Managed-Zugriff",
       "administration": {
         "title": "Delegierte Administration"

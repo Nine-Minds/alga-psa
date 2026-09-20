@@ -239,6 +239,9 @@
       }
     },
     "coManagement": {
+      "providers": {
+        "title": "Email and Identity Providers"
+      },
       "title": "Co-Managed Access",
       "administration": {
         "title": "Delegated Administration"

@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "Provider di email e identità",
+      "description": "Registra la tua applicazione Google o Microsoft per le email in entrata, l'accesso del personale e la configurazione della directory. Queste credenziali appartengono al tuo spazio di lavoro.",
+      "backToEmail": "Torna alle impostazioni email"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} modifica non salvata",
     "unsavedChanges_other": "{{count}} modifiche non salvate"
