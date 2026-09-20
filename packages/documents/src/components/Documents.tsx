@@ -92,6 +92,10 @@ const isDocumentActionError = (value: unknown): value is ActionMessageError | Ac
   isActionPermissionError(value) || isActionMessageError(value);
 
 interface DocumentsProps {
+  /** Open the standard document editor without showing the document manager. */
+  documentToOpen?: IDocument;
+  drawerOnly?: boolean;
+  onDocumentClosed?: () => void;
   id?: string;
   documents: IDocument[];
   gridColumns?: 3 | 4;
@@ -118,6 +122,9 @@ interface DocumentsProps {
 }
 
 const Documents = ({
+  documentToOpen,
+  drawerOnly = false,
+  onDocumentClosed,
   id = 'documents',
   documents: initialDocuments,
   gridColumns,
@@ -1211,6 +1218,14 @@ const Documents = ({
     handleDocumentClickRef.current = handleDocumentClick;
   });
   useEffect(() => {
+    if (documentToOpen) void handleDocumentClickRef.current(documentToOpen);
+  }, [documentToOpen]);
+  const wasDrawerOpen = useRef(false);
+  useEffect(() => {
+    if (wasDrawerOpen.current && !isDrawerOpen) onDocumentClosed?.();
+    wasDrawerOpen.current = isDrawerOpen;
+  }, [isDrawerOpen, onDocumentClosed]);
+  useEffect(() => {
     if (!inFolderMode) return;
     const docId = searchParams?.get('doc') ?? null;
     if (!docId || autoOpenedDocRef.current === docId) return;
@@ -1601,6 +1616,33 @@ const Documents = ({
       </div>
     </div>
   );
+
+  if (drawerOnly) {
+    return (
+      <>
+        <Drawer
+          id={`${id}-document-drawer`}
+          isOpen={isDrawerOpen}
+          onClose={handleDrawerClose}
+          isInDrawer={isInDrawer}
+          hideCloseButton={true}
+          drawerVariant="document"
+        >
+          {renderDrawerBody()}
+        </Drawer>
+        <ConfirmationDialog
+          id={`${id}-unsaved-changes-dialog`}
+          isOpen={showUnsavedChangesDialog}
+          onClose={() => setShowUnsavedChangesDialog(false)}
+          onConfirm={executeDrawerClose}
+          title="Unsaved Changes"
+          message="Are you sure you want to cancel? Any unsaved changes will be lost."
+          confirmLabel="Discard changes"
+          cancelLabel="Continue editing"
+        />
+      </>
+    );
+  }
 
   // Folder mode: show folder tree sidebar and new layout
   if (inFolderMode) {

@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Error al eliminar la entrada de tiempo",
     "timeEntryDeleted": "Entrada de tiempo eliminada",
     "closeFailed": "No se pudo cerrar el ticket",
-    "scheduleVisitFailed": "No se pudo abrir el planificador",
     "loadCommentsFailed": "No se pudieron cargar los comentarios",
     "updateTicketFailed": "No se pudo actualizar el ticket",
     "errorWithMessage": "Error: {{message}}",
     "billingProfileUpdated": "Perfil de facturación actualizado",
-    "updateBillingProfileFailed": "No se pudo actualizar el perfil de facturación"
+    "updateBillingProfileFailed": "No se pudo actualizar el perfil de facturación",
+    "scheduleOpenFailed": "No se pudo abrir el programador"
   },
   "conversation": {
     "comments": "Comentarios",
@@ -335,6 +335,8 @@
     "deleteUploadedImages": "Eliminar imágenes",
     "keepUploadedImages": "Conservar imágenes",
     "bundledUpdate": "Actualización agrupada",
+    "bundledUpdateFrom": "Actualización agrupada de {{number}}",
+    "systemAuthor": "Sistema",
     "clientSuffix": " (Cliente)",
     "internalCommentTooltip": "Comentario interno",
     "resolutionCommentTooltip": "Comentario de resolución",
@@ -1076,7 +1078,8 @@
       "responseStateTrackingDisabled": "Seguimiento del estado de respuesta deshabilitado",
       "title": "Preferencias de visualización de tickets",
       "description": "Configure cómo el panel de tickets muestra las columnas y las marcas de tiempo para su equipo.",
-      "dateTimeFormat": "Formato de fecha y hora",
+      "showWeekday": "Mostrar el día de la semana en las marcas de tiempo",
+      "countryDrivesFormat": "El formato de fecha y hora sigue el país de su empresa. Configúrelo en Configuración → General.",
       "ticketListColumns": "Columnas de la lista de tickets",
       "showTags": "Mostrar etiquetas",
       "displayUnderTitle": "Mostrar debajo del título",
@@ -1374,7 +1377,13 @@
       "alreadyBundled": "El ticket ya está agrupado: {{ticket}}",
       "masterAsChild": "El ticket principal no puede ser también un ticket secundario.",
       "noChildren": "No se proporcionaron tickets secundarios.",
-      "childrenOnBundledChild": "No se pueden añadir tickets secundarios a un ticket secundario ya agrupado."
+      "childrenOnBundledChild": "No se pueden añadir tickets secundarios a un ticket secundario ya agrupado.",
+      "concurrent": "Uno o más tickets seleccionados se agruparon simultáneamente. Actualice la página e inténtelo de nuevo.",
+      "closedMasterChoiceRequired": "El ticket principal de este paquete está cerrado. Elija cómo agregar el ticket secundario: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Esa opción no está permitida para este ticket principal. Elija una de estas: {{choices}}.",
+      "choiceOnOpenMaster": "Esa opción solo se aplica cuando el ticket principal del paquete está cerrado.",
+      "closeRuleFailed": "Este ticket aún no se puede cerrar: {{reason}}",
+      "reopenUnavailable": "No se puede reabrir el ticket principal porque no hay ningún estado de ticket abierto configurado."
     },
     "ticket": {
       "validationDetails": "Corrija los datos del ticket: {{details}}",
@@ -1481,7 +1490,21 @@
       "remove": "Quitar",
       "noChildren": "No hay tickets secundarios en este paquete.",
       "addChildMultiClientMessage": "Esto agregará {{ticket}} de un cliente diferente al paquete. Confirme que desea continuar.",
-      "thisTicket": "este ticket"
+      "thisTicket": "este ticket",
+      "openChildrenBadge": "{{count}} secundarios abiertos",
+      "openChildrenBadgeShort": "{{count}} abiertos",
+      "childOpenStatus": "Abierto",
+      "childClosedStatus": "Cerrado",
+      "closedMasterDialogTitle": "El ticket principal de este paquete está cerrado",
+      "closedMasterDialogIntro": "El ticket principal está cerrado. Elija qué debe ocurrir con el ticket secundario cuando se agregue.",
+      "keepClosedLabel": "Agregar y mantener cerrado el ticket principal",
+      "keepClosedHelp": "El ticket secundario permanece abierto con su propio reloj de SLA. El paquete se mostrará como inconsistente hasta que se resuelva el ticket secundario.",
+      "applyResolutionLabel": "Agregar y aplicar la resolución del ticket principal a este ticket secundario",
+      "applyResolutionHelp": "Cierra el ticket secundario con el estado {{status}} y publica la resolución del ticket principal en el ticket secundario como comentario público.",
+      "applyResolutionHelpNoComment": "Cierra el ticket secundario con el estado {{status}}. El ticket principal no tiene ningún comentario de resolución público para publicar.",
+      "reopenMasterLabel": "Agregar y reabrir el ticket principal",
+      "reopenMasterHelp": "Reabre solo el ticket principal. Los tickets secundarios ya cerrados de este paquete permanecen cerrados; las notificaciones de reapertura y el SLA se aplican al ticket principal.",
+      "closedMasterGating": "Las reglas de cierre del tablero no permiten tickets secundarios abiertos bajo un ticket principal cerrado, por lo que mantener cerrado el ticket principal no es una opción."
     },
     "autoClose": "Se cerrará automáticamente el {{date}} salvo que haya nueva actividad.",
     "autoCloseWarned": "Se ha avisado al cliente."
@@ -1603,7 +1626,8 @@
       "additionalAgentsTooltip": "Agentes adicionales:",
       "unknownAgent": "Agente desconocido",
       "category": "Categoría",
-      "selectDestinationStatus": "Seleccione un estado para el nuevo tablero antes de guardar."
+      "selectDestinationStatus": "Seleccione un estado para el nuevo tablero antes de guardar.",
+      "viewSchedule": "Ver agenda"
     },
     "layout": {
       "grid": "Cuadrícula",
@@ -1631,7 +1655,6 @@
       "showLess": "Mostrar menos",
       "contact": "Contacto",
       "client": "Cliente",
-      "nextVisit": "Próxima visita",
       "callsAndEmails": "Llamadas y correos",
       "call": "Llamar",
       "viewAll": "Ver todo",
@@ -1657,7 +1680,6 @@
       "billing": "Facturación",
       "couldNotLoad": "No se pudo cargar este panel",
       "nothingScheduled": "Nada programado",
-      "scheduleVisit": "Programar una visita",
       "scheduledWork": "Trabajo programado",
       "scheduleDone": "completado",
       "noCallsOrEmails": "No hay llamadas ni correos registrados",
@@ -1703,7 +1725,9 @@
         "approved": "Aprobada",
         "declined": "Rechazada",
         "cancelled": "Cancelada"
-      }
+      },
+      "scheduleTime": "Programar tiempo",
+      "openScheduleEntry": "Abrir entrada de agenda"
     },
     "timeline": {
       "subtitle": "Respuestas, tiempo y cambios del sistema en un solo lugar",
@@ -1786,7 +1810,8 @@
         "checklist_template_applied": "plantilla de lista aplicada",
         "close_rules_overridden": "reglas de cierre anuladas",
         "close_rules_bypassed": "reglas de cierre omitidas",
-        "auto_close_warning_sent": "aviso de cierre automático enviado"
+        "auto_close_warning_sent": "aviso de cierre automático enviado",
+        "bundle_child_added": "ticket secundario agregado al paquete"
       },
       "closeStatus": "Estado de cierre",
       "noStatusChange": "No cambiar el estado",
@@ -1801,6 +1826,80 @@
       "contactHelper": "Omite el correo al cliente, la invitación a la encuesta y la notificación del portal de clientes",
       "internalLabel": "Tampoco notificar a agentes y observadores",
       "internalHelper": "Omite también sus correos y notificaciones en la aplicación"
+    }
+  },
+  "externalLinks": {
+    "title": "Vínculos externos",
+    "empty": "Sin vínculos externos",
+    "loading": "Cargando vínculos externos...",
+    "noUrl": "No hay URL disponible para esta referencia",
+    "customSystemOption": "{{label}} (personalizado)",
+    "actions": {
+      "add": "Agregar vínculo",
+      "edit": "Editar",
+      "remove": "Eliminar",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "menu": "Acciones del vínculo"
+    },
+    "relationship": {
+      "origin": "Origen",
+      "mirror": "Espejo",
+      "reference": "Referencia"
+    },
+    "relationshipDescription": {
+      "origin": "Dónde se originó este ticket. Cada ticket puede tener un vínculo de origen, que determina su insignia de origen.",
+      "mirror": "Otro registro que sigue el mismo trabajo que este ticket.",
+      "reference": "Información de apoyo para este ticket."
+    },
+    "dialog": {
+      "addTitle": "Agregar vínculo externo",
+      "editTitle": "Editar vínculo externo",
+      "intro": "Agregar un vínculo no sincroniza datos entre sistemas."
+    },
+    "removeDialog": {
+      "title": "Eliminar vínculo externo",
+      "message": "¿Eliminar este vínculo externo del ticket?"
+    },
+    "fields": {
+      "system": "Sistema",
+      "loadingSystems": "Cargando sistemas...",
+      "selectSystem": "Seleccione un sistema",
+      "externalId": "ID externo",
+      "externalIdPlaceholder": "p. ej., 42 o 1234567890",
+      "realm": "Ámbito",
+      "url": "URL",
+      "urlOptional": "Anulación opcional",
+      "urlRequired": "https://...",
+      "relationship": "Relación",
+      "originExistsHint": "Este ticket ya tiene un vínculo de origen.",
+      "actorGroup": "Persona o cuenta (opcional)",
+      "actorHint": "La persona o cuenta asociada al registro vinculado en el sistema externo.",
+      "actorHandle": "Nombre de usuario o identificador",
+      "actorDisplay": "Nombre para mostrar",
+      "builtInGroup": "Sistemas integrados",
+      "customGroup": "Sistemas personalizados",
+      "urlPreview": "Abre:",
+      "urlPreviewIncomplete": "Complete los campos anteriores para previsualizar el vínculo."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket no encontrado",
+      "commentNotFound": "Comentario no encontrado en este ticket",
+      "linkNotFound": "Vínculo externo no encontrado",
+      "systemNotFound": "Sistema externo desconocido",
+      "externalIdRequired": "El ID externo es obligatorio",
+      "invalidUrl": "La URL debe ser una URL http(s) válida",
+      "invalidRelationship": "Relación no válida",
+      "invalidEntityType": "Tipo de entidad no válido",
+      "originExists": "Esta entidad ya tiene un vínculo de origen",
+      "duplicateExternalLink": "Ese registro externo ya está vinculado",
+      "systemInUse": "Este sistema externo está en uso por vínculos existentes",
+      "systemInUseCount": "Este sistema externo está en uso por {{count}} vínculo(s)",
+      "invalidSystemKey": "Las claves de sistemas personalizados deben coincidir con custom:<slug> usando letras minúsculas, dígitos o guiones bajos",
+      "systemLabelRequired": "La etiqueta del sistema es obligatoria",
+      "permissionDenied": "Permiso denegado: no se pueden administrar sistemas externos",
+      "systemRequired": "Elija un sistema externo.",
+      "urlRequired": "Se requiere una URL para los sistemas sin plantilla de URL."
     }
   }
 }

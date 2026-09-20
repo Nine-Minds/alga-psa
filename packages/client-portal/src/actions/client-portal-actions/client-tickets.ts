@@ -31,7 +31,7 @@ import {
 } from '@shared/lib/ticketActivity';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
-  applyVisibilityBoardFilter,
+  applyTicketVisibilityFilter,
   getTicketOrigin,
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
@@ -162,7 +162,7 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
-      applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 't.board_id');
+      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
     })
     .first();
 
@@ -265,7 +265,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyVisibilityBoardFilter(query, visibility.visibleBoardIds);
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -350,7 +350,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyVisibilityBoardFilter(ticketQuery, visibility.visibleBoardIds);
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
         })
         .first();
 
@@ -431,8 +431,12 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       // in buildTicketThreadTabState).
       const conversationsQuery = scopedDb.table('comments');
       scopedDb.tenantJoin(conversationsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
+      // Read-time bundle provenance. Only the source comment id is selected:
+      // a bundle can span clients, so the portal must never learn (or be able
+      // to follow a link to) the master ticket.
+      scopedDb.tenantJoin(conversationsQuery, 'ticket_bundle_mirrors as bm', 'comments.comment_id', 'bm.child_comment_id', { type: 'left' });
       conversationsQuery
-        .select('comments.*')
+        .select('comments.*', 'bm.source_comment_id as bundle_mirror_source_comment_id')
         .where({
           'comments.ticket_id': ticketId,
           'comments.is_internal': false,
@@ -543,13 +547,23 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
 
+    const conversationsWithProvenance = (result.conversations as Array<Record<string, any>>).map((comment) => {
+      const { bundle_mirror_source_comment_id, ...commentRow } = comment;
+      return {
+        ...commentRow,
+        bundle_mirror_source: bundle_mirror_source_comment_id
+          ? { source_comment_id: bundle_mirror_source_comment_id }
+          : null,
+      };
+    });
+
     return {
       ...ticketWithoutCreatorType,
       ticket_origin: getTicketOrigin(result.ticket as any),
       entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
       updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
       closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
-      conversations: result.conversations,
+      conversations: conversationsWithProvenance,
       documents: result.documents,
       // Linked assets joined from asset_associations; the type is broadened on
       // the consumer side via a small augmentation since ITicketWithDetails
@@ -1173,7 +1187,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds);
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' });
         })
         .first();
 
@@ -1258,43 +1272,44 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       })();
 
       const requestedBoardId = validatedData.board_id?.trim() || null;
-      let assignedBoardId: string | null = requestedBoardId;
 
       if (visibility.visibleBoardIds !== null && visibility.visibleBoardIds.length === 0) {
         throw expectedClientTicketActionError('Selected visibility group does not allow any boards');
       }
 
-      if (visibility.visibleBoardIds !== null) {
-        if (!requestedBoardId) {
-          assignedBoardId = visibility.visibleBoardIds[0] || null;
-        } else if (!visibility.visibleBoardIds.includes(requestedBoardId)) {
-          throw expectedClientTicketActionError(VISIBILITY_NOT_FOUND_ERROR);
-        }
+      if (
+        requestedBoardId &&
+        visibility.visibleBoardIds !== null &&
+        !visibility.visibleBoardIds.includes(requestedBoardId)
+      ) {
+        throw expectedClientTicketActionError(VISIBILITY_NOT_FOUND_ERROR);
       }
 
-      const resolvedBoard = !assignedBoardId
-        ? await tenantDb(trx, tenant).table('boards')
-            .where({
-              is_default: true,
-              is_inactive: false
-            })
-            .first()
-        : await tenantDb(trx, tenant).table('boards')
-            .where({
-              board_id: assignedBoardId,
-              is_inactive: false
-            })
-            .first();
+      // No board sent: prefer the tenant default when the contact may see it,
+      // otherwise the first active board they may see. Hidden boards are
+      // already subtracted from visibleBoardIds, so a hidden default never wins.
+      const boardCandidates = tenantDb(trx, tenant).table('boards')
+        .where({ is_inactive: false })
+        .modify((query) => {
+          if (requestedBoardId) {
+            query.where({ board_id: requestedBoardId });
+          } else if (visibility.visibleBoardIds !== null) {
+            query.whereIn('board_id', visibility.visibleBoardIds);
+          } else {
+            query.where({ is_default: true });
+          }
+        })
+        .orderBy([{ column: 'is_default', order: 'desc' }, 'display_order', 'board_name']);
+
+      const resolvedBoard = await boardCandidates.first();
 
       if (!resolvedBoard) {
         throw expectedClientTicketActionError(
-          assignedBoardId
+          requestedBoardId
             ? VISIBILITY_NOT_FOUND_ERROR
             : 'No default board configured for tickets'
         );
       }
-
-      assignedBoardId = resolvedBoard.board_id;
 
       // Fetch default status for tickets
       const defaultStatusId = await TicketModel.getDefaultStatusId(

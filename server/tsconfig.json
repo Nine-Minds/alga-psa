@@ -195,6 +195,12 @@
       "@alga-psa/ee-microsoft-teams/*": [
         "../ee/packages/microsoft-teams/src/*"
       ],
+      "@alga-psa/ee-threecx": [
+        "../ee/packages/threecx/src/index.ts"
+      ],
+      "@alga-psa/ee-threecx/*": [
+        "../ee/packages/threecx/src/*"
+      ],
       "@alga-psa/ee-stubs": [
         "../packages/ee/src/index.ts"
       ],

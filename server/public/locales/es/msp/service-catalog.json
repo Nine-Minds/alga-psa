@@ -31,7 +31,8 @@
       "advancedSettings": "Configuración avanzada",
       "addNew": "Agregar nueva tasa impositiva",
       "add": "Agregar tasa impositiva",
-      "update": "Actualizar tasa impositiva"
+      "update": "Actualizar tasa impositiva",
+      "cancel": "Cancelar"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Fecha de inicio *",
         "endDate": "Fecha de finalización (opcional)",
         "region": "Región fiscal *",
-        "percentage": "Porcentaje de impuestos *"
+        "percentage": "Porcentaje de impuestos *",
+        "active": "Activa"
       },
       "placeholders": {
         "loadingRegions": "Cargando regiones...",
@@ -48,7 +50,9 @@
       },
       "addTitle": "Agregar nueva tasa impositiva",
       "editTitle": "Editar tasa impositiva",
-      "description": "Introduzca los detalles de la tasa impositiva."
+      "description": "Introduzca los detalles de la tasa impositiva.",
+      "activeHint": "Las tasas inactivas se ignoran al calcular los impuestos de las facturas.",
+      "regionDescription": "Esta tasa se aplica a las facturas con impuestos de {{region}}."
     },
     "title": "Tasas de impuestos",
     "loading": "Cargando tasas impositivas",

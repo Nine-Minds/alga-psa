@@ -302,7 +302,7 @@ function PickerField({
           borderRadius: 10,
           borderWidth: 1,
           borderColor: theme.colors.border,
-          backgroundColor: disabled ? theme.colors.borderLight : theme.colors.card,
+          backgroundColor: disabled ? theme.colors.disabled.bg : theme.colors.card,
           opacity: pressed ? 0.9 : 1,
         })}
       >

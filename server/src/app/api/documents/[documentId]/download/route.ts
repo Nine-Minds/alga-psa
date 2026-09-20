@@ -6,8 +6,9 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import { runWithTenant } from '@alga-psa/db';
+import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import {
   getAuthorizedDocumentByFileId,
   getAuthorizedDocumentById,
@@ -78,8 +79,32 @@ export async function GET(
         return getAuthorizedDocumentByFileId(trx, tenantId, currentUser as any, documentId);
       });
 
-      if (!document || !document.file_id) {
+      if (!document) {
         return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+      }
+
+      const encodedFilename = encodeURIComponent(document.document_name || 'download');
+      const asciiFilename = document.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
+
+      if (!document.file_id) {
+        // Block documents (call and meeting transcripts, notes) have no file:
+        // serve their content as Markdown instead of answering 404.
+        const blockRow = await tenantDb(knex, tenantId)
+          .table('document_block_content')
+          .where({ document_id: document.document_id })
+          .first('block_data');
+        if (!blockRow) {
+          return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+        }
+        const blockData = typeof blockRow.block_data === 'string' ? JSON.parse(blockRow.block_data) : blockRow.block_data;
+        const markdown = convertBlockNoteToMarkdown(blockData) ?? '';
+        const body = Buffer.from(markdown, 'utf8');
+        const headers = new Headers();
+        headers.set('Content-Type', 'text/markdown; charset=utf-8');
+        headers.set('Content-Disposition', `attachment; filename="${asciiFilename}.md"; filename*=UTF-8''${encodedFilename}.md`);
+        headers.set('Content-Length', body.length.toString());
+        headers.set('Cache-Control', 'no-cache');
+        return new Response(body as any, { status: 200, headers });
       }
 
       const result = await StorageService.downloadFile(document.file_id);
@@ -90,9 +115,6 @@ export async function GET(
       const { buffer, metadata } = result;
       const headers = new Headers();
       headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
-
-      const encodedFilename = encodeURIComponent(document.document_name || 'download');
-      const asciiFilename = document.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
       headers.set(
         'Content-Disposition',
         `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`,

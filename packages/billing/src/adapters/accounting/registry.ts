@@ -13,6 +13,27 @@ export const ADAPTER_EXPORT_CAPABILITIES = {
   xero_csv: ['invoice']
 } as const satisfies Record<string, readonly string[]>;
 
+/**
+ * Outbound remote-operation support per adapter, for producers that enqueue
+ * work at the billing-event boundary. Mirrors the adapter capabilities; the
+ * appliers remain the authoritative capability gate.
+ */
+export const ADAPTER_OUTBOUND_CAPABILITIES = {
+  quickbooks_online: { payment: true, credit: true, void: true },
+  quickbooks_desktop: { payment: false, credit: false, void: false },
+  quickbooks_csv: { payment: false, credit: false, void: false },
+  xero: { payment: false, credit: false, void: false },
+  xero_csv: { payment: false, credit: false, void: false }
+} as const satisfies Record<string, { payment: boolean; credit: boolean; void: boolean }>;
+
+export function adapterSupportsOutboundOperation(
+  adapterType: string,
+  operation: 'payment' | 'credit' | 'void'
+): boolean {
+  const caps = ADAPTER_OUTBOUND_CAPABILITIES as Record<string, { payment: boolean; credit: boolean; void: boolean } | undefined>;
+  return Boolean(caps[adapterType]?.[operation]);
+}
+
 export class AccountingAdapterRegistry {
   private readonly adapters = new Map<string, AccountingExportAdapter>();
 

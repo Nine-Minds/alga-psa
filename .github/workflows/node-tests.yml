@@ -24,7 +24,10 @@ jobs:
             package-lock.json
             e2e-tests/package-lock.json
       - run: npm install -g npm@11
-      - run: npm ci
+      - name: Install browser discovery dependencies with bounded download recovery
+        env:
+          FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       - run: npm --prefix e2e-tests ci
       - name: Build shared libraries imported by test fixtures
         run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3

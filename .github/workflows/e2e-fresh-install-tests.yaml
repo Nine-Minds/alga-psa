@@ -468,7 +468,7 @@ jobs:
           docker-compose -p alga-e2e-test up --no-build --wait --wait-timeout 90 -d algasim test-ingress
           docker-compose -p alga-e2e-test exec -T algasim node --input-type=module -e 'const r = await fetch("https://calendar-callback:3443/probe", { signal: AbortSignal.timeout(5000) }); if (r.status !== 404) throw new Error("Calendar callback TLS routing failed")'
           curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
-          jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
+          jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "threecx", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
           docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"
 
       - name: Initialize isolated shared worker state
@@ -942,6 +942,20 @@ jobs:
         run: xvfb-run --auto-servernum npm test
         shell: bash
 
+      # The server is force-recreated for the upgrade and Teams stages below, so
+      # the end-of-job container-logs artifact only holds the last incarnation.
+      # Keep the browser-stage server and worker output next to the Playwright
+      # report while it still exists.
+      - name: Preserve browser-stage service logs
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 3
+        run: |
+          mkdir -p e2e-tests/test-results/browser-stage-logs
+          for service in server workflow-worker temporal-worker email-service; do
+            timeout --kill-after=5s 30s docker-compose -p alga-e2e-test logs --no-color "$service" > "e2e-tests/test-results/browser-stage-logs/${service}.log" 2>&1 || echo "Log capture for $service exited with $?" >> "e2e-tests/test-results/browser-stage-logs/${service}.log"
+          done
+        shell: bash
+
       # Publish completed browser evidence before the independent API lane.
       - name: Upload Playwright diagnostics
         if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
@@ -1265,9 +1279,13 @@ jobs:
           path: e2e-tests/test-results/
           retention-days: 7
 
+      # The setup chain shares the owned, expiring quarantine (scripts/lib/quarantine.json)
+      # and must not fail the job carrying other browser gates. Readiness records a missing
+      # Teams verdict as quarantined-failing and re-arms when the entry expires.
       - name: Start explicit Teams development configuration
         id: teams_development_server
         if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        continue-on-error: true
         timeout-minutes: 10
         run: |
           set -euo pipefail
@@ -1307,20 +1325,44 @@ jobs:
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
           docker-compose -p alga-e2e-test exec -T server node -e 'const fs = require("node:fs"); const probe = "/app/server/node_modules/.cache/webpack/.write-probe"; fs.writeFileSync(probe, "cache-writable", { flag: "wx" }); fs.unlinkSync(probe);'
           ready=false
+          mkdir -p "$RUNNER_TEMP/teams-development-probe"
+          : > "$RUNNER_TEMP/teams-development-probe/attempts.txt"
           for _attempt in $(seq 1 90); do
-            if curl --max-time 15 --fail --silent http://localhost:3000/auth/msp/signin >/dev/null; then ready=true; break; fi
+            if status=$(curl --max-time 15 --fail --silent -w '%{http_code}' -o /dev/null http://localhost:3000/auth/msp/signin); then
+              case "$status" in 2??|3??) ready=true ;; esac
+            fi
+            if [ -z "$status" ] || [ "$status" = 000 ]; then status=no-response; fi
+            printf '%s %s %s\n' "$_attempt" "$(date +%s)" "$status" >> "$RUNNER_TEMP/teams-development-probe/attempts.txt"
+            if [ "$ready" = true ]; then break; fi
             sleep 2
           done
+          if [ "$ready" != true ]; then
+            : > "$RUNNER_TEMP/teams-development-probe/last-body-full.html"
+            status=$(curl --max-time 15 --silent -w '%{http_code}' \
+              -D "$RUNNER_TEMP/teams-development-probe/last-headers.txt" \
+              -o "$RUNNER_TEMP/teams-development-probe/last-body-full.html" \
+              http://localhost:3000/auth/msp/signin) || true
+            if [ -z "$status" ] || [ "$status" = 000 ]; then status=no-response; fi
+            head -c 4096 "$RUNNER_TEMP/teams-development-probe/last-body-full.html" > "$RUNNER_TEMP/teams-development-probe/last-body.html" || true
+            rm -f "$RUNNER_TEMP/teams-development-probe/last-body-full.html"
+            timeout --kill-after=5s 30s docker-compose -p alga-e2e-test logs --no-color --tail=200 server > "$RUNNER_TEMP/teams-development-probe/server-tail.log" 2>&1 || true
+            timeout --kill-after=5s 30s docker-compose -p alga-e2e-test ps > "$RUNNER_TEMP/teams-development-probe/container-status.txt" 2>&1 || true
+            echo "::warning::Teams development server never became ready after $_attempt attempts; last status $status"
+            head -n 40 "$RUNNER_TEMP/teams-development-probe/last-body.html"
+          fi
+          printf '%s\n' "$status" > "$RUNNER_TEMP/teams-development-probe/last-status.txt"
           test "$ready" = true
 
       - name: Capture recreated Teams server credentials
         id: teams_creds
         if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' }}
+        continue-on-error: true
         run: docker-compose -p alga-e2e-test logs --no-color server | node e2e-tests/harness/capture-server-credentials.mjs
 
       - name: Check Teams source authentication configuration
         id: teams_auth_preflight
         if: ${{ !cancelled() && steps.teams_creds.outcome == 'success' }}
+        continue-on-error: true
         timeout-minutes: 2
         env:
           E2E_DATABASE_ISOLATED: 'true'
@@ -1334,6 +1376,7 @@ jobs:
       - name: Warm authenticated Teams dashboard
         id: teams_dashboard_ready
         if: ${{ !cancelled() && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
+        continue-on-error: true
         timeout-minutes: 5
         env:
           E2E_TEAMS_DEVELOPMENT: 'true'
@@ -1390,6 +1433,15 @@ jobs:
         with:
           name: teams-development-diagnostics
           path: e2e-tests/test-results/local/
+          retention-days: 7
+
+      - name: Upload Teams development probe diagnostics
+        if: ${{ always() && steps.teams_development_server.outcome != 'skipped' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: teams-development-probe
+          path: ${{ runner.temp }}/teams-development-probe/
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Run actual Microsoft callback against isolated authority

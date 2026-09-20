@@ -870,8 +870,9 @@ async function createPricedService(
       service_id: serviceId,
       currency_code: "USD",
       rate,
+      effective_date: "1970-01-01",
     })
-    .onConflict(["tenant", "service_id", "currency_code"])
+    .onConflict(["tenant", "service_id", "currency_code", "effective_date"])
     .merge({ rate });
   return serviceId;
 }

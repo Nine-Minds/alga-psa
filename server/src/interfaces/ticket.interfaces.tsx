@@ -20,6 +20,11 @@ export interface ITicket extends TenantEntity, ITaggable {
   ticket_number: string;
   title: string;
   url: string | null;
+  // Nullable classification references (server/API create only; distinct from
+  // the numeric itil_impact/itil_urgency fields below).
+  severity_id?: string | null;
+  urgency_id?: string | null;
+  impact_id?: string | null;
   board_id: string;
   client_id: string | null;
   location_id?: string | null;

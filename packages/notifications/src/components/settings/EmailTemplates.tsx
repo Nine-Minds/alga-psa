@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } fr
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { Button } from "@alga-psa/ui/components/Button";
-import { Dialog, DialogContent, DialogTitle } from "@alga-psa/ui/components/Dialog";
+import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
@@ -27,7 +27,15 @@ import {
   SystemEmailTemplate,
   TenantEmailTemplate
 } from "../../types/notification";
-import { applyEmailPalette, STOCK_EMAIL_PALETTE, type EmailPaletteTokens } from "@alga-psa/email/branding";
+import {
+  applyEmailPalette,
+  findBrandLogoCid,
+  BRAND_LOGO_CIDS,
+  BRAND_LOGO_MARKER,
+  STOCK_EMAIL_PALETTE,
+  type BrandLogoPreviewUrls,
+  type EmailPaletteTokens,
+} from "@alga-psa/email/branding";
 import { EmailTemplatePreview } from "./EmailTemplatePreview";
 import type { EmailBrandingStatus } from "../../lib/emailBranding";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
@@ -46,7 +54,10 @@ import {
   TemplateVariablePanel,
   VariableReferenceDialog,
 } from "./TemplateVariableReference";
-import { measureCaretMenuPosition, type CaretMenuPosition } from "./caretPosition";
+import { measureCaretMenuPosition, revealOffset, type CaretMenuPosition } from "./caretPosition";
+import { getTenantLocaleSettingsAction } from "@alga-psa/tenancy/actions/tenant-actions/tenantLocaleActions";
+import { collectTemplateLanguages, initialLanguageSelection } from "./emailTemplatesState";
+import type { SourceRange } from "./emailTemplateSourceMap";
 
 export { replaceTemplateVariables } from "./EmailTemplatePreview";
 
@@ -104,6 +115,8 @@ export function EmailTemplates() {
 
   // Language filter state - empty means show all languages
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
+  // Once the tenant touches the filter, the default-language prefill stays out of the way.
+  const languageFilterTouched = useRef(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,16 +141,14 @@ export function EmailTemplates() {
   }, [selectedLanguages.size]);
 
   // Get available languages from templates
-  const availableLanguages = useMemo(() => {
-    if (!templates) return [];
-    const languageCodes = new Set<string>();
-    templates.systemTemplates.forEach(t => languageCodes.add(t.language_code));
-    templates.tenantTemplates.forEach(t => languageCodes.add(t.language_code));
-    return Array.from(languageCodes).sort();
-  }, [templates]);
+  const availableLanguages = useMemo(
+    () => (templates ? collectTemplateLanguages(templates) : []),
+    [templates],
+  );
 
   // Toggle language in filter
   const handleToggleLanguage = useCallback((languageCode: string) => {
+    languageFilterTouched.current = true;
     setSelectedLanguages(prev => {
       const next = new Set(prev);
       if (next.has(languageCode)) {
@@ -151,6 +162,7 @@ export function EmailTemplates() {
 
   // Clear all language filters
   const handleClearLanguageFilters = useCallback(() => {
+    languageFilterTouched.current = true;
     setSelectedLanguages(new Set());
   }, []);
 
@@ -162,6 +174,21 @@ export function EmailTemplates() {
         setTenant(currentTenant);
         const currentTemplates = await getTemplatesAction(currentTenant);
         setTemplates(currentTemplates);
+
+        // Land on the tenant's own language instead of every translation of
+        // every template; the filter itself still toggles and clears normally.
+        try {
+          const localeSettings = await getTenantLocaleSettingsAction();
+          const preselected = initialLanguageSelection(
+            collectTemplateLanguages(currentTemplates),
+            localeSettings?.defaultLocale,
+          );
+          if (preselected.length > 0 && !languageFilterTouched.current) {
+            setSelectedLanguages(new Set(preselected));
+          }
+        } catch (localeErr) {
+          console.error('Failed to load tenant locale settings:', localeErr);
+        }
       } catch (err) {
         console.error('Failed to load email templates:', err);
         setError(t('notifications.emailTemplatesUi.errors.loadFailed', 'Failed to load templates'));
@@ -575,6 +602,7 @@ export function EmailTemplates() {
       <ViewTemplateDialog
         template={viewingTemplate}
         onClose={() => setViewingTemplate(null)}
+        brandLogoUrls={brandingStatus?.logoOptions}
       />
 
       <EditTemplateDialog
@@ -585,6 +613,7 @@ export function EmailTemplates() {
         onTemplatesChange={setTemplates}
         brandingPalette={brandingTarget}
         appliedPalette={brandingStatus?.palette?.appliedPalette ?? null}
+        brandLogoUrls={brandingStatus?.logoOptions}
       />
 
       <VariableReferenceDialog
@@ -598,9 +627,12 @@ export function EmailTemplates() {
 function ViewTemplateDialog({
   template,
   onClose,
+  brandLogoUrls,
 }: {
   template: SystemEmailTemplate | null;
   onClose: () => void;
+  /** Resolves the embedded-logo reference for the preview iframe. */
+  brandLogoUrls?: BrandLogoPreviewUrls;
 }) {
   const { t } = useTranslation('msp/settings');
   const [htmlTab, setHtmlTab] = useState<string>('preview');
@@ -655,10 +687,16 @@ function ViewTemplateDialog({
   );
 
   return (
-    <Dialog isOpen={!!template} onClose={onClose} className="max-w-6xl" footer={footer}>
-      <DialogTitle>{t('notifications.emailTemplatesUi.view.title', { defaultValue: 'Standard Template: {{name}}', name: formatTemplateName(template.name) })}</DialogTitle>
-
-      <DialogContent className="grid gap-5 px-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <Dialog
+      isOpen={!!template}
+      onClose={onClose}
+      className="max-w-6xl"
+      // The `title` prop, not a child DialogTitle: only the prop fills the drag
+      // handle, which otherwise shows an empty grab bar above the heading.
+      title={t('notifications.emailTemplatesUi.view.title', { defaultValue: 'Standard Template: {{name}}', name: formatTemplateName(template.name) })}
+      footer={footer}
+    >
+      <DialogContent className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-4">
         <div>
           <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>
@@ -688,6 +726,7 @@ function ViewTemplateDialog({
               <div className="mt-2">
                 <EmailTemplatePreview
                   htmlContent={template.html_content}
+                  brandLogoUrls={brandLogoUrls}
                   templateName={template.name}
                   subject={template.subject}
                 />
@@ -717,6 +756,17 @@ function ViewTemplateDialog({
   );
 }
 
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
+
 function EditTemplateDialog({
   isOpen,
   onClose,
@@ -725,6 +775,7 @@ function EditTemplateDialog({
   onTemplatesChange,
   brandingPalette,
   appliedPalette,
+  brandLogoUrls,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -735,6 +786,8 @@ function EditTemplateDialog({
   brandingPalette: EmailPaletteTokens | null;
   /** What the last apply wrote, so its tokens are recognized too. */
   appliedPalette: EmailPaletteTokens | null;
+  /** Resolves the embedded-logo reference for the live preview. */
+  brandLogoUrls?: BrandLogoPreviewUrls;
 }) {
   type EditableField = 'subject' | 'html_content' | 'text_content';
   const { t } = useTranslation('msp/settings');
@@ -745,7 +798,8 @@ function EditTemplateDialog({
     text_content: template?.text_content ?? "",
     language_code: template?.language_code ?? "en"
   });
-  const [htmlTab, setHtmlTab] = useState<string>('source');
+  const [sidePanel, setSidePanel] = useState<string>('preview');
+  const [caretOffset, setCaretOffset] = useState<number | null>(null);
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
@@ -770,12 +824,17 @@ function EditTemplateDialog({
         text_content: template.text_content,
         language_code: template.language_code
       });
-      setHtmlTab('source');
+      setSidePanel('preview');
+      setCaretOffset(null);
       setTestResult(null);
       setAutocomplete(null);
     }
   }, [template]);
   const [isSaving, setIsSaving] = useState(false);
+
+  // The preview re-renders a whole iframe, so it follows the draft one pause behind.
+  const previewHtml = useDebouncedValue(formData.html_content ?? '', 300);
+  const previewSubject = useDebouncedValue(formData.subject ?? '', 300);
 
   const getFieldRef = (field: EditableField) => {
     if (field === 'subject') return subjectRef.current;
@@ -812,6 +871,20 @@ function EditTemplateDialog({
   };
 
   const insertVariable = (token: string) => replaceSelection(lastFocusedField.current, token);
+
+  const trackCaret = (element: HTMLTextAreaElement) => setCaretOffset(element.selectionStart);
+
+  // Preview click -> select the markup it was rendered from.
+  const selectSourceRange = (range: SourceRange) => {
+    const element = htmlRef.current;
+    if (!element) return;
+    lastFocusedField.current = 'html_content';
+    element.focus();
+    element.setSelectionRange(range.start, range.end);
+    // The mirror image of the preview's own scrollIntoView when the caret moves.
+    revealOffset(element, range.start);
+    setCaretOffset(range.start);
+  };
 
   const detectAutocomplete = (
     field: EditableField,
@@ -967,12 +1040,23 @@ function EditTemplateDialog({
   );
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} className="max-w-6xl" footer={footer}>
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-[92rem]"
+      // The `title` prop, not a child DialogTitle: only the prop fills the drag
+      // handle, which otherwise shows an empty grab bar above the heading.
+      title={t('notifications.emailTemplatesUi.edit.title', { defaultValue: 'Edit Custom Template: {{name}}', name: formatTemplateName(template?.name ?? '') })}
+      footer={footer}
+    >
       <form id="edit-template-form" onSubmit={handleSubmit}>
-        <DialogTitle>{t('notifications.emailTemplatesUi.edit.title', { defaultValue: 'Edit Custom Template: {{name}}', name: formatTemplateName(template?.name ?? '') })}</DialogTitle>
-
-        <DialogContent className="grid gap-5 px-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <div className="min-w-0 space-y-4">
+        <DialogContent className="grid gap-5 lg:grid-cols-2">
+          {/* Each pane scrolls inside itself, so the source never pushes the
+              preview off the bottom of the dialog. */}
+          <div
+            className="min-w-0 max-h-[34rem] space-y-4 overflow-y-auto pr-2"
+            onScroll={() => setAutocomplete(null)}
+          >
           <div>
             <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>
             <div className="p-2 bg-gray-50 rounded border text-gray-700">
@@ -1013,61 +1097,55 @@ function EditTemplateDialog({
                 </Button>
               )}
             </div>
-            <Tabs value={htmlTab} onValueChange={setHtmlTab}>
-              <TabsList>
-                <TabsTrigger value="source">{t('notifications.emailTemplatesUi.tabs.source', 'Source')}</TabsTrigger>
-                <TabsTrigger value="preview">{t('notifications.emailTemplatesUi.tabs.preview', 'Preview')}</TabsTrigger>
-              </TabsList>
-              <TabsContent value="source">
-                <TextArea
-                  id="html-content"
-                  ref={htmlRef}
-                  value={formData.html_content}
-                  onFocus={() => { lastFocusedField.current = 'html_content'; }}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, html_content: e.target.value }));
-                    detectAutocomplete('html_content', e.currentTarget);
-                  }}
-                  onScroll={() => setAutocomplete(null)}
-                  onKeyDown={(event) => handleAutocompleteKeyDown(event, 'html_content')}
-                  required
-                  rows={10}
-                  className="mt-2"
-                />
-                {autocompleteMenu('html_content')}
-              </TabsContent>
-              <TabsContent value="preview">
-                <div className="mt-2">
-                  <EmailTemplatePreview
-                    htmlContent={formData.html_content ?? ''}
-                    templateName={template?.name ?? ''}
-                    subject={formData.subject}
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
+            <TextArea
+              id="html-content"
+              ref={htmlRef}
+              value={formData.html_content}
+              onFocus={() => { lastFocusedField.current = 'html_content'; }}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, html_content: e.target.value }));
+                detectAutocomplete('html_content', e.currentTarget);
+                trackCaret(e.currentTarget);
+              }}
+              onSelect={(event) => trackCaret(event.currentTarget)}
+              onClick={(event) => trackCaret(event.currentTarget)}
+              onScroll={() => setAutocomplete(null)}
+              onKeyDown={(event) => handleAutocompleteKeyDown(event, 'html_content')}
+              required
+              rows={18}
+              className="mt-2 font-mono text-xs"
+            />
+            {autocompleteMenu('html_content')}
+            {formData.html_content?.includes(BRAND_LOGO_MARKER) && (
+              <p id="inline-logo-hint" className="mt-1 text-xs text-gray-400">
+                {t('notifications.emailTemplates.editor.inlineLogoHint', {
+                  defaultValue: 'Your logo is embedded in the message when it is sent. Keep the src="cid:{{cid}}" reference as it is — replacing it with a URL makes recipients approve an image download first.',
+                  // The wide variant travels under its own content-id, so the
+                  // hint quotes whichever one this template carries.
+                  cid: findBrandLogoCid(formData.html_content) ?? BRAND_LOGO_CIDS.default,
+                })}
+              </p>
+            )}
           </div>
 
-          {htmlTab !== 'preview' && (
-            <div>
-              <Label htmlFor="text-content">{t('notifications.emailTemplatesUi.fields.textContent', 'Text Content')}</Label>
-              <TextArea
-                id="text-content"
-                ref={textRef}
-                value={formData.text_content}
-                onFocus={() => { lastFocusedField.current = 'text_content'; }}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, text_content: e.target.value }));
-                  detectAutocomplete('text_content', e.currentTarget);
-                }}
-                onScroll={() => setAutocomplete(null)}
-                onKeyDown={(event) => handleAutocompleteKeyDown(event, 'text_content')}
-                required
-                rows={10}
-              />
-              {autocompleteMenu('text_content')}
-            </div>
-          )}
+          <div>
+            <Label htmlFor="text-content">{t('notifications.emailTemplatesUi.fields.textContent', 'Text Content')}</Label>
+            <TextArea
+              id="text-content"
+              ref={textRef}
+              value={formData.text_content}
+              onFocus={() => { lastFocusedField.current = 'text_content'; }}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, text_content: e.target.value }));
+                detectAutocomplete('text_content', e.currentTarget);
+              }}
+              onScroll={() => setAutocomplete(null)}
+              onKeyDown={(event) => handleAutocompleteKeyDown(event, 'text_content')}
+              required
+              rows={8}
+            />
+            {autocompleteMenu('text_content')}
+          </div>
 
           {testResult && (
             <div className={`p-3 rounded text-sm ${testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
@@ -1075,10 +1153,43 @@ function EditTemplateDialog({
             </div>
           )}
           </div>
-          <TemplateVariablePanel
-            templateName={template?.name ?? ''}
-            onInsert={insertVariable}
-          />
+
+          <div className="min-w-0">
+            <Tabs value={sidePanel} onValueChange={setSidePanel}>
+              <TabsList>
+                <TabsTrigger value="preview">{t('notifications.emailTemplatesUi.tabs.preview', 'Preview')}</TabsTrigger>
+                <TabsTrigger value="variables">{t('notifications.emailTemplatesUi.tabs.variables', 'Variables')}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="preview">
+                <div className="mt-2 space-y-2">
+                  {/* The iframe grows to its content, so the scroll belongs here. */}
+                  <div className="max-h-[30rem] overflow-y-auto pr-1">
+                    <EmailTemplatePreview
+                      id="edit-template-preview"
+                      htmlContent={previewHtml}
+                      brandLogoUrls={brandLogoUrls}
+                      templateName={template?.name ?? ''}
+                      subject={previewSubject}
+                      sourceMap
+                      highlightOffset={caretOffset}
+                      onSelectSource={selectSourceRange}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {t('notifications.emailTemplatesUi.preview.sourceSyncNote', 'Click anything in the preview to select the markup behind it; moving the cursor in the source outlines it here.')}
+                  </p>
+                </div>
+              </TabsContent>
+              <TabsContent value="variables">
+                <div className="mt-2">
+                  <TemplateVariablePanel
+                    templateName={template?.name ?? ''}
+                    onInsert={insertVariable}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </DialogContent>
       </form>
     </Dialog>

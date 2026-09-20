@@ -54,6 +54,7 @@ export {
 } from './invoiceGeneration';
 export * from './invoiceTemplates';
 export * from './manualInvoiceActions';
+export * from './ticketInvoiceActions';
 export * from './salesOrderInvoicingActions';
 export * from './rmaChargeActions';
 export * from './restockingFeeActions';

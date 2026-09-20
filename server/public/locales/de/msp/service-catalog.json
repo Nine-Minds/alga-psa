@@ -31,7 +31,8 @@
       "advancedSettings": "Erweiterte Einstellungen",
       "addNew": "Neuen Steuersatz hinzufügen",
       "add": "Steuersatz hinzufügen",
-      "update": "Steuersatz aktualisieren"
+      "update": "Steuersatz aktualisieren",
+      "cancel": "Abbrechen"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Startdatum *",
         "endDate": "Enddatum (optional)",
         "region": "Steuerregion *",
-        "percentage": "Steuerprozentsatz *"
+        "percentage": "Steuerprozentsatz *",
+        "active": "Aktiv"
       },
       "placeholders": {
         "loadingRegions": "Regionen werden geladen...",
@@ -48,7 +50,9 @@
       },
       "addTitle": "Neuen Steuersatz hinzufügen",
       "editTitle": "Steuersatz bearbeiten",
-      "description": "Geben Sie die Details zum Steuersatz ein."
+      "description": "Geben Sie die Details zum Steuersatz ein.",
+      "activeHint": "Inaktive Sätze werden bei der Besteuerung von Rechnungen ignoriert.",
+      "regionDescription": "Dieser Satz gilt für Rechnungen, die in {{region}} besteuert werden."
     },
     "title": "Steuersätze",
     "loading": "Steuersätze werden geladen",

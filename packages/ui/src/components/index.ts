@@ -125,6 +125,8 @@ export { default as Spinner } from './Spinner';
 export * from './SuccessDialog';
 export { default as SuccessDialog } from './SuccessDialog';
 export * from './Switch';
+export * from './SystemAvatar';
+export { default as SystemAvatar } from './SystemAvatar';
 export * from './SwitchWithLabel';
 export * from './Table';
 export * from './Tabs';

@@ -58,7 +58,8 @@
     "cipp": "Integrazione CIPP — collega la tua istanza CIPP per la gestione multi-tenant di Entra",
     "teamsIntegration": "Microsoft Teams — integrazione delle riunioni e bot Teams per notifiche ticket",
     "advancedAuthorizationBundles": "Bundle di Autorizzazione Avanzata — crea e gestisci bundle ABAC riutilizzabili di restringimento",
-    "scimProvisioning": "Provisioning utenti SCIM — sincronizza l'attivazione degli utenti dal tuo provider di identità"
+    "scimProvisioning": "Provisioning utenti SCIM — sincronizza l'attivazione degli utenti dal tuo provider di identità",
+    "pbxTelephony": "Telefonia PBX — collega un PBX 3CX per il riconoscimento dei chiamanti e la registrazione delle chiamate"
   },
   "summary": {
     "licensesUsed": "Licenze Utilizzate",

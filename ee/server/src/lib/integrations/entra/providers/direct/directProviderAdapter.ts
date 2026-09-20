@@ -412,13 +412,48 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     return tenants;
   }
 
-  public async listUsersForTenant(
-    input: EntraListUsersForTenantInput
-  ): Promise<EntraManagedUserRecord[]> {
-    if (IS_SELF_TENANT_SMOKE) {
-      return this.listSelfTenantUsers(input);
-    }
+  private mapUserRows(
+    rows: unknown[],
+    managedTenantId: string,
+    seenObjectIds: Set<string>
+  ): EntraManagedUserRecord[] {
+    const users: EntraManagedUserRecord[] = [];
+    for (const row of rows) {
+      const raw = toObject(row);
+      const entraObjectId = getFirstString(raw.id);
+      if (!entraObjectId || seenObjectIds.has(entraObjectId)) {
+        continue;
+      }
 
+      seenObjectIds.add(entraObjectId);
+
+      const userPrincipalName = getNullableString(raw.userPrincipalName);
+      const email = getNullableString(raw.mail) || userPrincipalName;
+      const entraTenantId = getNullableString(raw.tenantId) || managedTenantId;
+
+      users.push(normalizeEntraSyncUser({
+        entraTenantId,
+        entraObjectId,
+        userPrincipalName,
+        email,
+        displayName: getNullableString(raw.displayName),
+        givenName: getNullableString(raw.givenName),
+        surname: getNullableString(raw.surname),
+        accountEnabled: getBoolean(raw.accountEnabled, true),
+        jobTitle: getNullableString(raw.jobTitle),
+        mobilePhone: getNullableString(raw.mobilePhone),
+        businessPhones: getStringArray(raw.businessPhones),
+        raw,
+      }));
+    }
+    return users;
+  }
+
+  private async collectUsers(
+    managedTenantId: string,
+    fetchPage: (pageUrl: string) => Promise<Record<string, unknown>>,
+    maxPages?: number
+  ): Promise<{ users: EntraManagedUserRecord[]; pages: number; truncated: boolean }> {
     const users: EntraManagedUserRecord[] = [];
     const seenObjectIds = new Set<string>();
     const select = [
@@ -439,55 +474,127 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     // tenant's users are read from that tenant's own directory, with a token
     // minted against its authority — the same GDAP pattern
     // listSecurityGroupsForTenant already uses.
-    let nextUrl = `${graphBaseUrl()}/users?$select=${select}&$top=999`;
+    let nextUrl: string | null = `${graphBaseUrl()}/users?$select=${select}&$top=999`;
+    let pages = 0;
+    let truncated = false;
 
     while (nextUrl) {
-      const pageUrl = nextUrl;
-      const payload = await this.managedTenantGraphRequest(
-        input.tenant,
-        input.managedTenantId,
-        (accessToken) =>
-          axios.get(pageUrl, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            timeout: GRAPH_REQUEST_TIMEOUT_MS,
-          })
-      );
-      const rows = Array.isArray(payload.value) ? payload.value : [];
-
-      for (const row of rows) {
-        const raw = toObject(row);
-        const entraObjectId = getFirstString(raw.id);
-        if (!entraObjectId || seenObjectIds.has(entraObjectId)) {
-          continue;
-        }
-
-        seenObjectIds.add(entraObjectId);
-
-        const userPrincipalName = getNullableString(raw.userPrincipalName);
-        const email = getNullableString(raw.mail) || userPrincipalName;
-        const entraTenantId = getNullableString(raw.tenantId) || input.managedTenantId;
-
-        users.push(normalizeEntraSyncUser({
-          entraTenantId,
-          entraObjectId,
-          userPrincipalName,
-          email,
-          displayName: getNullableString(raw.displayName),
-          givenName: getNullableString(raw.givenName),
-          surname: getNullableString(raw.surname),
-          accountEnabled: getBoolean(raw.accountEnabled, true),
-          jobTitle: getNullableString(raw.jobTitle),
-          mobilePhone: getNullableString(raw.mobilePhone),
-          businessPhones: getStringArray(raw.businessPhones),
-          raw,
-        }));
+      if (typeof maxPages === 'number' && pages >= maxPages) {
+        truncated = true;
+        break;
       }
 
+      const pageUrl = nextUrl;
+      const payload = await fetchPage(pageUrl);
+      const rows = Array.isArray(payload.value) ? payload.value : [];
+      users.push(...this.mapUserRows(rows, managedTenantId, seenObjectIds));
+
       const candidateNextLink = getNullableString(payload['@odata.nextLink']);
-      nextUrl = candidateNextLink || '';
+      nextUrl = candidateNextLink || null;
+      pages += 1;
     }
 
+    return { users, pages, truncated };
+  }
+
+  /**
+   * Diagnostics seam: read exactly one page of a managed tenant's directory
+   * with a caller-supplied token, returning the next page URL so an expensive
+   * preview can resume across requests without serializing the token.
+   */
+  public async listUsersPageWithToken(input: {
+    tenant: string;
+    managedTenantId: string;
+    accessToken: string;
+    url?: string;
+    signal?: AbortSignal;
+  }): Promise<{ users: EntraManagedUserRecord[]; nextLink: string | null }> {
+    const select = [
+      'id',
+      'displayName',
+      'givenName',
+      'surname',
+      'mail',
+      'userPrincipalName',
+      'accountEnabled',
+      'jobTitle',
+      'mobilePhone',
+      'businessPhones',
+    ].join(',');
+    const pageUrl = input.url || `${graphBaseUrl()}/users?$select=${select}&$top=999`;
+    const expected = new URL(`${graphBaseUrl()}/users`);
+    const requested = new URL(pageUrl);
+    if (requested.origin !== expected.origin || requested.pathname !== expected.pathname) {
+      throw new Error('Graph returned an unexpected users paging URL. Restart diagnostics or contact support.');
+    }
+
+    const response = await axios.get(pageUrl, {
+      headers: { Authorization: `Bearer ${input.accessToken}` },
+      timeout: GRAPH_REQUEST_TIMEOUT_MS,
+      signal: input.signal,
+      maxRedirects: 0,
+    });
+    const payload = toObject(response.data);
+    const rows = Array.isArray(payload.value) ? payload.value : [];
+    const users = this.mapUserRows(rows, input.managedTenantId, new Set<string>());
+    return {
+      users,
+      nextLink: getNullableString(payload['@odata.nextLink']) || null,
+    };
+  }
+
+  public async listUsersForTenant(
+    input: EntraListUsersForTenantInput
+  ): Promise<EntraManagedUserRecord[]> {
+    if (IS_SELF_TENANT_SMOKE) {
+      return this.listSelfTenantUsers(input);
+    }
+
+    const { users } = await this.collectUsers(
+      input.managedTenantId,
+      (pageUrl) =>
+        this.managedTenantGraphRequest(
+          input.tenant,
+          input.managedTenantId,
+          (accessToken) =>
+            axios.get(pageUrl, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+              timeout: GRAPH_REQUEST_TIMEOUT_MS,
+            })
+        )
+    );
+
     return users;
+  }
+
+  /**
+   * Diagnostics seam: read a managed tenant's directory with a token the caller
+   * already minted, optionally bounded to a page budget. Reuses the same
+   * normalization and paging as listUsersForTenant without minting a second
+   * token. `truncated` is reported honestly rather than silently dropping pages.
+   */
+  public async listUsersForTenantWithToken(input: {
+    tenant: string;
+    managedTenantId: string;
+    accessToken: string;
+    maxPages?: number;
+  }): Promise<{ users: EntraManagedUserRecord[]; pages: number; truncated: boolean }> {
+    if (IS_SELF_TENANT_SMOKE) {
+      const users = await this.listSelfTenantUsers(input);
+      return { users, pages: 1, truncated: false };
+    }
+
+    return this.collectUsers(
+      input.managedTenantId,
+      (pageUrl) =>
+        axios
+          .get(pageUrl, {
+            headers: { Authorization: `Bearer ${input.accessToken}` },
+            timeout: GRAPH_REQUEST_TIMEOUT_MS,
+          })
+          .then((response) => toObject(response.data)),
+      input.maxPages
+    );
   }
 
   private async listSelfTenantAsManaged(

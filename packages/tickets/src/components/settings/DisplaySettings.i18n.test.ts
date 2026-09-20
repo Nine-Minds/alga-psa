@@ -12,12 +12,13 @@ describe('display settings i18n wiring contract', () => {
   it('T080: routes the column/toggle settings chrome through features/tickets translations', () => {
     const source = read('./DisplaySettings.tsx');
 
-    expect(source).toContain("const { t, i18n } = useTranslation('features/tickets');");
+    expect(source).toContain("const { t } = useTranslation('features/tickets');");
     expect(source).toContain("t('settings.display.responseStateTrackingTitle', 'Response State Tracking')");
     expect(source).toContain("'settings.display.responseStateTrackingDescription'");
     expect(source).toContain("t('settings.display.preferencesTitle', 'Ticket Display Preferences')");
     expect(source).toContain("'settings.display.preferencesDescription'");
-    expect(source).toContain("t('settings.display.dateTimeFormat', 'Date/Time Format')");
+    expect(source).toContain("t('settings.display.showWeekday', 'Show weekday in timestamps')");
+    expect(source).toContain("'settings.display.countryDrivesFormat'");
     expect(source).toContain("t('settings.display.columnsTitle', 'Ticket List Columns')");
     expect(source).toContain("t('settings.display.showTags', 'Show Tags')");
   });

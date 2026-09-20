@@ -6,6 +6,9 @@ import { Check, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AutomationProps } from '../ui-reflection/types';
 import { useTranslation } from '../lib/i18n/client';
+import { useDateFormat } from '../lib/dateFormat/useDateFormat';
+import { formatDateValue } from '../lib/i18n/formatDateValue';
+import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 
 interface TimezoneOption {
   value: string;
@@ -39,27 +42,46 @@ const getTimezoneAbbreviation = (timezone: string, locale?: string): string => {
   }
 };
 
-const formatTimezoneLabel = (timezone: string, locale?: string): string => {
+/**
+ * The preview clock beside each timezone is a TIME, so its 12/24h shape is the
+ * country's, not the reading language's. Handing the language tag straight to
+ * Intl let German render 15:04 where the tenant's country writes 3:04 PM — the
+ * same language-drives-the-pattern bug this component's callers were fixed for.
+ * The timezone NAME is a name, so it stays in the language.
+ */
+const formatTimezoneLabel = (
+  timezone: string,
+  locale?: string,
+  dateFormat: CountryDateFormat = SYSTEM_DATE_FORMAT,
+): string => {
   try {
-    const formatter = new Intl.DateTimeFormat(locale, {
-      timeZone: timezone,
-      timeZoneName: 'long',
-      hour: 'numeric',
-      minute: 'numeric',
-    });
-    const currentTime = formatter.format(new Date());
+    const currentTime = formatDateValue(
+      new Date(),
+      locale ?? '',
+      {
+        timeZone: timezone,
+        timeZoneName: 'long',
+        hour: 'numeric',
+        minute: 'numeric',
+      },
+      dateFormat,
+    );
     return `${timezone.replace('_', ' ')} (${currentTime})`;
   } catch (e) {
     return timezone.replace('_', ' ');
   }
 };
 
-const groupTimezones = (timezones: string[], locale?: string): TimezoneOption[] => {
+const groupTimezones = (
+  timezones: string[],
+  locale?: string,
+  dateFormat?: CountryDateFormat,
+): TimezoneOption[] => {
   return timezones.map((tz): TimezoneOption => {
     const region = tz.split('/')[0];
     return {
       value: tz,
-      label: formatTimezoneLabel(tz, locale),
+      label: formatTimezoneLabel(tz, locale, dateFormat),
       region: region.replace('_', ' '),
       abbreviation: getTimezoneAbbreviation(tz, locale),
     };
@@ -69,19 +91,20 @@ const groupTimezones = (timezones: string[], locale?: string): TimezoneOption[] 
 export default function TimezonePicker({ value, onValueChange, className }: TimezonePickerProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n?.language;
+  const dateFormat = useDateFormat();
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [search, setSearch] = React.useState('');
 
   const selectedTimezoneLabel = React.useMemo(() => {
     return value
-      ? formatTimezoneLabel(value, locale)
+      ? formatTimezoneLabel(value, locale, dateFormat)
       : t('timezonePicker.selectPlaceholder', 'Select timezone...');
-  }, [value, locale, t]);
+  }, [value, locale, dateFormat, t]);
 
   const timezoneOptions = useMemo(() => {
     const timezones = Intl.supportedValuesOf('timeZone');
-    return groupTimezones(timezones, locale);
-  }, [locale]);
+    return groupTimezones(timezones, locale, dateFormat);
+  }, [locale, dateFormat]);
 
   const filteredOptions = useMemo(() => {
     if (!search) return timezoneOptions;

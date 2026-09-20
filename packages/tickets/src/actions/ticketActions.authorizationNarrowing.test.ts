@@ -114,92 +114,6 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => currentBundleRules),
 }));
 
-vi.mock('@alga-psa/authorization/kernel', () => {
-  const evaluateWithRules = (
-    input: {
-      resource: { type: string; action: string };
-      record?: { boardId?: string | null; clientId?: string | null };
-      selectedBoardIds?: string[];
-    },
-    rules: Array<Record<string, unknown>>
-  ) => {
-    let allowed = true;
-
-    if (Array.isArray(input.selectedBoardIds)) {
-      allowed = Boolean(input.record?.boardId && input.selectedBoardIds.includes(input.record.boardId));
-    }
-
-    const matchingRules = rules.filter(
-      (rule) => rule.resource === input.resource.type && rule.action === input.resource.action
-    );
-
-    for (const rule of matchingRules) {
-      if (rule.templateKey === 'selected_boards') {
-        const selectedBoards = Array.isArray(rule.selectedBoardIds) ? (rule.selectedBoardIds as string[]) : [];
-        allowed = allowed && Boolean(input.record?.boardId && selectedBoards.includes(input.record.boardId));
-      }
-
-      if (rule.templateKey === 'selected_clients') {
-        const selectedClients = Array.isArray(rule.selectedClientIds) ? (rule.selectedClientIds as string[]) : [];
-        allowed = allowed && Boolean(input.record?.clientId && selectedClients.includes(input.record.clientId));
-      }
-    }
-
-    return {
-      allowed,
-      reasons: [],
-      scope: {
-        allowAll: allowed,
-        denied: !allowed,
-        constraints: [],
-      },
-      redactedFields: [],
-    };
-  };
-
-  class BuiltinAuthorizationKernelProvider {
-    constructor(_config?: unknown) {}
-  }
-
-  class BundleAuthorizationKernelProvider {
-    resolveRules: (input: unknown) => Promise<Array<Record<string, unknown>>>;
-
-    constructor(config: { resolveRules: (input: unknown) => Promise<Array<Record<string, unknown>>> }) {
-      this.resolveRules = config.resolveRules;
-    }
-  }
-
-  class RequestLocalAuthorizationCache {}
-
-  const createAuthorizationKernel = (config: {
-    bundleProvider?: BundleAuthorizationKernelProvider;
-  }) => ({
-    authorizeResource: async (input: {
-      resource: { type: string; action: string };
-      record?: { boardId?: string | null; clientId?: string | null };
-      selectedBoardIds?: string[];
-    }) => {
-      const rules = config.bundleProvider ? await config.bundleProvider.resolveRules(input) : [];
-      return evaluateWithRules(input, rules);
-    },
-  });
-
-  const getAuthorizationKernel = async () => ({
-    authorizeResource: async (input: {
-      resource: { type: string; action: string };
-      record?: { boardId?: string | null; clientId?: string | null };
-      selectedBoardIds?: string[];
-    }) => evaluateWithRules(input, currentBundleRules),
-  });
-
-  return {
-    BuiltinAuthorizationKernelProvider,
-    BundleAuthorizationKernelProvider,
-    RequestLocalAuthorizationCache,
-    createAuthorizationKernel,
-    getAuthorizationKernel,
-  };
-});
 
 function makeTicket(overrides: Record<string, unknown> = {}) {
   return {
@@ -350,6 +264,9 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     });
     hasPermissionMock.mockResolvedValue(true);
     getClientContactVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -526,6 +443,26 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     ).rejects.toThrow('suppressInternalNotifications requires suppressContactNotifications');
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
+  });
+  it.each([false, true])('uses the real kernel for contact narrowing on list/detail (admin=%s)', async (admin) => {
+    currentUser = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-1', clientId: 'client-1', contact_id: 'contact-1', roles: [] };
+    getClientContactVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: admin ? 'client' : 'contact', isClientAdmin: admin, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-allow'] });
+    const own = makeTicket({ ticket_id: 'own', board_id: 'board-allow', client_id: 'client-1', contact_name_id: 'contact-1' });
+    const sibling = makeTicket({ ticket_id: 'sibling', board_id: 'board-allow', client_id: 'client-1', contact_name_id: 'contact-2' });
+    const unassigned = makeTicket({ ticket_id: 'null', board_id: 'board-allow', client_id: 'client-1', contact_name_id: null });
+    withTransactionMock.mockImplementation(async (_db, callback) => callback(buildTrx({ listTickets: [own, sibling, unassigned], detailTicketsById: { sibling } })));
+    expect((await getTicketsForList({ boardFilterState: 'all' } as any)).map((ticket) => ticket.ticket_id)).toEqual(admin ? ['own', 'sibling', 'null'] : ['own']);
+    if (admin) expect(await getTicketById('sibling')).toMatchObject({ ticket_id: 'sibling' });
+    else expect(await getTicketById('sibling')).toMatchObject({ permissionError: 'Permission denied: Cannot view ticket' });
+  });
+
+  it('denies client list/detail when context resolution throws', async () => {
+    currentUser = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-1', contact_id: 'contact-1', roles: [] };
+    getClientContactVisibilityContextMock.mockRejectedValue(new Error('missing group'));
+    const ticket = makeTicket({ ticket_id: 'ticket-1' });
+    withTransactionMock.mockImplementation(async (_db, callback) => callback(buildTrx({ listTickets: [ticket], detailTicketsById: { 'ticket-1': ticket } })));
+    expect(await getTicketsForList({ boardFilterState: 'all' } as any)).toEqual([]);
+    expect(await getTicketById('ticket-1')).toMatchObject({ permissionError: 'Permission denied: Cannot view ticket' });
   });
 
   it('T007: rejects a client-portal caller on MSP status writes before permission or ticket access', async () => {

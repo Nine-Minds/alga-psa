@@ -283,7 +283,6 @@
     "saveCommentFailed": "Failed to save comment changes",
     "updateDescriptionFailed": "Failed to update description",
     "prepareTimeEntryFailed": "An error occurred while preparing the time entry. Please try again.",
-    "scheduleVisitFailed": "Failed to open the scheduler",
     "updateContactFailed": "Failed to update contact",
     "updateClientFailed": "Failed to update client",
     "updateLocationFailed": "Failed to update location",
@@ -310,7 +309,8 @@
     "updateTicketFailed": "Failed to update ticket",
     "errorWithMessage": "Error: {{message}}",
     "billingProfileUpdated": "Billing profile updated",
-    "updateBillingProfileFailed": "Failed to update billing profile"
+    "updateBillingProfileFailed": "Failed to update billing profile",
+    "scheduleOpenFailed": "Failed to open the scheduler"
   },
   "conversation": {
     "comments": "Comments",
@@ -343,6 +343,8 @@
     "deleteUploadedImages": "Delete Images",
     "keepUploadedImages": "Keep Images",
     "bundledUpdate": "Bundled update",
+    "bundledUpdateFrom": "Bundled update from {{number}}",
+    "systemAuthor": "System",
     "clientSuffix": " (Client)",
     "internalCommentTooltip": "Internal Comment",
     "resolutionCommentTooltip": "Resolution Comment",
@@ -1084,7 +1086,8 @@
       "responseStateTrackingDisabled": "Response state tracking disabled",
       "title": "Ticket Display Preferences",
       "description": "Configure how your Ticketing dashboard displays columns and timestamps for your team.",
-      "dateTimeFormat": "Date/Time Format",
+      "showWeekday": "Show weekday in timestamps",
+      "countryDrivesFormat": "Date and time format follows your company country. Set it under Settings → General.",
       "ticketListColumns": "Ticket List Columns",
       "showTags": "Show Tags",
       "displayUnderTitle": "Display under Title",
@@ -1382,7 +1385,13 @@
       "alreadyBundled": "Ticket is already bundled: {{ticket}}",
       "masterAsChild": "Master ticket cannot also be a child ticket.",
       "noChildren": "No child tickets provided.",
-      "childrenOnBundledChild": "Cannot add children to a bundled child ticket."
+      "childrenOnBundledChild": "Cannot add children to a bundled child ticket.",
+      "concurrent": "One or more selected tickets were bundled concurrently. Please refresh and try again.",
+      "closedMasterChoiceRequired": "This bundle's master is closed. Choose how to add the child: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "That choice is not allowed for this master. Choose one of: {{choices}}.",
+      "choiceOnOpenMaster": "That choice only applies when the bundle master is closed.",
+      "closeRuleFailed": "This ticket cannot be closed yet: {{reason}}",
+      "reopenUnavailable": "The master cannot be reopened because no open ticket status is configured."
     },
     "ticket": {
       "validationDetails": "Please fix the ticket details: {{details}}",
@@ -1489,7 +1498,21 @@
       "remove": "Remove",
       "noChildren": "No children in this bundle.",
       "addChildMultiClientMessage": "This will add {{ticket}} from a different client into the bundle. Confirm you want to proceed.",
-      "thisTicket": "this ticket"
+      "thisTicket": "this ticket",
+      "openChildrenBadge": "{{count}} open children",
+      "openChildrenBadgeShort": "{{count}} open",
+      "childOpenStatus": "Open",
+      "childClosedStatus": "Closed",
+      "closedMasterDialogTitle": "This bundle's master is closed",
+      "closedMasterDialogIntro": "The master is closed. Choose what should happen to the child when it is added.",
+      "keepClosedLabel": "Add and keep master closed",
+      "keepClosedHelp": "The child stays open with its own SLA clock. The bundle will show as inconsistent until the child is resolved.",
+      "applyResolutionLabel": "Add and apply the master's resolution to this child",
+      "applyResolutionHelp": "Closes the child with status {{status}} and posts the master's resolution to the child as a public comment.",
+      "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterLabel": "Add and reopen master",
+      "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
     "autoCloseWarned": "The customer has been warned."
@@ -1611,7 +1634,8 @@
       "responseWaitingOnClient": "Waiting on client",
       "responseNone": "No reply needed",
       "category": "Category",
-      "selectDestinationStatus": "Select a status for the new board before saving."
+      "selectDestinationStatus": "Select a status for the new board before saving.",
+      "viewSchedule": "View schedule"
     },
     "layout": {
       "grid": "Grid",
@@ -1639,7 +1663,6 @@
       "showLess": "Show less",
       "contact": "Contact",
       "client": "Client",
-      "nextVisit": "Next visit",
       "callsAndEmails": "Calls and emails",
       "call": "Call",
       "viewAll": "View all",
@@ -1667,7 +1690,6 @@
       "billing": "Billing",
       "couldNotLoad": "Could not load this tile",
       "nothingScheduled": "Nothing scheduled",
-      "scheduleVisit": "Schedule a visit",
       "scheduledWork": "Scheduled work",
       "scheduleDone": "done",
       "noCallsOrEmails": "No calls or emails logged",
@@ -1711,7 +1733,9 @@
         "approved": "Approved",
         "declined": "Declined",
         "cancelled": "Cancelled"
-      }
+      },
+      "scheduleTime": "Schedule time",
+      "openScheduleEntry": "Open schedule entry"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",
@@ -1759,7 +1783,8 @@
         "checklist_template_applied": "checklist template applied",
         "close_rules_overridden": "close rules overridden",
         "close_rules_bypassed": "close rules bypassed",
-        "auto_close_warning_sent": "auto-close warning sent"
+        "auto_close_warning_sent": "auto-close warning sent",
+        "bundle_child_added": "bundle child added"
       },
       "filterEverything": "Everything",
       "filterReplies": "Replies",
@@ -1801,6 +1826,80 @@
       "showAllActivity": "Show all activity",
       "collapseActivity": "Collapse older activity",
       "replyingToComment": "Replying to {{name}}"
+    }
+  },
+  "externalLinks": {
+    "title": "External links",
+    "empty": "No external links",
+    "loading": "Loading external links...",
+    "noUrl": "No URL available for this reference",
+    "customSystemOption": "{{label}} (custom)",
+    "actions": {
+      "add": "Add link",
+      "edit": "Edit",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "menu": "Link actions"
+    },
+    "relationship": {
+      "origin": "Origin",
+      "mirror": "Mirror",
+      "reference": "Reference"
+    },
+    "relationshipDescription": {
+      "origin": "Where this ticket started. Each ticket can have one origin link, which sets its origin badge.",
+      "mirror": "Another record tracking the same work as this ticket.",
+      "reference": "Supporting information for this ticket."
+    },
+    "dialog": {
+      "addTitle": "Add external link",
+      "editTitle": "Edit external link",
+      "intro": "Adding a link does not sync data between systems."
+    },
+    "removeDialog": {
+      "title": "Remove external link",
+      "message": "Remove this external link from the ticket?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Loading systems...",
+      "selectSystem": "Select a system",
+      "externalId": "External ID",
+      "externalIdPlaceholder": "e.g. 42 or 1234567890",
+      "realm": "Realm",
+      "url": "URL",
+      "urlOptional": "Optional override",
+      "urlRequired": "https://...",
+      "relationship": "Relationship",
+      "originExistsHint": "This ticket already has an origin link.",
+      "actorGroup": "Person or account (optional)",
+      "actorHint": "The person or account associated with the linked record in the external system.",
+      "actorHandle": "Username or handle",
+      "actorDisplay": "Display name",
+      "builtInGroup": "Built-in systems",
+      "customGroup": "Custom systems",
+      "urlPreview": "Opens:",
+      "urlPreviewIncomplete": "Fill in the fields above to preview the link."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket not found",
+      "commentNotFound": "Comment not found on this ticket",
+      "linkNotFound": "External link not found",
+      "systemNotFound": "Unknown external system",
+      "externalIdRequired": "External ID is required",
+      "invalidUrl": "URL must be a valid http(s) URL",
+      "invalidRelationship": "Invalid relationship",
+      "invalidEntityType": "Invalid entity type",
+      "originExists": "This entity already has an origin link",
+      "duplicateExternalLink": "That external record is already linked",
+      "systemInUse": "This external system is used by existing links",
+      "systemInUseCount": "This external system is used by {{count}} link(s)",
+      "invalidSystemKey": "Custom system keys must match custom:<slug> with lowercase letters, digits, or underscores",
+      "systemLabelRequired": "System label is required",
+      "permissionDenied": "Permission denied: Cannot manage external systems",
+      "systemRequired": "Choose an external system.",
+      "urlRequired": "A URL is required for systems without a URL template."
     }
   }
 }

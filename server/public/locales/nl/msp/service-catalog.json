@@ -31,7 +31,8 @@
       "advancedSettings": "Geavanceerde instellingen",
       "addNew": "Nieuw belastingtarief toevoegen",
       "add": "Belastingtarief toevoegen",
-      "update": "Belastingtarief bijwerken"
+      "update": "Belastingtarief bijwerken",
+      "cancel": "Annuleren"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Startdatum *",
         "endDate": "Einddatum (optioneel)",
         "region": "Belastingregio *",
-        "percentage": "Belastingpercentage *"
+        "percentage": "Belastingpercentage *",
+        "active": "Actief"
       },
       "placeholders": {
         "loadingRegions": "Regio's laden...",
@@ -48,7 +50,9 @@
       },
       "addTitle": "Nieuw belastingtarief toevoegen",
       "editTitle": "Belastingtarief bewerken",
-      "description": "Voer de gegevens voor het belastingtarief in."
+      "description": "Voer de gegevens voor het belastingtarief in.",
+      "activeHint": "Inactieve tarieven worden genegeerd bij het belasten van facturen.",
+      "regionDescription": "Dit tarief geldt voor facturen die in {{region}} worden belast."
     },
     "title": "Belastingtarieven",
     "loading": "Belastingtarieven laden",

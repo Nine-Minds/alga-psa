@@ -174,6 +174,7 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/events$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/events/index.ts') },
       { find: /^@alga-psa\/core\/encryption$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/encryption.ts') },
       { find: /^@alga-psa\/core\/i18n\/config$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/i18n/config.ts') },
+      { find: /^@alga-psa\/core\/i18n\/countryDateFormat$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/i18n/countryDateFormat.ts') },
       { find: /^@alga-psa\/core\/context\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/context/$1') },
 
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
@@ -200,6 +201,7 @@ export default defineConfig({
       { find: /^@alga-psa\/licensing$/, replacement: path.resolve(__dirname, '../packages/licensing/src/index.ts') },
       { find: /^@alga-psa\/licensing\/actions$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/index.ts') },
       { find: /^@alga-psa\/licensing\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/$1') },
+      { find: /^@alga-psa\/licensing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/actions/$1') },
       { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx') },
@@ -267,6 +269,8 @@ export default defineConfig({
       { find: /^@alga-psa\/ee-calendar\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/calendar/src/$1') },
       { find: /^@alga-psa\/ee-microsoft-teams$/, replacement: path.resolve(__dirname, '../ee/packages/microsoft-teams/src/index.ts') },
       { find: /^@alga-psa\/ee-microsoft-teams\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/microsoft-teams/src/$1') },
+      { find: /^@alga-psa\/ee-threecx$/, replacement: path.resolve(__dirname, '../ee/packages/threecx/src/index.ts') },
+      { find: /^@alga-psa\/ee-threecx\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/threecx/src/$1') },
       { find: /^@alga-psa\/ee-stubs$/, replacement: path.resolve(__dirname, '../packages/ee/src/index.ts') },
       { find: /^@alga-psa\/ee-stubs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/ee/src/$1') },
       { find: /^@alga-psa\/workflows$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/index.ts') },
@@ -309,6 +313,7 @@ export default defineConfig({
       { find: /^@alga-psa\/emulator-stripe$/, replacement: path.resolve(__dirname, '../packages/emulators/stripe/src/index.ts') },
       { find: /^@alga-psa\/emulator-webhook-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/webhook-sink/src/index.ts') },
       { find: /^@alga-psa\/emulator-xero$/, replacement: path.resolve(__dirname, '../packages/emulators/xero/src/index.ts') },
+      { find: /^@alga-psa\/emulator-threecx$/, replacement: path.resolve(__dirname, '../packages/emulators/threecx/src/index.ts') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },

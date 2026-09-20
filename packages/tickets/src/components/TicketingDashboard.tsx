@@ -41,7 +41,14 @@ import {
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
-import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
+import {
+  bundleTicketsAction,
+  getBundleMasterStatusAction,
+  getBundleMasterClosedContextAction,
+  type BundleMasterClosedContextActionResult,
+} from '../actions/ticketBundleActions';
+import { ClosedMasterChoiceFields } from './ticket/ClosedMasterChoiceFields';
+import type { ClosedMasterChoice } from '../lib/ticketBundlePolicy';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
@@ -223,6 +230,8 @@ const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
 
 // Module scope has no hook to read the app locale from, so the printing helpers
 // take it as an argument rather than defaulting to the browser's.
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
 function formatPrintDate(value: string | null | undefined, locale: string): string {
   if (!value) return '';
   const date = new Date(value);
@@ -230,11 +239,13 @@ function formatPrintDate(value: string | null | undefined, locale: string): stri
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatPrintDateTime(value: string | null | undefined, locale: string): string {
+// Printed timestamps keep a NAMED month (the language's job) but take their
+// 12/24h clock from the country, so they route through the central formatter.
+function formatPrintDateTime(value: string | null | undefined, formatDate: FormatDate): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(locale, {
+  return formatDate(date, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -250,9 +261,17 @@ function getTicketColumnValue(ticket: ITicketListItem, dataIndex: string | strin
   ), ticket);
 }
 
-function formatTicketPrintValue(value: unknown, locale: string): string {
+function formatTicketPrintValue(value: unknown, formatDate: FormatDate): string {
   if (value === null || value === undefined || value === '') return '';
-  if (value instanceof Date) return value.toLocaleString(locale);
+  if (value instanceof Date) {
+    return formatDate(value, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
   if (Array.isArray(value)) return value.filter(Boolean).join(', ');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -300,8 +319,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
   // These followed the browser locale, so a German UI printed American dates.
-  const { formatDate } = useFormatters();
-  const { locale } = useFormatters();
+  const { locale, dateFormat, formatDate } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
 
@@ -342,6 +360,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
   const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
   const [bundleError, setBundleError] = useState<string | null>(null);
+  const [bundleClosedMasterContext, setBundleClosedMasterContext] = useState<BundleMasterClosedContextActionResult | null>(null);
+  const [bundleClosedMasterChoice, setBundleClosedMasterChoice] = useState<ClosedMasterChoice | null>(null);
+  const [isLoadingBundleClosedContext, setIsLoadingBundleClosedContext] = useState(false);
   const [bundleExistingMasterIds, setBundleExistingMasterIds] = useState<Set<string>>(new Set());
   const [isLoadingBundleMasterStatus, setIsLoadingBundleMasterStatus] = useState(false);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
@@ -1323,6 +1344,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
       t,
       locale,
+      dateFormat,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -1444,6 +1466,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     bundleView,
     densityClasses.tagSize,
     t,
+    locale,
+    dateFormat,
   ]);
 
   const handleBulkDeleteClose = useCallback(() => {
@@ -1642,6 +1666,51 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const hasMultipleExistingMasters = bundleExistingMasterIds.size > 1;
 
+  // Load the chosen master's closed context so the dialog can require an
+  // explicit consequence when the master is already closed.
+  useEffect(() => {
+    if (!isBundleDialogOpen || !bundleMasterTicketId) {
+      setBundleClosedMasterContext(null);
+      setBundleClosedMasterChoice(null);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingBundleClosedContext(true);
+    (async () => {
+      try {
+        const context = await getBundleMasterClosedContextAction({ masterTicketId: bundleMasterTicketId });
+        if (cancelled) return;
+        if (isActionMessageError(context) || isActionPermissionError(context)) {
+          setBundleClosedMasterContext(null);
+          setBundleClosedMasterChoice(null);
+          return;
+        }
+        setBundleClosedMasterContext(context);
+        if (context.isClosed) {
+          setBundleClosedMasterChoice(
+            context.allowedChoices.includes('keep_closed') ? 'keep_closed' : (context.allowedChoices[0] ?? null)
+          );
+        } else {
+          setBundleClosedMasterChoice(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load closed-master context', error);
+          setBundleClosedMasterContext(null);
+          setBundleClosedMasterChoice(null);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingBundleClosedContext(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isBundleDialogOpen, bundleMasterTicketId]);
+
+  const bundleNeedsClosedMasterChoice = bundleClosedMasterContext?.isClosed === true;
+  const bundleClosedMasterChoiceReady = !bundleNeedsClosedMasterChoice || Boolean(bundleClosedMasterChoice);
+
   const performBundleTickets = useCallback(async () => {
     if (selectedTicketIdsArray.length < 2) {
       setBundleError(t('bulk.bundle.selectAtLeastTwo', 'Select at least two tickets to bundle.'));
@@ -1654,6 +1723,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (hasMultipleExistingMasters) {
       return;
     }
+    if (bundleNeedsClosedMasterChoice && !bundleClosedMasterChoice) {
+      setBundleError(
+        t('errors.bundle.closedMasterChoiceRequired', "This bundle's master is closed. Choose how to add the child: {{choices}}.", {
+          choices: (bundleClosedMasterContext?.allowedChoices ?? []).join(', '),
+        })
+      );
+      return;
+    }
 
     setBundleError(null);
     try {
@@ -1661,6 +1738,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         masterTicketId: bundleMasterTicketId,
         childTicketIds: selectedTicketIdsArray.filter((id) => id !== bundleMasterTicketId),
         mode: bundleSyncUpdates ? 'sync_updates' : 'link_only',
+        ...(bundleNeedsClosedMasterChoice && bundleClosedMasterChoice
+          ? { onClosedMaster: bundleClosedMasterChoice }
+          : {}),
       });
 
       if (isActionMessageError(result) || isActionPermissionError(result)) {
@@ -1689,6 +1769,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     clearSelection,
     onFilterChange,
     hasMultipleExistingMasters,
+    bundleNeedsClosedMasterChoice,
+    bundleClosedMasterChoice,
+    bundleClosedMasterContext,
     t,
   ]);
 
@@ -1782,7 +1865,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         return additionalAgents.length > 0 ? `${primary}; +${additionalAgents.length}: ${additionalAgents.join(', ')}` : primary;
       },
       due_date: (ticket) => formatPrintDate(ticket.due_date, locale) || t('dashboard.print.noDueDate', 'No due date'),
-      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, locale) || t('dashboard.print.emptyValue', '—'),
+      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
       tags: (ticket) => {
         const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
@@ -1809,7 +1892,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (
-          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey), locale)
+          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey), formatDate)
           || t('dashboard.print.emptyValue', '—')
         )),
       };
@@ -2844,6 +2927,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 setIsBundleDialogOpen(false);
                 setBundleError(null);
                 setBundleExistingMasterIds(new Set());
+                setBundleClosedMasterContext(null);
+                setBundleClosedMasterChoice(null);
               }}
             >
               {t('actions.cancel', 'Cancel')}
@@ -2855,6 +2940,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 selectedTicketIdsArray.length < 2 ||
                 !bundleMasterTicketId ||
                 isLoadingBundleMasterStatus ||
+                isLoadingBundleClosedContext ||
+                !bundleClosedMasterChoiceReady ||
                 hasMultipleExistingMasters
               }
             >
@@ -2869,6 +2956,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setIsBundleDialogOpen(false);
           setBundleError(null);
           setBundleExistingMasterIds(new Set());
+          setBundleClosedMasterContext(null);
+          setBundleClosedMasterChoice(null);
         }}
         id={`${id}-bundle-dialog`}
         title={t('bulk.bundle.dialogTitle', 'Bundle Tickets')}
@@ -2943,6 +3032,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             <div className="text-xs text-gray-500">
               {t('bulk.bundle.syncUpdatesHelp', 'Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.')}
             </div>
+
+            {bundleNeedsClosedMasterChoice && bundleClosedMasterContext && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/30" id={`${id}-bundle-closed-master-section`}>
+                <div className="mb-1 text-sm font-medium text-amber-900 dark:text-amber-200">
+                  {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
+                </div>
+                <p className="mb-2 text-xs text-amber-800 dark:text-amber-300">
+                  {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
+                </p>
+                <ClosedMasterChoiceFields
+                  idPrefix={`${id}-bundle-closed-master`}
+                  allowedChoices={bundleClosedMasterContext.allowedChoices}
+                  value={bundleClosedMasterChoice}
+                  onChange={setBundleClosedMasterChoice}
+                  hasResolutionComment={bundleClosedMasterContext.hasResolutionComment}
+                  masterStatusName={bundleClosedMasterContext.masterStatusName}
+                />
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

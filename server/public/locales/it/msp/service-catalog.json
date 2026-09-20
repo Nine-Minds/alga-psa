@@ -31,7 +31,8 @@
       "advancedSettings": "Impostazioni avanzate",
       "addNew": "Aggiungi nuova aliquota fiscale",
       "add": "Aggiungi aliquota fiscale",
-      "update": "Aggiorna aliquota fiscale"
+      "update": "Aggiorna aliquota fiscale",
+      "cancel": "Annulla"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Data di inizio *",
         "endDate": "Data di fine (facoltativa)",
         "region": "Regione fiscale *",
-        "percentage": "Percentuale d'imposta *"
+        "percentage": "Percentuale d'imposta *",
+        "active": "Attiva"
       },
       "placeholders": {
         "loadingRegions": "Caricamento regioni...",
@@ -48,7 +50,9 @@
       },
       "addTitle": "Aggiungi nuova aliquota fiscale",
       "editTitle": "Modifica aliquota fiscale",
-      "description": "Inserisci i dettagli dell'aliquota fiscale."
+      "description": "Inserisci i dettagli dell'aliquota fiscale.",
+      "activeHint": "Le aliquote inattive vengono ignorate nel calcolo delle imposte sulle fatture.",
+      "regionDescription": "Questa aliquota si applica alle fatture tassate in {{region}}."
     },
     "title": "Aliquote fiscali",
     "loading": "Caricamento aliquote fiscali",

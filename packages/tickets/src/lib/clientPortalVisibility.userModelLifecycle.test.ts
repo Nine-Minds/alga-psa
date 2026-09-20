@@ -39,6 +39,7 @@ type UserModelState = {
     tenant: string;
     group_id: string;
     client_id: string;
+    ticket_scope: 'client' | 'contact';
   }>;
   boards: Array<{
     tenant: string;
@@ -139,6 +140,13 @@ function createUserModelTrx(state: UserModelState) {
       };
     }
 
+    if (table === 'boards') {
+      return {
+        select: async () =>
+          state.boards.map((board) => ({ board_id: board.board_id, client_portal_visible: true })),
+      };
+    }
+
     if (table === 'client_portal_visibility_group_boards as cvgb') {
       return {
         join: () => ({
@@ -186,6 +194,7 @@ describe('portal user creation preserves client portal visibility assignments', 
           tenant: 'tenant-1',
           group_id: 'group-1',
           client_id: 'client-a',
+          ticket_scope: 'client',
         },
       ],
       boards: [
@@ -205,13 +214,23 @@ describe('portal user creation preserves client portal visibility assignments', 
     trx = createUserModelTrx(state);
   });
 
-  it('T028: a preconfigured contact assignment remains effective after portal user creation links to that contact', async () => {
+  it.each([
+    { ticketScope: 'client', isClientAdmin: false, effectiveTicketScope: 'client' },
+    { ticketScope: 'client', isClientAdmin: true, effectiveTicketScope: 'client' },
+    { ticketScope: 'contact', isClientAdmin: false, effectiveTicketScope: 'contact' },
+    { ticketScope: 'contact', isClientAdmin: true, effectiveTicketScope: 'client' },
+  ] as const)('T028: onboarding preserves $ticketScope scope and boards (admin=$isClientAdmin)', async ({
+    ticketScope,
+    isClientAdmin,
+    effectiveTicketScope,
+  }) => {
+    state.groups[0].ticket_scope = ticketScope;
     state.contacts.push({
       tenant: 'tenant-1',
       contact_name_id: 'contact-1',
       client_id: 'client-a',
       portal_visibility_group_id: 'group-1',
-      is_client_admin: false,
+      is_client_admin: isClientAdmin,
     });
 
     const result = await createPortalUserInDBWithTrx(trx, {
@@ -234,9 +253,16 @@ describe('portal user creation preserves client portal visibility assignments', 
       user_type: 'client',
     });
 
-    const visibility = await getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1');
-    expect(visibility.visibilityGroupId).toBe('group-1');
-    expect(visibility.visibleBoardIds).toEqual(['board-1']);
+    const visibility = await getClientContactVisibilityContext(trx, 'tenant-1', state.users[0].contact_id);
+    expect(visibility).toEqual({
+      ticketScope,
+      effectiveTicketScope,
+      isClientAdmin,
+      contactId: 'contact-1',
+      clientId: 'client-a',
+      visibilityGroupId: 'group-1',
+      visibleBoardIds: ['board-1'],
+    });
   });
 
   it('T038: unassigned contacts can still complete portal user onboarding with unrestricted ticket visibility', async () => {
@@ -262,5 +288,7 @@ describe('portal user creation preserves client portal visibility assignments', 
     const visibility = await getClientContactVisibilityContext(trx, 'tenant-1', 'contact-2');
     expect(visibility.visibilityGroupId).toBeNull();
     expect(visibility.visibleBoardIds).toBeNull();
+    expect(visibility.ticketScope).toBe('client');
+    expect(visibility.effectiveTicketScope).toBe('client');
   });
 });

@@ -52,6 +52,8 @@ interface QuickAddContactProps {
   onContactAdded: (newContact: IContact) => void;
   clients: IClient[];
   selectedClientId?: string | null;
+  /** Seeds the first phone row (e.g. the caller ID of an unmatched incoming call). */
+  initialPhoneNumber?: string | null;
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
@@ -86,7 +88,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   onClose,
   onContactAdded,
   clients,
-  selectedClientId = null
+  selectedClientId = null,
+  initialPhoneNumber = null,
 }) => {
   const { toast } = useToast();
   const { t } = useTranslation('msp/contacts');
@@ -132,10 +135,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       const fetchFormMetadata = async () => {
         try {
+          // The preselected dial country is a nicety; it must not take the country
+          // list and the phone types down with it.
           const [countriesData, suggestionLabels, tenantCountry] = await Promise.all([
             countries.length > 0 ? Promise.resolve(countries) : getAllCountries(),
             listContactPhoneTypeSuggestions(),
-            getTenantDefaultCountry(),
+            getTenantDefaultCountry().catch(() => null),
           ]);
           setCountries(countriesData);
           setCustomPhoneTypeSuggestions(suggestionLabels);
@@ -152,6 +157,9 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       if (selectedClientId) {
         setClientId(selectedClientId);
+      }
+      if (initialPhoneNumber) {
+        setPhoneNumbers([{ phone_number: initialPhoneNumber, canonical_type: 'work', is_default: true }]);
       }
       setError(null);
     } else {
@@ -177,7 +185,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setFieldErrors({});
       setPendingTags([]);
     }
-  }, [isOpen, selectedClientId]);
+  }, [isOpen, selectedClientId, initialPhoneNumber]);
 
   const mergedClients = React.useMemo(() => {
     const clientIds = new Set(clients.map(c => c.client_id));

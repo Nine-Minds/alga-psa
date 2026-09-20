@@ -49,6 +49,7 @@ type VisibilityState = {
     portal_visibility_group_id: string | null;
   }>;
   groups: Array<{
+    ticket_scope: 'client' | 'contact';
     tenant: string;
     group_id: string;
     client_id: string;
@@ -87,6 +88,10 @@ function matchesFilters(row: Record<string, any>, filters: Record<string, any>) 
 
 function createVisibilityTrx(state: VisibilityState) {
   return ((table: string) => {
+    if (table === 'boards') {
+      return { select: async () => [] };
+    }
+
     if (table === 'contacts') {
       return {
         where: (filters: Record<string, any>) => {
@@ -154,8 +159,8 @@ describe('contactActions visibility group integration', () => {
         },
       ],
       groups: [
-        { tenant: 'tenant-1', group_id: 'group-1', client_id: 'client-a' },
-        { tenant: 'tenant-1', group_id: 'group-2', client_id: 'client-a' },
+        { tenant: 'tenant-1', group_id: 'group-1', client_id: 'client-a', ticket_scope: 'client' },
+        { tenant: 'tenant-1', group_id: 'group-2', client_id: 'client-a', ticket_scope: 'contact' },
       ],
       boards: [
         { tenant: 'tenant-1', board_id: 'board-1' },
@@ -181,6 +186,7 @@ describe('contactActions visibility group integration', () => {
     const updatedVisibility = await getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1');
     expect(updatedVisibility.visibilityGroupId).toBe('group-2');
     expect(updatedVisibility.visibleBoardIds).toEqual(['board-2']);
+    expect(updatedVisibility.effectiveTicketScope).toBe('contact');
   }, 15_000);
 
   it('T001: MSP board loading returns active tenant boards without requiring board client ownership', async () => {

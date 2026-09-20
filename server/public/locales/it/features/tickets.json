@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Impossibile eliminare l'inserimento ore",
     "timeEntryDeleted": "Inserimento ore eliminato",
     "closeFailed": "Impossibile chiudere il ticket",
-    "scheduleVisitFailed": "Impossibile aprire il pianificatore",
     "loadCommentsFailed": "Impossibile caricare i commenti",
     "updateTicketFailed": "Impossibile aggiornare il ticket",
     "errorWithMessage": "Errore: {{message}}",
     "billingProfileUpdated": "Profilo di fatturazione aggiornato",
-    "updateBillingProfileFailed": "Impossibile aggiornare il profilo di fatturazione"
+    "updateBillingProfileFailed": "Impossibile aggiornare il profilo di fatturazione",
+    "scheduleOpenFailed": "Impossibile aprire il pianificatore"
   },
   "conversation": {
     "comments": "Commenti",
@@ -335,6 +335,8 @@
     "deleteUploadedImages": "Elimina immagini",
     "keepUploadedImages": "Mantieni immagini",
     "bundledUpdate": "Aggiornamento raggruppato",
+    "bundledUpdateFrom": "Aggiornamento raggruppato da {{number}}",
+    "systemAuthor": "Sistema",
     "clientSuffix": " (Cliente)",
     "internalCommentTooltip": "Commento interno",
     "resolutionCommentTooltip": "Commento di risoluzione",
@@ -1076,7 +1078,8 @@
       "responseStateTrackingDisabled": "Tracciamento dello stato di risposta disattivato",
       "title": "Preferenze visualizzazione ticket",
       "description": "Configura come la dashboard dei ticket mostra colonne e timestamp per il tuo team.",
-      "dateTimeFormat": "Formato data/ora",
+      "showWeekday": "Mostra il giorno della settimana negli orari",
+      "countryDrivesFormat": "Il formato di data e ora segue il paese della tua azienda. Impostalo in Impostazioni → Generale.",
       "ticketListColumns": "Colonne elenco ticket",
       "showTags": "Mostra tag",
       "displayUnderTitle": "Mostra sotto il titolo",
@@ -1374,7 +1377,13 @@
       "alreadyBundled": "Il ticket è già raggruppato: {{ticket}}",
       "masterAsChild": "Il ticket principale non può essere anche un ticket figlio.",
       "noChildren": "Nessun ticket figlio fornito.",
-      "childrenOnBundledChild": "Non è possibile aggiungere ticket figlio a un ticket figlio già raggruppato."
+      "childrenOnBundledChild": "Non è possibile aggiungere ticket figlio a un ticket figlio già raggruppato.",
+      "concurrent": "Uno o più ticket selezionati sono stati raggruppati contemporaneamente. Aggiornare la pagina e riprovare.",
+      "closedMasterChoiceRequired": "Il ticket principale di questo gruppo è chiuso. Scegliere come aggiungere il ticket figlio: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Questa scelta non è consentita per questo ticket principale. Scegliere una delle seguenti opzioni: {{choices}}.",
+      "choiceOnOpenMaster": "Questa scelta si applica solo quando il ticket principale del gruppo è chiuso.",
+      "closeRuleFailed": "Questo ticket non può ancora essere chiuso: {{reason}}",
+      "reopenUnavailable": "Non è possibile riaprire il ticket principale perché non è configurato alcuno stato ticket aperto."
     },
     "ticket": {
       "validationDetails": "Correggere i dati del ticket: {{details}}",
@@ -1481,7 +1490,21 @@
       "remove": "Rimuovi",
       "noChildren": "Nessun figlio in questo gruppo.",
       "addChildMultiClientMessage": "Verrà aggiunto {{ticket}} di un cliente diverso al gruppo. Conferma di voler procedere.",
-      "thisTicket": "questo ticket"
+      "thisTicket": "questo ticket",
+      "openChildrenBadge": "{{count}} figli aperti",
+      "openChildrenBadgeShort": "{{count}} aperti",
+      "childOpenStatus": "Aperto",
+      "childClosedStatus": "Chiuso",
+      "closedMasterDialogTitle": "Il ticket principale di questo gruppo è chiuso",
+      "closedMasterDialogIntro": "Il ticket principale è chiuso. Scegli cosa deve succedere al ticket figlio al momento dell’aggiunta.",
+      "keepClosedLabel": "Aggiungi e mantieni chiuso il ticket principale",
+      "keepClosedHelp": "Il ticket figlio resta aperto con il proprio orologio SLA. Il gruppo risulterà incoerente finché il ticket figlio non sarà risolto.",
+      "applyResolutionLabel": "Aggiungi e applica la risoluzione del ticket principale a questo ticket figlio",
+      "applyResolutionHelp": "Chiude il ticket figlio con lo stato {{status}} e pubblica la risoluzione del ticket principale nel ticket figlio come commento pubblico.",
+      "applyResolutionHelpNoComment": "Chiude il ticket figlio con lo stato {{status}}. Il ticket principale non ha alcun commento di risoluzione pubblico da pubblicare.",
+      "reopenMasterLabel": "Aggiungi e riapri il ticket principale",
+      "reopenMasterHelp": "Riapre solo il ticket principale. I ticket figli già chiusi in questo gruppo restano chiusi; le notifiche di riapertura e lo SLA si applicano al ticket principale.",
+      "closedMasterGating": "Le regole di chiusura della bacheca non consentono ticket figli aperti sotto un ticket principale chiuso, quindi non è possibile mantenere chiuso il ticket principale."
     },
     "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
     "autoCloseWarned": "Il cliente è stato avvisato."
@@ -1603,7 +1626,8 @@
       "additionalAgentsTooltip": "Agenti aggiuntivi:",
       "unknownAgent": "Agente sconosciuto",
       "category": "Categoria",
-      "selectDestinationStatus": "Seleziona uno stato per la nuova bacheca prima di salvare."
+      "selectDestinationStatus": "Seleziona uno stato per la nuova bacheca prima di salvare.",
+      "viewSchedule": "Vedi agenda"
     },
     "layout": {
       "grid": "Griglia",
@@ -1631,7 +1655,6 @@
       "showLess": "Mostra meno",
       "contact": "Contatto",
       "client": "Cliente",
-      "nextVisit": "Prossima visita",
       "callsAndEmails": "Chiamate ed email",
       "call": "Chiama",
       "viewAll": "Vedi tutto",
@@ -1657,7 +1680,6 @@
       "billing": "Fatturazione",
       "couldNotLoad": "Impossibile caricare questo riquadro",
       "nothingScheduled": "Niente in programma",
-      "scheduleVisit": "Pianifica una visita",
       "scheduledWork": "Lavoro pianificato",
       "scheduleDone": "completato",
       "noCallsOrEmails": "Nessuna chiamata o email registrata",
@@ -1703,7 +1725,9 @@
         "approved": "Approvato",
         "declined": "Rifiutato",
         "cancelled": "Annullato"
-      }
+      },
+      "scheduleTime": "Pianifica tempo",
+      "openScheduleEntry": "Apri voce di agenda"
     },
     "timeline": {
       "subtitle": "Risposte, tempo e modifiche di sistema in un unico posto",
@@ -1786,7 +1810,8 @@
         "checklist_template_applied": "modello di checklist applicato",
         "close_rules_overridden": "regole di chiusura sovrascritte",
         "close_rules_bypassed": "regole di chiusura ignorate",
-        "auto_close_warning_sent": "avviso di chiusura automatica inviato"
+        "auto_close_warning_sent": "avviso di chiusura automatica inviato",
+        "bundle_child_added": "ticket figlio aggiunto al bundle"
       },
       "closeStatus": "Stato di chiusura",
       "noStatusChange": "Non modificare lo stato",
@@ -1801,6 +1826,80 @@
       "contactHelper": "Salta l'e-mail al cliente, l'invito al sondaggio e la notifica del portale clienti",
       "internalLabel": "Non notificare anche agenti e osservatori",
       "internalHelper": "Salta anche le loro e-mail e notifiche in-app"
+    }
+  },
+  "externalLinks": {
+    "title": "Collegamenti esterni",
+    "empty": "Nessun collegamento esterno",
+    "loading": "Caricamento dei collegamenti esterni...",
+    "noUrl": "Nessun URL disponibile per questo riferimento",
+    "customSystemOption": "{{label}} (personalizzato)",
+    "actions": {
+      "add": "Aggiungi collegamento",
+      "edit": "Modifica",
+      "remove": "Rimuovi",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "menu": "Azioni del collegamento"
+    },
+    "relationship": {
+      "origin": "Origine",
+      "mirror": "Specchio",
+      "reference": "Riferimento"
+    },
+    "relationshipDescription": {
+      "origin": "Dove ha avuto origine questo ticket. Ogni ticket può avere un link di origine, che ne determina il badge di origine.",
+      "mirror": "Un altro record che tiene traccia dello stesso lavoro di questo ticket.",
+      "reference": "Informazioni di supporto per questo ticket."
+    },
+    "dialog": {
+      "addTitle": "Aggiungi collegamento esterno",
+      "editTitle": "Modifica collegamento esterno",
+      "intro": "L’aggiunta di un link non sincronizza i dati tra i sistemi."
+    },
+    "removeDialog": {
+      "title": "Rimuovi collegamento esterno",
+      "message": "Rimuovere questo collegamento esterno dal ticket?"
+    },
+    "fields": {
+      "system": "Sistema",
+      "loadingSystems": "Caricamento dei sistemi...",
+      "selectSystem": "Seleziona un sistema",
+      "externalId": "ID esterno",
+      "externalIdPlaceholder": "ad es. 42 o 1234567890",
+      "realm": "Ambito",
+      "url": "URL",
+      "urlOptional": "Sostituzione facoltativa",
+      "urlRequired": "https://...",
+      "relationship": "Relazione",
+      "originExistsHint": "Questo ticket ha già un collegamento di origine.",
+      "actorGroup": "Persona o account (facoltativo)",
+      "actorHint": "La persona o l’account associato al record collegato nel sistema esterno.",
+      "actorHandle": "Nome utente o identificativo",
+      "actorDisplay": "Nome visualizzato",
+      "builtInGroup": "Sistemi integrati",
+      "customGroup": "Sistemi personalizzati",
+      "urlPreview": "Apre:",
+      "urlPreviewIncomplete": "Compila i campi sopra per visualizzare l'anteprima del collegamento."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket non trovato",
+      "commentNotFound": "Commento non trovato in questo ticket",
+      "linkNotFound": "Collegamento esterno non trovato",
+      "systemNotFound": "Sistema esterno sconosciuto",
+      "externalIdRequired": "L'ID esterno è obbligatorio",
+      "invalidUrl": "L'URL deve essere un URL http(s) valido",
+      "invalidRelationship": "Relazione non valida",
+      "invalidEntityType": "Tipo di entità non valido",
+      "originExists": "Questa entità ha già un collegamento di origine",
+      "duplicateExternalLink": "Quel record esterno è già collegato",
+      "systemInUse": "Questo sistema esterno è utilizzato da collegamenti esistenti",
+      "systemInUseCount": "Questo sistema esterno è utilizzato da {{count}} collegamento/i",
+      "invalidSystemKey": "Le chiavi dei sistemi personalizzati devono corrispondere a custom:<slug> usando lettere minuscole, cifre o trattini bassi",
+      "systemLabelRequired": "L'etichetta del sistema è obbligatoria",
+      "permissionDenied": "Autorizzazione negata: impossibile gestire i sistemi esterni",
+      "systemRequired": "Scegli un sistema esterno.",
+      "urlRequired": "Per i sistemi senza modello di URL è necessario un URL."
     }
   }
 }

@@ -6,6 +6,7 @@ import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import SystemAvatar from '@alga-psa/ui/components/SystemAvatar';
 import { IComment } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -21,6 +22,7 @@ import { getCommentResponseSource } from '../../lib/responseSource';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
+import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
@@ -66,6 +68,12 @@ interface CommentItemProps {
    * 1px border width and radius — only the color changes.
    */
   accentBorderClassName?: string;
+  /**
+   * Read-only external-system references attached to this comment (comment-level
+   * links). Rendered as link-out chips; the manual writer only creates
+   * ticket-level links, so these come from the API/integration path.
+   */
+  externalLinks?: ITicketExternalLinkView[];
 }
 
 function getInboundSenderIdentity(
@@ -169,6 +177,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   canViewCommentMetadataDebug = false,
   variant = 'default',
   accentBorderClassName,
+  externalLinks = [],
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
@@ -214,8 +223,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation.metadata]
   );
 
+  const isBundleMirror = Boolean(conversation.bundle_mirror_source);
+  const isSystemAuthor = resolvedAuthor.source === 'system';
+
   const getAuthorName = () => {
-    if (conversation.is_system_generated) return t('conversation.bundledUpdate');
+    if (isSystemAuthor) {
+      return isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System');
+    }
     if (resolvedAuthor.source === 'user') {
       return `${resolvedAuthor.displayName}${resolvedAuthor.userType === 'client' ? t('conversation.clientSuffix') : ''}`;
     }
@@ -227,15 +241,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   // An unmatched inbound email still names its sender, so the avatar shows those
   // initials; the Unknown User placeholder is kept only when nothing identifies
-  // the author.
+  // the author. System-authored comments never reach this branch.
   const inboundSenderLabel = inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
-  const unknownAuthorAvatarName =
-    !conversation.is_system_generated && inboundSenderLabel
-      ? inboundSenderLabel
-      : t('conversation.unknownUser');
+  const unknownAuthorAvatarName = inboundSenderLabel || t('conversation.unknownUser');
 
   const getAuthorEmail = () => {
-    if (conversation.is_system_generated) return null;
+    if (isSystemAuthor) return null;
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
       return inboundSenderIdentity.fromAddress;
     }
@@ -463,8 +474,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
     >
       <div className={`flex items-start min-w-0 max-w-full ${isCompact ? 'mb-0.5' : 'mb-1'}`}>
         <div className={isCompact ? 'mr-2' : 'mr-2'}>
-          {/* Conditionally render UserAvatar or ContactAvatar */}
-          {conversation.is_system_generated || resolvedAuthor.source === 'unknown' ? (
+          {/* Conditionally render SystemAvatar, UserAvatar or ContactAvatar */}
+          {isSystemAuthor ? (
+            <SystemAvatar
+              {...withDataAutomationId({ id: `${commentId}-avatar` })}
+              glyph={isBundleMirror ? 'bundle' : 'system'}
+              label={isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System')}
+              size={isCompact ? 'sm' : 'md'}
+            />
+          ) : resolvedAuthor.source === 'unknown' ? (
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId=""
@@ -505,6 +523,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] break-words min-w-0">
                   {getAuthorName()}
                 </p>
+                {isBundleMirror && (
+                  conversation.bundle_mirror_source?.master_ticket_id ? (
+                    <a
+                      {...withDataAutomationId({ id: `${commentId}-bundled-update-badge` })}
+                      href={`/msp/tickets/${conversation.bundle_mirror_source.master_ticket_id}`}
+                      className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))] hover:underline"
+                    >
+                      {conversation.bundle_mirror_source.master_ticket_number
+                        ? t('conversation.bundledUpdateFrom', { number: conversation.bundle_mirror_source.master_ticket_number })
+                        : t('conversation.bundledUpdate')}
+                    </a>
+                  ) : (
+                    <span
+                      {...withDataAutomationId({ id: `${commentId}-bundled-update-badge` })}
+                      className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]"
+                    >
+                      {conversation.bundle_mirror_source?.master_ticket_number
+                        ? t('conversation.bundledUpdateFrom', { number: conversation.bundle_mirror_source.master_ticket_number })
+                        : t('conversation.bundledUpdate')}
+                    </span>
+                  )
+                )}
                 {conversation.is_internal && (
                   <Tooltip content={t('conversation.internalCommentTooltip')}>
                     <span {...withDataAutomationId({ id: `${commentId}-internal-badge` })}>
@@ -546,6 +586,29 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     }}
                   />
                 )}
+                {externalLinks.map((link) => (
+                  <span
+                    key={link.link_id}
+                    id={`${commentId}-external-link-${link.link_id}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs text-[rgb(var(--color-text-600))]"
+                    title={link.display.label}
+                  >
+                    {link.display.href ? (
+                      <a
+                        href={link.display.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {link.display.label} · {link.external_id}
+                      </a>
+                    ) : (
+                      <span>
+                        {link.display.label} · {link.external_id}
+                      </span>
+                    )}
+                  </span>
+                ))}
                 {canViewCommentMetadataDebug && isNonEmptyCommentMetadata(conversation.metadata) && (
                   <>
                     <Tooltip content={t('conversation.metadataDebug', 'View metadata (debug)')}>

@@ -10,6 +10,14 @@ export function Badge({
 }) {
   const theme = useTheme();
   const palette = theme.colors.badge[tone];
+  // High contrast outlines the badge in its own status colour.
+  const strongBorder: Record<typeof tone, string> = {
+    neutral: theme.colors.text,
+    info: theme.colors.info,
+    success: theme.colors.success,
+    warning: theme.colors.warning,
+    danger: theme.colors.danger,
+  };
   return (
     <View
       accessibilityRole="text"
@@ -22,7 +30,7 @@ export function Badge({
         borderRadius: theme.borderRadius.md,
         backgroundColor: palette.bg,
         borderWidth: 1,
-        borderColor: palette.border,
+        borderColor: theme.highContrast ? strongBorder[tone] : palette.border,
         alignSelf: "flex-start",
       }}
     >

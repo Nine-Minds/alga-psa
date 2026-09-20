@@ -1599,7 +1599,10 @@
     "defaultClosedHelp": "Um status fechado não pode ser o padrão para novos itens."
   },
   "callLink": {
-    "teamsCall": "Ligar no Microsoft Teams"
+    "teamsCall": "Ligar no Microsoft Teams",
+    "threecxCall": "Ligar via 3CX",
+    "threecxDialing": "Discando a partir do seu ramal 3CX",
+    "threecxFailed": "O PBX não conseguiu fazer a chamada"
   },
   "editor": {
     "attachFiles": "Anexar arquivos",

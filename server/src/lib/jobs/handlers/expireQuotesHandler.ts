@@ -4,6 +4,10 @@ import { getConnection } from 'server/src/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
 import { tenantDb } from '@alga-psa/db';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import { countryDateFormat, SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
+import { formatDateValue } from '@alga-psa/ui/lib/i18n/formatDateValue';
 
 export interface ExpireQuotesJobData extends Record<string, unknown> {
   tenantId: string;
@@ -18,18 +22,25 @@ interface ExpiredQuoteNotification {
   validUntil: string | Date | null;
 }
 
-function formatDate(value: string | Date | null): string {
+/**
+ * A bare `toLocaleDateString()` took its shape from the SERVER's locale, so the
+ * same tenant's mail was dated differently depending on which host ran the job.
+ * The tenant's country decides the digit order, their language names any month.
+ */
+function formatDate(value: string | Date | null, locale: string, dateFormat: CountryDateFormat): string {
   if (!value) {
     return 'the scheduled expiration date';
   }
 
-  return new Date(value).toLocaleDateString();
+  return formatDateValue(value instanceof Date ? value : String(value), locale, undefined, dateFormat);
 }
 
 async function sendExpirationNotification(
   tenantId: string,
   notification: ExpiredQuoteNotification,
-  tenantName: string
+  tenantName: string,
+  locale: string,
+  dateFormat: CountryDateFormat
 ): Promise<void> {
   if (!notification.creatorEmail) {
     return;
@@ -41,7 +52,7 @@ async function sendExpirationNotification(
     <p>Hello,</p>
     <p>Your quote <strong>${notification.quoteNumber || notification.title}</strong> is now marked as expired.</p>
     <p>Title: ${notification.title}</p>
-    <p>Valid until: ${formatDate(notification.validUntil)}</p>
+    <p>Valid until: ${formatDate(notification.validUntil, locale, dateFormat)}</p>
     <p>You can review the quote in ${tenantName} and issue a revision if the client still needs an updated proposal.</p>
   `;
   const text = [
@@ -49,7 +60,7 @@ async function sendExpirationNotification(
     '',
     `Your quote ${notification.quoteNumber || notification.title} is now marked as expired.`,
     `Title: ${notification.title}`,
-    `Valid until: ${formatDate(notification.validUntil)}`,
+    `Valid until: ${formatDate(notification.validUntil, locale, dateFormat)}`,
     `You can review the quote in ${tenantName} and issue a revision if the client still needs an updated proposal.`,
   ].join('\n');
 
@@ -92,6 +103,12 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
       .select('client_name')
       .first<{ client_name?: string | null }>();
     const tenantName = tenantRecord?.client_name?.trim() || 'your PSA';
+
+    // Resolved once per run: every notification in it goes to the same tenant.
+    const locale = await getTenantDefaultLocale(tenantId, 'internal').catch(() => 'en');
+    const dateFormat = await resolveTenantDefaultCountry(knex, tenantId)
+      .then((country) => countryDateFormat(country?.code ?? null))
+      .catch(() => SYSTEM_DATE_FORMAT);
 
     await knex.transaction(async (trx: Knex.Transaction) => {
       await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenantId]);
@@ -146,7 +163,7 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
 
     for (const notification of notifications) {
       try {
-        await sendExpirationNotification(tenantId, notification, tenantName);
+        await sendExpirationNotification(tenantId, notification, tenantName, locale, dateFormat);
       } catch (notificationError) {
         logger.warn('[expireQuotesHandler] Quote expiration notification failed', {
           tenantId,

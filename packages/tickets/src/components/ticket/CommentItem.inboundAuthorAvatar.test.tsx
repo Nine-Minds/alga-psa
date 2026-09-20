@@ -110,8 +110,9 @@ describe('CommentItem unresolved-author avatar', () => {
   });
 
   it('keeps the Unknown User avatar when no identity is available', () => {
-    renderComment(buildComment({}));
+    renderComment(buildComment({ is_system_generated: false }));
 
     expect(screen.getByText('UU')).toBeInTheDocument();
+    expect(screen.getByText('Unknown User')).toBeInTheDocument();
   });
 });

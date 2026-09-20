@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { STOCK_EMAIL_PALETTE } from '@alga-psa/email/branding';
+import {
+  decorateBrandedHtml,
+  resolveBrandLogoForPreview,
+  STOCK_EMAIL_PALETTE,
+} from '@alga-psa/email/branding';
 import {
   OVERRIDABLE_TOKENS,
   TOKEN_IDS,
@@ -15,6 +19,12 @@ import type { EmailBrandingStatus } from '../../lib/emailBranding';
 const panelSource = readFileSync(resolve(__dirname, 'EmailBrandingPanel.tsx'), 'utf8');
 const templatesSource = readFileSync(resolve(__dirname, 'EmailTemplates.tsx'), 'utf8');
 const tabHostSource = readFileSync(resolve(__dirname, 'EmailBrandingTab.tsx'), 'utf8');
+const previewSource = readFileSync(resolve(__dirname, 'EmailTemplatePreview.tsx'), 'utf8');
+
+const LOGO_OPTIONS = {
+  logoUrl: '/api/documents/view/square-file?t=1',
+  logoWideUrl: '/api/documents/view/wide-file?t=2',
+};
 
 const repoRoot = resolve(__dirname, '../../../../..');
 const settingsHostSource = readFileSync(
@@ -125,11 +135,18 @@ describe('email branding panel markup', () => {
     expect(panelSource).toContain('id={`email-branding-override-${TOKEN_IDS[token]}`}');
   });
 
-  it('renders previews client-side from the system HTML with no server call', () => {
+  it('renders the preview client-side from the system HTML with no server call', () => {
     expect(panelSource).toContain('applyEmailPalette(html, STOCK_EMAIL_PALETTE, resolved)');
-    expect(panelSource).toContain('htmlContent={previewHtml(template.html_content)}');
-    const previewBlock = panelSource.slice(panelSource.indexOf('previewTemplates.map'));
+    expect(panelSource).toContain('htmlContent={previewHtml(previewTemplate.html_content)}');
+    const previewBlock = panelSource.slice(panelSource.indexOf('{previewTemplate && ('));
     expect(previewBlock.slice(0, previewBlock.indexOf('</div>'))).not.toContain('Action(');
+  });
+
+  it('shows exactly one template preview, since the apply dialog previews each one', () => {
+    expect(panelSource).toContain('const previewTemplate = useMemo');
+    expect(panelSource).toContain('return preferred ?? pool[0] ?? null;');
+    expect(panelSource).not.toContain('previewTemplates');
+    expect(panelSource.match(/<EmailTemplatePreview/g)).toHaveLength(1);
   });
 
   it('registers with the unsaved-changes provider while dirty', () => {
@@ -201,5 +218,37 @@ describe('enterprise logo and attribution', () => {
   it('previews the brand assets exactly as an apply would write them', () => {
     expect(panelSource).toContain('decorateBrandedHtml(recolored, {');
     expect(panelSource).toContain('hideAttribution: draft.hideAttribution,');
+  });
+
+  it('writes the logo as a content-id and resolves it to a URL only for the preview', () => {
+    const decorated = decorateBrandedHtml('<body><h1>Hi</h1></body>', {
+      logo: { variant: 'wide', alt: 'Acme MSP' },
+    });
+
+    // What an apply persists: no origin, no URL — the send attaches the bytes.
+    expect(decorated).toContain('src="cid:alga-brand-logo-wide"');
+    expect(decorated).not.toContain('/api/documents/view/');
+
+    // What the iframe renders instead.
+    expect(resolveBrandLogoForPreview(decorated, LOGO_OPTIONS)).toContain(
+      `src="${LOGO_OPTIONS.logoWideUrl}"`,
+    );
+
+    // The panel and the template list hand the URLs to the preview frame, which
+    // substitutes them after the source annotation.
+    expect(panelSource).toContain('brandLogoUrls={status.logoOptions}');
+    expect(templatesSource).toContain('brandLogoUrls={brandingStatus?.logoOptions}');
+    expect(previewSource).toContain('resolveBrandLogoForPreview(annotated, { logoUrl, logoWideUrl })');
+    // The two URLs, not the object a parent may rebuild on every render.
+    expect(previewSource).toContain('[htmlContent, sampleData, sourceMap, logoUrl, logoWideUrl]');
+  });
+
+  it('tells the editor the cid reference is embedded at send time', () => {
+    expect(templatesSource).toContain('notifications.emailTemplates.editor.inlineLogoHint');
+    expect(templatesSource).toContain('formData.html_content?.includes(BRAND_LOGO_MARKER)');
+    // A wide-variant row travels under its own content-id, so the hint reads
+    // the one this template carries instead of naming the square one.
+    expect(templatesSource).toContain('cid: findBrandLogoCid(formData.html_content) ?? BRAND_LOGO_CIDS.default');
+    expect(templatesSource).toContain('src="cid:{{cid}}"');
   });
 });

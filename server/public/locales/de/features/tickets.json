@@ -297,12 +297,12 @@
     "deleteTimeEntryFailed": "Zeiteintrag konnte nicht gelöscht werden",
     "timeEntryDeleted": "Zeiteintrag gelöscht",
     "closeFailed": "Ticket konnte nicht geschlossen werden",
-    "scheduleVisitFailed": "Der Terminplaner konnte nicht geöffnet werden",
     "loadCommentsFailed": "Kommentare konnten nicht geladen werden",
     "updateTicketFailed": "Das Ticket konnte nicht aktualisiert werden",
     "errorWithMessage": "Fehler: {{message}}",
     "billingProfileUpdated": "Abrechnungsprofil aktualisiert",
-    "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
+    "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden",
+    "scheduleOpenFailed": "Der Planer konnte nicht geöffnet werden"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -335,6 +335,8 @@
     "deleteUploadedImages": "Bilder löschen",
     "keepUploadedImages": "Bilder behalten",
     "bundledUpdate": "Gebündeltes Update",
+    "bundledUpdateFrom": "Gebündeltes Update von {{number}}",
+    "systemAuthor": "System",
     "clientSuffix": " (Kunde)",
     "internalCommentTooltip": "Interner Kommentar",
     "resolutionCommentTooltip": "Lösungskommentar",
@@ -1076,7 +1078,8 @@
       "responseStateTrackingDisabled": "Antwortstatus-Tracking deaktiviert",
       "title": "Darstellungseinstellungen für Tickets",
       "description": "Konfigurieren Sie, wie Ihr Ticket-Dashboard Spalten und Zeitstempel für Ihr Team anzeigt.",
-      "dateTimeFormat": "Datum-/Zeitformat",
+      "showWeekday": "Wochentag in Zeitstempeln anzeigen",
+      "countryDrivesFormat": "Das Datums- und Zeitformat richtet sich nach dem Land Ihres Unternehmens. Legen Sie es unter Einstellungen → Allgemein fest.",
       "ticketListColumns": "Spalten der Ticketliste",
       "showTags": "Tags anzeigen",
       "displayUnderTitle": "Unter dem Titel anzeigen",
@@ -1374,7 +1377,13 @@
       "alreadyBundled": "Ticket ist bereits gebündelt: {{ticket}}",
       "masterAsChild": "Das Haupt-Ticket kann nicht zugleich ein untergeordnetes Ticket sein.",
       "noChildren": "Keine untergeordneten Tickets angegeben.",
-      "childrenOnBundledChild": "Einem gebündelten untergeordneten Ticket können keine untergeordneten Tickets hinzugefügt werden."
+      "childrenOnBundledChild": "Einem gebündelten untergeordneten Ticket können keine untergeordneten Tickets hinzugefügt werden.",
+      "concurrent": "Ein oder mehrere ausgewählte Tickets wurden gleichzeitig gebündelt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "closedMasterChoiceRequired": "Das Haupt-Ticket dieses Bündels ist geschlossen. Wählen Sie, wie das Unterticket hinzugefügt werden soll: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Diese Auswahl ist für dieses Haupt-Ticket nicht zulässig. Wählen Sie eine der folgenden Optionen: {{choices}}.",
+      "choiceOnOpenMaster": "Diese Auswahl gilt nur, wenn das Haupt-Ticket des Bündels geschlossen ist.",
+      "closeRuleFailed": "Dieses Ticket kann noch nicht geschlossen werden: {{reason}}",
+      "reopenUnavailable": "Das Haupt-Ticket kann nicht wieder geöffnet werden, da kein offener Ticketstatus konfiguriert ist."
     },
     "ticket": {
       "validationDetails": "Bitte korrigieren Sie die Ticketangaben: {{details}}",
@@ -1481,7 +1490,21 @@
       "remove": "Entfernen",
       "noChildren": "Keine Untertickets in diesem Bündel.",
       "addChildMultiClientMessage": "Dadurch wird {{ticket}} von einem anderen Kunden zum Bündel hinzugefügt. Bestätigen Sie, dass Sie fortfahren möchten.",
-      "thisTicket": "dieses Ticket"
+      "thisTicket": "dieses Ticket",
+      "openChildrenBadge": "{{count}} offene Untertickets",
+      "openChildrenBadgeShort": "{{count}} offen",
+      "childOpenStatus": "Offen",
+      "childClosedStatus": "Geschlossen",
+      "closedMasterDialogTitle": "Das Haupt-Ticket dieses Bündels ist geschlossen",
+      "closedMasterDialogIntro": "Das Haupt-Ticket ist geschlossen. Wählen Sie, was mit dem Unterticket beim Hinzufügen geschehen soll.",
+      "keepClosedLabel": "Hinzufügen und Haupt-Ticket geschlossen lassen",
+      "keepClosedHelp": "Das Unterticket bleibt mit eigener SLA-Uhr offen. Das Bündel wird als inkonsistent angezeigt, bis das Unterticket gelöst ist.",
+      "applyResolutionLabel": "Hinzufügen und die Lösung des Haupt-Tickets auf dieses Unterticket anwenden",
+      "applyResolutionHelp": "Schließt das Unterticket mit dem Status {{status}} und veröffentlicht die Lösung des Haupt-Tickets als öffentlichen Kommentar im Unterticket.",
+      "applyResolutionHelpNoComment": "Schließt das Unterticket mit dem Status {{status}}. Das Haupt-Ticket hat keinen öffentlichen Lösungskommentar zum Veröffentlichen.",
+      "reopenMasterLabel": "Hinzufügen und Haupt-Ticket wieder öffnen",
+      "reopenMasterHelp": "Öffnet nur das Haupt-Ticket wieder. Bereits geschlossene Untertickets in diesem Bündel bleiben geschlossen; Benachrichtigungen zur Wiedereröffnung und SLA gelten für das Haupt-Ticket.",
+      "closedMasterGating": "Die Abschlussregeln des Boards lassen keine offenen Untertickets unter einem geschlossenen Haupt-Ticket zu. Daher ist es nicht möglich, das Haupt-Ticket geschlossen zu lassen."
     },
     "autoClose": "Wird am {{date}} automatisch geschlossen, sofern keine neue Aktivität erfolgt.",
     "autoCloseWarned": "Der Kunde wurde benachrichtigt."
@@ -1603,7 +1626,8 @@
       "additionalAgentsTooltip": "Weitere Bearbeiter:",
       "unknownAgent": "Unbekannter Bearbeiter",
       "category": "Kategorie",
-      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus."
+      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus.",
+      "viewSchedule": "Zeitplan anzeigen"
     },
     "layout": {
       "grid": "Raster",
@@ -1631,7 +1655,6 @@
       "showLess": "Weniger anzeigen",
       "contact": "Kontakt",
       "client": "Kunde",
-      "nextVisit": "Nächster Besuch",
       "callsAndEmails": "Anrufe und E-Mails",
       "call": "Anrufen",
       "viewAll": "Alle anzeigen",
@@ -1657,7 +1680,6 @@
       "billing": "Abrechnung",
       "couldNotLoad": "Diese Kachel konnte nicht geladen werden",
       "nothingScheduled": "Nichts geplant",
-      "scheduleVisit": "Besuch planen",
       "scheduledWork": "Geplante Arbeit",
       "scheduleDone": "erledigt",
       "noCallsOrEmails": "Keine Anrufe oder E-Mails erfasst",
@@ -1703,7 +1725,9 @@
         "approved": "Genehmigt",
         "declined": "Abgelehnt",
         "cancelled": "Storniert"
-      }
+      },
+      "scheduleTime": "Zeit planen",
+      "openScheduleEntry": "Zeitplaneintrag öffnen"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",
@@ -1786,7 +1810,8 @@
         "checklist_template_applied": "checklistenvorlage angewendet",
         "close_rules_overridden": "schließregeln außer kraft gesetzt",
         "close_rules_bypassed": "schließregeln umgangen",
-        "auto_close_warning_sent": "automatische schließwarnung gesendet"
+        "auto_close_warning_sent": "automatische schließwarnung gesendet",
+        "bundle_child_added": "bündel-unterticket hinzugefügt"
       },
       "closeStatus": "Abschlussstatus",
       "noStatusChange": "Status nicht ändern",
@@ -1801,6 +1826,80 @@
       "contactHelper": "Überspringt die E-Mail an den Kunden, die Umfrage-Einladung und die Kundenportal-Benachrichtigung",
       "internalLabel": "Auch Agenten und Beobachter nicht benachrichtigen",
       "internalHelper": "Überspringt auch deren E-Mails und In-App-Benachrichtigungen"
+    }
+  },
+  "externalLinks": {
+    "title": "Externe Links",
+    "empty": "Keine externen Links",
+    "loading": "Externe Links werden geladen...",
+    "noUrl": "Für diese Referenz ist keine URL verfügbar",
+    "customSystemOption": "{{label}} (benutzerdefiniert)",
+    "actions": {
+      "add": "Link hinzufügen",
+      "edit": "Bearbeiten",
+      "remove": "Entfernen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "menu": "Link-Aktionen"
+    },
+    "relationship": {
+      "origin": "Ursprung",
+      "mirror": "Spiegel",
+      "reference": "Referenz"
+    },
+    "relationshipDescription": {
+      "origin": "Wo dieses Ticket seinen Ursprung hat. Jedes Ticket kann einen Ursprungs-Link haben, der sein Ursprungs-Badge bestimmt.",
+      "mirror": "Ein weiterer Eintrag, der dieselbe Aufgabe wie dieses Ticket verfolgt.",
+      "reference": "Ergänzende Informationen zu diesem Ticket."
+    },
+    "dialog": {
+      "addTitle": "Externen Link hinzufügen",
+      "editTitle": "Externen Link bearbeiten",
+      "intro": "Das Hinzufügen eines Links synchronisiert keine Daten zwischen den Systemen."
+    },
+    "removeDialog": {
+      "title": "Externen Link entfernen",
+      "message": "Diesen externen Link vom Ticket entfernen?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Systeme werden geladen...",
+      "selectSystem": "System auswählen",
+      "externalId": "Externe ID",
+      "externalIdPlaceholder": "z. B. 42 oder 1234567890",
+      "realm": "Bereich",
+      "url": "URL",
+      "urlOptional": "Optionale Überschreibung",
+      "urlRequired": "https://...",
+      "relationship": "Beziehung",
+      "originExistsHint": "Dieses Ticket hat bereits einen Ursprungs-Link.",
+      "actorGroup": "Person oder Konto (optional)",
+      "actorHint": "Die Person oder das Konto, die bzw. das mit dem verlinkten Eintrag im externen System verbunden ist.",
+      "actorHandle": "Benutzername oder Handle",
+      "actorDisplay": "Anzeigename",
+      "builtInGroup": "Integrierte Systeme",
+      "customGroup": "Benutzerdefinierte Systeme",
+      "urlPreview": "Öffnet:",
+      "urlPreviewIncomplete": "Füllen Sie die Felder oben aus, um den Link in der Vorschau zu sehen."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket nicht gefunden",
+      "commentNotFound": "Kommentar auf diesem Ticket nicht gefunden",
+      "linkNotFound": "Externer Link nicht gefunden",
+      "systemNotFound": "Unbekanntes externes System",
+      "externalIdRequired": "Externe ID ist erforderlich",
+      "invalidUrl": "URL muss eine gültige http(s)-URL sein",
+      "invalidRelationship": "Ungültige Beziehung",
+      "invalidEntityType": "Ungültiger Entitätstyp",
+      "originExists": "Diese Entität hat bereits einen Ursprungs-Link",
+      "duplicateExternalLink": "Dieser externe Datensatz ist bereits verlinkt",
+      "systemInUse": "Dieses externe System wird von bestehenden Links verwendet",
+      "systemInUseCount": "Dieses externe System wird von {{count}} Link(s) verwendet",
+      "invalidSystemKey": "Benutzerdefinierte Systemschlüssel müssen custom:<slug> entsprechen",
+      "systemLabelRequired": "Systembezeichnung ist erforderlich",
+      "permissionDenied": "Zugriff verweigert",
+      "systemRequired": "Wählen Sie ein externes System.",
+      "urlRequired": "Für Systeme ohne URL-Vorlage ist eine URL erforderlich."
     }
   }
 }

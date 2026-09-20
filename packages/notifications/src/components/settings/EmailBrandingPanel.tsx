@@ -34,7 +34,8 @@ import {
   type OverridableToken,
 } from "./emailBrandingPanelState";
 
-const PREFERRED_PREVIEW_TEMPLATES = ['ticket-created', 'invoice-email'];
+/** Tried in order for the single panel preview; every template gets its own preview in the apply dialog. */
+const PREFERRED_PREVIEW_TEMPLATE_NAMES = ['ticket-created', 'invoice-email'];
 
 /** Client-side edition check; the server enforces it again with isEnterprise. */
 const isEnterpriseEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -139,15 +140,15 @@ export function EmailBrandingPanel({
 
   const resolved = useMemo(() => (draft ? resolveDraft(draft) : STOCK_EMAIL_PALETTE), [draft]);
 
-  const previewTemplates = useMemo(() => {
+  const previewTemplate = useMemo(() => {
     const language = selectedLanguages.size > 0 ? [...selectedLanguages][0] : 'en';
     const inLanguage = systemTemplates.filter((template) => template.language_code === language);
     const pool = inLanguage.length > 0 ? inLanguage : systemTemplates;
-    const preferred = PREFERRED_PREVIEW_TEMPLATES
+    const preferred = PREFERRED_PREVIEW_TEMPLATE_NAMES
       .map((name) => pool.find((template) => template.name === name))
-      .filter((template): template is SystemEmailTemplate & { category: string } => !!template);
+      .find((template): template is SystemEmailTemplate & { category: string } => !!template);
 
-    return preferred.length === 2 ? preferred : pool.slice(0, 2);
+    return preferred ?? pool[0] ?? null;
   }, [systemTemplates, selectedLanguages]);
 
   const update = useCallback((patch: Partial<EmailBrandingDraft>) => {
@@ -208,17 +209,18 @@ export function EmailBrandingPanel({
   const showNewTemplateBanner = shouldShowNewTemplateBanner(status, dismissedNewCount);
   const hasAnyLogo = !!(status.logoOptions.logoWideUrl || status.logoOptions.logoUrl);
 
-  // Preview exactly what an apply would write, brand assets included.
+  // Preview exactly what an apply would write, brand assets included. The row
+  // references the logo by content-id, so the preview swaps it back for the
+  // branding URL the iframe can actually load.
   const previewHtml = (html: string) => {
     const recolored = applyEmailPalette(html, STOCK_EMAIL_PALETTE, resolved);
     if (!isEnterpriseEdition || !status.isEnterprise) return recolored;
 
-    const logoUrl = draft.logoVariant === 'wide'
-      ? status.logoOptions.logoWideUrl || status.logoOptions.logoUrl
-      : status.logoOptions.logoUrl;
+    const variant = draft.logoVariant === 'wide' && status.logoOptions.logoWideUrl ? 'wide' : 'default';
+    const uploaded = variant === 'wide' ? !!status.logoOptions.logoWideUrl : !!status.logoOptions.logoUrl;
 
     return decorateBrandedHtml(recolored, {
-      logo: draft.logoVariant && logoUrl ? { url: logoUrl, alt: status.logoOptions.clientName ?? '' } : undefined,
+      logo: draft.logoVariant && uploaded ? { variant, alt: status.logoOptions.clientName ?? '' } : undefined,
       hideAttribution: draft.hideAttribution,
     });
   };
@@ -442,14 +444,15 @@ export function EmailBrandingPanel({
 
           <div className="space-y-3">
             <Label>{t('notifications.emailBranding.preview.title', 'Preview')}</Label>
-            {previewTemplates.map((template) => (
+            {previewTemplate && (
               <EmailTemplatePreview
-                key={`${template.name}-${template.language_code}`}
-                id={`email-branding-preview-${template.name}`}
-                htmlContent={previewHtml(template.html_content)}
-                templateName={template.name}
+                key={`${previewTemplate.name}-${previewTemplate.language_code}`}
+                id={`email-branding-preview-${previewTemplate.name}`}
+                htmlContent={previewHtml(previewTemplate.html_content)}
+                brandLogoUrls={status.logoOptions}
+                templateName={previewTemplate.name}
               />
-            ))}
+            )}
           </div>
         </div>
 

@@ -7,6 +7,8 @@ import type { TemplateAst } from '@alga-psa/types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useDateFormat } from '@alga-psa/ui/lib/dateFormat/useDateFormat';
+import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import {
   SortableContext,
   useSortable,
@@ -601,7 +603,7 @@ const resolveTotalsRowPreviewModel = (
 const renderTablePreview = (
   metadata: Record<string, unknown>,
   previewData: WasmInvoiceViewModel | null,
-  options: { fillHeight: boolean; t?: DesignerTranslator; ast?: TemplateAst | null; locale?: string; scope?: Record<string, unknown>; presentationTranslator?: TemplateLabelTranslator }
+  options: { fillHeight: boolean; t?: DesignerTranslator; ast?: TemplateAst | null; locale?: string; dateFormat?: CountryDateFormat; scope?: Record<string, unknown>; presentationTranslator?: TemplateLabelTranslator }
 ): React.ReactNode => {
   const borderConfig = resolveTableBorderConfig(metadata);
   const headerWeightClass = FONT_WEIGHT_CLASS[
@@ -713,6 +715,7 @@ const renderTablePreview = (
                         type,
                         previewData?.currencyCode ?? 'USD',
                         options.locale,
+                        options.dateFormat,
                       ) ?? ''
                     : null;
                   return (
@@ -740,7 +743,7 @@ const renderTablePreview = (
                 }
 
                 const rawValue = resolveTableItemBindingRawValue(previewData, item, key, rowBinding);
-                const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD', options.locale) ?? '—';
+                const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD', options.locale, options.dateFormat) ?? '—';
                 return (
                   <span
                     key={`${rowKey}-${String(column.id ?? key)}`}
@@ -927,7 +930,7 @@ const renderTotalsRowsPreview = (
 };
 
 
-const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator, ast?: TemplateAst | null, locale?: string, scope?: Record<string, unknown>, presentationTranslator?: TemplateLabelTranslator): PreviewContentResult => {
+const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator, ast?: TemplateAst | null, locale?: string, scope?: Record<string, unknown>, presentationTranslator?: TemplateLabelTranslator, dateFormat?: CountryDateFormat): PreviewContentResult => {
   const metadata = getNodeMetadata(node);
   // Translate display-only field/text values; tables retain the neutral input
   // and localize their rows only after resolving transforms.
@@ -945,6 +948,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         bindingKey,
         format: metadata.format,
         locale,
+        dateFormat,
         scope: displayScope,
         displayFormat:
           metadata.displayFormat === 'single-line' ||
@@ -963,7 +967,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
           singleLine: !boundValue.multiline,
         };
       }
-      const preview = resolveFieldPreviewScaffold(node, previewData?.currencyCode ?? 'USD');
+      const preview = resolveFieldPreviewScaffold(node, previewData?.currencyCode ?? 'USD', dateFormat);
       if (preview.isPlaceholder) {
         return {
           content: renderPlaceholderPreview(preview.text),
@@ -990,6 +994,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         singleLine: true,
       };
     }
+    case 'richText':
     case 'text': {
       const authoredText =
         asTrimmedString(metadata.text) ||
@@ -1105,7 +1110,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'dynamic-table': {
       const fillHeight = inferHeightMode(getNodeStyle(node)) === 'fixed';
       return {
-        content: renderTablePreview(metadata, previewData, { fillHeight, t, ast, locale, scope, presentationTranslator }),
+        content: renderTablePreview(metadata, previewData, { fillHeight, t, ast, locale, dateFormat, scope, presentationTranslator }),
       };
     }
     case 'action-button':
@@ -1275,7 +1280,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const sectionCue = node.type === 'section' ? getSectionSemanticCue(getNodeName(node)) : null;
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
-  const isTextNode = node.type === 'text';
+  const isTextNode = node.type === 'text' || node.type === 'richText';
   const isFieldNode = node.type === 'field';
   const fieldDisplayLabel = isFieldNode ? asTrimmedString(metadata.label) : '';
   const isFieldLabelTranslatable = isFieldNode && isNodeLabelTranslatable(node);
@@ -1313,7 +1318,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const draggablePointerDown = listeners?.onPointerDown;
   const canvasAst = React.useContext(CanvasAstContext);
   const documentPreview = React.useContext(CanvasDocumentPreviewContext);
-  const previewContent = useMemo(() => getPreviewContent(node, previewData ?? documentPreview.data, t, canvasAst, documentPreview.locale, resolveCanvasRowScope(previewData ?? documentPreview.data, canvasAst, node.id), (key, options) => documentPreview.presentationLabels?.[key] ?? options.defaultValue), [node, previewData, t, canvasAst, documentPreview]);
+  // The tenant's country, from the MSP layout. The canvas is the one preview
+  // with no server round-trip, so it reads the same format the PDF resolves.
+  const dateFormat = useDateFormat();
+  const previewContent = useMemo(() => getPreviewContent(node, previewData ?? documentPreview.data, t, canvasAst, documentPreview.locale, resolveCanvasRowScope(previewData ?? documentPreview.data, canvasAst, node.id), (key, options) => documentPreview.presentationLabels?.[key] ?? options.defaultValue, dateFormat), [node, previewData, t, canvasAst, documentPreview, dateFormat]);
   const fieldNodeStyle = isFieldNode ? getNodeStyle(node) : undefined;
   const fieldLayoutStyle = isFieldNode
     ? {

@@ -31,7 +31,8 @@
       "advancedSettings": "Ustawienia zaawansowane",
       "addNew": "Dodaj nową stawkę podatku",
       "add": "Dodaj stawkę podatku",
-      "update": "Zaktualizuj stawkę podatku"
+      "update": "Zaktualizuj stawkę podatku",
+      "cancel": "Anuluj"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Data rozpoczęcia *",
         "endDate": "Data zakończenia (opcjonalnie)",
         "region": "Region podatkowy *",
-        "percentage": "Procent podatku *"
+        "percentage": "Procent podatku *",
+        "active": "Aktywna"
       },
       "placeholders": {
         "loadingRegions": "Ładowanie regionów...",
@@ -48,7 +50,9 @@
       },
       "addTitle": "Dodaj nową stawkę podatku",
       "editTitle": "Edytuj stawkę podatku",
-      "description": "Wprowadź szczegóły stawki podatku."
+      "description": "Wprowadź szczegóły stawki podatku.",
+      "activeHint": "Nieaktywne stawki są pomijane przy naliczaniu podatku na fakturach.",
+      "regionDescription": "Ta stawka dotyczy faktur opodatkowanych w regionie {{region}}."
     },
     "title": "Stawki podatkowe",
     "loading": "Ładowanie stawek podatkowych",

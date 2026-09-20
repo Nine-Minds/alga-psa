@@ -81,6 +81,24 @@ describe('maintenanceJobSubscriber', () => {
     expect(releaseMock).toHaveBeenCalledTimes(1);
   });
 
+  it('does not rethrow a partial execution failure that the fan-out reported', async () => {
+    // The Temporal activity already returned requested=true (publication
+    // succeeded); a partial replenishment failure is reported in the result and
+    // retried on the next schedule, not by an event-bus redelivery.
+    runMaintenanceJobMock.mockResolvedValue({
+      jobName: 'replenishContractCadenceServicePeriods',
+      scope: 'system',
+      total: 4,
+      succeeded: 2,
+      failed: 2,
+    });
+
+    await expect(
+      subscribedHandler!(event('replenishContractCadenceServicePeriods')),
+    ).resolves.toBeUndefined();
+    expect(releaseMock).toHaveBeenCalledTimes(1);
+  });
+
   it('does not lock forwarded per-tenant jobs', async () => {
     await subscribedHandler!(event('rmm-device-sync', { jobId: 'job-1', data: { tenantId: '11111111-1111-1111-1111-111111111111' } }));
     expect(acquireLockMock).not.toHaveBeenCalled();

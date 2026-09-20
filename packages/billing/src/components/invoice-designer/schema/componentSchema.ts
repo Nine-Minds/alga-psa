@@ -794,6 +794,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'column',
         'container',
         'text',
+        'richText',
         'totals',
         'table',
         'dynamic-table',
@@ -827,6 +828,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     hierarchy: {
       allowedChildren: [
         'text',
+        'richText',
         'totals',
         'table',
         'dynamic-table',
@@ -859,6 +861,23 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       size: { width: 320, height: 60 },
       metadata: {
         text: 'Text',
+      },
+    },
+    hierarchy: {
+      allowedChildren: [],
+      allowedParents: ['column', 'container', 'section'],
+    },
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TEXT_INSPECTOR),
+  },
+  richText: {
+    type: 'richText',
+    label: 'Rich Text',
+    description: 'Terms or copy authored as structured rich text (links, bold, paragraphs).',
+    category: 'Content',
+    defaults: {
+      size: { width: 320, height: 80 },
+      metadata: {
+        text: '',
       },
     },
     hierarchy: {
@@ -1221,6 +1240,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     hierarchy: {
       allowedChildren: [
         'text',
+        'richText',
         'totals',
         'table',
         'dynamic-table',

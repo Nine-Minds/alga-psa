@@ -13,6 +13,7 @@ import type {
   TaggedEntityType,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
 export const quoteStatusSchema = z.enum([
@@ -852,7 +853,7 @@ export const Quote = {
     const [createdQuote] = await tenantScopedTable(knexOrTrx, tenant, 'quotes')
       .insert({
         tenant,
-        ...quote,
+        ...prepareQuoteTermsForDb(quote as Record<string, unknown>),
         quote_number: quoteNumber,
         status: quote.is_template ? null : (quote.status ?? 'draft'),
         version: quote.version ?? 1,
@@ -898,7 +899,7 @@ export const Quote = {
 
     const [updatedQuote] = await tenantScopedTable(knexOrTrx, tenant, 'quotes')
       .where({ quote_id: quoteId })
-      .update({ ...updateData, updated_at: knexOrTrx.fn.now() })
+      .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
       .returning('*');
 
     await QuoteActivity.create(knexOrTrx, tenant, {

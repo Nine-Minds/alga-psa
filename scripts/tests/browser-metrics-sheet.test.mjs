@@ -162,7 +162,10 @@ test('validated archive provenance is retained and sanitized, and cannot move to
   const metrics = produce();
   assert.equal(metrics.status, 'passed');
   assert.equal(JSON.stringify(metrics.artifactManifest).includes('must-not-export'), false);
-  for (const overrides of [{ runAttempt: 3 }, { artifactManifest: { ...manifest, revision: 'b'.repeat(40) } }]) {
+  // A manifest can only originate at the current attempt or an earlier one of the
+  // same run; an attempt-1 consumer confronting an attempt-2 artifact is a future
+  // (impossible) claim, and a foreign revision is a different candidate.
+  for (const overrides of [{ runAttempt: 1 }, { artifactManifest: { ...manifest, revision: 'b'.repeat(40) } }]) {
     const rejected = produce(overrides);
     assert.equal(rejected.status, 'incomplete');
     assert.equal(rejected.artifactManifest, null);
@@ -172,9 +175,20 @@ test('validated archive provenance is retained and sanitized, and cannot move to
   assert.equal(rows[0].lane_status, 'passed');
   assert.equal(JSON.parse(rows[0].artifact_manifest).components.length, 9);
   assert.equal(rows[0].artifact_manifest.includes('must-not-export'), false);
-  const [stale] = objects(browserRows(metrics, { ...context, env: { GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '3' } }));
-  assert.equal(stale.lane_status, 'incomplete');
-  assert.equal(stale.artifact_manifest, '');
+  // A partial "re-run failed jobs" records an earlier attempt's successful browser
+  // lane while the recording job runs at a higher attempt; runId still pins the
+  // run, so the reused artifact's provenance is retained rather than discarded.
+  const [reused] = objects(browserRows(metrics, { ...context, env: { GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '3' } }));
+  assert.equal(reused.lane_status, 'passed');
+  assert.equal(JSON.parse(reused.artifact_manifest).components.length, 9);
+  // A recording run cannot host an artifact stamped with a later attempt.
+  const [future] = objects(browserRows(metrics, { ...context, env: { GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1' } }));
+  assert.equal(future.lane_status, 'incomplete');
+  assert.equal(future.artifact_manifest, '');
+  // Provenance still cannot move to a different run: the run id remains pinned.
+  const [foreign] = objects(browserRows(metrics, { ...context, env: { GITHUB_RUN_ID: '999', GITHUB_RUN_ATTEMPT: '2' } }));
+  assert.equal(foreign.lane_status, 'incomplete');
+  assert.equal(foreign.artifact_manifest, '');
 });
 
 test('browser header migration writes only U1 through Y1 before appending and preserves history', async t => {

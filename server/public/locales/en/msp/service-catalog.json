@@ -37,7 +37,8 @@
       "delete": "Delete",
       "addNew": "Add New Tax Rate",
       "add": "Add Tax Rate",
-      "update": "Update Tax Rate"
+      "update": "Update Tax Rate",
+      "cancel": "Cancel"
     },
     "dialog": {
       "addTitle": "Add New Tax Rate",
@@ -48,13 +49,16 @@
         "percentage": "Tax Percentage *",
         "description": "Description",
         "startDate": "Start Date *",
-        "endDate": "End Date (Optional)"
+        "endDate": "End Date (Optional)",
+        "active": "Active"
       },
       "placeholders": {
         "loadingRegions": "Loading regions...",
         "selectRegion": "Select Tax Region",
         "percentage": "Enter percentage"
-      }
+      },
+      "activeHint": "Inactive rates are ignored when invoices are taxed.",
+      "regionDescription": "This rate applies to invoices taxed in {{region}}."
     },
     "cap": {
       "title": "Tax cap",

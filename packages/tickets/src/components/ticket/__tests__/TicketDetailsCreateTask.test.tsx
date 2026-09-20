@@ -184,8 +184,8 @@ vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
   ReflectionContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('../../actions/ticketDisplaySettings', () => ({
-  getTicketingDisplaySettings: vi.fn().mockResolvedValue({ dateTimeFormat: 'MMM d, yyyy h:mm a' })
+vi.mock('../../../actions/ticketDisplaySettings', () => ({
+  getTicketingDisplaySettings: vi.fn().mockResolvedValue({ showWeekday: false })
 }));
 
 vi.mock('@alga-psa/tags/actions', () => ({
@@ -239,7 +239,7 @@ vi.mock('@alga-psa/documents/actions/documentActions', () => ({
   getDocumentByTicketId: vi.fn().mockResolvedValue([])
 }));
 
-vi.mock('../../actions/clientLookupActions', () => ({
+vi.mock('../../../actions/clientLookupActions', () => ({
   getClientLocations: vi.fn().mockResolvedValue([]),
   getContactByContactNameId: vi.fn().mockResolvedValue(null),
   getContactsByClient: vi.fn().mockResolvedValue([]),
@@ -247,15 +247,15 @@ vi.mock('../../actions/clientLookupActions', () => ({
   getAllClients: vi.fn().mockResolvedValue([])
 }));
 
-vi.mock('../../actions/optimizedTicketActions', () => ({
+vi.mock('../../../actions/optimizedTicketActions', () => ({
   updateTicketWithCache: vi.fn()
 }));
 
-vi.mock('../../actions/ticketActions', () => ({
+vi.mock('../../../actions/ticketActions', () => ({
   updateTicket: vi.fn()
 }));
 
-vi.mock('../../actions/ticketBundleActions', () => ({
+vi.mock('../../../actions/ticketBundleActions', () => ({
   addChildrenToBundleAction: vi.fn(),
   findTicketByNumberAction: vi.fn(),
   promoteBundleMasterAction: vi.fn(),
@@ -265,7 +265,7 @@ vi.mock('../../actions/ticketBundleActions', () => ({
   searchEligibleChildTicketsAction: vi.fn()
 }));
 
-vi.mock('../../actions/comment-actions/clipboardImageDraftActions', () => ({
+vi.mock('../../../actions/comment-actions/clipboardImageDraftActions', () => ({
   deleteDraftClipboardImages: vi.fn().mockResolvedValue(undefined),
 }));
 
