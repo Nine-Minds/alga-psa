@@ -18,7 +18,7 @@
  *   node scripts/build-co-managed-inventory.mjs --out docs/evidence/co-managed-completion/<sha>
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -385,6 +385,18 @@ const rows = buildRows();
 
 // Fail closed on the things CT001 will eventually assert.
 const failures = [];
+
+/**
+ * Candidate facts collected by scripts/collect-co-managed-candidate-facts.mjs.
+ * Read if present; absent facts stay null so the gate reports them as blocking
+ * reasons rather than treating absence as satisfaction.
+ */
+const factsPath = arg('facts', path.join(outDir, 'candidate-facts.json'));
+const facts = existsSync(factsPath) ? JSON.parse(readFileSync(factsPath, 'utf8')) : null;
+if (facts && facts.candidate !== candidate) {
+  failures.push(`candidate-facts.json was collected at ${facts.candidate} but this manifest is for ${candidate}`);
+}
+
 const seen = new Set();
 for (const row of rows) {
   if (seen.has(row.key)) failures.push(`duplicate row key ${row.key}`);
@@ -461,12 +473,16 @@ const manifest = {
   candidate,
   base,
   collectedAt: inventory.generatedAt,
-  pr: { number: 3363, head: null },
-  // Filled by whoever collects a real candidate. Null is a blocking reason.
+  pr: facts?.pr ? { number: facts.pr.number, head: facts.pr.head } : { number: 3363, head: null },
+  // Still uncollected: nothing in this round built or ran an app/worker from the
+  // candidate, so claiming provenance would be inventing it. Null is a blocking
+  // reason, which is the correct state.
   provenance: { app: { revision: null }, worker: { revision: null }, migrations: null, config: null, simulator: null },
-  worktreeClean,
-  mergeability: { mergeable: null, mergeStateStatus: null, checkedAtSha: null },
-  ci: { runId: null, checks: [] },
+  worktreeClean: facts?.worktreeClean ?? worktreeClean,
+  mergeability: facts?.mergeability ?? { mergeable: null, mergeStateStatus: null, checkedAtSha: null },
+  ci: facts?.ci
+    ? { runId: facts.ci.runId, status: facts.ci.status, conclusion: facts.ci.conclusion, checks: facts.ci.checks }
+    : { runId: null, checks: [] },
   reviewEnvironment: { stable: false, observedMinutes: 0, healingEvents: null },
   openDefects: OPEN_DEFECTS,
   productionPrerequisites: PRODUCTION_PREREQUISITES,

@@ -169,6 +169,36 @@ each adapter independently:
 The infrastructure-error cases stay green under both, so the repair is not broadening quarantine -
 unknown database failures still propagate to `retry`.
 
+### CI history: the case regressed, it did not always fail
+
+Round 2 concluded "the divergence lives in the CI environment". That is too weak. Reading Integration
+shard 1 across this branch's completed Production-regression runs narrows it to a window:
+
+| run | SHA | when | shard 1 | the requester case |
+| --- | --- | --- | --- | --- |
+| 35477498197 | `bda945b640` | 2026-09-19 23:57Z | **success** (all four shards green) | present in the file, passed |
+| 35486497392 | `7b0b52c6c3` | 2026-09-20 03:24Z | **failure**, 2 failed / 2166 passed | **failed** |
+| 35492001110 | `618019c3e3` | 2026-09-20 05:34Z | **failure**, 1 failed / 2170 passed | **failed** |
+
+The case was not new: `git show bda945b640:…/coManagedBootstrap.integration.test.ts` contains it, and
+shard 1 was green in that run. So it passed in CI, then failed in the next two runs. It was
+introduced by `b316bd523f`, well before the green run.
+
+That reframes it. Two consecutive failures at two different SHAs is evidence of **persistence**, not
+of a flake — but it is not proof of determinism either, because no two completed runs exist at the
+same SHA to compare. The honest statement is: persistent across two candidates, with one earlier
+green.
+
+The regression window is `bda945b640..7b0b52c6c3` — ten commits, including a merge of `origin/main`
+and `ad14eb6919` ("Log time refused on shared work because two dispatch guards disagreed on scope"),
+which touches `packages/co-managed/src/nativeTimeDispatch.ts` and its siblings. The window also
+touches `coManagedBootstrap.integration.test.ts` itself, so an ordering or fixture change inside the
+suite is as plausible as a product change. Shard composition also shifts between runs (2168 vs 2171
+tests), so "the same shard" is only approximately true across SHAs.
+
+This is the most actionable lead the card has for CF002–CF004, and it is a better next step than any
+further local reproduction: bisect that window against CI shard 1, not against this workstation.
+
 ### The 8 `Comment Reactions` failures were my harness, not the product
 
 Round 1 carried these as "probably local contention". They are not. Diagnosed:
