@@ -4,7 +4,8 @@ import { getClientContactVisibilityContext } from '@alga-psa/shared/lib/tickets/
 import { VISIBILITY_GROUP_MISMATCH_ERROR, VISIBILITY_GROUP_MISSING_ERROR } from '@alga-psa/shared/lib/tickets/clientPortalVisibility';
 import type { RequesterReplyAdmission } from '../../../shared/services/email/requesterReplyAdmission';
 import { withCoManagedRequesterEmailReply } from './requesterReplyTokens';
-import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
+import { CoManagedSharedWorkError, isCoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
+import { recordInboundDiagnostic } from '../../../shared/services/email/inboundErrorDiagnostics';
 
 /** Worker composition adapter. Only an authorization rejection is terminal;
  * database/writer failures propagate so the durable inbox can retry safely. */
@@ -40,7 +41,17 @@ export const admitCoManagedRequesterReply: RequesterReplyAdmission = async (trx,
     }));
     return { admitted: true, result };
   } catch (error) {
-    if (error instanceof CoManagedSharedWorkError) return { admitted: false };
+    // Duck-typed, not `instanceof`: this module is one of the export-map
+    // subpaths that resolve to the tsup bundle, so the writer callback can
+    // raise a `CoManagedSharedWorkError` built by the other compiled copy of
+    // this package. Under `instanceof` that rejection was rethrown as an
+    // unclassified failure, which the durable inbox then reports as `retry`
+    // instead of quarantining it.
+    if (isCoManagedSharedWorkError(error)) return { admitted: false };
+    recordInboundDiagnostic('admission', {
+      tenant: input.tenant, adapter: 'requester', admitted: false,
+      sharedWorkConstructorMatched: error instanceof CoManagedSharedWorkError,
+    }, error);
     throw error;
   }
 };

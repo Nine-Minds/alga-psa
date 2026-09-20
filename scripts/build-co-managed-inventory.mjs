@@ -1,0 +1,402 @@
+#!/usr/bin/env node
+/**
+ * CF001 — build the row-level reconciliation inventory for PR #3363.
+ *
+ * Every requirement in the three plans this card is executing against has to
+ * appear exactly once, with a status that is derived from something checkable
+ * rather than asserted in prose. `implemented: true` in a plan's features.json
+ * means code exists; it is not a claim that anything passed at the current
+ * candidate, so it can only ever produce `implemented-unverified` here.
+ *
+ * A row reaches `verified` only through EVIDENCE below — an explicit record of
+ * a command or journey that was actually run, at a named SHA, with its result.
+ * A skipped test, a screenshot alone, or a previous assignment reporting
+ * success cannot set it. Nothing is deleted and nothing is waived: rows that
+ * are out of the current round's scope keep their derived status and say so.
+ *
+ * Usage:
+ *   node scripts/build-co-managed-inventory.mjs --out docs/evidence/co-managed-completion/<sha>
+ */
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = fileURLToPath(new URL('../', import.meta.url));
+const argv = process.argv.slice(2);
+const arg = (name, fallback) => {
+  const i = argv.indexOf(`--${name}`);
+  return i === -1 ? fallback : argv[i + 1];
+};
+
+const candidate = arg('candidate', execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim());
+const outDir = path.resolve(root, arg('out', `docs/evidence/co-managed-completion/${candidate.slice(0, 10)}`));
+
+const STATUSES = ['missing-code', 'implemented-unverified', 'failed', 'blocked-external', 'verified'];
+
+const PLANS = {
+  foundation: 'docs/plans/2026-09-06-co-managed-it-plan.md',
+  clientIntegration: 'docs/plans/2026-09-11-co-managed-client-integration',
+  ticketList: 'docs/plans/2026-09-11-co-managed-ticket-list-unification',
+  correction: 'docs/plans/2026-09-20-co-managed-it-completion',
+};
+
+const readJson = (p) => JSON.parse(readFileSync(path.join(root, p), 'utf8'));
+
+/**
+ * The PRD's acceptance-coverage table maps each foundation contract to the CT
+ * IDs that are supposed to prove it. Parsed rather than retyped so the mapping
+ * cannot drift from the plan.
+ */
+function foundationAcceptance() {
+  const text = readFileSync(path.join(root, `${PLANS.correction}/PRD.md`), 'utf8');
+  const map = {};
+  for (const line of text.split('\n')) {
+    const match = /^\|\s*(T\d{2})\b[^|]*\|\s*(.+?)\s*\|\s*$/.exec(line);
+    if (!match) continue;
+    const ids = [...match[2].matchAll(/CT\d{3}/g)].map((m) => m[0]);
+    if (ids.length) map[match[1]] = [...new Set(ids)];
+  }
+  return map;
+}
+
+function foundationRows() {
+  const text = readFileSync(path.join(root, PLANS.foundation), 'utf8');
+  const rows = [];
+  for (const line of text.split('\n')) {
+    const match = /^\|\s*(T\d{2})\s+([^|]+?)\s*\|\s*(.+?)\s*\|\s*$/.exec(line);
+    if (!match) continue;
+    if (rows.some((row) => row.id === match[1])) continue;
+    rows.push({ id: match[1], title: match[2], description: match[3] });
+  }
+  return rows;
+}
+
+/**
+ * Evidence actually collected for this round. Each entry names the command or
+ * journey, the SHA it ran at, and what it did and did not establish. Adding a
+ * row here is the only way to move a requirement to `verified`, and a row whose
+ * `establishes` is empty cannot.
+ */
+const EVIDENCE = {
+  'base-reconciliation': {
+    type: 'automated',
+    sha: 'b96b4c2ae077e7cb63dfa51dff354401297edcd0',
+    command: 'node scripts/audit-merge-drops.mjs (both directions); direct diff of all 70 files main touched; '
+      + 'vitest over the 9 test files main added/changed',
+    result: 'audit clean both directions; 66/70 files identical to origin/main and the 4 differences justified; '
+      + '237 tests passed',
+    artifact: 'base-reconciliation.md',
+  },
+  'provider-route-regression': {
+    type: 'automated',
+    sha: '067a4bda1c',
+    command: 'server: vitest run src/test/unit/product/providerSetupReachability.test.ts '
+      + 'src/test/unit/product/coManagedProductSurface.test.ts '
+      + 'src/test/unit/product/uiReachabilityCoherence.contract.test.ts',
+    result: '41 passed. Mutation check: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page '
+      + 'fails 2 of the 6 new cases.',
+    artifact: 'cf005-provider-setup.md',
+  },
+  'provider-route-browser': {
+    type: 'browser',
+    sha: '067a4bda1c',
+    command: 'Real dev app at http://100.82.172.57:3374 as cm.rabbit.admin@whiterabbit.test '
+      + '(tenant 51ac6952-6d6f-4600-aace-b71a9b2a5e73, product_code co_managed): '
+      + 'Settings -> Email -> Inbound -> Open Providers; plus direct URLs for four excluded surfaces',
+    result: 'Open Providers now lands on /msp/co-management/providers ("Email and Identity Providers") with the '
+      + 'Microsoft app-registration surface rendered. /msp/settings/integrations (providers and accounting), '
+      + '/msp/settings/integrations/entra, /msp/billing and /msp/settings/extensions all still render '
+      + '"Page not available in your current product experience". PSA admin unchanged: /msp/go/providers '
+      + 'redirects to /msp/settings/integrations?category=providers.',
+    artifact: 'cf005-provider-setup.md',
+  },
+  'inbound-diagnostics-regression': {
+    type: 'automated',
+    sha: 'pending-commit',
+    command: 'server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts',
+    result: '10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the '
+      + 'separately-compiled-copy case.',
+    artifact: 'cf002-requester-deferral.md',
+  },
+  'requester-deferral-ci-failure': {
+    type: 'automated',
+    sha: '618019c3e3563f729684163c1abd8f5ad312e5dd',
+    command: 'GitHub Actions run 35492001110, job 106030872598, Integration shard 1, VITEST_SEED=20260610',
+    result: 'FAILED. 1 failed / 2170 passed. "defers and rolls back requester email when a separately compiled '
+      + 'admission adapter reports a lifecycle pause": expected defer, got retry, then '
+      + '"Failed to fully serialize error: Maximum call stack size exceeded" in place of the original exception.',
+    artifact: 'cf002-requester-deferral.md',
+  },
+  'requester-deferral-local-pass': {
+    type: 'automated',
+    sha: 'b96b4c2ae0',
+    command: 'server: vitest run ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts '
+      + 'at VITEST_SEED=20260610 against a CE+EE-overlay database (TEST_MIGRATIONS_DIR)',
+    result: '1416/1416 passed, including the failing case, with full intra-file shuffle at the CI seed. '
+      + 'This establishes that the failure is NOT reproducible from this file alone; it needs the real shard. '
+      + 'It does not establish that the defect is absent.',
+    artifact: 'cf002-requester-deferral.md',
+  },
+};
+
+/**
+ * Explicit, justified status overrides. Anything not listed here derives its
+ * status from its plan flag. Each override states why.
+ */
+const OVERRIDES = {
+  CF001: {
+    status: 'implemented-unverified',
+    why: 'This inventory is the deliverable. It exists and is committed, but CT001 (the exhaustiveness and '
+      + 'no-silent-removal audit that would verify it) is not written yet, so it cannot verify itself.',
+  },
+  CF002: {
+    status: 'failed',
+    why: 'Bounded primitive diagnostics and finite error reporting landed this round '
+      + '(shared/services/email/inboundErrorDiagnostics.ts, wired at rollback / lifecycle-classification / '
+      + 'disposition), with independent tests. The requirement is not met until the instrumented candidate '
+      + 'actually reports the first error in the real shard. Still failing at the last observed CI candidate.',
+    evidence: ['requester-deferral-ci-failure', 'inbound-diagnostics-regression', 'requester-deferral-local-pass'],
+  },
+  CF003: {
+    status: 'failed',
+    why: 'A structurally confirmed cause was repaired at its owner: the two separately compiled worker admission '
+      + 'adapters classified CoManagedSharedWorkError by `instanceof`, which cannot hold across this package\'s '
+      + 'split export map (root and some modules resolve to source, worker-facing subpaths to the tsup bundle), '
+      + 'so an authorization rejection was rethrown unclassified and the durable inbox reported `retry`. '
+      + 'That is a real defect and is now duck-typed like its sibling isCoManagedLifecycleError. It is NOT yet '
+      + 'established as THE cause of the CI failure -- no local reproduction of the shard failure exists, so the '
+      + 'causal claim is unproven and this row stays failed.',
+    evidence: ['requester-deferral-ci-failure', 'inbound-diagnostics-regression', 'requester-deferral-local-pass'],
+  },
+  CF004: {
+    status: 'failed',
+    why: 'Depends on CF003 being proven at a candidate. The requester audience/token isolation and both worker '
+      + 'entry points are untouched by this round\'s change except that the technician adapter '
+      + '(inboundEmailReply) got the same duck-typed classification, which needs the same shard proof.',
+    evidence: ['requester-deferral-ci-failure'],
+  },
+  CF005: {
+    status: 'verified',
+    why: 'The reported dead end was walked in a real browser as a co-managed customer administrator and now '
+      + 'resolves, with the excluded integration surfaces still denied in the same session and PSA navigation '
+      + 'unchanged. Backed by a mutation-proven regression.',
+    evidence: ['provider-route-browser', 'provider-route-regression'],
+  },
+  CF006: {
+    status: 'implemented-unverified',
+    why: 'The route-level product boundary, the RBAC (system_settings:update) and tenant-ownership guards inside '
+      + 'the reused provider actions, and the denial of excluded surfaces were all exercised as a real '
+      + 'co-managed admin. NOT verified: an actual OAuth callback with a real Microsoft application, '
+      + 'cross-tenant callback denial, and secret redaction on save. Those need CF007 and are untouched here.',
+    evidence: ['provider-route-browser', 'provider-route-regression'],
+  },
+  CF030: {
+    status: 'missing-code',
+    why: 'Deliberately not started this round. It is the last scope item and the budget went to CF002-CF006 and '
+      + 'this inventory. Its independent tests must be written and passing before it is used as a gate.',
+  },
+};
+
+/** Rows whose acceptance depends on a real vendor account and cannot be closed inside this card. */
+const EXTERNAL = {
+  'clientIntegration:T018': 'Historical real-provider language. Preserved as an external production prerequisite '
+    + 'under docs/evidence/co-managed-acceptance-scope.md. A simulator pass may not be recorded against it.',
+  'clientIntegration:T019': 'Same as T018: real-provider evidence, tracked as an external production prerequisite.',
+  CF032: 'By definition external: real recurring USD 11.49 price and provider checkout/webhook, external license '
+    + 'issuance, real Microsoft application acceptance, and deployed-storage/candidate migrations.',
+};
+
+/** The current round's scope, from the work order, so out-of-scope rows say so rather than looking neglected. */
+const OUT_OF_SCOPE_THIS_ROUND = new Set([
+  'CF011', 'CF012', 'CF013', 'CF014', 'CF015', 'CF016', 'CF017', 'CF018',
+  'CF019', 'CF020', 'CF021', 'CF022', 'CF023', 'CF024', 'CF025', 'CF026',
+  'CF027', 'CF028', 'CF029', 'CF031', 'CF032',
+]);
+
+function deriveStatus(key, row) {
+  if (OVERRIDES[key]) return OVERRIDES[key].status;
+  if (EXTERNAL[key]) return 'blocked-external';
+  return row.implemented === true ? 'implemented-unverified' : 'missing-code';
+}
+
+function buildRows() {
+  const rows = [];
+  const push = (row) => {
+    const key = row.plan === 'correction' || row.plan === 'foundation' ? row.id : `${row.plan}:${row.id}`;
+    const status = deriveStatus(key, row);
+    const override = OVERRIDES[key];
+    rows.push({
+      key,
+      plan: row.plan,
+      id: row.id,
+      kind: row.kind,
+      description: row.description,
+      implementationSource: row.implementationSource,
+      currentRegression: row.currentRegression,
+      ownerRole: row.ownerRole,
+      dependsOn: row.dependsOn ?? [],
+      foundationNote: row.foundationNote === true,
+      status,
+      justification: override?.why
+        ?? EXTERNAL[key]
+        ?? (OUT_OF_SCOPE_THIS_ROUND.has(key)
+          ? `Explicitly out of scope for the 2026-09-20 round; status derived from the plan flag `
+            + `(implemented=${row.implemented === true}). Not waived, not closed.`
+          : row.foundationNote
+            ? 'The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this '
+              + 'contract. Those audits are source review at their own revision, not acceptance: they ran no build, '
+              + 'no browser journey and no Citus. Nothing was run for this contract at candidate '
+              + `${candidate.slice(0, 10)}, so it stays implemented-unverified.`
+            : `Derived from the plan flag (implemented=${row.implemented === true}). No acceptance record exists at `
+              + `candidate ${candidate.slice(0, 10)}.`),
+      evidence: (override?.evidence ?? []).map((id) => ({ id, ...EVIDENCE[id] })),
+    });
+  };
+
+  const acceptance = foundationAcceptance();
+  for (const row of foundationRows()) {
+    const mapped = acceptance[row.id] ?? [];
+    push({
+      plan: 'foundation', id: row.id, kind: 'contract', description: `${row.title} — ${row.description}`,
+      implementationSource: `${PLANS.foundation} plus the 2026-09-08 source audits docs/plans/co-managed-audit-*.md`,
+      currentRegression: mapped.length ? mapped.join(', ') : 'unmapped by PRD.md#acceptance-coverage',
+      ownerRole: 'implementing-ood',
+      // The 2026-09-08 T01-T22 audits found code for every contract. That is
+      // source review, not acceptance -- so these are implemented-unverified,
+      // never verified, and never missing-code.
+      implemented: true,
+      foundationNote: true,
+      dependsOn: mapped,
+    });
+  }
+
+  for (const [plan, dir] of [['clientIntegration', PLANS.clientIntegration], ['ticketList', PLANS.ticketList],
+    ['correction', PLANS.correction]]) {
+    const tests = readJson(path.join(dir, 'tests.json'));
+    const coveredBy = {};
+    for (const test of tests) {
+      for (const featureId of test.featureIds ?? []) (coveredBy[featureId] ??= []).push(test.id);
+    }
+    for (const [kind, file] of [['feature', 'features.json'], ['test', 'tests.json']]) {
+      for (const row of readJson(path.join(dir, file))) {
+        push({
+          plan, id: row.id, kind, description: row.description,
+          implementationSource: `${dir}/${file}`,
+          currentRegression: kind === 'test'
+            ? `${row.type ?? 'unspecified'} (${row.implemented === true ? 'written' : 'not written'}; not run at this candidate)`
+            : (coveredBy[row.id]?.join(', ') ?? 'NO MAPPED TEST'),
+          ownerRole: row.ownerRole ?? 'implementing-ood',
+          implemented: row.implemented,
+          dependsOn: row.dependsOn ?? row.featureIds ?? [],
+        });
+      }
+    }
+  }
+
+  return rows;
+}
+
+const rows = buildRows();
+
+// Fail closed on the things CT001 will eventually assert.
+const failures = [];
+const seen = new Set();
+for (const row of rows) {
+  if (seen.has(row.key)) failures.push(`duplicate row key ${row.key}`);
+  seen.add(row.key);
+  if (!STATUSES.includes(row.status)) failures.push(`${row.key}: unknown status ${row.status}`);
+  if (!row.justification) failures.push(`${row.key}: no justification`);
+  if (row.status === 'verified' && row.evidence.length === 0) {
+    failures.push(`${row.key}: verified with no evidence record`);
+  }
+  for (const item of row.evidence) {
+    if (!item.command || !item.result) failures.push(`${row.key}: evidence ${item.id} is not a real record`);
+  }
+}
+const expected = {
+  foundation: 22,
+  'clientIntegration:feature': 33, 'clientIntegration:test': 21,
+  'ticketList:feature': 39, 'ticketList:test': 20,
+  'correction:feature': 32, 'correction:test': 26,
+};
+const counts = {};
+for (const row of rows) {
+  const bucket = row.plan === 'foundation' ? 'foundation' : `${row.plan}:${row.kind}`;
+  counts[bucket] = (counts[bucket] ?? 0) + 1;
+}
+for (const [bucket, want] of Object.entries(expected)) {
+  if (counts[bucket] !== want) failures.push(`${bucket}: expected ${want} rows, found ${counts[bucket] ?? 0}`);
+}
+
+const byStatus = {};
+for (const row of rows) byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
+
+const inventory = {
+  schemaVersion: 1,
+  candidate,
+  generatedAt: new Date().toISOString(),
+  plans: PLANS,
+  statusVocabulary: STATUSES,
+  counts, totals: { rows: rows.length, byStatus },
+  failures,
+  evidence: EVIDENCE,
+  rows,
+};
+
+mkdirSync(outDir, { recursive: true });
+writeFileSync(path.join(outDir, 'inventory.json'), `${JSON.stringify(inventory, null, 2)}\n`);
+
+const md = [];
+md.push(`# CF001 — co-managed reconciliation inventory`);
+md.push('');
+md.push(`Candidate: \`${candidate}\`. Generated by \`scripts/build-co-managed-inventory.mjs\`; edit the script, not`);
+md.push('this file. `inventory.json` in this directory is the machine-readable form.');
+md.push('');
+md.push('`implemented: true` in a plan means code exists. It is not an acceptance record, so it can only produce');
+md.push('`implemented-unverified` here. A row reaches `verified` only through an evidence entry naming a command or');
+md.push('journey, the SHA it ran at, and its result. No requirement is deleted or waived.');
+md.push('');
+md.push(`**${rows.length} rows.** ` + Object.entries(byStatus).sort().map(([s, n]) => `${s}: ${n}`).join(' · '));
+md.push('');
+md.push(failures.length ? `> **Self-check FAILED:**\n> - ${failures.join('\n> - ')}` : '> Self-check passed.');
+md.push('');
+md.push('## Evidence records');
+md.push('');
+md.push('| id | type | sha | command / journey | result |');
+md.push('| --- | --- | --- | --- | --- |');
+for (const [id, item] of Object.entries(EVIDENCE)) {
+  md.push(`| \`${id}\` | ${item.type} | \`${item.sha}\` | ${item.command.replace(/\|/g, '\\|')} | ${item.result.replace(/\|/g, '\\|')} |`);
+}
+md.push('');
+for (const [bucket, label] of [
+  ['foundation', 'Foundation contracts T01–T22'],
+  ['clientIntegration:feature', 'Client integration features F001–F033'],
+  ['clientIntegration:test', 'Client integration tests T001–T021'],
+  ['ticketList:feature', 'Ticket list features F001–F039'],
+  ['ticketList:test', 'Ticket list tests T001–T020'],
+  ['correction:feature', 'Correction features CF001–CF032'],
+  ['correction:test', 'Correction tests CT001–CT026'],
+]) {
+  md.push(`## ${label}`);
+  md.push('');
+  md.push('| ID | status | implementation source | current regression | owner | depends on | justification | evidence |');
+  md.push('| --- | --- | --- | --- | --- | --- | --- | --- |');
+  for (const row of rows) {
+    const rowBucket = row.plan === 'foundation' ? 'foundation' : `${row.plan}:${row.kind}`;
+    if (rowBucket !== bucket) continue;
+    md.push(`| ${row.id} | \`${row.status}\` | ${row.implementationSource} | ${row.currentRegression || '—'} `
+      + `| ${row.ownerRole} | ${row.dependsOn.length ? row.dependsOn.join(', ') : '—'} `
+      + `| ${row.justification.replace(/\|/g, '\\|')} `
+      + `| ${row.evidence.length ? row.evidence.map((e) => `\`${e.id}\``).join(', ') : '—'} |`);
+  }
+  md.push('');
+}
+writeFileSync(path.join(outDir, 'inventory.md'), `${md.join('\n')}\n`);
+
+console.log(`${rows.length} rows -> ${path.relative(root, outDir)}`);
+console.log(Object.entries(byStatus).sort().map(([s, n]) => `  ${s}: ${n}`).join('\n'));
+if (failures.length) {
+  for (const failure of failures) console.error(`FAIL ${failure}`);
+  process.exit(1);
+}

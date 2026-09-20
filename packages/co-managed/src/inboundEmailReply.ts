@@ -5,7 +5,8 @@ import type { EmailReplyAdmission } from '../../../shared/services/email/qualifi
 import { admitCoManagedRequesterReply } from './inboundRequesterReply';
 import { withCoManagedCustomerEmailReply } from './customerReplyTokens';
 import { withCoManagedCustomerCommentNotification } from './customerCommentNotification';
-import { authorizeCoManagedWorkRecord, CoManagedSharedWorkError, isCoManagedUuid, lockCoManagedRecipientIdentity } from './sharedWorkIdentity';
+import { CoManagedSharedWorkError, authorizeCoManagedWorkRecord, isCoManagedSharedWorkError, isCoManagedUuid, lockCoManagedRecipientIdentity } from './sharedWorkIdentity';
+import { recordInboundDiagnostic } from '../../../shared/services/email/inboundErrorDiagnostics';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
 /** Both durable worker roots use this adapter. Token rejection is terminal;
@@ -72,7 +73,15 @@ export const admitCoManagedEmailReply: EmailReplyAdmission = async (trx, input, 
     });
     return { admitted: true, result };
   } catch (error) {
-    if (error instanceof CoManagedSharedWorkError) return { admitted: false };
+    // Duck-typed for the same reason as `inboundRequesterReply`: this module is
+    // an export-map subpath that resolves to the tsup bundle, so an
+    // authorization rejection can arrive from the other compiled copy of this
+    // package and `instanceof` would silently rethrow it as `retry`.
+    if (isCoManagedSharedWorkError(error)) return { admitted: false };
+    recordInboundDiagnostic('admission', {
+      tenant: input.tenant, inboxId: input.inboxId, adapter: 'technician', admitted: false,
+      sharedWorkConstructorMatched: error instanceof CoManagedSharedWorkError,
+    }, error);
     throw error;
   }
 };

@@ -48,6 +48,7 @@ import {
   readStagedSourceMime,
 } from './inboundEmailSourceStager';
 import { processInboundEmailInApp } from './processInboundEmailInApp';
+import { inboundErrorMessage, recordInboundDiagnostic, summarizeInboundError } from './inboundErrorDiagnostics';
 import { InboundEmailOutboxEventPublisher } from '../../workflow/adapters/inboundEmailOutboxEventPublisher';
 import { buildArtifactKey } from './inboundEmailIdentity';
 import { extractEmbeddedImageAttachments } from './inboundEmailArtifactHelpers';
@@ -268,7 +269,29 @@ export async function processInboundInbox(
       return { terminalReplay: false as const, ...result };
     });
   } catch (error: any) {
-    if (isCoManagedLifecycleError(error)) {
+    // The commit transaction has already rolled back by the time this runs.
+    // Name the original exception in primitives before anything can try to
+    // serialize it: on CI run 35492001110 the reporter blew its stack here and
+    // the first error was never reported at all.
+    recordInboundDiagnostic('rollback', {
+      tenant: params.tenantId, inboxId: params.inboxId, claimed: claimResult.claimed,
+    }, error);
+    const lifecyclePause = isCoManagedLifecycleError(error);
+    if (!lifecyclePause) {
+      // Why the typed classification declined. A lifecycle error that crossed a
+      // separately compiled module boundary with a damaged contract shows up
+      // here as the exact field that failed to match, not as a bare `retry`.
+      const summary = summarizeInboundError(error);
+      recordInboundDiagnostic('lifecycle_classification', {
+        tenant: params.tenantId, inboxId: params.inboxId, classifiedAsLifecycle: false,
+        candidateName: summary.name, candidateCode: summary.code,
+        candidateLifecycleState: typeof (error as { lifecycle?: { state?: unknown } })?.lifecycle?.state === 'string'
+          ? (error as { lifecycle: { state: string } }).lifecycle.state : null,
+        candidateCanWrite: typeof (error as { lifecycle?: { canWrite?: unknown } })?.lifecycle?.canWrite === 'boolean'
+          ? (error as { lifecycle: { canWrite: boolean } }).lifecycle.canWrite : null,
+      });
+    }
+    if (lifecyclePause) {
       const until = new Date(Date.now() + 60_000);
       const released = await deferInboxForCoManagedLifecycle(db, {
         tenant: params.tenantId, inboxId: params.inboxId, state: error.lifecycle.state, until,
@@ -277,7 +300,11 @@ export async function processInboundInbox(
       return { disposition: 'defer', untilIso: until.toISOString(),
         reason: released ? `co_managed_${error.lifecycle.state}` : 'lifecycle_pause_ownership_lost' };
     }
-    const message = error?.message || String(error);
+    // Always a bounded string. `error.message` is used verbatim when it already
+    // is one, so sentinel comparisons and persisted provenance are unchanged;
+    // a thrown value whose `message` is an object can no longer put a walkable
+    // graph into a disposition or into inbound_email_inbox.
+    const message = inboundErrorMessage(error);
     if (message === 'inbox_fence_superseded') {
       // A competing reclaim owns the row now. Stop without ACKing success or
       // burning a Redis retry; the DB fence governs the next delivery.
@@ -293,6 +320,9 @@ export async function processInboundInbox(
     if (marked.terminal) {
       return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
     }
+    recordInboundDiagnostic('disposition', {
+      tenant: params.tenantId, inboxId: params.inboxId, disposition: 'retry', reason: 'commit_failure',
+    }, error);
     return { disposition: 'retry', error: message };
   }
 
