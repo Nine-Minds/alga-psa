@@ -1251,6 +1251,30 @@ export async function propagateBundleMasterStatus(
       .filter((child: Record<string, unknown>) => Boolean(child.is_closed))
       .map((child: Record<string, unknown>) => child.ticket_id as string);
 
+    // `assigned_to` moves the primary agent, and the child's ticket_resources
+    // rows have to move with it. Without this the incoming assignee is still
+    // recorded as an *additional* agent on the child, which the
+    // `assigned_to != additional_user_id` invariant will not carry, and the
+    // child's assignment does not survive the write. Same reason the
+    // boundary-crossing path below prepares reassignment; this path mirrors a
+    // bare assignment change and needs it just as much.
+    const legacyFinalizers: Array<() => Promise<void>> = [];
+    if (Object.prototype.hasOwnProperty.call(propagateFields, 'assigned_to')) {
+      for (const child of childRows as Array<Record<string, unknown>>) {
+        if (propagateFields.assigned_to !== child.assigned_to) {
+          legacyFinalizers.push(
+            await prepareTicketResourceReassignment(
+              trx,
+              ctx.tenant,
+              child.ticket_id as string,
+              child.assigned_to as string | null | undefined,
+              propagateFields.assigned_to as string | null | undefined
+            )
+          );
+        }
+      }
+    }
+
     const legacyUpdatedBy = ctx.isSystemActor ? null : ctx.user.user_id;
     if (openChildIds.length > 0) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
@@ -1261,6 +1285,10 @@ export async function propagateBundleMasterStatus(
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
         .whereIn('ticket_id', closedChildIds)
         .update({ ...closedFields, updated_by: legacyUpdatedBy, updated_at: updatedAt });
+    }
+
+    for (const finalize of legacyFinalizers) {
+      await finalize();
     }
 
     // System writes (the auto-close engine) publish no live UI update, exactly

@@ -17411,10 +17411,37 @@ async function withBundlePropagationSlaFixture(work: (fixture: any) => Promise<v
     await f.customer.table('tickets').where('ticket_id', childId).update({ master_ticket_id: f.resource.id });
     await f.customer.table('ticket_bundle_settings').insert({ tenant: f.resource.tenant, master_ticket_id: f.resource.id, mode: 'sync_updates' });
     const { updateTicketWithCache } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
-    const update = (patch: any) => f.run(() => updateTicketWithCache(f.resource.id, patch));
+    // A sync-mode master that crosses the open/closed boundary now requires an
+    // explicit propagation choice (BundlePropagationConfirmationRequiredError);
+    // these cases are about what propagation DOES once that choice is made, so
+    // the fixture makes it. The requirement itself is asserted separately by
+    // "requires an explicit propagation choice ..." below, so answering it here
+    // does not remove coverage of the guard.
+    const update = (patch: any, options: any = { propagateToChildren: true }) =>
+      f.run(() => updateTicketWithCache(f.resource.id, patch, options));
     await work({ ...f, original, childId, childPriorityId, childResource, update });
   });
 }
+
+it('MSP SLA bundle propagation requires an explicit propagation choice before touching a child', async () => withBundlePropagationSlaFixture(async f => {
+  // Main's sync-mode contract: a boundary-crossing status write on a bundle
+  // master must not silently close or reopen children. Asserted here on the
+  // co-managed path specifically, because that is the path where a child can
+  // belong to a different organization than the actor.
+  const before = await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId]).orderBy('ticket_id');
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  await expect(f.update({ status_id: f.closedStatusId }, {})).rejects.toThrow(/propagateToChildren/);
+  // Nothing is written when it bails: not the master, not the child, not the clocks.
+  expect(await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId]).orderBy('ticket_id')).toEqual(before);
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id')).toEqual(clocks);
+}));
+
+it('MSP SLA bundle propagation declining propagation moves the master alone and leaves every child untouched', async () => withBundlePropagationSlaFixture(async f => {
+  const childBefore = await f.customer.table('tickets').where('ticket_id', f.childId).first();
+  expect(await f.update({ status_id: f.closedStatusId }, { propagateToChildren: false })).toBe('success');
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ status_id: f.closedStatusId });
+  expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toEqual(childBefore);
+}));
 
 it('MSP SLA bundle propagation closes and reopens each child with its own obligation and closure fields', async () => withBundlePropagationSlaFixture(async f => {
   await f.customer.table('tickets').where('ticket_id', f.childId).update({ response_state: 'awaiting_client' });
