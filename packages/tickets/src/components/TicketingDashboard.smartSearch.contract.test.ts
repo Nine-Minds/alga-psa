@@ -75,11 +75,26 @@ describe('ticketing dashboard smart search wiring contract', () => {
     expect(source).not.toMatch(/params\.set\(['"]smart/);
   });
 
-  it('select-all-matching uses the same filter assembly as export, so a custom due-date range is honored', () => {
+  it('select-all-matching uses the export filter assembly normally and the chip-only scope in smart mode', () => {
     const start = source.indexOf('const handleSelectAllMatchingTickets = useCallback(');
     const end = source.indexOf('const handleBulkMoveBoardChange', start);
     const body = source.slice(start, end);
-    expect(body).toContain('getAllMatchingTicketIds(exportFilters)');
+    expect(body).toContain('selectAllMatchingScope(smartSearch.active, smartSearchFilters, exportFilters)');
+    expect(body).toContain('getAllMatchingTicketIds(scope)');
+    expect(body).toContain('selectAllMatchingFallbackIds(smartSearch.active, smartCandidateIds, selectableTicketIds)');
     expect(body).not.toContain('boardIds: selectedBoards');
+    // The Jev text must never be the enumerated keyword filter.
+    expect(body).not.toContain('getAllMatchingTicketIds(exportFilters)');
+  });
+
+  it('resolves selected rows from streamed smart results, not only the paginated list', () => {
+    // Regression: selection details, printing, and pruning read only `tickets`,
+    // so a streamed off-page selection vanished from bulk actions.
+    expect(source).toContain('buildSelectedTicketDetails(selectedTicketIds, [tickets, smartSearchRows])');
+    expect(source).toContain('collectSelectedTicketRows(selectedTicketIdsArray, [');
+    expect(source).toContain('loadTicketListItemsByIds(scope, missingIds)');
+    expect(source).toContain('pruneSelectedTicketIds(prev, new Set(selectableTicketIds), smartSearch.active)');
+    expect(source).toContain('onRowsChange={mergeSmartSearchRows}');
+    expect(source).toContain('const [smartSearchRowById, setSmartSearchRowById] = useState<Record<string, ITicketListItem>>({});');
   });
 });

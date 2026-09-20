@@ -56,6 +56,8 @@ export interface SmartSearchResultsProps<TScope, TRow extends object, TMetadata>
   rowClassName?: (record: TRow) => string;
   onRowClick?: (record: TRow) => void;
   onVisibleRowsChange?: (rows: TRow[]) => void;
+  /** Every row the panel holds, whether or not its bucket is collapsed; the page resolves selection against these. */
+  onRowsChange?: (rows: TRow[]) => void;
   onRowMetadata?: (metadata: TMetadata) => void;
   onExit: () => void;
 }
@@ -91,6 +93,7 @@ export function SmartSearchResults<TScope, TRow extends object, TMetadata>({
   rowClassName,
   onRowClick,
   onVisibleRowsChange,
+  onRowsChange,
   onRowMetadata,
   onExit,
 }: SmartSearchResultsProps<TScope, TRow, TMetadata>) {
@@ -161,7 +164,13 @@ export function SmartSearchResults<TScope, TRow extends object, TMetadata>({
         );
       },
     };
-    const base = columns as ColumnDefinition<RowWithScore<TRow>>[];
+    // Buckets are append-only and ordered by arrival, so sorting the page's
+    // sortable columns would reorder a bucket and make new arrivals insert into
+    // sorted positions. Every column is inert here.
+    const base = (columns as ColumnDefinition<RowWithScore<TRow>>[]).map((column) => ({
+      ...column,
+      sortable: false,
+    }));
     const at = Math.max(0, Math.min(relevanceColumnIndex, base.length));
     return [...base.slice(0, at), relevanceColumn, ...base.slice(at)];
   }, [columns, relevanceColumnIndex, t]);
@@ -189,6 +198,15 @@ export function SmartSearchResults<TScope, TRow extends object, TMetadata>({
     onVisibleRowsChange(visible);
   }, [strongRows, possibleRows, unlikelyRows, unscoredWithIds, showUnlikely, onVisibleRowsChange]);
 
+  // The page keeps every row the panel holds, including a collapsed bucket's, so
+  // a selection made there resolves to a full row for bulk actions and printing.
+  useEffect(() => {
+    if (!onRowsChange) {
+      return;
+    }
+    onRowsChange([...strongRows, ...possibleRows, ...unlikelyRows, ...unscoredWithIds]);
+  }, [strongRows, possibleRows, unlikelyRows, unscoredWithIds, onRowsChange]);
+
   const percent = state.total > 0 ? Math.min(100, Math.round(((state.scored + state.failed) / state.total) * 100)) : 0;
   const isRunning = state.status === 'running';
 
@@ -201,7 +219,9 @@ export function SmartSearchResults<TScope, TRow extends object, TMetadata>({
       // LEVERAGE: friction datatable-pagination-false-still-slices — DataTable applies its
       // page-row model even with pagination off, so a bucket would silently stop at 10 rows.
       pageSize={Math.max(rows.length, 1)}
-      manualSorting={false}
+      // Sorting is disabled on the columns above; manual sorting keeps DataTable
+      // from ever applying a client-side sort to a bucket's append-only order.
+      manualSorting={true}
       rowClassName={rowClassName as ((record: RowWithScore<TRow>) => string) | undefined}
       onRowClick={onRowClick as ((record: RowWithScore<TRow>) => void) | undefined}
     />

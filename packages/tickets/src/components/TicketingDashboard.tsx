@@ -12,6 +12,13 @@ import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
 import { SmartSearchResults } from '@alga-psa/ui/components/SmartSearchResults';
 import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
+import {
+  buildSelectedTicketDetails,
+  collectSelectedTicketRows,
+  pruneSelectedTicketIds,
+  selectAllMatchingFallbackIds,
+  selectAllMatchingScope,
+} from '../lib/smartSearchSelection';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -433,6 +440,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     runToken: 0,
     filtersKey: '',
   });
+
+  // Rows the results panel has streamed, keyed by id. The ordinary paginated
+  // list never holds a streamed off-page row, so this is the authoritative
+  // source for bulk actions, the bundle master picker, and printing while smart
+  // mode is active.
+  const [smartSearchRowById, setSmartSearchRowById] = useState<Record<string, ITicketListItem>>({});
 
   // Assignee filter values from props
   const selectedAssignees = filterValues.assignedToIds ?? EMPTY_STRING_ARRAY;
@@ -1024,31 +1037,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     [ticketsWithIds]
   );
 
+  // Drop selections the ordinary list no longer holds after a page refresh.
+  // While smart mode is active the candidate set comes from the panel, not this
+  // page, so a streamed off-page selection must survive; exiting smart mode
+  // clears the selection explicitly.
   useEffect(() => {
-    setSelectedTicketIds(prev => {
-      if (prev.size === 0) {
-        return prev;
-      }
-
-      const validIds = new Set(selectableTicketIds);
-      let changed = false;
-      const next = new Set<string>();
-
-      prev.forEach(id => {
-        if (validIds.has(id)) {
-          next.add(id);
-        } else {
-          changed = true;
-        }
-      });
-
-      if (!changed && next.size === prev.size) {
-        return prev;
-      }
-
-      return next;
-    });
-  }, [selectableTicketIds]);
+    setSelectedTicketIds(prev => pruneSelectedTicketIds(prev, new Set(selectableTicketIds), smartSearch.active));
+  }, [selectableTicketIds, smartSearch.active]);
 
   const rangeSelect = useRangeSelection<string>({
     items: visibleTicketIds,
@@ -1172,6 +1167,29 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTeamAvatarUrls((prev) => ({ ...prev, ...metadata.teamAvatarUrls }));
   }, []);
 
+  // Every row the panel holds, streamed or hydrated, so a selection made from a
+  // bucket resolves against an authoritative row even when the ordinary list has
+  // never loaded it.
+  const mergeSmartSearchRows = useCallback((rows: ITicketListItem[]) => {
+    setSmartSearchRowById((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const row of rows) {
+        const id = row.ticket_id;
+        if (typeof id === 'string' && id.length > 0 && next[id] !== row) {
+          next[id] = row;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+  const smartSearchRows = useMemo(() => Object.values(smartSearchRowById), [smartSearchRowById]);
+  const smartCandidateIds = useMemo(
+    () => smartSearchRows.map((row) => row.ticket_id).filter((id): id is string => typeof id === 'string' && id.length > 0),
+    [smartSearchRows]
+  );
+
   // The panel hydrates rows the stream could not score through the same by-id
   // loader the server uses, so they render with identical columns.
   const hydrateSmartSearchRows = useCallback(async (scope: ITicketListFilters, ids: string[]) => {
@@ -1191,23 +1209,35 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [smartSearch.active, searchQuery, exitSmartSearch]);
 
   const handleSelectAllMatchingTickets = useCallback(async () => {
+    // Smart mode's candidate set is the chips alone; the typed text is the Jev
+    // query, so enumerating the export filters would keep the keyword narrowing
+    // and select far fewer tickets than the panel is scoring.
+    const scope = selectAllMatchingScope(smartSearch.active, smartSearchFilters, exportFilters);
+    const fallbackIds = selectAllMatchingFallbackIds(smartSearch.active, smartCandidateIds, selectableTicketIds);
+    const selectFallback = () => {
+      setSelectedTicketIds(new Set(fallbackIds));
+      setAllMatchingMode(true);
+    };
     try {
-      const allIds = await getAllMatchingTicketIds(exportFilters);
+      const allIds = await getAllMatchingTicketIds(scope);
       if (isActionMessageError(allIds) || isActionPermissionError(allIds)) {
         toast.error(getErrorMessage(allIds));
-        setSelectedTicketIds(new Set(selectableTicketIds));
-        setAllMatchingMode(true);
+        selectFallback();
         return;
       }
       setSelectedTicketIds(new Set(allIds));
       setAllMatchingMode(true);
     } catch (error) {
       console.error('Failed to fetch all matching ticket IDs:', error);
-      // Fall back to selecting current page only
-      setSelectedTicketIds(new Set(selectableTicketIds));
-      setAllMatchingMode(true);
+      selectFallback();
     }
-  }, [exportFilters, selectableTicketIds]);
+  }, [
+    smartSearch.active,
+    smartSearchFilters,
+    exportFilters,
+    smartCandidateIds,
+    selectableTicketIds,
+  ]);
 
   const handleBulkMoveBoardChange = useCallback(async (boardId: string) => {
     setSelectedDestinationBoardId(boardId);
@@ -1261,33 +1291,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     [selectedTicketIdsArray, visibleTicketIdSet]
   );
   const isSelectionIndeterminate = selectedTicketIds.size > 0 && !allVisibleTicketsSelected;
-  const selectedTicketDetails = useMemo(() => {
-    if (selectedTicketIds.size === 0) {
-      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_id?: string | null; client_name?: string; board_id?: string | null }>;
-    }
-
-    const selectedSet = new Set(selectedTicketIds);
-
-    return tickets
-      .filter(ticket => ticket.ticket_id && selectedSet.has(ticket.ticket_id))
-      .map(ticket => ({
-        ticket_id: ticket.ticket_id as string,
-        ticket_number: ticket.ticket_number,
-        title: ticket.title,
-        client_id: ticket.client_id ?? null,
-        client_name: ticket.client_name,
-        board_id: ticket.board_id ?? null,
-      }))
-      .sort((a, b) => {
-        if (a.ticket_number && b.ticket_number) {
-          return a.ticket_number.localeCompare(b.ticket_number, undefined, { numeric: true, sensitivity: 'base' });
-        }
-        if (a.title && b.title) {
-          return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-        }
-        return 0;
-      });
-  }, [tickets, selectedTicketIds]);
+  // Resolved against the ordinary list and the rows smart search streamed, so a
+  // streamed off-page selection still reaches the bundle master picker, the
+  // cross-client warning, and the bulk-error labels.
+  const selectedTicketDetails = useMemo(
+    () => buildSelectedTicketDetails(selectedTicketIds, [tickets, smartSearchRows]),
+    [tickets, selectedTicketIds, smartSearchRows]
+  );
 
   const isSelectedBundleMultiClient = useMemo(() => {
     const uniqueClientIds = new Set(
@@ -1963,11 +1973,36 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   } = usePrintColumnSelection('print-columns:tickets-list', printColumns);
 
   const preparePrintTickets = useCallback(async () => {
+    const scope = smartSearch.active ? smartSearchFilters : exportFilters;
+
     if (hasSelection && !allMatchingMode) {
-      const selectedRows = displayedTickets.filter((ticket) => (
-        Boolean(ticket.ticket_id && selectedTicketIds.has(ticket.ticket_id))
-      ));
-      setPrintTickets(selectedRows);
+      // Rows the ordinary list does not hold (streamed smart results, or an
+      // off-page paginate-then-select) are hydrated through the same authorized
+      // by-id loader the stream uses rather than silently dropped from the print.
+      const { rows, missingIds } = collectSelectedTicketRows(selectedTicketIdsArray, [
+        displayedTickets,
+        smartSearchRows,
+      ]);
+      if (missingIds.length === 0) {
+        setPrintTickets(rows);
+        return;
+      }
+      const hydrated = await loadTicketListItemsByIds(scope, missingIds);
+      if (isActionMessageError(hydrated) || isActionPermissionError(hydrated)) {
+        toast.error(getErrorMessage(hydrated));
+        setPrintTickets(rows);
+        return;
+      }
+      mergeSmartSearchRows(hydrated.tickets);
+      ticketTagsRef.current = {
+        ...ticketTagsRef.current,
+        ...hydrated.metadata.ticketTags,
+      };
+      const hydratedById = new Map(hydrated.tickets.map((ticket) => [ticket.ticket_id, ticket]));
+      const complete = selectedTicketIdsArray
+        .map((id) => hydratedById.get(id) ?? rows.find((row) => row.ticket_id === id))
+        .filter((ticket): ticket is ITicketListItem => Boolean(ticket));
+      setPrintTickets(complete);
       return;
     }
 
@@ -1977,7 +2012,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       pageSize,
       TICKET_PRINT_FALLBACK_PAGE_SIZE
     );
-    const result = await fetchTicketsWithPagination(exportFilters, 1, printPageSize);
+    const result = await fetchTicketsWithPagination(scope, 1, printPageSize);
     if (isActionMessageError(result) || isActionPermissionError(result)) {
       toast.error(getErrorMessage(result));
       setPrintTickets([]);
@@ -1996,8 +2031,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     displayedTickets,
     exportFilters,
     hasSelection,
+    mergeSmartSearchRows,
     pageSize,
     selectedTicketIds,
+    selectedTicketIdsArray,
+    smartSearch.active,
+    smartSearchFilters,
+    smartSearchRows,
     totalCount,
   ]);
 
@@ -2706,6 +2746,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     }
                   }}
                   onVisibleRowsChange={handleVisibleRowsChange}
+                  onRowsChange={mergeSmartSearchRows}
                   onRowMetadata={handleSmartSearchRowMetadata}
                   onExit={exitSmartSearch}
                 />

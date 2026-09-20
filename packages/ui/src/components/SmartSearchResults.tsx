@@ -35,6 +35,8 @@ export interface SmartSearchResultsProps<TScope, TRow extends object, TMetadata>
   rowClassName?: (record: TRow) => string;
   onRowClick?: (record: TRow) => void;
   onVisibleRowsChange?: (rows: TRow[]) => void;
+  /** Every row the panel holds, whether or not its bucket is collapsed. */
+  onRowsChange?: (rows: TRow[]) => void;
   onRowMetadata?: (metadata: TMetadata) => void;
   onExit: () => void;
 }
