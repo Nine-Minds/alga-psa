@@ -119,6 +119,26 @@ reverted to `instanceof`, so a pass here is equally consistent with:
 CF002-CF004 therefore stay **`failed`** in the inventory. Until the control run distinguishes those
 two, the causal claim is unproven, and the authoritative signal is mandatory CI at the new head.
 
+### Unrelated local failures in the same run — reported, not diagnosed
+
+The faithful shard also produced 8 failures outside the co-managed suites, all of them the entire
+`Comment Reactions - Ticket Comments` suite, and every one a ~20 000 ms timeout:
+
+```
+× should add a reaction to a comment                                   20232ms
+× should remove a reaction when toggled again                          20213ms
+… 6 more, all 20-21s
+```
+
+The same suite **passed in CI shard 1** at `618019c3e3`, and earlier local runs timed out the same
+way in other unrelated suites (`service request store-only submissions`, `Portal domain appliance
+actions`) while a typecheck and a second test run were competing for the machine. That points at
+local resource contention, not a product defect.
+
+That is a hypothesis, not a finding: **no pristine-baseline run was made**, so these are recorded as
+observed-and-unexplained rather than waved off as pre-existing. They do not bear on the co-managed
+result — `coManagedBootstrap` had already completed and passed earlier in the same run.
+
 One more trap, learned the hard way: **do not kill a running shard and immediately start another.**
 `createTestDbConnection` drops and recreates `test_database`, so an interrupted run leaves it absent
 and the next run collapses with `database "test_database" does not exist` and
