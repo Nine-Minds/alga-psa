@@ -130,6 +130,7 @@ function eventIcon(eventType: string): React.ReactElement {
       return <CheckCircle className="h-4 w-4" />;
     case 'TICKET_REOPENED':
     case 'TICKET_BUNDLE_REOPENED':
+    case 'TICKET_BUNDLE_STATUS_PROPAGATED':
       return <RefreshCcw className="h-4 w-4" />;
     case 'TICKET_STATUS_CHANGED':
       return <ArrowRightCircle className="h-4 w-4" />;
@@ -214,6 +215,19 @@ function describeActivity(activity: TicketActivityRow): { title: string; annotat
         title: 'Bundle master reopened',
         subtitle: 'Triggered by a child-ticket reply',
       };
+    case 'TICKET_BUNDLE_STATUS_PROPAGATED': {
+      const details = (activity.details ?? {}) as {
+        action?: string;
+        propagated?: boolean;
+        child_ticket_ids?: string[];
+      };
+      if (details.propagated === false) {
+        return { title: `${actor} changed the bundle master status (children not updated)` };
+      }
+      const count = details.child_ticket_ids?.length ?? 0;
+      const action = details.action === 'reopen' ? 'reopened' : 'closed';
+      return { title: `${actor} ${action} the bundle master and ${count} child ticket(s)` };
+    }
     case 'TICKET_STATUS_CHANGED': {
       const c = activity.changes?.status_id;
       const detail = c ? changeLine('status_id', c) : 'Status changed';
@@ -396,6 +410,7 @@ const EVENT_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'TICKET_DOCUMENT_REMOVED', label: 'Document removed' },
   { value: 'TICKET_INBOUND_EMAIL_RECEIVED', label: 'Inbound email' },
   { value: 'TICKET_BUNDLE_REOPENED', label: 'Bundle reopened' },
+  { value: 'TICKET_BUNDLE_STATUS_PROPAGATED', label: 'Bundle status propagated' },
 ];
 
 const SOURCE_OPTIONS: { value: string; label: string }[] = [

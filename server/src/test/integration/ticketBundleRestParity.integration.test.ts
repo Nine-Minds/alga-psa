@@ -221,7 +221,9 @@ describe('REST TicketService bundle parity with the web', () => {
   it('closing a sync_updates master through REST cascades to its children', async () => {
     const { service, masterId, childA, childB } = await seedBundle('sync_updates');
 
-    await service.update(masterId, { status_id: fixture.closedStatusId }, serviceContext());
+    // A boundary-crossing status write on a sync master requires the explicit
+    // propagation choice (409 otherwise), matching the web confirm dialog.
+    await service.update(masterId, { status_id: fixture.closedStatusId, propagateToChildren: true }, serviceContext());
 
     const scoped = tenantDb(db, fixture.tenantId);
     for (const childId of [childA, childB]) {
@@ -233,7 +235,7 @@ describe('REST TicketService bundle parity with the web', () => {
     }
 
     // Reopening cascades the cleared closure state too.
-    await service.update(masterId, { status_id: fixture.openStatusId }, serviceContext());
+    await service.update(masterId, { status_id: fixture.openStatusId, propagateToChildren: true }, serviceContext());
     const reopened = await scoped.table('tickets').where({ ticket_id: childA }).first();
     expect(reopened.status_id).toBe(fixture.openStatusId);
     expect(reopened.is_closed).toBe(false);

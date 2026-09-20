@@ -386,6 +386,11 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
           { status_id: row.close_to_status_id },
           {
             systemActor: true,
+            // Auto-close is an automated close of the master; preserve the
+            // pre-gate behaviour by propagating to open children. This routes
+            // through propagateBundleMasterStatus so the ledger/audit rows are
+            // written and independently closed children stay closed.
+            propagateToChildren: true,
             bypassCloseRules: { source: 'auto_close' },
             suppressContactNotifications: Boolean(row.suppress_contact_notifications),
             suppressInternalNotifications: Boolean(row.suppress_internal_notifications),

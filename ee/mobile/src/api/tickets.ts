@@ -325,6 +325,12 @@ export function updateTicketStatus(
     apiKey: string;
     ticketId: string;
     status_id: string;
+    /**
+     * Sync-mode bundle masters only: true closes/reopens the affected child
+     * tickets, false changes the master only. Omit to receive a 409 with the
+     * affected children when the change crosses the open/closed boundary.
+     */
+    propagateToChildren?: boolean;
     notificationSuppression?: TicketNotificationSuppressionOptions;
     auditHeaders?: Record<string, string | undefined>;
   },
@@ -338,6 +344,9 @@ export function updateTicketStatus(
     },
     body: {
       status_id: params.status_id,
+      ...(params.propagateToChildren === undefined
+        ? {}
+        : { propagateToChildren: params.propagateToChildren }),
       ...params.notificationSuppression,
     },
   });

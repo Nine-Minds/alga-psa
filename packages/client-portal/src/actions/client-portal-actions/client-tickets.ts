@@ -30,7 +30,7 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@shared/lib/ticketActivity';
-import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { maybeReopenBundleMasterFromChildReply, revertBundlePropagationForChild } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
   applyTicketVisibilityFilter,
   getTicketOrigin,
@@ -1018,6 +1018,15 @@ export const updateTicketStatus = withAuth(async (
 
       if (isClosing) await recordCoManagedTicketResolution(trx, tenant, ticketId);
       else if (isReopening) await recordCoManagedTicketReopened(trx, tenant, ticketId);
+
+      // A bundled child reopened from the portal has left the "closed by
+      // master" state. Revert its active propagation row in the same
+      // transaction so the ledger agrees with tickets.is_closed and a later
+      // master close cannot collide with a stale row on the per-child unique
+      // index. No-op when the child holds no active row.
+      if (isReopening && ticket.master_ticket_id) {
+        await revertBundlePropagationForChild(trx, tenant, ticketId, userId);
+      }
 
       const statusChanges = {
         status_id: {

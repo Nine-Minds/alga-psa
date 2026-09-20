@@ -77,6 +77,7 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({

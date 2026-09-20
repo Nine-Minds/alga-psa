@@ -182,3 +182,17 @@ export type {
   EnforceTicketCloseRulesOptions,
   EnforceTicketCloseRulesResult,
 } from './closeRuleConstants';
+export {
+  BundlePropagationConfirmationRequiredError,
+} from './ticketBundlePropagation';
+export type {
+  TicketBundleBoundary,
+  BundlePropagationChild,
+  BundlePropagationUnaffectedReason,
+  BundlePropagationUnaffectedChild,
+  BundleStatusPropagationPreview,
+  BundlePropagationUser,
+  BundleStatusPropagationContext,
+  PropagateBundleMasterStatusOptions,
+  PropagateBundleMasterStatusResult,
+} from './ticketBundlePropagation';

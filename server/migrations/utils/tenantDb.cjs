@@ -481,6 +481,7 @@ const TENANT_TABLE_METADATA = {
   ticket_auto_close_state: { scope: 'tenant' },
   ticket_bundle_mirrors: { scope: 'tenant' },
   ticket_bundle_settings: { scope: 'tenant' },
+  ticket_bundle_status_propagations: { scope: 'tenant' },
   ticket_checklist_items: { scope: 'tenant' },
   ticket_entity_links: { scope: 'tenant' },
   ticket_materials: { scope: 'tenant' },

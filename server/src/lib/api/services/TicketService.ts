@@ -23,9 +23,14 @@ import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
 import {
   attachChildrenToBundle,
   maybeReopenBundleMasterFromChildReply,
+  previewBundleStatusPropagation,
+  propagateBundleMasterStatus,
+  revertBundlePropagationForChild,
+  revertBundlePropagationsForMaster,
   type BundleAfterCommitPublication,
   type BundleAttachFailure,
 } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 import {
   BundleConcurrentModificationError,
   type ClosedMasterChoice,
@@ -116,7 +121,6 @@ const TICKET_MOBILE_LIST_FIELDS = [
 // fields a bundled child cannot change directly, and the fields a
 // sync_updates master pushes down to its children.
 const BUNDLE_CHILD_LOCKED_FIELDS = ['status_id', 'assigned_to', 'priority_id'] as const;
-const BUNDLE_SYNCED_FIELDS = ['status_id', 'assigned_to', 'priority_id', 'is_closed', 'closed_by', 'closed_at'] as const;
 
 const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   ...TICKET_MOBILE_LIST_FIELDS,
@@ -1823,7 +1827,9 @@ export class TicketService extends BaseService<ITicket> {
 
       // Bundled child tickets lock workflow fields, same as the in-app
       // update action: status, assignment and priority flow down from the
-      // master (sync_updates) or are managed there (link_only).
+      // master (sync_updates) or are managed there (link_only). Adopted from
+      // main: a direct REST write to a bundled child's workflow fields is
+      // rejected, so a child can never be reopened behind the master's back.
       if (currentTicket.master_ticket_id) {
         const attempted = BUNDLE_CHILD_LOCKED_FIELDS.filter(
           (field) => (cleanedData as Record<string, unknown>)[field] !== undefined
@@ -1836,6 +1842,13 @@ export class TicketService extends BaseService<ITicket> {
           })));
         }
       }
+
+      // Sync-mode bundle propagation choice: a request option, not a column.
+      const propagateToChildren =
+        typeof (cleanedData as any).propagateToChildren === 'boolean'
+          ? ((cleanedData as any).propagateToChildren as boolean)
+          : undefined;
+      delete (cleanedData as any).propagateToChildren;
 
       const isBoardChange =
         cleanedData.board_id !== undefined &&
@@ -1937,6 +1950,24 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
+      // Sync-mode bundle masters require an explicit propagation choice before a
+      // boundary-crossing status write. Nothing is written when we bail here.
+      if (statusChanged && cleanedData.status_id) {
+        const propagationPreview = await previewBundleStatusPropagation(
+          trx,
+          context.tenant,
+          id,
+          cleanedData.status_id as string
+        );
+        if (
+          propagationPreview.crossesBoundary !== null &&
+          propagationPreview.affectedChildren.length > 0 &&
+          propagateToChildren === undefined
+        ) {
+          throw new BundlePropagationConfirmationRequiredError(propagationPreview);
+        }
+      }
+
       const updateData: Record<string, unknown> = {
         ...cleanedData,
         updated_by: context.userId,
@@ -1993,12 +2024,51 @@ export class TicketService extends BaseService<ITicket> {
         await finalizeResourceReassignment();
       }
 
-      await this.propagateBundleMasterUpdate(trx, context, id, updateData);
-
       // Handle tags if provided
       if (data.tags) {
         await this.handleTags(id, data.tags, context, trx);
       }
+
+      // Sync-mode bundle propagation (FR5): REST shares the single propagation
+      // engine with the server-action path. main's older inline
+      // propagateBundleMasterUpdate ran first and mirrored every synced field
+      // (including is_closed) to all children unconditionally, which made the
+      // engine's affected-set derivation observe children as already closed and
+      // silently skip the confirmation/ledger. The engine below is the
+      // authority. Boundary-crossing choices were gated above.
+      // The service context carries only a userId, but the propagation audit
+      // row stores the acting user's display name. Resolve the name fields in
+      // the same transaction (mirrors the comment-author lookup below) so the
+      // persisted actor_display_name is the real name, not "Unknown User".
+      const propagationActor = await tenantScopedTable(trx, 'users', context.tenant)
+        .select('first_name', 'last_name', 'username')
+        .where({ user_id: context.userId })
+        .first();
+
+      await propagateBundleMasterStatus(
+        trx,
+        {
+          tenant: context.tenant,
+          user: {
+            user_id: context.userId,
+            first_name: propagationActor?.first_name ?? null,
+            last_name: propagationActor?.last_name ?? null,
+            username: propagationActor?.username ?? null,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          previousMasterStatusId: currentTicket.status_id,
+        },
+        id,
+        cleanedData as Record<string, unknown>,
+        { propagateToChildren }
+      );
+
+      // A bundled child can no longer be reopened through this REST path: the
+      // BUNDLE_CHILD_LOCKED_FIELDS gate above rejects any change to a child's
+      // status_id/assigned_to/priority_id, so the ledger can never disagree
+      // with tickets.is_closed via this surface. (The former independent-close
+      // revert hook is intentionally gone; only bundle detach/remove reverts
+      // rows now.)
 
       // Publish appropriate events
       if (statusChanged) {
@@ -2111,41 +2181,6 @@ export class TicketService extends BaseService<ITicket> {
       await assertCoManagedOperationalWrite(trx, context.tenant);
       return this.withDescriptionHtml(ticket as ITicket);
     });
-  }
-
-  /**
-   * Bundle masters in sync_updates mode push workflow changes to their
-   * children. Mirrors the in-app update action so a master closed from the
-   * mobile app or the public API cascades exactly like one closed on the web.
-   * Children publish no events of their own; the master's carry the change.
-   */
-  private async propagateBundleMasterUpdate(
-    trx: Knex.Transaction,
-    context: ServiceContext,
-    masterTicketId: string,
-    updateData: Record<string, unknown>
-  ): Promise<void> {
-    const propagate: Record<string, unknown> = {};
-    for (const field of BUNDLE_SYNCED_FIELDS) {
-      if (Object.prototype.hasOwnProperty.call(updateData, field)) {
-        propagate[field] = updateData[field];
-      }
-    }
-    if (Object.keys(propagate).length === 0) return;
-
-    const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
-      .select('mode')
-      .where({ master_ticket_id: masterTicketId })
-      .first();
-    if (settings?.mode !== 'sync_updates') return;
-
-    await tenantScopedTable(trx, 'tickets', context.tenant)
-      .where({ master_ticket_id: masterTicketId })
-      .update({
-        ...propagate,
-        updated_by: context.userId,
-        updated_at: new Date().toISOString(),
-      });
   }
 
   private withDescriptionHtml<T extends ITicket>(ticket: T): T & { description_html: string } {
@@ -3557,6 +3592,8 @@ export class TicketService extends BaseService<ITicket> {
         .where({ ticket_id: params.childTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
 
+      await revertBundlePropagationForChild(trx, context.tenant, params.childTicketId, context.userId);
+
       const [{ count }] = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ master_ticket_id: masterTicketId })
         .count('ticket_id as count');
@@ -3602,6 +3639,8 @@ export class TicketService extends BaseService<ITicket> {
       await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ master_ticket_id: params.masterTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
+
+      await revertBundlePropagationsForMaster(trx, context.tenant, params.masterTicketId, context.userId);
 
       await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
         .where({ master_ticket_id: params.masterTicketId })

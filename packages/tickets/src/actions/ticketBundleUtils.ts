@@ -1,9 +1,11 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { registerAfterCommit, tenantDb } from '@alga-psa/db';
+import { v4 as uuidv4 } from 'uuid';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
-import { recordCoManagedTicketReopened } from '@alga-psa/co-managed';
+import { recordCoManagedTicketReopened, recordCoManagedTicketResolution } from '@alga-psa/co-managed';
+import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import {
   getBoardCloseRulesRow,
   openBundleChildrenCount,
@@ -17,6 +19,18 @@ import {
   type TicketActivityActorInfo,
   type TicketActivitySource,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
+import {
+  BundlePropagationConfirmationRequiredError,
+  type BundlePropagationChild,
+  type BundlePropagationUnaffectedChild,
+  type BundlePropagationUser,
+  type BundleStatusPropagationContext,
+  type BundleStatusPropagationPreview,
+  type PropagateBundleMasterStatusOptions,
+  type PropagateBundleMasterStatusResult,
+  type TicketBundleBoundary,
+} from '../lib/ticketBundlePropagation';
 import {
   enforceTicketCloseRules,
   TicketCloseValidationError,
@@ -911,4 +925,612 @@ export async function attachChildrenToBundle(
       publications,
     },
   };
+}
+
+interface DerivedBundleChildRow {
+  ticket_id: string;
+  ticket_number: string | null;
+  title: string | null;
+  status_id: string | null;
+  is_closed: boolean;
+  assigned_to: string | null;
+  priority_id: string | null;
+  closed_at: string | null;
+  closed_by: string | null;
+  propagation_id: string | null;
+  // Close-rule inputs: a propagated close must clear the same board rules a
+  // direct close would, so the child's own routing fields travel with it.
+  board_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+}
+
+function propagationDisplayName(user: BundlePropagationUser): string {
+  return `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'Unknown User';
+}
+
+async function readStatusIsClosed(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusId: string | null | undefined
+): Promise<boolean | null> {
+  if (!statusId) return null;
+  const row = await tenantScopedTable(trx, 'statuses', tenant)
+    .select('is_closed')
+    .where({ status_id: statusId })
+    .first();
+  return row ? Boolean(row.is_closed) : null;
+}
+
+async function readStatusBoardId(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusId: string | null | undefined
+): Promise<string | null> {
+  if (!statusId) return null;
+  const row = await tenantScopedTable(trx, 'statuses', tenant)
+    .select('board_id')
+    .where({ status_id: statusId })
+    .first();
+  return row ? ((row.board_id as string | null) ?? null) : null;
+}
+
+/**
+ * A co-managed collaborator is admitted to the master ticket, not to the
+ * bundle. Propagating its status would write rows on children the collaborator
+ * may never have been admitted to, so the whole edit is refused rather than
+ * silently narrowed to the visible children. Called before any child write on
+ * either propagation path.
+ */
+function assertBundlePropagationAuthority(ctx: BundleStatusPropagationContext): void {
+  if (ctx.collaborator) {
+    throw new Error('Shared bundle workflow edits require authority for every child ticket');
+  }
+}
+
+/**
+ * One tenant-scoped read of the master's children, left-joining each child's
+ * active propagation row from this master. "Child is closed" is read from the
+ * denormalized `tickets.is_closed` column (the authoritative close state the
+ * write paths maintain) rather than the board status's `is_closed` flag, so an
+ * independently closed child is never dragged back into the affected set by a
+ * non-boundary master status stamp. The affected/unaffected split is derived
+ * from this in memory.
+ */
+async function deriveBundleChildren(
+  trx: Knex.Transaction,
+  tenant: string,
+  masterId: string
+): Promise<DerivedBundleChildRow[]> {
+  const db = tenantDb(trx, tenant);
+  const withPropagation = db.tenantJoin(
+    tenantScopedTable(trx, 'tickets as t', tenant),
+    'ticket_bundle_status_propagations as p',
+    'p.child_ticket_id',
+    't.ticket_id',
+    {
+      type: 'left',
+      on: (join) => {
+        join.andOnVal('p.master_ticket_id', '=', masterId);
+        join.andOnNull('p.reverted_at');
+      },
+    }
+  );
+
+  const rows = await withPropagation
+    .select(
+      't.ticket_id',
+      't.ticket_number',
+      't.title',
+      't.status_id',
+      't.assigned_to',
+      't.priority_id',
+      't.closed_at',
+      't.closed_by',
+      't.is_closed',
+      't.board_id',
+      't.category_id',
+      't.subcategory_id',
+      'p.propagation_id'
+    )
+    .where({ 't.master_ticket_id': masterId });
+
+  return rows.map((row: Record<string, unknown>) => ({
+    ticket_id: String(row.ticket_id),
+    ticket_number: (row.ticket_number as string | null) ?? null,
+    title: (row.title as string | null) ?? null,
+    status_id: (row.status_id as string | null) ?? null,
+    is_closed: Boolean(row.is_closed),
+    assigned_to: (row.assigned_to as string | null) ?? null,
+    priority_id: (row.priority_id as string | null) ?? null,
+    closed_at: (row.closed_at as string | null) ?? null,
+    closed_by: (row.closed_by as string | null) ?? null,
+    propagation_id: (row.propagation_id as string | null) ?? null,
+    board_id: (row.board_id as string | null) ?? null,
+    category_id: (row.category_id as string | null) ?? null,
+    subcategory_id: (row.subcategory_id as string | null) ?? null,
+  }));
+}
+
+function toPreviewChild(child: DerivedBundleChildRow): BundlePropagationChild {
+  return {
+    ticket_id: child.ticket_id,
+    ticket_number: child.ticket_number,
+    title: child.title,
+    is_closed: child.is_closed,
+  };
+}
+
+/**
+ * FR1 — read-only preview of what a master status change would do to children.
+ * Returns `crossesBoundary: null` when the ticket is not a sync-mode master or
+ * the change does not cross the open/closed boundary.
+ */
+export async function previewBundleStatusPropagation(
+  trx: Knex.Transaction,
+  tenant: string,
+  masterTicketId: string,
+  newStatusId: string
+): Promise<BundleStatusPropagationPreview> {
+  const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+    .where({ master_ticket_id: masterTicketId })
+    .first();
+  const mode: BundleStatusPropagationPreview['mode'] =
+    settings?.mode === 'sync_updates' ? 'sync_updates' : 'link_only';
+
+  const master = await tenantScopedTable(trx, 'tickets', tenant)
+    .select('status_id')
+    .where({ ticket_id: masterTicketId })
+    .first();
+
+  const previousIsClosed = await readStatusIsClosed(trx, tenant, master?.status_id);
+  const nextIsClosed = await readStatusIsClosed(trx, tenant, newStatusId);
+
+  let crossesBoundary: TicketBundleBoundary | null = null;
+  if (
+    mode === 'sync_updates' &&
+    previousIsClosed !== null &&
+    nextIsClosed !== null &&
+    previousIsClosed !== nextIsClosed
+  ) {
+    crossesBoundary = nextIsClosed ? 'close' : 'reopen';
+  }
+
+  const base: BundleStatusPropagationPreview = {
+    mode,
+    masterTicketId,
+    newStatusId,
+    crossesBoundary,
+    affectedChildren: [],
+    unaffectedChildren: [],
+  };
+
+  if (crossesBoundary === null) {
+    return base;
+  }
+
+  const children = await deriveBundleChildren(trx, tenant, masterTicketId);
+  const affectedChildren: BundlePropagationChild[] = [];
+  const unaffectedChildren: BundlePropagationUnaffectedChild[] = [];
+
+  for (const child of children) {
+    const shape = toPreviewChild(child);
+    if (crossesBoundary === 'close') {
+      if (!child.is_closed) {
+        affectedChildren.push(shape);
+      } else {
+        unaffectedChildren.push({ ...shape, reason: 'already_closed' });
+      }
+    } else if (child.is_closed && child.propagation_id) {
+      affectedChildren.push(shape);
+    } else if (child.is_closed) {
+      unaffectedChildren.push({ ...shape, reason: 'independently_closed' });
+    } else {
+      unaffectedChildren.push({ ...shape, reason: 'already_open' });
+    }
+  }
+
+  return { ...base, affectedChildren, unaffectedChildren };
+}
+
+async function writeBundlePropagationActivity(
+  trx: Knex.Transaction,
+  ctx: BundleStatusPropagationContext,
+  masterId: string,
+  action: TicketBundleBoundary,
+  childTicketIds: string[],
+  propagated: boolean
+): Promise<void> {
+  const isSystem = ctx.isSystemActor === true;
+  await writeTicketActivity(trx, {
+    tenant: ctx.tenant,
+    ticketId: masterId,
+    eventType: TICKET_ACTIVITY_EVENT.BUNDLE_STATUS_PROPAGATED,
+    entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+    entityId: masterId,
+    actor: isSystem
+      ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
+      : {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: ctx.user.user_id,
+          displayName: propagationDisplayName(ctx.user),
+        },
+    source: ctx.source ?? (isSystem ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI),
+    occurredAt: nowIso(),
+    details: {
+      action,
+      propagated,
+      child_ticket_ids: childTicketIds,
+    },
+  });
+}
+
+/**
+ * FR2/FR3/FR4/FR5/FR12 — the single child-propagation contract.
+ *
+ * Re-derives the affected children inside the caller's transaction (the client
+ * preview is never trusted), writes the complete child row (`is_closed`
+ * included), records/reverts propagation rows, and writes the master activity
+ * row. Non-boundary changes keep the legacy sync behaviour.
+ */
+export async function propagateBundleMasterStatus(
+  trx: Knex.Transaction,
+  ctx: BundleStatusPropagationContext,
+  masterId: string,
+  updateData: Record<string, unknown>,
+  options: PropagateBundleMasterStatusOptions = {}
+): Promise<PropagateBundleMasterStatusResult> {
+  const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', ctx.tenant)
+    .where({ master_ticket_id: masterId })
+    .first();
+
+  if (settings?.mode !== 'sync_updates') {
+    return { propagated: false, action: null, affectedChildIds: [] };
+  }
+
+  const master = await tenantScopedTable(trx, 'tickets', ctx.tenant)
+    .select('status_id', 'is_closed', 'closed_at', 'closed_by')
+    .where({ ticket_id: masterId })
+    .first();
+
+  const nextStatusId =
+    (typeof updateData.status_id === 'string' ? updateData.status_id : undefined) ??
+    ctx.previousMasterStatusId ??
+    master?.status_id ??
+    null;
+
+  const previousIsClosed = await readStatusIsClosed(trx, ctx.tenant, ctx.previousMasterStatusId);
+  const nextIsClosed = await readStatusIsClosed(trx, ctx.tenant, nextStatusId);
+
+  const crossesBoundary =
+    previousIsClosed !== null && nextIsClosed !== null && previousIsClosed !== nextIsClosed
+      ? (nextIsClosed ? 'close' : 'reopen')
+      : null;
+
+  if (crossesBoundary === null) {
+    // Legacy sync: mirror workflow fields to every child, no propagation rows.
+    const propagateFields: Record<string, unknown> = {};
+    for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
+      if (Object.prototype.hasOwnProperty.call(updateData, key)) {
+        propagateFields[key] = updateData[key];
+      }
+    }
+    if (Object.keys(propagateFields).length === 0) {
+      return { propagated: false, action: null, affectedChildIds: [] };
+    }
+    assertBundlePropagationAuthority(ctx);
+
+    const childRows = await tenantScopedTable(trx, 'tickets', ctx.tenant)
+      .where({ master_ticket_id: masterId })
+      .select(['ticket_id', 'status_id', 'assigned_to', 'priority_id', 'closed_at', 'closed_by', 'is_closed']);
+
+    // `tickets.is_closed` is authoritative. A closed child keeps its status on
+    // a non-boundary master change; stamping the master's (open) status onto it
+    // would make the next close preview classify it as open, so a later
+    // propagated reopen would reopen a ticket closed independently.
+    const fieldsForChild = (child: Record<string, unknown>): Record<string, unknown> => {
+      if (!child.is_closed) return propagateFields;
+      const fields = { ...propagateFields };
+      delete fields.status_id;
+      return fields;
+    };
+    const closedFields = fieldsForChild({ is_closed: true });
+
+    const childPublishes = childRows
+      .map((child: Record<string, unknown>) => ({
+        ticketId: child.ticket_id as string,
+        updatedFields: diffTicketFields(child, fieldsForChild(child)),
+      }))
+      .filter((publish: { ticketId: string; updatedFields: string[] }) => publish.updatedFields.length > 0);
+
+    const updatedAt = nowIso();
+    const openChildIds = childRows
+      .filter((child: Record<string, unknown>) => !child.is_closed)
+      .map((child: Record<string, unknown>) => child.ticket_id as string);
+    const closedChildIds = childRows
+      .filter((child: Record<string, unknown>) => Boolean(child.is_closed))
+      .map((child: Record<string, unknown>) => child.ticket_id as string);
+
+    const legacyUpdatedBy = ctx.isSystemActor ? null : ctx.user.user_id;
+    if (openChildIds.length > 0) {
+      await tenantScopedTable(trx, 'tickets', ctx.tenant)
+        .whereIn('ticket_id', openChildIds)
+        .update({ ...propagateFields, updated_by: legacyUpdatedBy, updated_at: updatedAt });
+    }
+    if (closedChildIds.length > 0 && Object.keys(closedFields).length > 0) {
+      await tenantScopedTable(trx, 'tickets', ctx.tenant)
+        .whereIn('ticket_id', closedChildIds)
+        .update({ ...closedFields, updated_by: legacyUpdatedBy, updated_at: updatedAt });
+    }
+
+    // System writes (the auto-close engine) publish no live UI update, exactly
+    // as the master update does; there is no open browser session to notify.
+    for (const publish of ctx.isSystemActor ? [] : childPublishes) {
+      registerAfterCommit(
+        trx,
+        () =>
+          publishTicketUpdate({
+            tenantId: ctx.tenant,
+            ticketId: publish.ticketId,
+            updatedFields: publish.updatedFields,
+            updatedBy: { userId: ctx.user.user_id, displayName: propagationDisplayName(ctx.user) },
+            updatedAt,
+          }),
+        `ticket-live-update ticket=${publish.ticketId}`
+      );
+    }
+
+    return {
+      propagated: false,
+      action: null,
+      affectedChildIds: childRows.map((row: Record<string, unknown>) => row.ticket_id as string),
+    };
+  }
+
+  const children = await deriveBundleChildren(trx, ctx.tenant, masterId);
+  const affected =
+    crossesBoundary === 'close'
+      ? children.filter((child) => !child.is_closed)
+      : children.filter((child) => child.is_closed && Boolean(child.propagation_id));
+  const affectedChildIds = affected.map((child) => child.ticket_id);
+
+  if (affected.length === 0) {
+    // Nothing to decide: no child crossed the boundary, so no propagation
+    // activity row (a "children not updated" entry would be noise).
+    return { propagated: false, action: crossesBoundary, affectedChildIds: [] };
+  }
+
+  // Refuse before prompting: there is no point asking an actor to confirm a
+  // propagation its authority will not permit.
+  assertBundlePropagationAuthority(ctx);
+
+  if (options.propagateToChildren === undefined) {
+    const preview = await previewBundleStatusPropagation(trx, ctx.tenant, masterId, nextStatusId as string);
+    throw new BundlePropagationConfirmationRequiredError(preview);
+  }
+
+  if (options.propagateToChildren === false) {
+    await writeBundlePropagationActivity(trx, ctx, masterId, crossesBoundary, [], false);
+    return { propagated: false, action: crossesBoundary, affectedChildIds: [] };
+  }
+
+  const propagateUpdatedAt = nowIso();
+  const propagatedStatusId = (master?.status_id ?? nextStatusId) as string | null;
+  const propagate: Record<string, unknown> = {
+    status_id: propagatedStatusId,
+    is_closed: crossesBoundary === 'close',
+    closed_at: crossesBoundary === 'close' ? master?.closed_at ?? null : null,
+    closed_by: crossesBoundary === 'close' ? master?.closed_by ?? null : null,
+    updated_by: ctx.isSystemActor ? null : ctx.user.user_id,
+    updated_at: propagateUpdatedAt,
+  };
+  if (crossesBoundary === 'close') {
+    // A closed ticket never reloads as awaiting a response, on the master or
+    // on a child the master closed.
+    propagate.response_state = null;
+  }
+  if (Object.prototype.hasOwnProperty.call(updateData, 'assigned_to')) {
+    propagate.assigned_to = updateData.assigned_to;
+  }
+  if (Object.prototype.hasOwnProperty.call(updateData, 'priority_id')) {
+    propagate.priority_id = updateData.priority_id;
+  }
+
+  // One attribution for every child effect below: the caller's actor when it
+  // supplied one, otherwise the propagating user (or SYSTEM for engine writes).
+  const propagationActor: TicketActivityActorInfo = ctx.actor ?? {
+    actorType: ctx.isSystemActor ? TICKET_ACTIVITY_ACTOR.SYSTEM : TICKET_ACTIVITY_ACTOR.USER,
+    ...(ctx.isSystemActor
+      ? {}
+      : { userId: ctx.user.user_id, displayName: propagationDisplayName(ctx.user) }),
+  };
+  const propagationSource = (ctx.source ??
+    (ctx.isSystemActor
+      ? TICKET_ACTIVITY_SOURCE.SYSTEM
+      : TICKET_ACTIVITY_SOURCE.UI)) as TicketActivitySource;
+
+  // Statuses are board-scoped. Stamping the master's status onto a child on a
+  // different board would leave the child pointing at a status its own board
+  // does not define, which no later read can repair.
+  const propagatedStatusBoardId = await readStatusBoardId(trx, ctx.tenant, propagatedStatusId);
+  for (const child of affected) {
+    if (child.board_id !== propagatedStatusBoardId) {
+      throw new Error('A bundled ticket cannot use a status from another board');
+    }
+  }
+
+  // A propagated close is still a close: it must clear the same board close
+  // rules a direct close would, and honour the same override/bypass. Evaluated
+  // for every affected child before any row is written, so a blocked child
+  // aborts the whole master status change rather than closing a subset.
+  if (crossesBoundary === 'close') {
+    for (const child of affected) {
+      await enforceTicketCloseRules(trx, ctx.tenant, {
+        ticket: {
+          ticket_id: child.ticket_id,
+          board_id: child.board_id,
+          category_id: child.category_id,
+          subcategory_id: child.subcategory_id,
+          priority_id: (propagate.priority_id as string | null | undefined) ?? child.priority_id,
+          assigned_to: (propagate.assigned_to as string | null | undefined) ?? child.assigned_to,
+        },
+        override: options.overrideCloseRules,
+        bypass: options.bypassCloseRules,
+        actor: propagationActor,
+        source: propagationSource,
+      });
+    }
+  }
+
+  const childPublishes = affected
+    .map((child) => ({
+      ticketId: child.ticket_id,
+      updatedFields: diffTicketFields(child as unknown as Record<string, unknown>, propagate),
+    }))
+    .filter((publish) => publish.updatedFields.length > 0);
+
+  // `assigned_to` moves the primary agent; the ticket_resources rows have to
+  // move with it or the child keeps a stale additional-agent row that violates
+  // the `assigned_to != additional_user_id` constraint.
+  const finalizeChildResources: Array<() => Promise<void>> = [];
+  if (Object.prototype.hasOwnProperty.call(propagate, 'assigned_to')) {
+    for (const child of affected) {
+      if (propagate.assigned_to !== child.assigned_to) {
+        finalizeChildResources.push(
+          await prepareTicketResourceReassignment(
+            trx,
+            ctx.tenant,
+            child.ticket_id,
+            child.assigned_to,
+            propagate.assigned_to as string | null | undefined
+          )
+        );
+      }
+    }
+  }
+
+  await tenantScopedTable(trx, 'tickets', ctx.tenant)
+    .whereIn('ticket_id', affectedChildIds)
+    .update(propagate);
+
+  for (const finalize of finalizeChildResources) {
+    await finalize();
+  }
+
+  // Co-managed SLA/lifecycle bookkeeping is owned per ticket, not per bundle: a
+  // child closed or reopened by propagation is closed or reopened as far as the
+  // customer's own clocks are concerned.
+  for (const child of affected) {
+    if (crossesBoundary === 'close') {
+      await recordCoManagedTicketResolution(trx, ctx.tenant, child.ticket_id);
+    } else {
+      await recordCoManagedTicketReopened(trx, ctx.tenant, child.ticket_id);
+    }
+  }
+
+  // Each child gets its own timeline entry naming the master that moved it.
+  // The master's BUNDLE_STATUS_PROPAGATED row records the decision; these
+  // record the effect on the individual ticket.
+  for (const child of affected) {
+    await writeTicketActivity(trx, {
+      tenant: ctx.tenant,
+      ticketId: child.ticket_id,
+      eventType:
+        crossesBoundary === 'close' ? TICKET_ACTIVITY_EVENT.CLOSED : TICKET_ACTIVITY_EVENT.REOPENED,
+      entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+      entityId: child.ticket_id,
+      actor: propagationActor,
+      source: propagationSource,
+      occurredAt: propagateUpdatedAt,
+      changes: {
+        status_id: { old: child.status_id, new: propagate.status_id },
+        closed_at: { old: child.closed_at, new: propagate.closed_at },
+      },
+      details: { bundle_master_ticket_id: masterId },
+    });
+  }
+
+  const occurredAt = nowIso();
+  if (crossesBoundary === 'close') {
+    // Revert any row still active for an affected child before inserting the
+    // new close row. A child can hold a stale active row when it was reopened
+    // through a write path that did not revert the ledger. The per-child
+    // partial unique index (tenant, child_ticket_id) WHERE reverted_at IS NULL
+    // would otherwise abort this whole master status change. Reverting first
+    // lets the new row record the current child_previous_status_id and
+    // propagated_by rather than skipping the child.
+    await tenantScopedTable(trx, 'ticket_bundle_status_propagations', ctx.tenant)
+      .whereIn('child_ticket_id', affectedChildIds)
+      .whereNull('reverted_at')
+      .update({ reverted_at: occurredAt, reverted_by: ctx.user.user_id });
+
+    const rows = affected.map((child) => ({
+      tenant: ctx.tenant,
+      propagation_id: uuidv4(),
+      master_ticket_id: masterId,
+      child_ticket_id: child.ticket_id,
+      action: 'close',
+      child_previous_status_id: child.status_id,
+      propagated_by: ctx.user.user_id,
+      propagated_at: occurredAt,
+    }));
+    await tenantScopedTable(trx, 'ticket_bundle_status_propagations', ctx.tenant).insert(rows);
+  } else {
+    await tenantScopedTable(trx, 'ticket_bundle_status_propagations', ctx.tenant)
+      .where({ master_ticket_id: masterId })
+      .whereIn('child_ticket_id', affectedChildIds)
+      .whereNull('reverted_at')
+      .update({ reverted_at: occurredAt, reverted_by: ctx.user.user_id });
+  }
+
+  // As on the legacy path, a system-triggered propagation notifies no session.
+  for (const publish of ctx.isSystemActor ? [] : childPublishes) {
+    registerAfterCommit(
+      trx,
+      () =>
+        publishTicketUpdate({
+          tenantId: ctx.tenant,
+          ticketId: publish.ticketId,
+          updatedFields: publish.updatedFields,
+          updatedBy: { userId: ctx.user.user_id, displayName: propagationDisplayName(ctx.user) },
+          updatedAt: propagateUpdatedAt,
+        }),
+      `ticket-live-update ticket=${publish.ticketId}`
+    );
+  }
+
+  await writeBundlePropagationActivity(trx, ctx, masterId, crossesBoundary, affectedChildIds, true);
+  return { propagated: true, action: crossesBoundary, affectedChildIds };
+}
+
+/**
+ * FR4 — mark a child's active propagation row reverted when it leaves a bundle,
+ * so a later master reopen cannot touch a ticket that is no longer a child.
+ */
+export async function revertBundlePropagationForChild(
+  trx: Knex.Transaction,
+  tenant: string,
+  childTicketId: string,
+  revertedBy: string | null
+): Promise<void> {
+  await tenantScopedTable(trx, 'ticket_bundle_status_propagations', tenant)
+    .where({ child_ticket_id: childTicketId })
+    .whereNull('reverted_at')
+    .update({ reverted_at: nowIso(), reverted_by: revertedBy });
+}
+
+/**
+ * FR4 — mark every active propagation row for a master's children reverted
+ * (unbundle). Scoping by master keeps rows that belong to other masters intact.
+ */
+export async function revertBundlePropagationsForMaster(
+  trx: Knex.Transaction,
+  tenant: string,
+  masterTicketId: string,
+  revertedBy: string | null
+): Promise<void> {
+  await tenantScopedTable(trx, 'ticket_bundle_status_propagations', tenant)
+    .where({ master_ticket_id: masterTicketId })
+    .whereNull('reverted_at')
+    .update({ reverted_at: nowIso(), reverted_by: revertedBy });
 }

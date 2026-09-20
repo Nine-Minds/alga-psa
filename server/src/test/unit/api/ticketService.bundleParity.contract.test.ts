@@ -33,21 +33,23 @@ describe('TicketService bundle parity with the web update action', () => {
     expect(webAction).toContain("const lockedFields = new Set(['status_id', 'assigned_to', 'priority_id']);");
   });
 
-  it('cascades master updates to children only in sync_updates mode', () => {
+  it('cascades master updates to children through the shared propagation engine', () => {
     const update = methodBody(service, 'async update(id: string, data: UpdateTicketData', 'private withDescriptionHtml');
-    expect(update).toContain('await this.propagateBundleMasterUpdate(trx, context, id, updateData);');
+    // REST shares the single propagation engine with the web action. The older
+    // inline propagateBundleMasterUpdate is gone: it mirrored every synced field
+    // (including is_closed) to all children before the engine could derive the
+    // affected set, which defeated the confirmation and the ledger.
+    expect(update).toContain('await propagateBundleMasterStatus(');
+    expect(update).not.toContain('.propagateBundleMasterUpdate(');
 
-    const propagate = methodBody(service, 'private async propagateBundleMasterUpdate(', 'private withDescriptionHtml');
-    expect(propagate).toContain("if (settings?.mode !== 'sync_updates') return;");
-    expect(propagate).toContain('.where({ master_ticket_id: masterTicketId })');
-    expect(service).toContain(
-      "const BUNDLE_SYNCED_FIELDS = ['status_id', 'assigned_to', 'priority_id', 'is_closed', 'closed_by', 'closed_at'] as const;"
-    );
+    const utils = readSource('../../../../../packages/tickets/src/actions/ticketBundleUtils.ts');
+    expect(utils).toContain("if (settings?.mode !== 'sync_updates')");
+    expect(utils).toContain('.where({ master_ticket_id: masterId })');
   });
 
-  it('the web cascade also syncs the denormalized is_closed flag to children', () => {
-    const cascade = webAction.slice(webAction.indexOf("if (bundleSettings?.mode === 'sync_updates') {"));
-    expect(cascade).toContain('propagateFields.is_closed = !!newStatus?.is_closed;');
+  it('the shared propagation engine syncs the denormalized is_closed flag to children', () => {
+    const utils = readSource('../../../../../packages/tickets/src/actions/ticketBundleUtils.ts');
+    expect(utils).toContain("is_closed: crossesBoundary === 'close',");
   });
 
   it('exposes the bundled list view and bundle columns to REST clients', () => {

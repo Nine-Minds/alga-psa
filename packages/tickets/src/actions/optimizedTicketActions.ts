@@ -91,6 +91,14 @@ import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCom
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
+  propagateBundleMasterStatus,
+  previewBundleStatusPropagation,
+} from './ticketBundleUtils';
+import {
+  BundlePropagationConfirmationRequiredError,
+  type BundleStatusPropagationPreview,
+} from '../lib/ticketBundlePropagation';
+import {
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
   TICKET_STATUS_FILTER_ALL,
@@ -2478,6 +2486,12 @@ export interface UpdateTicketInTransactionOptions {
   /** Automation exemption from close rules (workflow/import/auto-close/portal); audit-logged. */
   bypassCloseRules?: { source: CloseRuleBypassSource };
   /**
+   * Sync-mode bundle master status changes that cross the open/closed boundary
+   * must choose: true propagates to affected children, false changes the master
+   * only, undefined raises BundlePropagationConfirmationRequiredError.
+   */
+  propagateToChildren?: boolean;
+  /**
    * Attribute the change to the system rather than `user` (auto-close engine):
    * closed_by stays null, events carry a SYSTEM actor, and the audit row is
    * system-sourced. `user` is still required for the call signature but is not
@@ -2704,6 +2718,27 @@ export async function updateTicketInTransaction(
 
     if (updateData.board_id !== undefined && updateData.board_id !== currentTicket.board_id) {
       await retainCoManagedConversationBeforeSourceChange(trx, tenant, 'ticket', id);
+    }
+
+    // Sync-mode bundle masters require an explicit propagation choice before a
+    // boundary-crossing status write. Nothing is written when we bail here.
+    if (
+      typeof updateData.status_id === 'string' &&
+      updateData.status_id !== currentTicket.status_id
+    ) {
+      const propagationPreview: BundleStatusPropagationPreview = await previewBundleStatusPropagation(
+        trx,
+        tenant,
+        id,
+        updateData.status_id,
+      );
+      if (
+        propagationPreview.crossesBoundary !== null &&
+        propagationPreview.affectedChildren.length > 0 &&
+        options?.propagateToChildren === undefined
+      ) {
+        throw new BundlePropagationConfirmationRequiredError(propagationPreview);
+      }
     }
 
     let updatedTicket;
@@ -3130,102 +3165,44 @@ export async function updateTicketInTransaction(
       );
     }
 
-    // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
-    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: id })
-      .first();
-
-    if (bundleSettings?.mode === 'sync_updates') {
-      const propagateFields: Record<string, any> = {};
-      for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
-        if (Object.prototype.hasOwnProperty.call(updateData, key)) {
-          propagateFields[key] = (updateData as any)[key];
-        }
-      }
-      // Live updates diff the user-facing fields only; is_closed mirrors
-      // status_id and is added to the write below, not to the diff.
-      const liveUpdateFields = { ...propagateFields };
-      // is_closed is written to the master outside updateData (see above);
-      // children need the same denormalized flag or they read as open.
-      if (Object.prototype.hasOwnProperty.call(propagateFields, 'status_id')) {
-        propagateFields.is_closed = !!newStatus?.is_closed;
-      }
-
-      if (Object.keys(propagateFields).length > 0) {
-        if (collaboration) throw new Error('Shared bundle workflow edits require authority for every child ticket');
-        const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ master_ticket_id: id }).orderBy('ticket_id').forUpdate().select('*');
-
-        for (const child of childTickets) {
-          const propagate: Record<string, any> = { ...propagateFields,
-            updated_by: isSystemActor ? null : user.user_id, updated_at: new Date().toISOString() };
-          let childClosing = false, childReopening = false;
-          if ('status_id' in propagateFields) {
-            if (!newStatus || newStatus.board_id !== child.board_id) {
-              throw new Error('A bundled ticket cannot use a status from another board');
-            }
-            const previousStatus = await tenantScopedTable(trx, 'statuses', tenant)
-              .where('status_id', child.status_id).forShare().first('is_closed');
-            if (!previousStatus) throw new Error('Bundled ticket status is unavailable');
-            childClosing = Boolean(newStatus.is_closed && !previousStatus.is_closed);
-            childReopening = Boolean(!newStatus.is_closed && previousStatus.is_closed);
-            propagate.is_closed = Boolean(newStatus.is_closed);
-            // LEVERAGE: pattern ticket-close-transition — child notification ownership prevents using the full primary update as-is.
-            if (childClosing) {
-              const merged = { ...child, ...propagateFields };
-              await enforceTicketCloseRules(trx, tenant, {
-                ticket: { ticket_id: child.ticket_id, board_id: merged.board_id, category_id: merged.category_id,
-                  subcategory_id: merged.subcategory_id, priority_id: merged.priority_id, assigned_to: merged.assigned_to },
-                override: options?.overrideCloseRules ? { requested: true, reason: options.overrideCloseRulesReason ?? null, user } : undefined,
-                bypass: options?.bypassCloseRules, actor: actorInfo,
-                source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
-              });
-              Object.assign(propagate, { closed_at: propagate.updated_at, closed_by: isSystemActor ? null : user.user_id, response_state: null });
-            } else if (childReopening) Object.assign(propagate, { closed_at: null, closed_by: null });
-          }
-          const finalizeChildResources = 'assigned_to' in propagateFields && propagateFields.assigned_to !== child.assigned_to
-            ? await prepareTicketResourceReassignment(trx, tenant, child.ticket_id, child.assigned_to, propagateFields.assigned_to) : null;
-          await tenantScopedTable(trx, 'tickets', tenant).where('ticket_id', child.ticket_id).update(propagate);
-          if (finalizeChildResources) await finalizeChildResources();
-          if (childClosing) await recordCoManagedTicketResolution(trx, tenant, child.ticket_id);
-          else if (childReopening) await recordCoManagedTicketReopened(trx, tenant, child.ticket_id);
-          if (childClosing || childReopening) {
-            await writeTicketActivity(trx, {
-              tenant, ticketId: child.ticket_id,
-              eventType: childClosing ? TICKET_ACTIVITY_EVENT.CLOSED : TICKET_ACTIVITY_EVENT.REOPENED,
-              entityType: TICKET_ACTIVITY_ENTITY.TICKET, entityId: child.ticket_id, actor: actorInfo,
-              source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
-              occurredAt: propagate.updated_at,
-              changes: { status_id: { old: child.status_id, new: propagate.status_id }, closed_at: { old: child.closed_at, new: propagate.closed_at } },
-              details: { bundle_master_ticket_id: id },
-            });
-          }
-          // main: live updates diff the user-facing fields only, so is_closed
-          // (mirrors status_id) and the updated_by/updated_at bookkeeping never
-          // reach the client as "changed fields". Start from that curated set and
-          // add the close denormalization this loop derives per child, which
-          // main's single bulk UPDATE could not compute.
-          const childLiveUpdateFields: Record<string, any> = { ...liveUpdateFields };
-          for (const closeField of ['closed_at', 'closed_by', 'response_state']) {
-            if (closeField in propagate) childLiveUpdateFields[closeField] = propagate[closeField];
-          }
-          const childUpdatedFields = diffTicketFields(child, childLiveUpdateFields);
-          // System closes (auto-close engine) skip the live UI update entirely,
-          // exactly as the master update above does.
-          if (!isSystemActor && childUpdatedFields.length) registerAfterCommit(trx, () =>
-            publishTicketUpdate({
-              tenantId: tenant, ticketId: child.ticket_id, updatedFields: childUpdatedFields,
-              updatedBy: { userId: user.user_id, displayName: formatLiveUpdateDisplayName(user) },
-              updatedAt: propagate.updated_at,
-            }), `ticket-live-update ticket=${child.ticket_id}`);
-        }
-        // Child closes publish no TICKET_CLOSED of their own — silent or not.
-        // The master's TICKET_CLOSED carries the suppression flags, and the
-        // close subscriber both emails and (when suppressed) skips child
-        // requesters from that single event. Publishing per-child events only
-        // on silent closes made the silent path noisier than a normal close.
-      }
-    }
+    // If this is a bundle master in sync_updates mode, propagate selected
+    // workflow updates to children. Boundary-crossing changes are limited to
+    // the affected set and record/revert propagation rows; non-boundary changes
+    // keep the legacy mirror-to-all-children behaviour. Child closes publish no
+    // TICKET_CLOSED of their own — silent or not. The master's TICKET_CLOSED
+    // carries the suppression flags, and the close subscriber both emails and
+    // (when suppressed) skips child requesters from that single event.
+    //
+    // The per-child close rules, co-managed resolution/reopen bookkeeping,
+    // board-scoped status validation, resource reassignment and collaborator
+    // authority check all live inside the engine: it is the single owner of
+    // child writes, so a caller cannot reach the children without them.
+    await propagateBundleMasterStatus(
+      trx,
+      {
+        tenant,
+        user: {
+          user_id: user.user_id,
+          first_name: user.first_name ?? null,
+          last_name: user.last_name ?? null,
+          username: user.username ?? null,
+        },
+        isSystemActor,
+        source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
+        previousMasterStatusId: currentTicket.status_id,
+        collaborator: Boolean(collaboration),
+        actor: actorInfo,
+      },
+      id,
+      updateData as Record<string, unknown>,
+      {
+        propagateToChildren: options?.propagateToChildren,
+        overrideCloseRules: options?.overrideCloseRules
+          ? { requested: true, reason: options.overrideCloseRulesReason ?? null, user }
+          : undefined,
+        bypassCloseRules: options?.bypassCloseRules,
+      },
+    );
 
     await assertCoManagedOperationalWrite(trx, tenant);
 
@@ -3254,6 +3231,7 @@ export const updateTicketWithCache = withAuth(async (
     | 'overrideCloseRulesReason'
     | 'suppressContactNotifications'
     | 'suppressInternalNotifications'
+    | 'propagateToChildren'
   >,
 ): Promise<'success' | TicketActionError> => {
   try {

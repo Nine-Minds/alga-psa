@@ -232,6 +232,16 @@ const EXTERNAL_LINK_ERROR_STATUS: Record<string, number> = {
   system_in_use: 409,
 };
 
+function isBundlePropagationConfirmationRequiredError(
+  error: unknown
+): error is { message: string; preview?: any; details?: any } {
+  return (
+    Boolean(error) &&
+    typeof error === 'object' &&
+    (error as { name?: unknown }).name === 'BundlePropagationConfirmationRequiredError'
+  );
+}
+
 function isExternalLinkValidationError(error: unknown): error is { code: string; message: string } {
   return (
     Boolean(error) &&
@@ -499,6 +509,22 @@ export function handleApiError(error: any): NextResponse {
       status: explicitStatus,
       headers: error.headers
     });
+  }
+
+  if (isBundlePropagationConfirmationRequiredError(error)) {
+    const preview = error.preview ?? error.details ?? {};
+    return NextResponse.json({
+      error: {
+        code: 'CONFLICT',
+        message: error.message,
+        details: {
+          reason: 'bundle_propagation_confirmation_required',
+          crossesBoundary: preview.crossesBoundary ?? null,
+          affectedChildren: preview.affectedChildren ?? [],
+          unaffectedChildren: preview.unaffectedChildren ?? [],
+        },
+      },
+    }, { status: 409 });
   }
 
   if (isExternalLinkValidationError(error)) {
