@@ -1392,7 +1392,18 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
                     issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
-                    checks: ['pkce', 'state'],
+                    // `nonce` is load-bearing, not belt-and-braces. `state` binds the
+                    // callback to the browser that started it; `pkce` binds the code to
+                    // the client that requested it; only `nonce` binds the *ID token*
+                    // to this authorization request, which is what stops a token minted
+                    // for another request being replayed into this session.
+                    //
+                    // It was absent, and the repo had already measured the consequence:
+                    // ee/docs/plans/2026-09-05-production-regression-prevention/microsoft-coverage-boundaries.md
+                    // records "Observed one token request, zero JWKS requests and no
+                    // nonce" against a real callback run. Auth.js only sends and
+                    // verifies a nonce when it is listed here.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
                         const emailCandidate =
@@ -2216,6 +2227,11 @@ export const options: NextAuthConfig = {
                     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
                     issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
+                    // Same checks as the async provider above. This env-only fallback
+                    // previously declared none at all, so the two Microsoft providers in
+                    // this file ran with different verification postures depending on
+                    // which one a deployment happened to build.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??
