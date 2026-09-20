@@ -73,6 +73,7 @@ export * from './localAuthentication';
 
 export * from './nativeTimeTracking';
 
+export * from './nativeTimeDispatch';
 export * from './nativeTimeRead';
 
 export * from './nativeTimeDeletion';

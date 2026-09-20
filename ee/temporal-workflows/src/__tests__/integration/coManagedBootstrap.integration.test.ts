@@ -14081,6 +14081,21 @@ it('native time sheet lifecycle applies creation permission to automatic API she
   expect(await customer.table('time_sheets').where('period_id', periodId)).toHaveLength(1);
 }));
 
+it('native time sheet lifecycle keeps a customer workspace on the co-managed path through an empty sheet', async () => withNativeTimeSheetCommandFixture(async ({ context, customer, operations, create }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant);
+  const opened = await operations.fetchOrCreateTimeSheet(context.userId, periodId);
+  // An operational workspace owns all of its time whatever state a sheet is
+  // in. total_hours and comments come from the co-managed projection; the
+  // native fallback returns the raw row and neither field. Scoping this
+  // dispatch by addressed effort, as the sponsor path now is, would drop an
+  // empty customer sheet onto the native path and lose that projection.
+  expect(opened).toMatchObject({ user_id: context.userId, period_id: periodId, approval_status: 'DRAFT', total_hours: 0, comments: [] });
+  const entry = await create({ start_time: '2026-09-15T09:00:00Z', end_time: '2026-09-15T10:00:00Z' });
+  expect(entry.time_sheet_id).toBe(opened.id);
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ billing_mode: 'operational', time_sheet_id: opened.id });
+  expect(await operations.fetchOrCreateTimeSheet(context.userId, periodId)).toMatchObject({ id: opened.id, total_hours: 1 });
+}));
+
 async function withTimeSheetApiFixture(work: (fixture: any) => Promise<void>) {
   return withNativeTimeSheetCommandFixture(async (fixture: any) => {
     const { TimeSheetService } = await import('../../../../../server/src/lib/api/services/TimeSheetService');
@@ -18025,6 +18040,101 @@ it('MSP shared time deletion retains the source reference and prevents deleting 
   expect(await f.customer.table('tickets').where('ticket_id', f.resource.id)).toHaveLength(1);
 }));
 
+
+async function withSponsorNativeSheetFixture(work: (fixture: any) => Promise<void>) {
+  return withMspSharedTimeSaveFixture(async f => {
+    const operations = await import('../../../../../packages/scheduling/src/actions/timeSheetOperations');
+    const { TimeSheetService } = await import('../../../../../server/src/lib/api/services/TimeSheetService');
+    const lifecycle = await import('../../../../../packages/co-managed/src/nativeTimeSheetLifecycle');
+    const apiKeyId = randomUUID(), nextPeriodId = randomUUID();
+    await f.sponsor.table('api_keys').insert({ tenant: f.principal.tenant, api_key_id: apiKeyId, user_id: f.principal.userId, api_key: randomUUID(), active: true });
+    await f.sponsor.table('time_periods').insert({ tenant: f.principal.tenant, period_id: nextPeriodId, start_date: '2026-09-14', end_date: '2026-09-21' });
+    const context = { tenant: f.principal.tenant, userId: f.principal.userId, apiKeyId, user: f.user };
+    const sheetService = new TimeSheetService();
+    const connection = vi.spyOn(sheetService as any, 'getKnex').mockResolvedValue({ knex: db, tenant: f.principal.tenant });
+    // Server actions return their expected failures instead of throwing, so a
+    // denial has to be inspected either way round.
+    const open = (userId = f.principal.userId, periodId = nextPeriodId) =>
+      operations.fetchOrCreateTimeSheet(userId, periodId).catch((error: any) => error);
+    const addUser = async () => {
+      const base = await f.sponsor.table('users').where('user_id', f.principal.userId).first(), userId = randomUUID();
+      await f.sponsor.table('users').insert({ ...base, user_id: userId, email: `sponsor-other-${userId}@example.test`, username: `sponsor-other-${userId}` });
+      return userId;
+    };
+    const actor = async () => ({ kind: 'api_key' as const, tenant: f.principal.tenant, userId: f.principal.userId, apiKeyId });
+    try { await work({ ...f, operations, lifecycle, sheetService, context, apiKeyId, nextPeriodId, open, addUser, actor }); }
+    finally { connection.mockRestore(); }
+  });
+}
+
+it('native time sheet lifecycle opens a sponsor empty sheet natively and hands the same sheet back once shared effort lands in it', async () => withSponsorNativeSheetFixture(async f => {
+  // Commercial co-managed effort already exists in this workspace -- in a
+  // *different* sheet. A tenant-wide probe reads that as "co-managed owns
+  // everything here", claims a brand-new empty sheet it cannot then read back,
+  // and refuses; the MSP loses the ability to log billable time on shared work.
+  expect(await f.save()).toMatchObject({ time_sheet_id: f.sheetId, work_item_type: 'co_managed', billing_mode: 'commercial' });
+  const opened = await f.open();
+  expect(opened).toMatchObject({ user_id: f.principal.userId, period_id: f.nextPeriodId, approval_status: 'DRAFT' });
+  expect(opened.id).not.toBe(f.sheetId);
+  expect(await f.sponsor.table('time_sheets').where('period_id', f.nextPeriodId)).toHaveLength(1);
+  // Same user, same period, other half of the transition: once shared effort
+  // lands in this sheet the co-managed path owns it again and opening it must
+  // keep resolving, now through the co-managed projection.
+  const landed = await f.save({ time_sheet_id: opened.id, start_time: '2026-09-15T09:00:00Z', end_time: '2026-09-15T10:00:00Z' });
+  expect(landed).toMatchObject({ time_sheet_id: opened.id, work_item_type: 'co_managed', billing_mode: 'commercial' });
+  expect(await f.open()).toMatchObject({ id: opened.id, period_id: f.nextPeriodId, total_hours: 1 });
+  expect(await f.sponsor.table('time_sheets').where('period_id', f.nextPeriodId)).toHaveLength(1);
+}));
+
+it('native time sheet lifecycle leaves an MSP workspace holding no shared effort entirely on its native path', async () => withSponsorNativeSheetFixture(async f => {
+  expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+  const opened = await f.open();
+  expect(opened).toMatchObject({ user_id: f.principal.userId, period_id: f.nextPeriodId, approval_status: 'DRAFT' });
+  // The native projection is the raw row: no co-managed sheet view came back.
+  expect(opened.total_hours).toBeUndefined();
+  expect((await f.open()).id).toBe(opened.id);
+  // Every other sheet-addressed operation declines to the same native path.
+  expect(await f.lifecycle.createCoManagedNativeTimeSheet(db, f.principal.tenant, { userId: f.principal.userId, periodId: f.nextPeriodId }, f.actor)).toMatchObject({ handled: false });
+  expect(await f.lifecycle.editCoManagedNativeTimeSheet(db, f.principal.tenant, opened.id, { notes: 'Ordinary MSP sheet note' }, f.actor, async () => {})).toBe(false);
+  expect(await f.lifecycle.deleteCoManagedNativeTimeSheet(db, f.principal.tenant, opened.id, f.actor)).toBe(false);
+  expect(await f.sheetService.update(opened.id, { notes: 'Ordinary MSP sheet note' }, f.context)).toMatchObject({ id: opened.id, notes: 'Ordinary MSP sheet note' });
+  expect(await f.operations.deleteTimeSheets([opened.id])).toMatchObject({ deletedIds: [opened.id], failed: [] });
+  expect(await f.sponsor.table('time_sheets').where('period_id', f.nextPeriodId)).toHaveLength(0);
+}));
+
+it('native time sheet lifecycle keeps refusing an unauthorized delegate once a sponsor falls through to the native path', async () => withSponsorNativeSheetFixture(async f => {
+  await f.save();
+  const otherId = await f.addUser();
+  // The suite's global stub answers every hasPermission with true, which would
+  // hand this actor tenant-wide delegation it does not have. Restore the real
+  // evaluator so both guards are measured against the same granted rights:
+  // time_sheet approve, no read_all, no managed relationship to the subject.
+  const realRbac = await vi.importActual<typeof import('@alga-psa/auth/rbac')>('@alga-psa/auth/rbac');
+  const auth = await import('@alga-psa/auth');
+  const permission = vi.mocked(auth.hasPermission), previous = permission.getMockImplementation();
+  permission.mockImplementation(realRbac.hasPermission);
+  try {
+    // Populated: the co-managed path owns this sheet and rejects the actor.
+    const ownedPeriod = randomUUID(), ownedSheet = randomUUID();
+    await f.sponsor.table('time_periods').insert({ tenant: f.principal.tenant, period_id: ownedPeriod, start_date: '2026-09-21', end_date: '2026-09-28' });
+    await f.sponsor.table('time_sheets').insert({ tenant: f.principal.tenant, id: ownedSheet, period_id: ownedPeriod, user_id: otherId, approval_status: 'DRAFT' });
+    await f.sponsor.table('time_entries').insert({ tenant: f.principal.tenant, entry_id: randomUUID(), user_id: otherId, time_sheet_id: ownedSheet,
+      work_item_type: 'co_managed', work_item_id: f.referenceId, co_managed_work_reference_id: f.referenceId, start_time: new Date('2026-09-22T09:00:00Z'),
+      end_time: new Date('2026-09-22T10:00:00Z'), work_date: '2026-09-22', work_timezone: 'UTC', billable_duration: 60, approval_status: 'DRAFT' });
+    await expect(f.open(otherId, ownedPeriod)).resolves.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    // Empty: the native path owns it and has to reject the same actor, or the
+    // repair would have turned a refusal into a granted sheet.
+    const denied = await f.open(otherId);
+    expect(denied).not.toMatchObject({ approval_status: 'DRAFT' });
+    expect(JSON.stringify(denied?.permissionError ?? denied?.message ?? denied)).toMatch(/Permission denied/);
+    // The API creation path is the one fall-through that carried no delegation
+    // check of its own. Without one, declining to the native path would hand a
+    // caller a sheet the co-managed path refused it a moment earlier.
+    await expect(f.sheetService.create({ user_id: otherId, period_id: f.nextPeriodId }, f.context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await f.sponsor.table('time_sheets').where('period_id', f.nextPeriodId)).toHaveLength(0);
+    expect(await f.sponsor.table('time_sheets').where('user_id', otherId)).toEqual([expect.objectContaining({ id: ownedSheet })]);
+  } finally { previous ? permission.mockImplementation(previous) : permission.mockResolvedValue(true); }
+}));
 
 async function withMspSharedTimerFixture(work: (fixture: any) => Promise<void>) {
   return withMspSharedTimeSaveFixture(async f => {

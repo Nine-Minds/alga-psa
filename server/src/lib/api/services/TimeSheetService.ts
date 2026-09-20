@@ -28,6 +28,7 @@ import {
 } from '../schemas/timeSheet';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
+import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { hasPermission } from '../../auth/rbac';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
 import { NativeScheduleRelationError, commandCoManagedNativeSchedule, NativeScheduleError, readCoManagedNativeSchedules, NativeTimePeriodSettingsError, readCoManagedNativeTimePeriodSettings, commandCoManagedNativeTimePeriodSettings, readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, generateTimePeriodCalendar, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
@@ -328,15 +329,31 @@ export class TimeSheetService extends BaseService<any> {
         return response;
       }));
       if (current.handled) return current.sheet;
-      
+
+      // Declining the co-managed path hands this request to the native one, so
+      // the native one has to carry the same delegation authority the
+      // co-managed path would have applied (admitCoManagedNativeTimeOwner:
+      // approve plus read_all-or-manager). update() and delete() below already
+      // refuse another user's sheet; creation did not, and without this a
+      // sponsor workspace falling through would gain a sheet it could not
+      // create a moment earlier.
+      const subjectUserId = data.user_id || context.userId;
+      if (subjectUserId !== context.userId) {
+        if (!context.user) throw new ForbiddenError('Permission denied: Cannot create a time sheet for another user');
+        try { await assertCanActOnBehalf(context.user, context.tenant, subjectUserId, knex); }
+        catch (error) { throw new ForbiddenError(error instanceof Error ? error.message : 'Permission denied: Cannot create a time sheet for another user'); }
+      }
+
       const created = await withTransaction(knex, async (trx) => {
+        // time_sheets carries no created_at/updated_at columns; writing them
+        // made every native creation fail on an undefined column. That only
+        // became reachable for a sponsor workspace once this path started
+        // owning its empty sheets.
         const timeSheetData = {
           ...data,
-          user_id: data.user_id || context.userId,
+          user_id: subjectUserId,
           approval_status: 'DRAFT',
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
+          tenant: context.tenant
         };
 
         const [timeSheet] = await tenantDb(trx, context.tenant).table(this.tableName)
@@ -389,10 +406,7 @@ export class TimeSheetService extends BaseService<any> {
           throw new ConflictError('Cannot modify approved time sheets');
         }
   
-        const updateData = {
-          ...data,
-          updated_at: new Date()
-        };
+        const updateData = { ...data };
   
         await this.buildTenantScopedQuery(trx, context)
           .where({ [this.primaryKey]: id })

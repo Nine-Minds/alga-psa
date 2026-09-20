@@ -1,8 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { productTimeEntryMode } from '@alga-psa/types';
-import { getCoManagedOperationalState, assertCoManagedOperationalWrite } from '@alga-psa/licensing';
-import { hasCoManagedConversationOwnership } from './nativeConversationEvents';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { dispatchCoManagedNativeTime } from './nativeTimeDispatch';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import { admitCoManagedNativeTimeOwner, admitCoManagedNativeTimeSource, isNativeTimeFieldHidden } from './nativeTimeEntryAccess';
@@ -15,15 +14,6 @@ export class NativeTimeSheetError extends Error {
     super({ SHEET_ALREADY_EXISTS: 'A time sheet already exists for this user and period', SHEET_NOT_EDITABLE: 'Only draft or returned sheets can have their notes edited', SHEET_INVALID_TRANSITION: 'Use the appropriate time sheet review command for this transition', SHEET_INVALID_INPUT: 'Invalid time sheet input' }[code]);
     this.name = 'NativeTimeSheetError';
   }
-}
-
-async function customerTimeWorkspace(trx: Knex.Transaction, tenant: string) {
-  await getCoManagedOperationalState(trx, tenant);
-  const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
-  const operational = await owner.table('time_entries').where(q => q.where('billing_mode', 'operational').orWhere('work_item_type', 'co_managed')).first('entry_id');
-  if (workspace?.product_code !== 'co_managed' && !operational && !await hasCoManagedConversationOwnership(trx, tenant)) return false;
-  if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
-  return true;
 }
 
 /** Opening existing history is a read. Only the missing-sheet branch consumes
@@ -47,7 +37,11 @@ async function openTimeSheet(db: Knex, tenant: string, input: { userId: string; 
   const { userId, periodId } = input;
   if (![tenant, userId, periodId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
-    if (!await customerTimeWorkspace(trx, tenant)) return { handled: false };
+    // The addressed resource is this user's sheet for this period. A sponsor
+    // workspace opening its first, empty sheet addresses no co-managed effort
+    // at all and belongs to the native path, which creates the sheet behind
+    // its own delegation check.
+    if (!await dispatchCoManagedNativeTime(trx, tenant, { kind: 'userPeriod', userId, periodId })) return { handled: false };
     if (input.notes !== undefined && typeof input.notes !== 'string') throw new NativeTimeSheetError('SHEET_INVALID_INPUT');
     const actor = snapshotCoManagedAuthenticatedActor(await identify()), owner = tenantDb(trx, tenant);
     if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
@@ -71,7 +65,7 @@ async function openTimeSheet(db: Knex, tenant: string, input: { userId: string; 
       const [created] = await owner.table('time_sheets').insert({ tenant, user_id: userId, period_id: periodId, approval_status: 'DRAFT', ...(input.notes !== undefined ? { notes: input.notes } : {}) }).returning('id');
       id = created.id;
     }
-    const current = await readCoManagedNativeTimeSheet(trx, tenant, id, async () => actor, { view: true, comments: true });
+    const current = await readCoManagedNativeTimeSheet(trx, tenant, id, async () => actor, { view: true, comments: true, inheritDispatch: true });
     if (!current.handled || current.sheet?.user_id !== userId || current.sheet?.period_id !== periodId) throw new CoManagedSharedWorkError();
     await credential.assertCurrent();
     if (existing.length && mode === 'create') throw new NativeTimeSheetError('SHEET_ALREADY_EXISTS');
@@ -86,7 +80,7 @@ export async function deleteCoManagedNativeTimeSheet(db: Knex, tenant: string, s
   identify: () => Promise<CoManagedAuthenticatedActor>): Promise<boolean> {
   if (![tenant, sheetId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
-    if (!await customerTimeWorkspace(trx, tenant)) return false;
+    if (!await dispatchCoManagedNativeTime(trx, tenant, { kind: 'sheets', sheetIds: [sheetId] })) return false;
     await assertCoManagedOperationalWrite(trx, tenant);
     const actor = snapshotCoManagedAuthenticatedActor(await identify()), owner = tenantDb(trx, tenant);
     if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
@@ -127,7 +121,7 @@ export async function editCoManagedNativeTimeSheet(db: Knex, tenant: string, she
 ): Promise<boolean> {
   if (![tenant, sheetId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
-    if (!await customerTimeWorkspace(trx, tenant)) return false;
+    if (!await dispatchCoManagedNativeTime(trx, tenant, { kind: 'sheets', sheetIds: [sheetId] })) return false;
     if ((input.notes !== undefined && typeof input.notes !== 'string') ||
         (input.approval_status !== undefined && !['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED'].includes(input.approval_status))) throw new NativeTimeSheetError('SHEET_INVALID_INPUT');
     await assertCoManagedOperationalWrite(trx, tenant);
@@ -146,7 +140,7 @@ export async function editCoManagedNativeTimeSheet(db: Knex, tenant: string, she
         (input.notes !== undefined && isNativeTimeFieldHidden(fields, ['notes', 'time_sheets.notes']))) throw new CoManagedSharedWorkError();
     const sheet = await owner.table('time_sheets').where('id', sheetId).forUpdate().first();
     if (!sheet || sheet.user_id !== hint.user_id) throw new CoManagedSharedWorkError();
-    const current = await readCoManagedNativeTimeSheet(trx, tenant, sheetId, async () => actor, { view: true, requireCompleteContent: input.notes !== undefined });
+    const current = await readCoManagedNativeTimeSheet(trx, tenant, sheetId, async () => actor, { view: true, requireCompleteContent: input.notes !== undefined, inheritDispatch: true });
     if (!current.handled) throw new CoManagedSharedWorkError();
     if (input.notes !== undefined) {
       if (!['DRAFT', 'CHANGES_REQUESTED'].includes(sheet.approval_status)) throw new NativeTimeSheetError('SHEET_NOT_EDITABLE');

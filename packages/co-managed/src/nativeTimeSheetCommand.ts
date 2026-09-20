@@ -1,8 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { productTimeEntryMode } from '@alga-psa/types';
-import { getCoManagedOperationalState, assertCoManagedOperationalWrite } from '@alga-psa/licensing';
-import { hasCoManagedConversationOwnership } from './nativeConversationEvents';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { dispatchCoManagedNativeTime } from './nativeTimeDispatch';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { admitCoManagedNativeTimeOwner, admitCoManagedNativeTimeSource, isNativeTimeFieldHidden, type CoManagedNativeTimeAccess } from './nativeTimeEntryAccess';
 import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
@@ -21,11 +20,8 @@ export async function commandCoManagedNativeTimeSheets(db: Knex, tenant: string,
   const ids = [...new Set(input.sheetIds)].sort(), { command } = input, reason = input.reason?.trim();
   if (!isCoManagedUuid(tenant) || !ids.length || !ids.every(isCoManagedUuid) || !['submit', 'approve', 'request_changes', 'reverse'].includes(command)) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
-    await getCoManagedOperationalState(trx, tenant);
-    const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
-    const operational = await owner.table('time_entries').whereIn('time_sheet_id', ids).where(q => q.where('billing_mode', 'operational').orWhere('work_item_type', 'co_managed')).first('entry_id');
-    if (workspace?.product_code !== 'co_managed' && !operational && !await hasCoManagedConversationOwnership(trx, tenant)) return { handled: false };
-    if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
+    if (!await dispatchCoManagedNativeTime(trx, tenant, { kind: 'sheets', sheetIds: ids })) return { handled: false };
+    const owner = tenantDb(trx, tenant);
     await assertCoManagedOperationalWrite(trx, tenant);
     const actor = snapshotCoManagedAuthenticatedActor(await identify());
     if (actor.tenant !== tenant || (input.actingUserId && input.actingUserId !== actor.userId)) throw new CoManagedSharedWorkError();
