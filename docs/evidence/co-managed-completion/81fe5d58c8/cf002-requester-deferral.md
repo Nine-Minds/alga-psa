@@ -922,3 +922,50 @@ AssertionError: expected RangeError: Maximum call stack size excee…
   mutation-proven at its owner, but the requirement asks for the original shard to pass at the
   candidate carrying the fix, and that CI run has not been made yet. That is the next action, and
   it is now an ordinary confirmation rather than an investigation.
+
+---
+
+# CF002 — REPAIR CONFIRMED IN CI (before/after at two SHAs)
+
+The guard shipped at `899ae2e1cc` and CI ran it at `449e0a7b6c`
+(run 35537272058, integration shard 1, job 106151151704). Both shard-1
+artifacts are committed here, so the comparison is re-readable:
+
+| | `603a74c575` (no guard) | `449e0a7b6c` (guard) |
+|---|---|---|
+| artifact | `raw-logs/inbound-diagnostics-shard1-35534035281.ndjson` | `raw-logs/inbound-diagnostics-shard1-35537272058.ndjson` |
+| shard-1 failures | **7** | **6** |
+| the requester lifecycle-pause case | **FAILED** | **PASSED** |
+| its `commit_body` | `CoManagedLifecycleError` / `CO_MANAGED_READ_ONLY`, `classifiedAsLifecycle: true` | same |
+| its `rollback` | **`RangeError`** | **`CoManagedLifecycleError`** |
+| its `lifecycle_classification` | declined (`false`) | *absent* |
+| its `disposition` | `retry` / `commit_failure` | *absent* — it deferred |
+| `RangeError` records in the file | 3 | **0** |
+
+The error now survives from the commit body to the rollback handler as the
+object the body raised, the classifier matches it, and the path returns `defer`
+before the disposition diagnostic is reached. That is the mechanism described in
+the previous section, confirmed by measurement rather than by reasoning.
+
+**The 6 remaining shard-1 failures are unrelated to CF002.** All six are
+"MSP SLA bundle propagation" cases, and comparing the two artifacts dates them
+exactly: they are present in *both* runs, so they arrived with the merge commit
+`3026683f9f`, not with the guard. They are a regression this round introduced and
+repaired in `abfbd69071`; see that commit for the two causes.
+
+## Status
+
+CF002 stays `failed` in this packet. Its PRD C2 exit condition includes the
+*original shard* passing at the candidate, and no CI run has yet been green at a
+candidate carrying both the guard and the bundle repair. What exists now:
+
+- causal explanation — **done**, and confirmed by before/after CI;
+- a regression that detects the cause's removal — **done**, mutation-verified
+  (`packages/db/src/withAdminTransaction.errorFidelity.test.ts`);
+- focused pass — **done**;
+- original-shard pass — **done locally**: the whole `coManagedBootstrap` file is
+  1418/1418 at `VITEST_SEED=20260610` against the documented CE+EE recipe, which
+  is the first fully green local run of this file recorded on this card;
+- green mandatory exact-candidate CI — **not yet**.
+
+The remaining step is a confirmation, not an investigation.

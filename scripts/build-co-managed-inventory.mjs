@@ -183,6 +183,70 @@ const EVIDENCE = {
       + 'has not yet been rerun at a candidate carrying the repair, so CF002 stays `failed`. The '
       + 'independent reporter-level serialization overflow is still not fixed.',
   },
+  'cf002-repair-confirmed': {
+    type: 'automated',
+    sha: '449e0a7b6c10adc03f2d88ad6977e42ae2ebd91f',
+    command: 'GitHub Actions run 35537272058, job 106151151704, Integration shard 1; compared against run '
+      + '35534035281 job 106141697370 at 603a74c575 via both uploaded inbound-diagnostics-shard-1.ndjson files',
+    result: 'REPAIR CONFIRMED before/after. At 603a74c575 shard 1 had 7 failures including the requester '
+      + 'lifecycle-pause case, whose chain was commit_body=CoManagedLifecycleError(classifiedAsLifecycle true) '
+      + '-> rollback=RangeError -> disposition retry/commit_failure, with 3 RangeError records in the file. At '
+      + '449e0a7b6c that case PASSES, the chain is commit_body=CoManagedLifecycleError -> '
+      + 'rollback=CoManagedLifecycleError with NO lifecycle_classification decline and NO disposition record '
+      + '(it deferred), and there are ZERO RangeError records. The 6 remaining shard-1 failures are all '
+      + 'MSP SLA bundle propagation and are present in BOTH runs, so they date to merge 3026683f9f, not to the '
+      + 'guard; repaired separately in abfbd69071.',
+    artifact: 'raw-logs/inbound-diagnostics-shard1-35537272058.ndjson',
+    artifactNote: 'Both shard-1 NDJSON files are committed so the comparison is re-readable. NOT established: a '
+      + 'green CI shard 1 at a candidate carrying BOTH the guard and the bundle repair, which is what CF002 '
+      + 'still needs. Locally the whole coManagedBootstrap file is 1418/1418 at VITEST_SEED=20260610.',
+  },
+  'bundle-propagation-regression-repair': {
+    type: 'automated',
+    sha: 'ROUND3_CANDIDATE',
+    command: 'server: vitest run ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts '
+      + 'with DB_NAME_SERVER=server_co_managed and VITEST_SEED=20260610 (docs/dev/running-integration-tests-locally.md)',
+    result: '1418/1418 pass, the first fully green local run of this file recorded on this card. Repairs 6 '
+      + 'regressions the merge introduced: (1) prepareTicketResourceReassignment was ported into the engine\'s '
+      + 'boundary path but not its legacy path, so a bare assigned_to change silently failed to move the child\'s '
+      + 'assignee; (2) main\'s new sync-mode contract requires an explicit propagateToChildren choice, which the '
+      + 'fixture did not make. Adds 2 cases covering the confirmation guard on the co-managed path so answering '
+      + 'it in the fixture does not hide it.',
+    artifact: 'base-reconciliation-round3.md',
+    artifactNote: 'Local run. NOT established: the same green result in CI, which is pending at the candidate. '
+      + 'Local server_co_managed required migrate:ee first (main\'s ticket_bundle_status_propagations table).',
+  },
+  'fixture-reset-repaired': {
+    type: 'automated',
+    sha: 'ROUND3_CANDIDATE',
+    command: 'npm run fixtures:co-managed -- --verify / --reset / --verify / (apply) / --verify',
+    result: 'The documented C7 cycle now reproduces with exit codes: 19/19 (exit 0) -> reset (exit 0) -> 5/19 '
+      + '(exit 1) -> apply (exit 0) -> 19/19 (exit 0). Previously the fixtures were stuck at 18/19 with a STALE '
+      + 'shared-work escalation row and --reset could not run at all: time_sheets, then jobs, then a second-level '
+      + 'blocker (client_billing_cycles under client_billing_profiles) that escaped from inside purgeRow\'s catch '
+      + 'and aborted the whole single-transaction reset. The complete table set was established by enumerating '
+      + 'every foreign key into users from pg_constraint and counting rows against the four fixture user ids.',
+    artifact: 'raw-logs/fixture-reset-cycle-449e0a7b6c.txt',
+    artifactNote: 'Full stdout with per-step exit codes. Fixtures are left applied at 19/19.',
+  },
+  'cf007-authority-hardening': {
+    type: 'automated',
+    sha: 'ROUND3_CANDIDATE',
+    command: 'ee/server: vitest run mcpIdpPresets (LIVE Google+Microsoft discovery) and '
+      + 'mcpOidcDiscoveryHardening; server: vitest run mcpIdpDiscoveryNotRequestSelected.contract and '
+      + 'nextAuthOptions.mspContract; node --test scripts/tests/microsoft-oidc-harness.test.mjs',
+    result: 'Nonce is now verified on BOTH Microsoft providers (it was absent on one and undeclared on the '
+      + 'other), OIDC discovery now binds the advertised issuer to the URL it was fetched from (Discovery 1.0 '
+      + 'section 4.3) with https-only transport, and the discoveryBaseUrl seam is pinned as not request-reachable. '
+      + '11 live + 9 hardening + 3 contract + 17 harness cases pass. MUTATION-VERIFIED: dropping nonce fails the '
+      + 'contract; disabling the issuer-match fails 3 of 9. Two candidate rules were REJECTED by measurement - '
+      + 'an issuer/jwks same-origin rule would break Google, and strict issuer equality would break Microsoft\'s '
+      + 'templated {tenantid} issuer.',
+    artifact: 'cf007-microsoft-authority.md',
+    artifactNote: 'ESTABLISHES the code half only. NOT established: real application sign-in/callback execution '
+      + '(the harness lane was not run), the emulator\'s missing Entra OIDC surface, and the still-ungated '
+      + 'production MICROSOFT_LOGIN_BASE_URL override, which is left alone with its reason recorded.',
+  },
   'admission-adapter-callsites': {
     type: 'automated',
     sha: 'ROUND2_CANDIDATE',
@@ -313,7 +377,7 @@ const OVERRIDES = {
       + 'mutation-verified regression, because there is no established cause to reintroduce. Row stays failed.',
     evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure', 'inbound-diagnostics-regression',
       'requester-deferral-local-pass', 'requester-deferral-control-run', 'cf002-diagnostic-survives-pass',
-      'cf002-cause-established'],
+      'cf002-cause-established', 'cf002-repair-confirmed'],
   },
   CF003: {
     status: 'failed',
@@ -358,6 +422,22 @@ const OVERRIDES = {
       + 'co-managed admin. NOT verified: an actual OAuth callback with a real Microsoft application, '
       + 'cross-tenant callback denial, and secret redaction on save. Those need CF007 and are untouched here.',
     evidence: ['provider-route-browser', 'provider-route-regression', 'release-flag-off-walk'],
+  },
+  CF007: {
+    status: 'implemented-unverified',
+    why: 'Code now exists where there was none, so this is no longer missing-code, but it is NOT verified. '
+      + 'Repaired this round: nonce is verified on both Microsoft providers (absent on one, undeclared on the '
+      + 'other, so verification posture depended on which provider a deployment built); OIDC discovery binds the '
+      + 'advertised issuer to the URL it was fetched from per Discovery 1.0 section 4.3, with https-only '
+      + 'transport; and the discoveryBaseUrl seam is pinned as not request-reachable. All mutation-verified, and '
+      + 'the pre-existing LIVE Google/Microsoft discovery tests still pass, which is what proves the new rules do '
+      + 'not reject real providers. STILL MISSING for verification: real application sign-in/callback execution '
+      + 'evidence (the harness lane was not run, so nothing shows the app now REQUESTS a nonce end to end); the '
+      + 'emulator\'s Entra OIDC surface (no openid-configuration, no JWKS, no UserInfo, no PKCE, alg:none); and '
+      + 'the still-ungated production MICROSOFT_LOGIN_BASE_URL override, deliberately left alone because the '
+      + 'Teams-style NODE_ENV gate would break the e2e emulator lane, which runs NODE_ENV=production WITH that '
+      + 'override set.',
+    evidence: ['cf007-authority-hardening'],
   },
   CF030: {
     status: 'missing-code',
@@ -413,6 +493,27 @@ const OPEN_DEFECTS = [
       + 'CI-shaped Redis, so publishes retry until the 20s test timeout. That is the whole explanation for the '
       + '8 Comment Reactions failures in the local shard runs; CI writes no redis password secret and is '
       + 'unaffected. Delete the secret or set a matching requirepass before the next reproduction.',
+  },
+  {
+    id: 'microsoft-login-base-url-ungated-in-production',
+    kind: 'product',
+    summary: 'shared/services/email/microsoftGraphEndpoints.ts honours MICROSOFT_LOGIN_BASE_URL and '
+      + 'MICROSOFT_GRAPH_BASE_URL unconditionally, including production, and that is where client secrets are '
+      + 'POSTed. The Teams surface already gated its half behind a deny-by-default flag plus a production lock '
+      + 'and left a comment saying the email module was deliberately unchanged. Copying that gate would BREAK '
+      + 'the e2e emulator lane: docker-compose.ee.yaml runs NODE_ENV=production while the e2e-emulators overlay '
+      + 'sets the variable, so the override is in use UNDER production NODE_ENV. Closing it needs an opt-in flag '
+      + 'threaded into the compose overlay too, which cannot be validated without the full Docker e2e stack. '
+      + 'Reported rather than half-done. No sovereign-cloud support exists in the repo, so that is not a blocker.',
+  },
+  {
+    id: 'msgraph-emulator-missing-entra-oidc-surface',
+    kind: 'test-coverage',
+    summary: 'packages/emulators/msgraph serves authorize/token/adminconsent but has no Entra OIDC surface: no '
+      + '/{tenant}/v2.0/.well-known/openid-configuration, no /{tenant}/discovery/v2.0/keys, no OIDC UserInfo, no '
+      + 'PKCE enforcement, and it signs with alg:none. Its own Bot Framework side is a real RS256 signer with a '
+      + 'published JWKS and is the template for completing it. This is why the NextAuth callback lane needs a '
+      + 'separate harness fixture, and it is the remaining half of CF007.',
   },
   {
     id: 'co-managed-account-management-permission-gap',
