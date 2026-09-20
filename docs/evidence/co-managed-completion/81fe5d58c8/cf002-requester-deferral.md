@@ -169,25 +169,39 @@ each adapter independently:
 The infrastructure-error cases stay green under both, so the repair is not broadening quarantine -
 unknown database failures still propagate to `retry`.
 
-### Unrelated local failures in the same run — reported, not diagnosed
+### The 8 `Comment Reactions` failures were my harness, not the product
 
-The faithful shard also produced 8 failures outside the co-managed suites, all of them the entire
-`Comment Reactions - Ticket Comments` suite, and every one a ~20 000 ms timeout:
+Round 1 carried these as "probably local contention". They are not. Diagnosed:
 
 ```
-× should add a reaction to a comment                                   20232ms
-× should remove a reaction when toggled again                          20213ms
-… 6 more, all 20-21s
+[Redis] Client error { error: 'ERR AUTH <password> called without any password configured
+                               for the default user. Are you sure your configuration is correct?' }
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
 ```
 
-The same suite **passed in CI shard 1** at `618019c3e3`, and earlier local runs timed out the same
-way in other unrelated suites (`service request store-only submissions`, `Portal domain appliance
-actions`) while a typecheck and a second test run were competing for the machine. That points at
-local resource contention, not a product defect.
+`packages/event-bus/src/config/redisConfig.ts:101` resolves the password with
+`getSecret('redis_password', 'REDIS_PASSWORD')`, and `getSecret` reads the **secrets file first**. This
+checkout has a leftover `secrets/redis_password` (32 bytes) from the card's password-protected Redis
+on `:6374`, so `unset REDIS_PASSWORD` in the shard runner did nothing — the client still sent `AUTH`.
+The CI-shaped Redis the reproduction uses (`redis:7-alpine` on `:6379`) has `requirepass` **empty**, so
+it rejects the `AUTH`, reconnection attempts exhaust, `publishTicketUpdate` blocks, and each test hits
+the 20 000 ms vitest timeout.
 
-That is a hypothesis, not a finding: **no pristine-baseline run was made**, so these are recorded as
-observed-and-unexplained rather than waved off as pre-existing. They do not bear on the co-managed
-result — `coManagedBootstrap` had already completed and passed earlier in the same run.
+CI does not hit this because its `Create secrets files` step writes only `secrets/postgres_password`
+and `secrets/db_password_server` — never `secrets/redis_password` — so there is no password to send.
+
+Ruled out along the way, each with evidence rather than assertion:
+
+| Hypothesis | Verdict |
+| --- | --- |
+| CPU contention from a concurrent typecheck | **No.** Reproduces with the suite running alone. |
+| Shared-`test_database` contention inside the shard | **No.** Reproduces on a private `test_database_cr_branch` via `TEST_DB_NAME`. |
+| A product defect in comment reactions | **No.** The suite passes in CI shard 1, and the hang is in the Redis publish path, not the insert. Postgres shows `idle in transaction` / `ClientRead` after `insert into "comment_reactions"` — the database is done and waiting on a client that is stuck retrying Redis. |
+
+**Consequence for the shard evidence above:** any suite in those local runs that publishes to Redis was
+running against a mis-authenticated client. That can only *cause* failures, never mask them, so it
+does not weaken the `coManagedBootstrap` passes — but a future reproduction should either delete
+`secrets/redis_password` or start the container with a matching `requirepass`.
 
 One more trap, learned the hard way: **do not kill a running shard and immediately start another.**
 `createTestDbConnection` drops and recreates `test_database`, so an interrupted run leaves it absent

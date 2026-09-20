@@ -254,6 +254,16 @@ const OPEN_DEFECTS = [
       + 'Pre-existing and shell-owned; reported, not fixed.',
   },
   {
+    id: 'local-redis-auth-mismatch-harness',
+    kind: 'harness',
+    summary: 'Reproduction harness only, not product: packages/event-bus redisConfig resolves the password via '
+      + 'getSecret(\'redis_password\', \'REDIS_PASSWORD\'), which reads secrets/redis_password BEFORE the env var. '
+      + 'A leftover secrets/redis_password in this checkout makes the client send AUTH to the password-less '
+      + 'CI-shaped Redis, so publishes retry until the 20s test timeout. That is the whole explanation for the '
+      + '8 Comment Reactions failures in the local shard runs; CI writes no redis password secret and is '
+      + 'unaffected. Delete the secret or set a matching requirepass before the next reproduction.',
+  },
+  {
     id: 'reachability-contract-excludes-co-managed',
     kind: 'test-coverage',
     summary: 'uiReachabilityCoherence.contract.test.ts runs for algadesk and psa only. It is the contract that '
