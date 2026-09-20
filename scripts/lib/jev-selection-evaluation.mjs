@@ -75,11 +75,12 @@ export function evaluateSelection({ selection, integrationReports = [], browserR
     return result;
   }
   const forced = new Set(selection.always ?? []);
+  // Absent reports are recorded as absent, never scored as zero executions.
   const suiteJudgments = selection.integration?.judgments ?? [];
   const integration = executedSuites(integrationReports).map(entry => ({
     identity: entry.file, failed: entry.failed, judgment: resolveJudged(entry.file, suiteJudgments),
   }));
-  result.integration = score(integration, forced, thresholds);
+  result.integration = integrationReports.length ? score(integration, forced, thresholds) : { missing_inputs: true, reason: 'No integration shard reports were available' };
   const browserJudgments = selection.browser?.judgments ?? [];
   const browser = browserReports.flatMap(report => executedBrowserTests(report)).map(entry => {
     const exact = browserJudgments.find(judgment => matchesSuffix(entry.file, judgment.file.replace(/^e2e-tests\/tests\//, '')) && judgment.title === entry.title)
@@ -89,7 +90,7 @@ export function evaluateSelection({ selection, integrationReports = [], browserR
       .sort((a, b) => b.probability - a.probability)[0] ?? null;
     return { identity: `${entry.file}::${entry.title}`, failed: entry.failed || entry.flaky, duration: entry.duration, judgment: exact ?? fallback };
   });
-  result.browser = score(browser, forced, thresholds);
+  result.browser = browserReports.length ? score(browser, forced, thresholds) : { missing_inputs: true, reason: 'No browser reports were available' };
   return result;
 }
 
@@ -99,8 +100,10 @@ export function renderEvaluationMarkdown(evaluation) {
     lines.push(`Selection status: **${evaluation.selection_status}**. ${evaluation.reason ?? ''}`);
     return lines.join('\n');
   }
+  lines.push('Shadow mode: non-gating. Judgments change nothing that runs; an unavailable key or API failure runs everything.', '');
   for (const [label, block] of [['Integration suites', evaluation.integration], ['Browser tests', evaluation.browser]]) {
     if (!block) continue;
+    if (block.missing_inputs) { lines.push(`### ${label}`, '', `**Not scored:** ${block.reason}.`, ''); continue; }
     lines.push(`### ${label}`, '', `Executed ${block.executed}, judged ${block.judged}, failed ${block.failed.length}.`, '');
     lines.push('| threshold | would run | would defer | deferred share | deferred minutes | failures caught | recall |', '|---|---|---|---|---|---|---|');
     for (const row of block.by_threshold) {

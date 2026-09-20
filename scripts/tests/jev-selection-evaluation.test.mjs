@@ -68,3 +68,12 @@ test('an unavailable selection evaluates to its reason without scoring', () => {
   assert.match(renderEvaluationMarkdown(evaluation), /unavailable.*no key/);
   assert.match(renderEvaluationMarkdown(evaluateSelection({ selection: null })), /missing/);
 });
+
+test('missing reports are recorded as missing inputs, never scored as zero executions', () => {
+  const evaluation = evaluateSelection({ selection, integrationReports: [], browserReports: [playwrightReport] });
+  assert.deepEqual(evaluation.integration, { missing_inputs: true, reason: 'No integration shard reports were available' });
+  assert.equal(evaluation.browser.executed, 3);
+  const markdown = renderEvaluationMarkdown(evaluation);
+  assert.match(markdown, /Integration suites\n\n\*\*Not scored:\*\* No integration shard reports/);
+  assert.match(markdown, /Shadow mode: non-gating/);
+});

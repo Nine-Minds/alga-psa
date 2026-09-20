@@ -106,6 +106,7 @@ try {
     .map(j => `| ${j.probability.toFixed(2)} | ${j.title ? `${j.file} › ${j.title}` : j.file} |`);
   summarize([
     `## Jev test selection (${mode})`, '',
+    ...(mode === 'shadow' ? ['Shadow mode: non-gating. These judgments change nothing that runs; an unavailable key or API failure runs everything.', ''] : []),
     `Change: ${context.title || '(untitled)'} — ${change.changed_files.length} files, rendered ${selection.change.rendered_chars} chars.`,
     `Integration: ${suites.length} suites judged; at threshold ${threshold} would run ${selection.integration.decision.run.length}, defer ${selection.integration.decision.defer.length} (${selection.always.length} always-run).`,
     `Browser: ${browser.length} tests judged; would run ${selection.browser.decision.run.length}, defer ${selection.browser.decision.defer.length}.`,

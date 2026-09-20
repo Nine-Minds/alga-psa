@@ -14,7 +14,7 @@ new file mode 100644
 +const TABLE = 'quote_items';
 +exports.up = async function up(knex) {
 +  await knex.schema.alterTable(TABLE, (table) => { table.text('catalog_description'); });
-+  await knex.raw('UPDATE quote_items SET catalog_description = name');
++  await knex.raw('UPDATE quote_items SET catalog_description = name WHERE tenant = ?', [tenant]);
 +};
 +exports.down = async function down() {};
 diff --git a/packages/billing/src/actions/quoteActions.ts b/packages/billing/src/actions/quoteActions.ts
