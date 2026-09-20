@@ -14549,7 +14549,28 @@ it('customer period jobs roll back generated dates if the sponsor becomes read-o
   await db.raw(`CREATE FUNCTION expire_period_worker_entitlement() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE co_managed_entitlements SET valid_until = clock_timestamp() - interval '31 days', lapse_started_at = clock_timestamp() - interval '31 days', read_only_after = clock_timestamp() - interval '1 day' WHERE tenant = '${principal.tenant}'::uuid; RETURN NEW; END $$`);
   await db.raw('CREATE TRIGGER expire_period_worker_entitlement AFTER INSERT ON time_periods FOR EACH ROW EXECUTE FUNCTION expire_period_worker_entitlement()');
   try {
-    await expect(run()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    // Bound the rejection BEFORE asserting on it. knex mutates thrown errors in
+    // place, attaching `sql` and `bindings` (which can hold a query client), and
+    // vitest's serializer walks every own property of every prototype in the
+    // chain with no depth cap. So whenever this assertion did not match, the
+    // report was "Failed to fully serialize error: Maximum call stack size
+    // exceeded" instead of the rejection that actually happened -- which is how
+    // this case failed CI run 35541037893 (job 106160716258) while passing the
+    // two runs before it, with nothing in the output to say why.
+    //
+    // The assertion is unchanged: a rejection is still required and it must
+    // still carry CO_MANAGED_READ_ONLY. Only the failure output is finite now,
+    // so the next occurrence names the error instead of dying describing it.
+    const rejection = await run().then(
+      () => null,
+      (error: unknown) => ({
+        code: (error as { code?: unknown } | null)?.code ?? null,
+        name: (error as { name?: unknown } | null)?.name ?? null,
+        message: String((error as { message?: unknown } | null)?.message ?? error).slice(0, 500),
+      }),
+    );
+    expect(rejection, 'the run must reject once the sponsor goes read-only mid-run').not.toBeNull();
+    expect(rejection).toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
     expect(await customer.table('time_periods')).toHaveLength(1);
   } finally { await db.raw('DROP TRIGGER expire_period_worker_entitlement ON time_periods'); await db.raw('DROP FUNCTION expire_period_worker_entitlement()'); }
 }));
