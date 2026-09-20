@@ -26,7 +26,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { evaluateCoManagedCompletion } from './lib/co-managed-completion.mjs';
+import { evaluateCoManagedCompletion, headOnlyRewritesItsOwnEvidence } from './lib/co-managed-completion.mjs';
 import { coManagedRequirementKeys } from './lib/co-managed-plan-ids.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -107,11 +107,29 @@ try {
   headRevision = null;
 }
 if (headRevision && manifest?.candidate && manifest.candidate !== headRevision) {
-  const reason = `manifest candidate ${manifest.candidate.slice(0, 10)} is not the current HEAD ${headRevision.slice(0, 10)}`;
-  verdict.blocking.humanReview.unshift(reason);
-  verdict.humanReviewReady = false;
-  verdict.blocking.production.unshift(reason);
-  verdict.productionReady = false;
+  // Tolerate exactly one case: HEAD is the commit that added this packet and
+  // touched nothing else. See headOnlyRewritesItsOwnEvidence.
+  let changed = null;
+  try {
+    changed = execFileSync('git', ['diff', '--name-only', `${manifest.candidate}..${headRevision}`],
+      { cwd: root, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  } catch {
+    changed = null;
+  }
+  const evidenceDir = manifestPath
+    ? path.relative(root, path.dirname(manifestPath)).split(path.sep).join('/')
+    : null;
+  if (!(changed && headOnlyRewritesItsOwnEvidence(changed, evidenceDir))) {
+    const detail = changed === null
+      ? 'could not diff the two revisions'
+      : `${changed.length} file(s) changed outside ${evidenceDir}`;
+    const reason = `manifest candidate ${manifest.candidate.slice(0, 10)} is not the current HEAD `
+      + `${headRevision.slice(0, 10)} (${detail})`;
+    verdict.blocking.humanReview.unshift(reason);
+    verdict.humanReviewReady = false;
+    verdict.blocking.production.unshift(reason);
+    verdict.productionReady = false;
+  }
 }
 
 if (arg('json') !== undefined || argv.includes('--json')) {

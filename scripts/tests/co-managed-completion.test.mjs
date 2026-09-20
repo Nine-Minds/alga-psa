@@ -4,6 +4,7 @@ import {
   EVIDENCE_TYPES,
   REQUIREMENT_STATUSES,
   evaluateCoManagedCompletion,
+  headOnlyRewritesItsOwnEvidence,
 } from '../lib/co-managed-completion.mjs';
 
 /**
@@ -315,4 +316,45 @@ test('the status vocabulary is the one the inventory uses', () => {
   assert.deepEqual(REQUIREMENT_STATUSES,
     ['missing-code', 'implemented-unverified', 'failed', 'blocked-external', 'verified']);
   assert.deepEqual(EVIDENCE_TYPES, ['automated', 'browser', 'database', 'simulator', 'external']);
+});
+
+
+/**
+ * The candidate-vs-HEAD exception. A manifest cannot name the commit that adds
+ * it, so generated-last it is one docs-only commit behind. The exception has to
+ * be narrow enough that real drift still blocks.
+ */
+const DIR = 'docs/evidence/co-managed-completion/81fe5d58c8';
+
+test('HEAD may rewrite only the packet under the candidate it describes', () => {
+  assert.equal(headOnlyRewritesItsOwnEvidence([
+    `${DIR}/manifest.json`, `${DIR}/inventory.json`, `${DIR}/inventory.md`,
+  ], DIR), true);
+});
+
+test('a single file touched outside that directory is real drift', () => {
+  for (const stray of [
+    'server/src/lib/productSurfaceRegistry.ts',
+    'docs/plans/2026-09-20-co-managed-it-completion/features.json',
+    'docs/evidence/co-managed-completion/README.md',
+    'docs/evidence/co-managed-completion/deadbeef00/manifest.json',
+    'packages/co-managed/src/sharedWorkIdentity.ts',
+  ]) {
+    assert.equal(
+      headOnlyRewritesItsOwnEvidence([`${DIR}/manifest.json`, stray], DIR), false,
+      `${stray} must count as drift`,
+    );
+  }
+});
+
+test('a prefix that merely looks similar does not count as inside', () => {
+  // `.../81fe5d58c8-old/x` must not satisfy a `.../81fe5d58c8` prefix.
+  assert.equal(headOnlyRewritesItsOwnEvidence([`${DIR}-old/manifest.json`], DIR), false);
+});
+
+test('an empty or unusable diff never grants the exception', () => {
+  assert.equal(headOnlyRewritesItsOwnEvidence([], DIR), false);
+  assert.equal(headOnlyRewritesItsOwnEvidence(null, DIR), false);
+  assert.equal(headOnlyRewritesItsOwnEvidence([`${DIR}/manifest.json`], ''), false);
+  assert.equal(headOnlyRewritesItsOwnEvidence([`${DIR}/manifest.json`], null), false);
 });

@@ -18,7 +18,7 @@
  *   node scripts/build-co-managed-inventory.mjs --out docs/evidence/co-managed-completion/<sha>
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -56,6 +56,7 @@ const EVIDENCE = {
     result: 'audit clean both directions; 66/70 files identical to origin/main and the 4 differences justified; '
       + '237 tests passed',
     artifact: 'base-reconciliation.md',
+    artifactNote: 'No separate raw log: this record is a diff/audit result, and the per-file justification table IS the artifact. The commands are re-runnable against origin/main 8120314513.',
     dependencyAnalysis: 'Carried forward. This evidence is about the merge commit itself -- that origin/main '
       + '8120314513 was taken without dropping content. Every commit after it is additive (co-managed source, '
       + 'tests, locale keys, docs) and none re-resolves that merge or touches the four contested billing/types '
@@ -69,6 +70,7 @@ const EVIDENCE = {
     result: '859 passed. Mutation checks: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page '
       + 'fails 2 of 7 provider cases; re-adding CoManagedFeatureBoundary to the route fails 1 of 7.',
     artifact: 'cf005-provider-setup.md',
+    artifactNote: 'Deterministic unit run; re-runnable in seconds by the command above. No log committed.',
   },
   'provider-route-browser': {
     type: 'browser',
@@ -83,7 +85,8 @@ const EVIDENCE = {
       + 'redirects to /msp/settings/integrations?category=providers. Re-walked at the round-2 candidate after '
       + 'the locale keys and the release-flag change: /msp/go/providers renders the workbench '
       + '(main innerText 1697 chars, #provider-credentials-selector present).',
-    artifact: 'cf005-provider-setup.md',
+    artifact: 'screenshots/cf005-co-managed-providers.png',
+    artifactNote: 'Screenshot plus the recorded DOM text in cf005-provider-setup.md. A screenshot corroborates; the DOM text and the regression are the durable claims.',
   },
   'release-flag-off-walk': {
     type: 'browser',
@@ -95,6 +98,7 @@ const EVIDENCE = {
       + 'MspLayoutClient wraps the whole shell in CoManagedWorkspaceBoundary for product_code co_managed. '
       + 'Restored afterwards and re-verified the route renders (1697 chars).',
     artifact: 'cf005-provider-setup.md',
+    artifactNote: 'Browser-measured innerText lengths, recorded inline. No raw log: the measurement is the result. Reproduce with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false.',
   },
   'admission-adapter-callsites': {
     type: 'automated',
@@ -104,6 +108,7 @@ const EVIDENCE = {
       + 'inboundEmailReply -> instanceof fails 1 of 8. The unrelated-infrastructure-error cases stay green under '
       + 'both, so the repair does not broaden quarantine.',
     artifact: 'cf002-requester-deferral.md',
+    artifactNote: 'Deterministic unit run; re-runnable in seconds. No log committed.',
   },
   'inbound-diagnostics-regression': {
     type: 'automated',
@@ -113,6 +118,7 @@ const EVIDENCE = {
     result: '10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the '
       + 'separately-compiled-copy case.',
     artifact: 'cf002-requester-deferral.md',
+    artifactNote: 'Deterministic unit run; re-runnable in seconds. No log committed.',
   },
   'requester-deferral-ci-failure': {
     type: 'automated',
@@ -121,7 +127,7 @@ const EVIDENCE = {
     result: 'FAILED. 1 failed / 2170 passed. "defers and rolls back requester email when a separately compiled '
       + 'admission adapter reports a lifecycle pause": expected defer, got retry, then '
       + '"Failed to fully serialize error: Maximum call stack size exceeded" in place of the original exception.',
-    artifact: 'cf002-requester-deferral.md',
+    artifact: 'raw-logs/ci-shard1-618019c3e3.txt',
   },
   'requester-deferral-control-run': {
     type: 'automated',
@@ -133,7 +139,8 @@ const EVIDENCE = {
       + '(1416/1416, 265s). Both arms pass, so the local shard cannot discriminate: the repair is NOT '
       + 'demonstrated to be the cause, and is not refuted either because the divergence never reproduces '
       + 'locally. The divergence lives in the CI environment.',
-    artifact: 'cf002-requester-deferral.md',
+    artifact: 'raw-logs/shard-control-arm.txt',
+    artifactCompare: 'raw-logs/shard-fixed-arm.txt',
   },
   'requester-deferral-local-pass': {
     type: 'automated',
@@ -143,7 +150,7 @@ const EVIDENCE = {
     result: '1416/1416 passed, including the failing case, with full intra-file shuffle at the CI seed. '
       + 'This establishes that the failure is NOT reproducible from this file alone; it needs the real shard. '
       + 'It does not establish that the defect is absent.',
-    artifact: 'cf002-requester-deferral.md',
+    artifact: 'raw-logs/shard-fixed-arm.txt',
     dependencyAnalysis: 'Carried forward as a NEGATIVE result only -- it records what does NOT reproduce the '
       + 'failure. It is attached to rows that stay `failed`, so it can never grant acceptance, and a later '
       + 'commit cannot make a non-reproduction into a reproduction.',
@@ -389,6 +396,17 @@ for (const row of rows) {
   }
   for (const item of row.evidence) {
     if (!item.command || !item.result) failures.push(`${row.key}: evidence ${item.id} is not a real record`);
+  }
+}
+// An artifact reference that does not resolve is worse than none: it reads as
+// corroboration a reviewer can open, and cannot be.
+for (const [id, item] of Object.entries(EVIDENCE)) {
+  if (!item.artifact) { failures.push(`evidence ${id}: no artifact reference`); continue; }
+  if (!existsSync(path.join(outDir, item.artifact))) {
+    failures.push(`evidence ${id}: artifact ${item.artifact} does not exist`);
+  }
+  if (item.artifactCompare && !existsSync(path.join(outDir, item.artifactCompare))) {
+    failures.push(`evidence ${id}: artifactCompare ${item.artifactCompare} does not exist`);
   }
 }
 const expected = EXPECTED_COUNTS;

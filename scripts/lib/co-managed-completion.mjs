@@ -125,6 +125,30 @@ function evidenceAppliesToCandidate(item, candidate) {
   return isNonEmptyString(item.dependencyAnalysis);
 }
 
+/**
+ * A manifest cannot record the SHA of the commit that adds it: the manifest is
+ * part of that commit's content. Generated last, it names the commit before it,
+ * so `manifest.candidate !== HEAD` by exactly one docs-only commit — and a
+ * blanket "candidate must equal HEAD" rule would make that blocker permanent and
+ * therefore meaningless.
+ *
+ * The narrow, checkable exception: HEAD may be ahead of the candidate **only**
+ * if every file changed between them lives inside the candidate's own evidence
+ * directory. A commit that rewrites the packet under the candidate it describes
+ * does not change what is being verified. One touched file anywhere else — any
+ * source, test, plan or other evidence directory — and the candidate really is
+ * stale.
+ *
+ * @param changedFiles repo-relative paths changed between candidate and HEAD
+ * @param evidenceDir  repo-relative evidence directory for this candidate
+ */
+export function headOnlyRewritesItsOwnEvidence(changedFiles, evidenceDir) {
+  if (!Array.isArray(changedFiles) || changedFiles.length === 0) return false;
+  if (typeof evidenceDir !== 'string' || evidenceDir.length === 0) return false;
+  const prefix = evidenceDir.endsWith('/') ? evidenceDir : `${evidenceDir}/`;
+  return changedFiles.every((file) => typeof file === 'string' && file.startsWith(prefix));
+}
+
 export function evaluateCoManagedCompletion(input) {
   const manifest = isPlainObject(input?.manifest) ? input.manifest : null;
   const expectedIds = input?.expectedRequirementIds;
