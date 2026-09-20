@@ -11,7 +11,6 @@ import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
 import { SmartSearchResults } from '@alga-psa/ui/components/SmartSearchResults';
-import { useSmartSearchAvailability } from '@alga-psa/ui/lib/smartSearch/useSmartSearchAvailability';
 import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
@@ -154,6 +153,8 @@ interface TicketingDashboardProps {
    */
   onNavigateAway?: () => void;
   allowSlaStatusFilter?: boolean;
+  /** Decided by the page's server component: every smart search gate passed for this caller. */
+  smartSearchAvailable?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
   /**
    * The resolved board→tenant→catalog view. Owned by the container so that
@@ -311,6 +312,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   canUpdateTickets = true,
   onNavigateAway,
   allowSlaStatusFilter = true,
+  smartSearchAvailable = false,
   useAlgaDeskQuickAddForm = false,
   viewPresentation,
   onViewPresentationChange,
@@ -425,7 +427,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // into Jev mode over the chip-filtered set. Deliberately not URL-mirrored so a
   // reload never spends tokens. `filtersKey` is the chip set captured at run time,
   // so a later chip change can offer a rerun instead of silently rerunning.
-  const { available: smartSearchAvailable } = useSmartSearchAvailability('ticket');
   const [smartSearch, setSmartSearch] = useState<{ active: boolean; query: string; runToken: number; filtersKey: string }>({
     active: false,
     query: '',

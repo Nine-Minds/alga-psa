@@ -7,8 +7,9 @@
  * The bucketed results panel is enterprise code; this wrapper loads it through
  * the edition-swapped `@enterprise` alias the same way the credentials panels
  * are loaded. In community edition the alias resolves to a stub that renders
- * nothing, and no page enters smart-search mode there anyway (see
- * useSmartSearchAvailability).
+ * nothing, and no page enters smart-search mode there anyway: each page's
+ * server component decides availability through the edition-swapped
+ * getSmartSearchAvailability action and passes it down as a prop.
  */
 
 import React from 'react';

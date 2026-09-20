@@ -12,7 +12,10 @@ describe('projects smart search wiring contract', () => {
   const source = read('./Projects.tsx');
 
   it('enters smart mode from Enter in the search box and from the Smart search button, gated on availability', () => {
-    expect(source).toContain("useSmartSearchAvailability('project')");
+    // The gate is evaluated in the server component and arrives as a prop.
+    expect(source).toContain('smartSearchAvailable?: boolean;');
+    expect(source).toContain('smartSearchAvailable = false }: ProjectsProps)');
+    expect(source).not.toContain('useSmartSearchAvailability');
     expect(source).toContain("if (e.key === 'Enter' && smartSearchAvailable && (activeFilters.searchQuery ?? '').trim().length > 0) {");
     expect(source).toContain("runSmartSearch(activeFilters.searchQuery ?? '');");
     expect(source).toContain('id="projects-smart-search-run"');

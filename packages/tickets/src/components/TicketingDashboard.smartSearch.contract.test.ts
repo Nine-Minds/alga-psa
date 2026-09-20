@@ -11,8 +11,12 @@ function read(relativePath: string): string {
 describe('ticketing dashboard smart search wiring contract', () => {
   const source = read('./TicketingDashboard.tsx');
 
-  it('enters smart mode from Enter in the search box and from the Smart search button, gated on availability', () => {
-    expect(source).toContain("useSmartSearchAvailability('ticket')");
+  it('enters smart mode from Enter in the search box and from the Smart search button, gated on availability decided by the page', () => {
+    // The gate is evaluated in the server component and arrives as a prop, so the
+    // affordance is right on first paint instead of appearing after a client probe.
+    expect(source).toContain('smartSearchAvailable?: boolean;');
+    expect(source).toContain('smartSearchAvailable = false,');
+    expect(source).not.toContain('useSmartSearchAvailability');
     expect(source).toContain("if (e.key === 'Enter' && smartSearchAvailable && searchQuery.trim().length > 0) {");
     expect(source).toContain('runSmartSearch(searchQuery);');
     expect(source).toContain('id={`${id}-smart-search-run`}');

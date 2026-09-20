@@ -30,7 +30,6 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { SmartSearchResults } from '@alga-psa/ui/components/SmartSearchResults';
-import { useSmartSearchAvailability } from '@alga-psa/ui/lib/smartSearch/useSmartSearchAvailability';
 import type { ProjectSmartSearchRowMetadata, ProjectSmartSearchScope } from '../lib/smartProjectSearch/types';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
@@ -145,6 +144,8 @@ interface ProjectsProps {
   initialFilters?: Partial<ProjectListFilters>;
   initialProjectTags?: Record<string, ITag[]>;
   initialAllUniqueTags?: ITag[];
+  /** Decided by the page's server component: every smart search gate passed for this caller. */
+  smartSearchAvailable?: boolean;
 }
 
 export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
@@ -155,7 +156,7 @@ export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
   pageSize: 10,
 };
 
-export default function Projects({ initialProjects, clients, initialFilters, initialProjectTags, initialAllUniqueTags }: ProjectsProps) {
+export default function Projects({ initialProjects, clients, initialFilters, initialProjectTags, initialAllUniqueTags, smartSearchAvailable = false }: ProjectsProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
@@ -178,7 +179,6 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
 
   // Smart search: Jev scores the chip-filtered projects against the typed text.
   // Local state only; it is never mirrored into the URL.
-  const { available: smartSearchAvailable } = useSmartSearchAvailability('project');
   const [smartSearch, setSmartSearch] = useState<{ active: boolean; query: string; runToken: number; scopeKey: string }>({
     active: false,
     query: '',
