@@ -5,7 +5,10 @@
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-const LIMITS = { body: 4000, excerptLines: 60, excerptChars: 2500, totalChars: 32000, symbols: 30, tables: 30, hunks: 8, files: 400 };
+// The description states intent; the diff is the evidence. Keep only the
+// opening of the body: later paragraphs tend to list tests, evidence and
+// examples, and on PR #3448 those names alone lifted unrelated suites to 0.5.
+const LIMITS = { body: 1200, excerptLines: 60, excerptChars: 2500, totalChars: 32000, symbols: 30, tables: 30, hunks: 8, files: 400 };
 
 const KINDS = [
   ['migration', /^(?:server|ee\/server)\/migrations\//],

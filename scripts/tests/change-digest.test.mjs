@@ -108,6 +108,9 @@ test('change context prefers the pull request event and falls back to the head c
   assert.deepEqual(digestChange({ files: diff }).files[0].symbols, ['a', 'b'], 'exported bindings and functions are symbols');
   const event = path.join(cwd, 'event.json');
   writeFileSync(event, JSON.stringify({ pull_request: { number: 7, title: 'PR title', body: 'PR body' } }));
+  const long = JSON.stringify({ pull_request: { number: 8, title: 'Long', body: 'intent. '.repeat(400) } });
+  writeFileSync(path.join(cwd, 'long.json'), long);
+  assert.equal(readChangeContext({ cwd, eventPath: path.join(cwd, 'long.json') }).body.length, 1200, 'only the opening of a long body is evidence of intent');
   assert.deepEqual(readChangeContext({ cwd, eventPath: event }), { title: 'PR title', body: 'PR body', number: 7, source: 'pull_request' });
   assert.deepEqual(readChangeContext({ cwd, eventPath: path.join(cwd, 'missing.json') }), { title: 'feat: change a', body: 'Longer body here.', number: null, source: 'commit' });
 });

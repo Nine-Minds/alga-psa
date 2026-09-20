@@ -13,7 +13,9 @@ const CHUNK = 40;
 export const BATCH_BUDGET_CHARS = 36_000 * 3.2;
 
 const SHARED_SETUP = 'Shared setup that nearly every test performs (creating a tenant, seeding an admin user, signing in) '
-  + 'is not overlap with the change. Judge the behavior the test actually asserts.';
+  + 'is not overlap with the change. Judge the behavior the test actually asserts. '
+  + 'The files in `change.files` are the evidence of what changed; `change.title` and `change.body` only state intent, '
+  + 'and a test or feature merely mentioned there is not thereby affected.';
 
 function suiteQuestion(key) {
   return {
