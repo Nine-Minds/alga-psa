@@ -335,6 +335,8 @@
     "deleteUploadedImages": "Supprimer des images",
     "keepUploadedImages": "Conserver les images",
     "bundledUpdate": "Mise à jour groupée",
+    "bundledUpdateFrom": "Mise à jour groupée de {{number}}",
+    "systemAuthor": "Système",
     "clientSuffix": " (Client)",
     "internalCommentTooltip": "Commentaire interne",
     "resolutionCommentTooltip": "Commentaire de résolution",

@@ -437,6 +437,15 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       scopedDb.tenantJoin(conversationsQuery, 'comments as parent', 'comments.parent_comment_id', 'parent.comment_id', {
         type: 'left', on: join => join.andOn('parent.thread_id', '=', 'ct.thread_id').andOn('parent.ticket_id', '=', 'comments.ticket_id'),
       });
+      // Read-time bundle provenance. Only the source comment id is selected:
+      // a bundle can span clients, so the portal must never learn (or be able
+      // to follow a link to) the master ticket.
+      scopedDb.tenantJoin(conversationsQuery, 'ticket_bundle_mirrors as bm', 'comments.comment_id', 'bm.child_comment_id', { type: 'left' });
+      // `visibleCommentsQuery` already restricts to published public roots with
+      // `commentAudienceSql(...) = 'requester'`, which requires thread, root and
+      // comment `is_internal` all FALSE. That subsumes the portal's
+      // "never receive MSP-internal notes" guarantee, so the explicit
+      // `comments.is_internal` / `ct.is_internal` filters are not repeated here.
       conversationsQuery.select([
         'comments.tenant', 'comments.comment_id', 'comments.ticket_id', 'comments.thread_id',
         'comments.user_id', 'comments.contact_id', 'comments.author_type',
@@ -444,6 +453,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         'comments.is_internal', 'comments.is_resolution', 'comments.is_system_generated',
         'comments.created_at', 'comments.updated_at', 'comments.deleted_at',
         'comments.publish_state', 'comments.published_at',
+        'bm.source_comment_id as bundle_mirror_source_comment_id',
       ]).select({
         // Retain tombstones and visible replies without exposing retained bodies
         // or identifiers of unpublished/private intermediate parents.
@@ -551,13 +561,23 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
 
+    const conversationsWithProvenance = (result.conversations as Array<Record<string, any>>).map((comment) => {
+      const { bundle_mirror_source_comment_id, ...commentRow } = comment;
+      return {
+        ...commentRow,
+        bundle_mirror_source: bundle_mirror_source_comment_id
+          ? { source_comment_id: bundle_mirror_source_comment_id }
+          : null,
+      };
+    });
+
     return {
       ...ticketWithoutCreatorType,
       ticket_origin: getTicketOrigin(result.ticket as any),
       entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
       updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
       closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
-      conversations: result.conversations,
+      conversations: conversationsWithProvenance,
       documents: result.documents,
       // Linked assets joined from asset_associations; the type is broadened on
       // the consumer side via a small augmentation since ITicketWithDetails

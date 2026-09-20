@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -227,5 +229,37 @@ describe('Ticket bundling client portal author resolution', () => {
     });
     expect(resolved.source).toBe('user');
     expect(resolved.displayName).toBe('Agent Sender');
+  });
+
+  it('exposes the source comment id but never the master identity in the portal payload', async () => {
+    mockCurrentUser = clientUser;
+    const result = await getClientTicketDetails(childId);
+
+    const mirrored = (result.conversations as any[]).find((c) => c.is_system_generated);
+    expect(mirrored).toBeTruthy();
+    expect(mirrored.bundle_mirror_source).toBeTruthy();
+    expect(mirrored.bundle_mirror_source.source_comment_id).toBeTruthy();
+    expect(mirrored.bundle_mirror_source.master_ticket_id).toBeUndefined();
+    expect(mirrored.bundle_mirror_source.master_ticket_number).toBeUndefined();
+    expect(mirrored).not.toHaveProperty('bundle_mirror_source_comment_id');
+  });
+
+  it('selects no master ticket columns when loading portal conversations', () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, '../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets.ts'),
+      'utf8'
+    );
+    const start = source.indexOf('const conversationsQuery = scopedDb.table(');
+    const end = source.indexOf('const [ticket, conversations, documents, users, linkedAssets]', start);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+
+    const section = source.slice(start, end);
+    expect(section).toContain("scopedDb.tenantJoin(conversationsQuery, 'ticket_bundle_mirrors as bm'");
+    expect(section).toContain("'bm.source_comment_id as bundle_mirror_source_comment_id'");
+    expect(section).not.toContain('tickets as mt');
+    expect(section).not.toContain('master_ticket_id');
+    expect(section).not.toContain('master_ticket_number');
   });
 });

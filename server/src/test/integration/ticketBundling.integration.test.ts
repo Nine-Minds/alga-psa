@@ -126,6 +126,7 @@ let getConsolidatedTicketData: any;
 let fetchTicketsWithPagination: any;
 let updateComment: any;
 let createComment: any;
+let findCommentsByTicketId: any;
 let saveTimeEntry: any;
 let TicketService: any;
 
@@ -179,7 +180,7 @@ describe('Ticket bundling integration', () => {
       '@alga-psa/tickets/actions/optimizedTicketActions'
     ));
 
-    ({ updateComment, createComment } = await import('@alga-psa/tickets/actions/comment-actions/commentActions'));
+    ({ updateComment, createComment, findCommentsByTicketId } = await import('@alga-psa/tickets/actions/comment-actions/commentActions'));
     ({ saveTimeEntry } = await import('@alga-psa/scheduling/actions/timeEntryActions'));
     ({ TicketService } = await import('server/src/lib/api/services/TicketService'));
 
@@ -636,6 +637,152 @@ describe('Ticket bundling integration', () => {
     });
     expect(resolvedViaContact.source).toBe('contact');
     expect(resolvedViaContact.displayName).toBe('Bundling Contact');
+  });
+
+  it('T008: consolidated child comments expose bundle provenance while staying unattributed', async () => {
+    const scopedDb = tenantDb(db, tenantId);
+    const clientA = await createClient(db, tenantId, `PRV ${uuidv4().slice(0, 6)}`);
+    const contactA = await createContact(db, tenantId, clientA, `prv-${uuidv4().slice(0, 6)}@example.com`);
+
+    const masterId = uuidv4();
+    const childId = uuidv4();
+    const masterNumber = `PRV-${uuidv4().slice(0, 6)}`;
+    await insertTicket(db, { tenant: tenantId, ticketId: masterId, ticketNumber: masterNumber, title: 'Provenance master', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+    await insertTicket(db, { tenant: tenantId, ticketId: childId, ticketNumber: `PRV-${uuidv4().slice(0, 6)}`, title: 'Provenance child', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+
+    await runWithTenant(tenantId, async () => {
+      await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'sync_updates' }, internalUser as any);
+    });
+
+    const sourceCommentId = uuidv4();
+    const sourceThreadId = uuidv4();
+    const note = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Authorless master update' }] }]);
+    await scopedDb.table('comment_threads').insert({
+      tenant: tenantId,
+      thread_id: sourceThreadId,
+      ticket_id: masterId,
+      project_task_id: null,
+      root_comment_id: sourceCommentId,
+      is_internal: false,
+      reply_count: 0,
+      last_activity_at: db.fn.now(),
+      created_at: db.fn.now(),
+      created_by: null,
+    });
+    await scopedDb.table('comments').insert({
+      tenant: tenantId,
+      comment_id: sourceCommentId,
+      thread_id: sourceThreadId,
+      ticket_id: masterId,
+      user_id: null,
+      contact_id: null,
+      author_type: 'unknown',
+      note,
+      markdown_content: 'Authorless master update',
+      is_internal: false,
+      is_resolution: false,
+      is_system_generated: true,
+      created_at: db.fn.now(),
+    });
+
+    const { mirrorCommentToChild } = await import('@alga-psa/tickets/actions/ticketBundleUtils');
+    let mirroredCommentId: string | null = null;
+    await db.transaction(async (trx) => {
+      mirroredCommentId = await mirrorCommentToChild(trx, tenantId, {
+        sourceComment: {
+          comment_id: sourceCommentId,
+          note,
+          markdown_content: 'Authorless master update',
+          user_id: null,
+          contact_id: null,
+          author_type: 'unknown',
+        },
+        childTicketId: childId,
+        isResolution: false,
+      });
+    });
+    expect(mirroredCommentId).toBeTruthy();
+
+    await insertResolutionComment(db, tenantId, childId, internalUser.user_id, {
+      isInternal: false,
+      isResolution: false,
+      note: 'Child-only note',
+    });
+
+    const childData = await runWithTenant(tenantId, async () =>
+      getConsolidatedTicketData(childId, internalUser as any)
+    );
+    const childComments = childData.comments as any[];
+    const mirrored = childComments.find((comment) => comment.comment_id === mirroredCommentId);
+    expect(mirrored).toBeTruthy();
+    expect(mirrored.bundle_mirror_source).toMatchObject({
+      source_comment_id: sourceCommentId,
+      master_ticket_id: masterId,
+      master_ticket_number: masterNumber,
+    });
+    expect(mirrored.user_id ?? null).toBeNull();
+    expect(mirrored.contact_id ?? null).toBeNull();
+
+    const plain = childComments.find((comment) => comment.note === 'Child-only note' || comment.note?.includes?.('Child-only note'));
+    expect(plain).toBeTruthy();
+    expect(plain.bundle_mirror_source).toBeNull();
+
+    // Every MSP refresh path (remote 'comments' update, post add/edit/delete)
+    // refetches through findCommentsByTicketId -> Comment.getAllbyTicketId, not
+    // through getConsolidatedTicketData. If the provenance join lived only in
+    // the consolidated loader, mirrors would silently flip to "System" with no
+    // chip after the first refetch. Assert the shared read layer returns the
+    // same shape.
+    const refreshedComments = await runWithTenant(tenantId, async () =>
+      findCommentsByTicketId(childId)
+    );
+    expect(Array.isArray(refreshedComments)).toBe(true);
+    const refreshedMirror = (refreshedComments as any[]).find((comment) => comment.comment_id === mirroredCommentId);
+    expect(refreshedMirror).toBeTruthy();
+    expect(refreshedMirror.bundle_mirror_source).toMatchObject({
+      source_comment_id: sourceCommentId,
+      master_ticket_id: masterId,
+      master_ticket_number: masterNumber,
+    });
+    const refreshedPlain = (refreshedComments as any[]).find((comment) => comment.comment_id !== mirroredCommentId && !comment.is_system_generated);
+    expect(refreshedPlain?.bundle_mirror_source ?? null).toBeNull();
+
+    const resolutionMasterId = uuidv4();
+    const resolutionChildId = uuidv4();
+    const resolutionMasterNumber = `PRV-${uuidv4().slice(0, 6)}`;
+    await insertTicket(db, { tenant: tenantId, ticketId: resolutionMasterId, ticketNumber: resolutionMasterNumber, title: 'Resolution master', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+    await insertTicket(db, { tenant: tenantId, ticketId: resolutionChildId, ticketNumber: `PRV-${uuidv4().slice(0, 6)}`, title: 'Resolution child', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+    await closeTicketRow(db, tenantId, resolutionMasterId, statusClosedId, internalUser.user_id);
+    const resolutionCommentId = await insertResolutionComment(db, tenantId, resolutionMasterId, internalUser.user_id, {
+      isInternal: false,
+      isResolution: true,
+      note: 'Authorless resolution',
+    });
+    await scopedDb.table('comments').where({ comment_id: resolutionCommentId }).update({
+      user_id: null,
+      contact_id: null,
+      author_type: 'unknown',
+    });
+
+    await runWithTenant(tenantId, () =>
+      addChildrenToBundleAction(
+        { masterTicketId: resolutionMasterId, childTicketIds: [resolutionChildId], onClosedMaster: 'apply_resolution' },
+        internalUser as any
+      )
+    );
+
+    const resolutionData = await runWithTenant(tenantId, async () =>
+      getConsolidatedTicketData(resolutionChildId, internalUser as any)
+    );
+    const resolutionMirror = (resolutionData.comments as any[]).find((comment) => comment.is_system_generated);
+    expect(resolutionMirror).toBeTruthy();
+    expect(resolutionMirror.bundle_mirror_source).toMatchObject({
+      source_comment_id: resolutionCommentId,
+      master_ticket_id: resolutionMasterId,
+      master_ticket_number: resolutionMasterNumber,
+    });
+    expect(resolutionMirror.user_id ?? null).toBeNull();
+    expect(resolutionMirror.contact_id ?? null).toBeNull();
   });
 
   it('reopen-on-reply can reopen the master when a client replies on a child', async () => {
