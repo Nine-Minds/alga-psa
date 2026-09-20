@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   completeMicrosoftEmailApplicationCreation,
   getMicrosoftEmailSetupSigningSecret,
@@ -105,7 +106,7 @@ async function respondToSetupWindow(input: {
 
 function genericFailure(code: MicrosoftEmailSetupErrorCode): Promise<NextResponse> {
   return respondToSetupWindow({
-    returnTo: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/msp/settings/integrations?category=providers`,
+    returnTo: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}${PROVIDER_SETUP_ENTRY_PATH}`,
     payload: failure(code),
   });
 }
