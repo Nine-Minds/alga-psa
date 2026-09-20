@@ -2213,7 +2213,8 @@ export async function calculatePreviewTax(
     charges: IBillingCharge[],
     clientId: string,
     cycleEnd: ISO8601String,
-    defaultTaxRegion: string
+    defaultTaxRegion: string,
+    currencyCode: string
 ): Promise<number> {
     const { getCurrentUserAsync } = await import('../lib/authHelpers');
     const currentUser = await getCurrentUserAsync();
@@ -2232,7 +2233,8 @@ export async function calculatePreviewTax(
                 charge.total,
                 cycleEnd,
                 charge.tax_region || defaultTaxRegion,
-                true // Assume preview doesn't apply discounts for tax calc? Check logic.
+                true,
+                currencyCode
             );
             totalTax += taxResult.taxAmount;
         }
@@ -2246,7 +2248,8 @@ export async function calculateChargeDetails(
     clientId: string,
     endDate: ISO8601String,
     taxService: TaxService,
-    defaultTaxRegion: string
+    defaultTaxRegion: string,
+    currencyCode: string
 ): Promise<{ netAmount: number; taxCalculationResult: ITaxCalculationResult }> {
     let netAmount: number;
 
@@ -2264,8 +2267,9 @@ export async function calculateChargeDetails(
             clientId,
             netAmount,
             endDate,
-            charge.tax_region || defaultTaxRegion
-            // Removed the 'applyDiscount' flag, assuming default behavior is correct here
+            charge.tax_region || defaultTaxRegion,
+            true,
+            currencyCode
         )
         : { taxAmount: 0, taxRate: 0 };
 

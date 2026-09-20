@@ -9165,6 +9165,43 @@
           "data"
         ]
       },
+      "ClientNotesResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "document": {
+                "description": "The linked notes document row, or null when the client has no notes."
+              },
+              "blockData": {
+                "description": "BlockNote block array for the notes body, or null."
+              },
+              "lastUpdated": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "ISO timestamp of the last notes update, or null."
+              }
+            },
+            "required": [
+              "lastUpdated"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClientNotesUpdateBody": {
+        "type": "object",
+        "properties": {
+          "blockData": {
+            "description": "Full BlockNote block array (or its JSON string). Replaces the existing notes document."
+          }
+        }
+      },
       "ContractLineIdParam": {
         "type": "object",
         "properties": {
@@ -12411,6 +12448,212 @@
           "frequency",
           "start_date",
           "invoice_template"
+        ]
+      },
+      "TaxRateListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "created_at",
+              "updated_at",
+              "region_code",
+              "tax_percentage",
+              "start_date",
+              "end_date",
+              "cap_amount",
+              "currency_code"
+            ],
+            "default": "created_at"
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          },
+          "search": {
+            "type": "string"
+          },
+          "created_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "is_active": {
+            "type": "string"
+          },
+          "region_code": {
+            "type": "string"
+          },
+          "effective_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ]
+          }
+        }
+      },
+      "TaxRateListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tax_rate_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "region_code": {
+                  "type": "string"
+                },
+                "tax_percentage": {
+                  "type": "number"
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "start_date": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  ]
+                },
+                "end_date": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "cap_amount": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Tax cap in currency_code minor units; null is uncapped, zero charges zero on supported calculation paths."
+                },
+                "currency_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "tenant": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_active": {
+                  "type": "boolean"
+                },
+                "is_composite": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "tax_rate_id",
+                "region_code",
+                "tax_percentage",
+                "cap_amount",
+                "currency_code",
+                "tenant"
+              ]
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "number"
+              },
+              "limit": {
+                "type": "number"
+              },
+              "total": {
+                "type": "number"
+              },
+              "totalPages": {
+                "type": "number"
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
         ]
       },
       "KbArticle": {
@@ -15666,6 +15909,12 @@
               "null"
             ]
           },
+          "client_portal_visible": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "tenant": {
             "type": "string",
             "format": "uuid"
@@ -15684,6 +15933,7 @@
           "display_itil_urgency",
           "default_assigned_to",
           "enable_live_ticket_timer",
+          "client_portal_visible",
           "tenant"
         ]
       },
@@ -15759,6 +16009,9 @@
           },
           "enable_live_ticket_timer": {
             "type": "boolean"
+          },
+          "client_portal_visible": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -15812,6 +16065,9 @@
             "type": "boolean"
           },
           "enable_live_ticket_timer": {
+            "type": "boolean"
+          },
+          "client_portal_visible": {
             "type": "boolean"
           }
         },
@@ -16888,6 +17144,13 @@
           },
           "rate": {
             "type": "number"
+          },
+          "effective_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Calendar date the price takes effect; the epoch when untagged."
           }
         },
         "required": [
@@ -17017,7 +17280,15 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ServicePrice"
-            }
+            },
+            "description": "Current price per currency (latest effective on or before today)."
+          },
+          "scheduled_prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServicePrice"
+            },
+            "description": "Future-dated prices that are not yet billed."
           }
         },
         "required": [
@@ -17119,6 +17390,13 @@
           },
           "rate": {
             "type": "number"
+          },
+          "effective_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Calendar date the price takes effect; the epoch when untagged."
           }
         },
         "required": [
@@ -17251,7 +17529,15 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProductPrice"
-            }
+            },
+            "description": "Current price per currency (latest effective on or before today)."
+          },
+          "scheduled_prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductPrice"
+            },
+            "description": "Future-dated prices that are not yet billed."
           }
         },
         "required": [
@@ -21577,6 +21863,11 @@
           "summary": {
             "type": "string"
           },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional link-out for the ticket; any URL accepted by the ticket create schema. Omit or supply a valid URL; null is rejected."
+          },
           "client_id": {
             "type": "string",
             "format": "uuid"
@@ -21592,6 +21883,21 @@
           "status_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "severity_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional severity reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected."
+          },
+          "urgency_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional urgency reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected."
+          },
+          "impact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional impact reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected."
           },
           "external_links": {
             "type": "array",
@@ -21832,6 +22138,16 @@
             "type": "string",
             "format": "uuid"
           },
+          "scheduled_publish_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Withhold this client-visible comment until this future instant (ISO 8601). Requires scheduled_publish_tz; not allowed with is_internal or when replying into an internal thread."
+          },
+          "scheduled_publish_tz": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "IANA time zone the author scheduled in, e.g. America/New_York."
+          },
           "suppressContactNotifications": {
             "type": "boolean",
             "description": "When true, suppresses customer-facing email and portal notifications for this operation."
@@ -21844,7 +22160,7 @@
         "required": [
           "comment_text"
         ],
-        "description": "Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history."
+        "description": "Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job."
       },
       "WorkV1CreateTagBody": {
         "type": "object",
@@ -24411,6 +24727,18 @@
             "type": "string",
             "format": "uuid"
           },
+          "status_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_closed": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Filter by status closure; 'false' also matches interactions with no status."
+          },
           "date_from": {
             "type": "string",
             "format": "date-time"
@@ -24986,6 +25314,71 @@
         "required": [
           "data"
         ]
+      },
+      "InteractionStatusListV1": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "status_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "is_closed": {
+                  "type": "boolean"
+                },
+                "is_default": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "order_number": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "status_id",
+                "name",
+                "is_closed",
+                "is_default",
+                "order_number"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "UpdateInteractionBodyV1": {
+        "type": "object",
+        "properties": {
+          "status_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 10000
+          }
+        }
       },
       "InteractionApiErrorV1": {
         "type": "object",
@@ -42269,6 +42662,337 @@
         }
       }
     },
+    "/api/v1/clients/{id}/notes": {
+      "get": {
+        "summary": "Get client notes",
+        "description": "Returns the BlockNote content of the client notes document (the rich-text notes shown on the client page), or null fields when no notes exist.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client notes content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientNotesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client id or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client notes failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update client notes",
+        "description": "Creates or replaces the BlockNote notes document linked to the client. Send the full block array; partial updates are not merged. Returns the document id.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientNotesUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notes saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "document_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "document_id"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client id or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client notes failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete client notes",
+        "description": "Unlinks the notes document from the client. Pass delete_document=true to also hard-delete the document and its block content.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "delete_document",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notes unlinked/deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client id or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client notes failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/contacts": {
       "get": {
         "summary": "List contacts",
@@ -51121,8 +51845,8 @@
     },
     "/api/v1/financial/tax/rates": {
       "get": {
-        "summary": "List financial tax rates (transaction list wiring)",
-        "description": "Route file currently maps to ApiFinancialController.list(), so the response is the generic financial transaction list rather than a tax-rate list.",
+        "summary": "List tax rates",
+        "description": "Returns tenant-scoped tax rates. cap_amount is a safe integer in currency_code minor units, or null for no cap; zero is intentional. A null currency applies to all invoice currencies, including unresolved legacy caps. Caps apply per rate contribution and per period segment, not to component-based composite calculations. Requires financial:read, billing:read and PSA product access. This route exposes GET only; no tax-rate mutation endpoints are added.",
         "tags": [
           "Financial"
         ],
@@ -51137,8 +51861,7 @@
           "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
           "x-rbac-resource": "financial",
           "x-rbac-action": "read",
-          "x-route-to-controller-mismatch": true,
-          "x-controller-method": "ApiFinancialController.list()"
+          "x-controller-method": "ApiFinancialController.listTaxRates()"
         },
         "x-alga-products": [
           "psa"
@@ -51162,7 +51885,18 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "region_code",
+                "tax_percentage",
+                "start_date",
+                "end_date",
+                "cap_amount",
+                "currency_code"
+              ],
+              "default": "created_at"
             },
             "required": false,
             "name": "sort",
@@ -51174,7 +51908,8 @@
               "enum": [
                 "asc",
                 "desc"
-              ]
+              ],
+              "default": "desc"
             },
             "required": false,
             "name": "order",
@@ -51190,7 +51925,8 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "required": false,
             "name": "created_from",
@@ -51198,7 +51934,8 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "required": false,
             "name": "created_to",
@@ -51206,7 +51943,8 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "required": false,
             "name": "updated_from",
@@ -51214,7 +51952,8 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "required": false,
             "name": "updated_to",
@@ -51222,20 +51961,10 @@
           },
           {
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             },
             "required": false,
-            "name": "client_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "invoice_id",
+            "name": "is_active",
             "in": "query"
           },
           {
@@ -51243,128 +51972,24 @@
               "type": "string"
             },
             "required": false,
-            "name": "type",
+            "name": "region_code",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "status",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_min",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_max",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
               ]
             },
             "required": false,
-            "name": "include_expired",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "expiring_soon",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_remaining",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_expiration",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "day",
-                "week",
-                "month"
-              ]
-            },
-            "required": false,
-            "name": "group_by",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "include_projections",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "as_of_date",
+            "name": "effective_date",
             "in": "query"
           }
         ],
@@ -51374,7 +51999,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiPaginated"
+                  "$ref": "#/components/schemas/TaxRateListResponse"
                 }
               }
             }
@@ -51400,7 +52025,7 @@
             }
           },
           "403": {
-            "description": "financial:read permission denied.",
+            "description": "financial:read, billing:read or PSA product access denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -90920,7 +91545,7 @@
       },
       "post": {
         "summary": "Create ticket bundle",
-        "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates.",
+        "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
         "tags": [
           "Work Management v1"
         ],
@@ -91139,7 +91764,7 @@
     "/api/v1/tickets/{id}/bundle/children": {
       "post": {
         "summary": "Add bundle children",
-        "description": "Adds child tickets to the existing bundle mastered by {id}.",
+        "description": "Adds child tickets to the existing bundle mastered by {id}. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
         "tags": [
           "Work Management v1"
         ],
@@ -96853,6 +97478,115 @@
         }
       }
     },
+    "/api/v1/tickets/{id}/comments/{commentId}/schedule": {
+      "delete": {
+        "summary": "Cancel a scheduled comment",
+        "description": "Cancels a comment that was created with scheduled_publish_at and has not published yet. The row is retained with publish_state=canceled (soft-deleted) and its publication job is removed. Returns 400 for comments that are not scheduled.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Comment UUID."
+            },
+            "required": true,
+            "description": "Comment UUID.",
+            "name": "commentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scheduled comment canceled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tickets/{id}/documents": {
       "get": {
         "summary": "List ticket documents",
@@ -98115,6 +98849,224 @@
           },
           "500": {
             "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/documents/{documentId}/thumbnail": {
+      "get": {
+        "summary": "Get a ticket document thumbnail image",
+        "description": "Serves the cached 200x200 cover-cropped JPEG thumbnail for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no thumbnail.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Document UUID."
+            },
+            "required": true,
+            "description": "Document UUID.",
+            "name": "documentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary thumbnail image (image/jpeg).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (ETag matched If-None-Match).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Document not found or has no thumbnail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/documents/{documentId}/preview": {
+      "get": {
+        "summary": "Get a ticket document preview image",
+        "description": "Serves the cached 800x600 fit-inside JPEG preview for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no preview.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Document UUID."
+            },
+            "required": true,
+            "description": "Document UUID.",
+            "name": "documentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary preview image (image/jpeg).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (ETag matched If-None-Match).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Document not found or has no preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -108905,6 +109857,29 @@
           {
             "schema": {
               "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "status_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter by status closure; 'false' also matches interactions with no status."
+            },
+            "required": false,
+            "description": "Filter by status closure; 'false' also matches interactions with no status.",
+            "name": "is_closed",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "format": "date-time"
             },
             "required": false,
@@ -109134,6 +110109,195 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InteractionSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or query parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interaction not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an interaction status or notes",
+        "description": "Closes/reopens an interaction (status_id must be an interaction status) or replaces its notes. Title and timing are not editable here because they also re-sync the linked calendar entry.",
+        "tags": [
+          "Interactions v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "interaction"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInteractionBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated interaction.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or query parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interaction not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interaction-statuses": {
+      "get": {
+        "summary": "List interaction statuses",
+        "description": "Tenant statuses of type interaction, in display order.",
+        "tags": [
+          "Interactions v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "interaction"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "responses": {
+          "200": {
+            "description": "Interaction statuses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionStatusListV1"
                 }
               }
             }

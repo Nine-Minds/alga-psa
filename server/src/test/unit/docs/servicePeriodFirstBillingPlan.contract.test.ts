@@ -260,6 +260,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/billing/recurringBillingRunActions.test.ts',
   'server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts',
   'server/src/test/unit/billing/recurringServicePeriodActions.test.ts',
+  // Tax-cap invoice regression coverage uses persisted service-period
+  // boundaries in recurring-charge fixtures; it landed after the snapshot.
+  'server/src/test/unit/billing/taxCapInvoiceCompute.test.ts',
+  'server/src/test/unit/billing/taxRateCaps.db.test.ts',
   'server/src/test/unit/billing/updateClientBillingSchedule.test.ts',
   // Credit draw-down policy suite (feature/credit-drawdown-policy-controls)
   // landed after the pass-0 snapshot and seeds invoice charges with persisted

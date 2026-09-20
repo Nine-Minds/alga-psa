@@ -102,7 +102,7 @@ describe('TaxService PostgreSQL rate selection', () => {
   it('persists cap_amount through the create and update actions', async () => {
     const saved = await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).first();
     const { tax_rate_id: omitted, ...data } = saved;
-    const created = await addTaxRate({ ...data, start_date: '2025-01-01', end_date: '2026-01-01', cap_amount: 1234 });
+    const created = await addTaxRate({ ...data, start_date: '2025-01-01', end_date: '2026-01-01', cap_amount: 1234, currency_code: 'USD' });
     expect(created).toHaveProperty('tax_rate_id');
     if (!('tax_rate_id' in created)) throw new Error('Expected a persisted tax rate');
     expect(Number(created.cap_amount)).toBe(1234);

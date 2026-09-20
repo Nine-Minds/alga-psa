@@ -508,6 +508,11 @@ export interface ITaxRate extends TenantEntity {
   description?: string;
   start_date: string;
   end_date?: string | null;
+  /** Explicit invoice currency, or null for a universal rate. */
+  currency_code?: string | null;
+  /** Safe integer tax cap in rate-currency minor units; null is uncapped, zero is intentional.
+   * Applied per rate contribution/per period segment, not to component-based composite totals. */
+  cap_amount?: number | null;
 }
 
 export interface IClientTaxRate extends TenantEntity {

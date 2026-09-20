@@ -59,6 +59,34 @@
     "deleteEntity": {
       "fallback": "questa aliquota fiscale",
       "withRegion": "{{regionName}} aliquota fiscale"
+    },
+    "cap": {
+      "title": "Limite d’imposta",
+      "label": "Limite d’imposta ({{currencyCode}})",
+      "currency": "Valuta dell’aliquota",
+      "universal": "Tutte le valute delle fatture",
+      "optional": "Facoltativo",
+      "noCap": "Nessun limite",
+      "clear": "Cancella limite d’imposta",
+      "hint": "Imposta massima di questa aliquota per ogni calcolo. Lasciare vuoto per non applicare limiti. Inserire 0 per non addebitare imposte nei calcoli che usano questo limite.",
+      "scopeTitle": "Come si applicano i limiti d’imposta",
+      "scope": "Un calcolo regionale limita il contributo di ogni aliquota prima di sommare le imposte, non il totale regionale. I calcoli per periodo applicano il limite a ogni aliquota in ciascun segmento di date; più segmenti possono superare insieme il limite. Una fattura può includere più calcoli. Non è un limite per fattura, cliente, progetto o intero periodo. I limiti di fatturazione dei progetti limitano gli importi fatturabili; i limiti d’imposta limitano l’imposta calcolata. I fornitori fiscali esterni usano la propria configurazione.",
+      "applicability": "Questa aliquota si applica solo alle fatture in {{currencyCode}}. Non verrà più selezionata per le altre valute.",
+      "composite": "Questo limite si applica quando l’aliquota contribuisce a un calcolo regionale. I calcoli basati sui componenti non applicano questo limite.",
+      "legacy": "Valuta non specificata · {{amount}} unità minime",
+      "legacyHelp": "Questo limite salvato si applica attualmente nelle unità minime della valuta di ciascuna fattura. Selezionare una valuta e confermare l’importo salvato oppure inserire un nuovo limite. Le altre modifiche mantengono il valore; è anche possibile cancellarlo senza scegliere una valuta.",
+      "resolve": "Usa l’importo salvato in unità minime di {{currencyCode}}",
+      "reenter": "Reinserire il limite nella nuova valuta prima di salvare.",
+      "example": "Esempio: {{amount}}; senza separatori delle migliaia.",
+      "errors": {
+        "negative": "Inserire un limite d’imposta pari o superiore a zero.",
+        "precision": "Il limite contiene più cifre decimali di quelle consentite dalla valuta.",
+        "invalid": "Inserire un importo con il separatore decimale dell’esempio, senza segni, separatori delle migliaia o simboli di valuta.",
+        "overflow": "Il limite supera l’importo massimo supportato.",
+        "currency": "Scegliere una valuta supportata prima di impostare un limite d’imposta.",
+        "reenter": "Reinserire il limite nella nuova valuta prima di salvare."
+      },
+      "compositeIndicator": "Solo calcoli regionali"
     }
   },
   "taxRateDetail": {

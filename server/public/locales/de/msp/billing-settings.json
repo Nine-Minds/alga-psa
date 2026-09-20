@@ -1293,7 +1293,10 @@
       "regionInvalid": "Die ausgewählte Steuerregion ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und wählen Sie eine andere Region.",
       "duplicate": "Für diese Region und diesen Zeitraum existiert bereits ein Steuersatz.",
       "missingField": "Erforderliches Steuersatzfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Steuersatzfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Steuersatzfeld fehlt: {{field}}.",
+      "capInvalid": "Die Steuerobergrenze muss eine nicht negative, sicher darstellbare ganze Zahl in kleinsten Währungseinheiten sein.",
+      "capCurrencyRequired": "Wählen Sie eine Währung, bevor Sie eine Steuerobergrenze festlegen oder ändern.",
+      "currencyInvalid": "Wählen Sie eine unterstützte Währung für den Steuersatz."
     },
     "tax": {
       "defaultRequiresActiveRate": "Konfigurieren Sie mindestens einen aktiven Steuersatz, bevor Sie Standard-Steuereinstellungen erstellen.",
