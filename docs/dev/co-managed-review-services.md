@@ -7,7 +7,7 @@ leftover unit is what produced the port-collision failures in earlier rounds.
 
 | Service | Port | cwd | Readiness |
 |---|---|---|---|
-| `dev-server` | 3374 | `<worktree>/server` | `3374` + `/auth/signin` |
+| `dev-server` | 3374 | `<worktree>/server` | `3374` + `/auth/msp/signin` |
 | `temporal-worker` | 8375 | `<worktree>/ee/temporal-workflows` | `8375` + `/health` |
 | `workflow-worker` | 4374 | `<worktree>/services/workflow-worker` | `4374` + `/health` |
 | `review-guide` | 8874 | `/home/robert/card-reviews/co-managed-it-3363` | `8874` + `/` |
@@ -45,7 +45,7 @@ RUN="$WORKTREE/scripts/dev/run-card-service.sh"
 alga-dev workflow-ensure-service --projectId=$PROJECT --name=dev-server \
   --cwd="$WORKTREE/server" \
   --command="CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 $RUN dev-server \
-    --health http://127.0.0.1:3374/auth/signin \
+    --health http://127.0.0.1:3374/auth/msp/signin \
     $WORKTREE/scripts/dev/run-co-managed-dev-server.sh --host 100.82.172.57 --port 3374"
 
 alga-dev workflow-ensure-service --projectId=$PROJECT --name=temporal-worker \
@@ -157,12 +157,76 @@ says "up".
 After every restart, verify with an actual HTTP status:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' --max-time 20 http://100.82.172.57:3374/auth/signin
-# expect 200 or 307
+curl -s -o /dev/null -w '%{http_code}\n' --max-time 20 http://100.82.172.57:3374/auth/msp/signin
+# expect 200
 ```
 
 That is also why each service above registers a `--readinessPath` and not just a
 port: the hub then probes the listener's HTTP response rather than the PTY.
+
+### …and neither is a redirect
+
+The path used to be `/auth/signin`, and that was not a readiness check either.
+`/auth/signin` never reaches the App Router — `proxy.ts` answers it with a 307 to
+the portal-specific sign-in — so it returns the same 307 whether the router can
+resolve anything or nothing.
+
+Human review blocker 6 is what that costs. The registered app was serving the
+root **"404 - Page Not Found"** for every `/msp` URL three or more segments deep
+— the co-managed shared task, ticket and project detail routes, but equally
+`/msp/projects/<id>/tasks/<taskId>`, `/msp/workflows/runs/<id>`,
+`/msp/time-entry/timesheet/<id>` and `/msp/settings/integrations/entra`. Shallower
+routes were fine. Throughout, `/auth/signin` answered 307, the port was bound,
+the supervisor's probe passed and the service record said live.
+
+`/auth/msp/signin` is the shallowest public URL that resolves a page three
+segments deep and renders it, so the probe fails when the router's deeper
+entries are missing.
+
+## When routes that exist render "404 - Page Not Found"
+
+The truncation above was **in the running Turbopack dev server's app route
+table, not in the tree**. Established by experiment on 2026-09-19:
+
+* Every one of those route files was present, tracked, and byte-identical to
+  working siblings; nothing was edited to fix it.
+* `.next/dev/server/app-paths-manifest.json` *listed* the missing routes, so the
+  entrypoints had been compiled — the router simply would not match them.
+* The one intervention that cleared it was making any change under
+  `server/src/app/**` (moving a directory out and straight back), which forces
+  Turbopack to re-derive the app route tree. Every route recovered at once.
+* It did not come back: not across a plain restart, not across a wiped `.next`
+  with a cold 11 GB Turbopack cache, and not across a restart deliberately
+  interrupted 77 s into a cold build (the shape of the restart that preceded it).
+* The structure itself is sound. A minimal Next 16.2.12 app reproducing this
+  tree — `@modal` slot with eight `(.)` interceptions, a `default.tsx`, a
+  `[...catchAll]`, a nested per-section `@modal`, routes up to five segments
+  deep — resolves every route in both `next dev` and a production `next build`.
+
+So it is a **dev-runtime defect, not a source defect**, and it is not
+deterministic — it could not be re-induced. Next 16.2 turns
+`turbopackFileSystemCacheForDev` on by default, which is the only component that
+can carry a route table across a restart, but that was not proven to be the
+carrier.
+
+If a route that exists renders the root 404:
+
+```bash
+# 1. Confirm it is the whole depth band, not one route. Any /msp URL three or
+#    more segments deep will show it; a two-segment one will not.
+#    (Needs a session cookie — /msp bounces at the proxy otherwise.)
+# 2. Force Turbopack to re-derive the route tree.
+touch server/src/app/msp/layout.tsx
+# 3. Re-probe. If it persists, stop the service and clear the dev cache:
+scripts/dev/run-card-service.sh dev-server --stop
+rm -rf server/.next
+alga-dev workflow-restart-service --projectId=$PROJECT --name=dev-server
+```
+
+`server/src/app/msp/co-management/sharedDetailRoutes.contract.test.ts` pins the
+*structural* half of this — that the URLs the co-managed surfaces emit resolve,
+through Next's own matcher, to the pages they name. It cannot see a dev server
+whose route table has gone stale; that is what the readiness path is for.
 
 ## When the whole stack dies at once
 
@@ -222,7 +286,7 @@ done
 # each chain must pass through the hub pid (460951 at time of writing)
 
 # 3. Real HTTP readiness, not a port check.
-curl -s -o /dev/null -w 'app %{http_code}\n'   http://100.82.172.57:3374/auth/signin
+curl -s -o /dev/null -w 'app %{http_code}\n'   http://100.82.172.57:3374/auth/msp/signin
 curl -s -o /dev/null -w 'temporal %{http_code}\n' http://127.0.0.1:8375/health
 curl -s -o /dev/null -w 'workflow %{http_code}\n' http://127.0.0.1:4374/health
 curl -s -o /dev/null -w 'guide %{http_code}\n'    http://100.82.172.57:8874/
@@ -241,7 +305,7 @@ npm run build --workspace=@alga-psa/<pkg>      # required for packages/storage:
                                                # from dist, which is gitignored
                                                # and CI-rebuilt
 alga-dev workflow-restart-service --projectId=$PROJECT --name=dev-server
-curl -s -o /dev/null -w '%{http_code}\n' http://100.82.172.57:3374/auth/signin
+curl -s -o /dev/null -w '%{http_code}\n' http://100.82.172.57:3374/auth/msp/signin
 ```
 
 Skipping the restart validates stale code; an earlier round got false 200s

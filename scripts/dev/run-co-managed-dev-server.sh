@@ -15,7 +15,7 @@
 #     --name=dev-server \
 #     --cwd=/home/robert/alga-copies/feature-co-managed-it/server \
 #     --command='../scripts/dev/run-co-managed-dev-server.sh' \
-#     --readinessPort=3374 --readinessPath=/auth/signin
+#     --readinessPort=3374 --readinessPath=/auth/msp/signin
 #
 # Usage: scripts/dev/run-co-managed-dev-server.sh [--host <addr>] [--port <n>]
 #   ADVERTISED_HOST  address a reviewer's browser uses (default: 100.82.172.57)
@@ -56,6 +56,25 @@ fi
 # repeatedly on this host even at 32GB. The workspace dists are prebuilt, so
 # invoke the entrypoint directly and skip nx entirely.
 
+# READINESS MUST RENDER A PAGE, NOT BOUNCE AT THE PROXY
+#
+# This service was registered with `/auth/signin` as its readiness and health
+# path. `/auth/signin` never reaches the App Router: proxy.ts answers it with a
+# 307 to the portal-specific sign-in. It answers that 307 whether or not the
+# router can resolve anything at all, which is how it certified a dev server as
+# healthy while every /msp route three or more segments deep rendered the root
+# "404 - Page Not Found" -- the state human review hit on the shared
+# project-task detail route, and the state in which the supervisor's probe, the
+# bound port and the process record all still looked correct. (The truncation
+# was in the running Turbopack dev server's app route table, not in the tree:
+# the same files, untouched, serve those routes before and after. See
+# docs/dev/co-managed-review-services.md.)
+#
+# `/auth/msp/signin` is the shallowest public URL that actually resolves a page
+# three segments deep and renders it, so a probe against it fails when the
+# router's deeper entries are missing instead of reporting a green port.
+READINESS_PATH=/auth/msp/signin
+
 # Next blocks /_next/* asset, HMR and RSC requests from unrecognised origins.
 # DEV_ALLOWED_ORIGINS feeds next.config.mjs's allowedDevOrigins, which asserts
 # at startup that it covers whatever HOST/NEXTAUTH_URL advertise.
@@ -93,7 +112,7 @@ echo "  entrypoint  : server/dev-server.ts (owns the upgrade event)"
 echo "  reviewer URL: $HOST"
 echo "  dev origins : $DEV_ALLOWED_ORIGINS"
 echo "  hocuspocus  : $NEXT_PUBLIC_HOCUSPOCUS_URL -> \${HOCUSPOCUS_HOST}:\${HOCUSPOCUS_PORT}"
-echo "  readiness   : curl -s -o /dev/null -w '%{http_code}' $HOST/auth/signin  # expect 200 or 307"
+echo "  readiness   : curl -s -o /dev/null -w '%{http_code}' $HOST$READINESS_PATH  # expect 200"
 echo
 
 # `.next` must be a real directory INSIDE the repo, and the guard below is
@@ -118,7 +137,7 @@ echo
 # nested dependency would break it again.
 #
 # What makes it worth a hard stop is that no probe catches it. The process is
-# healthy, the port is bound, `/auth/signin` answers a real HTTP status, and
+# healthy, the port is bound, `$READINESS_PATH` answers a real HTTP status, and
 # `/msp/dashboard` renders -- it is only the routes whose server actions touch
 # an externalised package that fail, and they fail as a 500 POST behind an
 # ordinary-looking "Unable to load tickets. Refresh to check your current
