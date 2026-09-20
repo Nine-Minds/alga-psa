@@ -102,13 +102,20 @@ export function SmartSearchResults<TScope, TRow extends object, TMetadata>({
   const [showUnlikely, setShowUnlikely] = useState(false);
   const [unscoredRows, setUnscoredRows] = useState<TRow[]>([]);
   const lastRunTokenRef = useRef<number | null>(null);
+  // The scope and query captured when the active run started. A later scope-prop
+  // change with an unchanged runToken is only the pages' current filters (the
+  // "Filters changed. Run again" prompt); it must never replace what this run is
+  // streaming or hydrating against.
+  const runScopeRef = useRef<TScope | null>(null);
 
-  // The page bumps runToken to start a search; each bump is one run.
+  // The page bumps runToken to start a search; each bump is one run, and only a
+  // bump may capture the scope and query the run uses.
   useEffect(() => {
     if (lastRunTokenRef.current === runToken) {
       return;
     }
     lastRunTokenRef.current = runToken;
+    runScopeRef.current = scope;
     setShowUnlikely(false);
     setUnscoredRows([]);
     run(scope, query);
@@ -117,7 +124,8 @@ export function SmartSearchResults<TScope, TRow extends object, TMetadata>({
   }, [runToken]);
 
   // Failed batches are hydrated once the stream has settled so the "could not
-  // be scored" section still shows every row the scope matched.
+  // be scored" section still shows every row the scope matched. Hydration uses
+  // the run's captured scope, not the current filters.
   const settled = state.status === 'done' || state.status === 'error' || state.status === 'cancelled';
   useEffect(() => {
     if (!settled || state.unscoredIds.length === 0) {
@@ -125,7 +133,7 @@ export function SmartSearchResults<TScope, TRow extends object, TMetadata>({
     }
     let cancelled = false;
     (async () => {
-      const result = await hydrateRows(scope, state.unscoredIds);
+      const result = await hydrateRows(runScopeRef.current ?? scope, state.unscoredIds);
       if (cancelled) {
         return;
       }

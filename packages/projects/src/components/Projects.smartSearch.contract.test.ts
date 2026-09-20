@@ -41,6 +41,24 @@ describe('projects smart search wiring contract', () => {
     expect(source).toContain('onRerun={rerunSmartSearch}');
   });
 
+  it('keeps the active run on its captured scope through chip changes', () => {
+    // The panel is handed the run's captured scope, so a chip change with an
+    // unchanged runToken only raises the rerun prompt and never replaces what
+    // the active run is scoring.
+    expect(source).toContain('scope={smartSearch.scope ?? smartSearchScope}');
+
+    const runStart = source.indexOf('const runSmartSearch = useCallback(');
+    const runEnd = source.indexOf('const exitSmartSearch', runStart);
+    const run = source.slice(runStart, runEnd);
+    expect(run).toContain('scope: smartSearchScope,');
+
+    const rerunStart = source.indexOf('const rerunSmartSearch = useCallback(');
+    const rerunEnd = source.indexOf('const exitSmartSearch', rerunStart);
+    const rerun = source.slice(rerunStart, rerunEnd);
+    expect(rerun).toContain('scope: smartSearchScope,');
+    expect(rerun).toContain('runToken: prev.runToken + 1,');
+  });
+
   it('replaces the paginated table with the results panel, sharing columns and hydrating through the by-id loader', () => {
     const regionStart = source.indexOf('<ShortcutActiveRegion id="projects-shortcut-region"');
     const regionEnd = source.indexOf('</ShortcutActiveRegion>', regionStart);

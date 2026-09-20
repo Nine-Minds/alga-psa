@@ -81,11 +81,11 @@ describe('ticketing dashboard smart search wiring contract', () => {
     expect(source).not.toMatch(/params\.set\(['"]smart/);
   });
 
-  it('select-all-matching uses the export filter assembly normally and the chip-only scope in smart mode', () => {
+  it('select-all-matching uses the export filter assembly normally and the active run scope in smart mode', () => {
     const start = source.indexOf('const handleSelectAllMatchingTickets = useCallback(');
     const end = source.indexOf('const handleBulkMoveBoardChange', start);
     const body = source.slice(start, end);
-    expect(body).toContain('selectAllMatchingScope(smartSearch.active, smartSearchFilters, exportFilters)');
+    expect(body).toContain('selectAllMatchingScope(smartSearch.active, smartSearch.scope ?? smartSearchFilters, exportFilters)');
     expect(body).toContain('getAllMatchingTicketIds(scope)');
     expect(body).toContain('selectAllMatchingFallbackIds(smartSearch.active, smartCandidateIds, selectableTicketIds)');
     expect(body).not.toContain('boardIds: selectedBoards');
@@ -94,6 +94,36 @@ describe('ticketing dashboard smart search wiring contract', () => {
     expect(body).toContain('const generation = smartSearchGenerationRef.current;');
     expect(body).toContain('await selectMatchingTickets({');
     expect(body).toContain('isCurrent: () => generation === smartSearchGenerationRef.current');
+  });
+
+  it('captures the scope at run start and keeps an explicit rerun as the only way to replace it', () => {
+    // The run record carries the captured scope alongside the captured chips key.
+    const runStart = source.indexOf('const runSmartSearch = useCallback(');
+    const runEnd = source.indexOf('const exitSmartSearch', runStart);
+    const run = source.slice(runStart, runEnd);
+    expect(run).toContain('filtersKey: smartSearchFiltersKey,');
+    expect(run).toContain('scope: smartSearchFilters,');
+    expect(run).toContain('beginSmartSearchRun(smartSearch.runToken + 1);');
+
+    const rerunStart = source.indexOf('const rerunSmartSearch = useCallback(');
+    const rerunEnd = source.indexOf('const exitSmartSearch', rerunStart);
+    const rerun = source.slice(rerunStart, rerunEnd);
+    expect(rerun).toContain('beginSmartSearchRun(smartSearch.runToken + 1);');
+    expect(rerun).toContain('clearSelection();');
+    expect(rerun).toContain('scope: smartSearchFilters,');
+
+    // The panel is handed the captured run scope, never the live chips, so a
+    // stale-filter change cannot replace what the active run is streaming.
+    expect(source).toContain('scope={smartSearch.scope ?? smartSearchFilters}');
+    // Printing also stays within the captured run scope.
+    expect(source).toContain('const scope = smartSearch.active ? smartSearch.scope ?? smartSearchFilters : exportFilters;');
+  });
+
+  it('keeps the smart search panel mounted through ordinary-list loading transitions', () => {
+    // Regression: changing a chip (e.g. a board tab) flipped isLoadingMore and
+    // replaced the whole body with a spinner, unmounting the panel so it
+    // remounted and re-ran its stream with the new scope ("Scored 1").
+    expect(source).toContain('{isLoadingMore && !smartSearch.active ? (');
   });
 
   it('resolves selected rows from streamed smart results, not only the paginated list', () => {

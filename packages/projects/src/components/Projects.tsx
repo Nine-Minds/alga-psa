@@ -178,12 +178,21 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   const [indexedSearchProjectIds, setIndexedSearchProjectIds] = useState<Set<string> | null>(null);
 
   // Smart search: Jev scores the chip-filtered projects against the typed text.
-  // Local state only; it is never mirrored into the URL.
-  const [smartSearch, setSmartSearch] = useState<{ active: boolean; query: string; runToken: number; scopeKey: string }>({
+  // Local state only; it is never mirrored into the URL. `scope` is the
+  // candidate set captured when the run started; the current chips may change
+  // and only raise the rerun prompt until an explicit rerun replaces it.
+  const [smartSearch, setSmartSearch] = useState<{
+    active: boolean;
+    query: string;
+    runToken: number;
+    scopeKey: string;
+    scope: ProjectSmartSearchScope | null;
+  }>({
     active: false,
     query: '',
     runToken: 0,
     scopeKey: '',
+    scope: null,
   });
 
   // Sync state when initialProjects changes (e.g., from router.refresh())
@@ -558,12 +567,23 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     if (!smartSearchAvailable || query.length === 0) {
       return;
     }
-    setSmartSearch((prev) => ({ active: true, query, runToken: prev.runToken + 1, scopeKey: smartSearchScopeKey }));
-  }, [smartSearchAvailable, smartSearchScopeKey]);
+    setSmartSearch((prev) => ({
+      active: true,
+      query,
+      runToken: prev.runToken + 1,
+      scopeKey: smartSearchScopeKey,
+      scope: smartSearchScope,
+    }));
+  }, [smartSearchAvailable, smartSearchScope, smartSearchScopeKey]);
 
   const rerunSmartSearch = useCallback(() => {
-    setSmartSearch((prev) => ({ ...prev, runToken: prev.runToken + 1, scopeKey: smartSearchScopeKey }));
-  }, [smartSearchScopeKey]);
+    setSmartSearch((prev) => ({
+      ...prev,
+      runToken: prev.runToken + 1,
+      scopeKey: smartSearchScopeKey,
+      scope: smartSearchScope,
+    }));
+  }, [smartSearchScope, smartSearchScopeKey]);
 
   const exitSmartSearch = useCallback(() => {
     setSmartSearch((prev) => (prev.active ? { ...prev, active: false } : prev));
@@ -1146,7 +1166,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               id="projects"
               entity="project"
               i18nNamespace="features/projects"
-              scope={smartSearchScope}
+              scope={smartSearch.scope ?? smartSearchScope}
               query={smartSearch.query}
               runToken={smartSearch.runToken}
               scopeStale={smartSearchScopeStale}

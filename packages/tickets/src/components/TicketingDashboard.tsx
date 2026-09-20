@@ -438,13 +438,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Smart search (enterprise): Enter or the Smart search button switches the box
   // into Jev mode over the chip-filtered set. Deliberately not URL-mirrored so a
-  // reload never spends tokens. `filtersKey` is the chip set captured at run time,
-  // so a later chip change can offer a rerun instead of silently rerunning.
-  const [smartSearch, setSmartSearch] = useState<{ active: boolean; query: string; runToken: number; filtersKey: string }>({
+  // reload never spends tokens. `scope` is the candidate set captured when the
+  // run started and is the only scope the active run ever enumerates, hydrates,
+  // prints, or selects over; `filtersKey` is the same chip set as a string, so a
+  // later chip change can offer a rerun instead of silently rerunning.
+  const [smartSearch, setSmartSearch] = useState<{
+    active: boolean;
+    query: string;
+    runToken: number;
+    filtersKey: string;
+    scope: ITicketListFilters | null;
+  }>({
     active: false,
     query: '',
     runToken: 0,
     filtersKey: '',
+    scope: null,
   });
 
   // Rows the current smart search run has streamed, keyed by id. The ordinary
@@ -1170,16 +1179,28 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       lastEmittedSearchRef.current = '';
       onFilterChange({ searchQuery: '' });
     }
-    setSmartSearch(() => ({ active: true, query, runToken: smartSearch.runToken + 1, filtersKey: smartSearchFiltersKey }));
-  }, [smartSearchAvailable, smartSearch.runToken, beginSmartSearchRun, clearSelection, filterValues.searchQuery, onFilterChange, smartSearchFiltersKey]);
+    setSmartSearch(() => ({
+      active: true,
+      query,
+      runToken: smartSearch.runToken + 1,
+      filtersKey: smartSearchFiltersKey,
+      scope: smartSearchFilters,
+    }));
+  }, [smartSearchAvailable, smartSearch.runToken, beginSmartSearchRun, clearSelection, filterValues.searchQuery, onFilterChange, smartSearchFilters, smartSearchFiltersKey]);
 
   const rerunSmartSearch = useCallback(() => {
-    // A rerun scores a different candidate set, so the previous selections are
-    // no longer actionable; clear them with the old rows.
+    // A rerun captures the latest chips and scores that different candidate set,
+    // so the previous selections and streamed rows are no longer actionable;
+    // clear them with the old rows.
     beginSmartSearchRun(smartSearch.runToken + 1);
     clearSelection();
-    setSmartSearch((prev) => ({ ...prev, runToken: prev.runToken + 1, filtersKey: smartSearchFiltersKey }));
-  }, [smartSearch.runToken, beginSmartSearchRun, clearSelection, smartSearchFiltersKey]);
+    setSmartSearch((prev) => ({
+      ...prev,
+      runToken: prev.runToken + 1,
+      filtersKey: smartSearchFiltersKey,
+      scope: smartSearchFilters,
+    }));
+  }, [smartSearch.runToken, beginSmartSearchRun, clearSelection, smartSearchFilters, smartSearchFiltersKey]);
 
   const exitSmartSearch = useCallback(() => {
     smartSearchGenerationRef.current += 1;
@@ -1240,10 +1261,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [smartSearch.active, searchQuery, exitSmartSearch]);
 
   const handleSelectAllMatchingTickets = useCallback(async () => {
-    // Smart mode's candidate set is the chips alone; the typed text is the Jev
-    // query, so enumerating the export filters would keep the keyword narrowing
-    // and select far fewer tickets than the panel is scoring.
-    const scope = selectAllMatchingScope(smartSearch.active, smartSearchFilters, exportFilters);
+    // Smart mode's candidate set is the scope captured when the active run
+    // started; the typed text is the Jev query, so enumerating the export
+    // filters would keep the keyword narrowing and select far fewer tickets.
+    // The current chips are deliberately not used here: they may have changed
+    // while the run is still showing (the rerun prompt is up), and enumerating
+    // them would enumerate a set the panel never scored.
+    const scope = selectAllMatchingScope(smartSearch.active, smartSearch.scope ?? smartSearchFilters, exportFilters);
     const fallbackIds = selectAllMatchingFallbackIds(smartSearch.active, smartCandidateIds, selectableTicketIds);
     const generation = smartSearchGenerationRef.current;
     await selectMatchingTickets({
@@ -1268,6 +1292,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [
     smartSearch.active,
+    smartSearch.scope,
     smartSearchFilters,
     exportFilters,
     smartCandidateIds,
@@ -2008,7 +2033,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   } = usePrintColumnSelection('print-columns:tickets-list', printColumns);
 
   const preparePrintTickets = useCallback(async () => {
-    const scope = smartSearch.active ? smartSearchFilters : exportFilters;
+    // An active run prints the candidate set captured at run start, not the
+    // current chips, so a stale-filter prompt cannot change what is printed.
+    const scope = smartSearch.active ? smartSearch.scope ?? smartSearchFilters : exportFilters;
 
     if (hasSelection && !allMatchingMode) {
       // Rows the ordinary list does not hold (streamed smart results, or an
@@ -2077,6 +2104,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedTicketIds,
     selectedTicketIdsArray,
     smartSearch.active,
+    smartSearch.scope,
     smartSearchFilters,
     smartSearchRows,
     totalCount,
@@ -2713,8 +2741,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </div>
 
         <div className={densityClasses.bodyPadding}>
-        {/* isLoadingMore prop now correctly reflects loading state from container for pagination or filter changes */}
-        {isLoadingMore ? (
+        {/* The smart search panel owns its run: an ordinary-list refresh (a chip
+            change, pagination, or a background fetch) must not unmount it, or it
+            would restart its stream over whatever scope it remounts with. Only
+            the ordinary table gets replaced by the loading spinner. */}
+        {isLoadingMore && !smartSearch.active ? (
           <Spinner size="md" className="h-32 w-full" />
         ) : (
           <>
@@ -2769,7 +2800,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   id={id}
                   entity="ticket"
                   i18nNamespace="features/tickets"
-                  scope={smartSearchFilters}
+                  scope={smartSearch.scope ?? smartSearchFilters}
                   query={smartSearch.query}
                   runToken={smartSearch.runToken}
                   scopeStale={smartSearchFiltersStale}

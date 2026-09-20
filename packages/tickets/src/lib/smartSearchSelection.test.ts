@@ -144,6 +144,15 @@ describe('smart search selection', () => {
     expect(selectAllMatchingScope(true, smartFilters, exportFilters)).toBe(smartFilters);
   });
 
+  it('enumerates the captured run scope while the current chips are stale', () => {
+    // The run scored All tickets; the user has since clicked another board tab,
+    // so current filters differ. Select-all must stay inside the run's scope.
+    const capturedScope = { boardIds: undefined, searchQuery: '' } as ITicketListFilters;
+    const staleCurrentChips = { boardIds: ['projects-board'], searchQuery: '' } as ITicketListFilters;
+
+    expect(selectAllMatchingScope(true, capturedScope, staleCurrentChips)).toBe(capturedScope);
+  });
+
   it('retains the full chip-filtered candidate set for a semantic query with zero keyword matches', () => {
     // The Jev query matches no ticket by keyword; the candidate set is the chips.
     const chipFilteredIds = ['t1', 't2', 't3', 't4', 't5'];

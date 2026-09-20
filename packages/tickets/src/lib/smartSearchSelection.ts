@@ -174,9 +174,10 @@ export function buildSelectedTicketDetails(
 
 /**
  * The scope "select all matching" enumerates. In smart mode the candidate set is
- * the chip filters alone; the typed text is the Jev query, never a keyword
- * filter, so passing the export filters would keep the keyword narrowing and
- * select far fewer tickets.
+ * the scope captured when the active run started — never the current chips,
+ * which may have changed while only the "run again" prompt is showing — and the
+ * typed text is the Jev query, never a keyword filter, so passing the export
+ * filters would keep the keyword narrowing and select far fewer tickets.
  */
 export function selectAllMatchingScope(
   smartSearchActive: boolean,
