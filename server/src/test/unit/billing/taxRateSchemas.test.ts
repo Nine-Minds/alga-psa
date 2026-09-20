@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createTaxRateSchema, updateTaxRateSchema, taxRateResponseSchema,
   taxRateAdvancedSchema, taxRateListQuerySchema,
-} from '../../../../server/src/lib/api/schemas/financialSchemas';
+} from '../../../lib/api/schemas/financialSchemas';
 
 const tenant = 'f90a2f58-f5ca-439a-b5b6-2811fa877ef9';
 const base = { tenant, region_code: 'TEST', tax_percentage: 10, start_date: '2026-01-01' };

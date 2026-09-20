@@ -19,21 +19,21 @@ vi.mock('@shared/services/productAccessGuard', () => {
   class ProductAccessError extends Error {}
   return { ProductAccessError, assertPsaOnlyTenantAccess: async () => { if (context.productDenied) throw new ProductAccessError(); } };
 });
-vi.mock('../../../../server/src/lib/auth/rbac', () => ({ hasPermission: async (_user: unknown, resource: string, operation: string) => context.denied !== operation && context.denied !== resource }));
-vi.mock('../../../../server/src/lib/db/db', async importOriginal => ({
-  ...await importOriginal<typeof import('../../../../server/src/lib/db/db')>(),
+vi.mock('../../../lib/auth/rbac', () => ({ hasPermission: async (_user: unknown, resource: string, operation: string) => context.denied !== operation && context.denied !== resource }));
+vi.mock('../../../lib/db/db', async importOriginal => ({
+  ...await importOriginal<typeof import('../../../lib/db/db')>(),
   getConnection: async () => context.db,
 }));
-import { GET } from '../../../../server/src/app/api/v1/financial/tax/rates/route';
-import { ApiFinancialController } from '../../../../server/src/lib/api/controllers/ApiFinancialController';
-import { UnauthorizedError } from '../../../../server/src/lib/api/middleware/apiMiddleware';
-import { FinancialService } from '../../../../server/src/lib/api/services/FinancialService';
-import { taxRateListQuerySchema } from '../../../../server/src/lib/api/schemas/financialSchemas';
-import { addTaxRate, updateTaxRate, getTaxRates, getTaxRatePermissions } from '../../src/actions/taxRateActions';
-import { TaxService } from '../../src/services/taxService';
-import { BillingEngine } from '../../src/lib/billing/billingEngine';
-import { computeRecurringQuantityCharges } from '../../src/lib/billing/compute/computeRecurringQuantityCharges';
-import { createTaxCapDraft, taxCapPayload } from '../../src/components/billing-dashboard/taxCapForm';
+import { GET } from '../../../app/api/v1/financial/tax/rates/route';
+import { ApiFinancialController } from '../../../lib/api/controllers/ApiFinancialController';
+import { UnauthorizedError } from '../../../lib/api/middleware/apiMiddleware';
+import { FinancialService } from '../../../lib/api/services/FinancialService';
+import { taxRateListQuerySchema } from '../../../lib/api/schemas/financialSchemas';
+import { addTaxRate, updateTaxRate, getTaxRates, getTaxRatePermissions } from '@alga-psa/billing/actions/taxRateActions';
+import { TaxService } from '@alga-psa/billing/services/taxService';
+import { BillingEngine } from '@alga-psa/billing/lib/billing/billingEngine';
+import { computeRecurringQuantityCharges } from '@alga-psa/billing/lib/billing/compute/computeRecurringQuantityCharges';
+import { createTaxCapDraft, taxCapPayload } from '@alga-psa/billing/components/billing-dashboard/taxCapForm';
 
 let db: Knex;
 let foreignTenant: string;
@@ -279,7 +279,7 @@ describe('T018: recurring draft preview and persisted tax cap', () => {
         .where({ 'user.user_type': 'internal', 'service.billing_method': 'hourly' }).select('user.*').first();
       if (!fixtureUser) throw new Error('The migrated test DB must seed a tenant with an internal user and hourly service.');
       context.user = fixtureUser; context.tenant = fixtureUser.tenant;
-      const { createInvoiceTicketSourceFixture } = await import('../../../../server/test-utils/invoiceTicketProductionFixtures');
+      const { createInvoiceTicketSourceFixture } = await import('../../../../test-utils/invoiceTicketProductionFixtures');
       const ids = await createInvoiceTicketSourceFixture(context.db!, { tenant: context.tenant, userId: fixtureUser.user_id }, async ids => {
         const tx = context.db!;
         // One 100.00 hourly charge, no usage or overtime. Keep the client's
@@ -306,9 +306,9 @@ describe('T018: recurring draft preview and persisted tax cap', () => {
         expect(await updateTaxRate({ tax_rate_id: ids.taxRateId, ...taxCapPayload(draft, 'en', false) } as any))
           .toMatchObject({ cap_amount: cap, currency_code: 'GBP' });
       }, { materializeServicePeriods: false });
-      const { syncRecurringServicePeriodsForContractLine } = await import('../../src/actions/recurringServicePeriodSync');
+      const { syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync');
       await syncRecurringServicePeriodsForContractLine(context.db!, { tenant: context.tenant, contractLineId: ids.lineId, sourceRunPrefix: 'tax-cap-invoice-test' });
-      const { previewInvoice, generateInvoice } = await import('../../src/actions/invoiceGeneration');
+      const { previewInvoice, generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
       const preview = await previewInvoice(ids.cycleId);
       expect(preview.success, JSON.stringify(preview)).toBe(true);
       const generated: any = await generateInvoice(ids.cycleId);
