@@ -83,8 +83,12 @@ Real dev app `http://100.82.172.57:3374`, signed in as `cm.rabbit.admin@whiterab
 PSA unchanged, verified in the same browser as `cm.msp.admin@oz.test` (`product_code: "psa"`):
 `/msp/go/providers` → `/msp/settings/integrations?category=providers`, title "Integrations".
 
-Screenshot: `/tmp/ghostty-pane-ide/screenshots/cf005-co-managed-providers.png` (ephemeral path; the
-durable claim is the DOM text recorded above).
+Screenshot: `screenshots/cf005-co-managed-providers.png`, committed alongside this document. It
+shows the page as tenant `51ac6952-6d6f-4600-aace-b71a9b2a5e73`: "Email and identity providers",
+"Back to Email settings", the Google/Microsoft selector, and the Microsoft panel with "New app
+registration", "Microsoft Entra", "Reconnect Microsoft services" and the per-service app mapping.
+A screenshot is corroboration, not proof — the durable claims are the recorded DOM text above and
+the regression below.
 
 ## Regression and mutation proof
 
