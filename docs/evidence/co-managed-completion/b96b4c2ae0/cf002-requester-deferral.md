@@ -33,7 +33,7 @@ standing in for what a dist-compiled worker adapter throws. It asserts
 | 1 | The single case, standalone, `VITEST_SEED=20260610`, CE+EE overlay, `DB_NAME_SERVER=server_co_managed` | **passed** |
 | 2 | The whole `coManagedBootstrap.integration.test.ts` file at the same seed, full intra-file shuffle | **1416/1416 passed** |
 | 3 | "Real shard" with `INTEGRATION_SHARD_TOTAL=1`, `TIER1_BASE_SHA=<merge base>` — **312 files** | bootstrap suite **passed**; see below, this was not the failing shard |
-| 4 | Faithful shard: `INTEGRATION_SHARD_TOTAL=4`, `INTEGRATION_SHARD_INDEX=1`, `TIER1_BASE_SHA=''` — **78 files** | in flight at the end of this round |
+| 4 | Faithful shard: `INTEGRATION_SHARD_TOTAL=4`, `INTEGRATION_SHARD_INDEX=1`, `TIER1_BASE_SHA=''` — **78 files** | bootstrap suite **1416/1416 passed** (265s); see "What attempt 4 does and does not establish" |
 
 Attempts 1 and 2 rule out intra-file ordering and the migration overlay. The documented harness
 rules were followed throughout: the CE+EE overlay was built from `server/migrations` +
@@ -83,6 +83,41 @@ docker run -d --name cm-greenmail -p 33025:3025 -p 38080:8080 \
   -e GREENMAIL_OPTS='-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled' \
   greenmail/standalone:2.1.8
 ```
+
+### What attempt 4 does and does not establish
+
+The faithful shard executed `coManagedBootstrap.integration.test.ts` and it **passed, 1416/1416, in
+265 seconds**, with the case under test among them:
+
+```
+ ✓ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1416 tests) 265509ms 857 MB heap used
+```
+
+Checked, because a green line is not enough here:
+
+- **It executed; it was not skipped.** Zero `↓ defers and rolls back requester email …` skip markers
+  and zero `skipped` in the file's summary. Contrast the discarded first faithful attempt, which
+  reported `1416 tests | 1416 skipped` because an interrupted predecessor had left `test_database`
+  dropped — a green-looking file that ran nothing.
+- **Zero `[inbound-email-diagnostic]` lines is expected, not suspicious.** `server/vitest.config.ts`
+  sets `silent: 'passed-only'`, so console output is retained only for failing tests. The
+  diagnostics are designed to surface exactly when the case fails, which is what the next CI shard-1
+  log will show if it still diverges.
+
+**What this does establish:** the "original-shard pass at seed 20260610" the exit criteria ask for,
+at the correct composition, with the case genuinely executed.
+
+**What this does NOT establish — and this is the important half:** that the fix caused it. No
+**control run** was made. The same 78-file shard was never run with `isCoManagedSharedWorkError`
+reverted to `instanceof`, so a pass here is equally consistent with:
+
+- the duck-typing repair having fixed a real, CI-only manifestation; or
+- the divergence being specific to the GitHub runner — timing, or the `packages/co-managed` dist that
+  `npm ci` produces there versus the explicit `npx tsup` build here — in which case this shard would
+  have passed before the fix too.
+
+CF002-CF004 therefore stay **`failed`** in the inventory. Until the control run distinguishes those
+two, the causal claim is unproven, and the authoritative signal is mandatory CI at the new head.
 
 One more trap, learned the hard way: **do not kill a running shard and immediately start another.**
 `createTestDbConnection` drops and recreates `test_database`, so an interrupted run leaves it absent
@@ -183,9 +218,11 @@ resolves carries the duck-typed predicate (`dist/chunk-HLLCNPFH.js:31`).
 
 ## What is next
 
-0. Finish the faithful shard (attempt 4) and, whatever it says, run it once more with
-   `isCoManagedSharedWorkError` reverted to `instanceof`. Without that control the shard result
-   cannot be attributed to the fix in either direction.
+0. **Run the control.** Attempt 4 passed; rerun that exact 78-file shard with
+   `isCoManagedSharedWorkError` reverted to `instanceof`. If it fails, the repair is the cause and
+   CF003 can move. If it also passes, the divergence is CI-environment-specific and the diagnostics
+   in the CI log are the only way forward. Nothing else about CF002-CF004 should be attempted before
+   this, because every other reading depends on which of those two it is.
 1. Read the `[inbound-email-diagnostic]` lines from the next CI shard-1 log. The `rollback` and
    `lifecycle_classification` stages name the first exception and say precisely which contract field
    declined. `admission.sharedWorkConstructorMatched: false` would confirm the dual-constructor
