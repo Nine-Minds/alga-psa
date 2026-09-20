@@ -68,23 +68,55 @@ export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inp
   });
 }
 
-/** Worker-only delivery adapter. Retaining the invitation lock through send and
- * acknowledgment prevents an old send from acknowledging a replacement token. */
+/** Worker-only delivery adapter. The send must not run inside the retaining
+ * transaction. Retaining takes `FOR UPDATE` on the customer `tenants` row (seat
+ * scope admission), while the mail path writes `email_sending_logs` on its own
+ * pooled connection, and that insert's foreign key needs `KEY SHARE` on the same
+ * row. Each then waits on the other, and Postgres cannot break the cycle because
+ * the retaining side is idle in transaction waiting on its client rather than
+ * blocked on a lock: the send never returns, the activity burns its timeout, and
+ * its retry sends the mail a second time.
+ *
+ * The token identity that holding the lock used to protect is enforced by
+ * comparison instead. Phase one retains the invitation and reads the exact token;
+ * the send runs with no transaction open; phase three re-reads the invitation
+ * under its own short lock and acknowledges only if the stored token is still the
+ * one that was sent. An old send meeting a replacement token finds them
+ * different and drops its acknowledgment -- success and failure alike, since
+ * neither describes the token now outstanding. */
 export async function deliverCoManagedInitialAdministratorInvitation(db: Knex, sponsorTenant: string, operationId: string,
   send: (input: { customerTenant: string; workspaceName: string; administratorName: string; email: string; token: string }) => Promise<boolean>): Promise<void> {
-  const sent = await db.transaction(async trx => {
+  const prepared = await db.transaction(async trx => {
     const context = await retainInvitation(trx, sponsorTenant, operationId);
-    if (!context || context.operation.invitation_sent_at) return true;
+    if (!context || context.operation.invitation_sent_at) return null;
     await assertInvitationCapacity(trx, context);
     await context.customer.table('user_invitations').where('invitation_id', context.invitation.invitation_id)
       .update({ expires_at: trx.raw("now() + interval '24 hours'") });
-    const delivered = await send({ customerTenant: context.operation.customer_tenant, workspaceName: context.operation.request.workspaceName,
-      administratorName: `${context.invitation.first_name} ${context.invitation.last_name}`, email: context.invitation.email, token: context.invitation.token });
+    return { customerTenant: context.operation.customer_tenant as string, workspaceName: context.operation.request.workspaceName as string,
+      administratorName: `${context.invitation.first_name} ${context.invitation.last_name}`, email: context.invitation.email as string,
+      token: context.invitation.token as string, invitationId: context.invitation.invitation_id as string };
+  });
+  if (!prepared) return;
+
+  // No transaction is open across this call, by design. See above.
+  const delivered = await send({ customerTenant: prepared.customerTenant, workspaceName: prepared.workspaceName,
+    administratorName: prepared.administratorName, email: prepared.email, token: prepared.token });
+
+  const acknowledged = await db.transaction(async trx => {
+    // Retain again rather than reading the invitation row directly: acknowledging
+    // takes the same locks in the same order as every other invitation path
+    // (sponsor scope, then the customer invitation). Locking the invitation first
+    // here inverts that order against a concurrent recovery, which holds the
+    // operation row and wants the invitation -- a genuine deadlock, and one
+    // Postgres does report.
+    const context = await retainInvitation(trx, sponsorTenant, operationId);
+    if (!context || context.invitation.token !== prepared.token) return false;
     await context.sponsor.table('co_managed_provisioning_operations').where('operation_id', operationId).update({
       invitation_sent_at: delivered ? trx.raw('now()') : null,
       invitation_delivery_error: delivered ? null : 'INVITATION_DELIVERY_FAILED', updated_at: trx.raw('now()'),
     });
-    return delivered;
+    return true;
   });
-  if (!sent) throw new Error('Customer administrator invitation could not be delivered');
+  if (!acknowledged) return;
+  if (!delivered) throw new Error('Customer administrator invitation could not be delivered');
 }

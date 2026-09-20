@@ -96,7 +96,11 @@ const log = { info() {}, warn() {}, error() {} };
 beforeAll(async () => {
   const connection = { host: process.env.DB_HOST || 'localhost', port: Number(process.env.DB_PORT || 5432),
     user: process.env.DB_USER_ADMIN || 'postgres', password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN') };
-  const sourceDatabase = process.env.DB_NAME_SERVER || process.env.DB_NAME || 'server';
+  // `ALGA_SCHEMA_SOURCE_DB` is the run's own `DB_NAME_SERVER`, captured in
+  // vitest.globalSetup before any file could re-point it at the shared test
+  // database. Preferring it keeps this clone's schema independent of which
+  // files ran first in the fork; see the note there.
+  const sourceDatabase = process.env.ALGA_SCHEMA_SOURCE_DB || process.env.DB_NAME_SERVER || process.env.DB_NAME || 'server';
   admin = knex({ client: 'pg', connection: { ...connection, database: 'postgres' } });
   source = knex({ client: 'pg', connection: { ...connection, database: sourceDatabase } });
   await admin.raw('CREATE DATABASE ??', [databaseName]); created = true;

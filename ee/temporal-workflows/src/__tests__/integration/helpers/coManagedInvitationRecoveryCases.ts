@@ -150,5 +150,61 @@ export function registerCoManagedInvitationRecoveryTests(getDb: () => Knex,
       expect((await f.sponsor.table('co_managed_provisioning_operations').first()).invitation_sent_at).not.toBeNull();
       await f.deliver(); expect(send).toHaveBeenCalledOnce();
     });
+
+    it('sends with no retaining transaction open, so the mail path can still take its own locks', async () => {
+      const f = await fixture();
+      // The real mail path writes `email_sending_logs` on a separate pooled
+      // connection, and that insert's foreign key needs KEY SHARE on the
+      // customer `tenants` row. Retaining holds FOR UPDATE on exactly that row,
+      // so taking this lock from another connection during the send is what used
+      // to hang forever -- undetectably, because the holder sits idle in
+      // transaction rather than blocked. The timeout keeps a regression to a
+      // failed assertion instead of a hung suite.
+      send.mockImplementationOnce(async () => {
+        await f.db.transaction(async trx => {
+          await trx.raw("set local statement_timeout = '5s'");
+          await trx.raw('select 1 from tenants where tenant = ? for key share', [f.operation.customer_tenant]);
+        });
+        return true;
+      });
+      await f.deliver();
+      expect((await f.sponsor.table('co_managed_provisioning_operations').first()).invitation_sent_at).not.toBeNull();
+    });
+
+    it('drops a completed send acknowledgment when a replacement token took its place mid-flight', async () => {
+      const f = await fixture(), original = await f.invitation();
+      const replacement = `${randomUUID()}${randomUUID()}`.replaceAll('-', '');
+      send.mockImplementationOnce(async () => {
+        await f.customer.table('user_invitations').where('invitation_id', original.invitation_id).update({ token: replacement });
+        return true;
+      });
+      await f.deliver();
+      // The acknowledgment describes a token nobody can redeem any more, so it is
+      // discarded rather than recorded against the replacement.
+      expect((await f.invitation()).token).toBe(replacement);
+      expect(await f.sponsor.table('co_managed_provisioning_operations').first())
+        .toMatchObject({ invitation_sent_at: null, invitation_delivery_error: null });
+      // Leaving no receipt keeps the replacement deliverable.
+      await f.deliver();
+      expect((await f.sponsor.table('co_managed_provisioning_operations').first()).invitation_sent_at).not.toBeNull();
+      expect(send).toHaveBeenCalledTimes(2);
+      expect(send).toHaveBeenLastCalledWith(expect.objectContaining({
+        inviteLink: `https://co-managed.example.test/auth/team/setup?token=${replacement}` }));
+    });
+
+    it('drops a failed send acknowledgment when a replacement token took its place mid-flight', async () => {
+      const f = await fixture(), original = await f.invitation();
+      const replacement = `${randomUUID()}${randomUUID()}`.replaceAll('-', '');
+      send.mockImplementationOnce(async () => {
+        await f.customer.table('user_invitations').where('invitation_id', original.invitation_id).update({ token: replacement });
+        return false;
+      });
+      // A failure that describes the superseded token is not this invitation's
+      // failure, so it neither raises nor records a delivery error.
+      await expect(f.deliver()).resolves.toBeUndefined();
+      expect(await f.sponsor.table('co_managed_provisioning_operations').first())
+        .toMatchObject({ invitation_sent_at: null, invitation_delivery_error: null });
+      expect((await f.invitation()).token).toBe(replacement);
+    });
   });
 }
