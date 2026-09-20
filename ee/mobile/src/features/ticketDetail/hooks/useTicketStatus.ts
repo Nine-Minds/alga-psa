@@ -136,13 +136,12 @@ export function useTicketStatus(
               [
                 { text: t("common:cancel"), style: "cancel" },
                 {
-                  text: t("detail.bundle.masterOnly", "Master only"),
+                  text: t("detail.bundle.masterOnly"),
                   onPress: () => void submitStatus(statusId, notificationSuppression, false),
                 },
                 {
                   text: t(
                     isClose ? "detail.bundle.closeWithChildren" : "detail.bundle.reopenWithChildren",
-                    isClose ? "Close children too" : "Reopen children too",
                   ),
                   onPress: () => void submitStatus(statusId, notificationSuppression, true),
                 },

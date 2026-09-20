@@ -573,7 +573,7 @@
     "bundleMasterLabel": "Sélectionner le ticket principal",
     "bundleMasterPlaceholder": "Sélectionnez le ticket principal...",
     "bundleSyncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du workflow)",
-    "bundleSyncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lors du regroupement. Ensuite, la fermeture ou la réouverture du maître ferme ou rouvre tous les tickets enfants, et les modifications de statut, d’assigné et de priorité sur le maître s’appliquent aux enfants. Les champs de flux de travail sont verrouillés sur les enfants. Les notes internes restent sur le maître.",
+    "bundleSyncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lors du regroupement. Ensuite, la fermeture ou la réouverture du maître ferme ou rouvre tous les tickets enfants, et les modifications de statut, d’assigné et de priorité sur le maître s’appliquent aux enfants. Les champs de workflow sont verrouillés sur les enfants. Les notes internes restent sur le maître.",
     "bundleSelectAtLeastTwo": "Sélectionnez au moins deux tickets à regrouper.",
     "bundleSelectMaster": "Sélectionnez un ticket principal.",
     "bundleSuccess": "Tickets regroupés",
@@ -636,7 +636,7 @@
       "masterTicket": "Ticket principal",
       "selectMasterTicket": "Sélectionnez le ticket principal...",
       "syncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du workflow)",
-      "syncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lors du regroupement. Ensuite, la fermeture ou la réouverture du maître ferme ou rouvre tous les tickets enfants, et les modifications de statut, d’assigné et de priorité sur le maître s’appliquent aux enfants. Les champs de flux de travail sont verrouillés sur les enfants. Les notes internes restent sur le maître.",
+      "syncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lors du regroupement. Ensuite, la fermeture ou la réouverture du maître ferme ou rouvre tous les tickets enfants, et les modifications de statut, d’assigné et de priorité sur le maître s’appliquent aux enfants. Les champs de workflow sont verrouillés sur les enfants. Les notes internes restent sur le maître.",
       "childrenDescription": "Les enfants conservent leur statut actuel ; les champs de workflow sont verrouillés sur les enfants. Les réponses entrantes des enfants sont affichées ci-dessous en lecture seule.",
       "checkingMasters": "Vérification des regroupements existants...",
       "existingMasterSuffix": "(maître existant)",
@@ -1482,7 +1482,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Les tickets enfants conservent leur statut actuel lors du regroupement. Ensuite, la fermeture ou la réouverture du maître ferme ou rouvre tous les tickets enfants, et les modifications de statut, d’assigné et de priorité sur le maître s’appliquent aux enfants. Les champs de flux de travail sont verrouillés sur les enfants. Les notes internes restent sur le maître.",
+      "childrenDescription": "Les tickets enfants conservent leur statut actuel lors du regroupement. Ensuite, la fermeture ou la réouverture du maître ferme ou rouvre tous les tickets enfants, et les modifications de statut, d’assigné et de priorité sur le maître s’appliquent aux enfants. Les champs de workflow sont verrouillés sur les enfants. Les notes internes restent sur le maître.",
       "title": "Groupe",
       "masterBanner": "Ce ticket est le maître d'un groupe ({{count}} enfants). Mode : {{mode}}.",
       "multipleClients": "Plusieurs clients",

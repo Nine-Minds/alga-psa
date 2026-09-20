@@ -1501,7 +1501,7 @@
         "closeBody": "Deze master staat in synchronisatiemodus. Sluiten sluit ook de {{count}} hieronder vermelde open kindtickets.",
         "reopenBody": "Deze master staat in synchronisatiemodus. Heropenen heropent de {{count}} kindtickets die hij heeft gesloten. Onafhankelijk gesloten kinderen blijven gesloten.",
         "stayClosedHeading": "Blijven gesloten (onafhankelijk gesloten)",
-        "boardRulesNote": "Board-sluitregels worden niet gecontroleerd op kinderen.",
+        "boardRulesNote": "Sluitregels van het bord worden niet gecontroleerd op kinderen.",
         "closeConfirm": "Master en {{count}} kinderen sluiten",
         "reopenConfirm": "Master en {{count}} kinderen heropenen",
         "masterOnlyClose": "Alleen master sluiten",

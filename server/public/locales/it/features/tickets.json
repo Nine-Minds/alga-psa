@@ -1501,7 +1501,7 @@
         "closeBody": "Questo master è in modalità sincronizzazione. Chiuderlo chiuderà anche i {{count}} ticket figli aperti elencati di seguito.",
         "reopenBody": "Questo master è in modalità sincronizzazione. Riaprirlo riaprirà i {{count}} ticket figli che ha chiuso. I figli chiusi in modo indipendente restano chiusi.",
         "stayClosedHeading": "Restano chiusi (chiusi in modo indipendente)",
-        "boardRulesNote": "Le regole di chiusura della board non vengono verificate sui figli.",
+        "boardRulesNote": "Le regole di chiusura della bacheca non vengono verificate sui figli.",
         "closeConfirm": "Chiudi master e {{count}} figli",
         "reopenConfirm": "Riapri master e {{count}} figli",
         "masterOnlyClose": "Chiudi solo il master",

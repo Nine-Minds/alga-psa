@@ -3,7 +3,14 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
-const locales = ['en', 'de', 'es', 'fr', 'it', 'nl'] as const;
+
+// Derived, not hand-listed: an earlier hard-coded six ('en' plus de/es/fr/it/nl)
+// went stale when pl and pt joined the registry, so this contract passed while
+// those two packs were missing every key it claims to cover.
+const translatedLocales = Object.keys(
+  JSON.parse(fs.readFileSync(path.join(repoRoot, 'tools/i18n/locales.registry.json'), 'utf8')),
+).sort();
+const locales = ['en', ...translatedLocales];
 
 function readLocale(locale: string): Record<string, any> {
   const file = path.join(repoRoot, 'server/public/locales', locale, 'features/tickets.json');
@@ -11,7 +18,11 @@ function readLocale(locale: string): Record<string, any> {
 }
 
 describe('ticket bundle status propagation copy contract', () => {
-  it('states the propagation behaviour in the bundle help and master panel for all six locales', () => {
+  it('covers every locale the registry ships, not a hand-listed subset', () => {
+    expect(translatedLocales).toEqual(['de', 'es', 'fr', 'it', 'nl', 'pl', 'pt']);
+  });
+
+  it('states the propagation behaviour in the bundle help and master panel for every locale', () => {
     const english = readLocale('en');
     const expectedEnglish =
       'Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children';
