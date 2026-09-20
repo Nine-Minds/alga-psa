@@ -57,12 +57,55 @@ Nothing was relaxed. The reused surface is the one PSA uses:
 - **Tenant ownership and secret redaction** — the actions' own; no new persistence was written.
 - **Release flag** — `release-v1-6-feature` is read only by `CoManagedFeatureBoundary` and other
   client components. The **denials** are decided by `resolveProductRouteBehavior(productCode,
-  pathname)`, which takes no flag and is evaluated in `MspLayoutClient` *before*
-  `CoManagedFeatureBoundary` runs — it replaces `children` entirely. A denial therefore cannot depend
-  on the flag's value. No backend flag was introduced. **Not empirically demonstrated with the flag
-  forced off**: doing so needs a dev-server restart with `NEXT_PUBLIC_DISABLE_FEATURE_FLAGS`, which
-  would disturb the shared review environment. The claim above is structural, from the code and the
-  unit test, and is labelled as such.
+  pathname)`, which takes no flag. No backend flag was introduced. This was originally recorded as a
+  structural claim; it has since been walked with the flag forced off — see below, and note that the
+  walk **disproved** part of what was assumed.
+
+## The release flag, walked rather than reasoned about
+
+The route was first shipped wrapped in `CoManagedFeatureBoundary` with no `fallback`, which that
+component's contract says makes a whole-route caller "render blank when the flag is off". The
+expected consequence was that a co-managed customer clicking **Open Providers** with the flag off
+would get a blank page instead of the boundary card.
+
+Forced off and walked, as `cm.rabbit.admin@whiterabbit.test`:
+
+```bash
+NEXT_PUBLIC_FORCE_FEATURE_FLAGS='release-v1-6-feature:false'
+```
+
+(`NEXT_PUBLIC_DISABLE_FEATURE_FLAGS` is the wrong lever: `useFeatureFlag` treats it as force-**enable**.)
+
+| Route | `main` innerText length, flag off |
+| --- | --- |
+| `/msp/dashboard` | 0 |
+| `/msp/tickets` | 0 |
+| `/msp/settings/email` | 0 |
+| `/msp/co-management/ticket-access` | 0 |
+| `/msp/co-management/providers` | 0 |
+
+**The blanking is shell-wide, not route-specific.** `MspLayoutClient` wraps the entire MSP shell in
+`CoManagedWorkspaceBoundary`, which is `CoManagedFeatureBoundary` for `product_code: co_managed`.
+With the flag off a co-managed tenant has no application at all, so the customer could never reach
+Settings → Email to click Open Providers, and the route-level wrapper changed nothing observable.
+The expected consequence above did not occur.
+
+The wrapper was still removed, for the reasons now recorded in `providers/page.tsx`: redundant for
+`co_managed` given the shell gate; for `psa` — which this route's rule also allows and which the
+shell boundary does not wrap — it was the only gate, over a surface PSA already reaches unflagged;
+and if the shell blanking is ever given the fallback it lacks, a surviving gate here would create the
+dead end for real, because the Open Providers entry point is gated only on enterprise edition.
+
+With the flag restored, `/msp/go/providers` renders the workbench again: `main` innerText 1697
+characters, `#provider-credentials-selector` present.
+
+### A larger defect this surfaced — reported, not fixed
+
+An entire product's UI rendering empty, with no fallback and no explanation, is a real defect. It is
+pre-existing and shell-owned (`MspLayoutClient` / `CoManagedFeatureBoundary`), well outside this
+card's provider-setup scope, and fixing it means deciding what a co-managed tenant should see when
+the release flag is off — a product decision, not a repair. Recorded in the manifest as open defect
+`co-managed-shell-blank-with-flag-off`.
 
 ## Browser walkthrough
 

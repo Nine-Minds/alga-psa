@@ -56,20 +56,23 @@ const EVIDENCE = {
     result: 'audit clean both directions; 66/70 files identical to origin/main and the 4 differences justified; '
       + '237 tests passed',
     artifact: 'base-reconciliation.md',
+    dependencyAnalysis: 'Carried forward. This evidence is about the merge commit itself -- that origin/main '
+      + '8120314513 was taken without dropping content. Every commit after it is additive (co-managed source, '
+      + 'tests, locale keys, docs) and none re-resolves that merge or touches the four contested billing/types '
+      + 'files, so the claim cannot be invalidated by a later commit without a new merge.',
   },
   'provider-route-regression': {
     type: 'automated',
-    sha: '067a4bda1c',
-    command: 'server: vitest run src/test/unit/product/providerSetupReachability.test.ts '
-      + 'src/test/unit/product/coManagedProductSurface.test.ts '
-      + 'src/test/unit/product/uiReachabilityCoherence.contract.test.ts',
-    result: '41 passed. Mutation check: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page '
-      + 'fails 2 of the 6 new cases.',
+    sha: 'ROUND2_CANDIDATE',
+    command: 'server: vitest run src/test/unit/product + src/test/unit/email (125 files) at the round-2 candidate, '
+      + 'after the release-flag gate was removed from the provider route',
+    result: '859 passed. Mutation checks: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page '
+      + 'fails 2 of 7 provider cases; re-adding CoManagedFeatureBoundary to the route fails 1 of 7.',
     artifact: 'cf005-provider-setup.md',
   },
   'provider-route-browser': {
     type: 'browser',
-    sha: '067a4bda1c',
+    sha: 'ROUND2_CANDIDATE',
     command: 'Real dev app at http://100.82.172.57:3374 as cm.rabbit.admin@whiterabbit.test '
       + '(tenant 51ac6952-6d6f-4600-aace-b71a9b2a5e73, product_code co_managed): '
       + 'Settings -> Email -> Inbound -> Open Providers; plus direct URLs for four excluded surfaces',
@@ -77,13 +80,36 @@ const EVIDENCE = {
       + 'Microsoft app-registration surface rendered. /msp/settings/integrations (providers and accounting), '
       + '/msp/settings/integrations/entra, /msp/billing and /msp/settings/extensions all still render '
       + '"Page not available in your current product experience". PSA admin unchanged: /msp/go/providers '
-      + 'redirects to /msp/settings/integrations?category=providers.',
+      + 'redirects to /msp/settings/integrations?category=providers. Re-walked at the round-2 candidate after '
+      + 'the locale keys and the release-flag change: /msp/go/providers renders the workbench '
+      + '(main innerText 1697 chars, #provider-credentials-selector present).',
     artifact: 'cf005-provider-setup.md',
+  },
+  'release-flag-off-walk': {
+    type: 'browser',
+    sha: 'ROUND2_CANDIDATE',
+    command: 'Dev server restarted with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false; walked as '
+      + 'cm.rabbit.admin@whiterabbit.test',
+    result: 'The blanking is shell-wide, not route-specific: /msp/dashboard, /msp/tickets, /msp/settings/email, '
+      + '/msp/co-management/ticket-access and /msp/co-management/providers all render main innerText length 0. '
+      + 'MspLayoutClient wraps the whole shell in CoManagedWorkspaceBoundary for product_code co_managed. '
+      + 'Restored afterwards and re-verified the route renders (1697 chars).',
+    artifact: 'cf005-provider-setup.md',
+  },
+  'admission-adapter-callsites': {
+    type: 'automated',
+    sha: 'ROUND2_CANDIDATE',
+    command: 'server: vitest run src/test/unit/email/coManagedAdmissionAdapters.test.ts',
+    result: '8 passed. Mutation runs, each adapter independently: inboundRequesterReply -> instanceof fails 2 of 8; '
+      + 'inboundEmailReply -> instanceof fails 1 of 8. The unrelated-infrastructure-error cases stay green under '
+      + 'both, so the repair does not broaden quarantine.',
+    artifact: 'cf002-requester-deferral.md',
   },
   'inbound-diagnostics-regression': {
     type: 'automated',
-    sha: '57987f45c3',
-    command: 'server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts',
+    sha: 'ROUND2_CANDIDATE',
+    command: 'server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts (rerun at the round-2 '
+      + 'candidate as part of the 125-file product+email sweep)',
     result: '10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the '
       + 'separately-compiled-copy case.',
     artifact: 'cf002-requester-deferral.md',
@@ -106,8 +132,17 @@ const EVIDENCE = {
       + 'This establishes that the failure is NOT reproducible from this file alone; it needs the real shard. '
       + 'It does not establish that the defect is absent.',
     artifact: 'cf002-requester-deferral.md',
+    dependencyAnalysis: 'Carried forward as a NEGATIVE result only -- it records what does NOT reproduce the '
+      + 'failure. It is attached to rows that stay `failed`, so it can never grant acceptance, and a later '
+      + 'commit cannot make a non-reproduction into a reproduction.',
   },
 };
+
+// Evidence recorded as collected at "this round's candidate" resolves here, so
+// the manifest can never carry a placeholder into the readiness calculation.
+for (const item of Object.values(EVIDENCE)) {
+  if (item.sha === 'ROUND2_CANDIDATE') item.sha = candidate;
+}
 
 /**
  * Explicit, justified status overrides. Anything not listed here derives its
@@ -136,7 +171,8 @@ const OVERRIDES = {
       + 'That is a real defect and is now duck-typed like its sibling isCoManagedLifecycleError. It is NOT yet '
       + 'established as THE cause of the CI failure -- no local reproduction of the shard failure exists, so the '
       + 'causal claim is unproven and this row stays failed.',
-    evidence: ['requester-deferral-ci-failure', 'inbound-diagnostics-regression', 'requester-deferral-local-pass'],
+    evidence: ['requester-deferral-ci-failure', 'inbound-diagnostics-regression', 'requester-deferral-local-pass',
+      'admission-adapter-callsites'],
   },
   CF004: {
     status: 'failed',
@@ -150,7 +186,7 @@ const OVERRIDES = {
     why: 'The reported dead end was walked in a real browser as a co-managed customer administrator and now '
       + 'resolves, with the excluded integration surfaces still denied in the same session and PSA navigation '
       + 'unchanged. Backed by a mutation-proven regression.',
-    evidence: ['provider-route-browser', 'provider-route-regression'],
+    evidence: ['provider-route-browser', 'provider-route-regression', 'release-flag-off-walk'],
   },
   CF006: {
     status: 'implemented-unverified',
@@ -158,7 +194,7 @@ const OVERRIDES = {
       + 'the reused provider actions, and the denial of excluded surfaces were all exercised as a real '
       + 'co-managed admin. NOT verified: an actual OAuth callback with a real Microsoft application, '
       + 'cross-tenant callback denial, and secret redaction on save. Those need CF007 and are untouched here.',
-    evidence: ['provider-route-browser', 'provider-route-regression'],
+    evidence: ['provider-route-browser', 'provider-route-regression', 'release-flag-off-walk'],
   },
   CF030: {
     status: 'missing-code',
@@ -190,6 +226,15 @@ const OPEN_DEFECTS = [
     summary: 'AlgaDesk has the same provider dead end fixed for co-managed: /msp/settings/integrations is '
       + 'not_found for it while an enterprise-edition tenant still renders the Open Providers entry. '
       + 'Out of this card\'s scope; reported, not fixed.',
+  },
+  {
+    id: 'co-managed-shell-blank-with-flag-off',
+    kind: 'functional',
+    summary: 'With release-v1-6-feature off, a co-managed tenant\'s entire MSP UI renders empty -- /msp/dashboard, '
+      + '/msp/tickets, /msp/settings/email and every /msp/co-management route return an empty main. '
+      + 'MspLayoutClient wraps the shell in CoManagedWorkspaceBoundary, and CoManagedFeatureBoundary renders '
+      + '`fallback ?? null` with no fallback supplied anywhere. Verified in a browser at the round-2 candidate. '
+      + 'Pre-existing and shell-owned; reported, not fixed.',
   },
   {
     id: 'reachability-contract-excludes-co-managed',
