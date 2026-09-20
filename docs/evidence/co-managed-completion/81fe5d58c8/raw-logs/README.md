@@ -57,3 +57,20 @@ reproducible and checkable.
   GitHub job/step/timestamp prefixes stripped, as for every file here.
 - sha256 committed: `389279056dfcd6659485af5f083ee242e90e147083eb84522b8763a12a1d3616`
 - sha256 source: `985023e00307031afbaacff5b850c9c939251ac20363f5a9a69e53964ee351e2`
+
+### `ci-shard1-b17b7a80b4.txt`
+
+- capture: `gh api --allow-escape-sequences /repos/Nine-Minds/alga-psa/actions/jobs/106114010249/logs`
+  (run `35524282543`, Integration shard 1, at `b17b7a80b4`, concluded `failure` 2026-09-20T17:18:58Z).
+- **Kept complete — 4640 lines, untrimmed.** Every other file here is trimmed around its points of
+  interest. This one must not be, because its central finding is an **absence**: the string
+  `Transaction failed:` does not occur anywhere in the run, though `withAdminTransaction` emits it
+  unconditionally on the only path by which it can reject. A trimmed excerpt cannot carry a claim
+  about what is *not* in a log, so the whole log is preserved and the claim is checkable with
+  `grep -c`. ANSI colour codes and GitHub timestamp prefixes stripped, as for every file here;
+  nothing else removed.
+- Verifiable counts: `inbound-email-diagnostic` = 3, `withAdminTransaction` = 12,
+  `Transaction failed` = **0**, `errorFrames` = **0**.
+- sha256 committed: `6fe2c718583edfe7c831a38dc28d8b3eaf98243f76104f7df333a97fdf93301a`
+- sha256 source (ANSI and timestamps intact, as the API returned it):
+  `3a50f032e51b7535768764b258708364cf31d6a220a2eb73996dc841b48d120c`

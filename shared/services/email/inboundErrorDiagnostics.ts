@@ -47,6 +47,17 @@ export interface InboundErrorSummary {
    * thing name/code/message cannot say.
    */
   frames: string[];
+  /**
+   * Why `frames` is empty, when it is; `null` when frames were read.
+   *
+   * Empty frames are not self-explaining, and on CI run 35524282543 that cost a
+   * round: all three diagnostic stages fired with `RangeError: Maximum call
+   * stack size exceeded` and *no* `errorFrames` key at all, which is consistent
+   * with four different failures of `error.stack` that call for four different
+   * next steps. Naming the branch is the difference between "the stack was
+   * unreadable" and "the stack was readable and had no frames".
+   */
+  framesUnavailable: string | null;
 }
 
 function boundedString(value: unknown, limit: number): string | null {
@@ -82,12 +93,24 @@ export function inboundErrorMessage(error: unknown): string {
  * a reporter. The message line is dropped (it is already reported separately)
  * and each frame is trimmed and truncated.
  */
-function boundedFrames(error: unknown): string[] {
+function boundedFrames(error: unknown): { frames: string[]; unavailable: string | null } {
   let stack: unknown;
-  // A hostile or exotic thrown value can throw from a `stack` getter.
-  try { stack = (error as { stack?: unknown } | null | undefined)?.stack; } catch { return []; }
-  if (typeof stack !== 'string' || stack === '') return [];
-  return stack
+  // A hostile or exotic thrown value can throw from a `stack` getter -- and so
+  // can an ordinary one. V8 formats `.stack` lazily on first access, vite-node
+  // installs a source-mapping `prepareStackTrace`, and running that formatter
+  // costs stack. Reading `.stack` while the stack is already exhausted can
+  // therefore raise a *second* `RangeError` from the getter itself. That is not
+  // a hypothetical: it is the leading explanation for the empty frames on run
+  // 35524282543, so the branch is reported rather than swallowed.
+  try {
+    stack = (error as { stack?: unknown } | null | undefined)?.stack;
+  } catch (stackError) {
+    const thrown = (stackError as { name?: unknown } | null)?.name;
+    return { frames: [], unavailable: `stack_getter_threw:${typeof thrown === 'string' ? thrown : 'unknown'}` };
+  }
+  if (typeof stack !== 'string') return { frames: [], unavailable: `stack_absent:${typeof stack}` };
+  if (stack === '') return { frames: [], unavailable: 'stack_empty' };
+  const frames = stack
     .split('\n')
     .filter((line) => /^\s*at\s/.test(line))
     .slice(0, MAX_FRAMES)
@@ -95,9 +118,15 @@ function boundedFrames(error: unknown): string[] {
       const trimmed = line.trim();
       return trimmed.length > MAX_FRAME_LENGTH ? `${trimmed.slice(0, MAX_FRAME_LENGTH)}…` : trimmed;
     });
+  // A non-empty stack with no `at ` lines means the formatter returned
+  // something -- a message-only stack, or a custom format -- rather than
+  // failing. Record its length so the next reader knows there was text to look
+  // at without putting the text itself into a reporter.
+  if (frames.length === 0) return { frames: [], unavailable: `no_frame_lines:${stack.length}` };
+  return { frames, unavailable: null };
 }
 
-function summarizeShallow(error: unknown): Omit<InboundErrorSummary, 'cause' | 'frames'> {
+function summarizeShallow(error: unknown): Omit<InboundErrorSummary, 'cause' | 'frames' | 'framesUnavailable'> {
   const record = (error && typeof error === 'object' ? error : {}) as Record<string, unknown>;
   return {
     name: boundedString(record.name, MAX_CODE_LENGTH) ?? (typeof error === 'object' && error !== null ? '' : typeof error),
@@ -106,8 +135,23 @@ function summarizeShallow(error: unknown): Omit<InboundErrorSummary, 'cause' | '
   };
 }
 
-export function summarizeInboundError(error: unknown): InboundErrorSummary {
-  const shallow = { ...summarizeShallow(error), frames: boundedFrames(error) };
+export interface SummarizeInboundErrorOptions {
+  /**
+   * Read `error.stack`. Default `true`.
+   *
+   * Pass `false` at a boundary that must describe the error *without* risking
+   * the read: accessing `.stack` can itself throw, and a caller placed to
+   * observe an error before anything else touches it needs an observation that
+   * cannot be the thing that destroys it.
+   */
+  readStack?: boolean;
+}
+
+export function summarizeInboundError(error: unknown, options: SummarizeInboundErrorOptions = {}): InboundErrorSummary {
+  const { frames, unavailable } = options.readStack === false
+    ? { frames: [] as string[], unavailable: 'stack_not_read' }
+    : boundedFrames(error);
+  const shallow = { ...summarizeShallow(error), frames, framesUnavailable: unavailable };
   const rawCause = error && typeof error === 'object' ? (error as { cause?: unknown }).cause : undefined;
   if (rawCause === undefined || rawCause === null) return { ...shallow, cause: null };
   // Exactly one level. A cause that points back at its own error -- or at a
@@ -118,6 +162,14 @@ export function summarizeInboundError(error: unknown): InboundErrorSummary {
 
 export type InboundDiagnosticStage =
   | 'admission'
+  /**
+   * The error as it leaves the commit transaction's own callback, observed
+   * before any enclosing helper can touch it. `withAdminTransaction` reads
+   * `error.stack` in its `catch` before rethrowing; if that read throws, the
+   * error the caller finally sees is *not* the error the transaction raised.
+   * This stage is the only place that can tell those two apart.
+   */
+  | 'commit_body'
   | 'rollback'
   | 'lifecycle_classification'
   | 'disposition';
@@ -134,10 +186,11 @@ export function recordInboundDiagnostic(
   stage: InboundDiagnosticStage,
   context: Record<string, string | number | boolean | null | undefined>,
   error?: unknown,
+  options: SummarizeInboundErrorOptions = {},
 ): void {
   const payload: Record<string, unknown> = { stage, ...context };
   if (arguments.length >= 3) {
-    const summary = summarizeInboundError(error);
+    const summary = summarizeInboundError(error, options);
     payload.errorName = summary.name;
     payload.errorCode = summary.code;
     payload.errorMessage = summary.message;
@@ -145,6 +198,13 @@ export function recordInboundDiagnostic(
     // Only when there is something to say, so an ordinary rejection keeps its
     // one short line.
     if (summary.frames.length > 0) payload.errorFrames = summary.frames;
+    // Always say why when there are none. An absent `errorFrames` key used to
+    // be ambiguous across four distinct failures of `error.stack`; it is not
+    // any more.
+    else payload.errorFramesUnavailable = summary.framesUnavailable;
+    // Only meaningful alongside a frame failure, and cheap: a limit of 0 turns
+    // every stack into the empty string and would explain the whole thing.
+    if (summary.frames.length === 0) payload.stackTraceLimit = Error.stackTraceLimit ?? null;
   }
   console.warn('[inbound-email-diagnostic]', JSON.stringify(payload));
 }

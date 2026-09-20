@@ -236,37 +236,73 @@ export async function processInboundInbox(
   let commitResult: CoreCommitResult;
   try {
     commitResult = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      // Acquire lifecycle locks before the inbox/operational rows. A license
-      // or relationship change during source fetch cannot slip into this commit.
-      await assertCoManagedOperationalWrite(trx, params.tenantId);
-      const locked = await lockInboxForUpdate(trx, {
-        tenant: params.tenantId,
-        inbox_id: params.inboxId,
-        token: leaseToken,
-        version: leaseVersion,
-      });
-      if (!locked) {
-        throw new Error('inbox_fence_superseded');
-      }
+      try {
+        // Acquire lifecycle locks before the inbox/operational rows. A license
+        // or relationship change during source fetch cannot slip into this commit.
+        await assertCoManagedOperationalWrite(trx, params.tenantId);
+        const locked = await lockInboxForUpdate(trx, {
+          tenant: params.tenantId,
+          inbox_id: params.inboxId,
+          token: leaseToken,
+          version: leaseVersion,
+        });
+        if (!locked) {
+          throw new Error('inbox_fence_superseded');
+        }
 
-      const effects = await getEffectsForInbox(trx, params.tenantId, params.inboxId);
-      if (effects.length > 0) {
-        // Replay of an already-committed message: return the stored outcome.
-        return { terminalReplay: true as const, inbox: locked };
-      }
+        const effects = await getEffectsForInbox(trx, params.tenantId, params.inboxId);
+        if (effects.length > 0) {
+          // Replay of an already-committed message: return the stored outcome.
+          return { terminalReplay: true as const, inbox: locked };
+        }
 
-      const result = await runCommitPhase({
-        tenantId: params.tenantId,
-        inboxId: params.inboxId,
-        owner: params.owner,
-        mode: params.mode,
-        trx,
-        inbox: locked,
-        emailData: parsed.emailData,
-        qualifiedReplyAdmission: params.qualifiedReplyAdmission,
-        retainConversationEvent: params.retainConversationEvent,
-      });
-      return { terminalReplay: false as const, ...result };
+        const result = await runCommitPhase({
+          tenantId: params.tenantId,
+          inboxId: params.inboxId,
+          owner: params.owner,
+          mode: params.mode,
+          trx,
+          inbox: locked,
+          emailData: parsed.emailData,
+          qualifiedReplyAdmission: params.qualifiedReplyAdmission,
+          retainConversationEvent: params.retainConversationEvent,
+        });
+        return { terminalReplay: false as const, ...result };
+      } catch (error) {
+        // Observe the error *as this transaction raised it* -- inside the
+        // callback, so nothing between here and the handler below has touched
+        // it yet -- then rethrow it unchanged. This observation must not alter
+        // control flow; it only records.
+        //
+        // It exists because `withAdminTransaction` is not a transparent
+        // rethrow. Its own `catch` evaluates `error.stack` to build a console
+        // line before rethrowing (`packages/db/src/index.ts`), and reading
+        // `.stack` can itself throw: V8 formats it lazily and vite-node's
+        // source-mapping `prepareStackTrace` costs stack to run, so the read
+        // can fail precisely when the stack is already exhausted. When it does,
+        // the caller receives the *getter's* error, not this one.
+        //
+        // CI runs 35522723445 and 35524282543 both carry exactly that
+        // signature: `processInboundInbox` catches `RangeError: Maximum call
+        // stack size exceeded`, yet `Transaction failed:` -- which
+        // `withAdminTransaction` emits unconditionally before it rethrows --
+        // appears nowhere in either log. The rethrow therefore did not complete
+        // normally, and the error reaching the handler below is not known to be
+        // the error raised here. This stage is what will say.
+        //
+        // `readStack: false` is load-bearing: the point is to describe the
+        // error without performing the read suspected of destroying it.
+        recordInboundDiagnostic('commit_body', {
+          tenant: params.tenantId,
+          inboxId: params.inboxId,
+          classifiedAsLifecycle: isCoManagedLifecycleError(error),
+          lifecycleState: typeof (error as { lifecycle?: { state?: unknown } })?.lifecycle?.state === 'string'
+            ? (error as { lifecycle: { state: string } }).lifecycle.state : null,
+          lifecycleCanWrite: typeof (error as { lifecycle?: { canWrite?: unknown } })?.lifecycle?.canWrite === 'boolean'
+            ? (error as { lifecycle: { canWrite: boolean } }).lifecycle.canWrite : null,
+        }, error, { readStack: false });
+        throw error;
+      }
     });
   } catch (error: any) {
     // The commit transaction has already rolled back by the time this runs.

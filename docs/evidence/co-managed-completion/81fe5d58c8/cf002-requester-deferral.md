@@ -424,6 +424,12 @@ resolves carries the duck-typed predicate (`dist/chunk-HLLCNPFH.js:31`).
    the commit transaction. `admission.sharedWorkConstructorMatched` never appeared, which rules the
    dual-constructor mechanism *out* as the cause of this failure — the overflow happens after
    admission returns.
+
+   > **Superseded by the 2026-09-20 mitigation round (see the section at the end of this file).**
+   > `admission` is emitted from inside the adapter's own `catch`, *after* an
+   > `isCoManagedSharedWorkError` early return. Its absence is therefore consistent with three
+   > states — adapter never invoked, adapter invoked and correctly quarantined, or overflow after
+   > return — so neither the ordering claim nor the dual-constructor exclusion is established.
 2. **Read the `errorFrames` from the next CI shard-1 log.** This round adds them; they name the
    recursion site. Nothing else about CF002-CF004 should be attempted first, because every candidate
    repair depends on which function is recursing.
@@ -441,3 +447,301 @@ No error was turned into `defer`; the test was not skipped, `.skip`-ed or moved 
 expected disposition was not relaxed; requester admission was not loosened. Unknown
 infrastructure/database failures still `retry` and authorization/token failures still quarantine —
 the repair makes the quarantine path *more* reliable, not broader.
+
+---
+
+# 2026-09-20, mitigation round — static reconnaissance at `b17b7a80b4`
+
+The CI read that names the recursion site had not completed when this section was written; the run
+is `35524282543`, job `106114010249`, at `b17b7a80b4`. What follows is the work that did **not**
+depend on it, recorded so the next round does not repeat it. **None of it closes CF002-CF004.**
+
+## A premise the last round recorded is not supported by its evidence
+
+The previous entry concluded, from `admission` never appearing in the log, that "the overflow
+happens after admission returns, between the injected throw and `processInboundInbox`'s catch."
+
+That does not follow. The `admission` stage is emitted from `packages/co-managed/src/inboundRequesterReply.ts:51`,
+which sits **inside the adapter's own `catch`** — and, decisively, *after* the quarantine branch one
+line above it:
+
+```ts
+  } catch (error) {
+    if (isCoManagedSharedWorkError(error)) return { admitted: false };   // :50 — returns first
+    recordInboundDiagnostic('admission', { ... }, error);                // :51 — never reached
+    throw error;
+```
+
+So a silent `admission` stage is consistent with **three** states, not one:
+
+1. the adapter was **never invoked** — the `RangeError` was thrown earlier in the same commit
+   transaction, before `processInboundEmailInApp.ts:2069` calls the injected admission lambda;
+2. the adapter **was invoked and correctly quarantined** a shared-work rejection, taking the `:50`
+   early return *before* the diagnostic; or
+3. the adapter returned normally and the overflow happened after it — what the last round assumed.
+
+Only (3) was considered. Notably `assertCoManagedOperationalWrite` runs at
+`shared/services/email/inboundEmailCoreProcessor.ts:241`, *before* admission, and the test's own
+assertions (no comments, no effects, no outbox rows) hold under all three, so they do not
+discriminate either. The search window is the whole `withAdminTransaction` callback
+(`inboundEmailCoreProcessor.ts:238`), not the tail of it.
+
+This matters for more than the ordering. The last round used the silent `admission` stage to
+conclude that the failure "rules the dual-constructor mechanism OUT as the cause." Under state (2)
+the dual-constructor path is not merely unexcluded — it is the branch that would *produce* the
+silence. **That exclusion is unsupported, not just weak, and must not be carried forward.**
+
+## A CI-vs-local difference that was proposed and is refuted
+
+`server/src/test/setup.ts:172` carries the comment "CI's Node 20", which invites the hypothesis that
+a different V8 stack limit explains why the overflow is CI-only. It does not apply to this lane:
+
+```
+$ grep -n "node-version" .github/workflows/integration-tests.yml
+34,123,251,353,425,506,590:          node-version: '22'
+$ node --version
+v22.18.0
+```
+
+Integration shard 1 runs Node 22; this workstation runs Node 22.18.0. Same major, same V8 stack
+regime. **The Node-version explanation is refuted** — the `setup.ts` comment is about an unrelated
+jsdom `localStorage` global, not about this lane. Do not spend a round on it.
+
+## Ranked candidate sites, to be matched against the frames
+
+Anchors to compare the incoming `errorFrames` against. These are candidates, **not** findings.
+
+1. **`Transaction.isCompleted()` — `node_modules/knex/lib/execution/transaction.js:95-99`.** Verified
+   verbatim; the only literally self-recursive function that executes on the rollback path:
+   ```js
+   isCompleted() {
+     return (this._completed || (this.outerTx && this.outerTx.isCompleted()) || false);
+   }
+   ```
+   It is called for every query issued through a transaction client, including the `ROLLBACK` and
+   `ROLLBACK TO SAVEPOINT` this test provokes, and it walks `outerTx` with no depth cap and no cycle
+   guard. Real nesting on this path is admin trx → `inboundRequesterReply.ts:17` savepoint →
+   a per-`assertCoManagedOperationalWrite` transaction → comment savepoints, i.e. depth 4-5, which is
+   *not* enough by itself. So if the frames name `isCompleted`, the defect is whatever produced a
+   long or cyclic `outerTx` chain, and that is the thing to repair — not `isCompleted` itself.
+2. **Unguarded rich-text walkers on the comment-creation path**: `packages/tickets/src/lib/commentNoise.ts:13`
+   (`collectBlockNoteText`) and `:31` (`hasMediaBlock`); `packages/tickets/src/lib/ticketRichText.ts:609`
+   (`extractInlineTextFromBlockNote`) and `:657` (`collectBlockLines`). No depth cap, no visited set.
+   Compare `packages/co-managed/src/conversationRichText.ts:40`, which *already* carries a budget —
+   the hardening exists in one place and not these.
+
+## Ruled out, with reasons — do not re-walk these
+
+- **Self-delegating spy recursion in the fixture.** `withRequesterInboundFixture`
+  (`coManagedBootstrap.integration.test.ts:8839-8866`) installs only bare `vi.spyOn` calls with no
+  `mockImplementation`, plus `intake.process.mockImplementation(actual.processInboundEmailInApp)`
+  from `vi.importActual`, all restored in `finally`. The failing test at `:9051` installs no spies.
+  Separately, `tinyspy` unwraps an already-spied function to its original, so `spyOn`-on-`spyOn`
+  cannot self-wrap.
+- **The diagnostics module itself.** `inboundErrorDiagnostics.ts` is bounded at every recursion:
+  `boundedString` recurses once onto a primitive, `summarizeInboundError` follows `cause` exactly one
+  level, `boundedFrames` slices to `MAX_FRAMES`. It is what *caught* the overflow, not its source.
+- **`isCoManagedLifecycleError`** (`packages/licensing/src/lib/co-managed-lifecycle.ts:24`) — pure
+  field comparisons, no recursion. It correctly declines a `RangeError`; that is not the bug.
+- **`runOwnedTransaction` / `withAdminTransaction` / `withTransaction` / `withSavepoint`**
+  (`packages/db/src/index.ts:78-140`, `packages/db/src/lib/tenant.ts:163-272`) and
+  **`flushAfterCommitHooks`** (`packages/db/src/lib/afterCommit.ts:58`) — no self-calls; the
+  read-only retry helpers retry once, not recursively, and `READ_ONLY_ERROR_RE`
+  (`readOnlyRetry.ts:17`) does not match `"Workspace became read-only"`, so the injected error never
+  enters them.
+- **Two compiled copies calling each other.** The failing test imports both
+  `admitCoManagedRequesterReply` and `retainCoManagedInboundCommentEvent` from **source** relative
+  paths, nothing under `shared/` imports `@alga-psa/co-managed`, and
+  `packages/co-managed/dist/inboundRequesterReply.js` is a re-export with no import back into
+  source. No src↔dist mutual call exists on this path.
+- **`getConnection`** (`packages/db/src/lib/connection.ts:48`) is self-recursive but behind an
+  `await`, so it cannot grow the JS stack. Ruled out as the `RangeError`; noted as a latent hang.
+- **`packages/co-managed/src/nativeTimeDispatch.ts`** — the only new `packages/co-managed/src` module
+  in the `bda945b640..7b0b52c6c3` regression window. Read in full: no recursion, and it is on the
+  native *time* path, not the inbound email path.
+- **`process.env.CI` / `NODE_ENV` branches on this path** — none exist.
+
+## Expectation-setting for the frames
+
+V8's default `Error.stackTraceLimit` is 10, so at most ten frames of the cycle will arrive even
+though `MAX_FRAMES` is 14. vite-node installs a source-map `prepareStackTrace`, so frames should
+return as `.ts` positions matchable against the anchors above.
+
+## Status
+
+CF002, CF003 and CF004 remain `failed`. Nothing above is a repair, and no repair may be attempted
+until the frames name the site — the reason this round added no product change is unchanged from the
+last: guessing at a fix for an unreproducible infinite recursion is how a wrong change ships.
+
+---
+
+# The CI read at `b17b7a80b4` — the frames are silent, and their silence is informative
+
+Run [35524282543](https://github.com/Nine-Minds/alga-psa/actions/runs/35524282543), job
+`106114010249`, Integration shard 1, concluded **`failure`** at 2026-09-20T17:18:58Z.
+Shards 2, 3 and 4 concluded success. Full log preserved untrimmed at
+`raw-logs/ci-shard1-b17b7a80b4.txt`.
+
+```
+ Test Files  1 failed | 77 passed (78)
+      Tests  1 failed | 2170 passed (2171)
+
+ × defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause 453ms
+   → Failed to fully serialize error: Maximum call stack size exceeded
+Inner error message: expected { disposition: 'retry', …(1) } to match object { disposition: 'defer', …(1) }
+```
+
+Unchanged from `fb2e696645`: same single failing case, same disposition collapse. The duck-typing
+repair did not fix it, which was already expected.
+
+## 1. What the instrumentation returned
+
+All three stages fired, and **`errorFrames` is absent from every one of them**:
+
+```
+$ grep -c errorFrames raw-logs/ci-shard1-b17b7a80b4.txt
+0
+```
+
+```
+[inbound-email-diagnostic] {"stage":"rollback","tenant":"d772a7e9-…","inboxId":"71cb6e4d-…","claimed":true,
+  "errorName":"RangeError","errorCode":null,"errorMessage":"Maximum call stack size exceeded","errorCause":null}
+[inbound-email-diagnostic] {"stage":"lifecycle_classification", … ,"classifiedAsLifecycle":false,
+  "candidateName":"RangeError","candidateLifecycleState":null,"candidateCanWrite":null}
+[inbound-email-diagnostic] {"stage":"disposition", … ,"disposition":"retry","reason":"commit_failure",
+  "errorName":"RangeError","errorMessage":"Maximum call stack size exceeded"}
+```
+
+`recordInboundDiagnostic` emits `errorFrames` only when `summary.frames.length > 0`, so
+`boundedFrames()` returned `[]`. **The recursion site is still not named.** That is a negative
+result and it is reported as one — the round did not get the artifact it was waiting for.
+
+## 2. But a second, unasked-for observation did land, and it is the real finding
+
+`withAdminTransaction` logs unconditionally in its `catch` **before** it rethrows
+(`packages/db/src/index.ts`):
+
+```js
+  } catch (error) {
+    console.error(`[withAdminTransaction:${transactionId}] Transaction failed:`, {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined      // <-- reads .stack
+    });
+    throw error;
+  }
+```
+
+That `catch` is the *only* path by which `withAdminTransaction` can reject. So if
+`processInboundInbox`'s handler ran — and it did, the `rollback` stage proves it — the line must
+have been emitted. It was not, in **either** instrumented run:
+
+| | `withAdminTransaction` lines | `Transaction failed` lines |
+| --- | --- | --- |
+| `ci-shard1-fb2e696645.txt` | 12 | **0** |
+| `ci-shard1-b17b7a80b4.txt` | 12 | **0** |
+
+Both counts are reproducible with `grep -c` against the committed logs; the `b17b7a80b4` log is
+kept untrimmed precisely so this absence is checkable.
+
+### What that forces
+
+The rethrow did not complete normally. Something in that `catch` block threw before
+`console.error` returned, and the error `processInboundInbox` finally saw is therefore **not known
+to be the error the transaction raised**. The block contains exactly one expression that touches
+the error: `error.stack`.
+
+And reading `.stack` is not free. V8 formats it lazily on first access, and vite-node installs a
+source-mapping `prepareStackTrace` that runs *at that moment* and costs stack to run. A `.stack`
+read performed while the stack is already deep can therefore raise its own
+`RangeError: Maximum call stack size exceeded` — from the getter, not from the code under test.
+
+Two independent readers of `.stack` on this path both came back empty-handed in the same run:
+`withAdminTransaction`'s unguarded read (log line never completed) and `boundedFrames`'s guarded
+read (returned `[]`). That convergence is the substance of this finding.
+
+### Two readings remain, and they call for opposite repairs
+
+**(A) The catch manufactured the error.** The transaction raised the duck-typed
+`CoManagedLifecycleError` the test throws; `error.stack` in `withAdminTransaction`'s catch
+overflowed; the `RangeError` replaced it; `isCoManagedLifecycleError` correctly declined the
+`RangeError`; disposition collapsed to `retry`. Under this reading the recursion is **not** in
+product logic at all, and the repair belongs in `packages/db` — a catch that reports an error must
+not be able to destroy it.
+
+**(B) The transaction body genuinely overflowed.** Some product path recursed, the `RangeError` is
+authentic, `retry` is the correct disposition for it, and the catch's `.stack` read merely failed
+too (formatting a real overflow stack is exactly when it would). Under this reading the repair is
+whatever is recursing, and `retry` is not the bug.
+
+**Nothing in the current evidence distinguishes these**, and they are not variations on one theme —
+under (A) `retry` is a defect, under (B) `retry` is correct behaviour. Guessing between them is how
+a wrong change ships, so **no repair is attempted**. CF002, CF003 and CF004 stay `failed`.
+
+## 3. The instrumentation this round adds, and why it is decisive
+
+Two changes, both observation-only; neither alters control flow or any disposition.
+
+**A `commit_body` stage** (`shared/services/email/inboundEmailCoreProcessor.ts`). The commit
+callback's body is now wrapped in its own `try`/`catch` that records the error's identity *inside*
+the transaction — before `withAdminTransaction`'s catch can touch it — and rethrows it unchanged.
+It is passed `readStack: false`, which is load-bearing: an observation placed to see the error
+before the suspect read must not perform that read itself.
+
+This is a clean discriminator:
+
+- `commit_body` reports `CoManagedLifecycleError` with `classifiedAsLifecycle: true`, then
+  `rollback` reports `RangeError` → **reading (A)**. The error was destroyed in transit and the
+  owner of the defect is `withAdminTransaction`.
+- `commit_body` reports `RangeError` → **reading (B)**. The overflow is real and inside the body,
+  and the next step is to bisect the body, not the transaction helper.
+
+**Reason codes for empty frames** (`shared/services/email/inboundErrorDiagnostics.ts`). An absent
+`errorFrames` key was consistent with four different failures and the round could not act on it.
+Each branch now names itself in a new `errorFramesUnavailable` field —
+`stack_getter_threw:<name>` / `stack_absent:<type>` / `stack_empty` / `no_frame_lines:<length>` /
+`stack_not_read` — alongside `stackTraceLimit`, since a limit of `0` would explain the whole
+observation on its own. If the next run reports `stack_getter_threw:RangeError`, reading (A) is
+confirmed outright.
+
+### Mutation evidence
+
+`server/src/test/unit/email/inboundErrorDiagnostics.test.ts`, 22 tests, pass at this candidate.
+Both new behaviours were individually reverted and the suite was rerun:
+
+```
+mutation 1 — `errorFramesUnavailable` emission removed (silent omission restored):
+  × emits errorFramesUnavailable and the stack trace limit instead of a silent omission
+  × records a commit_body stage without reading the stack
+      Tests  2 failed | 20 passed (22)
+
+mutation 2 — the `readStack: false` guard removed, so the summary always reads `.stack`:
+  × never touches the stack getter when readStack is false
+  × records a commit_body stage without reading the stack
+      Tests  2 failed | 20 passed (22)
+```
+
+Restored, `22 passed (22)`. `npx tsc --noEmit` is clean for both `server/tsconfig.json` and
+`ee/temporal-workflows/tsconfig.json`.
+
+## 4. What the next round should do
+
+1. Read `commit_body` from the next shard-1 log. It settles (A) vs (B) in one line, and nothing
+   else about CF002-CF004 should be attempted before it.
+2. If (A): repair `withAdminTransaction` so its diagnostic catch cannot replace the error it is
+   reporting — bound the `.stack` read the way `inboundErrorDiagnostics` already bounds every other
+   read of a thrown value. The regression is a transaction whose body throws an identifiable error
+   while `.stack` throws on access; it must arrive at the caller as the error the body raised.
+3. If (B): bisect the commit body. `errorFramesUnavailable` will also say whether the frames were
+   unreadable or merely absent, which decides whether frame capture can be made to work at all.
+4. Only then: mutation proof, focused pass, and a full original-shard pass at seed `20260610`.
+
+The standing warning still applies: do **not** read a green shard 1 as a fix unless a named
+mechanism explains it. The case passed once already, at `bda945b640`.
+
+## Forbidden shortcuts — none taken
+
+No error was turned into `defer`; the test was not skipped, `.skip`-ed or moved out of the shard;
+the expected disposition was not relaxed; requester admission was not loosened; the reverted
+clone-source pin and `ALGA_SCHEMA_SOURCE_DB` were not reintroduced. Unknown infrastructure and
+database failures still `retry` and authorization/token failures still quarantine — this round adds
+observation only and changes no disposition on any path.

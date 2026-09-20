@@ -48,7 +48,7 @@ Anchored at the `origin/main` base-reconciliation merge commit.
 ## The gate
 
 ```bash
-node --test scripts/tests/co-managed-completion.test.mjs   # 55 cases; run these first
+node --test scripts/tests/co-managed-completion.test.mjs   # 59 cases; run these first
 node scripts/verify-co-managed-completion.mjs
 ```
 
