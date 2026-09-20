@@ -264,6 +264,21 @@ const EVIDENCE = {
       + 'browser - no co-managed browser test exists (see ticketList:T019/T011) - only that the eligibility '
       + 'gate and the recovery contract behave.',
   },
+  'cf002-verified-green-shard': {
+    type: 'automated',
+    sha: '5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a',
+    command: 'GitHub Actions run 35543087189, job 106164529115, Integration shard 1, VITEST_SEED=20260610',
+    result: 'GREEN. 2173 passed, 0 failed, 0 skipped. Includes the requester lifecycle-pause case, all 8 '
+      + 'MSP SLA bundle-propagation cases, and the period-job case whose rejection was made finite this round. '
+      + 'The uploaded inbound-diagnostics-shard-1.ndjson carries 32 records with ZERO RangeError, and every '
+      + 'commit_body error name equals its rollback error name - the substitution that turned defer into retry '
+      + 'is gone, measured at the candidate. Three shard-1 artifacts are now committed (35534035281 broken, '
+      + '35537272058 repaired-but-red-elsewhere, 35543087189 green) so the whole arc is re-readable.',
+    artifact: 'raw-logs/inbound-diagnostics-shard1-35543087189.ndjson',
+    artifactNote: 'NOT a claim that the full mandatory CI is green: integration shard 4 failed at this same '
+      + 'candidate on an unrelated RMM/pg-boss delivery timing flake (1 of 520, "expected pending to be '
+      + 'completed"), which is recorded as an open defect rather than waved through.',
+  },
   'ticket-list-reconciliation': {
     type: 'analysis',
     sha: 'ROUND3_CANDIDATE',
@@ -377,8 +392,22 @@ const OVERRIDES = {
       + 'no-silent-removal audit that would verify it) is not written yet, so it cannot verify itself.',
   },
   CF002: {
-    status: 'failed',
-    why: 'CAUSE NOW ESTABLISHED; row stays `failed` only because the confirming shard has not run. '
+    status: 'verified',
+    why: 'VERIFIED at candidate 5e71e4efd2. Integration shard 1 (run 35543087189, job 106164529115) is GREEN: '
+      + '2173 passed, 0 failed, 0 skipped, including "defers and rolls back requester email when a separately '
+      + 'compiled admission adapter reports a lifecycle pause". The uploaded diagnostics carry 32 records with '
+      + 'ZERO RangeError, and every commit_body error name equals its rollback error name '
+      + '(CoManagedLifecycleError->CoManagedLifecycleError twice, Error->Error six times) - the substitution '
+      + 'that produced retry is gone, measured at the candidate rather than argued. All four C2 exit conditions '
+      + 'are met: causal explanation (withAdminTransaction read error.stack unguarded inside its catch, so the '
+      + 'lazy getter\'s own RangeError propagated in place of the throw below it); a regression that detects '
+      + 'its removal, MUTATION-VERIFIED (withAdminTransaction.errorFidelity.test.ts fails 3 of 4 when the guard '
+      + 'is reverted, with the exact CI signature); a focused pass; and an original-shard pass both locally '
+      + '(coManagedBootstrap 1418/1418 at VITEST_SEED=20260610) and in CI. NOT claimed: the independent '
+      + 'reporter-level serialization overflow is still not fixed in general - this round only made one '
+      + 'recurring site finite - and integration shard 4 failed at this candidate on an unrelated RMM/pg-boss '
+      + 'timing flake (1 of 520), so the aggregate mandatory CI is not green. Superseded framing retained '
+      + 'below for provenance: '
       + 'The file sink added this round worked on its first CI run: shard 1 failed at 603a74c575 '
       + '(run 35534035281, job 106141697370) and uploaded 34 diagnostic records. They show the '
       + 'commit body raising a CORRECTLY FORMED CoManagedLifecycleError / CO_MANAGED_READ_ONLY with '
@@ -412,7 +441,7 @@ const OVERRIDES = {
       + 'mutation-verified regression, because there is no established cause to reintroduce. Row stays failed.',
     evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure', 'inbound-diagnostics-regression',
       'requester-deferral-local-pass', 'requester-deferral-control-run', 'cf002-diagnostic-survives-pass',
-      'cf002-cause-established', 'cf002-repair-confirmed'],
+      'cf002-cause-established', 'cf002-repair-confirmed', 'cf002-verified-green-shard'],
   },
   CF003: {
     status: 'failed',
@@ -433,7 +462,7 @@ const OVERRIDES = {
   },
   CF004: {
     status: 'failed',
-    why: 'Depends on CF003 being proven at a candidate. The requester audience/token isolation and both worker '
+    why: 'Round-4 note: shard 1 is now GREEN at 5e71e4efd2 (job 106164529115) and the requester lifecycle-pause case passes, so the defer/co_managed_read_only disposition IS now observed on a passing candidate. This row is still not flipped because its wording also requires the refund half - attempt_count=0 and inbox back to received - and that specific assertion has not been separately confirmed here. Depends on CF003 being proven at a candidate. The requester audience/token isolation and both worker '
       + 'entry points are untouched by this round\'s change except that the technician adapter '
       + '(inboundEmailReply) got the same duck-typed classification, which needs the same shard proof. The '
       + 'fb2e696645 read shows the pause never reaches the classification at all, so the rollback/refund '
@@ -892,6 +921,15 @@ const OPEN_DEFECTS = [
       + 'CI-shaped Redis, so publishes retry until the 20s test timeout. That is the whole explanation for the '
       + '8 Comment Reactions failures in the local shard runs; CI writes no redis password secret and is '
       + 'unaffected. Delete the secret or set a matching requirepass before the next reproduction.',
+  },
+  {
+    id: 'rmm-pgboss-delivery-timing-flake',
+    kind: 'test-reliability',
+    summary: 'Integration shard 4 failed at 5e71e4efd2 (run 35543087189, job 106164529103) on 1 of 520: '
+      + '"RMM device sync - pg-boss (CE) accepts and delivers the job delivers the job to rmmDeviceSyncHandler '
+      + 'and writes the cursor", expected pending to be completed. Unrelated to co-managed - it is a job-queue '
+      + 'delivery race - and shard 4 passed at the two preceding candidates, so it is intermittent. Recorded '
+      + 'rather than retried away; it is why the aggregate mandatory CI is not green even though shard 1 is.',
   },
   {
     id: 'microsoft-login-base-url-ungated-in-production',
