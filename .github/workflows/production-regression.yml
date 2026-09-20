@@ -64,13 +64,16 @@ jobs:
           JEV_SELECTION_MODE: shadow
           JEV_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           JEV_HEAD_SHA: ${{ github.sha }}
+      # `warn`, not `error`: a crash before the script writes its outcome must
+      # still leave this job green, so dependent lanes run everything rather
+      # than being skipped.
       - name: Preserve judgments
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jev-selection
           path: test-results/selection/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
   unit:
     uses: ./.github/workflows/unit-tests.yml

@@ -97,6 +97,22 @@ mode, and made for the revision being tested. Anything else runs everything.
   identity exists in the collection, sits below the threshold, and the judgment
   revision matches; otherwise it fails as a filtered run, exactly as before.
 
+## Fallbacks
+
+Every failure path degrades to running everything; none blocks a PR.
+
+| Situation | Recorded as | Integration lane | Browser lane |
+|---|---|---|---|
+| `TYPESAFE_API_KEY` not set | `unavailable` | deterministic selection | full directory |
+| API error after retries, or a crash in the selector | `failed` with the reason, plus a workflow warning | deterministic selection | full directory |
+| Artifact missing (nightly, dispatch, upload skipped) | not applicable | deterministic selection | full directory |
+| Artifact recorded in shadow mode, or for another revision | `unavailable` | deterministic selection | full directory |
+| Harness change in the diff | judged, but not applied | full directory | judgment applied |
+
+"Deterministic selection" is the pre-existing behavior: manifest floor plus
+graph-affected suites, or the full directory when the change sits outside the
+import graph. The selection job itself never fails.
+
 ## Graduating from shadow to enforcing
 
 The number that matters is **recall against real failures**: of the suites and
