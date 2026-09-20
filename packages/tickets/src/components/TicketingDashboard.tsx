@@ -10,9 +10,9 @@ import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
-import { SmartTicketSearchResults } from './SmartTicketSearchResults';
-import { useSmartTicketSearchAvailability } from './useSmartTicketSearchAvailability';
-import type { SmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
+import { SmartSearchResults } from '@alga-psa/ui/components/SmartSearchResults';
+import { useSmartSearchAvailability } from '@alga-psa/ui/lib/smartSearch/useSmartSearchAvailability';
+import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -52,7 +52,7 @@ import {
 } from '../actions/ticketBundleActions';
 import { ClosedMasterChoiceFields } from './ticket/ClosedMasterChoiceFields';
 import type { ClosedMasterChoice } from '../lib/ticketBundlePolicy';
-import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
+import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -425,7 +425,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // into Jev mode over the chip-filtered set. Deliberately not URL-mirrored so a
   // reload never spends tokens. `filtersKey` is the chip set captured at run time,
   // so a later chip change can offer a rerun instead of silently rerunning.
-  const { available: smartSearchAvailable } = useSmartTicketSearchAvailability();
+  const { available: smartSearchAvailable } = useSmartSearchAvailability('ticket');
   const [smartSearch, setSmartSearch] = useState<{ active: boolean; query: string; runToken: number; filtersKey: string }>({
     active: false,
     query: '',
@@ -1164,12 +1164,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Rows streamed by smart search carry their own tags and avatar urls; fold
   // them into the same stores the main table's columns read from.
-  const handleSmartSearchRowMetadata = useCallback((metadata: SmartSearchRowMetadata) => {
+  const handleSmartSearchRowMetadata = useCallback((metadata: TicketSmartSearchRowMetadata) => {
     ticketTagsRef.current = { ...ticketTagsRef.current, ...metadata.ticketTags };
     setTagsVersion((v) => v + 1);
     setAdditionalAgentAvatarUrls((prev) => ({ ...prev, ...metadata.agentAvatarUrls }));
     setTeamAvatarUrls((prev) => ({ ...prev, ...metadata.teamAvatarUrls }));
   }, []);
+
+  // The panel hydrates rows the stream could not score through the same by-id
+  // loader the server uses, so they render with identical columns.
+  const hydrateSmartSearchRows = useCallback(async (scope: ITicketListFilters, ids: string[]) => {
+    const result = await loadTicketListItemsByIds(scope, ids);
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      return result;
+    }
+    return { rows: result.tickets, metadata: result.metadata };
+  }, []);
+  const smartSearchRowId = useCallback((record: ITicketListItem) => record.ticket_id as string, []);
 
   // Clearing the box (or Escape) leaves smart mode and restores the keyword list.
   useEffect(() => {
@@ -2670,14 +2681,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             )}
             <ShortcutActiveRegion id="tickets-shortcut-region" className="outline-none">
               {smartSearch.active ? (
-                <SmartTicketSearchResults
+                <SmartSearchResults<ITicketListFilters, ITicketListItem, TicketSmartSearchRowMetadata>
                   id={id}
-                  filters={smartSearchFilters}
+                  entity="ticket"
+                  i18nNamespace="features/tickets"
+                  scope={smartSearchFilters}
                   query={smartSearch.query}
                   runToken={smartSearch.runToken}
-                  filtersStale={smartSearchFiltersStale}
+                  scopeStale={smartSearchFiltersStale}
                   onRerun={rerunSmartSearch}
                   columns={columns}
+                  relevanceColumnIndex={1}
+                  rowId={smartSearchRowId}
+                  hydrateRows={hydrateSmartSearchRows}
                   rowClassName={(record: ITicketListItem) =>
                     `${densityClasses.tableRowDensity} cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none focus-visible:ring-0 hover:!bg-table-hover ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
                       ? '!bg-table-selected'

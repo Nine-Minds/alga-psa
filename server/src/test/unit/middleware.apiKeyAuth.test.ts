@@ -13,7 +13,8 @@ describe('shouldSkipApiKeyAuth', () => {
   });
 
   it('lets the smart ticket search stream authenticate its session in the route handler', () => {
-    expect(shouldSkipApiKeyAuth('/api/tickets/smart-search/stream')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/smart-search/ticket/stream')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/smart-search/project/stream')).toBe(true);
     // Other ticket API routes still need an API key.
     expect(shouldSkipApiKeyAuth('/api/tickets/123')).toBe(false);
   });

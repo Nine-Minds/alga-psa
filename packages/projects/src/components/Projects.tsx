@@ -11,7 +11,7 @@ import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
-import { deleteProject, searchProjectListIds } from '../actions/projectActions';
+import { deleteProject, loadProjectListItemsByIds, searchProjectListIds } from '../actions/projectActions';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -19,7 +19,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
-import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText } from 'lucide-react';
+import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
@@ -29,6 +29,9 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { SmartSearchResults } from '@alga-psa/ui/components/SmartSearchResults';
+import { useSmartSearchAvailability } from '@alga-psa/ui/lib/smartSearch/useSmartSearchAvailability';
+import type { ProjectSmartSearchRowMetadata, ProjectSmartSearchScope } from '../lib/smartProjectSearch/types';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from '@alga-psa/types';
@@ -172,6 +175,16 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
 
   const [projects, setProjects] = useState<IProject[]>(initialProjects);
   const [indexedSearchProjectIds, setIndexedSearchProjectIds] = useState<Set<string> | null>(null);
+
+  // Smart search: Jev scores the chip-filtered projects against the typed text.
+  // Local state only; it is never mirrored into the URL.
+  const { available: smartSearchAvailable } = useSmartSearchAvailability('project');
+  const [smartSearch, setSmartSearch] = useState<{ active: boolean; query: string; runToken: number; scopeKey: string }>({
+    active: false,
+    query: '',
+    runToken: 0,
+    scopeKey: '',
+  });
 
   // Sync state when initialProjects changes (e.g., from router.refresh())
   useEffect(() => {
@@ -408,6 +421,10 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       setIndexedSearchProjectIds(null);
       return;
     }
+    if (smartSearch.active) {
+      // The typed text is the Jev query while smart mode is on, not a keyword filter.
+      return;
+    }
 
     setIndexedSearchProjectIds(null);
     let isCancelled = false;
@@ -430,23 +447,17 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       isCancelled = true;
       clearTimeout(timeout);
     };
-  }, [activeFilters.searchQuery]);
+  }, [activeFilters.searchQuery, smartSearch.active]);
 
-  const filteredProjects = useMemo(() => {
-    const { searchQuery, status, projectStatus, tags, clientId, contactId, managerId } = activeFilters;
-    const search = (searchQuery || '').toLowerCase();
+  // The chips alone. This is the list smart search scores; the keyword filter
+  // is applied on top of it below for the ordinary table.
+  const chipFilteredProjects = useMemo(() => {
+    const { status, projectStatus, tags, clientId, contactId, managerId } = activeFilters;
 
     let filtered = projects.filter(project =>
-      (!search ||
-       (indexedSearchProjectIds
-         ? (typeof project.project_id === 'string' && indexedSearchProjectIds.has(project.project_id)) ||
-           project.project_name.toLowerCase().includes(search) ||
-           project.project_number?.toLowerCase().includes(search)
-         : project.project_name.toLowerCase().includes(search) ||
-           project.project_number?.toLowerCase().includes(search))) &&
-      (status === 'all' ||
-       (status === 'active' && !project.is_inactive) ||
-       (status === 'inactive' && project.is_inactive))
+      status === 'all' ||
+      (status === 'active' && !project.is_inactive) ||
+      (status === 'inactive' && project.is_inactive)
     );
 
     // Apply project status filter. 'open' hides closed statuses (default, like the
@@ -517,7 +528,69 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
 
     return filtered;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tagsVersion tracks projectTagsRef mutations
-  }, [projects, activeFilters, deadlineFilterValue, tagsVersion, indexedSearchProjectIds]);
+  }, [projects, activeFilters, deadlineFilterValue, tagsVersion]);
+
+  const filteredProjects = useMemo(() => {
+    const search = (activeFilters.searchQuery || '').toLowerCase();
+    if (!search) {
+      return chipFilteredProjects;
+    }
+    return chipFilteredProjects.filter(project =>
+      indexedSearchProjectIds
+        ? (typeof project.project_id === 'string' && indexedSearchProjectIds.has(project.project_id)) ||
+          project.project_name.toLowerCase().includes(search) ||
+          project.project_number?.toLowerCase().includes(search)
+        : project.project_name.toLowerCase().includes(search) ||
+          project.project_number?.toLowerCase().includes(search)
+    );
+  }, [chipFilteredProjects, activeFilters.searchQuery, indexedSearchProjectIds]);
+
+  // Smart search scores the chip-filtered set; the typed text is the Jev query, not a filter.
+  const smartSearchScope = useMemo(
+    (): ProjectSmartSearchScope => ({ projectIds: chipFilteredProjects.map((project) => project.project_id) }),
+    [chipFilteredProjects]
+  );
+  const smartSearchScopeKey = useMemo(() => smartSearchScope.projectIds.join(','), [smartSearchScope]);
+  const smartSearchScopeStale = smartSearch.active && smartSearch.scopeKey !== smartSearchScopeKey;
+
+  const runSmartSearch = useCallback((rawQuery: string) => {
+    const query = rawQuery.trim();
+    if (!smartSearchAvailable || query.length === 0) {
+      return;
+    }
+    setSmartSearch((prev) => ({ active: true, query, runToken: prev.runToken + 1, scopeKey: smartSearchScopeKey }));
+  }, [smartSearchAvailable, smartSearchScopeKey]);
+
+  const rerunSmartSearch = useCallback(() => {
+    setSmartSearch((prev) => ({ ...prev, runToken: prev.runToken + 1, scopeKey: smartSearchScopeKey }));
+  }, [smartSearchScopeKey]);
+
+  const exitSmartSearch = useCallback(() => {
+    setSmartSearch((prev) => (prev.active ? { ...prev, active: false } : prev));
+  }, []);
+
+  // Rows streamed by smart search carry their tags; fold them into the store
+  // the table's tag column reads from.
+  const handleSmartSearchRowMetadata = useCallback((metadata: ProjectSmartSearchRowMetadata) => {
+    projectTagsRef.current = { ...projectTagsRef.current, ...metadata.projectTags };
+    setTagsVersion((v) => v + 1);
+  }, []);
+
+  const hydrateSmartSearchRows = useCallback(async (_scope: ProjectSmartSearchScope, ids: string[]) => {
+    const result = await loadProjectListItemsByIds(ids);
+    if (isActionPermissionError(result)) {
+      return result;
+    }
+    return { rows: result.projects, metadata: result.metadata };
+  }, []);
+  const smartSearchRowId = useCallback((project: IProject) => project.project_id, []);
+
+  // Clearing the box (or Escape, or Reset) leaves smart mode and restores the keyword list.
+  useEffect(() => {
+    if (smartSearch.active && !(activeFilters.searchQuery ?? '')) {
+      exitSmartSearch();
+    }
+  }, [smartSearch.active, activeFilters.searchQuery, exitSmartSearch]);
 
   const handleEditProject = (project: IProject) => {
     openDrawer(
@@ -887,13 +960,36 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
           <div className="relative p-0.5 shrink-0">
             <Input
               type="text"
-              placeholder={projectListT('searchPlaceholder', 'Search projects, tasks, and comments')}
+              placeholder={smartSearchAvailable
+                ? projectListT('searchSmart', 'Search projects, tasks, and comments… Enter for smart search')
+                : projectListT('searchPlaceholder', 'Search projects, tasks, and comments')}
               className="pl-10 pr-4 py-2 w-64"
               value={activeFilters.searchQuery || ''}
               onChange={(e) => handleFilterChange({ searchQuery: e.target.value || undefined })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && smartSearchAvailable && (activeFilters.searchQuery ?? '').trim().length > 0) {
+                  e.preventDefault();
+                  runSmartSearch(activeFilters.searchQuery ?? '');
+                } else if (e.key === 'Escape' && smartSearch.active) {
+                  handleFilterChange({ searchQuery: undefined });
+                }
+              }}
             />
             <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
+          {smartSearchAvailable && (
+            <Button
+              id="projects-smart-search-run"
+              variant={smartSearch.active ? 'soft' : 'outline'}
+              onClick={() => runSmartSearch(activeFilters.searchQuery ?? '')}
+              disabled={(activeFilters.searchQuery ?? '').trim().length === 0}
+              title={t('smartSearch.runTitle', 'Score the filtered projects against this query')}
+              className="shrink-0 flex items-center gap-1"
+            >
+              <Sparkles className="h-4 w-4" />
+              {t('smartSearch.run', 'Smart search')}
+            </Button>
+          )}
 
           {/* Status filter */}
           <div className="relative z-10 shrink-0">
@@ -1045,18 +1141,37 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
 
       <div className="bg-white shadow rounded-lg p-4">
         <ShortcutActiveRegion id="projects-shortcut-region" className="outline-none">
-          <DataTable
-            key={`${activeFilters.page}-${activeFilters.pageSize}`}
-            id="projects-table"
-            data={filteredProjects}
-            columns={columns}
-            pagination={true}
-            currentPage={activeFilters.page || 1}
-            onPageChange={(page) => handleFilterChange({ page })}
-            pageSize={activeFilters.pageSize || 10}
-            onItemsPerPageChange={(pageSize) => handleFilterChange({ pageSize, page: 1 })}
-            initialSorting={[{ id: 'created_at', desc: true }]}
-          />
+          {smartSearch.active ? (
+            <SmartSearchResults<ProjectSmartSearchScope, IProject, ProjectSmartSearchRowMetadata>
+              id="projects"
+              entity="project"
+              i18nNamespace="features/projects"
+              scope={smartSearchScope}
+              query={smartSearch.query}
+              runToken={smartSearch.runToken}
+              scopeStale={smartSearchScopeStale}
+              onRerun={rerunSmartSearch}
+              columns={columns}
+              relevanceColumnIndex={1}
+              rowId={smartSearchRowId}
+              hydrateRows={hydrateSmartSearchRows}
+              onRowMetadata={handleSmartSearchRowMetadata}
+              onExit={exitSmartSearch}
+            />
+          ) : (
+            <DataTable
+              key={`${activeFilters.page}-${activeFilters.pageSize}`}
+              id="projects-table"
+              data={filteredProjects}
+              columns={columns}
+              pagination={true}
+              currentPage={activeFilters.page || 1}
+              onPageChange={(page) => handleFilterChange({ page })}
+              pageSize={activeFilters.pageSize || 10}
+              onItemsPerPageChange={(pageSize) => handleFilterChange({ pageSize, page: 1 })}
+              initialSorting={[{ id: 'created_at', desc: true }]}
+            />
+          )}
         </ShortcutActiveRegion>
       </div>
 

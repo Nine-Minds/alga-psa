@@ -12,7 +12,7 @@ describe('ticketing dashboard smart search wiring contract', () => {
   const source = read('./TicketingDashboard.tsx');
 
   it('enters smart mode from Enter in the search box and from the Smart search button, gated on availability', () => {
-    expect(source).toContain("useSmartTicketSearchAvailability()");
+    expect(source).toContain("useSmartSearchAvailability('ticket')");
     expect(source).toContain("if (e.key === 'Enter' && smartSearchAvailable && searchQuery.trim().length > 0) {");
     expect(source).toContain('runSmartSearch(searchQuery);');
     expect(source).toContain('id={`${id}-smart-search-run`}');
@@ -39,7 +39,7 @@ describe('ticketing dashboard smart search wiring contract', () => {
   it('scores the chip filters only and offers a rerun when they change', () => {
     expect(source).toContain("const smartSearchFilters = useMemo((): ITicketListFilters => ({ ...exportFilters, searchQuery: '' }), [exportFilters]);");
     expect(source).toContain('const smartSearchFiltersStale = smartSearch.active && smartSearch.filtersKey !== smartSearchFiltersKey;');
-    expect(source).toContain('filtersStale={smartSearchFiltersStale}');
+    expect(source).toContain('scopeStale={smartSearchFiltersStale}');
     expect(source).toContain('onRerun={rerunSmartSearch}');
   });
 
@@ -48,7 +48,9 @@ describe('ticketing dashboard smart search wiring contract', () => {
     const regionEnd = source.indexOf('</ShortcutActiveRegion>', regionStart);
     const region = source.slice(regionStart, regionEnd);
     expect(region).toContain('{smartSearch.active ? (');
-    expect(region).toContain('<SmartTicketSearchResults');
+    expect(region).toContain('<SmartSearchResults<ITicketListFilters, ITicketListItem, TicketSmartSearchRowMetadata>');
+    expect(region).toContain('entity="ticket"');
+    expect(region).toContain('hydrateRows={hydrateSmartSearchRows}');
     expect(region).toContain('columns={columns}');
     expect(region).toContain('onVisibleRowsChange={handleVisibleRowsChange}');
     expect(region).toContain('onRowMetadata={handleSmartSearchRowMetadata}');
