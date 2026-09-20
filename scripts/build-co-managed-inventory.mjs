@@ -18,9 +18,16 @@
  *   node scripts/build-co-managed-inventory.mjs --out docs/evidence/co-managed-completion/<sha>
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  CO_MANAGED_PLANS as PLANS,
+  EXPECTED_COUNTS,
+  foundationAcceptance,
+  foundationContracts,
+  planRows,
+} from './lib/co-managed-plan-ids.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const argv = process.argv.slice(2);
@@ -33,44 +40,6 @@ const candidate = arg('candidate', execFileSync('git', ['rev-parse', 'HEAD'], { 
 const outDir = path.resolve(root, arg('out', `docs/evidence/co-managed-completion/${candidate.slice(0, 10)}`));
 
 const STATUSES = ['missing-code', 'implemented-unverified', 'failed', 'blocked-external', 'verified'];
-
-const PLANS = {
-  foundation: 'docs/plans/2026-09-06-co-managed-it-plan.md',
-  clientIntegration: 'docs/plans/2026-09-11-co-managed-client-integration',
-  ticketList: 'docs/plans/2026-09-11-co-managed-ticket-list-unification',
-  correction: 'docs/plans/2026-09-20-co-managed-it-completion',
-};
-
-const readJson = (p) => JSON.parse(readFileSync(path.join(root, p), 'utf8'));
-
-/**
- * The PRD's acceptance-coverage table maps each foundation contract to the CT
- * IDs that are supposed to prove it. Parsed rather than retyped so the mapping
- * cannot drift from the plan.
- */
-function foundationAcceptance() {
-  const text = readFileSync(path.join(root, `${PLANS.correction}/PRD.md`), 'utf8');
-  const map = {};
-  for (const line of text.split('\n')) {
-    const match = /^\|\s*(T\d{2})\b[^|]*\|\s*(.+?)\s*\|\s*$/.exec(line);
-    if (!match) continue;
-    const ids = [...match[2].matchAll(/CT\d{3}/g)].map((m) => m[0]);
-    if (ids.length) map[match[1]] = [...new Set(ids)];
-  }
-  return map;
-}
-
-function foundationRows() {
-  const text = readFileSync(path.join(root, PLANS.foundation), 'utf8');
-  const rows = [];
-  for (const line of text.split('\n')) {
-    const match = /^\|\s*(T\d{2})\s+([^|]+?)\s*\|\s*(.+?)\s*\|\s*$/.exec(line);
-    if (!match) continue;
-    if (rows.some((row) => row.id === match[1])) continue;
-    rows.push({ id: match[1], title: match[2], description: match[3] });
-  }
-  return rows;
-}
 
 /**
  * Evidence actually collected for this round. Each entry names the command or
@@ -207,6 +176,42 @@ const EXTERNAL = {
     + 'issuance, real Microsoft application acceptance, and deployed-storage/candidate migrations.',
 };
 
+/** Known-open defects. `functional`, `security` and `data-integrity` block implementationReady. */
+const OPEN_DEFECTS = [
+  {
+    id: 'CF002-requester-deferral',
+    kind: 'functional',
+    summary: 'Integration shard 1 reports `retry` where `defer` is required for the separately compiled '
+      + 'admission adapter case. Cause not established; see cf002-requester-deferral.md.',
+  },
+  {
+    id: 'algadesk-provider-dead-end',
+    kind: 'functional',
+    summary: 'AlgaDesk has the same provider dead end fixed for co-managed: /msp/settings/integrations is '
+      + 'not_found for it while an enterprise-edition tenant still renders the Open Providers entry. '
+      + 'Out of this card\'s scope; reported, not fixed.',
+  },
+  {
+    id: 'reachability-contract-excludes-co-managed',
+    kind: 'test-coverage',
+    summary: 'uiReachabilityCoherence.contract.test.ts runs for algadesk and psa only. It is the contract that '
+      + 'would have caught the CF005 defect class for co_managed.',
+  },
+];
+
+/** External production prerequisites. Only the release owner can accept these. */
+const PRODUCTION_PREREQUISITES = [
+  { id: 'stripe-recurring-1149', owner: 'release-operator', acceptedByReleaseOwner: false,
+    summary: 'Real recurring USD 11.49 (1149 cents) monthly licensed price and a provider test-mode '
+      + 'checkout/webhook/invoice.' },
+  { id: 'external-license-issuance', owner: 'release-operator', acceptedByReleaseOwner: false,
+    summary: 'External sponsor-bound and independent-customer license issuance and renewal.' },
+  { id: 'microsoft-real-application', owner: 'release-operator', acceptedByReleaseOwner: false,
+    summary: 'Real Microsoft application, callback, permissions and directory/inbound acceptance.' },
+  { id: 'deployed-storage-and-migrations', owner: 'release-operator', acceptedByReleaseOwner: false,
+    summary: 'Deployed storage and candidate migrations including distributed invariants.' },
+];
+
 /** The current round's scope, from the work order, so out-of-scope rows say so rather than looking neglected. */
 const OUT_OF_SCOPE_THIS_ROUND = new Set([
   'CF011', 'CF012', 'CF013', 'CF014', 'CF015', 'CF016', 'CF017', 'CF018',
@@ -254,8 +259,8 @@ function buildRows() {
     });
   };
 
-  const acceptance = foundationAcceptance();
-  for (const row of foundationRows()) {
+  const acceptance = foundationAcceptance(root);
+  for (const row of foundationContracts(root)) {
     const mapped = acceptance[row.id] ?? [];
     push({
       plan: 'foundation', id: row.id, kind: 'contract', description: `${row.title} — ${row.description}`,
@@ -271,15 +276,15 @@ function buildRows() {
     });
   }
 
-  for (const [plan, dir] of [['clientIntegration', PLANS.clientIntegration], ['ticketList', PLANS.ticketList],
-    ['correction', PLANS.correction]]) {
-    const tests = readJson(path.join(dir, 'tests.json'));
+  for (const plan of ['clientIntegration', 'ticketList', 'correction']) {
+    const dir = PLANS[plan];
+    const tests = planRows(root, plan, 'tests.json');
     const coveredBy = {};
     for (const test of tests) {
       for (const featureId of test.featureIds ?? []) (coveredBy[featureId] ??= []).push(test.id);
     }
     for (const [kind, file] of [['feature', 'features.json'], ['test', 'tests.json']]) {
-      for (const row of readJson(path.join(dir, file))) {
+      for (const row of planRows(root, plan, file)) {
         push({
           plan, id: row.id, kind, description: row.description,
           implementationSource: `${dir}/${file}`,
@@ -314,12 +319,7 @@ for (const row of rows) {
     if (!item.command || !item.result) failures.push(`${row.key}: evidence ${item.id} is not a real record`);
   }
 }
-const expected = {
-  foundation: 22,
-  'clientIntegration:feature': 33, 'clientIntegration:test': 21,
-  'ticketList:feature': 39, 'ticketList:test': 20,
-  'correction:feature': 32, 'correction:test': 26,
-};
+const expected = EXPECTED_COUNTS;
 const counts = {};
 for (const row of rows) {
   const bucket = row.plan === 'foundation' ? 'foundation' : `${row.plan}:${row.kind}`;
@@ -346,6 +346,49 @@ const inventory = {
 
 mkdirSync(outDir, { recursive: true });
 writeFileSync(path.join(outDir, 'inventory.json'), `${JSON.stringify(inventory, null, 2)}\n`);
+
+/**
+ * The C8 manifest. It carries the same rows plus the candidate identity,
+ * provenance, CI, mergeability and prerequisite fields the readiness verifier
+ * needs. Everything the verifier cannot observe for itself is recorded here as
+ * an explicit UNKNOWN rather than omitted, so the gate reports a named blocking
+ * reason instead of silently treating an absent field as satisfied.
+ *
+ * This file does not compute readiness. `scripts/verify-co-managed-completion.mjs`
+ * does, from the plans read independently of this output.
+ */
+const base = (() => {
+  try { return execFileSync('git', ['merge-base', 'origin/main', candidate], { cwd: root, encoding: 'utf8' }).trim(); }
+  catch { return null; }
+})();
+const worktreeClean = (() => {
+  try { return execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim() === ''; }
+  catch { return null; }
+})();
+
+const manifest = {
+  schemaVersion: 1,
+  candidate,
+  base,
+  collectedAt: inventory.generatedAt,
+  pr: { number: 3363, head: null },
+  // Filled by whoever collects a real candidate. Null is a blocking reason.
+  provenance: { app: { revision: null }, worker: { revision: null }, migrations: null, config: null, simulator: null },
+  worktreeClean,
+  mergeability: { mergeable: null, mergeStateStatus: null, checkedAtSha: null },
+  ci: { runId: null, checks: [] },
+  reviewEnvironment: { stable: false, observedMinutes: 0, healingEvents: null },
+  openDefects: OPEN_DEFECTS,
+  productionPrerequisites: PRODUCTION_PREREQUISITES,
+  evidence: EVIDENCE,
+  requirements: rows.map((row) => ({
+    key: row.key, status: row.status, justification: row.justification,
+    ownerRole: row.ownerRole, requiredInCard: row.status !== 'blocked-external',
+    externalOwner: EXTERNAL[row.key] ? 'release-operator' : undefined,
+    evidence: row.evidence.map((item) => ({ id: item.id })),
+  })),
+};
+writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
 const md = [];
 md.push(`# CF001 — co-managed reconciliation inventory`);
