@@ -100,6 +100,67 @@ const EVIDENCE = {
     artifact: 'cf005-provider-setup.md',
     artifactNote: 'Browser-measured innerText lengths, recorded inline. No raw log: the measurement is the result. Reproduce with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false.',
   },
+  'base-reconciliation-round3': {
+    type: 'automated',
+    sha: 'ROUND3_CANDIDATE',
+    command: 'git merge origin/main (2dc8454a4c, 19 commits: sync-mode bundle status propagation); '
+      + 'node scripts/audit-merge-drops.mjs --added-by origin/main --against 023076a648 --result worktree; '
+      + 'byte-identity diff of every file main touched that the branch did not; vitest over the suites main added',
+    result: 'Four conflicts, all in ticket-bundle / client-portal code where the co-managed audience guards live; '
+      + 'all four resolved by keeping BOTH sides, none by taking a side. audit-merge-drops: 22 contested files, '
+      + '7 flagged lines, every one a line this resolution deliberately rewrote. 49 files main touched that the '
+      + 'branch did not are byte-identical to origin/main; the single exception is ticketBundlePropagation.ts, '
+      + 'whose types this resolution extends. Main\'s new suites pass: 14 server unit, 26 tickets-package, '
+      + '3 temporal, 1 TicketDetails confirm. PR #3363 reports mergeable=MERGEABLE.',
+    artifact: 'base-reconciliation-round3.md',
+    artifactNote: 'Diff/audit result; the per-file table IS the artifact. Re-runnable against origin/main 2dc8454a4c. '
+      + 'NOT established: ee/mobile suites could not run locally (mobile deps absent), so their evidence is '
+      + 'byte-identity to origin/main plus the CI run, not a local pass.',
+  },
+  'nav-contract-reanchored': {
+    type: 'automated',
+    sha: 'ROUND3_CANDIDATE',
+    command: 'server: vitest run src/test/unit/api/microsoftEmailSetupCallback.test.ts '
+      + 'src/test/unit/product/uiReachabilityCoherence.contract.test.ts '
+      + 'src/test/unit/product/providerSetupReachability.test.ts; '
+      + 'packages/integrations: vitest run (whole project)',
+    result: '37 passed across the 6 targeted suites; 115 files / 959 tests pass for @alga-psa/integrations. '
+      + 'MUTATION-VERIFIED both halves: pointing the psa rows of PRODUCT_NAV_DESTINATIONS at '
+      + '/msp/settings/MUTATED turns microsoftEmailSetupCallback and MicrosoftIntegrationSettings.contract red. '
+      + 'uiReachabilityCoherence now runs for co_managed as well as algadesk/psa; MUTATION-VERIFIED by adding a '
+      + 'co_managed-allowed route prefix with no nav entry, which the orphan assertion reports by name. '
+      + '/msp/settings/integrations remains not_found for co_managed.',
+    artifact: 'cf005-provider-setup.md',
+    artifactNote: 'Deterministic unit runs plus two recorded mutation checks; re-runnable in seconds.',
+  },
+  'integration-shard-apt-repair': {
+    type: 'automated',
+    sha: 'ROUND3_CANDIDATE',
+    command: 'Read GitHub Actions job 106117870496 (Integration shard 4) and repaired '
+      + '.github/workflows/integration-tests.yml:145 and citus-migration-smoke.yml:137',
+    result: 'Shard 4 died before running a single test: apt-get update exited 100 because packages.microsoft.com '
+      + 'returned HTTP 403 for the Ubuntu noble InRelease file. poppler-utils is a genuine dependency '
+      + '(invoiceTicketImmutable/invoiceTicketProduction shell out to pdftotext) and is kept. The step now drops '
+      + 'the vendor sources the runner ships, tolerates a residual update error, and hard-verifies pdftotext -v; '
+      + 'the install is not `|| true`.',
+    artifact: 'base-reconciliation-round3.md',
+    artifactNote: 'NOT established locally: whether the 78 missing collection records go to zero. That is only '
+      + 'readable from the Repository test inventory job of a run where shard 4 actually collects, and must be '
+      + 'read from that job output rather than assumed from causation.',
+  },
+  'cf002-diagnostic-survives-pass': {
+    type: 'automated',
+    sha: 'ROUND3_CANDIDATE',
+    command: 'server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts',
+    result: '29 passed (was 22). Adds a file sink (ALGA_INBOUND_DIAGNOSTIC_FILE, NDJSON, capped, never throws) '
+      + 'wired in integration-tests.yml to the existing server-integration-shard-N artifact, and derives '
+      + 'recursionCycle/recursionRepetitions so a stack overflow names its own recursion site. New cases cover '
+      + 'self-recursion, mutual recursion, a negative case that must not invent a cycle, the emitted payload, '
+      + 'and the sink\'s create / no-op / never-throw behaviour.',
+    artifact: 'cf002-requester-deferral.md',
+    artifactNote: 'ESTABLISHES observation only. It does NOT establish a cause for CF002, and there is no '
+      + 'mutation-verified CF002 regression because there is no established cause to reintroduce.',
+  },
   'admission-adapter-callsites': {
     type: 'automated',
     sha: 'ROUND2_CANDIDATE',
@@ -179,8 +240,9 @@ const EVIDENCE = {
 
 // Evidence recorded as collected at "this round's candidate" resolves here, so
 // the manifest can never carry a placeholder into the readiness calculation.
+const CANDIDATE_PLACEHOLDERS = new Set(['ROUND2_CANDIDATE', 'ROUND3_CANDIDATE']);
 for (const item of Object.values(EVIDENCE)) {
-  if (item.sha === 'ROUND2_CANDIDATE') item.sha = candidate;
+  if (CANDIDATE_PLACEHOLDERS.has(item.sha)) item.sha = candidate;
 }
 
 /**
@@ -195,15 +257,24 @@ const OVERRIDES = {
   },
   CF002: {
     status: 'failed',
-    why: 'PARTLY MET. The instrumented candidate ran: CI shard 1 at fb2e696645 reports the first exception as '
-      + 'RangeError "Maximum call stack size exceeded" thrown inside the commit transaction, which is why the '
-      + 'lifecycle classification declines and the disposition is retry. The two stack overflows are now '
-      + 'separated -- this product-path one, and the independent reporter-level serializer overflow also seen '
-      + 'over an unrelated knex error in the same shard. What is still NOT captured is WHERE it recurses: the '
-      + 'diagnostics carried no stack. This candidate adds bounded frames (at most 14, each truncated, '
-      + 'mutation-checked) so the next CI read names the recursion site. Row stays failed until it does.',
+    why: 'STILL UNEXPLAINED, and this round corrects the previous round\'s framing rather than advancing the row. '
+      + 'Shard-1 history for the separately-compiled requester lifecycle-pause case is now pass (bda945b640), '
+      + 'fail x5 (7b0b52c6c3, 618019c3e3, fb2e696645, b17b7a80b4), then PASS at 023076a648 (job 106117870494). '
+      + 'That retires the earlier "deterministic regression in a fixed window" reading: six runs show '
+      + 'pass-fail-pass, which is not deterministic. It also exposes the blocking fact: the commit_body '
+      + 'discriminator shipped at 4879aa8d63 and 023076a648 is the FIRST head that carried it -- and that run '
+      + 'passed, so it emitted nothing, because server/vitest.config.ts sets silent:"passed-only". The prior '
+      + 'round\'s instrumentation can only speak when the test fails, and the test had stopped failing, so every '
+      + '"read commit_body from the next log" next-action was unreachable. This round fixes that and nothing '
+      + 'else: a file sink writes every record as NDJSON to the existing server-integration-shard-N artifact '
+      + 'regardless of pass/fail, and the report now names its own recursion cycle. A green run therefore now '
+      + 'yields the discriminator, because the commit_body stage sits in the withAdminTransaction callback\'s own '
+      + 'catch and the PASSING path of this test throws CoManagedLifecycleError through exactly that catch. '
+      + 'Readings (A) (withAdminTransaction\'s unguarded .stack read manufactured the RangeError) and (B) (the '
+      + 'commit body genuinely overflowed) both remain open and untested. No causal explanation, and no '
+      + 'mutation-verified regression, because there is no established cause to reintroduce. Row stays failed.',
     evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure', 'inbound-diagnostics-regression',
-      'requester-deferral-local-pass', 'requester-deferral-control-run'],
+      'requester-deferral-local-pass', 'requester-deferral-control-run', 'cf002-diagnostic-survives-pass'],
   },
   CF003: {
     status: 'failed',
@@ -228,7 +299,10 @@ const OVERRIDES = {
       + 'entry points are untouched by this round\'s change except that the technician adapter '
       + '(inboundEmailReply) got the same duck-typed classification, which needs the same shard proof. The '
       + 'fb2e696645 read shows the pause never reaches the classification at all, so the rollback/refund '
-      + 'behaviour this row requires is still unobserved on a passing candidate.',
+      + 'behaviour this row requires is still unobserved on a passing candidate. Round 3 note: shard 1 PASSED at '
+      + '023076a648, but with silent:"passed-only" that pass produced no record of which path ran, so it cannot '
+      + 'be read as observing the rollback/refund behaviour either. The file sink added this round is what will '
+      + 'make a green run say.',
     evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure'],
   },
   CF005: {
@@ -302,10 +376,21 @@ const OPEN_DEFECTS = [
       + 'unaffected. Delete the secret or set a matching requirepass before the next reproduction.',
   },
   {
-    id: 'reachability-contract-excludes-co-managed',
-    kind: 'test-coverage',
-    summary: 'uiReachabilityCoherence.contract.test.ts runs for algadesk and psa only. It is the contract that '
-      + 'would have caught the CF005 defect class for co_managed.',
+    id: 'co-managed-account-management-permission-gap',
+    kind: 'product',
+    summary: 'A co_managed workspace resolves /msp/account as allowed (msp_core_helpdesk) but its seed vocabulary '
+      + 'never grants account_management:read, so the header avatar menu -> Account entry never renders for any '
+      + 'co-managed tenant. Found by extending uiReachabilityCoherence.contract.test.ts to co_managed this round. '
+      + 'Repair needs server/migrations/utils/permissions/catalog.cjs plus a backfill migration for existing '
+      + 'tenants, which is a seeding change beyond this card. RECORDED, not waived: the contract asserts each '
+      + 'recorded gap is still real, so seeding the permission turns the test red and forces the entry out.',
+  },
+  {
+    id: 'algadesk-provider-nav-dead-end',
+    kind: 'product',
+    summary: 'AlgaDesk has the identical provider dead end: /msp/settings/integrations is not_found for it, yet an '
+      + 'EE AlgaDesk tenant still renders the Open Providers entry. Recorded in UNRESOLVED_NAV_DESTINATIONS in '
+      + 'providerSetupReachability.test.ts. Explicitly out of this card\'s scope; carried forward unfixed.',
   },
 ];
 
