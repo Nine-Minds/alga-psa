@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "candidate": "ce277ac37a1a454fc24b2fad419228683556d3b8",
-  "generatedAt": "2026-09-20T22:11:07.488Z",
+  "candidate": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+  "generatedAt": "2026-09-20T23:19:12.688Z",
   "plans": {
     "foundation": "docs/plans/2026-09-06-co-managed-it-plan.md",
     "clientIntegration": "docs/plans/2026-09-11-co-managed-client-integration",
@@ -27,11 +27,11 @@
   "totals": {
     "rows": 193,
     "byStatus": {
-      "implemented-unverified": 96,
+      "implemented-unverified": 104,
       "blocked-external": 3,
-      "missing-code": 90,
-      "failed": 3,
-      "verified": 1
+      "missing-code": 82,
+      "verified": 2,
+      "failed": 2
     }
   },
   "failures": [],
@@ -47,7 +47,7 @@
     },
     "provider-route-regression": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "server: vitest run src/test/unit/product + src/test/unit/email (125 files) at the round-2 candidate, after the release-flag gate was removed from the provider route",
       "result": "859 passed. Mutation checks: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page fails 2 of 7 provider cases; re-adding CoManagedFeatureBoundary to the route fails 1 of 7.",
       "artifact": "cf005-provider-setup.md",
@@ -55,7 +55,7 @@
     },
     "provider-route-browser": {
       "type": "browser",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "Real dev app at http://100.82.172.57:3374 as cm.rabbit.admin@whiterabbit.test (tenant 51ac6952-6d6f-4600-aace-b71a9b2a5e73, product_code co_managed): Settings -> Email -> Inbound -> Open Providers; plus direct URLs for four excluded surfaces",
       "result": "Open Providers now lands on /msp/co-management/providers (\"Email and Identity Providers\") with the Microsoft app-registration surface rendered. /msp/settings/integrations (providers and accounting), /msp/settings/integrations/entra, /msp/billing and /msp/settings/extensions all still render \"Page not available in your current product experience\". PSA admin unchanged: /msp/go/providers redirects to /msp/settings/integrations?category=providers. Re-walked at the round-2 candidate after the locale keys and the release-flag change: /msp/go/providers renders the workbench (main innerText 1697 chars, #provider-credentials-selector present).",
       "artifact": "screenshots/cf005-co-managed-providers.png",
@@ -63,7 +63,7 @@
     },
     "release-flag-off-walk": {
       "type": "browser",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "Dev server restarted with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false; walked as cm.rabbit.admin@whiterabbit.test",
       "result": "The blanking is shell-wide, not route-specific: /msp/dashboard, /msp/tickets, /msp/settings/email, /msp/co-management/ticket-access and /msp/co-management/providers all render main innerText length 0. MspLayoutClient wraps the whole shell in CoManagedWorkspaceBoundary for product_code co_managed. Restored afterwards and re-verified the route renders (1697 chars).",
       "artifact": "cf005-provider-setup.md",
@@ -71,7 +71,7 @@
     },
     "base-reconciliation-round3": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "git merge origin/main (2dc8454a4c, 19 commits: sync-mode bundle status propagation); node scripts/audit-merge-drops.mjs --added-by origin/main --against 023076a648 --result worktree; byte-identity diff of every file main touched that the branch did not; vitest over the suites main added",
       "result": "Four conflicts, all in ticket-bundle / client-portal code where the co-managed audience guards live; all four resolved by keeping BOTH sides, none by taking a side. audit-merge-drops: 22 contested files, 7 flagged lines, every one a line this resolution deliberately rewrote. 49 files main touched that the branch did not are byte-identical to origin/main; the single exception is ticketBundlePropagation.ts, whose types this resolution extends. Main's new suites pass: 14 server unit, 26 tickets-package, 3 temporal, 1 TicketDetails confirm. PR #3363 reports mergeable=MERGEABLE.",
       "artifact": "base-reconciliation-round3.md",
@@ -79,7 +79,7 @@
     },
     "nav-contract-reanchored": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "server: vitest run src/test/unit/api/microsoftEmailSetupCallback.test.ts src/test/unit/product/uiReachabilityCoherence.contract.test.ts src/test/unit/product/providerSetupReachability.test.ts; packages/integrations: vitest run (whole project)",
       "result": "37 passed across the 6 targeted suites; 115 files / 959 tests pass for @alga-psa/integrations. MUTATION-VERIFIED both halves: pointing the psa rows of PRODUCT_NAV_DESTINATIONS at /msp/settings/MUTATED turns microsoftEmailSetupCallback and MicrosoftIntegrationSettings.contract red. uiReachabilityCoherence now runs for co_managed as well as algadesk/psa; MUTATION-VERIFIED by adding a co_managed-allowed route prefix with no nav entry, which the orphan assertion reports by name. /msp/settings/integrations remains not_found for co_managed.",
       "artifact": "cf005-provider-setup.md",
@@ -87,7 +87,7 @@
     },
     "integration-shard-apt-repair": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "Read GitHub Actions job 106117870496 (Integration shard 4) and repaired .github/workflows/integration-tests.yml:145 and citus-migration-smoke.yml:137",
       "result": "Shard 4 died before running a single test: apt-get update exited 100 because packages.microsoft.com returned HTTP 403 for the Ubuntu noble InRelease file. poppler-utils is a genuine dependency (invoiceTicketImmutable/invoiceTicketProduction shell out to pdftotext) and is kept. The step now drops the vendor sources the runner ships, tolerates a residual update error, and hard-verifies pdftotext -v; the install is not `|| true`.",
       "artifact": "base-reconciliation-round3.md",
@@ -95,7 +95,7 @@
     },
     "cf002-diagnostic-survives-pass": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts",
       "result": "29 passed (was 22). Adds a file sink (ALGA_INBOUND_DIAGNOSTIC_FILE, NDJSON, capped, never throws) wired in integration-tests.yml to the existing server-integration-shard-N artifact, and derives recursionCycle/recursionRepetitions so a stack overflow names its own recursion site. New cases cover self-recursion, mutual recursion, a negative case that must not invent a cycle, the emitted payload, and the sink's create / no-op / never-throw behaviour.",
       "artifact": "cf002-requester-deferral.md",
@@ -119,7 +119,7 @@
     },
     "bundle-propagation-regression-repair": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "server: vitest run ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts with DB_NAME_SERVER=server_co_managed and VITEST_SEED=20260610 (docs/dev/running-integration-tests-locally.md)",
       "result": "1418/1418 pass, the first fully green local run of this file recorded on this card. Repairs 6 regressions the merge introduced: (1) prepareTicketResourceReassignment was ported into the engine's boundary path but not its legacy path, so a bare assigned_to change silently failed to move the child's assignee; (2) main's new sync-mode contract requires an explicit propagateToChildren choice, which the fixture did not make. Adds 2 cases covering the confirmation guard on the co-managed path so answering it in the fixture does not hide it.",
       "artifact": "base-reconciliation-round3.md",
@@ -127,7 +127,7 @@
     },
     "fixture-reset-repaired": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "npm run fixtures:co-managed -- --verify / --reset / --verify / (apply) / --verify",
       "result": "The documented C7 cycle now reproduces with exit codes: 19/19 (exit 0) -> reset (exit 0) -> 5/19 (exit 1) -> apply (exit 0) -> 19/19 (exit 0). Previously the fixtures were stuck at 18/19 with a STALE shared-work escalation row and --reset could not run at all: time_sheets, then jobs, then a second-level blocker (client_billing_cycles under client_billing_profiles) that escaped from inside purgeRow's catch and aborted the whole single-transaction reset. The complete table set was established by enumerating every foreign key into users from pg_constraint and counting rows against the four fixture user ids.",
       "artifact": "raw-logs/fixture-reset-cycle-449e0a7b6c.txt",
@@ -135,15 +135,39 @@
     },
     "cf007-authority-hardening": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "ee/server: vitest run mcpIdpPresets (LIVE Google+Microsoft discovery) and mcpOidcDiscoveryHardening; server: vitest run mcpIdpDiscoveryNotRequestSelected.contract and nextAuthOptions.mspContract; node --test scripts/tests/microsoft-oidc-harness.test.mjs",
       "result": "Nonce is now verified on BOTH Microsoft providers (it was absent on one and undeclared on the other), OIDC discovery now binds the advertised issuer to the URL it was fetched from (Discovery 1.0 section 4.3) with https-only transport, and the discoveryBaseUrl seam is pinned as not request-reachable. 11 live + 9 hardening + 3 contract + 17 harness cases pass. MUTATION-VERIFIED: dropping nonce fails the contract; disabling the issuer-match fails 3 of 9. Two candidate rules were REJECTED by measurement - an issuer/jwks same-origin rule would break Google, and strict issuer equality would break Microsoft's templated {tenantid} issuer.",
       "artifact": "cf007-microsoft-authority.md",
       "artifactNote": "ESTABLISHES the code half only. NOT established: real application sign-in/callback execution (the harness lane was not run), the emulator's missing Entra OIDC surface, and the still-ungated production MICROSOFT_LOGIN_BASE_URL override, which is left alone with its reason recorded."
     },
+    "qualified-handback-eligibility-repair": {
+      "type": "automated",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+      "command": "server: vitest run src/test/unit/product/coManagedHandbackRecovery.test.tsx ../packages/tickets/src/lib/ticketListIdentity.test.ts",
+      "result": "19 passed. Writing the missing T013 recovery test exposed a product defect: isQualifiedHandbackEligible read responsibility/work_revision from the top level of the item while every real CoManagedTicketQueueItem carries them under `fields`, so it returned false for EVERY row and the qualified selection column and handback composer were dead at runtime. It typechecked (optional properties) and its only unit test used a flat object, so it agreed with the bug. The predicate now takes the real shape, so a flat object is a type error rather than a silent false. MUTATION-VERIFIED: reverting to the top-level read fails 6 cases across the two suites.",
+      "artifact": "ticket-list-reconciliation.md",
+      "artifactNote": "Unit-level only. It does NOT establish that the qualified handback journey works in a browser - no co-managed browser test exists (see ticketList:T019/T011) - only that the eligibility gate and the recovery contract behave."
+    },
+    "cf002-verified-green-shard": {
+      "type": "automated",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+      "command": "GitHub Actions run 35543087189, job 106164529115, Integration shard 1, VITEST_SEED=20260610",
+      "result": "GREEN. 2173 passed, 0 failed, 0 skipped. Includes the requester lifecycle-pause case, all 8 MSP SLA bundle-propagation cases, and the period-job case whose rejection was made finite this round. The uploaded inbound-diagnostics-shard-1.ndjson carries 32 records with ZERO RangeError, and every commit_body error name equals its rollback error name - the substitution that turned defer into retry is gone, measured at the candidate. Three shard-1 artifacts are now committed (35534035281 broken, 35537272058 repaired-but-red-elsewhere, 35543087189 green) so the whole arc is re-readable.",
+      "artifact": "raw-logs/inbound-diagnostics-shard1-35543087189.ndjson",
+      "artifactNote": "NOT a claim that the full mandatory CI is green: integration shard 4 failed at this same candidate on an unrelated RMM/pg-boss delivery timing flake (1 of 520, \"expected pending to be completed\"), which is recorded as an open defect rather than waved through."
+    },
+    "ticket-list-reconciliation": {
+      "type": "analysis",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+      "command": "Row-by-row code read of all 39 unchecked ticket-list rows (F003-F039, T002-T019) against packages/tickets/src/{lib,components,actions}, server/src/components/{co-managed,tickets} and server/src/app/msp/tickets",
+      "result": "Of 39 rows, 7 are satisfied by code that exists and move to implemented-unverified (F012, F015, F021, F029, F036, T003, T014); 3 features and 5 tests were searched and have NO implementing code (F006, F022, F026, T006, T008, T011, T013, T019); the remaining 24 are PARTIAL and stay missing-code with the specific missing third named. Three structural findings: TicketListShell was written as a PARALLEL frame rather than extracted from the dashboard, so F010 and its test T005 have no subject; the components this plan intends to RETIRE are the only ones with component tests, so T007/T010/T012 point at the wrong target; and no test file anywhere renders QualifiedTicketList, TicketListScopeBar, TicketListShell, CoManagedTicketHandbackComposer or CoManagedTicketQueueLegacyAdapter.",
+      "artifact": "ticket-list-reconciliation.md",
+      "artifactNote": "A code read, not an execution. It establishes what EXISTS, never that anything passes - no row moves to verified on it. Re-runnable by re-reading the cited file:line references."
+    },
     "admission-adapter-callsites": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "server: vitest run src/test/unit/email/coManagedAdmissionAdapters.test.ts",
       "result": "8 passed. Mutation runs, each adapter independently: inboundRequesterReply -> instanceof fails 2 of 8; inboundEmailReply -> instanceof fails 1 of 8. The unrelated-infrastructure-error cases stay green under both, so the repair does not broaden quarantine.",
       "artifact": "cf002-requester-deferral.md",
@@ -151,7 +175,7 @@
     },
     "inbound-diagnostics-regression": {
       "type": "automated",
-      "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+      "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
       "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts (rerun at the round-2 candidate as part of the 125-file product+email sweep)",
       "result": "10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the separately-compiled-copy case.",
       "artifact": "cf002-requester-deferral.md",
@@ -208,7 +232,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -225,7 +249,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -242,7 +266,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -261,7 +285,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -278,7 +302,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -300,7 +324,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -318,7 +342,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -337,7 +361,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -357,7 +381,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -375,7 +399,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -393,7 +417,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -411,7 +435,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -428,7 +452,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -445,7 +469,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -462,7 +486,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -479,7 +503,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -498,7 +522,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -516,7 +540,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -535,7 +559,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -553,7 +577,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -571,7 +595,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -590,7 +614,7 @@
       ],
       "foundationNote": true,
       "status": "implemented-unverified",
-      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate ce277ac37a, so it stays implemented-unverified.",
+      "justification": "The 2026-09-08 source audits (docs/plans/co-managed-audit-*.md) found an implementation for this contract. Those audits are source review at their own revision, not acceptance: they ran no build, no browser journey and no Citus. Nothing was run for this contract at candidate 5e71e4efd2, so it stays implemented-unverified.",
       "evidence": []
     },
     {
@@ -605,7 +629,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -620,7 +644,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -635,7 +659,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -650,7 +674,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -665,7 +689,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -680,7 +704,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -695,7 +719,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -710,7 +734,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -725,7 +749,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -740,7 +764,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -755,7 +779,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -770,7 +794,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -785,7 +809,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -800,7 +824,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -815,7 +839,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -830,7 +854,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -845,7 +869,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -860,7 +884,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -875,7 +899,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -890,7 +914,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -905,7 +929,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -920,7 +944,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -935,7 +959,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -950,7 +974,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -965,7 +989,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -980,7 +1004,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -995,7 +1019,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1010,7 +1034,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1025,7 +1049,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1040,7 +1064,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1055,7 +1079,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1070,7 +1094,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1085,7 +1109,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1105,7 +1129,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1127,7 +1151,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1146,7 +1170,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1165,7 +1189,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1186,7 +1210,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1204,7 +1228,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1225,7 +1249,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1246,7 +1270,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1268,7 +1292,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1288,7 +1312,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1307,7 +1331,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1327,7 +1351,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1347,7 +1371,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1366,7 +1390,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1387,7 +1411,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1406,7 +1430,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1426,7 +1450,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1498,7 +1522,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1521,7 +1545,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1536,7 +1560,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1551,7 +1575,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1566,7 +1590,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. Exists: scope parse/serialize (ticketListScope.ts:175,:249), explicit transitions (TicketListScopeBar.tsx:112), the navigation-in-flight URL guard (ticketListUrlSync.ts:27 used at TicketingDashboardContainer.tsx:325) and native popstate restore (:726). MISSING the row's headline requirement: no native list-state snapshot exists anywhere, so returning to native serializes to a bare /msp/tickets (serializeTicketListQuery returns '' for native, ticketListScope.ts:254) and filters/page/sort/bundle are dropped. Qualified Back/Forward also does not restore presentation (QualifiedTicketList.tsx:77 seeds it in a useState initializer, no popstate listener). resetQualifiedTicketListPresentation (ticketListScope.ts:318) is dead code.",
       "evidence": []
     },
     {
@@ -1581,7 +1605,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1596,7 +1620,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1611,7 +1635,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "NO CODE. ticketListDetailHref appends no return target and says so itself (ticketListIdentity.ts:69); QualifiedTicketList.tsx:161 pushes the bare href. Native returnFilters is pre-existing and encodes no queueView/workspace - `queueView` appears nowhere in ticketFilterUtils.ts or the ticket detail page.",
       "evidence": []
     },
     {
@@ -1626,7 +1650,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1641,7 +1665,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1656,7 +1680,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1671,7 +1695,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL, and not what the row asks. TicketListShell.tsx exists with the required slots, but its only consumer is the qualified list (QualifiedTicketList.tsx:346). TicketingDashboard.tsx never imports it and still renders heading/actions/board inline (:2245). Nothing was extracted from the actual dashboard frame; a parallel frame was written, so the native structure this row exists to preserve is not going through it.",
       "evidence": []
     },
     {
@@ -1686,7 +1710,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1700,9 +1724,19 @@
       "ownerRole": "implementing-ood",
       "dependsOn": [],
       "foundationNote": false,
-      "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
-      "evidence": []
+      "status": "implemented-unverified",
+      "justification": "Code exists. server/src/app/msp/tickets/page.tsx:117 returns on the qualified SSR branch before any native bootstrap, with the client gate and native fallback at :121 and the loading state at QualifiedTicketList.tsx:369. Caveat recorded rather than hidden: the native fallback is a client-side router.replace('/msp/tickets') (TicketListQualifiedFallback.tsx:22), not an inline native render. Unverified - no test renders this branch.",
+      "evidence": [
+        {
+          "id": "ticket-list-reconciliation",
+          "type": "analysis",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+          "command": "Row-by-row code read of all 39 unchecked ticket-list rows (F003-F039, T002-T019) against packages/tickets/src/{lib,components,actions}, server/src/components/{co-managed,tickets} and server/src/app/msp/tickets",
+          "result": "Of 39 rows, 7 are satisfied by code that exists and move to implemented-unverified (F012, F015, F021, F029, F036, T003, T014); 3 features and 5 tests were searched and have NO implementing code (F006, F022, F026, T006, T008, T011, T013, T019); the remaining 24 are PARTIAL and stay missing-code with the specific missing third named. Three structural findings: TicketListShell was written as a PARALLEL frame rather than extracted from the dashboard, so F010 and its test T005 have no subject; the components this plan intends to RETIRE are the only ones with component tests, so T007/T010/T012 point at the wrong target; and no test file anywhere renders QualifiedTicketList, TicketListScopeBar, TicketListShell, CoManagedTicketHandbackComposer or CoManagedTicketQueueLegacyAdapter.",
+          "artifact": "ticket-list-reconciliation.md",
+          "artifactNote": "A code read, not an execution. It establishes what EXISTS, never that anything passes - no row moves to verified on it. Re-runnable by re-reading the cited file:line references."
+        }
+      ]
     },
     {
       "key": "ticketList:F013",
@@ -1716,7 +1750,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1731,7 +1765,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1745,9 +1779,19 @@
       "ownerRole": "implementing-ood",
       "dependsOn": [],
       "foundationNote": false,
-      "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
-      "evidence": []
+      "status": "implemented-unverified",
+      "justification": "Code state satisfies it, by separation rather than by a mechanism - flagged deliberately. Qualified rows are CoManagedTicketQueueItem with their own column set (QualifiedTicketList.tsx:218) and never touch ticket-columns.tsx / ticketColumnCatalog.ts; the type seam is ticketListIdentity.ts:12, and native cells are untouched. Because the two sources never render in one table, the requirement holds by construction. Unverified: no test exercises it, and if the two were ever merged into one table the guarantee would disappear silently.",
+      "evidence": [
+        {
+          "id": "ticket-list-reconciliation",
+          "type": "analysis",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+          "command": "Row-by-row code read of all 39 unchecked ticket-list rows (F003-F039, T002-T019) against packages/tickets/src/{lib,components,actions}, server/src/components/{co-managed,tickets} and server/src/app/msp/tickets",
+          "result": "Of 39 rows, 7 are satisfied by code that exists and move to implemented-unverified (F012, F015, F021, F029, F036, T003, T014); 3 features and 5 tests were searched and have NO implementing code (F006, F022, F026, T006, T008, T011, T013, T019); the remaining 24 are PARTIAL and stay missing-code with the specific missing third named. Three structural findings: TicketListShell was written as a PARALLEL frame rather than extracted from the dashboard, so F010 and its test T005 have no subject; the components this plan intends to RETIRE are the only ones with component tests, so T007/T010/T012 point at the wrong target; and no test file anywhere renders QualifiedTicketList, TicketListScopeBar, TicketListShell, CoManagedTicketHandbackComposer or CoManagedTicketQueueLegacyAdapter.",
+          "artifact": "ticket-list-reconciliation.md",
+          "artifactNote": "A code read, not an execution. It establishes what EXISTS, never that anything passes - no row moves to verified on it. Re-runnable by re-reading the cited file:line references."
+        }
+      ]
     },
     {
       "key": "ticketList:F016",
@@ -1761,7 +1805,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1776,7 +1820,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL, and the part this row adds is vacuous. The native side (ticketViewSettings.ts, TicketViewMenu.tsx, validateCapturedFilters at page.tsx:324) is intact and pre-existing. The exclusion clause holds only because the qualified list has no View menu and no display state to leak (see F022); no code filters queue params out of a saved-default write, so nothing enforces it once F022 lands.",
       "evidence": []
     },
     {
@@ -1791,7 +1835,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1806,7 +1850,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1821,7 +1865,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. Present: applied-on-submit search (QualifiedTicketList.tsx:282), open/closed/all (:298), workspace via TicketListScopeBar.tsx:154 from the authorized reader (:79), scope-preserving reset (:319). MISSING: there is no qualified client filter control at all - clientId only arrives from a fixed prop or the URL (:93) - and the reset at :323 does not clear a global clientId, contradicting the PRD's 'global client narrowing can be cleared'.",
       "evidence": []
     },
     {
@@ -1835,9 +1879,19 @@
       "ownerRole": "implementing-ood",
       "dependsOn": [],
       "foundationNote": false,
-      "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
-      "evidence": []
+      "status": "implemented-unverified",
+      "justification": "Code exists. QualifiedTicketList.tsx:387 sets manualSorting, server totalItems from result.totalCount, and onPageChange/onItemsPerPageChange; unsupported columns are sortable:false (:248,:254,:260); counts come from the server page (:372); the page-size preference is honoured at page.tsx:108. Recorded gaps short of the row's wording: no explicit refresh control in qualified mode, and the header-sort mapping at :401 falls back to 'title' for any non-updated_at column id. Unverified - no test renders this component.",
+      "evidence": [
+        {
+          "id": "ticket-list-reconciliation",
+          "type": "analysis",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+          "command": "Row-by-row code read of all 39 unchecked ticket-list rows (F003-F039, T002-T019) against packages/tickets/src/{lib,components,actions}, server/src/components/{co-managed,tickets} and server/src/app/msp/tickets",
+          "result": "Of 39 rows, 7 are satisfied by code that exists and move to implemented-unverified (F012, F015, F021, F029, F036, T003, T014); 3 features and 5 tests were searched and have NO implementing code (F006, F022, F026, T006, T008, T011, T013, T019); the remaining 24 are PARTIAL and stay missing-code with the specific missing third named. Three structural findings: TicketListShell was written as a PARALLEL frame rather than extracted from the dashboard, so F010 and its test T005 have no subject; the components this plan intends to RETIRE are the only ones with component tests, so T007/T010/T012 point at the wrong target; and no test file anywhere renders QualifiedTicketList, TicketListScopeBar, TicketListShell, CoManagedTicketHandbackComposer or CoManagedTicketQueueLegacyAdapter.",
+          "artifact": "ticket-list-reconciliation.md",
+          "artifactNote": "A code read, not an execution. It establishes what EXISTS, never that anything passes - no row moves to verified on it. Re-runnable by re-reading the cited file:line references."
+        }
+      ]
     },
     {
       "key": "ticketList:F022",
@@ -1851,7 +1905,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "NO CODE. QualifiedTicketList.tsx:276 returns a fixed column array; there is no View menu, no density control and no optional-column state anywhere on the qualified path.",
       "evidence": []
     },
     {
@@ -1866,7 +1920,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -1881,7 +1935,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. The CSV itself is correct - QualifiedTicketList.tsx:135 strips page/pageSize and exports all applied matches independent of selection, with machine-readable owner/relationship/ticket columns at coManagedTicketQueueActions.ts:27. But it is NOT in the Share area this row requires: it is a standalone Export button in the heading actions (:333) while native Share lives in TicketingDashboard.tsx.",
       "evidence": []
     },
     {
@@ -1896,7 +1950,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. Button, 'Add MSP ticket' wording and authorized client prefill exist (QualifiedTicketList.tsx:336, locale key present in en/de/es/fr). MISSING: no keyboard shortcut (native uses usePageCreateShortcut at TicketingDashboard.tsx:83; absent here) and no post-creation refresh.",
       "evidence": []
     },
     {
@@ -1911,7 +1965,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "NO CODE. The qualified list navigates away to /msp/create-ticket and has no creation-result handling of any kind, so there is nothing to produce the out-of-scope success link this row requires.",
       "evidence": []
     },
     {
@@ -1926,7 +1980,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL, one direction only. Qualified selection is correctly separate: local state (QualifiedTicketList.tsx:87) keyed by ticketListIdentityKey and cleared on every request/scope/page change (:115), with no TicketsRouteProvider import. NOT implemented: the reverse. /msp/tickets/layout.tsx mounts TicketsRouteProvider for BOTH branches and it rehydrates its sessionStorage selection on mount (TicketsRouteProvider.tsx:103) with no scope awareness, so a native selection survives a native to qualified transition.",
       "evidence": []
     },
     {
@@ -1941,7 +1995,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL, and the first half was BROKEN until this round. isQualifiedHandbackEligible read responsibility/work_revision from the TOP LEVEL of the item, while every real CoManagedTicketQueueItem carries them under `fields` - so it evaluated undefined against 'msp' and returned false for EVERY row. Nothing was ever handback eligible: the selection column offered no rows and the single composer never rendered, which also made F029/F030/F031 unreachable in a browser. It typechecked because the parameter type made those properties optional, and the only unit test passed a hand-written FLAT object, so it agreed with the bug instead of catching it. Repaired and mutation-verified this round (6 cases go red when reverted). Still PARTIAL: selection with eligibility gating now feeds one composer (QualifiedTicketList.tsx:178, composer at :376), but the second half - removing the duplicate standalone bulk-handback checklist - is NOT done: CoManagedTicketBulkHandback.tsx still exists with its own checkbox list (:44) and still has live tests.",
       "evidence": []
     },
     {
@@ -1955,9 +2009,19 @@
       "ownerRole": "implementing-ood",
       "dependsOn": [],
       "foundationNote": false,
-      "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
-      "evidence": []
+      "status": "implemented-unverified",
+      "justification": "Reachability: this composer never rendered in a browser before this round's eligibility repair. Code exists. CoManagedTicketHandbackComposer.tsx:104 builds per-item {operationId, expectedRevision, resource}; :128 freezes the command and reuses the exact frozen request on retry; required note and audience line at :188. Server-side bound and dedupe at packages/co-managed/src/ticketBulkHandback.ts:22. Unverified at the component level: no test file imports this composer; the DB-side behaviour is covered by the integration suite (see ticketList:T014).",
+      "evidence": [
+        {
+          "id": "ticket-list-reconciliation",
+          "type": "analysis",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+          "command": "Row-by-row code read of all 39 unchecked ticket-list rows (F003-F039, T002-T019) against packages/tickets/src/{lib,components,actions}, server/src/components/{co-managed,tickets} and server/src/app/msp/tickets",
+          "result": "Of 39 rows, 7 are satisfied by code that exists and move to implemented-unverified (F012, F015, F021, F029, F036, T003, T014); 3 features and 5 tests were searched and have NO implementing code (F006, F022, F026, T006, T008, T011, T013, T019); the remaining 24 are PARTIAL and stay missing-code with the specific missing third named. Three structural findings: TicketListShell was written as a PARALLEL frame rather than extracted from the dashboard, so F010 and its test T005 have no subject; the components this plan intends to RETIRE are the only ones with component tests, so T007/T010/T012 point at the wrong target; and no test file anywhere renders QualifiedTicketList, TicketListScopeBar, TicketListShell, CoManagedTicketHandbackComposer or CoManagedTicketQueueLegacyAdapter.",
+          "artifact": "ticket-list-reconciliation.md",
+          "artifactNote": "A code read, not an execution. It establishes what EXISTS, never that anything passes - no row moves to verified on it. Re-runnable by re-reading the cited file:line references."
+        }
+      ]
     },
     {
       "key": "ticketList:F030",
@@ -1971,7 +2035,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Reachability: unreachable in a browser before this round's eligibility repair. PARTIAL. Persistence is implemented well - versioned, 24h expiry, actor-scoped key (CoManagedTicketHandbackComposer.tsx:12), written BEFORE first submit (:134), never auto-submitted on restore (:159), storage-unavailable message (:198). NOT implemented: nothing prevents a scope or page change from tearing the composer down. Selection clears on scope change (QualifiedTicketList.tsx:115) so eligible empties and the composer returns null (:176), while `restored` is read only at mount (:93) - an unresolved uncertain handback therefore vanishes from the screen until reload. No logout cleanup hook.",
       "evidence": []
     },
     {
@@ -1986,7 +2050,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Reachability: unreachable in a browser before this round's eligibility repair. PARTIAL. Per-item outcomes render (CoManagedTicketHandbackComposer.tsx:200). The re-read this row requires is MANUAL only: onDone is wired to a Reload button (:215) which bumps a refresh counter (QualifiedTicketList.tsx:380); nothing re-reads the authorized queue automatically when results arrive, so returned work does not leave working until the operator asks.",
       "evidence": []
     },
     {
@@ -2001,7 +2065,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. Implemented: stale-clearing on every request change (QualifiedTicketList.tsx:112), export failure dropping protected rows (:154), loading (:369), empty (:384), restricted per-cell label (:166). MISSING: no separate no-match vs empty state, no workspace-unavailable state or reset action (the PRD requires a scoped unavailable result plus a clear reset instead of silent widening), and no retry affordance on a failed load.",
       "evidence": []
     },
     {
@@ -2016,7 +2080,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -2031,7 +2095,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -2046,7 +2110,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -2060,9 +2124,19 @@
       "ownerRole": "implementing-ood",
       "dependsOn": [],
       "foundationNote": false,
-      "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
-      "evidence": []
+      "status": "implemented-unverified",
+      "justification": "Code exists. CoManagedFeatureBoundary wraps the qualified branch (page.tsx:121), the native-mode scope bar (:396) and the legacy route (msp/co-managed/tickets/page.tsx:14); the boundary returns null while loading so there is no flash, and enabled!==true or error yields the fallback (CoManagedFeatureBoundary.tsx:19). Unverified, with a specific gap: coManagedT21Boundary.contract.test.ts inventories five co-managed pages but NOT /msp/tickets, the ticket-queue legacy page or the scope bar, so this row is asserted by no test.",
+      "evidence": [
+        {
+          "id": "ticket-list-reconciliation",
+          "type": "analysis",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+          "command": "Row-by-row code read of all 39 unchecked ticket-list rows (F003-F039, T002-T019) against packages/tickets/src/{lib,components,actions}, server/src/components/{co-managed,tickets} and server/src/app/msp/tickets",
+          "result": "Of 39 rows, 7 are satisfied by code that exists and move to implemented-unverified (F012, F015, F021, F029, F036, T003, T014); 3 features and 5 tests were searched and have NO implementing code (F006, F022, F026, T006, T008, T011, T013, T019); the remaining 24 are PARTIAL and stay missing-code with the specific missing third named. Three structural findings: TicketListShell was written as a PARALLEL frame rather than extracted from the dashboard, so F010 and its test T005 have no subject; the components this plan intends to RETIRE are the only ones with component tests, so T007/T010/T012 point at the wrong target; and no test file anywhere renders QualifiedTicketList, TicketListScopeBar, TicketListShell, CoManagedTicketHandbackComposer or CoManagedTicketQueueLegacyAdapter.",
+          "artifact": "ticket-list-reconciliation.md",
+          "artifactNote": "A code read, not an execution. It establishes what EXISTS, never that anything passes - no row moves to verified on it. Re-runnable by re-reading the cited file:line references."
+        }
+      ]
     },
     {
       "key": "ticketList:F037",
@@ -2076,7 +2150,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -2091,7 +2165,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. Translations exist in all four locales, theme tokens are used throughout (QualifiedTicketList.tsx:240,:280) and narrow width is handled via columnFitMode='scroll' (:391) plus flex-wrap toolbars. MISSING the accessibility half: no keyboard navigation or focus-return handling - rows open via onRowClick (:405), the title Link is the only keyboard path, and nothing restores focus on return from detail or create.",
       "evidence": []
     },
     {
@@ -2106,7 +2180,7 @@
       "dependsOn": [],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL, and blocked on its own precondition. All three entries do use the common composition (global page.tsx:122, client CoManagedClientIntegration.tsx:105, legacy CoManagedTicketQueueLegacyAdapter.tsx:47). But the duplicate ownership was NOT retired - CoManagedTicketQueue.tsx and CoManagedTicketBulkHandback.tsx still exist with live tests - and there is no real-application evidence: no browser or e2e test touches the co-managed ticket list anywhere in the repo.",
       "evidence": []
     },
     {
@@ -2126,7 +2200,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -2149,7 +2223,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. Only the last clause (URL writers stop before navigation) is covered, by a pre-plan test: TicketingDashboardContainer.urlSync.contract.test.tsx. Pure scope parsing is covered by ticketListScope.test.ts. Nothing renders the real coordinator with a scope, and there is no snapshot-retention or selection-clearing test.",
       "evidence": []
     },
     {
@@ -2172,9 +2246,19 @@
         "F024"
       ],
       "foundationNote": false,
-      "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
-      "evidence": []
+      "status": "implemented-unverified",
+      "justification": "Test exists and matches. coManagedBootstrap.integration.test.ts:4390 covers the combined list with search/sort/page/counts, :4410 client scoping including a sibling, :4492 same-number same-UUID across two customers plus workspace options, :15978 full filtered export ignoring page controls, and :16164 assignment-driven working/oversight membership. Unverified only in the sense that it has not been recorded green at this candidate; it is part of the coManagedBootstrap file, which is 1418/1418 locally.",
+      "evidence": [
+        {
+          "id": "ticket-list-reconciliation",
+          "type": "analysis",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+          "command": "Row-by-row code read of all 39 unchecked ticket-list rows (F003-F039, T002-T019) against packages/tickets/src/{lib,components,actions}, server/src/components/{co-managed,tickets} and server/src/app/msp/tickets",
+          "result": "Of 39 rows, 7 are satisfied by code that exists and move to implemented-unverified (F012, F015, F021, F029, F036, T003, T014); 3 features and 5 tests were searched and have NO implementing code (F006, F022, F026, T006, T008, T011, T013, T019); the remaining 24 are PARTIAL and stay missing-code with the specific missing third named. Three structural findings: TicketListShell was written as a PARALLEL frame rather than extracted from the dashboard, so F010 and its test T005 have no subject; the components this plan intends to RETIRE are the only ones with component tests, so T007/T010/T012 point at the wrong target; and no test file anywhere renders QualifiedTicketList, TicketListScopeBar, TicketListShell, CoManagedTicketHandbackComposer or CoManagedTicketQueueLegacyAdapter.",
+          "artifact": "ticket-list-reconciliation.md",
+          "artifactNote": "A code read, not an execution. It establishes what EXISTS, never that anything passes - no row moves to verified on it. Re-runnable by re-reading the cited file:line references."
+        }
+      ]
     },
     {
       "key": "ticketList:T004",
@@ -2194,7 +2278,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. Covered: revoke/handback (coManagedBootstrap.integration.test.ts:4427), unshared and other-MSP exclusion (:4436), redaction before search/sort/counts (:4476), export field restriction and revoked removal (:15991). NOT covered: the omitted-assignment-is-not-false case - has_msp_assignment appears only in ticketQueue.ts and QualifiedTicketList.tsx:264 and in no test.",
       "evidence": []
     },
     {
@@ -2215,7 +2299,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Cannot exist as written while F010 is unmet: the dashboard does not render through TicketListShell, so 'native dashboard rendered through the new frame' has no subject. Pre-existing native regressions do exist (ticketColumns.prefetch.contract, boardArrival.contract, ticketColumnOrder, ticketViewSettings) and are unaffected.",
       "evidence": []
     },
     {
@@ -2234,7 +2318,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "NO TEST. columnFitMode==='scroll' exists at packages/ui/src/components/DataTable.tsx:397, but columnFitMode appears in zero DataTable test files; neither DataTable.interaction.test.tsx nor DataTable.expandedRow.test.tsx touches column fitting.",
       "evidence": []
     },
     {
@@ -2255,7 +2339,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL, and aimed at the wrong component. coManagedTicketQueue.test.tsx covers toolbar requests, sorting, reset and pagination for CoManagedTicketQueue - the component this plan intends to RETIRE. QualifiedTicketList has no test file at all.",
       "evidence": []
     },
     {
@@ -2273,7 +2357,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "NO TEST, and no subject: qualified View controls do not exist (see F022), so there is nothing to pair with the native ones.",
       "evidence": []
     },
     {
@@ -2294,7 +2378,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. ticketListIdentity.test.ts covers key and href purity only. No component test exercises rows, Ctrl/Cmd-click opening (QualifiedTicketList.tsx:232) or detail return with duplicate identities.",
       "evidence": []
     },
     {
@@ -2313,7 +2397,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL, and aimed at the wrong component. coManagedTicketQueue.test.tsx has exactly the applied-filter export and stale-download-discarded assertions, but against the retired component. Nothing covers native Share or the new Export button.",
       "evidence": []
     },
     {
@@ -2332,7 +2416,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "NO TEST. There is no co-managed browser or e2e test anywhere in the repo (server/src/test/e2e, e2e-tests/tests).",
       "evidence": []
     },
     {
@@ -2351,7 +2435,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL, and aimed at the wrong component. coManagedTicketBulkHandback.test.tsx tests the retired checklist. The 100-item bound is enforced server-side (packages/co-managed/src/ticketBulkHandback.ts:22) but no test covers the new selection column or CoManagedTicketHandbackComposer.",
       "evidence": []
     },
     {
@@ -2370,9 +2454,19 @@
         "F036"
       ],
       "foundationNote": false,
-      "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
-      "evidence": []
+      "status": "implemented-unverified",
+      "justification": "WRITTEN THIS ROUND, and writing it found a product defect. coManagedHandbackRecovery.test.tsx drives the real composer against real sessionStorage across 13 cases: a restored intent is never auto-submitted, resuming replays the EXACT frozen operationId rather than minting a new one, the intent is cleared once the result is known, and expired / wrong-actor / mismatched-scope / wrong-version / corrupt / empty intents are all refused. It also pins that the replay command is written BEFORE the action is called (observed from inside the action, not after it), that it survives an uncertain result so a reload can resume, and that a browser with storage disabled says so and still permits the handback. Unverified: not yet recorded green in CI at a candidate.",
+      "evidence": [
+        {
+          "id": "qualified-handback-eligibility-repair",
+          "type": "automated",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+          "command": "server: vitest run src/test/unit/product/coManagedHandbackRecovery.test.tsx ../packages/tickets/src/lib/ticketListIdentity.test.ts",
+          "result": "19 passed. Writing the missing T013 recovery test exposed a product defect: isQualifiedHandbackEligible read responsibility/work_revision from the top level of the item while every real CoManagedTicketQueueItem carries them under `fields`, so it returned false for EVERY row and the qualified selection column and handback composer were dead at runtime. It typechecked (optional properties) and its only unit test used a flat object, so it agreed with the bug. The predicate now takes the real shape, so a flat object is a type error rather than a silent false. MUTATION-VERIFIED: reverting to the top-level read fails 6 cases across the two suites.",
+          "artifact": "ticket-list-reconciliation.md",
+          "artifactNote": "Unit-level only. It does NOT establish that the qualified handback journey works in a browser - no co-managed browser test exists (see ticketList:T019/T011) - only that the eligibility gate and the recovery contract behave."
+        }
+      ]
     },
     {
       "key": "ticketList:T014",
@@ -2390,9 +2484,19 @@
         "F031"
       ],
       "foundationNote": false,
-      "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
-      "evidence": []
+      "status": "implemented-unverified",
+      "justification": "Test exists and matches. coManagedBootstrap.integration.test.ts:16011 covers mixed per-item outcomes, idempotent exact-request retry (:16029), forbidden (:16044), readOnly/invalid (:16055) and rollback (:16064), with re-queried working/oversight membership at :4427. Unverified only in the sense that it has not been recorded green at this candidate.",
+      "evidence": [
+        {
+          "id": "ticket-list-reconciliation",
+          "type": "analysis",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+          "command": "Row-by-row code read of all 39 unchecked ticket-list rows (F003-F039, T002-T019) against packages/tickets/src/{lib,components,actions}, server/src/components/{co-managed,tickets} and server/src/app/msp/tickets",
+          "result": "Of 39 rows, 7 are satisfied by code that exists and move to implemented-unverified (F012, F015, F021, F029, F036, T003, T014); 3 features and 5 tests were searched and have NO implementing code (F006, F022, F026, T006, T008, T011, T013, T019); the remaining 24 are PARTIAL and stay missing-code with the specific missing third named. Three structural findings: TicketListShell was written as a PARALLEL frame rather than extracted from the dashboard, so F010 and its test T005 have no subject; the components this plan intends to RETIRE are the only ones with component tests, so T007/T010/T012 point at the wrong target; and no test file anywhere renders QualifiedTicketList, TicketListScopeBar, TicketListShell, CoManagedTicketHandbackComposer or CoManagedTicketQueueLegacyAdapter.",
+          "artifact": "ticket-list-reconciliation.md",
+          "artifactNote": "A code read, not an execution. It establishes what EXISTS, never that anything passes - no row moves to verified on it. Re-runnable by re-reading the cited file:line references."
+        }
+      ]
     },
     {
       "key": "ticketList:T015",
@@ -2412,7 +2516,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. Stale-response and export-failure behaviour is tested only for the retired component. QualifiedTicketList's own generation guard (:107-120) is untested, and the unavailable-workspace state the row requires does not exist to be tested (see F032).",
       "evidence": []
     },
     {
@@ -2432,7 +2536,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL, and weaker than it looks. coManagedClientIntegration.test.tsx:22 exists but MOCKS QualifiedTicketList, so it asserts slot wiring only - not fixed-client reads, export, reset or id uniqueness in the full-page and drawer surfaces.",
       "evidence": []
     },
     {
@@ -2455,7 +2559,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. coManagedT21Boundary.contract.test.ts and coManagedFeatureBoundary.test.tsx exist, but the inventory lists /msp/co-managed and /msp/co-management pages and NOT /msp/tickets/page.tsx, /msp/co-managed/tickets/page.tsx, TicketListScopeBar or CoManagedTicketQueueLegacyAdapter - exactly the new coordinator surfaces this row names.",
       "evidence": []
     },
     {
@@ -2476,7 +2580,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "PARTIAL. Covered: the route/API product matrix (coManagedProductSurface.test.ts), sponsor route selection, and 'keeps backend resolution free of release-flag checks' (coManagedT21Boundary.contract.test.ts:50). NOT covered: the legacy /msp/co-managed/tickets to canonical qualified-URL mapping implemented at CoManagedTicketQueueLegacyAdapter.tsx:29-51.",
       "evidence": []
     },
     {
@@ -2507,7 +2611,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "NO TEST. The full browser journey (native to working to oversight to client to CSV to handback to native, with widths, locale, theme and keyboard) has no counterpart anywhere; no co-managed browser test exists in the repo.",
       "evidence": []
     },
     {
@@ -2536,7 +2640,7 @@
       ],
       "foundationNote": false,
       "status": "implemented-unverified",
-      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=true). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -2567,8 +2671,8 @@
         "CF001"
       ],
       "foundationNote": false,
-      "status": "failed",
-      "justification": "CAUSE NOW ESTABLISHED; row stays `failed` only because the confirming shard has not run. The file sink added this round worked on its first CI run: shard 1 failed at 603a74c575 (run 35534035281, job 106141697370) and uploaded 34 diagnostic records. They show the commit body raising a CORRECTLY FORMED CoManagedLifecycleError / CO_MANAGED_READ_ONLY with classifiedAsLifecycle TRUE, and the very next stage reporting RangeError. commit_body reports RangeError 0/8 times, so the overflow is not the product's: it is manufactured by withAdminTransaction's unguarded lazy `error.stack` read (packages/db/src/index.ts), whose getter throws INSIDE the catch block and propagates in place of the `throw error` below it, so the caller never receives the transaction's error. Two other messages show the same substitution, one over an ordinary Error - the mechanism is general, not co-managed specific. This also explains the intermittency: whether the read overflows depends on stack depth at the moment of failure, which varies with shard composition and order. Reading (A) confirmed, reading (B) refuted. Repaired at its owner with a MUTATION-VERIFIED regression (withAdminTransaction.errorFidelity.test.ts; reverting the guard fails 3 of 4 with the exact CI signature). Exit still requires the original shard to pass at a candidate carrying the repair, which has not been run, and the independent reporter-level serialization overflow is still NOT fixed. Superseded framing retained below for provenance: Shard-1 history for the separately-compiled requester lifecycle-pause case is now pass (bda945b640), fail x5 (7b0b52c6c3, 618019c3e3, fb2e696645, b17b7a80b4), then PASS at 023076a648 (job 106117870494). That retires the earlier \"deterministic regression in a fixed window\" reading: six runs show pass-fail-pass, which is not deterministic. It also exposes the blocking fact: the commit_body discriminator shipped at 4879aa8d63 and 023076a648 is the FIRST head that carried it -- and that run passed, so it emitted nothing, because server/vitest.config.ts sets silent:\"passed-only\". The prior round's instrumentation can only speak when the test fails, and the test had stopped failing, so every \"read commit_body from the next log\" next-action was unreachable. This round fixes that and nothing else: a file sink writes every record as NDJSON to the existing server-integration-shard-N artifact regardless of pass/fail, and the report now names its own recursion cycle. A green run therefore now yields the discriminator, because the commit_body stage sits in the withAdminTransaction callback's own catch and the PASSING path of this test throws CoManagedLifecycleError through exactly that catch. Readings (A) (withAdminTransaction's unguarded .stack read manufactured the RangeError) and (B) (the commit body genuinely overflowed) both remain open and untested. No causal explanation, and no mutation-verified regression, because there is no established cause to reintroduce. Row stays failed.",
+      "status": "verified",
+      "justification": "VERIFIED at candidate 5e71e4efd2. Integration shard 1 (run 35543087189, job 106164529115) is GREEN: 2173 passed, 0 failed, 0 skipped, including \"defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause\". The uploaded diagnostics carry 32 records with ZERO RangeError, and every commit_body error name equals its rollback error name (CoManagedLifecycleError->CoManagedLifecycleError twice, Error->Error six times) - the substitution that produced retry is gone, measured at the candidate rather than argued. All four C2 exit conditions are met: causal explanation (withAdminTransaction read error.stack unguarded inside its catch, so the lazy getter's own RangeError propagated in place of the throw below it); a regression that detects its removal, MUTATION-VERIFIED (withAdminTransaction.errorFidelity.test.ts fails 3 of 4 when the guard is reverted, with the exact CI signature); a focused pass; and an original-shard pass both locally (coManagedBootstrap 1418/1418 at VITEST_SEED=20260610) and in CI. NOT claimed: the independent reporter-level serialization overflow is still not fixed in general - this round only made one recurring site finite - and integration shard 4 failed at this candidate on an unrelated RMM/pg-boss timing flake (1 of 520), so the aggregate mandatory CI is not green. Superseded framing retained below for provenance: The file sink added this round worked on its first CI run: shard 1 failed at 603a74c575 (run 35534035281, job 106141697370) and uploaded 34 diagnostic records. They show the commit body raising a CORRECTLY FORMED CoManagedLifecycleError / CO_MANAGED_READ_ONLY with classifiedAsLifecycle TRUE, and the very next stage reporting RangeError. commit_body reports RangeError 0/8 times, so the overflow is not the product's: it is manufactured by withAdminTransaction's unguarded lazy `error.stack` read (packages/db/src/index.ts), whose getter throws INSIDE the catch block and propagates in place of the `throw error` below it, so the caller never receives the transaction's error. Two other messages show the same substitution, one over an ordinary Error - the mechanism is general, not co-managed specific. This also explains the intermittency: whether the read overflows depends on stack depth at the moment of failure, which varies with shard composition and order. Reading (A) confirmed, reading (B) refuted. Repaired at its owner with a MUTATION-VERIFIED regression (withAdminTransaction.errorFidelity.test.ts; reverting the guard fails 3 of 4 with the exact CI signature). Exit still requires the original shard to pass at a candidate carrying the repair, which has not been run, and the independent reporter-level serialization overflow is still NOT fixed. Superseded framing retained below for provenance: Shard-1 history for the separately-compiled requester lifecycle-pause case is now pass (bda945b640), fail x5 (7b0b52c6c3, 618019c3e3, fb2e696645, b17b7a80b4), then PASS at 023076a648 (job 106117870494). That retires the earlier \"deterministic regression in a fixed window\" reading: six runs show pass-fail-pass, which is not deterministic. It also exposes the blocking fact: the commit_body discriminator shipped at 4879aa8d63 and 023076a648 is the FIRST head that carried it -- and that run passed, so it emitted nothing, because server/vitest.config.ts sets silent:\"passed-only\". The prior round's instrumentation can only speak when the test fails, and the test had stopped failing, so every \"read commit_body from the next log\" next-action was unreachable. This round fixes that and nothing else: a file sink writes every record as NDJSON to the existing server-integration-shard-N artifact regardless of pass/fail, and the report now names its own recursion cycle. A green run therefore now yields the discriminator, because the commit_body stage sits in the withAdminTransaction callback's own catch and the PASSING path of this test throws CoManagedLifecycleError through exactly that catch. Readings (A) (withAdminTransaction's unguarded .stack read manufactured the RangeError) and (B) (the commit body genuinely overflowed) both remain open and untested. No causal explanation, and no mutation-verified regression, because there is no established cause to reintroduce. Row stays failed.",
       "evidence": [
         {
           "id": "requester-deferral-ci-diagnosed",
@@ -2589,7 +2693,7 @@
         {
           "id": "inbound-diagnostics-regression",
           "type": "automated",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts (rerun at the round-2 candidate as part of the 125-file product+email sweep)",
           "result": "10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the separately-compiled-copy case.",
           "artifact": "cf002-requester-deferral.md",
@@ -2617,7 +2721,7 @@
         {
           "id": "cf002-diagnostic-survives-pass",
           "type": "automated",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts",
           "result": "29 passed (was 22). Adds a file sink (ALGA_INBOUND_DIAGNOSTIC_FILE, NDJSON, capped, never throws) wired in integration-tests.yml to the existing server-integration-shard-N artifact, and derives recursionCycle/recursionRepetitions so a stack overflow names its own recursion site. New cases cover self-recursion, mutual recursion, a negative case that must not invent a cycle, the emitted payload, and the sink's create / no-op / never-throw behaviour.",
           "artifact": "cf002-requester-deferral.md",
@@ -2640,6 +2744,15 @@
           "result": "REPAIR CONFIRMED before/after. At 603a74c575 shard 1 had 7 failures including the requester lifecycle-pause case, whose chain was commit_body=CoManagedLifecycleError(classifiedAsLifecycle true) -> rollback=RangeError -> disposition retry/commit_failure, with 3 RangeError records in the file. At 449e0a7b6c that case PASSES, the chain is commit_body=CoManagedLifecycleError -> rollback=CoManagedLifecycleError with NO lifecycle_classification decline and NO disposition record (it deferred), and there are ZERO RangeError records. The 6 remaining shard-1 failures are all MSP SLA bundle propagation and are present in BOTH runs, so they date to merge 3026683f9f, not to the guard; repaired separately in abfbd69071.",
           "artifact": "raw-logs/inbound-diagnostics-shard1-35537272058.ndjson",
           "artifactNote": "Both shard-1 NDJSON files are committed so the comparison is re-readable. NOT established: a green CI shard 1 at a candidate carrying BOTH the guard and the bundle repair, which is what CF002 still needs. Locally the whole coManagedBootstrap file is 1418/1418 at VITEST_SEED=20260610."
+        },
+        {
+          "id": "cf002-verified-green-shard",
+          "type": "automated",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
+          "command": "GitHub Actions run 35543087189, job 106164529115, Integration shard 1, VITEST_SEED=20260610",
+          "result": "GREEN. 2173 passed, 0 failed, 0 skipped. Includes the requester lifecycle-pause case, all 8 MSP SLA bundle-propagation cases, and the period-job case whose rejection was made finite this round. The uploaded inbound-diagnostics-shard-1.ndjson carries 32 records with ZERO RangeError, and every commit_body error name equals its rollback error name - the substitution that turned defer into retry is gone, measured at the candidate. Three shard-1 artifacts are now committed (35534035281 broken, 35537272058 repaired-but-red-elsewhere, 35543087189 green) so the whole arc is re-readable.",
+          "artifact": "raw-logs/inbound-diagnostics-shard1-35543087189.ndjson",
+          "artifactNote": "NOT a claim that the full mandatory CI is green: integration shard 4 failed at this same candidate on an unrelated RMM/pg-boss delivery timing flake (1 of 520, \"expected pending to be completed\"), which is recorded as an open defect rather than waved through."
         }
       ]
     },
@@ -2678,7 +2791,7 @@
         {
           "id": "inbound-diagnostics-regression",
           "type": "automated",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "server: vitest run src/test/unit/email/inboundErrorDiagnostics.test.ts (rerun at the round-2 candidate as part of the 125-file product+email sweep)",
           "result": "10 passed. Mutation check: reverting isCoManagedSharedWorkError to `instanceof` fails the separately-compiled-copy case.",
           "artifact": "cf002-requester-deferral.md",
@@ -2706,7 +2819,7 @@
         {
           "id": "admission-adapter-callsites",
           "type": "automated",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "server: vitest run src/test/unit/email/coManagedAdmissionAdapters.test.ts",
           "result": "8 passed. Mutation runs, each adapter independently: inboundRequesterReply -> instanceof fails 2 of 8; inboundEmailReply -> instanceof fails 1 of 8. The unrelated-infrastructure-error cases stay green under both, so the repair does not broaden quarantine.",
           "artifact": "cf002-requester-deferral.md",
@@ -2728,7 +2841,7 @@
       ],
       "foundationNote": false,
       "status": "failed",
-      "justification": "Depends on CF003 being proven at a candidate. The requester audience/token isolation and both worker entry points are untouched by this round's change except that the technician adapter (inboundEmailReply) got the same duck-typed classification, which needs the same shard proof. The fb2e696645 read shows the pause never reaches the classification at all, so the rollback/refund behaviour this row requires is still unobserved on a passing candidate. Round 3 note: shard 1 PASSED at 023076a648, but with silent:\"passed-only\" that pass produced no record of which path ran, so it cannot be read as observing the rollback/refund behaviour either. The file sink added this round is what will make a green run say.",
+      "justification": "Round-4 note: shard 1 is now GREEN at 5e71e4efd2 (job 106164529115) and the requester lifecycle-pause case passes, so the defer/co_managed_read_only disposition IS now observed on a passing candidate. This row is still not flipped because its wording also requires the refund half - attempt_count=0 and inbox back to received - and that specific assertion has not been separately confirmed here. Depends on CF003 being proven at a candidate. The requester audience/token isolation and both worker entry points are untouched by this round's change except that the technician adapter (inboundEmailReply) got the same duck-typed classification, which needs the same shard proof. The fb2e696645 read shows the pause never reaches the classification at all, so the rollback/refund behaviour this row requires is still unobserved on a passing candidate. Round 3 note: shard 1 PASSED at 023076a648, but with silent:\"passed-only\" that pass produced no record of which path ran, so it cannot be read as observing the rollback/refund behaviour either. The file sink added this round is what will make a green run say.",
       "evidence": [
         {
           "id": "requester-deferral-ci-diagnosed",
@@ -2767,7 +2880,7 @@
         {
           "id": "provider-route-browser",
           "type": "browser",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "Real dev app at http://100.82.172.57:3374 as cm.rabbit.admin@whiterabbit.test (tenant 51ac6952-6d6f-4600-aace-b71a9b2a5e73, product_code co_managed): Settings -> Email -> Inbound -> Open Providers; plus direct URLs for four excluded surfaces",
           "result": "Open Providers now lands on /msp/co-management/providers (\"Email and Identity Providers\") with the Microsoft app-registration surface rendered. /msp/settings/integrations (providers and accounting), /msp/settings/integrations/entra, /msp/billing and /msp/settings/extensions all still render \"Page not available in your current product experience\". PSA admin unchanged: /msp/go/providers redirects to /msp/settings/integrations?category=providers. Re-walked at the round-2 candidate after the locale keys and the release-flag change: /msp/go/providers renders the workbench (main innerText 1697 chars, #provider-credentials-selector present).",
           "artifact": "screenshots/cf005-co-managed-providers.png",
@@ -2776,7 +2889,7 @@
         {
           "id": "provider-route-regression",
           "type": "automated",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "server: vitest run src/test/unit/product + src/test/unit/email (125 files) at the round-2 candidate, after the release-flag gate was removed from the provider route",
           "result": "859 passed. Mutation checks: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page fails 2 of 7 provider cases; re-adding CoManagedFeatureBoundary to the route fails 1 of 7.",
           "artifact": "cf005-provider-setup.md",
@@ -2785,7 +2898,7 @@
         {
           "id": "release-flag-off-walk",
           "type": "browser",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "Dev server restarted with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false; walked as cm.rabbit.admin@whiterabbit.test",
           "result": "The blanking is shell-wide, not route-specific: /msp/dashboard, /msp/tickets, /msp/settings/email, /msp/co-management/ticket-access and /msp/co-management/providers all render main innerText length 0. MspLayoutClient wraps the whole shell in CoManagedWorkspaceBoundary for product_code co_managed. Restored afterwards and re-verified the route renders (1697 chars).",
           "artifact": "cf005-provider-setup.md",
@@ -2812,7 +2925,7 @@
         {
           "id": "provider-route-browser",
           "type": "browser",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "Real dev app at http://100.82.172.57:3374 as cm.rabbit.admin@whiterabbit.test (tenant 51ac6952-6d6f-4600-aace-b71a9b2a5e73, product_code co_managed): Settings -> Email -> Inbound -> Open Providers; plus direct URLs for four excluded surfaces",
           "result": "Open Providers now lands on /msp/co-management/providers (\"Email and Identity Providers\") with the Microsoft app-registration surface rendered. /msp/settings/integrations (providers and accounting), /msp/settings/integrations/entra, /msp/billing and /msp/settings/extensions all still render \"Page not available in your current product experience\". PSA admin unchanged: /msp/go/providers redirects to /msp/settings/integrations?category=providers. Re-walked at the round-2 candidate after the locale keys and the release-flag change: /msp/go/providers renders the workbench (main innerText 1697 chars, #provider-credentials-selector present).",
           "artifact": "screenshots/cf005-co-managed-providers.png",
@@ -2821,7 +2934,7 @@
         {
           "id": "provider-route-regression",
           "type": "automated",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "server: vitest run src/test/unit/product + src/test/unit/email (125 files) at the round-2 candidate, after the release-flag gate was removed from the provider route",
           "result": "859 passed. Mutation checks: reverting PRODUCT_NAV_DESTINATIONS.providers.co_managed to the PSA page fails 2 of 7 provider cases; re-adding CoManagedFeatureBoundary to the route fails 1 of 7.",
           "artifact": "cf005-provider-setup.md",
@@ -2830,7 +2943,7 @@
         {
           "id": "release-flag-off-walk",
           "type": "browser",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "Dev server restarted with NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:false; walked as cm.rabbit.admin@whiterabbit.test",
           "result": "The blanking is shell-wide, not route-specific: /msp/dashboard, /msp/tickets, /msp/settings/email, /msp/co-management/ticket-access and /msp/co-management/providers all render main innerText length 0. MspLayoutClient wraps the whole shell in CoManagedWorkspaceBoundary for product_code co_managed. Restored afterwards and re-verified the route renders (1697 chars).",
           "artifact": "cf005-provider-setup.md",
@@ -2857,7 +2970,7 @@
         {
           "id": "cf007-authority-hardening",
           "type": "automated",
-          "sha": "ce277ac37a1a454fc24b2fad419228683556d3b8",
+          "sha": "5e71e4efd27fbd0305310b14ab8ceae3d64a5c6a",
           "command": "ee/server: vitest run mcpIdpPresets (LIVE Google+Microsoft discovery) and mcpOidcDiscoveryHardening; server: vitest run mcpIdpDiscoveryNotRequestSelected.contract and nextAuthOptions.mspContract; node --test scripts/tests/microsoft-oidc-harness.test.mjs",
           "result": "Nonce is now verified on BOTH Microsoft providers (it was absent on one and undeclared on the other), OIDC discovery now binds the advertised issuer to the URL it was fetched from (Discovery 1.0 section 4.3) with https-only transport, and the discoveryBaseUrl seam is pinned as not request-reachable. 11 live + 9 hardening + 3 contract + 17 harness cases pass. MUTATION-VERIFIED: dropping nonce fails the contract; disabling the issuer-match fails 3 of 9. Two candidate rules were REJECTED by measurement - an issuer/jwks same-origin rule would break Google, and strict issuer equality would break Microsoft's templated {tenantid} issuer.",
           "artifact": "cf007-microsoft-authority.md",
@@ -2880,7 +2993,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -2897,7 +3010,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -2914,7 +3027,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3330,7 +3443,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3349,7 +3462,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3367,7 +3480,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3385,7 +3498,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3404,7 +3517,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3422,7 +3535,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3439,7 +3552,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3456,7 +3569,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3474,7 +3587,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3493,7 +3606,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3512,7 +3625,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3530,7 +3643,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3547,7 +3660,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3566,7 +3679,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3585,7 +3698,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3602,7 +3715,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3619,7 +3732,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3637,7 +3750,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3655,7 +3768,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3672,7 +3785,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3691,7 +3804,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3708,7 +3821,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3725,7 +3838,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3742,7 +3855,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3762,7 +3875,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     },
     {
@@ -3781,7 +3894,7 @@
       ],
       "foundationNote": false,
       "status": "missing-code",
-      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate ce277ac37a.",
+      "justification": "Derived from the plan flag (implemented=false). No acceptance record exists at candidate 5e71e4efd2.",
       "evidence": []
     }
   ]
