@@ -50,6 +50,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -502,12 +503,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       priorities,
       categories
     ] = await Promise.all([
-      // Comments
-      tenantScopedTable(trx, 'comments', tenant)
-        .where({
-          ticket_id: ticketId
-        })
-        .orderBy('created_at', 'asc'),
+      // Comments, with read-time bundle provenance owned by the shared read
+      // layer so this load and every refresh path return identical shapes.
+      Comment.getAllbyTicketId(trx, tenant, ticketId),
       
       // Documents
       tenantLeftJoin(

@@ -17,13 +17,13 @@ export interface CommentContactAuthor {
 }
 
 export interface ResolvedCommentAuthor {
-  source: 'user' | 'contact' | 'unknown';
+  source: 'user' | 'contact' | 'system' | 'unknown';
   displayName: string;
   email?: string;
   userId?: string;
   contactId?: string;
   userType?: string;
-  avatarKind: 'user' | 'contact' | 'unknown';
+  avatarKind: 'user' | 'contact' | 'system' | 'unknown';
   avatarUrl: string | null;
 }
 
@@ -34,8 +34,15 @@ const UNKNOWN_AUTHOR: ResolvedCommentAuthor = {
   avatarUrl: null,
 };
 
+const SYSTEM_AUTHOR: ResolvedCommentAuthor = {
+  source: 'system',
+  displayName: 'System',
+  avatarKind: 'system',
+  avatarUrl: null,
+};
+
 export function resolveCommentAuthor(
-  comment: Pick<IComment, 'user_id' | 'contact_id'>,
+  comment: Pick<IComment, 'user_id' | 'contact_id' | 'is_system_generated'>,
   options: {
     userMap: Record<string, CommentUserAuthor>;
     contactMap?: Record<string, CommentContactAuthor>;
@@ -69,6 +76,10 @@ export function resolveCommentAuthor(
         avatarUrl: contact.avatarUrl,
       };
     }
+  }
+
+  if (comment.is_system_generated) {
+    return SYSTEM_AUTHOR;
   }
 
   return UNKNOWN_AUTHOR;

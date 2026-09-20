@@ -343,6 +343,8 @@
     "deleteUploadedImages": "⟦Ḓḗŀḗŧḗ Īḿȧɠḗş⟧",
     "keepUploadedImages": "⟦Ķḗḗƥ Īḿȧɠḗş⟧",
     "bundledUpdate": "⟦Ɓŭƞḓŀḗḓ ŭƥḓȧŧḗ⟧",
+    "bundledUpdateFrom": "⟦Ɓŭƞḓŀḗḓ ŭƥḓȧŧḗ ƒřȯḿ {{number}}⟧",
+    "systemAuthor": "⟦Şẏşŧḗḿ⟧",
     "clientSuffix": "⟦ (Ƈŀīḗƞŧ)⟧",
     "internalCommentTooltip": "⟦Īƞŧḗřƞȧŀ Ƈȯḿḿḗƞŧ⟧",
     "resolutionCommentTooltip": "⟦Řḗşȯŀŭŧīȯƞ Ƈȯḿḿḗƞŧ⟧",

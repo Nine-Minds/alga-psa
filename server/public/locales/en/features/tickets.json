@@ -343,6 +343,8 @@
     "deleteUploadedImages": "Delete Images",
     "keepUploadedImages": "Keep Images",
     "bundledUpdate": "Bundled update",
+    "bundledUpdateFrom": "Bundled update from {{number}}",
+    "systemAuthor": "System",
     "clientSuffix": " (Client)",
     "internalCommentTooltip": "Internal Comment",
     "resolutionCommentTooltip": "Resolution Comment",

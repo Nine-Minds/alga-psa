@@ -161,8 +161,6 @@ export interface TicketBentoLayoutProps {
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   /** Threaded reply pipeline (same handler the conversation view gets). */
   onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
-  /** Bundle master reference for mirrored child comments (MSP portal only). */
-  bundleMaster?: { ticketId: string; ticketNumber: string | null };
   /**
    * Server-started data promises from the RSC page. Tiles resolve them via
    * React use() behind <Suspense> skeletons — zero fetch-on-mount requests.
@@ -967,7 +965,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             resolveTicketAttachmentViewUrl={props.resolveTicketAttachmentViewUrl}
             initialEntries={props.bentoStreams?.timelineEntries}
             initialReactions={props.bentoStreams?.commentReactions}
-            bundleMaster={props.bundleMaster}
           />
           </Suspense>
         </div>

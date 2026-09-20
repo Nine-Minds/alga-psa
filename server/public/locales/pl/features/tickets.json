@@ -377,6 +377,8 @@
     "deleteUploadedImages": "Usuń obrazy",
     "keepUploadedImages": "Zachowaj obrazy",
     "bundledUpdate": "Aktualizacja zbiorcza",
+    "bundledUpdateFrom": "Aktualizacja zbiorcza z {{number}}",
+    "systemAuthor": "System",
     "clientSuffix": " (Klient)",
     "internalCommentTooltip": "Komentarz wewnętrzny",
     "resolutionCommentTooltip": "Komentarz rozwiązania",
