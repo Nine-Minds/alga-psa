@@ -95,6 +95,24 @@ describe('ticketing dashboard smart search wiring contract', () => {
     expect(source).toContain('loadTicketListItemsByIds(scope, missingIds)');
     expect(source).toContain('pruneSelectedTicketIds(prev, new Set(selectableTicketIds), smartSearch.active)');
     expect(source).toContain('onRowsChange={mergeSmartSearchRows}');
-    expect(source).toContain('const [smartSearchRowById, setSmartSearchRowById] = useState<Record<string, ITicketListItem>>({});');
+  });
+
+  it('scopes the streamed row cache and the selection to a single run', () => {
+    // A fresh run replaces the cache and bumps the generation so a stale report
+    // cannot repopulate the previous board's rows.
+    expect(source).toContain('createSmartSearchRunCache<ITicketListItem>(String(runToken), generation)');
+    expect(source).toContain('mergeSmartSearchRunRows(prev, { runKey, generation, rows })');
+    expect(source).toContain('smartSearchRunCandidateIds(smartSearchRunCache, activeSmartSearchRunKey)');
+    expect(source).toContain('if (generation !== smartSearchGenerationRef.current) {');
+
+    // An explicit rerun clears the old candidate set with the old selection.
+    const rerunStart = source.indexOf('const rerunSmartSearch = useCallback(');
+    const rerunEnd = source.indexOf('const exitSmartSearch', rerunStart);
+    const rerun = source.slice(rerunStart, rerunEnd);
+    expect(rerun).toContain('beginSmartSearchRun(smartSearch.runToken + 1);');
+    expect(rerun).toContain('clearSelection();');
+
+    // Each run is a fresh panel, so an unmounted run's callbacks cannot report.
+    expect(source).toContain('key={smartSearch.runToken}');
   });
 });

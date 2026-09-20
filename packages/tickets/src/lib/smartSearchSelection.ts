@@ -12,6 +12,76 @@
 
 import type { ITicketListFilters, ITicketListItem } from '@alga-psa/types';
 
+/**
+ * One smart search run's streamed rows. `generation` and `runKey` identify the
+ * run, so a report from a superseded run (a stale panel callback or a hydration
+ * that resolved after the run changed) can be discarded rather than leak an old
+ * board's tickets into the current candidate set.
+ */
+export interface SmartSearchRunCache<TRow> {
+  runKey: string;
+  generation: number;
+  byId: Record<string, TRow>;
+}
+
+export interface SmartSearchRunReport<TRow> {
+  runKey: string;
+  generation: number;
+  rows: ReadonlyArray<TRow>;
+}
+
+export function createSmartSearchRunCache<TRow>(runKey: string, generation: number): SmartSearchRunCache<TRow> {
+  return { runKey, generation, byId: {} };
+}
+
+/**
+ * Merge a panel report into the run cache. A report whose run key or generation
+ * does not match the cache is ignored, so an explicit rerun (or a callback from
+ * an unmounted panel) can never repopulate the previous run's rows.
+ */
+export function mergeSmartSearchRunRows<TRow extends { ticket_id?: string }>(
+  cache: SmartSearchRunCache<TRow>,
+  report: SmartSearchRunReport<TRow>
+): SmartSearchRunCache<TRow> {
+  if (report.generation !== cache.generation || report.runKey !== cache.runKey) {
+    return cache;
+  }
+  let changed = false;
+  const byId = { ...cache.byId };
+  for (const row of report.rows) {
+    const id = row.ticket_id;
+    if (typeof id === 'string' && id.length > 0 && byId[id] !== row) {
+      byId[id] = row;
+      changed = true;
+    }
+  }
+  return changed ? { ...cache, byId } : cache;
+}
+
+/**
+ * Rows the cache holds for the run active right now. Any other run — or when
+ * smart mode is off — yields nothing, so an inactive cache can never supply an
+ * ordinary-list action.
+ */
+export function smartSearchRunRows<TRow>(
+  cache: SmartSearchRunCache<TRow>,
+  activeRunKey: string | null
+): TRow[] {
+  if (!activeRunKey || cache.runKey !== activeRunKey) {
+    return [];
+  }
+  return Object.values(cache.byId);
+}
+
+export function smartSearchRunCandidateIds<TRow extends { ticket_id?: string }>(
+  cache: SmartSearchRunCache<TRow>,
+  activeRunKey: string | null
+): string[] {
+  return smartSearchRunRows(cache, activeRunKey)
+    .map((row) => row.ticket_id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+}
+
 export interface SelectedTicketDetail {
   ticket_id: string;
   ticket_number?: string;

@@ -4,9 +4,13 @@ import type { ITicketListFilters, ITicketListItem } from '@alga-psa/types';
 import {
   buildSelectedTicketDetails,
   collectSelectedTicketRows,
+  createSmartSearchRunCache,
+  mergeSmartSearchRunRows,
   pruneSelectedTicketIds,
   selectAllMatchingFallbackIds,
   selectAllMatchingScope,
+  smartSearchRunCandidateIds,
+  smartSearchRunRows,
 } from './smartSearchSelection';
 
 function ticket(id: string, overrides: Partial<ITicketListItem> = {}): ITicketListItem {
@@ -104,5 +108,56 @@ describe('smart search selection', () => {
       'streamed-b',
     ]);
     expect(selectAllMatchingFallbackIds(false, ['streamed-a'], ['page-1', 'page-2'])).toEqual(['page-1', 'page-2']);
+  });
+});
+
+describe('smart search run cache lifecycle', () => {
+  it('replaces the previous run cache on a disjoint-filter rerun and discards a stale report', () => {
+    // Board A run streams its rows.
+    let runA = createSmartSearchRunCache<ITicketListItem>('run-a', 1);
+    runA = mergeSmartSearchRunRows(runA, { runKey: 'run-a', generation: 1, rows: [ticket('a1'), ticket('a2')] });
+    expect(smartSearchRunCandidateIds(runA, 'run-a')).toEqual(['a1', 'a2']);
+
+    // Switching to board B begins a fresh run with a fresh cache.
+    let runB = createSmartSearchRunCache<ITicketListItem>('run-b', 2);
+    // A late board-A report (old run/generation) must not repopulate anything.
+    runB = mergeSmartSearchRunRows(runB, { runKey: 'run-a', generation: 1, rows: [ticket('a1'), ticket('a2')] });
+    expect(smartSearchRunCandidateIds(runB, 'run-b')).toEqual([]);
+
+    runB = mergeSmartSearchRunRows(runB, { runKey: 'run-b', generation: 2, rows: [ticket('b1')] });
+    expect(smartSearchRunCandidateIds(runB, 'run-b')).toEqual(['b1']);
+    // Board A's run is no longer active, so its rows are invisible.
+    expect(smartSearchRunCandidateIds(runB, 'run-a')).toEqual([]);
+  });
+
+  it('ignores a report from a superseded generation of the same run key', () => {
+    const cache = createSmartSearchRunCache<ITicketListItem>('run-x', 5);
+    const stale = mergeSmartSearchRunRows(cache, { runKey: 'run-x', generation: 4, rows: [ticket('old')] });
+    expect(stale).toBe(cache);
+    expect(smartSearchRunCandidateIds(stale, 'run-x')).toEqual([]);
+  });
+
+  it('serves no rows while smart mode is inactive and rebuilds on re-entry', () => {
+    let cache = createSmartSearchRunCache<ITicketListItem>('run-1', 1);
+    cache = mergeSmartSearchRunRows(cache, { runKey: 'run-1', generation: 1, rows: [ticket('a')] });
+    expect(smartSearchRunCandidateIds(cache, 'run-1')).toEqual(['a']);
+
+    // Exit: no active run key, so the cache cannot feed ordinary-list actions.
+    expect(smartSearchRunRows(cache, null)).toEqual([]);
+    expect(smartSearchRunCandidateIds(cache, null)).toEqual([]);
+
+    // Re-entry starts a new run; the old rows are gone.
+    const reentry = createSmartSearchRunCache<ITicketListItem>('run-2', 2);
+    expect(smartSearchRunCandidateIds(reentry, 'run-2')).toEqual([]);
+    const merged = mergeSmartSearchRunRows(reentry, { runKey: 'run-2', generation: 2, rows: [ticket('b')] });
+    expect(smartSearchRunCandidateIds(merged, 'run-2')).toEqual(['b']);
+  });
+
+  it('a failed select-all fallback keeps only the current run candidate set', () => {
+    // After board A then board B, only board B is cached and active.
+    let cache = createSmartSearchRunCache<ITicketListItem>('board-b', 2);
+    cache = mergeSmartSearchRunRows(cache, { runKey: 'board-b', generation: 2, rows: [ticket('b1'), ticket('b2')] });
+    const candidateIds = smartSearchRunCandidateIds(cache, 'board-b');
+    expect(selectAllMatchingFallbackIds(true, candidateIds, ['page-1'])).toEqual(['b1', 'b2']);
   });
 });

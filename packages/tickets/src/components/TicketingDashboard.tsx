@@ -15,9 +15,14 @@ import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/type
 import {
   buildSelectedTicketDetails,
   collectSelectedTicketRows,
+  createSmartSearchRunCache,
+  mergeSmartSearchRunRows,
   pruneSelectedTicketIds,
   selectAllMatchingFallbackIds,
   selectAllMatchingScope,
+  smartSearchRunCandidateIds,
+  smartSearchRunRows,
+  type SmartSearchRunCache,
 } from '../lib/smartSearchSelection';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
@@ -441,11 +446,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     filtersKey: '',
   });
 
-  // Rows the results panel has streamed, keyed by id. The ordinary paginated
-  // list never holds a streamed off-page row, so this is the authoritative
-  // source for bulk actions, the bundle master picker, and printing while smart
-  // mode is active.
-  const [smartSearchRowById, setSmartSearchRowById] = useState<Record<string, ITicketListItem>>({});
+  // Rows the current smart search run has streamed, keyed by id. The ordinary
+  // paginated list never holds a streamed off-page row, so this is the
+  // authoritative source for bulk actions, the bundle master picker, and
+  // printing while smart mode is active. Scoped to one run: a rerun clears it
+  // and a stale report from a superseded run is discarded, so board A's rows
+  // never leak into board B's candidate set.
+  const smartSearchGenerationRef = useRef(0);
+  const [smartSearchRunCache, setSmartSearchRunCache] = useState<SmartSearchRunCache<ITicketListItem>>(
+    () => createSmartSearchRunCache<ITicketListItem>(String(smartSearch.runToken), smartSearchGenerationRef.current)
+  );
 
   // Assignee filter values from props
   const selectedAssignees = filterValues.assignedToIds ?? EMPTY_STRING_ARRAY;
@@ -1135,25 +1145,44 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const smartSearchFiltersKey = useMemo(() => JSON.stringify(smartSearchFilters), [smartSearchFilters]);
   const smartSearchFiltersStale = smartSearch.active && smartSearch.filtersKey !== smartSearchFiltersKey;
 
+  const smartSearchRunKey = String(smartSearch.runToken);
+  const activeSmartSearchRunKey = smartSearch.active ? smartSearchRunKey : null;
+
+  // Begin a fresh run: bump the generation so any in-flight report from the
+  // previous run is discarded, and replace the cache so its rows cannot leak
+  // into the new candidate set.
+  const beginSmartSearchRun = useCallback((runToken: number) => {
+    const generation = smartSearchGenerationRef.current + 1;
+    smartSearchGenerationRef.current = generation;
+    setSmartSearchRunCache(createSmartSearchRunCache<ITicketListItem>(String(runToken), generation));
+  }, []);
+
   const runSmartSearch = useCallback((rawQuery: string) => {
     const query = rawQuery.trim();
     if (!smartSearchAvailable || query.length === 0) {
       return;
     }
+    beginSmartSearchRun(smartSearch.runToken + 1);
     clearSelection();
     // Leave keyword mode: the container must not keep filtering by the typed text.
     if ((filterValues.searchQuery ?? '') !== '') {
       lastEmittedSearchRef.current = '';
       onFilterChange({ searchQuery: '' });
     }
-    setSmartSearch((prev) => ({ active: true, query, runToken: prev.runToken + 1, filtersKey: smartSearchFiltersKey }));
-  }, [smartSearchAvailable, clearSelection, filterValues.searchQuery, onFilterChange, smartSearchFiltersKey]);
+    setSmartSearch(() => ({ active: true, query, runToken: smartSearch.runToken + 1, filtersKey: smartSearchFiltersKey }));
+  }, [smartSearchAvailable, smartSearch.runToken, beginSmartSearchRun, clearSelection, filterValues.searchQuery, onFilterChange, smartSearchFiltersKey]);
 
   const rerunSmartSearch = useCallback(() => {
+    // A rerun scores a different candidate set, so the previous selections are
+    // no longer actionable; clear them with the old rows.
+    beginSmartSearchRun(smartSearch.runToken + 1);
+    clearSelection();
     setSmartSearch((prev) => ({ ...prev, runToken: prev.runToken + 1, filtersKey: smartSearchFiltersKey }));
-  }, [smartSearchFiltersKey]);
+  }, [smartSearch.runToken, beginSmartSearchRun, clearSelection, smartSearchFiltersKey]);
 
   const exitSmartSearch = useCallback(() => {
+    smartSearchGenerationRef.current += 1;
+    setSmartSearchRunCache(createSmartSearchRunCache<ITicketListItem>('', smartSearchGenerationRef.current));
     clearSelection();
     setSmartSearch((prev) => (prev.active ? { ...prev, active: false } : prev));
   }, [clearSelection]);
@@ -1167,27 +1196,28 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTeamAvatarUrls((prev) => ({ ...prev, ...metadata.teamAvatarUrls }));
   }, []);
 
-  // Every row the panel holds, streamed or hydrated, so a selection made from a
-  // bucket resolves against an authoritative row even when the ordinary list has
-  // never loaded it.
-  const mergeSmartSearchRows = useCallback((rows: ITicketListItem[]) => {
-    setSmartSearchRowById((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const row of rows) {
-        const id = row.ticket_id;
-        if (typeof id === 'string' && id.length > 0 && next[id] !== row) {
-          next[id] = row;
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, []);
-  const smartSearchRows = useMemo(() => Object.values(smartSearchRowById), [smartSearchRowById]);
+  // Every row the current run's panel holds, streamed or hydrated, so a
+  // selection made from a bucket resolves against an authoritative row even
+  // when the ordinary list has never loaded it. The run key and generation are
+  // frozen into this callback: a report from a previous run is dropped instead
+  // of merging into the current cache.
+  const mergeSmartSearchRows = useMemo(() => {
+    const runKey = smartSearchRunKey;
+    // The cache carries the generation of the run it belongs to; freezing it
+    // here means a callback from an earlier run reports the old generation and
+    // is dropped by mergeSmartSearchRunRows.
+    const generation = smartSearchRunCache.generation;
+    return (rows: ITicketListItem[]) => {
+      setSmartSearchRunCache((prev) => mergeSmartSearchRunRows(prev, { runKey, generation, rows }));
+    };
+  }, [smartSearchRunKey, smartSearchRunCache.generation]);
+  const smartSearchRows = useMemo(
+    () => smartSearchRunRows(smartSearchRunCache, activeSmartSearchRunKey),
+    [smartSearchRunCache, activeSmartSearchRunKey]
+  );
   const smartCandidateIds = useMemo(
-    () => smartSearchRows.map((row) => row.ticket_id).filter((id): id is string => typeof id === 'string' && id.length > 0),
-    [smartSearchRows]
+    () => smartSearchRunCandidateIds(smartSearchRunCache, activeSmartSearchRunKey),
+    [smartSearchRunCache, activeSmartSearchRunKey]
   );
 
   // The panel hydrates rows the stream could not score through the same by-id
@@ -1987,7 +2017,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         setPrintTickets(rows);
         return;
       }
+      const generation = smartSearchGenerationRef.current;
       const hydrated = await loadTicketListItemsByIds(scope, missingIds);
+      // A rerun or exit while hydrating makes this result actionable for a run
+      // that no longer exists; drop it rather than print stale rows.
+      if (generation !== smartSearchGenerationRef.current) {
+        return;
+      }
       if (isActionMessageError(hydrated) || isActionPermissionError(hydrated)) {
         toast.error(getErrorMessage(hydrated));
         setPrintTickets(rows);
@@ -2723,6 +2759,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             <ShortcutActiveRegion id="tickets-shortcut-region" className="outline-none">
               {smartSearch.active ? (
                 <SmartSearchResults<ITicketListFilters, ITicketListItem, TicketSmartSearchRowMetadata>
+                  // Each run is a fresh panel: the old one unmounts, so its
+                  // in-flight hydration cannot report into the new run.
+                  key={smartSearch.runToken}
                   id={id}
                   entity="ticket"
                   i18nNamespace="features/tickets"
