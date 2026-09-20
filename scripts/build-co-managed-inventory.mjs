@@ -247,6 +247,24 @@ const EVIDENCE = {
       + '(the harness lane was not run), the emulator\'s missing Entra OIDC surface, and the still-ungated '
       + 'production MICROSOFT_LOGIN_BASE_URL override, which is left alone with its reason recorded.',
   },
+  'ticket-list-reconciliation': {
+    type: 'analysis',
+    sha: 'ROUND3_CANDIDATE',
+    command: 'Row-by-row code read of all 39 unchecked ticket-list rows (F003-F039, T002-T019) against '
+      + 'packages/tickets/src/{lib,components,actions}, server/src/components/{co-managed,tickets} and '
+      + 'server/src/app/msp/tickets',
+    result: 'Of 39 rows, 7 are satisfied by code that exists and move to implemented-unverified (F012, F015, '
+      + 'F021, F029, F036, T003, T014); 3 features and 5 tests were searched and have NO implementing code '
+      + '(F006, F022, F026, T006, T008, T011, T013, T019); the remaining 24 are PARTIAL and stay missing-code '
+      + 'with the specific missing third named. Three structural findings: TicketListShell was written as a '
+      + 'PARALLEL frame rather than extracted from the dashboard, so F010 and its test T005 have no subject; '
+      + 'the components this plan intends to RETIRE are the only ones with component tests, so T007/T010/T012 '
+      + 'point at the wrong target; and no test file anywhere renders QualifiedTicketList, TicketListScopeBar, '
+      + 'TicketListShell, CoManagedTicketHandbackComposer or CoManagedTicketQueueLegacyAdapter.',
+    artifact: 'ticket-list-reconciliation.md',
+    artifactNote: 'A code read, not an execution. It establishes what EXISTS, never that anything passes - no '
+      + 'row moves to verified on it. Re-runnable by re-reading the cited file:line references.',
+  },
   'admission-adapter-callsites': {
     type: 'automated',
     sha: 'ROUND2_CANDIDATE',
@@ -446,6 +464,356 @@ const OVERRIDES = {
   },
 };
 
+
+/**
+ * CF001 reconciliation of the 39 unchecked ticket-list rows, done by reading the
+ * code rather than by trusting the plan flag.
+ *
+ * `implemented: false` in the plan only ever produced `missing-code` here, which
+ * is right as a default and wrong as a final answer: it cannot tell "nobody
+ * built this" apart from "this is two thirds built". Each row below states what
+ * exists, with file:line, and what does not.
+ *
+ * Only rows whose described behaviour is actually satisfied move to
+ * `implemented-unverified`. PARTIAL rows stay `missing-code` on purpose - a
+ * requirement two thirds met is not met - but they now say precisely which third
+ * is missing, which is the difference between a backlog and a list.
+ */
+const TICKET_LIST_RECONCILIATION = {
+  'ticketList:F003': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Exists: scope parse/serialize (ticketListScope.ts:175,:249), explicit transitions '
+      + '(TicketListScopeBar.tsx:112), the navigation-in-flight URL guard (ticketListUrlSync.ts:27 used at '
+      + 'TicketingDashboardContainer.tsx:325) and native popstate restore (:726). MISSING the row\'s headline '
+      + 'requirement: no native list-state snapshot exists anywhere, so returning to native serializes to a '
+      + 'bare /msp/tickets (serializeTicketListQuery returns \'\' for native, ticketListScope.ts:254) and '
+      + 'filters/page/sort/bundle are dropped. Qualified Back/Forward also does not restore presentation '
+      + '(QualifiedTicketList.tsx:77 seeds it in a useState initializer, no popstate listener). '
+      + 'resetQualifiedTicketListPresentation (ticketListScope.ts:318) is dead code.',
+  },
+  'ticketList:F006': {
+    status: 'missing-code',
+    why:
+      'NO CODE. ticketListDetailHref appends no return target and says so itself '
+      + '(ticketListIdentity.ts:69); QualifiedTicketList.tsx:161 pushes the bare href. Native returnFilters '
+      + 'is pre-existing and encodes no queueView/workspace - `queueView` appears nowhere in '
+      + 'ticketFilterUtils.ts or the ticket detail page.',
+  },
+  'ticketList:F010': {
+    status: 'missing-code',
+    why:
+      'PARTIAL, and not what the row asks. TicketListShell.tsx exists with the required slots, but its only '
+      + 'consumer is the qualified list (QualifiedTicketList.tsx:346). TicketingDashboard.tsx never imports '
+      + 'it and still renders heading/actions/board inline (:2245). Nothing was extracted from the actual '
+      + 'dashboard frame; a parallel frame was written, so the native structure this row exists to preserve '
+      + 'is not going through it.',
+  },
+  'ticketList:F012': {
+    status: 'implemented-unverified',
+    why:
+      'Code exists. server/src/app/msp/tickets/page.tsx:117 returns on the qualified SSR branch before any '
+      + 'native bootstrap, with the client gate and native fallback at :121 and the loading state at '
+      + 'QualifiedTicketList.tsx:369. Caveat recorded rather than hidden: the native fallback is a '
+      + 'client-side router.replace(\'/msp/tickets\') (TicketListQualifiedFallback.tsx:22), not an inline '
+      + 'native render. Unverified - no test renders this branch.',
+    evidence: ['ticket-list-reconciliation'],
+  },
+  'ticketList:F015': {
+    status: 'implemented-unverified',
+    why:
+      'Code state satisfies it, by separation rather than by a mechanism - flagged deliberately. Qualified '
+      + 'rows are CoManagedTicketQueueItem with their own column set (QualifiedTicketList.tsx:218) and never '
+      + 'touch ticket-columns.tsx / ticketColumnCatalog.ts; the type seam is ticketListIdentity.ts:12, and '
+      + 'native cells are untouched. Because the two sources never render in one table, the requirement holds '
+      + 'by construction. Unverified: no test exercises it, and if the two were ever merged into one table '
+      + 'the guarantee would disappear silently.',
+    evidence: ['ticket-list-reconciliation'],
+  },
+  'ticketList:F017': {
+    status: 'missing-code',
+    why:
+      'PARTIAL, and the part this row adds is vacuous. The native side (ticketViewSettings.ts, '
+      + 'TicketViewMenu.tsx, validateCapturedFilters at page.tsx:324) is intact and pre-existing. The '
+      + 'exclusion clause holds only because the qualified list has no View menu and no display state to leak '
+      + '(see F022); no code filters queue params out of a saved-default write, so nothing enforces it once '
+      + 'F022 lands.',
+  },
+  'ticketList:F020': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Present: applied-on-submit search (QualifiedTicketList.tsx:282), open/closed/all (:298), '
+      + 'workspace via TicketListScopeBar.tsx:154 from the authorized reader (:79), scope-preserving reset '
+      + '(:319). MISSING: there is no qualified client filter control at all - clientId only arrives from a '
+      + 'fixed prop or the URL (:93) - and the reset at :323 does not clear a global clientId, contradicting '
+      + 'the PRD\'s \'global client narrowing can be cleared\'.',
+  },
+  'ticketList:F021': {
+    status: 'implemented-unverified',
+    why:
+      'Code exists. QualifiedTicketList.tsx:387 sets manualSorting, server totalItems from '
+      + 'result.totalCount, and onPageChange/onItemsPerPageChange; unsupported columns are sortable:false '
+      + '(:248,:254,:260); counts come from the server page (:372); the page-size preference is honoured at '
+      + 'page.tsx:108. Recorded gaps short of the row\'s wording: no explicit refresh control in qualified '
+      + 'mode, and the header-sort mapping at :401 falls back to \'title\' for any non-updated_at column id. '
+      + 'Unverified - no test renders this component.',
+    evidence: ['ticket-list-reconciliation'],
+  },
+  'ticketList:F022': {
+    status: 'missing-code',
+    why:
+      'NO CODE. QualifiedTicketList.tsx:276 returns a fixed column array; there is no View menu, no density '
+      + 'control and no optional-column state anywhere on the qualified path.',
+  },
+  'ticketList:F024': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. The CSV itself is correct - QualifiedTicketList.tsx:135 strips page/pageSize and exports '
+      + 'all applied matches independent of selection, with machine-readable owner/relationship/ticket '
+      + 'columns at coManagedTicketQueueActions.ts:27. But it is NOT in the Share area this row requires: it '
+      + 'is a standalone Export button in the heading actions (:333) while native Share lives in '
+      + 'TicketingDashboard.tsx.',
+  },
+  'ticketList:F025': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Button, \'Add MSP ticket\' wording and authorized client prefill exist '
+      + '(QualifiedTicketList.tsx:336, locale key present in en/de/es/fr). MISSING: no keyboard shortcut '
+      + '(native uses usePageCreateShortcut at TicketingDashboard.tsx:83; absent here) and no post-creation '
+      + 'refresh.',
+  },
+  'ticketList:F026': {
+    status: 'missing-code',
+    why:
+      'NO CODE. The qualified list navigates away to /msp/create-ticket and has no creation-result handling '
+      + 'of any kind, so there is nothing to produce the out-of-scope success link this row requires.',
+  },
+  'ticketList:F027': {
+    status: 'missing-code',
+    why:
+      'PARTIAL, one direction only. Qualified selection is correctly separate: local state '
+      + '(QualifiedTicketList.tsx:87) keyed by ticketListIdentityKey and cleared on every request/scope/page '
+      + 'change (:115), with no TicketsRouteProvider import. NOT implemented: the reverse. '
+      + '/msp/tickets/layout.tsx mounts TicketsRouteProvider for BOTH branches and it rehydrates its '
+      + 'sessionStorage selection on mount (TicketsRouteProvider.tsx:103) with no scope awareness, so a '
+      + 'native selection survives a native to qualified transition.',
+  },
+  'ticketList:F028': {
+    status: 'missing-code',
+    why:
+      'PARTIAL, first half only. Selection with eligibility gating feeding one composer exists '
+      + '(QualifiedTicketList.tsx:178, isQualifiedHandbackEligible at ticketListIdentity.ts:77, composer at '
+      + ':376). The second half - removing the duplicate standalone bulk-handback checklist - is NOT done: '
+      + 'CoManagedTicketBulkHandback.tsx still exists with its own checkbox list (:44) and still has live '
+      + 'tests.',
+  },
+  'ticketList:F029': {
+    status: 'implemented-unverified',
+    why:
+      'Code exists. CoManagedTicketHandbackComposer.tsx:104 builds per-item {operationId, expectedRevision, '
+      + 'resource}; :128 freezes the command and reuses the exact frozen request on retry; required note and '
+      + 'audience line at :188. Server-side bound and dedupe at '
+      + 'packages/co-managed/src/ticketBulkHandback.ts:22. Unverified at the component level: no test file '
+      + 'imports this composer; the DB-side behaviour is covered by the integration suite (see '
+      + 'ticketList:T014).',
+    evidence: ['ticket-list-reconciliation'],
+  },
+  'ticketList:F030': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Persistence is implemented well - versioned, 24h expiry, actor-scoped key '
+      + '(CoManagedTicketHandbackComposer.tsx:12), written BEFORE first submit (:134), never auto-submitted '
+      + 'on restore (:159), storage-unavailable message (:198). NOT implemented: nothing prevents a scope or '
+      + 'page change from tearing the composer down. Selection clears on scope change '
+      + '(QualifiedTicketList.tsx:115) so eligible empties and the composer returns null (:176), while '
+      + '`restored` is read only at mount (:93) - an unresolved uncertain handback therefore vanishes from '
+      + 'the screen until reload. No logout cleanup hook.',
+  },
+  'ticketList:F031': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Per-item outcomes render (CoManagedTicketHandbackComposer.tsx:200). The re-read this row '
+      + 'requires is MANUAL only: onDone is wired to a Reload button (:215) which bumps a refresh counter '
+      + '(QualifiedTicketList.tsx:380); nothing re-reads the authorized queue automatically when results '
+      + 'arrive, so returned work does not leave working until the operator asks.',
+  },
+  'ticketList:F032': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Implemented: stale-clearing on every request change (QualifiedTicketList.tsx:112), export '
+      + 'failure dropping protected rows (:154), loading (:369), empty (:384), restricted per-cell label '
+      + '(:166). MISSING: no separate no-match vs empty state, no workspace-unavailable state or reset action '
+      + '(the PRD requires a scoped unavailable result plus a clear reset instead of silent widening), and no '
+      + 'retry affordance on a failed load.',
+  },
+  'ticketList:F036': {
+    status: 'implemented-unverified',
+    why:
+      'Code exists. CoManagedFeatureBoundary wraps the qualified branch (page.tsx:121), the native-mode '
+      + 'scope bar (:396) and the legacy route (msp/co-managed/tickets/page.tsx:14); the boundary returns '
+      + 'null while loading so there is no flash, and enabled!==true or error yields the fallback '
+      + '(CoManagedFeatureBoundary.tsx:19). Unverified, with a specific gap: '
+      + 'coManagedT21Boundary.contract.test.ts inventories five co-managed pages but NOT /msp/tickets, the '
+      + 'ticket-queue legacy page or the scope bar, so this row is asserted by no test.',
+    evidence: ['ticket-list-reconciliation'],
+  },
+  'ticketList:F038': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Translations exist in all four locales, theme tokens are used throughout '
+      + '(QualifiedTicketList.tsx:240,:280) and narrow width is handled via columnFitMode=\'scroll\' (:391) '
+      + 'plus flex-wrap toolbars. MISSING the accessibility half: no keyboard navigation or focus-return '
+      + 'handling - rows open via onRowClick (:405), the title Link is the only keyboard path, and nothing '
+      + 'restores focus on return from detail or create.',
+  },
+  'ticketList:F039': {
+    status: 'missing-code',
+    why:
+      'PARTIAL, and blocked on its own precondition. All three entries do use the common composition '
+      + '(global page.tsx:122, client CoManagedClientIntegration.tsx:105, legacy '
+      + 'CoManagedTicketQueueLegacyAdapter.tsx:47). But the duplicate ownership was NOT retired - '
+      + 'CoManagedTicketQueue.tsx and CoManagedTicketBulkHandback.tsx still exist with live tests - and there '
+      + 'is no real-application evidence: no browser or e2e test touches the co-managed ticket list anywhere '
+      + 'in the repo.',
+  },
+  'ticketList:T002': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Only the last clause (URL writers stop before navigation) is covered, by a pre-plan test: '
+      + 'TicketingDashboardContainer.urlSync.contract.test.tsx. Pure scope parsing is covered by '
+      + 'ticketListScope.test.ts. Nothing renders the real coordinator with a scope, and there is no '
+      + 'snapshot-retention or selection-clearing test.',
+  },
+  'ticketList:T003': {
+    status: 'implemented-unverified',
+    why:
+      'Test exists and matches. coManagedBootstrap.integration.test.ts:4390 covers the combined list with '
+      + 'search/sort/page/counts, :4410 client scoping including a sibling, :4492 same-number same-UUID '
+      + 'across two customers plus workspace options, :15978 full filtered export ignoring page controls, and '
+      + ':16164 assignment-driven working/oversight membership. Unverified only in the sense that it has not '
+      + 'been recorded green at this candidate; it is part of the coManagedBootstrap file, which is 1418/1418 '
+      + 'locally.',
+    evidence: ['ticket-list-reconciliation'],
+  },
+  'ticketList:T004': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Covered: revoke/handback (coManagedBootstrap.integration.test.ts:4427), unshared and '
+      + 'other-MSP exclusion (:4436), redaction before search/sort/counts (:4476), export field restriction '
+      + 'and revoked removal (:15991). NOT covered: the omitted-assignment-is-not-false case - '
+      + 'has_msp_assignment appears only in ticketQueue.ts and QualifiedTicketList.tsx:264 and in no test.',
+  },
+  'ticketList:T005': {
+    status: 'missing-code',
+    why:
+      'Cannot exist as written while F010 is unmet: the dashboard does not render through TicketListShell, '
+      + 'so \'native dashboard rendered through the new frame\' has no subject. Pre-existing native regressions '
+      + 'do exist (ticketColumns.prefetch.contract, boardArrival.contract, ticketColumnOrder, '
+      + 'ticketViewSettings) and are unaffected.',
+  },
+  'ticketList:T006': {
+    status: 'missing-code',
+    why:
+      'NO TEST. columnFitMode===\'scroll\' exists at packages/ui/src/components/DataTable.tsx:397, but '
+      + 'columnFitMode appears in zero DataTable test files; neither DataTable.interaction.test.tsx nor '
+      + 'DataTable.expandedRow.test.tsx touches column fitting.',
+  },
+  'ticketList:T007': {
+    status: 'missing-code',
+    why:
+      'PARTIAL, and aimed at the wrong component. coManagedTicketQueue.test.tsx covers toolbar requests, '
+      + 'sorting, reset and pagination for CoManagedTicketQueue - the component this plan intends to RETIRE. '
+      + 'QualifiedTicketList has no test file at all.',
+  },
+  'ticketList:T008': {
+    status: 'missing-code',
+    why:
+      'NO TEST, and no subject: qualified View controls do not exist (see F022), so there is nothing to '
+      + 'pair with the native ones.',
+  },
+  'ticketList:T009': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. ticketListIdentity.test.ts covers key and href purity only. No component test exercises '
+      + 'rows, Ctrl/Cmd-click opening (QualifiedTicketList.tsx:232) or detail return with duplicate '
+      + 'identities.',
+  },
+  'ticketList:T010': {
+    status: 'missing-code',
+    why:
+      'PARTIAL, and aimed at the wrong component. coManagedTicketQueue.test.tsx has exactly the '
+      + 'applied-filter export and stale-download-discarded assertions, but against the retired component. '
+      + 'Nothing covers native Share or the new Export button.',
+  },
+  'ticketList:T011': {
+    status: 'missing-code',
+    why:
+      'NO TEST. There is no co-managed browser or e2e test anywhere in the repo (server/src/test/e2e, '
+      + 'e2e-tests/tests).',
+  },
+  'ticketList:T012': {
+    status: 'missing-code',
+    why:
+      'PARTIAL, and aimed at the wrong component. coManagedTicketBulkHandback.test.tsx tests the retired '
+      + 'checklist. The 100-item bound is enforced server-side '
+      + '(packages/co-managed/src/ticketBulkHandback.ts:22) but no test covers the new selection column or '
+      + 'CoManagedTicketHandbackComposer.',
+  },
+  'ticketList:T013': {
+    status: 'missing-code',
+    why:
+      'NO TEST. No test file imports CoManagedTicketHandbackComposer; its sessionStorage recovery path '
+      + '(:27-58, :159-174) - expiry, actor scoping, no-auto-submit - is entirely untested, which is the '
+      + 'highest-value missing test in this plan.',
+  },
+  'ticketList:T014': {
+    status: 'implemented-unverified',
+    why:
+      'Test exists and matches. coManagedBootstrap.integration.test.ts:16011 covers mixed per-item '
+      + 'outcomes, idempotent exact-request retry (:16029), forbidden (:16044), readOnly/invalid (:16055) and '
+      + 'rollback (:16064), with re-queried working/oversight membership at :4427. Unverified only in the '
+      + 'sense that it has not been recorded green at this candidate.',
+    evidence: ['ticket-list-reconciliation'],
+  },
+  'ticketList:T015': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Stale-response and export-failure behaviour is tested only for the retired component. '
+      + 'QualifiedTicketList\'s own generation guard (:107-120) is untested, and the unavailable-workspace '
+      + 'state the row requires does not exist to be tested (see F032).',
+  },
+  'ticketList:T016': {
+    status: 'missing-code',
+    why:
+      'PARTIAL, and weaker than it looks. coManagedClientIntegration.test.tsx:22 exists but MOCKS '
+      + 'QualifiedTicketList, so it asserts slot wiring only - not fixed-client reads, export, reset or id '
+      + 'uniqueness in the full-page and drawer surfaces.',
+  },
+  'ticketList:T017': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. coManagedT21Boundary.contract.test.ts and coManagedFeatureBoundary.test.tsx exist, but the '
+      + 'inventory lists /msp/co-managed and /msp/co-management pages and NOT /msp/tickets/page.tsx, '
+      + '/msp/co-managed/tickets/page.tsx, TicketListScopeBar or CoManagedTicketQueueLegacyAdapter - exactly '
+      + 'the new coordinator surfaces this row names.',
+  },
+  'ticketList:T018': {
+    status: 'missing-code',
+    why:
+      'PARTIAL. Covered: the route/API product matrix (coManagedProductSurface.test.ts), sponsor route '
+      + 'selection, and \'keeps backend resolution free of release-flag checks\' '
+      + '(coManagedT21Boundary.contract.test.ts:50). NOT covered: the legacy /msp/co-managed/tickets to '
+      + 'canonical qualified-URL mapping implemented at CoManagedTicketQueueLegacyAdapter.tsx:29-51.',
+  },
+  'ticketList:T019': {
+    status: 'missing-code',
+    why:
+      'NO TEST. The full browser journey (native to working to oversight to client to CSV to handback to '
+      + 'native, with widths, locale, theme and keyboard) has no counterpart anywhere; no co-managed browser '
+      + 'test exists in the repo.',
+  },
+};
+
 /** Rows whose acceptance depends on a real vendor account and cannot be closed inside this card. */
 const EXTERNAL = {
   'clientIntegration:T018': 'Historical real-provider language. Preserved as an external production prerequisite '
@@ -555,6 +923,7 @@ const OUT_OF_SCOPE_THIS_ROUND = new Set([
 ]);
 
 function deriveStatus(key, row) {
+  if (TICKET_LIST_RECONCILIATION[key]) return TICKET_LIST_RECONCILIATION[key].status;
   if (OVERRIDES[key]) return OVERRIDES[key].status;
   if (EXTERNAL[key]) return 'blocked-external';
   return row.implemented === true ? 'implemented-unverified' : 'missing-code';
@@ -565,7 +934,7 @@ function buildRows() {
   const push = (row) => {
     const key = row.plan === 'correction' || row.plan === 'foundation' ? row.id : `${row.plan}:${row.id}`;
     const status = deriveStatus(key, row);
-    const override = OVERRIDES[key];
+    const override = OVERRIDES[key] ?? TICKET_LIST_RECONCILIATION[key];
     rows.push({
       key,
       plan: row.plan,
