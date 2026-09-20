@@ -41,12 +41,33 @@ describe('ticketListIdentity', () => {
   });
 
   it('applies the existing handback eligibility rules', () => {
-    expect(isQualifiedHandbackEligible({ relationshipId: RELATIONSHIP, responsibility: 'msp', work_revision: 3 })).toBe(true);
+    // Shaped like a real CoManagedTicketQueueItem, which is the only thing
+    // production ever passes. These four cases previously used a hand-written
+    // FLAT object and so agreed with a bug instead of catching it: the
+    // predicate read `responsibility`/`work_revision` from the top level, every
+    // real item carries them under `fields`, and the result was a silent
+    // `undefined === 'msp'` -> false for every row. Nothing was handback
+    // eligible, so the qualified list's selection column offered no rows and
+    // the single composer never rendered.
+    const item = (fields: Record<string, unknown>, relationshipId: string | null = RELATIONSHIP) =>
+      ({ tenant: TENANT, ticketId: TICKET, workspaceName: 'Customer', relationshipId, fields }) as never;
+
+    expect(isQualifiedHandbackEligible(item({ responsibility: 'msp', work_revision: 3 }))).toBe(true);
     // Customer-responsible work is never handback-selectable from the list.
-    expect(isQualifiedHandbackEligible({ relationshipId: RELATIONSHIP, responsibility: 'customer', work_revision: 3 })).toBe(false);
+    expect(isQualifiedHandbackEligible(item({ responsibility: 'customer', work_revision: 3 }))).toBe(false);
     // A native row has no relationship.
-    expect(isQualifiedHandbackEligible({ relationshipId: null, responsibility: 'msp', work_revision: 3 })).toBe(false);
+    expect(isQualifiedHandbackEligible(item({ responsibility: 'msp', work_revision: 3 }, null))).toBe(false);
     // No revision means the command cannot freeze an identity.
-    expect(isQualifiedHandbackEligible({ relationshipId: RELATIONSHIP, responsibility: 'msp', work_revision: null })).toBe(false);
+    expect(isQualifiedHandbackEligible(item({ responsibility: 'msp', work_revision: null }))).toBe(false);
+    // Redacted rows omit the fields entirely rather than sending nulls.
+    expect(isQualifiedHandbackEligible({ relationshipId: RELATIONSHIP })).toBe(false);
+  });
+
+  it('does not accept a flat item, which is how the eligibility bug hid', () => {
+    // The regression that would have caught it. A top-level shape carries no
+    // `fields`, so it must be ineligible rather than quietly true.
+    expect(isQualifiedHandbackEligible(
+      { relationshipId: RELATIONSHIP, responsibility: 'msp', work_revision: 3 } as never,
+    )).toBe(false);
   });
 });

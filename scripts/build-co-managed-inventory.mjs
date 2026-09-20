@@ -247,6 +247,23 @@ const EVIDENCE = {
       + '(the harness lane was not run), the emulator\'s missing Entra OIDC surface, and the still-ungated '
       + 'production MICROSOFT_LOGIN_BASE_URL override, which is left alone with its reason recorded.',
   },
+  'qualified-handback-eligibility-repair': {
+    type: 'automated',
+    sha: 'ROUND3_CANDIDATE',
+    command: 'server: vitest run src/test/unit/product/coManagedHandbackRecovery.test.tsx '
+      + '../packages/tickets/src/lib/ticketListIdentity.test.ts',
+    result: '19 passed. Writing the missing T013 recovery test exposed a product defect: '
+      + 'isQualifiedHandbackEligible read responsibility/work_revision from the top level of the item while '
+      + 'every real CoManagedTicketQueueItem carries them under `fields`, so it returned false for EVERY row '
+      + 'and the qualified selection column and handback composer were dead at runtime. It typechecked '
+      + '(optional properties) and its only unit test used a flat object, so it agreed with the bug. The '
+      + 'predicate now takes the real shape, so a flat object is a type error rather than a silent false. '
+      + 'MUTATION-VERIFIED: reverting to the top-level read fails 6 cases across the two suites.',
+    artifact: 'ticket-list-reconciliation.md',
+    artifactNote: 'Unit-level only. It does NOT establish that the qualified handback journey works in a '
+      + 'browser - no co-managed browser test exists (see ticketList:T019/T011) - only that the eligibility '
+      + 'gate and the recovery contract behave.',
+  },
   'ticket-list-reconciliation': {
     type: 'analysis',
     sha: 'ROUND3_CANDIDATE',
@@ -601,16 +618,23 @@ const TICKET_LIST_RECONCILIATION = {
   'ticketList:F028': {
     status: 'missing-code',
     why:
-      'PARTIAL, first half only. Selection with eligibility gating feeding one composer exists '
-      + '(QualifiedTicketList.tsx:178, isQualifiedHandbackEligible at ticketListIdentity.ts:77, composer at '
-      + ':376). The second half - removing the duplicate standalone bulk-handback checklist - is NOT done: '
+      'PARTIAL, and the first half was BROKEN until this round. isQualifiedHandbackEligible read '
+      + 'responsibility/work_revision from the TOP LEVEL of the item, while every real '
+      + 'CoManagedTicketQueueItem carries them under `fields` - so it evaluated undefined against \'msp\' and '
+      + 'returned false for EVERY row. Nothing was ever handback eligible: the selection column offered no '
+      + 'rows and the single composer never rendered, which also made F029/F030/F031 unreachable in a '
+      + 'browser. It typechecked because the parameter type made those properties optional, and the only '
+      + 'unit test passed a hand-written FLAT object, so it agreed with the bug instead of catching it. '
+      + 'Repaired and mutation-verified this round (6 cases go red when reverted). Still PARTIAL: selection '
+      + 'with eligibility gating now feeds one composer (QualifiedTicketList.tsx:178, composer at :376), but '
+      + 'the second half - removing the duplicate standalone bulk-handback checklist - is NOT done: '
       + 'CoManagedTicketBulkHandback.tsx still exists with its own checkbox list (:44) and still has live '
       + 'tests.',
   },
   'ticketList:F029': {
     status: 'implemented-unverified',
     why:
-      'Code exists. CoManagedTicketHandbackComposer.tsx:104 builds per-item {operationId, expectedRevision, '
+      'Reachability: this composer never rendered in a browser before this round\'s eligibility repair. Code exists. CoManagedTicketHandbackComposer.tsx:104 builds per-item {operationId, expectedRevision, '
       + 'resource}; :128 freezes the command and reuses the exact frozen request on retry; required note and '
       + 'audience line at :188. Server-side bound and dedupe at '
       + 'packages/co-managed/src/ticketBulkHandback.ts:22. Unverified at the component level: no test file '
@@ -621,7 +645,7 @@ const TICKET_LIST_RECONCILIATION = {
   'ticketList:F030': {
     status: 'missing-code',
     why:
-      'PARTIAL. Persistence is implemented well - versioned, 24h expiry, actor-scoped key '
+      'Reachability: unreachable in a browser before this round\'s eligibility repair. PARTIAL. Persistence is implemented well - versioned, 24h expiry, actor-scoped key '
       + '(CoManagedTicketHandbackComposer.tsx:12), written BEFORE first submit (:134), never auto-submitted '
       + 'on restore (:159), storage-unavailable message (:198). NOT implemented: nothing prevents a scope or '
       + 'page change from tearing the composer down. Selection clears on scope change '
@@ -632,7 +656,7 @@ const TICKET_LIST_RECONCILIATION = {
   'ticketList:F031': {
     status: 'missing-code',
     why:
-      'PARTIAL. Per-item outcomes render (CoManagedTicketHandbackComposer.tsx:200). The re-read this row '
+      'Reachability: unreachable in a browser before this round\'s eligibility repair. PARTIAL. Per-item outcomes render (CoManagedTicketHandbackComposer.tsx:200). The re-read this row '
       + 'requires is MANUAL only: onDone is wired to a Reload button (:215) which bumps a refresh counter '
       + '(QualifiedTicketList.tsx:380); nothing re-reads the authorized queue automatically when results '
       + 'arrive, so returned work does not leave working until the operator asks.',
@@ -760,11 +784,18 @@ const TICKET_LIST_RECONCILIATION = {
       + 'CoManagedTicketHandbackComposer.',
   },
   'ticketList:T013': {
-    status: 'missing-code',
+    status: 'implemented-unverified',
     why:
-      'NO TEST. No test file imports CoManagedTicketHandbackComposer; its sessionStorage recovery path '
-      + '(:27-58, :159-174) - expiry, actor scoping, no-auto-submit - is entirely untested, which is the '
-      + 'highest-value missing test in this plan.',
+      'WRITTEN THIS ROUND, and writing it found a product defect. '
+      + 'coManagedHandbackRecovery.test.tsx drives the real composer against real sessionStorage across 13 '
+      + 'cases: a restored intent is never auto-submitted, resuming replays the EXACT frozen operationId '
+      + 'rather than minting a new one, the intent is cleared once the result is known, and expired / '
+      + 'wrong-actor / mismatched-scope / wrong-version / corrupt / empty intents are all refused. It also '
+      + 'pins that the replay command is written BEFORE the action is called (observed from inside the '
+      + 'action, not after it), that it survives an uncertain result so a reload can resume, and that a '
+      + 'browser with storage disabled says so and still permits the handback. Unverified: not yet recorded '
+      + 'green in CI at a candidate.',
+    evidence: ['qualified-handback-eligibility-repair'],
   },
   'ticketList:T014': {
     status: 'implemented-unverified',
