@@ -28,17 +28,67 @@ standing in for what a dist-compiled worker adapter throws. It asserts
 
 ## Reproduction attempts
 
-| Attempt | Result |
-| --- | --- |
-| The single case, standalone, `VITEST_SEED=20260610`, CE+EE overlay, `DB_NAME_SERVER=server_co_managed` | **passed** |
-| The whole `coManagedBootstrap.integration.test.ts` file, `VITEST_SEED=20260610` (full intra-file shuffle at the CI seed), CE+EE overlay | **1416/1416 passed** |
+| # | Attempt | Result |
+| --- | --- | --- |
+| 1 | The single case, standalone, `VITEST_SEED=20260610`, CE+EE overlay, `DB_NAME_SERVER=server_co_managed` | **passed** |
+| 2 | The whole `coManagedBootstrap.integration.test.ts` file at the same seed, full intra-file shuffle | **1416/1416 passed** |
+| 3 | "Real shard" with `INTEGRATION_SHARD_TOTAL=1`, `TIER1_BASE_SHA=<merge base>` — **312 files** | bootstrap suite **passed**; see below, this was not the failing shard |
+| 4 | Faithful shard: `INTEGRATION_SHARD_TOTAL=4`, `INTEGRATION_SHARD_INDEX=1`, `TIER1_BASE_SHA=''` — **78 files** | in flight at the end of this round |
 
-So the divergence is **not** intra-file ordering and **not** the migration overlay. It requires the
-real shard — cross-file state in a single `singleFork` process. The documented harness rules were
-followed: the CE+EE overlay was built from `server/migrations` + `ee/server/migrations`
-(1101 + 70 → 1165 files after 6 EE-over-CE collisions) and `TEST_MIGRATIONS_DIR` was exported; the
-bootstrap harness's runtime `DB_NAME_SERVER` selection was left alone and the reverted clone-source
-pin and `ALGA_SCHEMA_SOURCE_DB` were **not** reintroduced.
+Attempts 1 and 2 rule out intra-file ordering and the migration overlay. The documented harness
+rules were followed throughout: the CE+EE overlay was built from `server/migrations` +
+`ee/server/migrations` (1101 + 70 → 1165 files after 6 EE-over-CE collisions) and
+`TEST_MIGRATIONS_DIR` was exported; the bootstrap harness's runtime `DB_NAME_SERVER` selection was
+left alone, and the reverted clone-source pin and `ALGA_SCHEMA_SOURCE_DB` were **not** reintroduced.
+
+### Attempt 3 was the wrong shard, and that is the round's most useful finding
+
+The PRD asks for shard membership and order to be preserved. They were not, in two ways:
+
+| | `INTEGRATION_SHARD_TOTAL` | `TIER1_BASE_SHA` | Gate decision | Files |
+| --- | --- | --- | --- | --- |
+| CI job 106030872598 | **4** | *(empty)* | `Change evidence unavailable; full suite required` | **78** |
+| attempt 3 | 1 | `8120314513` | `manifest + affected suites` | 312 |
+| attempt 4 | **4** | *(empty)* | `Change evidence unavailable; full suite required` | **78** |
+
+1. **The matrix is four wide.** `gh run view 35492001110` shows `Integration shard 1` (failure)
+   alongside shards 2, 3 and 4, all success. Listing only the *failed* jobs — which is how the
+   commissioning snapshot describes the run — hides that. With `TOTAL=1`, `partitionTestFiles` hands
+   one process all ~310 integration files instead of shard 1's 78, so the cross-file state a
+   `singleFork` process accumulates before reaching `coManagedBootstrap` is a different set in a
+   different order. For an order-dependent failure that is a different experiment.
+2. **`TIER1_BASE_SHA` must be empty.** CI passed it empty, so `readChangedFiles` finds no change
+   evidence, `selectIntegration` returns `full`, and the gate selects both integration directories.
+   Supplying the merge base instead yields `manifest + affected suites` — a different selection again.
+
+So attempt 3's pass is **not** evidence that the defect is fixed, and it would not have been evidence
+that it was absent either.
+
+The faithful invocation, which reproduces CI's gate line verbatim and collects exactly 78 files with
+`coManagedBootstrap.integration.test.ts` among them:
+
+```bash
+INTEGRATION_SHARD_INDEX=1 INTEGRATION_SHARD_TOTAL=4 TIER1_BASE_SHA='' \
+VITEST_SEED=20260610 REQUIRE_DB=1 REAL_REDIS=1 REDIS_HOST=localhost REDIS_PORT=6379 \
+TEST_MIGRATIONS_DIR="$PWD/server/.ci-combined-migrations" \
+npm run test:integration:tier1     # from server/
+```
+
+It needs two services this workstation does not otherwise run, because the card's own ports do not
+match what the lane expects (`REDIS_PASSWORD` must be unset; the card's Redis on `:6374` has one):
+
+```bash
+docker run -d --name cm-redis-ci -p 6379:6379 redis:7-alpine
+docker run -d --name cm-greenmail -p 33025:3025 -p 38080:8080 \
+  -e GREENMAIL_OPTS='-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled' \
+  greenmail/standalone:2.1.8
+```
+
+One more trap, learned the hard way: **do not kill a running shard and immediately start another.**
+`createTestDbConnection` drops and recreates `test_database`, so an interrupted run leaves it absent
+and the next run collapses with `database "test_database" does not exist` and
+`Connection terminated unexpectedly` across ~160 files. That looks like a product failure and is not
+one. The first faithful attempt was discarded for exactly this reason.
 
 ## The reporting failure came first
 
@@ -133,6 +183,9 @@ resolves carries the duck-typed predicate (`dist/chunk-HLLCNPFH.js:31`).
 
 ## What is next
 
+0. Finish the faithful shard (attempt 4) and, whatever it says, run it once more with
+   `isCoManagedSharedWorkError` reverted to `instanceof`. Without that control the shard result
+   cannot be attributed to the fix in either direction.
 1. Read the `[inbound-email-diagnostic]` lines from the next CI shard-1 log. The `rollback` and
    `lifecycle_classification` stages name the first exception and say precisely which contract field
    declined. `admission.sharedWorkConstructorMatched: false` would confirm the dual-constructor
