@@ -41,6 +41,17 @@ function stripQuery(href: string): string {
   return href.split('?')[0];
 }
 
+/**
+ * Source with comments stripped. Naming a path or a flag while explaining a
+ * decision is fine; linking to it or reading it is not, and only the latter
+ * should fail these assertions.
+ */
+function code(file: string): string {
+  return fs.readFileSync(path.join(repoRoot, file), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+}
+
 function sourceFiles(): string[] {
   const roots = [
     'packages/integrations/src',
@@ -144,18 +155,19 @@ describe('provider setup reachability', () => {
   });
 
   it('does not put the release flag between the customer and its own provider credentials', () => {
+    // The entry point that leads here -- the Open Providers button on
+    // Settings -> Email -> Inbound -- is gated only on enterprise edition. A
+    // gate on the destination alone would therefore turn the release flag into
+    // a dead end for a capability whose entry point is not flag-gated:
     // CoManagedFeatureBoundary renders `fallback ?? null`, and its contract says
-    // a caller that replaces a whole route must supply a fallback "or the route
-    // renders blank when the flag is off". The entry point that leads here --
-    // the Open Providers button on Settings -> Email -> Inbound -- is gated only
-    // on enterprise edition, so gating the destination and not the entry point
-    // turns the flag into a blank-page dead end that is strictly worse than the
-    // product boundary card this route replaced.
-    // Comments are stripped: explaining the decision in prose is fine, using the
-    // flag is not.
-    const code = (file: string) => fs.readFileSync(path.join(repoRoot, file), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/^\s*\/\/.*$/gm, '');
+    // a caller replacing a whole route must supply one "or the route renders
+    // blank when the flag is off".
+    //
+    // Today that is latent rather than visible, because MspLayoutClient already
+    // blanks the whole co-managed shell when the flag is off (verified in a
+    // browser: /msp/dashboard, /msp/tickets and /msp/settings/email all render
+    // an empty main). This assertion keeps the route from re-acquiring its own
+    // gate if that shell-wide blanking is ever given the fallback it lacks.
     const page = code('server/src/app/msp/co-management/providers/page.tsx');
     const entry = code('packages/integrations/src/components/email/EmailProviderConfiguration.tsx');
 
@@ -176,7 +188,7 @@ describe('provider setup reachability', () => {
   it('has no source link left that sends a user straight at a product-specific provider page', () => {
     const offenders = sourceFiles()
       .filter((file) => {
-        const source = fs.readFileSync(file, 'utf8');
+        const source = code(path.relative(repoRoot, file));
         return source.includes('/msp/settings/integrations?category=providers')
           || source.includes('/msp/settings/integrations?category=communication');
       })
