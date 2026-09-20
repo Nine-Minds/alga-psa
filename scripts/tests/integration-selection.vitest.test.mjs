@@ -19,7 +19,7 @@ test('workflow selector and real integration runner agree on git changes and wid
   // Exercise the production entry points in a disposable repository. The
   // runner shim delegates every invocation to the installed Vitest binary;
   // its optional failure models an unavailable affected-test graph only.
-  for (const file of ['scripts/select-integration-tests.mjs', 'scripts/run-tier1-integration.mjs', 'scripts/lib/integration-selection.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs']) {
+  for (const file of ['scripts/select-integration-tests.mjs', 'scripts/run-tier1-integration.mjs', 'scripts/lib/integration-selection.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs', 'scripts/lib/jev-enforcement.mjs']) {
     write(file, '');
     copyFileSync(path.join(repository, file), path.join(root, file));
   }
