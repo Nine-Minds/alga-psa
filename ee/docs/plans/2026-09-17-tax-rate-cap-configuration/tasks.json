@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "api",
+      "title": "Actions, API and permission tests",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "api",
+      "notes": ""
+    },
+    {
+      "id": "invoice",
+      "title": "Shared parent tax arithmetic and invoice integration",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "invoice",
+      "notes": ""
+    },
+    {
+      "id": "locales",
+      "title": "Translations and administrator documentation",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "locales",
+      "notes": ""
+    },
+    {
+      "id": "ui",
+      "title": "Exact money helpers and Tax Rates UI",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "root",
+      "notes": ""
+    },
+    {
+      "id": "verify",
+      "title": "Integration review, live smoke, checks and commit",
+      "status": "done",
+      "dependsOn": [
+        "api",
+        "invoice",
+        "locales",
+        "ui"
+      ],
+      "owner": "root",
+      "notes": "Validation and review complete; scoped local commit contains the draft. See VALIDATION.md for evidence and limits."
+    }
+  ]
+}
