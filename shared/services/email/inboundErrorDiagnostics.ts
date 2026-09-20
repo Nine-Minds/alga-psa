@@ -24,6 +24,13 @@
 /** Generous enough that realistic messages are verbatim; bounded regardless. */
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_CODE_LENGTH = 120;
+/**
+ * Enough frames to show a repeating cycle twice over; bounded so a stack
+ * overflow -- whose stack is thousands of frames long -- cannot itself become
+ * the unbounded payload this module exists to prevent.
+ */
+const MAX_FRAMES = 14;
+const MAX_FRAME_LENGTH = 200;
 
 export interface InboundErrorSummary {
   /** Constructor-independent discriminator. Empty string when absent. */
@@ -33,6 +40,13 @@ export interface InboundErrorSummary {
   message: string;
   /** One level only: `name|code|message` of a direct cause, never a chain. */
   cause: string | null;
+  /**
+   * The topmost `MAX_FRAMES` stack frames, each bounded. For a
+   * `RangeError: Maximum call stack size exceeded` the repeating cycle sits at
+   * the top of the stack, so these frames name the recursion site -- the one
+   * thing name/code/message cannot say.
+   */
+  frames: string[];
 }
 
 function boundedString(value: unknown, limit: number): string | null {
@@ -62,7 +76,28 @@ export function inboundErrorMessage(error: unknown): string {
   }
 }
 
-function summarizeShallow(error: unknown): Omit<InboundErrorSummary, 'cause'> {
+/**
+ * Bounded frames from `error.stack`. Never the whole stack: an overflow stack
+ * is enormous, and the point of this module is that nothing unbounded reaches
+ * a reporter. The message line is dropped (it is already reported separately)
+ * and each frame is trimmed and truncated.
+ */
+function boundedFrames(error: unknown): string[] {
+  let stack: unknown;
+  // A hostile or exotic thrown value can throw from a `stack` getter.
+  try { stack = (error as { stack?: unknown } | null | undefined)?.stack; } catch { return []; }
+  if (typeof stack !== 'string' || stack === '') return [];
+  return stack
+    .split('\n')
+    .filter((line) => /^\s*at\s/.test(line))
+    .slice(0, MAX_FRAMES)
+    .map((line) => {
+      const trimmed = line.trim();
+      return trimmed.length > MAX_FRAME_LENGTH ? `${trimmed.slice(0, MAX_FRAME_LENGTH)}…` : trimmed;
+    });
+}
+
+function summarizeShallow(error: unknown): Omit<InboundErrorSummary, 'cause' | 'frames'> {
   const record = (error && typeof error === 'object' ? error : {}) as Record<string, unknown>;
   return {
     name: boundedString(record.name, MAX_CODE_LENGTH) ?? (typeof error === 'object' && error !== null ? '' : typeof error),
@@ -72,7 +107,7 @@ function summarizeShallow(error: unknown): Omit<InboundErrorSummary, 'cause'> {
 }
 
 export function summarizeInboundError(error: unknown): InboundErrorSummary {
-  const shallow = summarizeShallow(error);
+  const shallow = { ...summarizeShallow(error), frames: boundedFrames(error) };
   const rawCause = error && typeof error === 'object' ? (error as { cause?: unknown }).cause : undefined;
   if (rawCause === undefined || rawCause === null) return { ...shallow, cause: null };
   // Exactly one level. A cause that points back at its own error -- or at a
@@ -107,6 +142,9 @@ export function recordInboundDiagnostic(
     payload.errorCode = summary.code;
     payload.errorMessage = summary.message;
     payload.errorCause = summary.cause;
+    // Only when there is something to say, so an ordinary rejection keeps its
+    // one short line.
+    if (summary.frames.length > 0) payload.errorFrames = summary.frames;
   }
   console.warn('[inbound-email-diagnostic]', JSON.stringify(payload));
 }

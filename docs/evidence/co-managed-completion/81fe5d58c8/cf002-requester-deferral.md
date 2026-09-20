@@ -199,6 +199,85 @@ tests), so "the same shard" is only approximately true across SHAs.
 This is the most actionable lead the card has for CF002–CF004, and it is a better next step than any
 further local reproduction: bisect that window against CI shard 1, not against this workstation.
 
+### The CI read at `fb2e696645`: the first error is finally named
+
+[Run 35522723445](https://github.com/Nine-Minds/alga-psa/actions/runs/35522723445), job
+[106110228049](https://github.com/Nine-Minds/alga-psa/actions/runs/35522723445/job/106110228049),
+Integration shard 1, `VITEST_SEED=20260610`. **2 failed / 2169 passed (2171)**. Raw capture:
+[`raw-logs/ci-shard1-fb2e696645.txt`](raw-logs/ci-shard1-fb2e696645.txt).
+
+The requester-deferral case **still fails**, so the duck-typing repair did not fix it — consistent
+with the control run, which had already shown the local shard cannot discriminate. What is new is
+that the bounded diagnostics landed in round 2 fired, and they name the first exception:
+
+```
+[inbound-email-diagnostic] {"stage":"rollback","tenant":"3b2af6e8…","inboxId":"05450c9a…",
+  "claimed":true,"errorName":"RangeError","errorCode":null,
+  "errorMessage":"Maximum call stack size exceeded","errorCause":null}
+[inbound-email-diagnostic] {"stage":"lifecycle_classification", … ,"classifiedAsLifecycle":false,
+  "candidateName":"RangeError","candidateCode":null,
+  "candidateLifecycleState":null,"candidateCanWrite":null}
+[inbound-email-diagnostic] {"stage":"disposition", … ,"disposition":"retry",
+  "reason":"commit_failure","errorName":"RangeError",
+  "errorMessage":"Maximum call stack size exceeded"}
+```
+
+**There are two distinct stack overflows, and conflating them is what cost the earlier rounds.**
+
+1. A **product-path** `RangeError: Maximum call stack size exceeded`, thrown inside the commit
+   transaction and caught by `processInboundInbox`. It is not a lifecycle error, so
+   `isCoManagedLifecycleError` correctly declines it and the disposition is `retry`. **This is the
+   cause of the failed assertion**, and it is a real defect, not a reporting artifact.
+2. A **reporter-level** `Failed to fully serialize error: Maximum call stack size exceeded`, which
+   is what the run summary prints. The round-2 diagnosis of this one is confirmed by the *other*
+   failing test in the same shard — `customer period jobs roll back generated dates` — whose inner
+   error is an ordinary knex `insert into "time_periods"` rejection and which shows the identical
+   reporter message. So the serializer blows its stack on a knex error graph regardless of the
+   co-managed path, exactly as described, and it is independent of (1).
+
+### What (1) narrows to, and what it does not
+
+The `admission` stage did **not** fire. Both adapters emit that stage from their `catch` before
+rethrowing anything they do not recognise, so the `RangeError` did not pass through
+`admitCoManagedRequesterReply`. The test calls the real adapter first and only then throws its
+duck-typed lifecycle error, so the overflow happens *after* admission returns — between the
+injected `throw` and `processInboundInbox`'s `catch`, i.e. in the transaction rejection/rollback
+path, where the lifecycle error is replaced by a `RangeError`.
+
+That is as far as name, code and message can take it. **No repair is attempted here**: the
+recursion site is unknown, it does not reproduce on this workstation in either arm, and guessing at
+a fix for an unreproducible infinite recursion is how a wrong change gets shipped.
+
+What this round adds instead is the next observation, at the same bounded, primitives-only standard:
+`summarizeInboundError` now carries `frames` — the topmost stack frames, each truncated, at most 14.
+For a stack-overflow `RangeError` the repeating cycle sits at the top of the stack, so these frames
+name the recursion site, which is the one thing the current diagnostics cannot say. Note V8's default
+`Error.stackTraceLimit` is 10, so a real overflow yields ten frames of the cycle; the ceiling exists
+so an environment that raises that limit cannot turn an overflow stack into the unbounded payload
+this module exists to prevent. Both bounds are mutation-checked
+(`server/src/test/unit/email/inboundErrorDiagnostics.test.ts`, 15 tests: dropping the per-frame
+truncation fails one case, raising `MAX_FRAMES` fails another).
+
+**CF002-CF004 stay `failed`.** CF002's requirement — capture the first requester intake error — is
+now partly met and partly not: the error is named, its location is not.
+
+### Determinism, established rather than assumed
+
+Integration shard 1 across this branch's completed Production-regression runs:
+
+| run | SHA | shard 1 | the requester case |
+| --- | --- | --- | --- |
+| 35477498197 | `bda945b640` | success | present, passed |
+| 35486497392 | `7b0b52c6c3` | failure | failed |
+| 35492001110 | `618019c3e3` | failure | failed |
+| 35522723445 | `fb2e696645` | failure | failed |
+
+Three consecutive failures at three different SHAs, after one green. That is now strong evidence of
+a **deterministic** regression rather than an intermittent, though still not proof in the strict
+sense — no two completed runs share a SHA. The regression window `bda945b640..7b0b52c6c3` (ten
+commits, including an `origin/main` merge and edits to the bootstrap suite itself) remains the
+bisect target, and a stack-overflow cause fits a window that contains a merge.
+
 ### The 8 `Comment Reactions` failures were my harness, not the product
 
 Round 1 carried these as "probably local contention". They are not. Diagnosed:
@@ -240,6 +319,12 @@ and the next run collapses with `database "test_database" does not exist` and
 one. The first faithful attempt was discarded for exactly this reason.
 
 ## The reporting failure came first
+
+> **Superseded in part by the `fb2e696645` CI read above.** This section is correct about the
+> *reporter* overflow, and that diagnosis is now independently confirmed by a second, unrelated
+> failing test in the same shard. It was wrong to assume the reporter overflow was the only one:
+> there is also a genuine product-path `RangeError` on this path, and that is what actually
+> produces `retry`.
 
 The PRD is right that the stack overflow is a candidate *reporting* failure, not the established
 cause — and it is worse than that: it is why the first exception was never named. The `retry`
@@ -334,13 +419,21 @@ resolves carries the duck-typed predicate (`dist/chunk-HLLCNPFH.js:31`).
 
 0. ~~Run the control.~~ **Done - it passed.** The local shard cannot discriminate, so no further
    local reproduction attempt is worth making.
-1. Read the `[inbound-email-diagnostic]` lines from the next CI shard-1 log. The `rollback` and
-   `lifecycle_classification` stages name the first exception and say precisely which contract field
-   declined. `admission.sharedWorkConstructorMatched: false` would confirm the dual-constructor
-   mechanism directly.
-2. If the divergence persists with a named first error, repair that error's owner.
-3. Only then: mutation proof that the repaired case fails without the fix, focused pass, and a
-   full original-shard pass at seed `20260610`.
+1. ~~Read the `[inbound-email-diagnostic]` lines from the next CI shard-1 log.~~ **Done at
+   `fb2e696645`.** The first error is `RangeError: Maximum call stack size exceeded`, thrown inside
+   the commit transaction. `admission.sharedWorkConstructorMatched` never appeared, which rules the
+   dual-constructor mechanism *out* as the cause of this failure — the overflow happens after
+   admission returns.
+2. **Read the `errorFrames` from the next CI shard-1 log.** This round adds them; they name the
+   recursion site. Nothing else about CF002-CF004 should be attempted first, because every candidate
+   repair depends on which function is recursing.
+3. Repair the recursion at its owner. The regression window `bda945b640..7b0b52c6c3` is the
+   cross-check: whatever the frames name should be traceable to one of those ten commits.
+4. Only then: mutation proof that the repaired case fails without the fix, focused pass, and a full
+   original-shard pass at seed `20260610`.
+
+A warning for whoever picks this up: do **not** read a green shard 1 as a fix unless the frames or a
+named mechanism explain it. The case passed once already, at `bda945b640`.
 
 ## Forbidden shortcuts — none taken
 

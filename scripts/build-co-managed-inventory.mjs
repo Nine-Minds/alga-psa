@@ -129,9 +129,25 @@ const EVIDENCE = {
       + '"Failed to fully serialize error: Maximum call stack size exceeded" in place of the original exception.',
     artifact: 'raw-logs/ci-shard1-618019c3e3.txt',
   },
+  'requester-deferral-ci-diagnosed': {
+    type: 'automated',
+    sha: 'fb2e696645023b24371a93805ed1fe3ae94e036b',
+    command: 'GitHub Actions run 35522723445, job 106110228049, Integration shard 1, VITEST_SEED=20260610',
+    result: 'FAILED. 2 failed / 2169 passed (2171). The requester-deferral case still fails, so the '
+      + 'duck-typing repair is not the fix. NEW: the bounded diagnostics fired and name the first exception -- '
+      + 'rollback/lifecycle_classification/disposition all report RangeError "Maximum call stack size exceeded", '
+      + 'thrown inside the commit transaction, which isCoManagedLifecycleError correctly declines, producing '
+      + 'retry. The `admission` stage did NOT fire, which rules the dual-constructor mechanism OUT as the cause. '
+      + 'The reporter-level "Failed to fully serialize error" is separately confirmed as an independent '
+      + 'serializer overflow: the other failing test in the same shard shows it over an ordinary knex error.',
+    artifact: 'raw-logs/ci-shard1-fb2e696645.txt',
+  },
   'requester-deferral-control-run': {
     type: 'automated',
-    sha: 'ROUND2_CANDIDATE',
+    // Pinned to the round-2 published head this actually ran against, never to
+    // "the current candidate": a later commit must not be able to relabel an
+    // older measurement as fresh.
+    sha: 'fb2e696645023b24371a93805ed1fe3ae94e036b',
     command: 'The faithful 78-file shard (INTEGRATION_SHARD_TOTAL=4, INDEX=1, TIER1_BASE_SHA empty, '
       + 'VITEST_SEED=20260610) rerun with isCoManagedSharedWorkError reverted to `instanceof` in both source '
       + 'and the tsup dist the integration lane resolves',
@@ -141,6 +157,10 @@ const EVIDENCE = {
       + 'locally. The divergence lives in the CI environment.',
     artifact: 'raw-logs/shard-control-arm.txt',
     artifactCompare: 'raw-logs/shard-fixed-arm.txt',
+    dependencyAnalysis: 'Ran on the round-2 source tree. The only source change since is '
+      + 'shared/services/email/inboundErrorDiagnostics.ts gaining bounded stack frames, which the A/B this '
+      + 'record reports (isCoManagedSharedWorkError duck-typed vs instanceof) does not depend on. Attached '
+      + 'only to rows that stay `failed`, so it cannot grant acceptance either way.',
   },
   'requester-deferral-local-pass': {
     type: 'automated',
@@ -175,13 +195,15 @@ const OVERRIDES = {
   },
   CF002: {
     status: 'failed',
-    why: 'Bounded primitive diagnostics and finite error reporting landed this round '
-      + '(shared/services/email/inboundErrorDiagnostics.ts, wired at rollback / lifecycle-classification / '
-      + 'disposition), with independent tests. Five local reproduction attempts -- including the correct shard '
-      + 'composition and a control with the fix reverted -- all pass, so the first error still has not been '
-      + 'captured. The requirement is not met until an instrumented CI candidate reports it.',
-    evidence: ['requester-deferral-ci-failure', 'inbound-diagnostics-regression', 'requester-deferral-local-pass',
-      'requester-deferral-control-run'],
+    why: 'PARTLY MET. The instrumented candidate ran: CI shard 1 at fb2e696645 reports the first exception as '
+      + 'RangeError "Maximum call stack size exceeded" thrown inside the commit transaction, which is why the '
+      + 'lifecycle classification declines and the disposition is retry. The two stack overflows are now '
+      + 'separated -- this product-path one, and the independent reporter-level serializer overflow also seen '
+      + 'over an unrelated knex error in the same shard. What is still NOT captured is WHERE it recurses: the '
+      + 'diagnostics carried no stack. This candidate adds bounded frames (at most 14, each truncated, '
+      + 'mutation-checked) so the next CI read names the recursion site. Row stays failed until it does.',
+    evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure', 'inbound-diagnostics-regression',
+      'requester-deferral-local-pass', 'requester-deferral-control-run'],
   },
   CF003: {
     status: 'failed',
@@ -191,17 +213,23 @@ const OVERRIDES = {
       + '`retry`. It is now duck-typed like its sibling isCoManagedLifecycleError and pinned at both call sites. '
       + 'The CONTROL RUN REFUTES THE CAUSAL CLAIM: the faithful 78-file shard passes with the predicate reverted '
       + 'to `instanceof` just as it passes with the fix, so the repair is not demonstrated to be the cause of the '
-      + 'CI failure -- and is not refuted either, because the divergence never reproduces locally in either arm. '
-      + 'The defect is fixed on its own merits; the CI divergence remains unexplained. Row stays failed.',
-    evidence: ['requester-deferral-ci-failure', 'inbound-diagnostics-regression', 'requester-deferral-local-pass',
-      'requester-deferral-control-run', 'admission-adapter-callsites'],
+      + 'CI failure. The CI read at fb2e696645 now REFUTES it outright: the case still fails with the fix in '
+      + 'place, and the `admission` diagnostic stage -- which both adapters emit before rethrowing anything they '
+      + 'do not recognise -- never fired, so no shared-work rejection crossed that boundary at all. The real '
+      + 'first error is a RangeError stack overflow raised after admission returns. The duck-typing repair is '
+      + 'kept on its own merits (the split export map really can put two constructors in one process) but it is '
+      + 'NOT the repair this row needs, and the recursion site is still unknown. Row stays failed.',
+    evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure', 'inbound-diagnostics-regression',
+      'requester-deferral-local-pass', 'requester-deferral-control-run', 'admission-adapter-callsites'],
   },
   CF004: {
     status: 'failed',
     why: 'Depends on CF003 being proven at a candidate. The requester audience/token isolation and both worker '
       + 'entry points are untouched by this round\'s change except that the technician adapter '
-      + '(inboundEmailReply) got the same duck-typed classification, which needs the same shard proof.',
-    evidence: ['requester-deferral-ci-failure'],
+      + '(inboundEmailReply) got the same duck-typed classification, which needs the same shard proof. The '
+      + 'fb2e696645 read shows the pause never reaches the classification at all, so the rollback/refund '
+      + 'behaviour this row requires is still unobserved on a passing candidate.',
+    evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure'],
   },
   CF005: {
     status: 'verified',
@@ -239,10 +267,13 @@ const OPEN_DEFECTS = [
   {
     id: 'CF002-requester-deferral',
     kind: 'functional',
-    summary: 'Integration shard 1 reported `retry` where `defer` is required for the separately compiled '
-      + 'admission adapter case. Cause NOT established: five local attempts, including the correct 78-file '
-      + 'shard composition and a control with the candidate fix reverted, all pass. The divergence is '
-      + 'CI-environment-specific. See cf002-requester-deferral.md.',
+    summary: 'Integration shard 1 reports `retry` where `defer` is required for the separately compiled '
+      + 'admission adapter case -- four completed CI runs now: green at bda945b640, then failing at '
+      + '7b0b52c6c3, 618019c3e3 and fb2e696645, so it is a deterministic regression, not a flake. FIRST ERROR '
+      + 'NAMED at fb2e696645: RangeError "Maximum call stack size exceeded" thrown inside the commit '
+      + 'transaction, so the lifecycle classification correctly declines it. The recursion SITE is still '
+      + 'unknown and does not reproduce on this workstation in either arm of the control. Bounded stack frames '
+      + 'were added this candidate to name it on the next CI read. See cf002-requester-deferral.md.',
   },
   {
     id: 'algadesk-provider-dead-end',
