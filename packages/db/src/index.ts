@@ -134,10 +134,48 @@ export async function withAdminTransaction<T>(
     const result = await runOwnedTransaction(adminDb, callback);
     return result;
   } catch (error) {
-    console.error(`[withAdminTransaction:${transactionId}] Transaction failed:`, {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    // Reporting must never replace the error it reports.
+    //
+    // `error.stack` is a lazy getter: V8 formats the trace on first access, and
+    // under vite-node a source-mapping `prepareStackTrace` runs at that moment
+    // and itself consumes stack. Reading it when the stack is already deep can
+    // therefore raise a *second* error from the getter — and because that throw
+    // happened inside this catch block, it propagated in place of the
+    // `throw error` below. The caller then received
+    // `RangeError: Maximum call stack size exceeded` instead of the real
+    // exception, and every classification downstream failed on an error it
+    // could no longer recognise.
+    //
+    // Measured, not inferred: CI run 35534035281, integration shard 1, job
+    // 106141697370. The `commit_body` diagnostic — taken inside the
+    // transaction callback, before this handler runs — reports
+    // `CoManagedLifecycleError` / `CO_MANAGED_READ_ONLY` with
+    // `classifiedAsLifecycle: true`, and the very next stage reports
+    // `RangeError`. Three independent messages in that shard show the same
+    // substitution, one of them over an ordinary `Error`, so the mechanism is
+    // general and not specific to the co-managed path. That substitution is
+    // why a requester lifecycle pause that must `defer` returned `retry`.
+    //
+    // So: guard the read, wrap the whole diagnostic, and keep the rethrow
+    // outside it. A failure to describe the error must cost the description,
+    // never the error.
+    try {
+      let stack: string | undefined;
+      try {
+        stack = error instanceof Error ? error.stack : undefined;
+      } catch (stackError) {
+        stack = `<unavailable: reading error.stack threw ${
+          (stackError as { name?: unknown } | null)?.name ?? 'unknown'
+        }>`;
+      }
+      console.error(`[withAdminTransaction:${transactionId}] Transaction failed:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack
+      });
+    } catch {
+      // Even the console call can fail (a hostile `toString`, a closed stream).
+      // The original error still has to reach the caller intact.
+    }
     throw error;
   }
 }

@@ -836,3 +836,89 @@ No error was turned into `defer`; the test was not skipped or moved out of its s
 disposition was not relaxed; requester admission was not bypassed. Unknown infrastructure and
 database failures still `retry`, authorization/token failures still quarantine. This round adds
 observation only.
+
+---
+
+# CF002 — CAUSE ESTABLISHED (CI run 35534035281, shard 1, job 106141697370)
+
+The file sink worked on its first run. Integration shard 1 failed at `603a74c575`, and the
+`server-integration-shard-1` artifact carried `inbound-diagnostics-shard-1.ndjson` — 34 records.
+Copied verbatim to `raw-logs/inbound-diagnostics-shard1-35534035281.ndjson`.
+
+## The measurement
+
+Records correlated by `inboxId`. The failing requester lifecycle-pause case:
+
+| stage | errorName | errorCode | classifiedAsLifecycle | disposition |
+|---|---|---|---|---|
+| `commit_body` | **`CoManagedLifecycleError`** | **`CO_MANAGED_READ_ONLY`** | **`true`** | — |
+| `rollback` | **`RangeError`** | null | — | — |
+| `lifecycle_classification` | — | — | `false` | — |
+| `disposition` | `RangeError` | null | — | `retry` / `commit_failure` |
+
+The commit body raised a **correctly formed lifecycle error**, and `isCoManagedLifecycleError`
+classified it `true` *inside* the transaction callback. Between that observation and the outer
+catch, the error became a `RangeError`. The outer catch then declined classification and returned
+`retry` where `defer` was required.
+
+Across all 34 records, `commit_body` reports `RangeError` **zero** times out of 8. Two further
+messages show the identical substitution, one of them over an ordinary `Error`:
+
+```
+commit_body Error  ->  rollback RangeError  ->  disposition retry/commit_failure
+```
+
+## Verdict: reading (A), confirmed. Reading (B) is refuted.
+
+The `RangeError` is not raised by the product commit body. It is manufactured by the reporting path
+between the inner and outer catch, and the mechanism is general — not specific to co-managed.
+
+The site is `packages/db/src/index.ts:137-140`, `withAdminTransaction`'s failure handler:
+
+```ts
+console.error(`[withAdminTransaction:${id}] Transaction failed:`, {
+  error: ..., stack: error instanceof Error ? error.stack : undefined   // unguarded
+});
+throw error;                                                            // never reached
+```
+
+`error.stack` is a lazy getter. V8 formats the trace on first access, vite-node's source-mapping
+`prepareStackTrace` runs at that moment and itself consumes stack, so the read raises its own
+`RangeError` precisely when the stack is already deep. That throw happens **inside the catch
+block**, so it propagates *instead of* the `throw error` on the next line. The caller never sees
+the transaction's error at all.
+
+This also explains the intermittency that made the case look like a flake: whether the read
+overflows depends on the stack depth at the moment of failure, which varies with shard composition
+and execution order. That is the varying input — and it is why `bda945b640` and `023076a648`
+passed while five runs between them failed.
+
+## The repair and its proof
+
+`withAdminTransaction`'s handler now guards the `.stack` read, wraps the whole diagnostic, and
+keeps the rethrow outside it. A failure to describe an error costs the description, never the error.
+The diagnostic is not silenced: an unreadable stack is reported as
+`<unavailable: reading error.stack threw RangeError>`.
+
+Regression: `packages/db/src/withAdminTransaction.errorFidelity.test.ts`, 4 cases — the caller
+receives the identical object the body raised (identity, not shape, so duck-typed classification
+still matches), the same for an ordinary error, the diagnostic still fires and names the unreadable
+stack, and a readable stack is still logged verbatim.
+
+**Mutation-verified.** Reverting the guard to the original unguarded read fails 3 of the 4 cases
+with exactly the CI signature:
+
+```
+AssertionError: expected RangeError: Maximum call stack size excee…
+                to be CoManagedLifecycleError: Workspace became… { code: '…' }
+```
+
+## What is still NOT claimed
+
+- The **reporter-level** serialization overflow (`Failed to fully serialize error`) is a separate,
+  independent failure and is still not described as fixed. It is a Vitest/knex interaction, not
+  this one. The two remained distinct throughout.
+- CF002's row is not set to `verified` here. The cause is established and the repair is
+  mutation-proven at its owner, but the requirement asks for the original shard to pass at the
+  candidate carrying the fix, and that CI run has not been made yet. That is the next action, and
+  it is now an ordinary confirmation rather than an investigation.

@@ -161,6 +161,28 @@ const EVIDENCE = {
     artifactNote: 'ESTABLISHES observation only. It does NOT establish a cause for CF002, and there is no '
       + 'mutation-verified CF002 regression because there is no established cause to reintroduce.',
   },
+  'cf002-cause-established': {
+    type: 'automated',
+    sha: '603a74c5757a56f2a3a5c75d07e347603beb3ecd',
+    command: 'GitHub Actions run 35534035281, job 106141697370, Integration shard 1; read '
+      + 'inbound-diagnostics-shard-1.ndjson from the server-integration-shard-1 artifact; then '
+      + 'packages/db: vitest run src/withAdminTransaction.errorFidelity.test.ts (+ mutation)',
+    result: 'CAUSE ESTABLISHED. 34 records. The failing case reports commit_body = '
+      + 'CoManagedLifecycleError / CO_MANAGED_READ_ONLY with classifiedAsLifecycle TRUE, then '
+      + 'rollback = RangeError, then disposition retry/commit_failure. commit_body reports '
+      + 'RangeError 0 times out of 8, so the overflow is NOT raised by the product commit body: it '
+      + 'is manufactured by withAdminTransaction\'s unguarded lazy error.stack read '
+      + '(packages/db/src/index.ts:137-140), whose getter throws inside the catch block and '
+      + 'propagates in place of the `throw error` below it. Two further messages show the same '
+      + 'substitution, one over an ordinary Error, so the mechanism is general. Reading (A) '
+      + 'confirmed; reading (B) refuted. Repaired at its owner; regression is 4 cases in '
+      + 'withAdminTransaction.errorFidelity.test.ts, MUTATION-VERIFIED: reverting the guard fails '
+      + '3 of 4 with the exact CI signature (RangeError where CoManagedLifecycleError is expected).',
+    artifact: 'raw-logs/inbound-diagnostics-shard1-35534035281.ndjson',
+    artifactNote: 'The raw NDJSON the shard uploaded, verbatim. NOT established: the original shard '
+      + 'has not yet been rerun at a candidate carrying the repair, so CF002 stays `failed`. The '
+      + 'independent reporter-level serialization overflow is still not fixed.',
+  },
   'admission-adapter-callsites': {
     type: 'automated',
     sha: 'ROUND2_CANDIDATE',
@@ -257,7 +279,23 @@ const OVERRIDES = {
   },
   CF002: {
     status: 'failed',
-    why: 'STILL UNEXPLAINED, and this round corrects the previous round\'s framing rather than advancing the row. '
+    why: 'CAUSE NOW ESTABLISHED; row stays `failed` only because the confirming shard has not run. '
+      + 'The file sink added this round worked on its first CI run: shard 1 failed at 603a74c575 '
+      + '(run 35534035281, job 106141697370) and uploaded 34 diagnostic records. They show the '
+      + 'commit body raising a CORRECTLY FORMED CoManagedLifecycleError / CO_MANAGED_READ_ONLY with '
+      + 'classifiedAsLifecycle TRUE, and the very next stage reporting RangeError. commit_body '
+      + 'reports RangeError 0/8 times, so the overflow is not the product\'s: it is manufactured by '
+      + 'withAdminTransaction\'s unguarded lazy `error.stack` read (packages/db/src/index.ts), whose '
+      + 'getter throws INSIDE the catch block and propagates in place of the `throw error` below it, '
+      + 'so the caller never receives the transaction\'s error. Two other messages show the same '
+      + 'substitution, one over an ordinary Error - the mechanism is general, not co-managed '
+      + 'specific. This also explains the intermittency: whether the read overflows depends on stack '
+      + 'depth at the moment of failure, which varies with shard composition and order. Reading (A) '
+      + 'confirmed, reading (B) refuted. Repaired at its owner with a MUTATION-VERIFIED regression '
+      + '(withAdminTransaction.errorFidelity.test.ts; reverting the guard fails 3 of 4 with the exact '
+      + 'CI signature). Exit still requires the original shard to pass at a candidate carrying the '
+      + 'repair, which has not been run, and the independent reporter-level serialization overflow is '
+      + 'still NOT fixed. Superseded framing retained below for provenance: '
       + 'Shard-1 history for the separately-compiled requester lifecycle-pause case is now pass (bda945b640), '
       + 'fail x5 (7b0b52c6c3, 618019c3e3, fb2e696645, b17b7a80b4), then PASS at 023076a648 (job 106117870494). '
       + 'That retires the earlier "deterministic regression in a fixed window" reading: six runs show '
@@ -274,7 +312,8 @@ const OVERRIDES = {
       + 'commit body genuinely overflowed) both remain open and untested. No causal explanation, and no '
       + 'mutation-verified regression, because there is no established cause to reintroduce. Row stays failed.',
     evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure', 'inbound-diagnostics-regression',
-      'requester-deferral-local-pass', 'requester-deferral-control-run', 'cf002-diagnostic-survives-pass'],
+      'requester-deferral-local-pass', 'requester-deferral-control-run', 'cf002-diagnostic-survives-pass',
+      'cf002-cause-established'],
   },
   CF003: {
     status: 'failed',
