@@ -80,6 +80,9 @@ Real dev app `http://100.82.172.57:3374`, signed in as `cm.rabbit.admin@whiterab
 | `/msp/billing` | Page not available |
 | `/msp/settings/extensions` | Page not available |
 
+| `/msp/go/mailbox` (the return path out of the workbench) | Redirects to `/msp/settings/email`, title "Email \| AlgaPSA", not denied. Previously this pushed to `integrations?category=communication`, which is denied. |
+| `/msp/go/not-a-target` | **HTTP 404**, not a redirect. The dispatcher will not forward to a caller-supplied path. |
+
 PSA unchanged, verified in the same browser as `cm.msp.admin@oz.test` (`product_code: "psa"`):
 `/msp/go/providers` → `/msp/settings/integrations?category=providers`, title "Integrations".
 
