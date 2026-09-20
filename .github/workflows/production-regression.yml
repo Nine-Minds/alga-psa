@@ -40,6 +40,36 @@ jobs:
         env:
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           TIER1_HEAD_SHA: ${{ github.sha }}
+  # Shadow: Jev judges every integration suite and browser test against the
+  # change and records probabilities. Nothing reads the decision yet; the
+  # evaluation job below scores it against what really ran and failed.
+  # Without TYPESAFE_API_KEY the job records "unavailable" and passes.
+  jev-selection:
+    name: Jev test selection (shadow)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Judge candidate suites and browser tests against the change
+        run: node scripts/select-tests-jev.mjs
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          JEV_SELECTION_MODE: shadow
+          JEV_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          JEV_HEAD_SHA: ${{ github.sha }}
+      - name: Preserve judgments
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jev-selection
+          path: test-results/selection/
+          if-no-files-found: error
+          retention-days: 30
   unit:
     uses: ./.github/workflows/unit-tests.yml
     secrets: inherit
@@ -228,3 +258,46 @@ jobs:
           path: test-results/production-readiness/
           if-no-files-found: error
           retention-days: 30
+
+  # Scores the shadow selection against the executed integration shards and
+  # browser journeys: recall against real failures and the share of executed
+  # work Jev would have deferred, per threshold. Non-gating by design.
+  jev-shadow-evaluation:
+    name: Jev selection shadow evaluation
+    needs: [jev-selection, integration, browser]
+    if: always() && needs.jev-selection.result != 'skipped'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download judgments
+        uses: actions/download-artifact@v4
+        with:
+          name: jev-selection
+          path: test-results/selection-input/jev-selection
+      - name: Download integration shard reports
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: server-integration-shard-*
+          path: test-results/selection-input/integration
+      - name: Download browser reports
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fresh-install-playwright-*
+          path: test-results/selection-input/browser
+      - name: Score the shadow selection against executed and failed tests
+        run: node scripts/evaluate-jev-selection.mjs
+      - name: Preserve evaluation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jev-evaluation
+          path: test-results/selection/
+          if-no-files-found: error
+          retention-days: 90
