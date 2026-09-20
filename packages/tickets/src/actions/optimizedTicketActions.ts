@@ -7,7 +7,6 @@ import { retainNativeConversationEvent, publishNativeCommentWorkflowEvent } from
 
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
-import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import { retainCoManagedConversationBeforeSourceChange, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';

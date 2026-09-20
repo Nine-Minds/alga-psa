@@ -14,6 +14,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -55,10 +56,69 @@ const checks = (run?.jobs ?? []).map((job) => ({
   mandatory: MANDATORY.some((re) => re.test(job.name)),
 }));
 
+/**
+ * Content fingerprints for the three components whose *contents* decide whether
+ * a review environment matches the candidate.
+ *
+ * Each is a sha256 over the git tree hashes of the paths that define it, read
+ * at the candidate commit rather than from the working tree — so the value is
+ * reproducible by anyone with the repo (`git rev-parse <candidate>:<path>`) and
+ * cannot be perturbed by uncommitted local edits. A change to any file under
+ * those paths changes the fingerprint, which is the only property that makes it
+ * worth recording.
+ *
+ * Deliberately NOT a claim about anything running. `provenance.app.revision`
+ * and `provenance.worker.revision` are the running-system half and stay null:
+ * nothing in this repo exposes the revision a live app or worker was built
+ * from (there is no build-sha surface on /api/health or elsewhere), so the only
+ * honest way to fill them is for whoever actually starts the stack to record
+ * it. They remain blocking reasons, as does review-environment stability.
+ */
+const FINGERPRINT_PATHS = {
+  // The CE+EE overlay is what the integration lane builds its schema from.
+  migrations: ['server/migrations', 'ee/server/migrations'],
+  // Deployment shape: the compose files and the env contract they read.
+  config: ['docker-compose.yaml', 'docker-compose.ee.yaml', 'docker-compose.e2e-emulators.yaml', '.env.example'],
+  // The provider simulator the acceptance journeys drive.
+  simulator: ['packages/emulators'],
+};
+
+function treeHash(pathspec) {
+  try {
+    return sh('git', ['rev-parse', `${candidate}:${pathspec}`]);
+  } catch {
+    return null;
+  }
+}
+
+function fingerprint(paths) {
+  const parts = paths.map((p) => `${p}=${treeHash(p) ?? 'absent'}`);
+  // An all-absent input would hash to a stable value and read as a real
+  // fingerprint, so refuse rather than record something meaningless.
+  if (parts.every((part) => part.endsWith('=absent'))) return null;
+  return `sha256:${createHash('sha256').update(parts.join('\n')).digest('hex').slice(0, 32)}`;
+}
+
+const provenance = {
+  app: { revision: null },
+  worker: { revision: null },
+  migrations: fingerprint(FINGERPRINT_PATHS.migrations),
+  config: fingerprint(FINGERPRINT_PATHS.config),
+  simulator: fingerprint(FINGERPRINT_PATHS.simulator),
+  // Recorded so a reader can recompute each value instead of trusting it.
+  inputs: Object.fromEntries(
+    Object.entries(FINGERPRINT_PATHS).map(([key, paths]) => [
+      key,
+      paths.map((pathspec) => ({ path: pathspec, tree: treeHash(pathspec) })),
+    ]),
+  ),
+};
+
 const facts = {
   schemaVersion: 1,
   collectedAt: new Date().toISOString(),
   candidate,
+  provenance,
   worktreeClean: sh('git', ['status', '--porcelain']) === '',
   pr: pr ? { number: pr.number, head: pr.headRefOid, state: pr.state, isDraft: pr.isDraft } : null,
   mergeability: pr
@@ -76,3 +136,6 @@ console.log(`  pr.head=${facts.pr?.head?.slice(0, 10) ?? 'unknown'} mergeable=${
   + ` worktreeClean=${facts.worktreeClean}`);
 console.log(`  ci run=${facts.ci?.runId ?? 'none'} checks=${checks.length} mandatory=${mandatory.length}`
   + ` mandatoryGreen=${mandatory.filter((c) => c.conclusion === 'success').length}`);
+console.log(`  provenance migrations=${provenance.migrations ? 'ok' : 'MISSING'}`
+  + ` config=${provenance.config ? 'ok' : 'MISSING'} simulator=${provenance.simulator ? 'ok' : 'MISSING'}`
+  + ` app/worker revision=uncollected (no runtime revision surface exists)`);

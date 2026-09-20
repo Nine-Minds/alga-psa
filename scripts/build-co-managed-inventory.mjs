@@ -730,10 +730,14 @@ const manifest = {
   base,
   collectedAt: inventory.generatedAt,
   pr: facts?.pr ? { number: facts.pr.number, head: facts.pr.head } : { number: 3363, head: null },
-  // Still uncollected: nothing in this round built or ran an app/worker from the
-  // candidate, so claiming provenance would be inventing it. Null is a blocking
-  // reason, which is the correct state.
-  provenance: { app: { revision: null }, worker: { revision: null }, migrations: null, config: null, simulator: null },
+  // Content fingerprints come from the collector, which derives them from git
+  // tree hashes at the candidate, so they are reproducible rather than asserted.
+  // `app`/`worker` revision stay null on purpose: nothing exposes the revision a
+  // running app or worker was built from, so the only honest way to fill them is
+  // for whoever starts the stack to record it. They remain blocking reasons.
+  provenance: facts?.provenance ?? {
+    app: { revision: null }, worker: { revision: null }, migrations: null, config: null, simulator: null,
+  },
   worktreeClean: facts?.worktreeClean ?? worktreeClean,
   mergeability: facts?.mergeability ?? { mergeable: null, mergeStateStatus: null, checkedAtSha: null },
   ci: facts?.ci
