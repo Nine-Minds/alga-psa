@@ -274,3 +274,18 @@ Manual verification on the dev stack (board service on port 3008, compose projec
 - Adding the ticket description to `app_search_index` for keyword search (a real gap, `packages/search/src/indexers/ticket.ts`; worth its own card).
 - Client-portal ticket list.
 - Persisting or sharing smart-search results, or URL-encoding smart mode.
+
+---
+
+# Implementation status (2026-09-20)
+
+Implemented on this branch in the same session, following the changes above. Deviations from the plan as written:
+
+- **Middleware allowlist.** `server/src/middleware.ts` rejects every `/api/*` route without an API key unless allowlisted, so `/api/tickets/smart-search/` was added next to `/api/chat/`. Verified against the running dev stack: the authenticated page now reaches the handler and gets `503 SMART_SEARCH_NOT_CONFIGURED` while no key is set.
+- **Relevance chip is a column.** The panel inserts a `Match` column after the selection column instead of decorating the leading cell; the dashboard's column definitions are reused untouched. The bucket travels on the row (`smart_search_bucket`) so the client never re-derives thresholds.
+- **Comment author kind.** `packages/search/src/indexers/ticket_comment.ts` now writes `metadata.author_kind`; rows indexed earlier read as `technician`.
+- **Select-all-matching** in the dashboard now uses the same `exportFilters` assembly as export and smart search. The old inline copy dropped the custom due-date range; this is a small behavior fix, covered by the new contract test.
+- **Helm** was not touched: the OpenRouter key has no entry in `helm/templates/secret.yaml` either, so there was no sibling to place `TYPESAFE_API_KEY` beside. Hosted deployments supply it the same way they supply `OPENROUTER_API_KEY`.
+- **Secrets in local dev** are read from the environment by default (`SECRET_READ_CHAIN` unset ⇒ `env`), so a filesystem `secrets/typesafe_api_key` is not picked up unless the chain includes the filesystem provider. Set `TYPESAFE_API_KEY` in the server environment for local testing.
+
+Not verified in this session: scoring against the real TypeSafe API. No key was available, so the streamed-bucket UI was exercised only through unit tests of the runner, the SSE route, and the client reducer. Manual steps 3 to 8 in the Testing section remain to be run once a key is configured.

@@ -78,7 +78,8 @@
     "paused": "Pausiert",
     "allResponseStatuses": "Alle Antwortstatus",
     "responseStatus": "Antwortstatus",
-    "board": "Nach Board filtern"
+    "board": "Nach Board filtern",
+    "searchSmart": "Tickets und Kommentare durchsuchen… Enter für intelligente Suche"
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -1901,5 +1902,28 @@
       "systemRequired": "Wählen Sie ein externes System.",
       "urlRequired": "Für Systeme ohne URL-Vorlage ist eine URL erforderlich."
     }
+  },
+  "smartSearch": {
+    "run": "Intelligente Suche",
+    "runTitle": "Gefilterte Tickets anhand dieser Anfrage bewerten",
+    "relevanceColumn": "Treffer",
+    "relevance": "{{percent}}% relevant",
+    "strong": "Starke Treffer",
+    "possible": "Mögliche Treffer",
+    "unlikely": "Unwahrscheinliche Treffer",
+    "emptyBucketRunning": "Noch keine",
+    "emptyBucket": "Keine",
+    "scoring": "{{scored}} von {{total}} Tickets bewertet",
+    "summary": "{{total}} Tickets bewertet · {{strong}} stark · {{possible}} möglich",
+    "cancelled": "Suche nach {{scored}} von {{total}} Tickets abgebrochen",
+    "errorTitle": "Intelligente Suche gestoppt",
+    "starting": "Intelligente Suche wird gestartet…",
+    "rerun": "Filter geändert. Erneut ausführen",
+    "retry": "Erneut versuchen",
+    "cancel": "Abbrechen",
+    "exit": "Zurück zur Liste",
+    "notConfigured": "Die intelligente Suche ist auf diesem Server nicht konfiguriert",
+    "failedCount": "{{count}} Tickets konnten nicht bewertet werden",
+    "unscored": "Nicht bewertet"
   }
 }

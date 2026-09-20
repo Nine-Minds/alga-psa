@@ -140,6 +140,9 @@ const apiKeySkipPaths = [
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)
   '/api/chat/',
+  // Smart ticket search stream (MSP Tickets page): session-authenticated in-route
+  // via getCurrentUser + ticket:read, then streams SSE.
+  '/api/tickets/smart-search/',
   // AMP migration workspace uploads (MSP UI): session-authenticated in-route
   // via getCurrentUser + import_export permission checks.
   '/api/migrations/',

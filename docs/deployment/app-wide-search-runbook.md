@@ -50,3 +50,13 @@ Use this runbook when deploying the app-wide search index for the first time in 
 
 6. Confirm the daily `search:reconcile` job is registered. It repairs missed events by re-indexing updated or missing source rows and deleting orphaned index rows.
 
+
+## Smart ticket search (enterprise) reads the index
+
+Smart ticket search on the Tickets page builds each ticket's text for the Jev
+model from `app_search_index`: comment bodies come from `ticket_comment` rows
+(with their `metadata.author_kind`), while the title and description are read
+from `tickets` directly. A tenant whose index has not been backfilled scores on
+title and description only until `search:backfill` runs. Comment rows indexed
+before `author_kind` existed are treated as technician comments until the daily
+reconcile or a backfill rewrites them.

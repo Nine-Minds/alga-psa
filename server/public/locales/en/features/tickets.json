@@ -86,7 +86,8 @@
     "paused": "Paused",
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
-    "board": "Filter by board"
+    "board": "Filter by board",
+    "searchSmart": "Search tickets and comments… Enter for smart search"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -1901,5 +1902,28 @@
       "systemRequired": "Choose an external system.",
       "urlRequired": "A URL is required for systems without a URL template."
     }
+  },
+  "smartSearch": {
+    "run": "Smart search",
+    "runTitle": "Score the filtered tickets against this query",
+    "relevanceColumn": "Match",
+    "relevance": "{{percent}}% relevant",
+    "strong": "Strong matches",
+    "possible": "Possible matches",
+    "unlikely": "Unlikely matches",
+    "emptyBucketRunning": "None yet",
+    "emptyBucket": "None",
+    "scoring": "Scored {{scored}} of {{total}} tickets",
+    "summary": "Scored {{total}} tickets · {{strong}} strong · {{possible}} possible",
+    "cancelled": "Search cancelled after {{scored}} of {{total}} tickets",
+    "errorTitle": "Smart search stopped",
+    "starting": "Starting smart search…",
+    "rerun": "Filters changed. Run again",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "exit": "Back to list",
+    "notConfigured": "Smart search is not configured on this server",
+    "failedCount": "{{count}} tickets could not be scored",
+    "unscored": "Could not be scored"
   }
 }

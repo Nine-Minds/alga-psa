@@ -78,7 +78,8 @@
     "paused": "Pausado",
     "allResponseStatuses": "Todos os status de resposta",
     "responseStatus": "Status da resposta",
-    "board": "Filtrar por quadro"
+    "board": "Filtrar por quadro",
+    "searchSmart": "Pesquisar tickets e comentários… Enter para pesquisa inteligente"
   },
   "create": {
     "title": "Criar ticket de suporte",
@@ -1901,5 +1902,28 @@
       "systemRequired": "Escolha um sistema externo.",
       "urlRequired": "Uma URL é necessária para sistemas sem modelo de URL."
     }
+  },
+  "smartSearch": {
+    "run": "Pesquisa inteligente",
+    "runTitle": "Pontuar os tickets filtrados em relação a esta consulta",
+    "relevanceColumn": "Correspondência",
+    "relevance": "{{percent}}% relevante",
+    "strong": "Correspondências fortes",
+    "possible": "Correspondências possíveis",
+    "unlikely": "Correspondências improváveis",
+    "emptyBucketRunning": "Nenhuma ainda",
+    "emptyBucket": "Nenhuma",
+    "scoring": "{{scored}} de {{total}} tickets pontuados",
+    "summary": "{{total}} tickets pontuados · {{strong}} fortes · {{possible}} possíveis",
+    "cancelled": "Pesquisa cancelada após {{scored}} de {{total}} tickets",
+    "errorTitle": "A pesquisa inteligente parou",
+    "starting": "A iniciar a pesquisa inteligente…",
+    "rerun": "Os filtros mudaram. Executar novamente",
+    "retry": "Tentar novamente",
+    "cancel": "Cancelar",
+    "exit": "Voltar à lista",
+    "notConfigured": "A pesquisa inteligente não está configurada neste servidor",
+    "failedCount": "Não foi possível pontuar {{count}} tickets",
+    "unscored": "Não pontuados"
   }
 }

@@ -78,7 +78,8 @@
     "paused": "En pause",
     "allResponseStatuses": "Tous les statuts de réponse",
     "responseStatus": "Statut de réponse",
-    "board": "Filtrer par tableau"
+    "board": "Filtrer par tableau",
+    "searchSmart": "Rechercher des tickets et commentaires… Entrée pour la recherche intelligente"
   },
   "create": {
     "title": "Créer un ticket d'assistance",
@@ -1901,5 +1902,28 @@
       "systemRequired": "Choisissez un système externe.",
       "urlRequired": "Une URL est requise pour les systèmes sans modèle d'URL."
     }
+  },
+  "smartSearch": {
+    "run": "Recherche intelligente",
+    "runTitle": "Évaluer les tickets filtrés par rapport à cette requête",
+    "relevanceColumn": "Pertinence",
+    "relevance": "{{percent}}% pertinent",
+    "strong": "Correspondances fortes",
+    "possible": "Correspondances possibles",
+    "unlikely": "Correspondances improbables",
+    "emptyBucketRunning": "Aucune pour l’instant",
+    "emptyBucket": "Aucune",
+    "scoring": "{{scored}} tickets sur {{total}} évalués",
+    "summary": "{{total}} tickets évalués · {{strong}} fortes · {{possible}} possibles",
+    "cancelled": "Recherche annulée après {{scored}} tickets sur {{total}}",
+    "errorTitle": "La recherche intelligente s’est arrêtée",
+    "starting": "Démarrage de la recherche intelligente…",
+    "rerun": "Les filtres ont changé. Relancer",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "exit": "Retour à la liste",
+    "notConfigured": "La recherche intelligente n’est pas configurée sur ce serveur",
+    "failedCount": "{{count}} tickets n’ont pas pu être évalués",
+    "unscored": "Non évalués"
   }
 }
