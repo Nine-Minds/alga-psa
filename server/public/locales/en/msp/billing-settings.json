@@ -1021,7 +1021,8 @@
       },
       "label": {
         "label": "Category Label",
-        "placeholder": "Optional freeform label"
+        "placeholder": "Optional freeform label",
+        "help": "Internal identifier such as manufacturer/model; searchable, never shown to customers."
       },
       "vendor": {
         "label": "Vendor"

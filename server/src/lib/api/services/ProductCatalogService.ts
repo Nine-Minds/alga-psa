@@ -40,7 +40,7 @@ export class ProductCatalogService extends BaseService<IService> {
       tableName: 'service_catalog',
       primaryKey: 'service_id',
       tenantColumn: 'tenant',
-      searchableFields: ['service_name', 'description', 'sku', 'barcode'],
+      searchableFields: ['service_name', 'description', 'sku', 'barcode', 'product_category'],
       defaultSort: 'service_name',
       defaultOrder: 'asc'
     });
@@ -83,7 +83,8 @@ export class ProductCatalogService extends BaseService<IService> {
             .whereILike('sc.service_name', term)
             .orWhereILike('sc.description', term)
             .orWhereILike('sc.sku', term)
-            .orWhereILike('sc.barcode', barcodeTerm);
+            .orWhereILike('sc.barcode', barcodeTerm)
+            .orWhereILike('sc.product_category', term);
         });
       }
       return query;

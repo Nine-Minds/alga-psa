@@ -1021,7 +1021,8 @@
       },
       "label": {
         "label": "Libellé de catégorie",
-        "placeholder": "Libellé libre facultatif"
+        "placeholder": "Libellé libre facultatif",
+        "help": "Identifiant interne tel que fabricant/modèle ; recherchable, jamais affiché aux clients."
       },
       "vendor": {
         "label": "Fournisseur"

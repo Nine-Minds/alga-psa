@@ -1021,7 +1021,8 @@
       },
       "label": {
         "label": "Rótulo da categoria",
-        "placeholder": "Rótulo livre opcional"
+        "placeholder": "Rótulo livre opcional",
+        "help": "Identificador interno como fabricante/modelo; pesquisável, nunca exibido aos clientes."
       },
       "vendor": {
         "label": "Fornecedor"

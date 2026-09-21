@@ -192,7 +192,7 @@ export interface CatalogPickerSearchOptions {
 
 export type CatalogPickerItem = Pick<
   IService,
-  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku' | 'description'
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku' | 'description' | 'product_category'
 > & {
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
@@ -235,10 +235,15 @@ export const searchServiceCatalogForPicker = withAuth(async (
     }
 
     if (searchTerm) {
+      // LEVERAGE: pattern catalog-search-predicate — this service_name/description/sku/product_category
+      // ILIKE shape is duplicated in getServices (below), ServiceCatalogService.list,
+      // ProductCatalogService.list (plus barcode), and inventory's queryCatalogPickerItems.
+      // Consider a shared predicate helper once a sixth caller appears.
       base.andWhere((qb) => {
         qb.whereILike('sc.service_name', searchTerm)
           .orWhereILike('sc.description', searchTerm)
-          .orWhereILike('sc.sku', searchTerm);
+          .orWhereILike('sc.sku', searchTerm)
+          .orWhereILike('sc.product_category', searchTerm);
       });
     }
 
@@ -259,6 +264,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.item_kind as item_kind',
         'sc.sku as sku',
         'sc.description as description',
+        'sc.product_category as product_category',
         trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
         trx.raw('CAST(sc.cost AS FLOAT) as cost'),
         'sc.cost_currency as cost_currency'
@@ -367,7 +373,8 @@ export const getServices = withAuth(async (
               builder
                 .whereILike('sc.service_name', term)
                 .orWhereILike('sc.description', term)
-                .orWhereILike('sc.sku', term);
+                .orWhereILike('sc.sku', term)
+                .orWhereILike('sc.product_category', term);
             });
           }
 

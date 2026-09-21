@@ -13,6 +13,8 @@ import { useTranslation } from '../lib/i18n/client';
 export interface SelectOption {
   value: string;
   label: string;
+  /** Muted second line under the label; omit to keep the row single-line. */
+  secondaryLabel?: string;
   badge?: {
     text: string;
     variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
@@ -305,7 +307,7 @@ export function AsyncSearchableSelect({
                     value === option.value && 'bg-[rgb(var(--color-border-100))]'
                   )}
                 >
-                  <span className="flex-1 flex items-center gap-2">
+                  <span className="flex-1 flex items-center gap-2 min-w-0">
                     {option.badge && (
                       <span className={cn(
                         'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
@@ -319,7 +321,14 @@ export function AsyncSearchableSelect({
                         {option.badge.text}
                       </span>
                     )}
-                    {option.label}
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{option.label}</span>
+                      {option.secondaryLabel && (
+                        <span className="block truncate text-xs text-[rgb(var(--color-text-400))]">
+                          {option.secondaryLabel}
+                        </span>
+                      )}
+                    </span>
                   </span>
                   {value === option.value && <Check className="w-4 h-4 text-primary-600" />}
                 </Command.Item>
