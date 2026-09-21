@@ -1,0 +1,50 @@
+[
+  {
+    "id": "F001",
+    "description": "Add an optional, awaitable QuoteForm callback that notifies its parent after a successful in-form quote workflow update.",
+    "implemented": false,
+    "prdRefs": ["Requirements / Functional Requirements 1"]
+  },
+  {
+    "id": "F002",
+    "description": "Invoke and await the parent callback after a successful detail-view send while the workflow action remains busy.",
+    "implemented": false,
+    "prdRefs": ["Requirements / Functional Requirements 3"]
+  },
+  {
+    "id": "F003",
+    "description": "Invoke and await the parent callback after a successful detail-view resend while the workflow action remains busy.",
+    "implemented": false,
+    "prdRefs": ["Requirements / Functional Requirements 3"]
+  },
+  {
+    "id": "F004",
+    "description": "Invoke and await the parent callback after a successful detail-view approval while the workflow action remains busy.",
+    "implemented": false,
+    "prdRefs": ["Requirements / Functional Requirements 3"]
+  },
+  {
+    "id": "F005",
+    "description": "Do not invoke the parent callback when send, resend, or approve returns an action error, returns a permission error, or throws.",
+    "implemented": false,
+    "prdRefs": ["Requirements / Functional Requirements 4"]
+  },
+  {
+    "id": "F006",
+    "description": "Allow QuotesTab.loadData to refresh an already-mounted view without entering the full initial-loading state or unmounting QuoteForm.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Requirements / Functional Requirements 5"]
+  },
+  {
+    "id": "F007",
+    "description": "Wire QuoteForm's successful workflow callback in QuotesTab to the background loadData path so the quotes collection, status filters, and tab counts recompute from current server data.",
+    "implemented": false,
+    "prdRefs": ["Requirements / Functional Requirements 2", "Requirements / Functional Requirements 5"]
+  },
+  {
+    "id": "F008",
+    "description": "Preserve the existing full loading treatment for initial data load and the existing refresh behavior of list-row quote actions.",
+    "implemented": false,
+    "prdRefs": ["Requirements / Functional Requirements 6"]
+  }
+]
