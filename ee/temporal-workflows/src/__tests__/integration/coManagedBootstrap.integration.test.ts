@@ -17519,6 +17519,48 @@ it('MSP SLA bundle propagation rejects a foreign-board status before committing 
   expect(await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id')).toEqual(clocks);
 }));
 
+it.each([false, true])('MSP SLA bundle propagation open-to-open validates child board ownership (foreign board: %s)', async foreignBoard => withBundlePropagationSlaFixture(async f => {
+  const status = await f.customer.table('statuses').where('status_id', f.original.status_id).first();
+  expect(status.is_closed).toBe(false);
+  const nextStatusId = randomUUID();
+  const { maxOrder } = await f.customer.table('statuses').where('board_id', f.original.board_id).max('order_number as maxOrder').first();
+  await f.customer.table('statuses').insert({ ...status, status_id: nextStatusId, name: 'Another open status', is_default: false, order_number: maxOrder + 1 });
+
+  // Keep a same-board sibling in the rejected bundle to prove the entire
+  // owning update transaction rolls back, not just the foreign-board child.
+  const siblingId = randomUUID();
+  await f.customer.table('tickets').insert({ ...f.original, ticket_id: siblingId, ticket_number: 'SLA-SYNC-SIBLING', master_ticket_id: f.resource.id });
+  if (foreignBoard) {
+    const board = await f.customer.table('boards').where('board_id', f.original.board_id).first();
+    const boardId = randomUUID(), childStatusId = randomUUID();
+    await f.customer.table('boards').insert({ ...board, board_id: boardId, board_name: 'Open child separate board' });
+    await f.customer.table('statuses').insert({ ...status, status_id: childStatusId, board_id: boardId });
+    await f.customer.table('tickets').where('ticket_id', f.childId).update({ board_id: boardId, status_id: childStatusId });
+  }
+
+  const { previewBundleStatusPropagation } = await import('../../../../../packages/tickets/src/actions/ticketBundleUtils');
+  expect(await db.transaction(trx => previewBundleStatusPropagation(trx, f.resource.tenant, f.resource.id, nextStatusId)))
+    .toMatchObject({ mode: 'sync_updates', crossesBoundary: null });
+  const tickets = () => f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId, siblingId]).orderBy('ticket_id');
+  const before = await tickets();
+  expect(before.every(row => row.is_closed === false)).toBe(true);
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  f.workflow.mockClear();
+  if (foreignBoard) {
+    await expect(f.update({ status_id: nextStatusId }, {})).rejects.toThrow('A bundled ticket cannot use a status from another board');
+    expect(await tickets()).toEqual(before);
+    expect(f.workflow).not.toHaveBeenCalled();
+  } else {
+    expect(await f.update({ status_id: nextStatusId }, {})).toBe('success');
+    for (const ticket of await tickets()) {
+      expect(ticket).toMatchObject({ status_id: nextStatusId, board_id: f.original.board_id, is_closed: false,
+        closed_at: null, closed_by: null });
+      if (ticket.ticket_id !== f.resource.id) expect(ticket.updated_by).toBe(f.customerPrincipal.userId);
+    }
+  }
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id')).toEqual(clocks);
+}));
+
 it('MSP SLA bundle propagation enforces child close gates and rolls back the completed master', async () => withBundlePropagationSlaFixture(async f => {
   await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ assigned_to: f.customerPrincipal.userId });
   await f.customer.table('tickets').where('ticket_id', f.childId).update({ assigned_to: null });

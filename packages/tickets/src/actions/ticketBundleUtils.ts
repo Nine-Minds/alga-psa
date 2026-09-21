@@ -1222,7 +1222,18 @@ export async function propagateBundleMasterStatus(
 
     const childRows = await tenantScopedTable(trx, 'tickets', ctx.tenant)
       .where({ master_ticket_id: masterId })
-      .select(['ticket_id', 'status_id', 'assigned_to', 'priority_id', 'closed_at', 'closed_by', 'is_closed']);
+      .select(['ticket_id', 'board_id', 'status_id', 'assigned_to', 'priority_id', 'closed_at', 'closed_by', 'is_closed']);
+
+    // Open-to-open sync must obey the same board ownership rule as a boundary
+    // transition. Closed children keep their status and need no status check.
+    if (Object.prototype.hasOwnProperty.call(propagateFields, 'status_id')) {
+      const statusBoardId = await readStatusBoardId(trx, ctx.tenant, propagateFields.status_id as string | null);
+      for (const child of childRows) {
+        if (!child.is_closed && (!statusBoardId || statusBoardId !== child.board_id)) {
+          throw new Error('A bundled ticket cannot use a status from another board');
+        }
+      }
+    }
 
     // `tickets.is_closed` is authoritative. A closed child keeps its status on
     // a non-boundary master change; stamping the master's (open) status onto it
