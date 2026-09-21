@@ -1638,7 +1638,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       .where('user_id', userId)
       .first();
 
-    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+    // No user row means a system/sentinel actor (inbound email); the payload
+    // already carries the real sender identity, so prefer it over 'Someone'.
+    const authorName = author ? `${author.first_name} ${author.last_name}` : (comment?.author || 'Someone');
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
