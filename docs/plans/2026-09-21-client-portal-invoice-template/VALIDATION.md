@@ -76,10 +76,35 @@ After validation, all fixtures were removed and the dev data restored:
 - deleted both `SMOKE 2528` templates;
 - deleted the tenant-scope `invoice_template_assignments` row;
 - set Emerald City `clients.invoice_template_id` back to `NULL` (its pre-smoke value, which was already `NULL`);
-- restored `documents.source_template_id` for `94bf39b4-…` to its pre-smoke value `98da0e3a-…` (the working PDF bytes/file id remain the app-refreshed render; that refresh is the app's own download behavior);
 - restored the `glinda@emeraldcity.oz` (MSP) and `ozma@emeraldcity.oz` (portal) password hashes to their pre-smoke values.
 
-Verified after cleanup: 0 fixture templates, 0 tenant assignments, client override `NULL`, one invoice document association.
+### Working-PDF regeneration
+
+A first cleanup attempt set `documents.source_template_id` for `94bf39b4-…` back to its pre-smoke value by hand while leaving the case-B render's `file_id`, so the bytes and metadata disagreed. The working PDF was therefore regenerated through the application under the restored settings using the client portal's *Download PDF* (`#download-invoice-INV-000053`), which falls through to `getStoredInvoicePdf` because the document is not client-visible. The regeneration updated the working document in place:
+
+| Field | Value after regeneration |
+| --- | --- |
+| `documents.file_id` | `5faa78d9-f259-41fc-95cf-6e8a5c70380a` (rotated from the case-B `cfe6df1b-…`) |
+| `documents.source_template_id` | `98da0e3a-ef9a-473f-8095-17c1632ed473` — *Detailed Template* / `standard-detailed`, the template the restored settings resolve to |
+| `documents.file_size` | `35920` |
+| `documents.updated_at` | `2026-09-21 05:05:38.575+00` |
+| `documents.storage_path` | `pdfs/dd8cb218-d46d-47f3-be27-8aa50aad5fce/1789967138564-m34bmnsxzc8.pdf` |
+
+The stored PDF was read back from local storage and verified independently of the download response:
+
+- `sha256 46f42252a2147d2f00698cb52b81d1bafa815057e9f2a2fbfa70289bb6fefbd1` (identical to the bytes the action returned);
+- `pdftotext` contains **no** `SMOKE-2528` marker and begins `Oz` / `INVOICE` / `Invoice #:` / `INV-000053`.
+
+So the live document's bytes, `source_template_id`, and rendered template now all agree under the restored settings.
+
+### Orphaned blobs
+
+The case-A and case-B renders left two superseded blobs that no document or other table referenced (local storage is a `server/tmp/storage` directory):
+
+- `1789966759281-nb56fhswbwp.pdf` (case A, `file_id eda29ea6-…`)
+- `1789966815458-8iuq9w1x18.pdf` (case B, `file_id cfe6df1b-…`)
+
+Both blobs and their `external_files` records were deleted. Verified after cleanup: 0 fixture templates, 0 tenant assignments, client override `NULL`, one invoice document association, and the storage directory holds only the regenerated `1789967138564-m34bmnsxzc8.pdf`.
 
 ## Limitations
 
