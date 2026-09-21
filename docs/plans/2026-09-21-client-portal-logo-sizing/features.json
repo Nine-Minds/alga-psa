@@ -1,0 +1,8 @@
+[
+  {"id":"F001","description":"Expanded portal wordmarks use a 48px-high, width-bounded allocation with preserved aspect ratio and left alignment.","implemented":false},
+  {"id":"F002","description":"Uploaded square portal logos render at 48px expanded and 32px collapsed, without circular cropping or flex shrink.","implemented":false},
+  {"id":"F003","description":"Portal brand rows contain long names and artwork while preserving variant selection, wordmark failure fallback, label suppression, navigation and collapse persistence.","implemented":false},
+  {"id":"F004","description":"Dashboard branding preview uses 36px uploaded-logo allocations, uncropped square artwork and width containment.","implemented":false},
+  {"id":"F005","description":"Portal wide-logo help and its inline default describe scaling to fit in every locale without changing MSP appearance help.","implemented":false},
+  {"id":"F006","description":"Existing CE/EE gates and built-in 32px fallback remain intact while square-logo improvements apply wherever the client portal sidebar renders.","implemented":false}
+]
