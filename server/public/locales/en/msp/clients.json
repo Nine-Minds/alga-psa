@@ -727,6 +727,7 @@
     "status": "Status",
     "actions": "Actions",
     "openMenu": "Open menu",
+    "viewDetails": "View details",
     "unassign": "Unassign",
     "loading": "Loading contracts...",
     "empty": "No contracts have been assigned to this client yet.",

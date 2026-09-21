@@ -727,6 +727,7 @@
     "status": "Status",
     "actions": "Acties",
     "openMenu": "Menu openen",
+    "viewDetails": "Details bekijken",
     "unassign": "Toewijzing ongedaan maken",
     "loading": "Contracten laden...",
     "empty": "Er zijn nog geen contracten toegewezen aan deze klant.",

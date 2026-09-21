@@ -727,6 +727,7 @@
     "status": "Estado",
     "actions": "Acciones",
     "openMenu": "Abrir menú",
+    "viewDetails": "Ver detalles",
     "unassign": "Desasignar",
     "loading": "Cargando contratos...",
     "empty": "Aún no se han asignado contratos a este cliente.",
