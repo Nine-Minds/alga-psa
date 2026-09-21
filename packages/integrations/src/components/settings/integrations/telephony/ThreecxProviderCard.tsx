@@ -13,8 +13,6 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Phone } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { RELEASE_V1_6_FEATURE_FLAG } from '@alga-psa/core/features';
 import {
   clearThreecxPbxCredentials,
   completeThreecxPendingContact,
@@ -697,14 +695,13 @@ function CompletePendingContactDialog({
 }
 
 /**
- * The 3CX provider card. Hidden unless the release flag is on (client) and the
- * server reports the provider available (edition + Pro tier). Beyond the CRM
+ * The 3CX provider card. Hidden unless the server reports the provider
+ * available (edition + Pro tier). Beyond the CRM
  * template basics it hosts the PBX API sections: credentials, extension map,
  * call-history import, phonebook sync and the contact queue.
  */
 export function ThreecxProviderCard() {
   const { t } = useTranslation('msp/integrations');
-  const flag = useFeatureFlag(RELEASE_V1_6_FEATURE_FLAG);
   const searchParams = useSearchParams();
   const [state, setState] = useState<ThreecxCardState | null>(null);
   const [fullKey, setFullKey] = useState<string | null>(null);
@@ -722,10 +719,8 @@ export function ThreecxProviderCard() {
   }, []);
 
   useEffect(() => {
-    if (flag.enabled) {
-      void load();
-    }
-  }, [flag.enabled, load]);
+    void load();
+  }, [load]);
 
   const runBusy: RunBusy = useCallback(async (fn) => {
     setBusy(true);
@@ -739,9 +734,6 @@ export function ThreecxProviderCard() {
     }
   }, []);
 
-  if (!flag.enabled) {
-    return null;
-  }
   if (state && !state.available) {
     return null;
   }

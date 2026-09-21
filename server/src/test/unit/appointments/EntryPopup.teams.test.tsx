@@ -23,9 +23,8 @@ const {
   getUserAvatarUrlsBatchAction: vi.fn(),
 }));
 
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
@@ -201,7 +200,6 @@ const users = [
 
 describe('EntryPopup Teams UI', () => {
   beforeEach(() => {
-    releaseFlag.enabled = true;
     getTeamsMeetingCapability.mockResolvedValue({ available: true });
     getAppointmentRequestById.mockResolvedValue({
       success: true,

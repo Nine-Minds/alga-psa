@@ -14,9 +14,8 @@ const translate = (key: string, options?: Record<string, unknown>) => {
   return value;
 };
 
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -111,7 +110,7 @@ const save = () => fireEvent.submit(document.getElementById('custom-contract-lin
 
 describe('custom contract line semantic authoring in the active dialog', () => {
   beforeEach(() => {
-    releaseFlag.enabled = true; vi.clearAllMocks(); actionMocks.createCustomContractLine.mockResolvedValue('line-new'); });
+    vi.clearAllMocks(); actionMocks.createCustomContractLine.mockResolvedValue('line-new'); });
 
   it('saves period-total measurement, minimum and tier prices from the visible controls', async () => {
     open('Usage');

@@ -91,12 +91,11 @@ describe('email branding panel markup', () => {
     expect(templatesSource).not.toContain('EmailBrandingPanel');
   });
 
-  it('is gated behind the release-v1-6-feature flag in both settings hosts', () => {
+  it('is hidden for AlgaDesk in both settings hosts, with no feature flag', () => {
     for (const host of [settingsHostSource, pageHostSource]) {
-      expect(host).toContain("useFeatureFlag('release-v1-6-feature')");
       expect(host).toContain("id: 'email-branding'");
-      expect(host).toContain('!emailBrandingEnabled ? [] :');
-      expect(host).toContain("emailBrandingEnabled ? ['email-branding'] : []");
+      expect(host).toContain("isAlgaDesk ? [] : ['email-branding']");
+      expect(host).not.toContain('useFeatureFlag');
     }
   });
 

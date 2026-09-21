@@ -7,7 +7,6 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { ThreecxCardState } from '../../../../actions/integrations/telephonyActions';
 
 const mocks = vi.hoisted(() => ({
-  flagEnabled: true,
   cardState: null as ThreecxCardState | null,
   getCardState: vi.fn(),
   setProviderEnabled: vi.fn(async (): Promise<any> => ({ success: true })),
@@ -36,12 +35,6 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
     </select>
   ),
 }));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => ({ enabled: mocks.flagEnabled, loading: false, error: null }),
-}));
-
-vi.mock('@alga-psa/core/features', () => ({ RELEASE_V1_6_FEATURE_FLAG: 'release-v1-6-feature' }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
@@ -116,7 +109,6 @@ describe('ThreecxProviderCard', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    mocks.flagEnabled = true;
     mocks.getCardState.mockResolvedValue(cardState());
     mocks.setProviderEnabled.mockResolvedValue({ success: true });
     mocks.rotate.mockResolvedValue({ success: true, apiKey: 'rotated-full-key' });
@@ -125,14 +117,7 @@ describe('ThreecxProviderCard', () => {
 
   afterEach(() => cleanup());
 
-  it('T102: with the flag off the card renders nothing', () => {
-    mocks.flagEnabled = false;
-    const { container } = render(<ThreecxProviderCard />);
-    expect(container.querySelector('#telephony-provider-card-3cx')).toBeNull();
-    expect(mocks.getCardState).not.toHaveBeenCalled();
-  });
-
-  it('T103: with the flag on and the provider available the card renders', async () => {
+  it('T103: when the provider is available the card renders', async () => {
     render(<ThreecxProviderCard />);
     expect(await screen.findByText('3CX')).toBeTruthy();
   });

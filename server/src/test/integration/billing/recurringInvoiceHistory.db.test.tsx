@@ -21,9 +21,8 @@ const mocks = vi.hoisted(() => ({
 
 // Keep the SQL, tenant facade, transaction, row mapper, and UI formatter real.
 // Only supply the authenticated test tenant and isolate unrelated actions.
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
