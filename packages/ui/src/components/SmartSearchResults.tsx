@@ -1,19 +1,10 @@
-'use client';
-
 /**
- * Smart search results shell, shared by every list page that offers smart
- * search (tickets, projects).
+ * Edition-neutral contract for smart-search result panels.
  *
- * The bucketed results panel is enterprise code; this wrapper loads it through
- * the edition-swapped `@enterprise` alias the same way the credentials panels
- * are loaded. In community edition the alias resolves to a stub that renders
- * nothing, and no page enters smart-search mode there anyway: each page's
- * server component decides availability through the edition-swapped
- * getSmartSearchAvailability action and passes it down as a prop.
+ * Keep the enterprise loader in each feature package. Importing the
+ * edition-swapped `@enterprise` alias from this horizontal UI package makes
+ * UI depend on ee-stubs while ee-stubs already depends on UI.
  */
-
-import React from 'react';
-import dynamic from 'next/dynamic';
 
 import type { ColumnDefinition } from '@alga-psa/types';
 import type { SmartSearchEntity, SmartSearchRows } from '../lib/smartSearch/types';
@@ -40,25 +31,3 @@ export interface SmartSearchResultsProps<TScope, TRow extends object, TMetadata>
   onRowMetadata?: (metadata: TMetadata) => void;
   onExit: () => void;
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyProps = SmartSearchResultsProps<any, any, any>;
-
-const EnterpriseSmartSearchResults = dynamic(
-  () =>
-    import('@enterprise/components/smartSearch/SmartSearchResults').then(
-      (mod) => mod.SmartSearchResults as unknown as React.ComponentType<AnyProps>
-    ),
-  {
-    ssr: false,
-    loading: () => null,
-  }
-);
-
-export function SmartSearchResults<TScope, TRow extends object, TMetadata>(
-  props: SmartSearchResultsProps<TScope, TRow, TMetadata>
-) {
-  return <EnterpriseSmartSearchResults {...(props as AnyProps)} />;
-}
-
-export default SmartSearchResults;

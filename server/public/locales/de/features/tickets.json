@@ -1907,7 +1907,7 @@
     "run": "Intelligente Suche",
     "runTitle": "Gefilterte Tickets anhand dieser Anfrage bewerten",
     "relevanceColumn": "Treffer",
-    "relevance": "{{percent}}% relevant",
+    "relevance": "{{percent}} % Übereinstimmung",
     "strong": "Starke Treffer",
     "possible": "Mögliche Treffer",
     "unlikely": "Unwahrscheinliche Treffer",

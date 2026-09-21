@@ -1906,8 +1906,8 @@
   "smartSearch": {
     "run": "Slim zoeken",
     "runTitle": "Gefilterde tickets beoordelen op deze zoekopdracht",
-    "relevanceColumn": "Match",
-    "relevance": "{{percent}}% relevant",
+    "relevanceColumn": "Overeenkomst",
+    "relevance": "{{percent}}% overeenkomst",
     "strong": "Sterke matches",
     "possible": "Mogelijke matches",
     "unlikely": "Onwaarschijnlijke matches",

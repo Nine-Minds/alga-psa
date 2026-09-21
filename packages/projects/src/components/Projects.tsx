@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { parse } from 'date-fns';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -29,7 +30,7 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { SmartSearchResults } from '@alga-psa/ui/components/SmartSearchResults';
+import type { SmartSearchResultsProps } from '@alga-psa/ui/components/SmartSearchResults';
 import type { ProjectSmartSearchRowMetadata, ProjectSmartSearchScope } from '../lib/smartProjectSearch/types';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
@@ -42,6 +43,21 @@ import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+
+type AnySmartSearchResultsProps = SmartSearchResultsProps<unknown, Record<string, unknown>, unknown>;
+
+const EnterpriseSmartSearchResults = dynamic(
+  () => import('@enterprise/components/smartSearch/SmartSearchResults').then(
+    (mod) => mod.SmartSearchResults as unknown as React.ComponentType<AnySmartSearchResultsProps>
+  ),
+  { ssr: false, loading: () => null }
+);
+
+function SmartSearchResults<TScope, TRow extends object, TMetadata>(
+  props: SmartSearchResultsProps<TScope, TRow, TMetadata>
+) {
+  return <EnterpriseSmartSearchResults {...(props as unknown as AnySmartSearchResultsProps)} />;
+}
 
 export interface ProjectListFilters {
   searchQuery?: string;

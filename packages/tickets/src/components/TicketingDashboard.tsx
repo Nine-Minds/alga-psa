@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
@@ -10,7 +11,7 @@ import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
-import { SmartSearchResults } from '@alga-psa/ui/components/SmartSearchResults';
+import type { SmartSearchResultsProps } from '@alga-psa/ui/components/SmartSearchResults';
 import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
 import {
   buildSelectedTicketDetails,
@@ -123,6 +124,21 @@ import { useTicketsRouteState } from './TicketsRouteProvider';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './ticket/TicketNotificationSuppressionControl';
+
+type AnySmartSearchResultsProps = SmartSearchResultsProps<unknown, Record<string, unknown>, unknown>;
+
+const EnterpriseSmartSearchResults = dynamic(
+  () => import('@enterprise/components/smartSearch/SmartSearchResults').then(
+    (mod) => mod.SmartSearchResults as unknown as React.ComponentType<AnySmartSearchResultsProps>
+  ),
+  { ssr: false, loading: () => null }
+);
+
+function SmartSearchResults<TScope, TRow extends object, TMetadata>(
+  props: SmartSearchResultsProps<TScope, TRow, TMetadata>
+) {
+  return <EnterpriseSmartSearchResults {...(props as unknown as AnySmartSearchResultsProps)} />;
+}
 
 const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
   suppressContactNotifications: false,
