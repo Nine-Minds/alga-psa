@@ -977,6 +977,7 @@ jobs:
           E2E_DB_NAME: server
           E2E_DB_USER: postgres
           E2E_DB_PASSWORD: placeholder-password
+          JEV_SELECTION_PATH: ${{ github.workspace }}/test-results/jev-selection/jev-selection.json
         timeout-minutes: 25
         run: xvfb-run --auto-servernum npm test
         shell: bash
