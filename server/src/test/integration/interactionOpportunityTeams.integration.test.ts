@@ -69,6 +69,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 import InteractionModel from '../../../../packages/clients/src/models/interactions';
+import { getInteractionsForEntity } from '../../../../packages/clients/src/actions/interactionActions';
 
 const describeDb = await describeWithDb();
 
@@ -232,11 +233,27 @@ describeDb('interactions Teams path: opportunity and contact', () => {
       join_url: JOIN_URL,
     });
 
+    // The shared write helper must also move the deal's activity clock.
+    const opportunity = await tenantTable('opportunities')
+      .where({ opportunity_id: opportunityId })
+      .first('last_activity_at');
+    expect(new Date(opportunity.last_activity_at).getTime())
+      .toBeGreaterThan(new Date('2026-01-01T00:00:00.000Z').getTime());
+
     const forOpportunity = await InteractionModel.getForEntity(opportunityId, 'opportunity', tenantId);
     const forContact = await InteractionModel.getForEntity(contactId, 'contact', tenantId);
 
     expect(forOpportunity.map((row) => row.interaction_id)).toContain(interactionId);
     expect(forContact.map((row) => row.interaction_id)).toContain(interactionId);
+
+    // Read back through the public action the opportunity/contact feeds actually call.
+    const actionForOpportunity = await getInteractionsForEntity(opportunityId, 'opportunity');
+    const actionForContact = await getInteractionsForEntity(contactId, 'contact');
+    if (!Array.isArray(actionForOpportunity) || !Array.isArray(actionForContact)) {
+      throw new Error('getInteractionsForEntity returned an action error instead of interactions');
+    }
+    expect(actionForOpportunity.map((row) => row.interaction_id)).toContain(interactionId);
+    expect(actionForContact.map((row) => row.interaction_id)).toContain(interactionId);
   });
 
   it('rejects an opportunity that belongs to a different client', async () => {
