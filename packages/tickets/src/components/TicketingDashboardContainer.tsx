@@ -6,7 +6,6 @@ import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import {
-  getErrorMessage,
   handleError,
   isActionMessageError,
   isActionPermissionError,
@@ -32,6 +31,10 @@ import {
 import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
 import { normalizeAssignedToIds } from '../lib/ticketFilterUtils';
 import {
+  DEFAULT_TICKET_LIST_SORT_KEY,
+  isTicketListSortKey,
+} from '../lib/ticketListSort';
+import {
   buildBoardArrivalFilters,
   resolveTicketViewSettings,
   sanitizeStoredTicketView,
@@ -51,18 +54,6 @@ const ALLOWED_RESPONSE_STATES = new Set(['all', 'awaiting_client', 'awaiting_int
 const ALLOWED_SLA_STATUS_FILTERS = new Set(['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused']);
 const ALLOWED_BOARD_FILTER_STATES = new Set(['active', 'inactive', 'all']);
 const ALLOWED_BUNDLE_VIEWS = new Set(['bundled', 'individual']);
-const ALLOWED_SORT_KEYS = new Set([
-  'ticket_number',
-  'title',
-  'status_name',
-  'priority_name',
-  'board_name',
-  'category_name',
-  'client_name',
-  'entered_at',
-  'entered_by_name',
-  'due_date'
-]);
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -90,7 +81,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
 
   const sortByRaw = params.get('sortBy') || 'entered_at';
   const sortDirectionRaw = (params.get('sortDirection') || 'desc').toLowerCase();
-  const sortBy = ALLOWED_SORT_KEYS.has(sortByRaw) ? sortByRaw : 'entered_at';
+  const sortBy = isTicketListSortKey(sortByRaw) ? sortByRaw : DEFAULT_TICKET_LIST_SORT_KEY;
   const sortDirection: 'asc' | 'desc' = sortDirectionRaw === 'asc' ? 'asc' : 'desc';
 
   const dueDateFilterRaw = params.get('dueDateFilter');
@@ -464,7 +455,9 @@ export default function TicketingDashboardContainer({
       }
 
       if (isReturnedActionError(result)) {
-        handleError(getErrorMessage(result), t('errors.fetchTickets', 'Failed to fetch tickets'));
+        // Pass the payload through unflattened: handleError prefers a returned
+        // user-safe actionError over the fallback, but only for that channel.
+        handleError(result, t('errors.fetchTickets', 'Failed to fetch tickets'));
         setTickets([]);
         setTotalCount(0);
         return;
