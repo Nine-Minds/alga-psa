@@ -3731,6 +3731,12 @@
         "disabled": "Desativado",
         "notConfigured": "Não configurado"
       },
+      "setup": {
+        "configure": "Configurar integração",
+        "selectedAction": "Selecionada",
+        "currentIntegration": "Integração de telefonia",
+        "changeIntegration": "Escolher outra"
+      },
       "providers": {
         "teamsPhone": {
           "description": "Registra as chamadas do Teams Phone como interações assim que cada chamada termina. Histórico de chamadas, não alerta na tela em tempo real.",
