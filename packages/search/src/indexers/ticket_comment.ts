@@ -10,6 +10,7 @@ interface TicketCommentSearchRow {
   note: string | null;
   markdown_content: string | null;
   is_internal: boolean | null;
+  author_type: string | null;
   created_at?: Date | string | null;
   updated_at?: Date | string | null;
   ticket_title: string | null;
@@ -26,6 +27,27 @@ function resolveCommentBody(row: TicketCommentSearchRow): string | undefined {
     return looksLikeBlockNoteJson ? flattenBlockNote(note) : flattenMarkdown(note);
   }
   return undefined;
+}
+
+/**
+ * Who wrote the comment, as the reader of a ticket thread would classify it.
+ * Recorded in `metadata.author_kind` so consumers that reason over the thread
+ * (smart ticket search builds per-ticket state from these rows) can label each
+ * comment without joining back to `comments`. Rows indexed before this field
+ * existed carry no value; readers treat that as `technician`.
+ */
+export type SearchCommentAuthorKind = 'technician' | 'client' | 'system';
+
+export function toCommentAuthorKind(authorType: string | null | undefined): SearchCommentAuthorKind {
+  switch ((authorType ?? '').toLowerCase()) {
+    case 'client':
+    case 'contact':
+      return 'client';
+    case 'system':
+      return 'system';
+    default:
+      return 'technician';
+  }
 }
 
 function compactJoin(values: Array<string | null | undefined>): string | undefined {
@@ -49,6 +71,7 @@ function toSearchDoc(tenant: string, row: TicketCommentSearchRow): SearchDoc {
     subtitle: compactJoin([row.ticket_title, row.ticket_number]),
     body: resolveCommentBody(row),
     url: `/msp/tickets/${row.ticket_id}#comment-${row.comment_id}`,
+    metadata: { author_kind: toCommentAuthorKind(row.author_type) },
     acl: {
       requiredPermission: 'ticket:read',
       isInternalOnly: row.is_internal ?? false,
@@ -68,6 +91,7 @@ function baseTicketCommentQuery(knex: Knex, tenant: string) {
       'c.note',
       'c.markdown_content',
       'c.is_internal',
+      'c.author_type',
       'c.created_at',
       'c.updated_at',
       't.title as ticket_title',

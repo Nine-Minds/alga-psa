@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -49,6 +49,10 @@
     "./i18n/config": {
       "import": "./dist/lib/i18n/config.js",
       "types": "./src/lib/i18n/config.ts"
+    },
+    "./i18n/countryDateFormat": {
+      "import": "./dist/lib/i18n/countryDateFormat.js",
+      "types": "./src/lib/i18n/countryDateFormat.ts"
     },
     "./config/deletion": {
       "import": "./dist/config/deletion/index.js",

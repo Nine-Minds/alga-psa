@@ -1,0 +1,252 @@
+[
+  {
+    "id": "F001",
+    "description": "Expose cap_amount and the existing nullable currency_code consistently on shared/server tax-rate interfaces, correcting stale scope comments.",
+    "implemented": true,
+    "prdRefs": [
+      "D1",
+      "D3",
+      "D4"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Extend shared money helpers with strict locale-aware decimal-text to safe minor-unit conversion using currency fraction digits and exact arithmetic.",
+    "implemented": true,
+    "prdRefs": [
+      "D3"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Provide exact minor-unit edit hydration and currency-coded display formatting through the supported maximum for zero-, two-, and three-digit currencies.",
+    "implemented": true,
+    "prdRefs": [
+      "D3"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Normalize and strictly validate PostgreSQL integer cap strings at action/read boundaries without accepting malformed or rounded fractional strings.",
+    "implemented": true,
+    "prdRefs": [
+      "D3"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Validate the effective cap/currency pair on create and update; require an explicit supported rate currency for new or changed non-null caps, including zero.",
+    "implemented": true,
+    "prdRefs": [
+      "D1",
+      "D5"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Preserve omitted update fields, explicitly clear caps with null, and retain numeric zero without truthiness coercion.",
+    "implemented": true,
+    "prdRefs": [
+      "D3",
+      "D5"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Preserve unchanged legacy currency-less caps on unrelated updates and allow explicit currency resolution or clearing without guessing a currency.",
+    "implemented": true,
+    "prdRefs": [
+      "D1"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Return localized action errors for cap syntax/range and currency-pair validation failures while retaining existing permission/product-access guards.",
+    "implemented": true,
+    "prdRefs": [
+      "D3",
+      "D6"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Add minor-unit cap and currency fields consistently to public base/create/update/response/advanced schemas and inferred types without update defaults.",
+    "implemented": true,
+    "prdRefs": [
+      "D5"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Correct financial tax-rates GET to return normalized tenant-scoped tax-rate responses with its existing API guards plus billing-read/product-access checks.",
+    "implemented": true,
+    "prdRefs": [
+      "D5",
+      "D6"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Align API documentation and actual OpenAPI/generated schema consumers with cap units, nullable fields, omission semantics, and existing GET-only route availability.",
+    "implemented": true,
+    "prdRefs": [
+      "D5"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Pass actual invoice or charge currency through affected TaxService callers in invoice generation and previews, preserving existing selection behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "D7"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Carry persisted caps into the preloaded billing tax model and reuse parent regional arithmetic in its compute adapter without changing uncapped rounding.",
+    "implemented": true,
+    "prdRefs": [
+      "D7"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Add an explicit Tax cap column after percentage with No cap, currency-coded zero/amount, and unresolved legacy states.",
+    "implemented": true,
+    "prdRefs": [
+      "Administrator experience"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Group Rate currency and the optional Tax cap input beside percentage in the existing add/edit dialog, with visible currency-applicability and blank/zero guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "D1",
+      "D2",
+      "Administrator experience"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Use the shared currency picker and validated metadata with universal, zero-digit, and three-digit options, preserving valid stored codes outside the usual shortlist.",
+    "implemented": true,
+    "prdRefs": [
+      "D1"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Maintain raw cap text and original canonical values for exact edit hydration, untouched-field omission, meaningful dirty checking, cancel/reopen reset, and failed-save preservation.",
+    "implemented": true,
+    "prdRefs": [
+      "D3"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Add Clear tax cap behavior that submits null independently of the rate currency and keeps an intentionally entered zero.",
+    "implemented": true,
+    "prdRefs": [
+      "D3"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Require explicit cap re-entry when changing currency; show the change in rate applicability before saving instead of silently converting an amount.",
+    "implemented": true,
+    "prdRefs": [
+      "D1"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Provide an unresolved legacy-cap edit state with the exact stored minor amount, an explicit currency-resolution preview, and a clear action.",
+    "implemented": true,
+    "prdRefs": [
+      "D1"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Show field-associated localized validation for malformed, negative, excessive-precision, unsafe, and currency-invalid cap entries and focus the first invalid field.",
+    "implemented": true,
+    "prdRefs": [
+      "D3",
+      "Administrator experience"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Add accessible contextual help explaining per-rate contribution, per-segment reset, multiple invoice calculations, external tax, and the distinction from project billing caps.",
+    "implemented": true,
+    "prdRefs": [
+      "D2"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Display cap and currency in Advanced Settings Details, with the same exact formatting and empty/legacy states as the list.",
+    "implemented": true,
+    "prdRefs": [
+      "Administrator experience"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Show persistent composite-path limitations beside configured caps, in the edit form, and on Components without adding per-component inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "D4"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Gate create/update affordances and row-click behavior by billing permissions and pass read-only state through advanced detail editors.",
+    "implemented": true,
+    "prdRefs": [
+      "D6"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Provide keyboard-operable clear/help controls, associated labels/errors, stable unique IDs, responsive layout, theme compatibility, and duplicate-save protection.",
+    "implemented": true,
+    "prdRefs": [
+      "Administrator experience"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Add all cap/currency copy and validation keys consistently across supported service-catalog and billing-settings locales, including pseudo-locales.",
+    "implemented": true,
+    "prdRefs": [
+      "Localization and documentation"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Write the administrator configuration guide and update the parent contract for shipped UI/API availability, currency rules, scope, composite limitations, and open domain questions.",
+    "implemented": true,
+    "prdRefs": [
+      "Localization and documentation"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Verify shared CE/EE migration prerequisites and preserve parent branch ancestry without duplicating cap/currency migrations or guessing legacy data.",
+    "implemented": true,
+    "prdRefs": [
+      "D6",
+      "Delivery and verification"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Record live UI and draft-invoice smoke evidence for set/edit/clear/zero, reload persistence, resulting totals, currency handling, and read-only denial.",
+    "implemented": true,
+    "prdRefs": [
+      "Delivery and verification"
+    ]
+  }
+]

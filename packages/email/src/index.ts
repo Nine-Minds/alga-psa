@@ -46,6 +46,14 @@ export {
   capReferences
 } from './BaseEmailService';
 
+// Send-time brand logo embedding, for the paths that render a tenant template
+// and hand it straight to a provider instead of going through BaseEmailService.
+export {
+  embedBrandLogo,
+  type EmbedBrandLogoOptions,
+  type EmbedBrandLogoResult,
+} from './inlineBrandLogo';
+
 // Individual email sending functions
 export { sendPasswordResetEmail } from './sendPasswordResetEmail';
 export { sendPortalInvitationEmail } from './sendPortalInvitationEmail';

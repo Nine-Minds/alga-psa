@@ -35,6 +35,7 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: optimizedPathMocks.hasPermission }));
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: optimizedPathMocks.maybeReopenBundleMasterFromChildReply,
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 // Wire the core job-enqueue DI seam to the test doubles. Production registers a

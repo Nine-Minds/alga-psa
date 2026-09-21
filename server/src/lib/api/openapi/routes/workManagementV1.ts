@@ -71,10 +71,14 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       title: zOpenApi.string().optional(),
       summary: zOpenApi.string().optional(),
+      url: zOpenApi.string().url().optional().describe('Optional link-out for the ticket; any URL accepted by the ticket create schema. Omit or supply a valid URL; null is rejected.'),
       client_id: zOpenApi.string().uuid().optional(),
       board_id: zOpenApi.string().uuid().optional(),
       priority_id: zOpenApi.string().uuid().optional(),
       status_id: zOpenApi.string().uuid().optional(),
+      severity_id: zOpenApi.string().uuid().optional().describe('Optional severity reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
+      urgency_id: zOpenApi.string().uuid().optional().describe('Optional urgency reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
+      impact_id: zOpenApi.string().uuid().optional().describe('Optional impact reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
       external_links: zOpenApi.array(zOpenApi.object({
         system: zOpenApi.string().min(1).describe('Built-in system key or custom:<slug>.'),
         external_id: zOpenApi.string().min(1).describe('Identifier of the record in the external system.'),
@@ -115,6 +119,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       tags: zOpenApi.array(zOpenApi.string()).optional(),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
+      propagateToChildren: zOpenApi.boolean().optional().describe(
+        'Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Ticket fields to update. Notification suppression applies only to this operation.'),
   );
@@ -127,6 +134,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       closed_by: zOpenApi.string().uuid().optional(),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
+      propagateToChildren: zOpenApi.boolean().optional().describe(
+        'Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }),
   );
@@ -296,9 +306,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tickets/{id}/status', summary: 'Update ticket status', description: 'Updates ticket status, with optional per-operation notification suppression.', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/{id}/time-entries', summary: 'List ticket time entries', description: 'Returns the caller\'s time entries on the ticket plus, when permitted, other team members\' entries (or an anonymized aggregate when the caller lacks timesheet:read_all).', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/{id}/bundle', summary: 'Get ticket bundle', description: 'Returns bundle membership for the ticket: role (master, child, or standalone), the master ticket, child tickets, and bundle settings.', family: 'ticket' },
-    { method: 'post', path: '/api/v1/tickets/{id}/bundle', summary: 'Create ticket bundle', description: 'Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates.', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets/{id}/bundle', summary: 'Create ticket bundle', description: 'Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master\'s resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.', family: 'ticket' },
     { method: 'delete', path: '/api/v1/tickets/{id}/bundle', summary: 'Unbundle ticket', description: 'Unbundles master {id}, detaching all child tickets and removing bundle settings.', family: 'ticket' },
-    { method: 'post', path: '/api/v1/tickets/{id}/bundle/children', summary: 'Add bundle children', description: 'Adds child tickets to the existing bundle mastered by {id}.', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets/{id}/bundle/children', summary: 'Add bundle children', description: 'Adds child tickets to the existing bundle mastered by {id}. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master\'s resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.', family: 'ticket' },
     { method: 'delete', path: '/api/v1/tickets/{id}/bundle/children/{childId}', summary: 'Remove bundle child', description: 'Removes child {childId} from its bundle; removes bundle settings when no children remain.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/{id}/bundle/promote', summary: 'Promote bundle master', description: 'Promotes a child ticket to be the new bundle master, re-pointing the remaining children.', family: 'ticket' },
     { method: 'put', path: '/api/v1/tickets/{id}/bundle/settings', summary: 'Update ticket bundle settings', description: 'Updates the bundle mode and/or reopen-on-child-reply policy for master {id}.', family: 'ticket' },
@@ -371,6 +381,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'delete /api/v1/tickets/{id}',
   ]);
 
+  // Status writes that can propagate to bundle children return 409 when the
+  // caller omits `propagateToChildren` on a boundary-crossing sync master.
+  const BUNDLE_PROPAGATION_CONFLICT_OPS = new Set([
+    'put /api/v1/tickets/{id}',
+    'put /api/v1/tickets/{id}/status',
+  ]);
+
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
@@ -439,6 +456,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     if (DEPENDENCY_VALIDATED_DELETES.has(`${def.method} ${def.path}`)) {
       responses[409] = {
         description: 'Deletion blocked: the resource has dependent records that must be removed or reassigned first. The error details list the blocking dependencies.',
+        schema: ApiError,
+      };
+    }
+
+    if (BUNDLE_PROPAGATION_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Confirmation required: the status change would close or reopen child tickets of a sync-mode bundle master. Retry with propagateToChildren=true or false. The error details carry crossesBoundary and the affected/unaffected children.',
         schema: ApiError,
       };
     }

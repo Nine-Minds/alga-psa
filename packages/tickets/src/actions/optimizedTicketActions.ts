@@ -50,6 +50,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -61,7 +62,7 @@ import {
 } from '@alga-psa/shared/lib/ticketActivity';
 import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
-import { maybeReopenBundleMasterFromChildReply } from './ticketBundleUtils';
+import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -81,6 +82,14 @@ import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransi
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
+import {
+  propagateBundleMasterStatus,
+  previewBundleStatusPropagation,
+} from './ticketBundleUtils';
+import {
+  BundlePropagationConfirmationRequiredError,
+  type BundleStatusPropagationPreview,
+} from '../lib/ticketBundlePropagation';
 import {
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
@@ -502,12 +511,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       priorities,
       categories
     ] = await Promise.all([
-      // Comments
-      tenantScopedTable(trx, 'comments', tenant)
-        .where({
-          ticket_id: ticketId
-        })
-        .orderBy('created_at', 'asc'),
+      // Comments, with read-time bundle provenance owned by the shared read
+      // layer so this load and every refresh path return identical shapes.
+      Comment.getAllbyTicketId(trx, tenant, ticketId),
       
       // Documents
       tenantLeftJoin(
@@ -978,6 +984,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.contact_name_id',
         'comp.client_name',
         'ct.status_id',
+        'ct.is_closed',
+        'ct.closed_at',
         'ct.entered_at',
         'ct.updated_at',
         'ct.entered_by',
@@ -1087,7 +1095,10 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         mode: bundleSettings?.mode ?? null,
         reopenOnChildReply: Boolean(bundleSettings?.reopen_on_child_reply),
         masterTicket: bundleMaster,
-        children: bundleChildren
+        children: bundleChildren,
+        // Authorization-filtered children only; "open" is closed_at IS NULL,
+        // the same predicate the close rule and attach policy use.
+        openChildrenCount: bundleChildren.filter((child: any) => child.closed_at == null).length
       },
       aggregatedChildClientComments: filteredAggregatedChildClientComments,
       comments,
@@ -1839,6 +1850,7 @@ function buildTicketListItemsQuery(
       'tc.master_ticket_id',
       'tc.tenant',
       trx.raw('COUNT(*)::int as bundle_child_count'),
+      trx.raw('COUNT(*) FILTER (WHERE tc.closed_at IS NULL)::int as bundle_open_child_count'),
       trx.raw('array_agg(DISTINCT tc.client_id) FILTER (WHERE tc.client_id IS NOT NULL) as child_client_ids')
     )
     .whereNotNull('tc.master_ticket_id')
@@ -1895,6 +1907,7 @@ function buildTicketListItemsQuery(
       't.sla_paused_at', 't.sla_total_pause_minutes',
       // Bundle stats from pre-aggregated JOIN
       trx.raw('COALESCE(bs.bundle_child_count, 0) as bundle_child_count'),
+      trx.raw('COALESCE(bs.bundle_open_child_count, 0) as bundle_open_child_count'),
       trx.raw(`COALESCE(
         (SELECT COUNT(DISTINCT cid) FROM unnest(
           array_append(COALESCE(bs.child_client_ids, ARRAY[]::uuid[]), t.client_id)
@@ -1938,6 +1951,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       additional_agent_count,
       additional_agents,
       bundle_child_count,
+      bundle_open_child_count,
       bundle_distinct_client_count,
       bundle_master_ticket_number,
       // NOTE: Legacy ITIL fields removed - now using unified system
@@ -1977,10 +1991,132 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       additional_agent_count: additional_agent_count || 0,
       additional_agents: additional_agents || [],
       bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
+      bundle_open_child_count: typeof bundle_open_child_count === 'number' ? bundle_open_child_count : Number.parseInt(String(bundle_open_child_count ?? '0'), 10) || 0,
       bundle_distinct_client_count: typeof bundle_distinct_client_count === 'number' ? bundle_distinct_client_count : Number.parseInt(String(bundle_distinct_client_count ?? '0'), 10) || 0,
       bundle_master_ticket_number: bundle_master_ticket_number ?? null
     };
   });
+}
+
+/**
+ * The enrichment every list-shaped ticket fetch shares: batched agent/team
+ * avatars, client logos, and tags for a set of already-authorized rows. Both the
+ * paginated list and the by-id loader (smart search hydration) end here so a
+ * row rendered from either path carries the same metadata.
+ */
+export interface TicketListRowsWithMetadata {
+  tickets: ITicketListItem[];
+  metadata: {
+    agentAvatarUrls: Record<string, string | null>;
+    teamAvatarUrls: Record<string, string | null>;
+    ticketTags: Record<string, ITag[]>;
+  };
+}
+
+async function enrichTicketListItems(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketListItems: ITicketListItem[]
+): Promise<TicketListRowsWithMetadata> {
+  // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
+  const ticketIds = ticketListItems
+    .map((t: ITicketListItem) => t.ticket_id)
+    .filter((id: string | undefined): id is string => id !== undefined);
+
+  const agentUserIds = new Set<string>();
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    if (ticket.assigned_to) {
+      agentUserIds.add(ticket.assigned_to);
+    }
+    ticket.additional_agents?.forEach((agent: { user_id: string }) => {
+      agentUserIds.add(agent.user_id);
+    });
+  });
+
+  const teamIds = new Set<string>();
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    if (ticket.assigned_team_id) {
+      teamIds.add(ticket.assigned_team_id);
+    }
+  });
+
+  const clientIds = new Set<string>();
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    if (ticket.client_id) {
+      clientIds.add(ticket.client_id);
+    }
+  });
+
+  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap] = await Promise.all([
+    agentUserIds.size > 0
+      ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
+      : Promise.resolve(new Map<string, string | null>()),
+    teamIds.size > 0
+      ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
+      : Promise.resolve(new Map<string, string | null>()),
+    ticketIds.length > 0
+      ? tenantDb(trx, tenant)
+          .tenantJoin(
+            tenantScopedTable(trx, 'tag_mappings as tm', tenant),
+            'tag_definitions as td',
+            'tm.tag_id',
+            'td.tag_id'
+          )
+          .whereIn('tm.tagged_id', ticketIds)
+          .where('tm.tagged_type', 'ticket')
+          .select(
+            'tm.mapping_id',
+            'td.tag_id',
+            'td.tag_text',
+            'tm.tagged_id',
+            'tm.tagged_type',
+            'td.board_id',
+            'td.background_color',
+            'td.text_color'
+          )
+      : Promise.resolve([]),
+    clientIds.size > 0
+      ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
+      : Promise.resolve(new Map<string, string | null>()),
+  ]);
+
+  // Attach batched client logo URLs to each row (single query, no N+1).
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
+  });
+
+  // Convert Maps to Records for serialization
+  const agentAvatarUrls: Record<string, string | null> = {};
+  agentAvatarUrlsMap.forEach((url, id) => { agentAvatarUrls[id] = url; });
+
+  const teamAvatarUrls: Record<string, string | null> = {};
+  teamAvatarUrlsMap.forEach((url, id) => { teamAvatarUrls[id] = url; });
+
+  // Group tags by ticket ID
+  const ticketTags: Record<string, ITag[]> = {};
+  ticketTagRows.forEach((tag: any) => {
+    const tagObj: ITag = {
+      tag_id: tag.mapping_id,
+      tenant,
+      tag_text: tag.tag_text,
+      tagged_id: tag.tagged_id,
+      tagged_type: tag.tagged_type,
+      background_color: tag.background_color,
+      text_color: tag.text_color,
+    };
+    if (!ticketTags[tag.tagged_id]) {
+      ticketTags[tag.tagged_id] = [];
+    }
+    ticketTags[tag.tagged_id].push(tagObj);
+  });
+  return {
+    tickets: ticketListItems as ITicketListItem[],
+    metadata: {
+      agentAvatarUrls,
+      teamAvatarUrls,
+      ticketTags,
+    },
+  };
 }
 
 /**
@@ -2056,106 +2192,11 @@ export const getTicketsForList = withAuth(async (
       ticketListItems = mapTicketListItems(paginatedAuthorizedTickets);
     }
 
-    // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
-    const ticketIds = ticketListItems
-      .map((t: ITicketListItem) => t.ticket_id)
-      .filter((id: string | undefined): id is string => id !== undefined);
-
-    const agentUserIds = new Set<string>();
-    ticketListItems.forEach((ticket: ITicketListItem) => {
-      if (ticket.assigned_to) {
-        agentUserIds.add(ticket.assigned_to);
-      }
-      ticket.additional_agents?.forEach((agent: { user_id: string }) => {
-        agentUserIds.add(agent.user_id);
-      });
-    });
-
-    const teamIds = new Set<string>();
-    ticketListItems.forEach((ticket: ITicketListItem) => {
-      if (ticket.assigned_team_id) {
-        teamIds.add(ticket.assigned_team_id);
-      }
-    });
-
-    const clientIds = new Set<string>();
-    ticketListItems.forEach((ticket: ITicketListItem) => {
-      if (ticket.client_id) {
-        clientIds.add(ticket.client_id);
-      }
-    });
-
-    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap] = await Promise.all([
-      agentUserIds.size > 0
-        ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
-        : Promise.resolve(new Map<string, string | null>()),
-      teamIds.size > 0
-        ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
-        : Promise.resolve(new Map<string, string | null>()),
-      ticketIds.length > 0
-        ? tenantDb(trx, tenant)
-            .tenantJoin(
-              tenantScopedTable(trx, 'tag_mappings as tm', tenant),
-              'tag_definitions as td',
-              'tm.tag_id',
-              'td.tag_id'
-            )
-            .whereIn('tm.tagged_id', ticketIds)
-            .where('tm.tagged_type', 'ticket')
-            .select(
-              'tm.mapping_id',
-              'td.tag_id',
-              'td.tag_text',
-              'tm.tagged_id',
-              'tm.tagged_type',
-              'td.board_id',
-              'td.background_color',
-              'td.text_color'
-            )
-        : Promise.resolve([]),
-      clientIds.size > 0
-        ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
-        : Promise.resolve(new Map<string, string | null>()),
-    ]);
-
-    // Attach batched client logo URLs to each row (single query, no N+1).
-    ticketListItems.forEach((ticket: ITicketListItem) => {
-      ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
-    });
-
-    // Convert Maps to Records for serialization
-    const agentAvatarUrls: Record<string, string | null> = {};
-    agentAvatarUrlsMap.forEach((url, id) => { agentAvatarUrls[id] = url; });
-
-    const teamAvatarUrls: Record<string, string | null> = {};
-    teamAvatarUrlsMap.forEach((url, id) => { teamAvatarUrls[id] = url; });
-
-    // Group tags by ticket ID
-    const ticketTags: Record<string, ITag[]> = {};
-    ticketTagRows.forEach((tag: any) => {
-      const tagObj: ITag = {
-        tag_id: tag.mapping_id,
-        tenant,
-        tag_text: tag.tag_text,
-        tagged_id: tag.tagged_id,
-        tagged_type: tag.tagged_type,
-        background_color: tag.background_color,
-        text_color: tag.text_color,
-      };
-      if (!ticketTags[tag.tagged_id]) {
-        ticketTags[tag.tagged_id] = [];
-      }
-      ticketTags[tag.tagged_id].push(tagObj);
-    });
-
+    const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
     return {
-      tickets: ticketListItems as ITicketListItem[],
+      tickets: enriched.tickets,
       totalCount,
-      metadata: {
-        agentAvatarUrls,
-        teamAvatarUrls,
-        ticketTags,
-      }
+      metadata: enriched.metadata,
     };
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
@@ -2221,6 +2262,79 @@ export const getAllMatchingTicketIds = withAuth(async (
         return expected;
       }
       console.error('Failed to fetch matching ticket IDs:', error);
+      throw error;
+    }
+  });
+});
+
+/**
+ * List rows for an explicit set of ticket ids, in the order the ids were given.
+ * The rows pass through the same filter, authorization, and enrichment path as
+ * the paginated list, so a caller that already knows which tickets it wants
+ * (smart search hydrating a scored batch) renders them with identical columns.
+ * Tickets the caller cannot read, or that the filters exclude, are omitted.
+ */
+export const loadTicketListItemsByIds = withAuth(async (
+  user,
+  { tenant },
+  filters: ITicketListFilters,
+  ticketIds: string[]
+): Promise<TicketListRowsWithMetadata | TicketActionError> => {
+  const {knex: db} = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const requestedIds = Array.from(new Set(ticketIds.filter((id) => typeof id === 'string' && id.length > 0)));
+      if (requestedIds.length === 0) {
+        return { tickets: [], metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} } };
+      }
+
+      const validatedFilters = cleanFilterValues(
+        validateData(ticketListFiltersSchema, filters) as ITicketListFilters
+      );
+
+      const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+
+      const scopedBaseQuery = scopedQuery.clone();
+      const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
+      let rows: any[];
+      if (authSqlResult.supported) {
+        rows = await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder)
+          .whereIn('t.ticket_id', requestedIds)
+          .clearOrder();
+      } else {
+        const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery)
+          .whereIn('t.ticket_id', requestedIds)
+          .clearOrder();
+        rows = await filterAuthorizedTickets(trx, authorizationContext, candidates);
+      }
+
+      const byId = new Map<string, any>();
+      for (const row of rows) {
+        if (row?.ticket_id) {
+          byId.set(row.ticket_id, row);
+        }
+      }
+      const ordered = requestedIds
+        .map((id) => byId.get(id))
+        .filter((row): row is any => Boolean(row));
+
+      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      console.error('Failed to load ticket list rows by id:', error);
       throw error;
     }
   });
@@ -2460,6 +2574,12 @@ export interface UpdateTicketInTransactionOptions {
   /** Automation exemption from close rules (workflow/import/auto-close/portal); audit-logged. */
   bypassCloseRules?: { source: CloseRuleBypassSource };
   /**
+   * Sync-mode bundle master status changes that cross the open/closed boundary
+   * must choose: true propagates to affected children, false changes the master
+   * only, undefined raises BundlePropagationConfirmationRequiredError.
+   */
+  propagateToChildren?: boolean;
+  /**
    * Attribute the change to the system rather than `user` (auto-close engine):
    * closed_by stays null, events carry a SYSTEM actor, and the audit row is
    * system-sourced. `user` is still required for the call signature but is not
@@ -2648,6 +2768,27 @@ export async function updateTicketInTransaction(
       updateData.response_state = null;
     }
     const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
+
+    // Sync-mode bundle masters require an explicit propagation choice before a
+    // boundary-crossing status write. Nothing is written when we bail here.
+    if (
+      typeof updateData.status_id === 'string' &&
+      updateData.status_id !== currentTicket.status_id
+    ) {
+      const propagationPreview: BundleStatusPropagationPreview = await previewBundleStatusPropagation(
+        trx,
+        tenant,
+        id,
+        updateData.status_id,
+      );
+      if (
+        propagationPreview.crossesBoundary !== null &&
+        propagationPreview.affectedChildren.length > 0 &&
+        options?.propagateToChildren === undefined
+      ) {
+        throw new BundlePropagationConfirmationRequiredError(propagationPreview);
+      }
+    }
 
     let updatedTicket;
     
@@ -3073,61 +3214,31 @@ export async function updateTicketInTransaction(
       );
     }
 
-    // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
-    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: id })
-      .first();
-
-    if (bundleSettings?.mode === 'sync_updates') {
-      const propagateFields: Record<string, any> = {};
-      for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
-        if (Object.prototype.hasOwnProperty.call(updateData, key)) {
-          propagateFields[key] = (updateData as any)[key];
-        }
-      }
-
-      if (Object.keys(propagateFields).length > 0) {
-        const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ master_ticket_id: id })
-          .select(['ticket_id', ...Object.keys(propagateFields)]);
-
-        const childPublishes = childTickets
-          .map((childTicket: Record<string, unknown>) => ({
-            ticketId: childTicket.ticket_id as string,
-            updatedFields: diffTicketFields(childTicket, propagateFields),
-          }))
-          .filter((childPublish: { ticketId: string; updatedFields: ReturnType<typeof diffTicketFields> }) =>
-            childPublish.updatedFields.length > 0);
-
-        const propagate: Record<string, any> = { ...propagateFields };
-        propagate.updated_by = user.user_id;
-        propagate.updated_at = new Date().toISOString();
-        await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ master_ticket_id: id })
-          .update(propagate);
-
-        for (const childPublish of childPublishes) {
-          registerAfterCommit(trx, () =>
-            publishTicketUpdate({
-              tenantId: tenant,
-              ticketId: childPublish.ticketId,
-              updatedFields: childPublish.updatedFields,
-              updatedBy: {
-                userId: user.user_id,
-                displayName: formatLiveUpdateDisplayName(user),
-              },
-              updatedAt: propagate.updated_at,
-            }),
-            `ticket-live-update ticket=${childPublish.ticketId}`
-          );
-        }
-        // Child closes publish no TICKET_CLOSED of their own — silent or not.
-        // The master's TICKET_CLOSED carries the suppression flags, and the
-        // close subscriber both emails and (when suppressed) skips child
-        // requesters from that single event. Publishing per-child events only
-        // on silent closes made the silent path noisier than a normal close.
-      }
-    }
+    // If this is a bundle master in sync_updates mode, propagate selected
+    // workflow updates to children. Boundary-crossing changes are limited to
+    // the affected set and record/revert propagation rows; non-boundary changes
+    // keep the legacy mirror-to-all-children behaviour. Child closes publish no
+    // TICKET_CLOSED of their own — silent or not. The master's TICKET_CLOSED
+    // carries the suppression flags, and the close subscriber both emails and
+    // (when suppressed) skips child requesters from that single event.
+    await propagateBundleMasterStatus(
+      trx,
+      {
+        tenant,
+        user: {
+          user_id: user.user_id,
+          first_name: user.first_name ?? null,
+          last_name: user.last_name ?? null,
+          username: user.username ?? null,
+        },
+        isSystemActor,
+        source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
+        previousMasterStatusId: currentTicket.status_id,
+      },
+      id,
+      updateData as Record<string, unknown>,
+      { propagateToChildren: options?.propagateToChildren },
+    );
 
     // Revalidate paths to update UI
     revalidatePath(`/msp/tickets/${id}`);
@@ -3154,6 +3265,7 @@ export const updateTicketWithCache = withAuth(async (
     | 'overrideCloseRulesReason'
     | 'suppressContactNotifications'
     | 'suppressInternalNotifications'
+    | 'propagateToChildren'
   >,
 ): Promise<'success' | TicketActionError> => {
   try {
@@ -3308,6 +3420,10 @@ export const addTicketCommentWithCache = withAuth(async (
       thread_id: threadId,
       ticket_id: ticketId,
       user_id: user.user_id,
+      // Record the author's linked contact when present so the row is a
+      // faithful source for downstream copies (bundle mirrors) and author
+      // resolution can fall back to the contact map.
+      contact_id: user.contact_id ?? null,
       author_type: authorType,
       note: content,
       is_internal: effectiveIsInternal,
@@ -3358,66 +3474,23 @@ export const addTicketCommentWithCache = withAuth(async (
           .select('ticket_id')
           .where({ master_ticket_id: ticketId });
 
-        const now = new Date().toISOString();
         for (const child of children) {
-          const existingMirror = await tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)
-            .where({
-              source_comment_id: newComment.comment_id,
-              child_ticket_id: child.ticket_id,
-            })
-            .first();
-
-          if (existingMirror) {
-            continue;
-          }
-
-          const childIds = await trx.raw(
-            'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-          );
-          const childGenerated = childIds.rows?.[0] as
-            | { comment_id: string; thread_id: string }
-            | undefined;
-          if (!childGenerated?.comment_id || !childGenerated?.thread_id) {
-            throw new Error('Database UUID generation did not return mirrored comment/thread identifiers.');
-          }
-
-          await tenantDb(trx, tenant).table('comment_threads').insert({
-            tenant,
-            thread_id: childGenerated.thread_id,
-            ticket_id: child.ticket_id,
-            project_task_id: null,
-            root_comment_id: childGenerated.comment_id,
-            is_internal: false,
-            reply_count: 0,
-            last_activity_at: now,
-            created_at: now,
-            created_by: null,
+          // The mirror write lives in ticketBundleUtils.mirrorCommentToChild so
+          // the sync_updates shape is defined once. Carry the source author
+          // (user, contact, author_type) so the mirrored child comment resolves
+          // to the real author instead of showing as unknown.
+          await mirrorCommentToChild(trx, tenant, {
+            sourceComment: {
+              comment_id: newCommentId,
+              note: content,
+              markdown_content: markdownContent,
+              user_id: newComment.user_id ?? null,
+              contact_id: newComment.contact_id ?? null,
+              author_type: newComment.author_type,
+            },
+            childTicketId: child.ticket_id,
+            isResolution,
           });
-
-          await tenantDb(trx, tenant).table('comments').insert({
-            tenant,
-            comment_id: childGenerated.comment_id,
-            thread_id: childGenerated.thread_id,
-            ticket_id: child.ticket_id,
-            user_id: null,
-            author_type: 'unknown',
-            note: content,
-            is_internal: false,
-            is_resolution: isResolution,
-            is_system_generated: true,
-            markdown_content: markdownContent,
-            created_at: now,
-          });
-
-          await tenantDb(trx, tenant).table('ticket_bundle_mirrors')
-            .insert({
-              tenant,
-              source_comment_id: newComment.comment_id,
-              child_ticket_id: child.ticket_id,
-              child_comment_id: childGenerated.comment_id,
-            })
-            .onConflict()
-            .ignore();
         }
       }
     }

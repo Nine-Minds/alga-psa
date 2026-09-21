@@ -420,7 +420,9 @@ export async function saveMigrationMappingProfile(profile: {
       created_by: userId,
     })
     .onConflict(['tenant', 'entity_type', 'source_signature', 'name'])
-    .merge({ mapping: JSON.stringify(profile.mapping), updated_at: knex.fn.now() });
+    // Citus rejects STABLE functions (knex.fn.now() → CURRENT_TIMESTAMP) inside
+    // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
+    .merge({ mapping: JSON.stringify(profile.mapping), updated_at: new Date().toISOString() });
 }
 
 function toSummary(

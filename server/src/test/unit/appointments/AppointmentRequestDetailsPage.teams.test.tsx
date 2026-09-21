@@ -27,9 +27,18 @@ vi.mock('@alga-psa/client-portal/actions', () => ({
   cancelAppointmentRequest,
 }));
 
+// This file-level mock replaces the global one in src/test/setup.ts, so it has to
+// carry every export the page imports — the page renders the requested date/time
+// through useFormatters().
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback?: string) => fallback ?? _key,
+  }),
+  useFormatters: () => ({
+    formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en', options).format(
+        typeof date === 'string' ? new Date(date) : date,
+      ),
   }),
 }));
 

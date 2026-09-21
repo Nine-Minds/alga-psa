@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import type { Knex } from 'knex';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import type { IUser } from '@alga-psa/types';
@@ -10,7 +10,27 @@ import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_SOURCE,
+} from '@alga-psa/shared/lib/ticketActivity';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import {
+  previewBundleStatusPropagation,
+  revertBundlePropagationForChild,
+  revertBundlePropagationsForMaster,
+  attachChildrenToBundle,
+  getBundleMasterClosedContext,
+  type BundleAfterCommitPublication,
+  type BundleAttachFailure,
+} from './ticketBundleUtils';
+import type { BundleStatusPropagationPreview } from '../lib/ticketBundlePropagation';
+import {
+  BundleConcurrentModificationError,
+  type ClosedMasterChoice,
+} from '../lib/ticketBundlePolicy';
+
+const closedMasterChoiceSchema = z.enum(['keep_closed', 'apply_resolution', 'reopen_master']);
 
 function nowIso() {
   return new Date().toISOString();
@@ -52,37 +72,124 @@ async function findBundleMasterIds(
   return rows.map((r: any) => r.master_ticket_id).filter(Boolean);
 }
 
-async function buildBundleMasterError(
-  trx: any,
-  tenant: string,
-  masterIds: string[]
-): Promise<ActionMessageError> {
-  const rows = await tenantScopedTable(trx, 'tickets', tenant)
-    .select('ticket_number')
-    .whereIn('ticket_id', masterIds);
-  const labels = rows
-    .map((r: any) => r.ticket_number)
-    .filter((n: any): n is string => typeof n === 'string' && n.length > 0);
-  const listText = labels.length > 0 ? labels.join(', ') : masterIds.join(', ');
-  // Concatenating a prefix onto a shared tail cannot be translated — the halves
-  // do not agree in every language. Two whole sentences, one per number.
-  return masterIds.length === 1
-    ? actionError(
-        `Ticket ${listText} is already a bundle master and cannot be added as children. Unbundle them first, or use one of them as the master.`,
-        'features/tickets:errors.bundle.masterAlreadyBundleMaster',
-        { tickets: listText },
-      )
-    : actionError(
-        `Tickets ${listText} are already bundle masters and cannot be added as children. Unbundle them first, or use one of them as the master.`,
-        'features/tickets:errors.bundle.masterAlreadyBundleMasters',
-        { tickets: listText },
+const CLOSED_MASTER_CHOICE_LABELS: Record<ClosedMasterChoice, string> = {
+  keep_closed: 'keep the master closed',
+  apply_resolution: "apply the master's resolution to the child",
+  reopen_master: 'reopen the master',
+};
+
+function describeClosedMasterChoices(choices: ClosedMasterChoice[]): string {
+  const labels = choices.map((choice) => CLOSED_MASTER_CHOICE_LABELS[choice]);
+  if (labels.length <= 1) return labels.join('');
+  return `${labels.slice(0, -1).join(', ')}, or ${labels[labels.length - 1]}`;
+}
+
+function bundleAttachFailureToActionError(
+  failure: BundleAttachFailure,
+  options?: { masterIsChildMessage?: string; masterIsChildKey?: string }
+): ActionMessageError {
+  switch (failure.code) {
+    case 'no_children':
+      return actionError('No child tickets provided.', 'features/tickets:errors.bundle.noChildren');
+    case 'master_not_found':
+      return actionError('Master ticket not found.', 'features/tickets:errors.bundle.masterNotFound');
+    case 'child_not_found':
+      return actionError(
+        `Child ticket not found: ${failure.childTicketId ?? ''}`,
+        'features/tickets:errors.bundle.childNotFound',
+        { ticket: failure.childTicketId ?? '' },
       );
+    case 'master_is_child':
+      return actionError(
+        options?.masterIsChildMessage ?? 'Cannot select a child ticket as the master.',
+        options?.masterIsChildKey ?? 'features/tickets:errors.bundle.childAsMaster',
+      );
+    case 'already_bundled': {
+      const label = failure.childTicketNumber || failure.childTicketId || '';
+      return actionError(
+        `Ticket is already bundled: ${label}`,
+        'features/tickets:errors.bundle.alreadyBundled',
+        { ticket: label },
+      );
+    }
+    case 'children_are_masters': {
+      const numbers = failure.ticketNumbers ?? [];
+      const listText = numbers.length > 0 ? numbers.join(', ') : '';
+      // Two whole sentences, one per number — prefix + shared tail does not
+      // translate cleanly across languages.
+      return numbers.length === 1
+        ? actionError(
+            `Ticket ${listText} is already a bundle master and cannot be added as children. Unbundle them first, or use one of them as the master.`,
+            'features/tickets:errors.bundle.masterAlreadyBundleMaster',
+            { tickets: listText },
+          )
+        : actionError(
+            `Tickets ${listText} are already bundle masters and cannot be added as children. Unbundle them first, or use one of them as the master.`,
+            'features/tickets:errors.bundle.masterAlreadyBundleMasters',
+            { tickets: listText },
+          );
+    }
+    case 'choice_required':
+      return actionError(
+        `This bundle's master is closed. Choose how to add the child: ${describeClosedMasterChoices(failure.allowedChoices ?? [])}.`,
+        'features/tickets:errors.bundle.closedMasterChoiceRequired',
+        { choices: describeClosedMasterChoices(failure.allowedChoices ?? []) },
+      );
+    case 'choice_not_allowed':
+      return actionError(
+        `That choice is not allowed for this master. Choose one of: ${describeClosedMasterChoices(failure.allowedChoices ?? [])}.`,
+        'features/tickets:errors.bundle.closedMasterChoiceNotAllowed',
+        { choices: describeClosedMasterChoices(failure.allowedChoices ?? []) },
+      );
+    case 'choice_on_open_master':
+      return actionError(
+        'That choice only applies when the bundle master is closed.',
+        'features/tickets:errors.bundle.choiceOnOpenMaster',
+      );
+    case 'close_rule_failed': {
+      const reason = (failure.closeRuleFailures ?? []).map((f) => f.message).join('; ');
+      return actionError(
+        `This ticket cannot be closed yet: ${reason}`,
+        'features/tickets:errors.bundle.closeRuleFailed',
+        { reason },
+      );
+    }
+    case 'reopen_unavailable':
+      return actionError(
+        'The master cannot be reopened because no open ticket status is configured.',
+        'features/tickets:errors.bundle.reopenUnavailable',
+      );
+  }
+}
+
+function registerBundlePublications(
+  trx: Knex.Transaction,
+  workflowCtx: WorkflowEventPublishContext,
+  publications: BundleAfterCommitPublication[]
+): void {
+  for (const publication of publications) {
+    registerAfterCommit(
+      trx,
+      () =>
+        publishWorkflowEvent({
+          eventType: publication.eventType as any,
+          payload: publication.payload,
+          ctx: workflowCtx,
+          eventName: publication.eventName,
+          fromState: publication.fromState,
+          toState: publication.toState,
+          idempotencyKey: publication.idempotencyKey,
+        }),
+      `${publication.eventType} bundle-attach`
+    );
+  }
 }
 
 const bundleTicketsSchema = z.object({
   masterTicketId: z.string().uuid(),
   childTicketIds: z.array(z.string().uuid()).min(1),
   mode: z.enum(['link_only', 'sync_updates']).default('sync_updates'),
+  onClosedMaster: closedMasterChoiceSchema.optional(),
 });
 
 const findTicketByNumberSchema = z.object({
@@ -112,12 +219,10 @@ export const findTicketByNumberAction = withAuth(async (user, { tenant }, input:
 });
 
 type BundleTicketsResult = { masterTicketId: string; childTicketIds: string[]; mode: 'link_only' | 'sync_updates' };
-type BundleTxResult = { ok: true; value: BundleTicketsResult } | { ok: false; error: ActionMessageError };
-type BundleTicketRow = {
-  ticket_id: string;
-  ticket_number?: string | null;
-  master_ticket_id?: string | null;
-};
+
+function bundleActorInfo(user: IUser) {
+  return { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id };
+}
 
 export const bundleTicketsAction = withAuth(async (
   user,
@@ -135,96 +240,35 @@ export const bundleTicketsAction = withAuth(async (
   const occurredAt = nowIso();
   const workflowCtx = buildTicketBundleWorkflowCtx({ tenantId: tenant, actorUserId: user.user_id, occurredAt });
 
-  const txResult = await withTransaction(db, async (trx): Promise<BundleTxResult> => {
+  const txResult = await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot bundle tickets');
     }
 
-    // Fetch master + children and validate tenant isolation
-    const tickets = await tenantScopedTable(trx, 'tickets', tenant)
-      .select('ticket_id', 'ticket_number', 'master_ticket_id')
-      .whereIn('ticket_id', [data.masterTicketId, ...uniqueChildIds]) as BundleTicketRow[];
-
-    const byId = new Map<string, BundleTicketRow>(tickets.map((t) => [t.ticket_id, t]));
-    if (!byId.has(data.masterTicketId)) {
-      return { ok: false, error: actionError('Master ticket not found.', 'features/tickets:errors.bundle.masterNotFound') };
+    const result = await attachChildrenToBundle(trx, tenant, {
+      masterTicketId: data.masterTicketId,
+      childTicketIds: uniqueChildIds,
+      mode: data.mode,
+      choice: data.onClosedMaster ?? null,
+      actor: bundleActorInfo(user as IUser),
+      source: TICKET_ACTIVITY_SOURCE.UI,
+      occurredAt,
+      mergedReason: `bundle:${data.mode}`,
+    });
+    if (result.ok) {
+      registerBundlePublications(trx, workflowCtx, result.value.publications);
     }
-    for (const childId of uniqueChildIds) {
-      if (!byId.has(childId)) {
-        return { ok: false, error: actionError(`Child ticket not found: ${childId}`, 'features/tickets:errors.bundle.childNotFound', { ticket: childId }) };
-      }
-    }
-
-    const master = byId.get(data.masterTicketId)!;
-    if (master.master_ticket_id) {
-      return { ok: false, error: actionError('Cannot select a child ticket as the master.', 'features/tickets:errors.bundle.childAsMaster') };
-    }
-
-    // Prevent nesting bundles: children cannot themselves be masters
-    const offendingMasterIds = await findBundleMasterIds(trx, tenant, uniqueChildIds);
-    if (offendingMasterIds.length > 0) {
-      return { ok: false, error: await buildBundleMasterError(trx, tenant, offendingMasterIds) };
-    }
-
-    // Ensure children are not already bundled
-    for (const childId of uniqueChildIds) {
-      const child = byId.get(childId)!;
-      if (child.master_ticket_id) {
-        return { ok: false, error: actionError(`Ticket is already bundled: ${child.ticket_number || childId}`, 'features/tickets:errors.bundle.alreadyBundled', { ticket: child.ticket_number || childId }) };
-      }
-      if (childId === data.masterTicketId) {
-        return { ok: false, error: actionError('Master ticket cannot also be a child ticket.', 'features/tickets:errors.bundle.masterAsChild') };
-      }
-    }
-
-    // Attach children to master (do not change child status/assignment/etc)
-    const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', tenant)
-      .whereIn('ticket_id', uniqueChildIds)
-      .whereNull('master_ticket_id')
-      .update({
-        master_ticket_id: data.masterTicketId,
-        updated_by: user.user_id,
-        updated_at: nowIso(),
-      });
-    if (updatedChildrenCount !== uniqueChildIds.length) {
-      throw new Error('One or more selected tickets were bundled concurrently. Please refresh and try again.');
-    }
-
-    // Upsert bundle settings for the master
-    await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .insert({
-        tenant,
-        master_ticket_id: data.masterTicketId,
-        mode: data.mode,
-        reopen_on_child_reply: false,
-      })
-      .onConflict(['tenant', 'master_ticket_id'])
-      .merge({
-        mode: data.mode,
-      });
-
-    return { ok: true, value: { masterTicketId: data.masterTicketId, childTicketIds: uniqueChildIds, mode: data.mode } };
+    return result;
   });
 
-  if ('error' in txResult) {
-    return txResult.error;
-  }
-  const result = txResult.value;
-
-  for (const childTicketId of result.childTicketIds) {
-    await publishWorkflowEvent({
-      eventType: 'TICKET_MERGED',
-      ctx: workflowCtx,
-      eventName: 'Ticket Merged',
-      payload: {
-        sourceTicketId: childTicketId,
-        targetTicketId: result.masterTicketId,
-        mergedAt: occurredAt,
-        reason: `bundle:${result.mode}`,
-      },
+  if (!txResult.ok) {
+    return bundleAttachFailureToActionError(txResult, {
+      masterIsChildMessage: 'Cannot select a child ticket as the master.',
+      masterIsChildKey: 'features/tickets:errors.bundle.childAsMaster',
     });
   }
 
+  const result = txResult.value;
   // Trigger an RSC refresh of the tickets list. The client also refetches via
   // onFilterChange({}), but that fire-and-forget server action can be starved
   // by background polling and never settle, leaving the loading spinner stuck.
@@ -232,8 +276,11 @@ export const bundleTicketsAction = withAuth(async (
   // loading state when the refreshed data arrives).
   revalidatePath('/msp/tickets');
 
-  return result;
+  return { masterTicketId: result.masterTicketId, childTicketIds: result.childTicketIds, mode: data.mode };
   } catch (error) {
+    if (error instanceof BundleConcurrentModificationError) {
+      return actionError(error.message, 'features/tickets:errors.bundle.concurrent');
+    }
     const expected = ticketBundleActionErrorFrom(error);
     if (expected) return expected;
     throw error;
@@ -243,10 +290,10 @@ export const bundleTicketsAction = withAuth(async (
 const addChildrenSchema = z.object({
   masterTicketId: z.string().uuid(),
   childTicketIds: z.array(z.string().uuid()).min(1),
+  onClosedMaster: closedMasterChoiceSchema.optional(),
 });
 
 type AddChildrenResult = { masterTicketId: string; childTicketIds: string[] };
-type AddChildrenTxResult = { ok: true; value: AddChildrenResult } | { ok: false; error: ActionMessageError };
 
 export const addChildrenToBundleAction = withAuth(async (
   user,
@@ -264,69 +311,87 @@ export const addChildrenToBundleAction = withAuth(async (
   const occurredAt = nowIso();
   const workflowCtx = buildTicketBundleWorkflowCtx({ tenantId: tenant, actorUserId: user.user_id, occurredAt });
 
-  const txResult = await withTransaction(db, async (trx): Promise<AddChildrenTxResult> => {
+  const txResult = await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
 
-    const master = await tenantScopedTable(trx, 'tickets', tenant)
-      .select('ticket_id', 'master_ticket_id')
-      .where({ ticket_id: data.masterTicketId })
-      .first() as BundleTicketRow | undefined;
-    if (!master) return { ok: false, error: actionError('Master ticket not found.', 'features/tickets:errors.bundle.masterNotFound') };
-    if (master.master_ticket_id) return { ok: false, error: actionError('Cannot add children to a bundled child ticket.', 'features/tickets:errors.bundle.childrenOnBundledChild') };
-
-    const children = await tenantScopedTable(trx, 'tickets', tenant)
-      .select('ticket_id', 'ticket_number', 'master_ticket_id')
-      .whereIn('ticket_id', childIds) as BundleTicketRow[];
-    const byId = new Map<string, BundleTicketRow>(children.map((t) => [t.ticket_id, t]));
-    for (const childId of childIds) {
-      const child = byId.get(childId);
-      if (!child) return { ok: false, error: actionError(`Child ticket not found: ${childId}`, 'features/tickets:errors.bundle.childNotFound', { ticket: childId }) };
-      if (child.master_ticket_id) return { ok: false, error: actionError(`Ticket is already bundled: ${child.ticket_number || childId}`, 'features/tickets:errors.bundle.alreadyBundled', { ticket: child.ticket_number || childId }) };
+    const result = await attachChildrenToBundle(trx, tenant, {
+      masterTicketId: data.masterTicketId,
+      childTicketIds: childIds,
+      choice: data.onClosedMaster ?? null,
+      actor: bundleActorInfo(user as IUser),
+      source: TICKET_ACTIVITY_SOURCE.UI,
+      occurredAt,
+      mergedReason: 'bundle:added_children',
+    });
+    if (result.ok) {
+      registerBundlePublications(trx, workflowCtx, result.value.publications);
     }
-
-    // Prevent nesting bundles: children cannot themselves be masters
-    const offendingMasterIds = await findBundleMasterIds(trx, tenant, childIds);
-    if (offendingMasterIds.length > 0) {
-      return { ok: false, error: await buildBundleMasterError(trx, tenant, offendingMasterIds) };
-    }
-
-    const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', tenant)
-      .whereIn('ticket_id', childIds)
-      .whereNull('master_ticket_id')
-      .update({
-        master_ticket_id: data.masterTicketId,
-        updated_by: user.user_id,
-        updated_at: nowIso(),
-      });
-    if (updatedChildrenCount !== childIds.length) {
-      throw new Error('One or more selected tickets were bundled concurrently. Please refresh and try again.');
-    }
-
-    return { ok: true, value: { masterTicketId: data.masterTicketId, childTicketIds: childIds } };
+    return result;
   });
 
-  if ('error' in txResult) {
-    return txResult.error;
-  }
-  const result = txResult.value;
-
-  for (const childTicketId of result.childTicketIds) {
-    await publishWorkflowEvent({
-      eventType: 'TICKET_MERGED',
-      ctx: workflowCtx,
-      eventName: 'Ticket Merged',
-      payload: {
-        sourceTicketId: childTicketId,
-        targetTicketId: result.masterTicketId,
-        mergedAt: occurredAt,
-        reason: 'bundle:added_children',
-      },
+  if (!txResult.ok) {
+    return bundleAttachFailureToActionError(txResult, {
+      masterIsChildMessage: 'Cannot add children to a bundled child ticket.',
+      masterIsChildKey: 'features/tickets:errors.bundle.childrenOnBundledChild',
     });
   }
 
-  return result;
+  const result = txResult.value;
+  return { masterTicketId: result.masterTicketId, childTicketIds: result.childTicketIds };
+  } catch (error) {
+    if (error instanceof BundleConcurrentModificationError) {
+      return actionError(error.message, 'features/tickets:errors.bundle.concurrent');
+    }
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+const getBundleMasterClosedContextSchema = z.object({
+  masterTicketId: z.string().uuid(),
+});
+
+export type BundleMasterClosedContextActionResult = {
+  isClosed: boolean;
+  allowedChoices: ClosedMasterChoice[];
+  hasResolutionComment: boolean;
+  masterStatusName: string | null;
+  openChildrenCount: number;
+};
+
+/**
+ * Read-only context for the ticket-detail / list dialogs so the client can
+ * decide whether a closed-master choice is required and which choices the
+ * board allows. `ticket:read`.
+ */
+export const getBundleMasterClosedContextAction = withAuth(async (
+  user,
+  { tenant },
+  input: z.input<typeof getBundleMasterClosedContextSchema>
+): Promise<BundleMasterClosedContextActionResult | TicketActionError> => {
+  try {
+  const data = getBundleMasterClosedContextSchema.parse(input);
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+    const context = await getBundleMasterClosedContext(trx, tenant, data.masterTicketId);
+    if (!context) {
+      return actionError('Master ticket not found.', 'features/tickets:errors.bundle.masterNotFound');
+    }
+    return {
+      isClosed: context.isClosed,
+      allowedChoices: context.allowedChoices,
+      hasResolutionComment: Boolean(context.resolutionComment),
+      masterStatusName: context.statusName,
+      openChildrenCount: context.openChildrenCount,
+    };
+  });
   } catch (error) {
     const expected = ticketBundleActionErrorFrom(error);
     if (expected) return expected;
@@ -530,6 +595,10 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
         updated_at: nowIso(),
       });
 
+    // A detached child is no longer closed "by" this master: revert its active
+    // propagation row so a later master reopen cannot reopen it.
+    await revertBundlePropagationForChild(trx, tenant, data.childTicketId, user.user_id);
+
     // If the master now has no children, remove bundle settings
     const [{ count }] = await tenantScopedTable(trx, 'tickets', tenant)
       .where({ master_ticket_id: masterTicketId })
@@ -704,6 +773,10 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
         updated_at: nowIso(),
       });
 
+    // Unbundling detaches every child: revert their active propagation rows so
+    // a later reopen of this (now standalone) ticket cannot touch them.
+    await revertBundlePropagationsForMaster(trx, tenant, data.masterTicketId, user.user_id);
+
     await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
       .where({ master_ticket_id: data.masterTicketId })
       .delete();
@@ -726,6 +799,76 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
   }
 
   return result;
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+const previewBundleStatusPropagationSchema = z.object({
+  masterTicketId: z.string().uuid(),
+  newStatusId: z.string().uuid(),
+});
+
+/**
+ * FR7 — read-only preview for web surfaces. Lets the UI show the propagation
+ * confirmation without attempting the write.
+ */
+export const previewBundleStatusPropagationAction = withAuth(async (
+  user,
+  { tenant },
+  input: z.input<typeof previewBundleStatusPropagationSchema>
+): Promise<BundleStatusPropagationPreview | TicketActionError> => {
+  try {
+    const data = previewBundleStatusPropagationSchema.parse(input);
+    const { knex: db } = await createTenantKnex();
+
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+      return previewBundleStatusPropagation(trx, tenant, data.masterTicketId, data.newStatusId);
+    });
+  } catch (error) {
+    const expected = ticketBundleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+const previewBulkBundleStatusPropagationSchema = z.object({
+  ticketIds: z.array(z.string().uuid()).min(1).max(500),
+  newStatusId: z.string().uuid(),
+});
+
+/**
+ * FR7/FR9 — per-master previews for a bulk status change, keyed by master id.
+ * Skips non-masters and boundary-neutral changes.
+ */
+export const previewBulkBundleStatusPropagationAction = withAuth(async (
+  user,
+  { tenant },
+  input: z.input<typeof previewBulkBundleStatusPropagationSchema>
+): Promise<Record<string, BundleStatusPropagationPreview> | TicketActionError> => {
+  try {
+    const data = previewBulkBundleStatusPropagationSchema.parse(input);
+    const ticketIds = Array.from(new Set(data.ticketIds));
+    const { knex: db } = await createTenantKnex();
+
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+      const previews: Record<string, BundleStatusPropagationPreview> = {};
+      for (const ticketId of ticketIds) {
+        const preview = await previewBundleStatusPropagation(trx, tenant, ticketId, data.newStatusId);
+        if (preview.crossesBoundary !== null && preview.affectedChildren.length > 0) {
+          previews[ticketId] = preview;
+        }
+      }
+      return previews;
+    });
   } catch (error) {
     const expected = ticketBundleActionErrorFrom(error);
     if (expected) return expected;

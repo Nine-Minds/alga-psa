@@ -1,61 +1,44 @@
 import { formatDistanceToNow } from 'date-fns';
-import { formatDateTime } from '@alga-psa/core';
+import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
+import { formatDateValue } from '@alga-psa/ui/lib/i18n/formatDateValue';
 import { getDateFnsLocale } from '@alga-psa/ui/lib/dateFnsLocale';
 
 /**
- * Intl equivalents of the locale-sensitive ticketing date/time patterns.
+ * A ticket timestamp, in the tenant's country shape and the app's language.
  *
- * The tenant setting stores a date-fns pattern, but the settings screen
- * previews each choice with Intl in the app locale. Rendering the stored
- * pattern literally makes every ticket surface disagree with that preview:
- * "Aug 22, 2025 1:23 PM" under a preview promising "22 août 2025 13:23".
- * The two purely numeric choices ('yyyy-MM-dd HH:mm', 'dd/MM/yyyy HH:mm') are
- * deliberately fixed — their previews are literal too — so they stay on
- * date-fns and fall through this map untouched.
+ * What used to live here — a map from a stored date-fns pattern to its Intl
+ * equivalent, so ticket surfaces would not disagree with the settings preview —
+ * has moved into formatDateValue, which now owns the "country orders the
+ * digits, language names the months" split for every surface. The tenant no
+ * longer chooses a pattern at all; the only thing left to choose is whether the
+ * weekday is written, and that is a name, so the language supplies it.
  */
-const INTL_EQUIVALENTS: Record<string, Intl.DateTimeFormatOptions> = {
-  'MMM d, yyyy h:mm a': {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  },
-  'MM/dd/yyyy h:mm a': {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  },
-  'EEE, MMM d, yyyy h:mm a': {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  },
-};
-
-/** Format a ticket timestamp with the tenant's chosen pattern, in the app locale. */
 export function formatTicketDateTime(
   value: Date | string,
-  pattern: string,
   locale: string,
   timeZone: string,
+  dateFormat?: CountryDateFormat,
+  showWeekday = false,
 ): string {
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) {
     return typeof value === 'string' ? value : '';
   }
 
-  const intlOptions = INTL_EQUIVALENTS[pattern];
-  if (intlOptions) {
-    return new Intl.DateTimeFormat(locale, { ...intlOptions, timeZone }).format(date);
-  }
-
-  return formatDateTime(date, timeZone, pattern);
+  return formatDateValue(
+    date,
+    locale,
+    {
+      ...(showWeekday ? { weekday: 'short' as const } : {}),
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone,
+    },
+    dateFormat,
+  );
 }
 
 /**

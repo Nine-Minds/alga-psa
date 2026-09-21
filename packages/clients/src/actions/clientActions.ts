@@ -44,7 +44,7 @@ import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
-import { resolveTenantDefaultCountry } from '../lib/tenantDefaultCountry';
+import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',

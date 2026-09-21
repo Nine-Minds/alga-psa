@@ -15,6 +15,7 @@ import {
   resolveEmailPalette,
   suggestEmailPalette,
   type EmailBrandingApplyScope,
+  type EmailBrandingLogoVariant,
   type EmailBrandingPalette,
   type EmailPaletteTokens,
 } from '@alga-psa/email/branding';
@@ -229,10 +230,13 @@ function buildBrandDecorator(
 ): ((html: string) => string) | undefined {
   if (!enterprise) return undefined;
 
-  const logoUrl = palette.logo?.variant === 'wide'
-    ? branding?.logoWideUrl || branding?.logoUrl
-    : branding?.logoUrl;
-  const logo = palette.logo && logoUrl ? { url: logoUrl as string, alt: branding?.clientName ?? '' } : undefined;
+  // The written row references the logo by content-id, never by URL: the bytes
+  // are attached at send time. Only the variant is decided here, and only one
+  // the tenant has actually uploaded may be written.
+  const variant: EmailBrandingLogoVariant =
+    palette.logo?.variant === 'wide' && branding?.logoWideUrl ? 'wide' : 'default';
+  const uploaded = variant === 'wide' ? !!branding?.logoWideUrl : !!branding?.logoUrl;
+  const logo = palette.logo && uploaded ? { variant, alt: branding?.clientName ?? '' } : undefined;
   const hideAttribution = palette.hideAttribution === true;
 
   return (html: string) => decorateBrandedHtml(html, { logo, hideAttribution });

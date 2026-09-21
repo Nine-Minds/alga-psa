@@ -183,8 +183,9 @@ describe('tickets modal route infrastructure', () => {
   it('keeps select-all-matching selections in the shared selected id set for routed bulk actions', () => {
     const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');
 
-    expect(dashboard).toContain('const allIds = await getAllMatchingTicketIds(filters)');
-    expect(dashboard).toContain('setSelectedTicketIds(new Set(allIds))');
+    expect(dashboard).toContain('await selectMatchingTickets({');
+    expect(dashboard).toContain('const allIds = await getAllMatchingTicketIds(scope)');
+    expect(dashboard).toContain('setSelectedTicketIds(new Set(ids))');
     expect(dashboard).toContain('setAllMatchingMode(true)');
   });
 
