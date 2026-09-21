@@ -37,6 +37,23 @@ Two revisions with the same hash for an image would build the same context.
 Image artifacts keep their one-day retention; the previous push of the same
 branch and the latest merge to main are the usual sources.
 
+## Where the revision label is checked
+
+A reused image is labeled with the revision it was built at, not the
+candidate's. Every place that inspects that label derives the expected value
+from the verified build record (`scripts/lib/expected-image-revision.mjs`,
+which falls back to the candidate revision when no record exists and fails
+closed on a malformed or foreign record):
+
+- the browser job's load step (`verifyLoadedDockerImage`)
+- the provider topology check (`e2e-tests/harness/check-provider-topology.mjs`)
+- the supported-upgrade and Citus-upgrade switches (`scripts/expected-image-revision.mjs`)
+- the Microsoft callback stage (`imageBuildRevision` in its runtime binding)
+
+The `UPGRADE_APPLICATION_REVISION` claim stays the candidate revision: the
+running application is byte-identical to the candidate's build by the input
+proof, and the mounted source is always the candidate checkout.
+
 ## What the gate accepts
 
 `verifyBuildRecord` accepts a well-formed `reuse` block; the record's own
