@@ -811,12 +811,19 @@ export function QuickAddInteraction({
         resultInteraction = updateResult;
         console.log('Updated interaction received:', resultInteraction);
       } else if (createTeamsMeeting && canCreateTeamsMeeting && startTime && endTime) {
+        // LEVERAGE: pattern cross-feature-interaction-fields — unlike the plain
+        // addInteraction branch below (which forwards the whole interactionData),
+        // the Teams seam enumerates interaction fields by hand, so every new
+        // interaction field must be added here too (opportunity_id/notes were
+        // silently dropped before this fix).
         const scheduleResult = await clientCrossFeature.scheduleTeamsMeeting!({
           subject: title,
           startDateTime: startTime,
           endDateTime: endTime,
           client_id: interactionData.client_id ?? null,
           contact_name_id: interactionData.contact_name_id ?? null,
+          opportunity_id: interactionData.opportunity_id ?? null,
+          notes: interactionData.notes,
           attendees: meetingAttendees,
           interactionUserId: interactionData.user_id,
           // The scheduled meeting must exist on the AlgaPSA calendar too;

@@ -109,6 +109,10 @@ export interface ScheduleTeamsMeetingFromClientInput {
   endDateTime: string | Date;
   client_id?: string | null;
   contact_name_id?: string | null;
+  /** The opportunity the logged interaction belongs to, when scheduled from a deal. */
+  opportunity_id?: string | null;
+  /** Free-form interaction notes; the join link is appended server-side. */
+  notes?: string | null;
   attendees?: Array<{ emailAddress: string; name?: string }>;
   /** Who the logged interaction belongs to — distinct from the Teams organizer. Defaults to the creator. */
   interactionUserId?: string;
