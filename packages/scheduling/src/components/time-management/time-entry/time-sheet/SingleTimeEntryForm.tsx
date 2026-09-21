@@ -20,6 +20,7 @@ interface SingleTimeEntryFormProps {
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
   timePeriod?: ITimePeriodView;
   date?: Date;
+  workTimeZone?: string;
   isNewEntry?: boolean;
 }
 
@@ -38,6 +39,7 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
   onUpdateTimeInputs,
   timePeriod,
   date,
+  workTimeZone,
   isNewEntry = false
 }: SingleTimeEntryFormProps) {
   return (
@@ -58,6 +60,7 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
         lastNoteInputRef={lastNoteInputRef}
         timePeriod={timePeriod}
         date={date}
+        workTimeZone={workTimeZone}
         isNewEntry={isNewEntry}
       />
     </div>

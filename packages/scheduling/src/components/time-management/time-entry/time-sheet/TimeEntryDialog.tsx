@@ -51,6 +51,8 @@ interface TimeEntryDialogProps {
   inDrawer?: boolean;
   /** Optional selected-period context shown under the drawer title. */
   periodContextLabel?: string;
+  /** IANA timezone the entry's work_date is derived in (the subject user's). */
+  workTimeZone?: string;
 }
 
 function splitPaymentWarning(message: string): [string, string] {
@@ -77,6 +79,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     onTimeEntriesUpdate,
     inDrawer,
     periodContextLabel,
+    workTimeZone,
   } = props;
   const { t } = useTranslation('msp/time-entry');
   // Injected from the composition layer (billing owns the warning action).
@@ -389,6 +392,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
             onUpdateTimeInputs={updateTimeInputs}
             timePeriod={timePeriod}
             date={date}
+            workTimeZone={workTimeZone}
             isNewEntry={!hasExistingEntry}
           />
         </div>

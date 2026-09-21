@@ -9,19 +9,19 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Label } from '@alga-psa/ui/components/Label';
 import type {
   IExtendedWorkItem,
-  ITimeEntry,
   ITimePeriodView,
   ITimePeriodWithStatusView,
   TimeEntryWorkItemContext,
   TimeSheetStatus,
 } from '@alga-psa/types';
-import { fetchOrCreateTimeSheet, saveTimeEntry } from '../../../../actions/timeEntryActions';
+import { fetchOrCreateTimeSheet } from '../../../../actions/timeEntryActions';
 import {
   dateOnlyToLocalDate,
   isEditableSheetStatus,
   periodLastInclusiveDay,
   resolveEntryDefaults,
 } from '../../../../lib/timeEntryPeriodSelection';
+import { createTimeEntrySaveHandler } from '../../../../lib/timeEntrySaveAdapter';
 import TimeEntryDialog from './TimeEntryDialog';
 
 interface TimeEntryPeriodLauncherProps {
@@ -199,18 +199,8 @@ export default function TimeEntryPeriodLauncher({
     userId,
   ]);
 
-  const handleSave = useCallback(
-    async (timeEntry: Omit<ITimeEntry, 'tenant'>) => {
-      const savedEntry = await saveTimeEntry(timeEntry);
-      if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
-        // Reject so TimeEntryDialog keeps the form and entered values instead
-        // of dismissing with a false success toast.
-        throw new Error(getErrorMessage(savedEntry));
-      }
-      if (onComplete) {
-        onComplete();
-      }
-    },
+  const handleSave = useMemo(
+    () => createTimeEntrySaveHandler(onComplete),
     [onComplete],
   );
 
@@ -241,6 +231,7 @@ export default function TimeEntryPeriodLauncher({
         timeSheetId={resolvedSheet.sheetId}
         inDrawer={true}
         periodContextLabel={periodContextLabel}
+        workTimeZone={userTimeZone}
       />
     );
   }

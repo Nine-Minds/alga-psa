@@ -11,7 +11,7 @@
  *
  * Required integration coverage for T007.
  */
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { randomUUID } from 'node:crypto';
@@ -345,13 +345,20 @@ describe('time entry period selection against the real database', () => {
     });
     await grantTimeEntryPermissions(db, otherTenantId, otherTenantUserId);
 
-    client = await seedBucketClient(tenantId);
-
     mockCurrentUser = { user_id: userId, tenant: tenantId, user_type: 'internal' };
     ({ saveTimeEntry, fetchOrCreateTimeSheet, fetchTimePeriods } = await import(
       '@alga-psa/scheduling/actions/timeEntryActions'
     ));
   }, 180_000);
+
+  // Each test gets its own bucket contract so absolute bucket_usage assertions
+  // hold regardless of execution order (server/vitest.config.ts shuffles), and
+  // a fresh authenticated actor so a test that switches users cannot leak into
+  // the next one.
+  beforeEach(async () => {
+    client = await seedBucketClient(tenantId);
+    mockCurrentUser = { user_id: userId, tenant: tenantId, user_type: 'internal' };
+  });
 
   afterAll(async () => {
     await db?.destroy().catch(() => undefined);

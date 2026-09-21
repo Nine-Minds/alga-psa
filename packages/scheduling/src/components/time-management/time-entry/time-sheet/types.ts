@@ -47,6 +47,13 @@ export interface TimeEntryFormProps {
   lastNoteInputRef?: React.RefObject<HTMLTextAreaElement | null>;
   timePeriod?: ITimePeriodView;
   date?: Date;
+  /**
+   * IANA timezone the entry's work_date is derived in (the subject user's).
+   * When set, the date field, period bounds, and time pickers operate on that
+   * calendar day so the edited entry matches the saved subject work_date; when
+   * omitted they keep the historical browser-local behavior.
+   */
+  workTimeZone?: string;
   isNewEntry?: boolean;
   isSaving?: boolean;
   disableSave?: boolean;

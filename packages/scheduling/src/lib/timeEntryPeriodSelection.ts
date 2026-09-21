@@ -146,3 +146,29 @@ export function periodLastInclusiveDay(endDateExclusive: string): string {
 export function dateOnlyToLocalDate(dateOnly: string): Date {
   return new Date(`${dateOnly.slice(0, 10)}T00:00:00`);
 }
+
+/** A Date (local-midnight marker or any instant) as a YYYY-MM-DD calendar date. */
+export function dateToPlainDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}`;
+}
+
+/** Wall-clock time of an instant in a timezone, as HH:mm. */
+export function formatZonedTime(value: string | Date, timeZone: string | null | undefined): string {
+  const zoned = toInstant(value).toZonedDateTimeISO(normalizeTimeZone(timeZone));
+  return `${String(zoned.hour).padStart(2, '0')}:${String(zoned.minute).padStart(2, '0')}`;
+}
+
+/** Wall-clock time of an instant in a timezone, as HH:mm:ss. */
+export function formatZonedTimeSeconds(value: string | Date, timeZone: string | null | undefined): string {
+  const zoned = toInstant(value).toZonedDateTimeISO(normalizeTimeZone(timeZone));
+  return `${String(zoned.hour).padStart(2, '0')}:${String(zoned.minute).padStart(2, '0')}:${String(
+    zoned.second,
+  ).padStart(2, '0')}`;
+}
+
+/** The last minute (23:59) of a calendar date in a timezone. */
+export function endOfZonedDay(dateOnly: string, timeZone: string | null | undefined): Date {
+  return instantAtZonedTime(dateOnly, '23:59:00', timeZone);
+}

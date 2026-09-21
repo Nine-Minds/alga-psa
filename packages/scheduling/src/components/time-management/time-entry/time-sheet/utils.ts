@@ -1,5 +1,6 @@
 import { addMinutes, formatISO, isSameDay, parseISO, setHours, setMinutes } from 'date-fns';
 import { ITimeEntryWithNew } from './types';
+import { endOfZonedDay, workDateInTimeZone } from '../../../../lib/timeEntryPeriodSelection';
 
 export function formatTimeForInput(date: Date): string {
   const hours = date.getHours().toString().padStart(2, '0');
@@ -80,6 +81,43 @@ export function clampDurationToSameDay(startTime: Date, requestedDurationMinutes
     return {
       durationMinutes: 0,
       endTime: getLatestSameDayEndTime(startTime),
+      maxDurationMinutes,
+      wasClampedToSameDay: true,
+    };
+  }
+
+  const durationMinutes = Math.min(normalizedDurationMinutes, maxDurationMinutes);
+
+  return {
+    durationMinutes,
+    endTime: addMinutes(startTime, durationMinutes),
+    maxDurationMinutes,
+    wasClampedToSameDay: normalizedDurationMinutes > maxDurationMinutes,
+  };
+}
+
+/**
+ * Same clamp as clampDurationToSameDay, but the "same day" is the subject
+ * user's calendar day, not the browser's. The saved work_date is derived in the
+ * subject timezone, so an end time that crosses the browser's midnight can
+ * still stay on the subject day (and vice versa).
+ */
+export function clampDurationToZonedSameDay(
+  startTime: Date,
+  requestedDurationMinutes: number,
+  timeZone: string,
+) {
+  const subjectDay = workDateInTimeZone(startTime, timeZone);
+  const latestEndTime = endOfZonedDay(subjectDay, timeZone);
+  const maxDurationMinutes = Math.max(0, calculateDuration(startTime, latestEndTime));
+  const normalizedDurationMinutes = Number.isFinite(requestedDurationMinutes)
+    ? Math.max(1, Math.floor(requestedDurationMinutes))
+    : Number.POSITIVE_INFINITY;
+
+  if (maxDurationMinutes < 1) {
+    return {
+      durationMinutes: 0,
+      endTime: latestEndTime,
       maxDurationMinutes,
       wasClampedToSameDay: true,
     };

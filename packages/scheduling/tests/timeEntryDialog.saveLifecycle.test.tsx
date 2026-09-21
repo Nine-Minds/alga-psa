@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => {
     fetchTaxRegions: vi.fn(),
     deleteTimeEntry: vi.fn(),
     fetchTimeEntriesForTimeSheet: vi.fn(),
+    saveTimeEntry: vi.fn(),
     getClientIdForWorkItem: vi.fn(),
     toast: {
       loading: vi.fn(() => 'loading-toast'),
@@ -45,6 +46,8 @@ vi.mock('../src/actions/timeEntryActions', () => ({
   fetchScheduleEntryForWorkItem: vi.fn(async () => null),
   deleteTimeEntry: (...args: unknown[]) => mocks.deleteTimeEntry(...args),
   fetchTimeEntriesForTimeSheet: (...args: unknown[]) => mocks.fetchTimeEntriesForTimeSheet(...args),
+  fetchOrCreateTimeSheet: vi.fn(async () => ({ id: 'sheet-1' })),
+  saveTimeEntry: (...args: unknown[]) => mocks.saveTimeEntry(...args),
 }));
 
 vi.mock('../src/lib/contractLineDisambiguation', () => ({
@@ -98,6 +101,8 @@ vi.mock('../src/components/time-management/time-entry/time-sheet/SingleTimeEntry
 }));
 
 import TimeEntryDialog from '../src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
+import { createTimeEntrySaveHandler } from '../src/lib/timeEntrySaveAdapter';
+import { actionError } from '@alga-psa/ui/lib/errorHandling';
 
 const timePeriod = {
   period_id: 'period-1',
@@ -162,49 +167,80 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
     vi.clearAllMocks();
   });
 
-  it('a returned save error keeps the typed values, shows an error, and never closes or toasts success', async () => {
+  function primeProvider() {
     mocks.fetchServicesForTimeEntry.mockResolvedValue([
       { id: 'service-1', name: 'Implementation', billing_method: 'hourly' },
     ]);
     mocks.fetchTaxRegions.mockResolvedValue([]);
     mocks.getClientIdForWorkItem.mockResolvedValue(null);
+  }
 
-    const onSave = vi.fn().mockRejectedValue({ actionError: 'This time sheet is locked.' });
-    renderDialog({ onSave });
+  it('a returned action error through the save adapter keeps values and never closes, completes, or toasts success', async () => {
+    primeProvider();
+    mocks.saveTimeEntry.mockResolvedValue(
+      actionError(
+        'This time sheet is locked. Choose a draft sheet or a sheet with changes requested.',
+        'msp/time-entry:errors.timeSheet.notEditable',
+      ),
+    );
+
+    const onComplete = vi.fn();
+    const { onClose } = renderDialog({ onSave: createTimeEntrySaveHandler(onComplete) });
     await waitForForm();
 
     fireEvent.change(screen.getByTestId('dialog-note-input'), { target: { value: 'my detailed note' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.saveTimeEntry).toHaveBeenCalledTimes(1));
 
-    expect(onSave.mock.calls[0][0].work_item_id).toBe('task-1');
-    expect(onSave.mock.calls[0][0].work_item_type).toBe('project_task');
+    // The action error is turned into a rejection by the adapter, so the dialog
+    // must keep the user's values and report failure without success/close.
+    expect(mocks.saveTimeEntry.mock.calls[0][0].work_item_id).toBe('task-1');
+    expect(mocks.saveTimeEntry.mock.calls[0][0].work_item_type).toBe('project_task');
     expect(screen.getByTestId('dialog-note-input')).toHaveValue('my detailed note');
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
     expect(mocks.toast.success).not.toHaveBeenCalled();
     expect(mocks.toast.error).toHaveBeenCalled();
-    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it('a successful save closes once, shows success, and passes the provided timezone-sensitive start time', async () => {
-    mocks.fetchServicesForTimeEntry.mockResolvedValue([
-      { id: 'service-1', name: 'Implementation', billing_method: 'hourly' },
-    ]);
-    mocks.fetchTaxRegions.mockResolvedValue([]);
-    mocks.getClientIdForWorkItem.mockResolvedValue(null);
+  it('a thrown save exception keeps values and never closes, completes, or toasts success', async () => {
+    primeProvider();
+    mocks.saveTimeEntry.mockRejectedValue(new Error('network down'));
 
-    const onSave = vi.fn().mockResolvedValue(undefined);
-    const onClose = vi.fn();
-    renderDialog({ onSave, onClose });
+    const onComplete = vi.fn();
+    const { onClose } = renderDialog({ onSave: createTimeEntrySaveHandler(onComplete) });
+    await waitForForm();
+
+    fireEvent.change(screen.getByTestId('dialog-note-input'), { target: { value: 'keep me' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(mocks.saveTimeEntry).toHaveBeenCalledTimes(1));
+
+    expect(screen.getByTestId('dialog-note-input')).toHaveValue('keep me');
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(mocks.toast.success).not.toHaveBeenCalled();
+    expect(mocks.toast.error).toHaveBeenCalled();
+  });
+
+  it('a successful save through the adapter closes once, completes once, and passes the timezone-sensitive start time', async () => {
+    primeProvider();
+    mocks.saveTimeEntry.mockResolvedValue({ entry_id: 'entry-1' });
+
+    const onComplete = vi.fn();
+    const { onClose } = renderDialog({ onSave: createTimeEntrySaveHandler(onComplete) });
     await waitForForm();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-    expect(onSave).toHaveBeenCalledTimes(1);
-    // 08:00 in the subject timezone was supplied as 12:00Z.
-    expect(new Date(onSave.mock.calls[0][0].start_time).toISOString()).toBe('2026-09-01T12:00:00.000Z');
+    expect(onComplete).toHaveBeenCalledTimes(1);
     expect(mocks.toast.success).toHaveBeenCalled();
+    // 08:00 in the subject timezone was supplied as 12:00Z.
+    expect(new Date(mocks.saveTimeEntry.mock.calls[0][0].start_time).toISOString()).toBe(
+      '2026-09-01T12:00:00.000Z',
+    );
   });
 
   it('a ticket entry retains ticket context and reaches save after a service is chosen', async () => {

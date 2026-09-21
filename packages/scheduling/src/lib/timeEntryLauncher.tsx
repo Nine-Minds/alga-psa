@@ -6,12 +6,12 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { useFormatters, translate } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentTimePeriod, getTimeEntryUserTimeZone } from '../actions/timePeriodsActions';
-import { fetchTimePeriods, saveTimeEntry, getTimeEntryById } from '../actions/timeEntryActions';
+import { fetchTimePeriods, getTimeEntryById } from '../actions/timeEntryActions';
 import { fetchTimeSheet } from '../actions/timeSheetActions';
 import { isEditableSheetStatus, dateOnlyToLocalDate, periodLastInclusiveDay } from './timeEntryPeriodSelection';
+import { createTimeEntrySaveHandler } from './timeEntrySaveAdapter';
 import type {
   IExtendedWorkItem,
-  ITimeEntry,
   ITimeEntryWithWorkItem,
   ITimeSheetView,
   TimeEntryWorkItemContext,
@@ -62,19 +62,7 @@ const buildWorkItem = (context: TimeEntryWorkItemContext): Omit<IExtendedWorkIte
   };
 };
 
-const saveAndComplete = (onComplete?: () => void) => async (
-  timeEntry: Omit<ITimeEntry, 'tenant'>,
-): Promise<void> => {
-  const savedEntry = await saveTimeEntry(timeEntry);
-  if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
-    // Reject rather than swallow: the dialog only shows success and closes when
-    // onSave fulfils, so a returned action error must surface as a rejection.
-    throw new Error(getErrorMessage(savedEntry));
-  }
-  if (onComplete) {
-    onComplete();
-  }
-};
+const saveAndComplete = createTimeEntrySaveHandler;
 
 interface AnchoredTimeEntryDialogProps {
   existingEntry: ITimeEntryWithWorkItem;
@@ -82,6 +70,7 @@ interface AnchoredTimeEntryDialogProps {
   workItem: Omit<IExtendedWorkItem, 'tenant'>;
   onClose: () => void;
   onComplete?: () => void;
+  workTimeZone?: string;
 }
 
 /**
@@ -95,6 +84,7 @@ function AnchoredTimeEntryDialog({
   workItem,
   onClose,
   onComplete,
+  workTimeZone,
 }: AnchoredTimeEntryDialogProps): React.JSX.Element {
   const { formatDate } = useFormatters();
   const timePeriod = savedSheet.time_period!;
@@ -117,6 +107,7 @@ function AnchoredTimeEntryDialog({
       timeSheetId={savedSheet.id}
       inDrawer={true}
       periodContextLabel={periodContextLabel}
+      workTimeZone={workTimeZone}
     />
   );
 }
@@ -171,6 +162,7 @@ async function launchExistingEntry(params: {
       workItem={buildWorkItem(context)}
       onClose={closeDrawer}
       onComplete={onComplete}
+      workTimeZone={existingEntry.work_timezone ?? undefined}
     />,
     undefined,
     undefined,
