@@ -1,12 +1,15 @@
-import type { IQuote, QuoteViewModel, QuoteViewModelLineItem, QuoteViewModelLocation, QuoteViewModelLocationGroup, QuoteViewModelParty, QuoteViewModelPhase } from '@alga-psa/types';
+import type { IQuote, QuoteViewModel, QuoteViewModelCadenceGroup, QuoteViewModelLineItem, QuoteViewModelLocation, QuoteViewModelLocationGroup, QuoteViewModelParty, QuoteViewModelPhase } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
 import Quote from '../../models/quote';
-import { allocateQuoteDiscounts, type QuoteDiscountAllocationResult } from '../../services/quoteDiscountAllocation';
+import { allocateQuoteDiscounts, type QuoteDiscountAllocationResult, type QuoteDiscountItemAllocation } from '../../services/quoteDiscountAllocation';
 import { fetchTenantParty } from './tenantPartyAdapter';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { cadenceDefaultName, compareCadenceKeys, isRecurringCadenceKey, resolveCadenceKey } from '../quoteItemCadence';
+import { isOptional, isQuoteItemIncluded, isRequired } from '../quoteItemInclusion';
+import { presentedTaxAmount } from '../quoteItemTax';
 
 type QuoteItemGroupSummary = {
   items: QuoteViewModelLineItem[];
@@ -44,18 +47,12 @@ const toFiniteNumber = (value: unknown): number => {
 };
 
 /**
- * Unified quote-item eligibility shared with the draft totals and the
- * persisted recalculation service: required (non-optional) rows always
- * contribute, optional rows contribute only while selected. This is the one
- * rule every consumer applies when deciding bases, discounts, and group
- * totals, so optional-to-required transitions and unselected required rows
- * render identically before and after save.
+ * Base rows for the presented quote use required (non-optional) items only;
+ * optional rows are carried separately as an "if selected" add-on bucket. The
+ * legacy inclusion rule lives in the shared `quoteItemInclusion` helper and is
+ * used by the frozen `recurring_*`/`onetime_*` bindings and the persisted
+ * recalculation service.
  */
-const isQuoteItemIncluded = (item: { is_optional?: boolean | null; is_selected?: boolean | null }): boolean => {
-  if (!item.is_optional) return true;
-  return item.is_selected === true;
-};
-
 const buildAddress = (record: Record<string, unknown> | null | undefined): string | null => {
   if (!record) {
     return null;
@@ -251,6 +248,8 @@ interface ResolvedQuoteDiscounts {
   splits: Map<string, QuoteDiscountCadenceSplit>;
   /** Per-discount fully-resolved positive amount keyed by quote_item_id. */
   amountsById: Map<string, number>;
+  /** Per-discount per-base allocations keyed by quote_item_id. */
+  allocationsByDiscountId: Map<string, QuoteDiscountItemAllocation[]>;
   /** Sum of all resolved discounts. */
   totalDiscount: number;
 }
@@ -287,15 +286,17 @@ function resolveQuoteItemDiscounts(
   const allocation = allocateQuoteDiscounts(bases, discounts);
   const splits = new Map<string, QuoteDiscountCadenceSplit>();
   const amountsById = new Map<string, number>();
+  const allocationsByDiscountId = new Map<string, QuoteDiscountItemAllocation[]>();
   for (const result of allocation.discounts) {
     splits.set(result.discountId, {
       recurringAmount: result.recurringAmount,
       onetimeAmount: result.onetimeAmount,
     });
     amountsById.set(result.discountId, result.resolvedAmount);
+    allocationsByDiscountId.set(result.discountId, result.allocations);
   }
 
-  return { splits, amountsById, totalDiscount: allocation.totalDiscount };
+  return { splits, amountsById, allocationsByDiscountId, totalDiscount: allocation.totalDiscount };
 }
 
 /**
@@ -365,6 +366,134 @@ const buildQuoteGroupSummary = (items: QuoteViewModelLineItem[]): QuoteItemGroup
     total: subtotal + tax,
   };
 };
+
+type CadenceBaseMeta = { cadenceKey: string; optional: boolean };
+
+/**
+ * Per-cadence bands for the grouped template.
+ *
+ * Required (non-optional) bases and the discount allocations that land on them
+ * form the base bands (`groups_by_cadence`); optional bases and the
+ * allocations landing on them form the "Optional (if selected)" bands
+ * (`groups_by_cadence_with_optionals`). A discount allocation is attributed to
+ * a band by the cadence of the base item it reduces (never by the discount
+ * row's own persisted cadence), so a whole-quote discount spanning monthly,
+ * annual and one-time bases splits exactly and no band can go below zero.
+ *
+ * Only non-empty bands are emitted, in canonical cadence order. Both
+ * collections are the same `QuoteViewModelCadenceGroup` shape: a group in
+ * `groups_by_cadence` also carries its optional sub-bucket when it has one.
+ */
+function buildCadenceGroups(
+  lineItems: QuoteViewModelLineItem[],
+  discountAllocations: Map<string, QuoteDiscountItemAllocation[]>,
+  baseMeta: Map<string, CadenceBaseMeta>,
+): { groups: QuoteViewModelCadenceGroup[]; optionalGroups: QuoteViewModelCadenceGroup[] } {
+  const groupsByKey = new Map<string, QuoteViewModelCadenceGroup>();
+
+  const ensureGroup = (cadenceKey: string): QuoteViewModelCadenceGroup => {
+    let group = groupsByKey.get(cadenceKey);
+    if (!group) {
+      group = {
+        cadence_key: cadenceKey,
+        name: cadenceDefaultName(cadenceKey),
+        total_label: `${cadenceDefaultName(cadenceKey)} Total`,
+        is_recurring: isRecurringCadenceKey(cadenceKey),
+        items: [],
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+        optional_items: [],
+        optional_subtotal: 0,
+        optional_tax: 0,
+        optional_total: 0,
+      };
+      groupsByKey.set(cadenceKey, group);
+    }
+    return group;
+  };
+
+  const discountCopy = (
+    source: QuoteViewModelLineItem,
+    amount: number,
+    cadenceKey: string,
+  ): QuoteViewModelLineItem => ({
+    ...source,
+    is_recurring: isRecurringCadenceKey(cadenceKey),
+    billing_frequency: isRecurringCadenceKey(cadenceKey) ? cadenceKey : null,
+    quantity: 1,
+    unit_price: -amount,
+    total_price: -amount,
+    net_amount: -amount,
+    tax_amount: 0,
+  });
+
+  // Required and optional base rows, grouped by their own cadence.
+  for (const item of lineItems) {
+    if (item.is_discount) continue;
+    const group = ensureGroup(resolveCadenceKey(item));
+    if (isOptional(item)) {
+      group.optional_items.push(item);
+    } else {
+      group.items.push(item);
+    }
+  }
+
+  // Aggregate each discount's per-base allocations into one row per
+  // (discount, band, required/optional) so a discount spanning several bases in
+  // one band renders once, mirroring the legacy recurring/one-time split.
+  const aggregated = new Map<
+    string,
+    { source: QuoteViewModelLineItem; amount: number; optional: boolean; cadenceKey: string }
+  >();
+  for (const item of lineItems) {
+    if (!item.is_discount) continue;
+    const allocations = discountAllocations.get(item.quote_item_id);
+    if (!allocations || allocations.length === 0) continue;
+    for (const allocation of allocations) {
+      const meta = baseMeta.get(allocation.baseItemId);
+      if (!meta) continue;
+      const key = `${item.quote_item_id}::${meta.cadenceKey}::${meta.optional ? 'opt' : 'req'}`;
+      const existing = aggregated.get(key);
+      if (existing) {
+        existing.amount += allocation.amount;
+      } else {
+        aggregated.set(key, {
+          source: item,
+          amount: allocation.amount,
+          optional: meta.optional,
+          cadenceKey: meta.cadenceKey,
+        });
+      }
+    }
+  }
+
+  for (const entry of aggregated.values()) {
+    if (entry.amount <= 0) continue;
+    const group = ensureGroup(entry.cadenceKey);
+    const row = discountCopy(entry.source, entry.amount, entry.cadenceKey);
+    if (entry.optional) group.optional_items.push(row);
+    else group.items.push(row);
+  }
+
+  for (const group of groupsByKey.values()) {
+    group.subtotal = group.items.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
+    group.tax = group.items.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
+    group.total = group.subtotal + group.tax;
+    group.optional_subtotal = group.optional_items.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
+    group.optional_tax = group.optional_items.reduce((sum, item) => sum + presentedTaxAmount(item), 0);
+    group.optional_total = group.optional_subtotal + group.optional_tax;
+  }
+
+  const ordered = Array.from(groupsByKey.values())
+    .filter((group) => group.items.length > 0 || group.optional_items.length > 0)
+    .sort((left, right) => compareCadenceKeys(left.cadence_key, right.cadence_key));
+
+  return {
+    groups: ordered.filter((group) => group.items.length > 0),
+    optionalGroups: ordered.filter((group) => group.optional_items.length > 0),
+  };
+}
 
 async function fetchClientParty(
   knexOrTrx: Knex | Knex.Transaction,
@@ -527,6 +656,15 @@ export async function mapLoadedQuoteToViewModel(
   const mappedItems = rawItems.map((item) => mapQuoteItemToViewModel(item, locationsById));
   const resolvedDiscounts = resolveQuoteItemDiscounts(rawItems);
 
+  const baseMeta = new Map<string, CadenceBaseMeta>();
+  for (const item of mappedItems) {
+    if (item.is_discount) continue;
+    baseMeta.set(item.quote_item_id, {
+      cadenceKey: resolveCadenceKey(item),
+      optional: isOptional(item),
+    });
+  }
+
   // The general collection keeps discount rows positive but shows each at its
   // derived resolved amount (a legacy $40 row on a $25 base renders $25, an
   // unmatched row renders $0), so displayed rows, group totals, and the
@@ -549,20 +687,37 @@ export async function mapLoadedQuoteToViewModel(
   const onetimeSummary = buildQuoteGroupSummary(cadenceCollections.onetime);
   const serviceSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'service');
   const productSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'product');
+  const cadenceGroups = buildCadenceGroups(lineItems, resolvedDiscounts.allocationsByDiscountId, baseMeta);
 
   // Overall financials are derived from the same included bases and resolved
-  // discounts the groups show. Legacy quotes saved under the old positive-sum
+  // discounts the groups show. Required (non-optional) bases are the presented
+  // base price; optional add-ons are reported separately as "if selected" and
+  // never move the base totals. Legacy quotes saved under the old positive-sum
   // rules may carry a discount_total/total_amount that no longer matches the
   // derived allocation (unmatched targets, oversized discounts). Presenting
   // the persisted values next to derived groups was internally inconsistent
   // ($0 grouped total beside a -$15 overall total), so the view model reports
   // derived figures everywhere. Persistence is untouched - no backfill - and a
   // later save recalculates the stored row the same way.
-  const includedBases = rawItems.filter((item) => !item.is_discount && isQuoteItemIncluded(item));
-  const derivedSubtotal = includedBases.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
-  const derivedTax = includedBases.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
-  const derivedDiscountTotal = resolvedDiscounts.totalDiscount;
+  const requiredBases = rawItems.filter((item) => !item.is_discount && isRequired(item));
+  const optionalBases = rawItems.filter((item) => !item.is_discount && isOptional(item));
+  const derivedSubtotal = requiredBases.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
+  const derivedTax = requiredBases.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
+
+  let derivedDiscountTotal = 0;
+  let optionalDiscountTotal = 0;
+  for (const allocations of resolvedDiscounts.allocationsByDiscountId.values()) {
+    for (const allocation of allocations) {
+      const meta = baseMeta.get(allocation.baseItemId);
+      if (meta?.optional) optionalDiscountTotal += allocation.amount;
+      else derivedDiscountTotal += allocation.amount;
+    }
+  }
+
   const derivedTotal = derivedSubtotal - derivedDiscountTotal + derivedTax;
+  const optionalSubtotal = optionalBases.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
+  const optionalTax = optionalBases.reduce((sum, item) => sum + presentedTaxAmount(item), 0);
+  const optionalTotal = optionalSubtotal - optionalDiscountTotal + optionalTax;
 
   return {
     quote_id: quote.quote_id,
@@ -608,6 +763,11 @@ export async function mapLoadedQuoteToViewModel(
     product_total: productSummary.total,
     phases: buildPhaseViewModels(lineItems),
     groups_by_location: buildLocationGroups(lineItems),
+    groups_by_cadence: cadenceGroups.groups,
+    groups_by_cadence_with_optionals: cadenceGroups.optionalGroups,
+    optional_subtotal: optionalSubtotal,
+    optional_tax: optionalTax,
+    optional_total: optionalTotal,
     has_multiple_locations: locationsById.size >= 2,
     accepted_by_name: acceptedByName,
     accepted_at: toIsoDateString(quote.accepted_at),

@@ -126,6 +126,170 @@ describe('on-screen previews render in the recipient locale', () => {
     expect(preview.html).toContain('03/04/2026');
   });
 
+  it('localizes data-driven cadence band names and the Optional section for a grouped quote', async () => {
+    const cadenceTemplateAst: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          optionalTotal: { id: 'optionalTotal', kind: 'value', path: 'optional_total' },
+        },
+        collections: {
+          groupsByCadence: { id: 'groupsByCadence', kind: 'collection', path: 'groups_by_cadence' },
+          groupsByCadenceWithOptionals: {
+            id: 'groupsByCadenceWithOptionals',
+            kind: 'collection',
+            path: 'groups_by_cadence_with_optionals',
+          },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'cadence-bands',
+            type: 'stack',
+            direction: 'column',
+            repeat: { sourceBinding: { bindingId: 'groupsByCadence' }, itemBinding: 'group' },
+            children: [
+              { id: 'cadence-band-name', type: 'text', content: { type: 'path', path: 'name' } },
+              {
+                id: 'cadence-band-items',
+                type: 'dynamic-table',
+                repeat: { sourceBinding: { bindingId: 'group.items' }, itemBinding: 'item' },
+                columns: [
+                  { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' } },
+                  { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency' },
+                ],
+              },
+              { id: 'cadence-band-total-label', type: 'text', content: { type: 'path', path: 'total_label' } },
+              { id: 'cadence-band-total', type: 'text', content: { type: 'path', path: 'total|currency' } },
+            ],
+          },
+          {
+            id: 'cadence-optional-bands',
+            type: 'stack',
+            direction: 'column',
+            repeat: { sourceBinding: { bindingId: 'groupsByCadenceWithOptionals' }, itemBinding: 'group' },
+            children: [
+              { id: 'cadence-optional-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.optionalSection', defaultValue: 'Optional (if selected)' } },
+              { id: 'cadence-optional-name', type: 'text', content: { type: 'path', path: 'name' } },
+              {
+                id: 'cadence-optional-items',
+                type: 'dynamic-table',
+                repeat: { sourceBinding: { bindingId: 'group.optional_items' }, itemBinding: 'item' },
+                columns: [
+                  { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' } },
+                  { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency' },
+                ],
+              },
+              { id: 'cadence-optional-subtotal', type: 'text', content: { type: 'path', path: 'optional_subtotal|currency' } },
+            ],
+          },
+          {
+            id: 'totals',
+            type: 'totals',
+            sourceBinding: { bindingId: 'groupsByCadence' },
+            rows: [
+              {
+                id: 'optional-total',
+                label: { i18nKey: 'labels.optionalTotal', defaultValue: 'Optional if selected' },
+                value: { type: 'binding', bindingId: 'optionalTotal' },
+                format: 'currency',
+              },
+            ],
+          },
+        ],
+      },
+    } as TemplateAst;
+
+    const cadenceViewModel = {
+      quote_number: 'QT-1',
+      currencyCode: 'USD',
+      groups_by_cadence: [
+        {
+          cadence_key: 'monthly',
+          name: 'Monthly',
+          is_recurring: true,
+          items: [{ quote_item_id: 'm', description: 'Managed Support', quantity: 1, unit_price: 10000, total_price: 10000 }],
+          subtotal: 10000,
+          tax: 0,
+          total: 10000,
+          optional_items: [],
+          optional_subtotal: 0,
+          optional_tax: 0,
+          optional_total: 0,
+        },
+        {
+          cadence_key: 'annually',
+          name: 'Annually',
+          is_recurring: true,
+          items: [{ quote_item_id: 'a', description: 'Annual Firewall', quantity: 1, unit_price: 15900, total_price: 15900 }],
+          subtotal: 15900,
+          tax: 0,
+          total: 15900,
+          optional_items: [],
+          optional_subtotal: 0,
+          optional_tax: 0,
+          optional_total: 0,
+        },
+        {
+          // Unknown cadence: no `labels.cadence.*` key, so the band keeps its
+          // English fallback name and the `${name} Total` fallback footer.
+          cadence_key: 'biweekly',
+          name: 'Biweekly',
+          is_recurring: true,
+          items: [{ quote_item_id: 'b', description: 'Biweekly Check', quantity: 1, unit_price: 2000, total_price: 2000 }],
+          subtotal: 2000,
+          tax: 0,
+          total: 2000,
+          optional_items: [],
+          optional_subtotal: 0,
+          optional_tax: 0,
+          optional_total: 0,
+        },
+      ],
+      groups_by_cadence_with_optionals: [
+        {
+          cadence_key: 'monthly',
+          name: 'Monthly',
+          is_recurring: true,
+          items: [],
+          subtotal: 0,
+          tax: 0,
+          total: 0,
+          optional_items: [{ quote_item_id: 'o', description: 'Optional Backup', quantity: 1, unit_price: 4000, total_price: 4000 }],
+          optional_subtotal: 4000,
+          optional_tax: 0,
+          optional_total: 4000,
+        },
+      ],
+      optional_subtotal: 4000,
+      optional_tax: 0,
+      optional_total: 4000,
+    };
+    mapDbQuoteToViewModelMock.mockResolvedValue(cadenceViewModel);
+
+    const service = buildService('de', 'GB');
+    const preview = await service.renderQuotePreview({ quoteId: 'quote-3', templateAst: cadenceTemplateAst });
+
+    // Data-driven band names are localized from the documents namespace.
+    expect(preview.html).toContain('Monatlich');
+    expect(preview.html).toContain('Jährlich');
+    expect(preview.html).toContain('Optional (falls ausgewählt)');
+    // Band footers interpolate the localized cadence into `labels.cadenceTotal`.
+    expect(preview.html).toContain('Monatlich gesamt');
+    expect(preview.html).toContain('Jährlich gesamt');
+    // An unknown cadence has no translation: it keeps the English fallback name
+    // and the `${name} Total` footer rather than rendering a raw key/blank.
+    expect(preview.html).toContain('Biweekly');
+    expect(preview.html).toContain('Biweekly Total');
+    // Totals reconcile: annual band total and the optional subtotal.
+    expect(preview.html).toContain('159,00');
+    expect(preview.html).toContain('40,00');
+  });
+
   it('renders an invoice preview in the recipient locale too', async () => {
     const service = buildService('de', 'DE');
     (service as any).getInvoiceForRendering = vi.fn().mockResolvedValue({ client_id: 'client-1' });

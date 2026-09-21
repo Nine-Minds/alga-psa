@@ -339,6 +339,14 @@
       "subtotal": "Subtotale",
       "discounts": "Sconti",
       "tax": "Imposta",
+      "optionalIfSelected": "Opzionale se selezionato",
+      "cadence": {
+        "monthly": "Mensile",
+        "quarterly": "Trimestrale",
+        "semiAnnually": "Semestrale",
+        "annually": "Annuale",
+        "oneTime": "Una tantum"
+      },
       "statusLabel": "Stato",
       "approvalLabel": "Approvazione",
       "approvalMessage": "I preventivi richiedono l'approvazione del responsabile vendite prima dell'invio.",

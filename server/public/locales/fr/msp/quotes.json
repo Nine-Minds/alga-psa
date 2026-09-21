@@ -339,6 +339,14 @@
       "subtotal": "Sous-total",
       "discounts": "Remises",
       "tax": "Taxe",
+      "optionalIfSelected": "Optionnel si sélectionné",
+      "cadence": {
+        "monthly": "Mensuel",
+        "quarterly": "Trimestriel",
+        "semiAnnually": "Semestriel",
+        "annually": "Annuel",
+        "oneTime": "Ponctuel"
+      },
       "statusLabel": "Statut",
       "approvalLabel": "Approbation",
       "approvalMessage": "Les devis nécessitent l'approbation du responsable des ventes avant envoi.",

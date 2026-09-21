@@ -16,6 +16,7 @@ import type {
   RecurringObligationType,
 } from '@alga-psa/types';
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
+import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import {
   getRecurringServicePeriodDisplayState,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodDisplayState';
@@ -427,20 +428,7 @@ function resolveRecurringChargeFamily(contractLineType: string | null): Recurrin
 }
 
 function normalizeContractCadenceBillingCycle(value: string | null): SupportedContractCadenceBillingCycle | null {
-  switch ((value ?? '').toLowerCase()) {
-    case 'monthly':
-      return 'monthly';
-    case 'quarterly':
-      return 'quarterly';
-    case 'semi-annually':
-    case 'semiannually':
-      return 'semi-annually';
-    case 'annually':
-    case 'annual':
-      return 'annually';
-    default:
-      return null;
-  }
+  return normalizeCadenceBillingCycle(value) as SupportedContractCadenceBillingCycle | null;
 }
 
 function buildScheduleSourceRuleVersion(

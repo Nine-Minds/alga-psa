@@ -156,6 +156,10 @@ function getContractLineBillingTiming(item: IQuoteItem): 'arrears' | 'advance' {
     : 'advance';
 }
 
+// LEVERAGE: this is the same legacy inclusion rule as the shared
+// `isQuoteItemIncluded` in `../lib/quoteItemInclusion`. Conversion behavior is
+// deliberately frozen for alga-2026-0002383, so it was not repointed here;
+// a follow-up could import the shared helper.
 function isItemSelected(item: IQuoteItem): boolean {
   if (!item.is_optional) return true;
   return item.is_selected === true;

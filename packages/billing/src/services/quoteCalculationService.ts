@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
 import { allocateQuoteDiscounts } from './quoteDiscountAllocation';
+import { isQuoteItemIncluded } from '../lib/quoteItemInclusion';
 
 interface QuoteCalculationContext {
   quote_id: string;
@@ -54,15 +55,10 @@ function toQuoteDate(value?: string | null): string {
   return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }
 
-function isItemIncluded(item: QuoteItemRow): boolean {
-  if (!item.is_optional) return true;
-  return item.is_selected === true;
-}
-
 function resolveQuoteDiscounts(
   items: QuoteItemRow[]
 ): { byItemId: Map<string, number>; totalDiscount: number } {
-  const includedBaseItems = items.filter((item) => !item.is_discount && isItemIncluded(item));
+  const includedBaseItems = items.filter((item) => !item.is_discount && isQuoteItemIncluded(item));
   const bases = includedBaseItems.map((item) => ({
     id: item.quote_item_id,
     serviceId: item.service_id ?? null,
@@ -71,7 +67,7 @@ function resolveQuoteDiscounts(
   }));
 
   const discounts = items
-    .filter((item) => item.is_discount === true && isItemIncluded(item))
+    .filter((item) => item.is_discount === true && isQuoteItemIncluded(item))
     .map((item) => ({
       id: item.quote_item_id,
       discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
@@ -330,7 +326,7 @@ export async function recalculateQuoteFinancials(
   let tax = 0;
 
   for (const item of items) {
-    const isIncludedInTotals = isItemIncluded(item);
+    const isIncludedInTotals = isQuoteItemIncluded(item);
     const isDiscount = item.is_discount === true;
     // Preserve manual override: if tax_region was explicitly set on the item, keep it.
     // Otherwise fall back to the item's location.region_code, then to the client default.
@@ -343,26 +339,30 @@ export async function recalculateQuoteFinancials(
       ? (discountAmountById.get(item.quote_item_id) ?? 0)
       : (toNumber(item.quantity) * toNumber(item.unit_price));
 
-    let netAmount = isIncludedInTotals ? resolvedTotalPrice : 0;
+    const netAmount = isIncludedInTotals ? resolvedTotalPrice : 0;
     let taxAmount = 0;
-    let taxRate = isIncludedInTotals ? toNumber(item.tax_rate) : 0;
+    let taxRate = toNumber(item.tax_rate);
 
     if (!isDiscount) {
       subtotal += isIncludedInTotals ? resolvedTotalPrice : 0;
 
-      if (isIncludedInTotals && quote.client_id && taxSource === 'internal') {
+      // The rate is resolved for every base row (an unselected optional row
+      // keeps its rate so the presented "if selected" tax can be derived from
+      // it); only included rows contribute a persisted tax_amount and count
+      // toward the stored quote totals.
+      if (quote.client_id && taxSource === 'internal') {
         const taxResult = await calculateTaxWithConnection(
           knexOrTrx,
           tenant,
           quote.client_id,
-          netAmount,
+          resolvedTotalPrice,
           quoteDate,
           taxRegion ?? undefined,
           item.is_taxable !== false,
           currencyCode
         );
 
-        taxAmount = taxResult.taxAmount;
+        taxAmount = isIncludedInTotals ? taxResult.taxAmount : 0;
         taxRate = Math.round(Number(taxResult.taxRate ?? 0));
       } else if (taxSource !== 'internal') {
         taxAmount = 0;

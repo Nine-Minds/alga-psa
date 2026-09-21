@@ -339,6 +339,14 @@
       "subtotal": "⟦Şŭƀŧȯŧȧŀ⟧",
       "discounts": "⟦Ḓīşƈȯŭƞŧş⟧",
       "tax": "⟦Ŧȧẋ⟧",
+      "optionalIfSelected": "⟦Ȯƥŧīȯƞȧŀ īƒ şḗŀḗƈŧḗḓ⟧",
+      "cadence": {
+        "monthly": "⟦Ḿȯƞŧħŀẏ⟧",
+        "quarterly": "⟦Ɋŭȧřŧḗřŀẏ⟧",
+        "semiAnnually": "⟦Şḗḿī-ȧƞƞŭȧŀŀẏ⟧",
+        "annually": "⟦Ȧƞƞŭȧŀŀẏ⟧",
+        "oneTime": "⟦Ȯƞḗ-ŧīḿḗ⟧"
+      },
       "statusLabel": "⟦Şŧȧŧŭş⟧",
       "approvalLabel": "⟦Ȧƥƥřȯṽȧŀ⟧",
       "approvalMessage": "⟦Ɋŭȯŧḗş ƞḗḗḓ şȧŀḗş ŀḗȧḓ ȧƥƥřȯṽȧŀ ƀḗƒȯřḗ şḗƞḓīƞɠ.⟧",

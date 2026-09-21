@@ -8,7 +8,7 @@ import {
   resolveClientCountry,
   resolveTenantDefaultCountry,
 } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
-import type { DocumentAssociationEntityType, IDocument, TemplateAst } from '@alga-psa/types';
+import type { DocumentAssociationEntityType, IDocument, QuoteViewModel, QuoteViewModelCadenceGroup, TemplateAst } from '@alga-psa/types';
 import type { FileStore } from '@alga-psa/storage/types/storage';
 import { StorageProviderFactory, generateStoragePath, FileStoreModel } from '@alga-psa/storage';
 import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
@@ -29,7 +29,8 @@ import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
-import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
+import { cadenceI18nKey } from '../lib/quoteItemCadence';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -44,6 +45,64 @@ import { resolveQuoteTemplateAst } from '../lib/quote-template-ast/templateSelec
 import { getStandardSalesOrderTemplateAstByCode } from '../lib/sales-order-template-ast/standardTemplates';
 import { resolveSalesOrderTemplateAst } from '../lib/sales-order-template-ast/templateSelection';
 import { browserPoolService } from './browserPoolService';
+
+/**
+ * Localize the data-driven cadence band names and footer totals on a quote
+ * view model.
+ *
+ * The band headers bind a `path 'name'` and the band footers bind a
+ * `path 'total_label'` rather than AST i18n keys (the set of cadences is not
+ * known when the template is authored), so the PDF service resolves each band's
+ * `labels.cadence.*` and `labels.cadenceTotal` keys from the same `documents`
+ * namespace `localizeTemplateAstForLocale` uses. Unknown cadences keep their
+ * English fallback name and `${name} Total`.
+ */
+async function localizeQuoteCadenceGroups(
+  viewModel: QuoteViewModel,
+  locale?: string | null,
+): Promise<void> {
+  const groups = viewModel.groups_by_cadence ?? [];
+  const optionalGroups = viewModel.groups_by_cadence_with_optionals ?? [];
+  if (!locale || (groups.length === 0 && optionalGroups.length === 0)) {
+    return;
+  }
+
+  try {
+    const { getServerTranslation } = await import('@alga-psa/ui/lib/i18n/serverOnly');
+    const { t } = await getServerTranslation(locale as never, DOCUMENT_LABEL_NAMESPACE);
+    const cache = new Map<string, string>();
+    const localize = (group: QuoteViewModelCadenceGroup): void => {
+      const key = cadenceI18nKey(group.cadence_key);
+      if (!key) {
+        group.total_label = group.total_label ?? `${group.name ?? ''} Total`;
+        return;
+      }
+      let label = cache.get(key);
+      if (label === undefined) {
+        label = String(t(key, { defaultValue: group.name ?? '' }));
+        cache.set(key, label);
+      }
+      group.name = label;
+
+      // The "{{cadence}} Total" template is cached per cadence so a quote with
+      // monthly + annual bands interpolates each band's own localized name.
+      const totalKey = `total::${group.cadence_key}`;
+      let totalLabel = cache.get(totalKey);
+      if (totalLabel === undefined) {
+        totalLabel = String(
+          t('labels.cadenceTotal', { cadence: label, defaultValue: `${label} Total` }),
+        );
+        cache.set(totalKey, totalLabel);
+      }
+      group.total_label = totalLabel;
+    };
+    groups.forEach(localize);
+    optionalGroups.forEach(localize);
+  } catch (error) {
+    // Never fail a render over a label: fall back to the English band names.
+    console.error('Failed to localize quote cadence labels:', error);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -802,6 +861,9 @@ export class PDFGenerationService {
         throw new Error(`Quote ${options.quoteId} not found`);
       }
 
+      const renderLocale = await this.resolveRenderLocale({ quoteId: options.quoteId });
+      await localizeQuoteCadenceGroups(quoteViewModel, renderLocale);
+
       const templateAst = options.templateAst
         ?? (options.templateCode
           ? getStandardQuoteTemplateAstByCode(options.templateCode)
@@ -815,10 +877,7 @@ export class PDFGenerationService {
         templateAst,
         quoteViewModel as unknown as Record<string, unknown>
       );
-      const localized = await localizeTemplateAstForLocale(
-        templateAst,
-        await this.resolveRenderLocale({ quoteId: options.quoteId })
-      );
+      const localized = await localizeTemplateAstForLocale(templateAst, renderLocale);
       const dateFormat = await this.resolveRenderCountry({ quoteId: options.quoteId });
       const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
         locale: localized.locale,
@@ -993,6 +1052,8 @@ export class PDFGenerationService {
       if (!quoteViewModel) {
         throw new Error(`Quote ${options.quoteId} not found`);
       }
+
+      await localizeQuoteCadenceGroups(quoteViewModel, locale);
 
       let templateAst = options.templateAst ?? null;
       let templateId: string | null = null;

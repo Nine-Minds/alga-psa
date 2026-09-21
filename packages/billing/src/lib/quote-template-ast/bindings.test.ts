@@ -53,4 +53,26 @@ describe('quote template bindings', () => {
     expect(bindings.values?.recurringTotal?.path).toBe('recurring_total');
     expect(bindings.values?.productTotal?.path).toBe('product_total');
   });
+
+  it('declares cadence band collections and optional totals without removing legacy bindings', () => {
+    expect(QUOTE_TEMPLATE_COLLECTION_BINDINGS.groupsByCadence).toMatchObject({
+      id: 'groupsByCadence',
+      kind: 'collection',
+      path: 'groups_by_cadence',
+    });
+    expect(QUOTE_TEMPLATE_COLLECTION_BINDINGS.groupsByCadenceWithOptionals).toMatchObject({
+      id: 'groupsByCadenceWithOptionals',
+      kind: 'collection',
+      path: 'groups_by_cadence_with_optionals',
+    });
+    expect(QUOTE_TEMPLATE_VALUE_BINDINGS.optionalSubtotal?.path).toBe('optional_subtotal');
+    expect(QUOTE_TEMPLATE_VALUE_BINDINGS.optionalTax?.path).toBe('optional_tax');
+    expect(QUOTE_TEMPLATE_VALUE_BINDINGS.optionalTotal?.path).toBe('optional_total');
+
+    // Legacy bindings frozen catalog rows and custom clones still reference.
+    expect(QUOTE_TEMPLATE_COLLECTION_BINDINGS.groupsByLocation?.path).toBe('groups_by_location');
+    expect(QUOTE_TEMPLATE_VALUE_BINDINGS.recurringTotal?.path).toBe('recurring_total');
+    expect(QUOTE_TEMPLATE_VALUE_BINDINGS.onetimeTotal?.path).toBe('onetime_total');
+    expect(QUOTE_TEMPLATE_COLLECTION_BINDINGS.lineItems?.path).toBe('line_items');
+  });
 });

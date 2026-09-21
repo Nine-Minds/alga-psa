@@ -339,6 +339,14 @@
       "subtotal": "Subtotal",
       "discounts": "Descuentos",
       "tax": "Impuesto",
+      "optionalIfSelected": "Opcional si se selecciona",
+      "cadence": {
+        "monthly": "Mensual",
+        "quarterly": "Trimestral",
+        "semiAnnually": "Semestral",
+        "annually": "Anual",
+        "oneTime": "Puntual"
+      },
       "statusLabel": "Estado",
       "approvalLabel": "Aprobación",
       "approvalMessage": "Las cotizaciones requieren la aprobación del responsable de ventas antes de enviarse.",

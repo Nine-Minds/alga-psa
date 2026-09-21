@@ -339,6 +339,14 @@
       "subtotal": "Subtotaal",
       "discounts": "Kortingen",
       "tax": "Btw",
+      "optionalIfSelected": "Optioneel indien geselecteerd",
+      "cadence": {
+        "monthly": "Maandelijks",
+        "quarterly": "Per kwartaal",
+        "semiAnnually": "Halfjaarlijks",
+        "annually": "Jaarlijks",
+        "oneTime": "Eenmalig"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Goedkeuring",
       "approvalMessage": "Offertes vereisen goedkeuring door de salesmanager vóór verzending.",
