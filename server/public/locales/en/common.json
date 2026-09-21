@@ -55,7 +55,8 @@
     "settings": "Settings",
     "profile": "Profile",
     "logout": "Logout",
-    "help": "Help"
+    "help": "Help",
+    "coManagedDelegation": "Delegated administration"
   },
   "actions": {
     "save": "Save",
@@ -1603,6 +1604,18 @@
     "threecxCall": "Call via 3CX",
     "threecxDialing": "Dialing from your 3CX extension",
     "threecxFailed": "The PBX could not place the call"
+  },
+  "users": {
+    "soloLicenseLimit": "The Solo plan supports one technician. Upgrade the workspace before activating another user.",
+    "coManagedAdmission": {
+      "allocationConflict": "The seat allocation for this workspace changed or is no longer available. Refresh and try again.",
+      "invitationInvalid": "This invitation is no longer valid. Request a new invitation from your administrator.",
+      "licenseLapsed": "The sponsoring Pro license and its co-managed seats must be restored before adding customer technicians.",
+      "notActive": "A customer administrator must activate the co-management relationship before technicians can be added.",
+      "poolLimit": "The sponsoring MSP has no spare co-managed seats left to increase this allocation.",
+      "seatLimit": "This workspace has used every co-managed technician seat allocated to it. Ask the sponsoring MSP to allocate more seats."
+    },
+    "technicianLicenseLimit": "This workspace cannot activate another technician. Check its activation status and available license allocation."
   },
   "editor": {
     "attachFiles": "Attach files",

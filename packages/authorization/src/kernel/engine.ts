@@ -48,7 +48,9 @@ async function evaluateCore(
   const requestCache = getRequestCache(input.requestCache);
 
   const hasRbacAccess = await requestCache.getOrLoad(
-    `rbac:${input.subject.userId}:${input.resource.type}:${input.resource.action}`,
+    // A consolidated request can evaluate several tenant-qualified principals.
+    // Reusing only userId would carry an MSP's grant into another workspace.
+    `rbac:${JSON.stringify([input.subject, input.resource.type, input.resource.action])}`,
     () => deps.rbacEvaluator(input)
   );
 

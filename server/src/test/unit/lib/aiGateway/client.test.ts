@@ -8,6 +8,7 @@ import { AiCreditsError } from '../../../../../../ee/server/src/lib/aiGateway/ty
 const fetchMock = vi.fn<typeof fetch>();
 const licensingMocks = vi.hoisted(() => ({
   getLicenseStateRow: vi.fn(),
+  getSelfHostAiGatewayCredential: vi.fn(),
   isSelfHostLicensing: vi.fn(),
 }));
 
@@ -42,6 +43,8 @@ describe('AI gateway client', () => {
     vi.resetModules();
     fetchMock.mockReset();
     licensingMocks.getLicenseStateRow.mockReset();
+    licensingMocks.getSelfHostAiGatewayCredential.mockReset();
+    licensingMocks.getSelfHostAiGatewayCredential.mockResolvedValue(null);
     licensingMocks.isSelfHostLicensing.mockReset();
     licensingMocks.getLicenseStateRow.mockResolvedValue(null);
     licensingMocks.isSelfHostLicensing.mockResolvedValue(false);
@@ -101,9 +104,7 @@ describe('AI gateway client', () => {
 
   it('resolves the opaque appliance credential for a self-hosted install', async () => {
     licensingMocks.isSelfHostLicensing.mockResolvedValue(true);
-    licensingMocks.getLicenseStateRow.mockResolvedValue({
-      appliance_credential: 'a'.repeat(64),
-    });
+    licensingMocks.getSelfHostAiGatewayCredential.mockResolvedValue('a'.repeat(64));
     const { resolveGatewayAuthToken } = await import(
       '../../../../../../ee/server/src/lib/aiGateway/client'
     );
@@ -113,9 +114,7 @@ describe('AI gateway client', () => {
 
   it('rejects a self-hosted install without an appliance credential', async () => {
     licensingMocks.isSelfHostLicensing.mockResolvedValue(true);
-    licensingMocks.getLicenseStateRow.mockResolvedValue({
-      appliance_credential: null,
-    });
+    licensingMocks.getSelfHostAiGatewayCredential.mockRejectedValue(new Error('AI gateway authentication requires an appliance credential'));
     const { resolveGatewayAuthToken } = await import(
       '../../../../../../ee/server/src/lib/aiGateway/client'
     );
@@ -123,6 +122,18 @@ describe('AI gateway client', () => {
     await expect(resolveGatewayAuthToken('tenant-appliance')).rejects.toThrow(
       'AI gateway authentication requires an appliance credential',
     );
+  });
+
+  it.each([
+    ['EE', '../../../../../../ee/server/src/lib/aiGateway/client'],
+    ['CE', '../../../../../../packages/ee/src/lib/aiGateway/client'],
+  ])('fails closed in the %s client when customer connection admission or its database is unavailable', async (_edition, path) => {
+    const client = await import(path);
+    licensingMocks.getSelfHostAiGatewayCredential.mockRejectedValueOnce(new Error('This workspace requires its own AI gateway connection'));
+    await expect(client.resolveGatewayAuthToken('customer-tenant')).rejects.toThrow('own AI gateway connection');
+    licensingMocks.getSelfHostAiGatewayCredential.mockRejectedValueOnce(new Error('database unavailable'));
+    await expect(client.resolveGatewayAuthToken('customer-tenant')).rejects.toThrow('database unavailable');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('fetches the account with a bearer tenant token', async () => {

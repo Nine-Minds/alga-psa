@@ -1,3 +1,4 @@
+import type { NotificationDeliveryResult } from '@alga-psa/notifications/lib/notificationTransportTypes';
 import logger from '@alga-psa/core/logger';
 import { getActivePushTokensForUser, meetsPushPriorityThreshold } from './pushTokenService';
 import { buildTicketPushMessage, sendPushNotifications } from './expoPushService';
@@ -19,6 +20,7 @@ const TICKET_PUSH_TEMPLATES = new Set([
 ]);
 
 interface InternalNotification {
+  internal_notification_id?: string;
   tenant: string;
   user_id: string;
   template_name: string;
@@ -45,8 +47,8 @@ function extractTicketIdFromLink(link: string | null | undefined): string | unde
  */
 export async function triggerPushForNotification(
   notification: InternalNotification,
-): Promise<void> {
-  if (!TICKET_PUSH_TEMPLATES.has(notification.template_name)) return;
+): Promise<NotificationDeliveryResult> {
+  if (!TICKET_PUSH_TEMPLATES.has(notification.template_name)) return { status: 'skipped', reason: 'unsupported_template' };
 
   const ticketId = extractTicketIdFromLink(notification.link);
 
@@ -61,7 +63,7 @@ export async function triggerPushForNotification(
       userId: notification.user_id,
       tenant: notification.tenant,
     });
-    return;
+    return { status: 'skipped', reason: 'no_active_devices' };
   }
 
   // Each device chooses the lowest priority it wants pushed (Settings →
@@ -76,7 +78,9 @@ export async function triggerPushForNotification(
       priority,
       deviceCount: tokens.length,
     });
-    return;
+    // 'skipped', not 'failed': no device here will ever qualify for this
+    // priority, so a retryable failure would requeue the notification forever.
+    return { status: 'skipped', reason: 'below_priority_threshold' };
   }
 
   const messages = eligible.map((t) =>
@@ -85,12 +89,13 @@ export async function triggerPushForNotification(
       title: notification.title,
       body: notification.message,
       ticketId: ticketId ?? '',
+      notificationId: notification.internal_notification_id,
       tenant: notification.tenant,
       priority,
     }),
   );
 
-  await sendPushNotifications(messages, notification.tenant);
+  const { delivery } = await sendPushNotifications(messages, notification.tenant);
 
   logger.info('[PushDispatcher] Sent push notifications', {
     template: notification.template_name,
@@ -100,4 +105,5 @@ export async function triggerPushForNotification(
     deviceCount: eligible.length,
     filteredByThreshold: tokens.length - eligible.length,
   });
+  return delivery;
 }

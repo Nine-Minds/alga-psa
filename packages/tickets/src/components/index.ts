@@ -12,6 +12,8 @@ export { default as ResponseSourceBadge } from './ResponseSourceBadge';
 export { default as TicketOriginBadge } from './TicketOriginBadge';
 export { default as ResponseStateSelect, ResponseStateDisplay } from './ResponseStateSelect';
 export { default as TicketListSkeleton } from './TicketListSkeleton';
+export { default as TicketListShell } from './TicketListShell';
+export type { TicketListShellProps } from './TicketListShell';
 export { default as TicketingDashboard } from './TicketingDashboard';
 export { default as TicketingDashboardContainer } from './TicketingDashboardContainer';
 
@@ -31,3 +33,5 @@ export { default as TicketDocumentsSection } from './ticket/TicketDocumentsSecti
 export { default as TicketInfo } from './ticket/TicketInfo';
 export { default as TicketMaterialsCard } from './ticket/TicketMaterialsCard';
 export { default as TicketProperties } from './ticket/TicketProperties';
+
+export { TicketConversationAttachmentsProvider, type TicketConversationAttachmentsProps } from './ticket/TicketConversationAttachments';

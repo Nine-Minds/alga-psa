@@ -52,6 +52,10 @@ export interface TimeEntryComputeRow {
    */
   work_item_id?: string | null;
   work_item_type?: string | null;
+  work_source_tenant?: string | null;
+  work_source_kind?: string | null;
+  work_source_id?: string | null;
+  work_relationship_id?: string | null;
   ticket_number?: string | null;
   ticket_title?: string | null;
   /** Customer-visible ticket description (tickets.attributes->>'description'). */
@@ -153,6 +157,10 @@ export function buildTimeEntryWorkItemSnapshot(
     | "start_time"
     | "work_item_id"
     | "work_item_type"
+    | "work_source_tenant"
+    | "work_source_kind"
+    | "work_source_id"
+    | "work_relationship_id"
     | "ticket_number"
     | "ticket_title"
     | "ticket_description"
@@ -168,10 +176,14 @@ export function buildTimeEntryWorkItemSnapshot(
     serviceName: string | null;
   },
 ): InvoiceTimeEntrySnapshot {
+  const shared = entry.work_item_type === 'co_managed';
+  if (shared && (!entry.work_source_tenant || !entry.work_source_id || !entry.work_relationship_id ||
+      !['ticket', 'project_task'].includes(entry.work_source_kind ?? ''))) throw new Error('Shared billing work requires a qualified retained source');
+  const sourceKind = shared ? entry.work_source_kind : entry.work_item_type;
   const workItemType: InvoiceTimeEntrySnapshot["workItemType"] =
-    entry.work_item_type === "ticket"
+    sourceKind === "ticket"
       ? "ticket"
-      : entry.work_item_type === "project_task"
+      : sourceKind === "project_task"
         ? "project_task"
         : "ad_hoc";
   const isTicket = workItemType === "ticket";
@@ -181,7 +193,8 @@ export function buildTimeEntryWorkItemSnapshot(
     rateKind: billed.billedMinutes > 0 ? (billed.rateKind ?? 'unknown') : 'unknown',
     uniformRate: billed.billedMinutes > 0 && billed.rateKind === 'uniform' ? (billed.uniformRate ?? null) : null,
     workItemType,
-    workItemId: entry.work_item_id ?? null,
+    workItemId: shared ? entry.work_source_id! : entry.work_item_id ?? null,
+    ...(shared ? { sourceTenant: entry.work_source_tenant!, relationshipId: entry.work_relationship_id!, workReferenceId: entry.work_item_id ?? null } : {}),
     ticketNumber: isTicket ? trimmedOrNull(entry.ticket_number) : null,
     title: isTicket
       ? trimmedOrNull(entry.ticket_title)

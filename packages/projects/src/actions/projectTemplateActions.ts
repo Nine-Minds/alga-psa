@@ -1,7 +1,8 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type {
@@ -212,6 +213,7 @@ export const createTemplateFromProject = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'create', trx);
 
     // Verify project exists and user has access
@@ -469,18 +471,19 @@ export const applyTemplate = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       await checkPermission(user, 'project', 'create', trx);
-      return applyProjectTemplate(trx, tenant, templateId, projectData);
-    });
-
-    await publishEvent({
-      eventType: 'PROJECT_CREATED',
-      payload: {
-        tenantId: tenant,
-        projectId,
-        userId: user.user_id,
-        timestamp: new Date().toISOString(),
-      },
+      const projectId = await applyProjectTemplate(trx, tenant, templateId, projectData);
+      registerAfterCommit(trx, () => publishEvent({
+        eventType: 'PROJECT_CREATED',
+        payload: {
+          tenantId: tenant,
+          projectId,
+          userId: user.user_id,
+          timestamp: new Date().toISOString(),
+        },
+      }), 'PROJECT_CREATED');
+      return projectId;
     });
 
     return projectId;
@@ -618,6 +621,7 @@ export const updateTemplate = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Handle client_portal_config JSON serialization
@@ -662,6 +666,7 @@ export const deleteTemplate = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'delete', trx);
 
     // Cascade delete handled by FK constraints
@@ -696,6 +701,7 @@ export const duplicateTemplate = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'create', trx);
 
     const originalTemplate = await tenantScopedTable(trx, 'project_templates', tenant)
@@ -915,6 +921,7 @@ export const addTemplateDependency = withAuth(async (
     }
 
     return await withTransaction(db, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Validate that both tasks belong to the template
@@ -984,6 +991,7 @@ export const updateTemplateDependency = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Normalize 'blocked_by' the same way addTemplateDependency does:
@@ -1034,6 +1042,7 @@ export const removeTemplateDependency = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const deleted = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
@@ -1122,6 +1131,7 @@ export const addTemplatePhase = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify template exists
@@ -1192,6 +1202,7 @@ export const updateTemplatePhase = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const [updated] = await tenantScopedTable(trx, 'project_template_phases', tenant)
@@ -1227,6 +1238,7 @@ export const deleteTemplatePhase = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
@@ -1266,6 +1278,7 @@ export const reorderTemplatePhase = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
@@ -1338,6 +1351,7 @@ export const addTemplateTask = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify phase exists
@@ -1423,6 +1437,7 @@ export const updateTemplateTask = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const [updated] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
@@ -1464,6 +1479,7 @@ export const deleteTemplateTask = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
@@ -1512,6 +1528,7 @@ export const moveTemplateTask = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
@@ -1590,6 +1607,7 @@ export const updateTemplateTaskStatus = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
@@ -1662,6 +1680,7 @@ export const addTemplateStatusMapping = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Get existing mappings to determine display_order
@@ -1718,6 +1737,7 @@ export const replaceTemplateStatusMapping = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       await checkPermission(user, 'project', 'update', trx);
       const result = await replaceTemplateStatusMappingCore(
         trx,
@@ -1750,6 +1770,7 @@ export const removeTemplateStatusMapping = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const mapping = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
@@ -1793,6 +1814,7 @@ export const reorderTemplateStatusMappings = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const scopedMappings = await getScopedTemplateStatusMappings(
@@ -1835,6 +1857,7 @@ export const copyTemplateStatusesToPhase = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const existingPhaseMappings = await getScopedTemplateStatusMappings(
@@ -1899,6 +1922,7 @@ export const removeTemplatePhaseStatuses = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
@@ -1953,6 +1977,7 @@ export const setTaskAdditionalAgents = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
@@ -2007,6 +2032,7 @@ export const addTaskAdditionalAgent = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
@@ -2056,6 +2082,7 @@ export const removeTaskAdditionalAgent = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     await tenantScopedTable(trx, 'project_template_task_resources', tenant)
@@ -2120,6 +2147,7 @@ export const addTemplateChecklistItem = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
@@ -2189,6 +2217,7 @@ export const updateTemplateChecklistItem = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     const [updated] = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
@@ -2241,6 +2270,7 @@ export const deleteTemplateChecklistItem = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Get item first to find task for timestamp update
@@ -2303,6 +2333,7 @@ export const saveTemplateChecklistItems = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists

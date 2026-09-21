@@ -1,5 +1,7 @@
 'use server'
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
+import { commandCoManagedNativeSchedule, NativeScheduleRelationError, NativeScheduleError, readCoManagedNativeSchedules } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { IScheduleEntry, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -56,6 +58,7 @@ export type ScheduleActionResult<T> =
 type ScheduleActionError = ActionMessageError | ActionPermissionError;
 
 function scheduleActionErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof NativeScheduleError || error instanceof NativeScheduleRelationError) return error.message;
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
 
   if (message.startsWith('Permission denied')) {
@@ -114,6 +117,18 @@ async function getTicketIdForAppointmentRequest(
   return row?.ticket_id || undefined;
 }
 
+function nativeScheduleView(entry: any): IScheduleEntry {
+  const pattern = typeof entry.recurrence_pattern === 'string' ? JSON.parse(entry.recurrence_pattern) : entry.recurrence_pattern;
+  return { ...entry, scheduled_start: new Date(entry.scheduled_start), scheduled_end: new Date(entry.scheduled_end),
+    ...(entry.created_at ? { created_at: new Date(entry.created_at) } : {}),
+    ...(entry.updated_at ? { updated_at: new Date(entry.updated_at) } : {}),
+    recurrence_pattern: pattern ? { ...pattern, startDate: new Date(pattern.startDate),
+      ...(pattern.endDate ? { endDate: new Date(pattern.endDate) } : {}),
+      ...(pattern.exceptions ? { exceptions: pattern.exceptions.map((value: string | Date) => new Date(value)) } : {}),
+    } : null,
+  };
+}
+
 /**
  * Fetches schedule entries based on date range and user permissions.
  * - Users with 'user_schedule:update' can view all entries, optionally filtered by technicianIds.
@@ -129,6 +144,11 @@ export const getScheduleEntries = withAuth(async (
 ): Promise<ScheduleActionResult<IScheduleEntry[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const current = await readCoManagedNativeSchedules(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), {
+      calendar: { start: start.toISOString(), end: end.toISOString(), technicianIds },
+    });
+    if (current.handled) return { success: true, entries: current.entries.map(nativeScheduleView) };
 
     // Check for basic read permission
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
@@ -200,6 +220,11 @@ export const addScheduleEntry = withAuth(async (
 ) => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const current = await commandCoManagedNativeSchedule(db, tenant, { action: 'create', data: { ...entry,
+      assigned_user_ids: entry.assigned_user_ids?.length ? entry.assigned_user_ids : options?.assignedUserIds?.length ? options.assignedUserIds : [user.user_id],
+    } }, () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+    if (current.handled) return { success: true, entry: nativeScheduleView(current.entry) };
 
     // Basic check: Must have at least read permission to add own entry
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
@@ -530,6 +555,10 @@ export const updateScheduleEntry = withAuth(async (
 ) => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await commandCoManagedNativeSchedule(db, tenant, { action: 'update', id: entry_id, data: entry, scope: entry.updateType },
+      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+    if (current.handled) return { success: true, entry: nativeScheduleView(current.entry) };
+
     const canUpdateGlobally = await hasPermission(user, 'user_schedule', 'update', db);
 
     const masterEntryId =
@@ -867,6 +896,10 @@ export const deleteScheduleEntry = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
 
+    const current = await commandCoManagedNativeSchedule(db, tenant, { action: 'delete', id: entry_id, scope: deleteType },
+      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+    if (current.handled) return { success: true, deleted: true, canDelete: true, dependencies: [], alternatives: [] };
+
     const isVirtualId = entry_id.includes('_');
     const masterEntryId = isVirtualId ? entry_id.split('_')[0] : entry_id;
 
@@ -1161,6 +1194,11 @@ export const getScheduleEntryById = withAuth(async (
 ): Promise<IScheduleEntry | null | ScheduleActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await readCoManagedNativeSchedules(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { id: entryId });
+    if (current.handled) {
+      const entry = current.entries[0];
+      return entry ? nativeScheduleView(entry) : null;
+    }
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant) as any;
 

@@ -1,3 +1,11 @@
+import { recoverCoManagedNotificationDeliveries } from '@alga-psa/notifications/lib/coManagedDeliveryRuntime';
+import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
+import { persistCoManagedTaskCommentNotifications } from '../../co-managed/persistTaskCommentNotifications';
+import { consumeCoManagedConversationEvent } from '@alga-psa/co-managed';
+import { persistCoManagedCommentNotifications } from '../../co-managed/persistCommentNotifications';
+import { registerNotificationCreatedEffects } from '@alga-psa/notifications/actions/internal-notification-actions/notificationCreatedEffects';
+import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
+import { readTicketNotificationActor, resolveTicketNotificationActorNames, previousTicketChangeValue } from '../../notifications/ticketNotificationContext';
 
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getEventBus } from '../index';
@@ -766,7 +774,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
  */
 async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
-  const { tenantId, ticketId, userId, changes } = payload;
+  const { tenantId, ticketId, changes } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
@@ -782,20 +790,18 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       return;
     }
 
-    // Get user who made the change
-    const performedByUser = await tenantScopedTable(db, 'users', tenantId)
-      .select('user_id', 'first_name', 'last_name')
-      .where('user_id', userId)
-      .first();
-
-    const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
+    const actor = readTicketNotificationActor(payload, tenantId,
+      payload.updatedByUserId || payload.actorUserId || payload.userId);
+    const userId = actor.userId;
+    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
 
     // Build metadata with change details
     const metadata: Record<string, any> = {
       ticketId: ticket.ticket_number || 'New Ticket',
       ticketTitle: ticket.title,
       performedByName,
-      performedById: userId
+      performedById: userId || null,
+      ...(actor.actorReference ? { performedByActorReference: actor.actorReference } : {})
     };
 
     // Process changes to get human-readable names
@@ -806,7 +812,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       if (changes.status_id && typeof changes.status_id === 'object') {
         const oldStatus = await tenantScopedTable(db, 'statuses', tenantId)
           .select('name')
-          .where('status_id', changes.status_id.old)
+          .where('status_id', previousTicketChangeValue(changes.status_id) ?? null)
           .first();
         const newStatus = await tenantScopedTable(db, 'statuses', tenantId)
           .select('name')
@@ -827,7 +833,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       if (changes.priority_id && typeof changes.priority_id === 'object') {
         const oldPriority = await tenantScopedTable(db, 'priorities', tenantId)
           .select('priority_name', 'color')
-          .where('priority_id', changes.priority_id.old)
+          .where('priority_id', previousTicketChangeValue(changes.priority_id) ?? null)
           .first();
         const newPriority = await tenantScopedTable(db, 'priorities', tenantId)
           .select('priority_name', 'color')
@@ -850,9 +856,10 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
 
       // Handle assignment change
       if (changes.assigned_to && typeof changes.assigned_to === 'object') {
-        const oldAssignee = changes.assigned_to.old ? await tenantScopedTable(db, 'users', tenantId)
+        const previousAssignee = previousTicketChangeValue(changes.assigned_to);
+        const oldAssignee = previousAssignee ? await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
-          .where('user_id', changes.assigned_to.old)
+          .where('user_id', previousAssignee)
           .first() : null;
         const newAssignee = changes.assigned_to.new ? await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
@@ -984,16 +991,10 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
       return;
     }
 
-    // Get user who closed the ticket
-    const userId = payload.userId || '';
-
-    // Get user who closed it for the notification
-    const performedByUser = userId ? await tenantScopedTable(db, 'users', tenantId)
-      .select('first_name', 'last_name')
-      .where('user_id', userId)
-      .first() : null;
-
-    const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
+    const actor = readTicketNotificationActor(payload, tenantId,
+      payload.closedByUserId || payload.actorUserId || payload.userId);
+    const userId = actor.userId;
+    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
 
     // Resolve links for both MSP and client portal
     const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1024,7 +1025,8 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
             data: {
               ticketId: ticket.ticket_number || 'New Ticket',
               ticketTitle: ticket.title,
-              closedByName: performedByName
+              closedByName: performedByName,
+              ...(actor.actorReference ? { closedByActorReference: actor.actorReference } : {})
             }
           });
           notifiedUserIds.add(assigneeId);
@@ -1277,6 +1279,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
   try {
     const db = await getConnection(tenantId);
+    if (await withTransaction(db, trx => hasCoManagedConversationOwnership(trx, tenantId))) return;
     const scopedDb = tenantDb(db, tenantId);
 
     // Get task details
@@ -1475,6 +1478,7 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
 
   try {
     const db = await getConnection(tenantId);
+    if (await withTransaction(db, trx => hasCoManagedConversationOwnership(trx, tenantId))) return;
     const scopedDb = tenantDb(db, tenantId);
 
     // Get task details
@@ -1607,8 +1611,11 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
  * Handle ticket comment added events
  */
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
-  const { payload } = event;
-  const { tenantId, ticketId, userId, comment } = payload;
+  let { payload } = event;
+  const { tenantId, ticketId } = payload;
+  const actor = readTicketNotificationActor(payload, tenantId, payload.actorUserId || payload.userId);
+  const userId = actor.userId;
+  let { comment } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   console.log('[InternalNotificationSubscriber] handleTicketCommentAdded START', {
@@ -1620,6 +1627,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
 
   try {
     const db = opts?.db ?? await getConnection(tenantId);
+    const currentPayload = await resolveTicketCommentNotificationPayload(db, payload);
+    if (!currentPayload) return;
+    payload = currentPayload; comment = payload.comment;
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -1632,13 +1642,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       return;
     }
 
-    // Get author name
-    const author = await tenantScopedTable(db, 'users', tenantId)
-      .select('first_name', 'last_name')
-      .where('user_id', userId)
-      .first();
-
-    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+    const [authorName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -1678,7 +1682,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
           )
           .whereIn('user_id', resolvedMentionedUserIds);
         const mentionedUsersToNotify = mentionedUsers.filter((mentionedUser) =>
-          shouldCreateTicketCommentNotification(
+          (!comment?.isInternal || mentionedUser.user_type === 'internal') && shouldCreateTicketCommentNotification(
             suppression,
             mentionedUser.user_type === 'client' ? 'contact' : 'internal',
           ));
@@ -1713,7 +1717,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 commentText: commentText,
                 commentPreview: commentPreview,
                 commentAuthor: authorName,
-                commentAuthorId: userId,
+                commentAuthorId: userId || null,
+                ...(actor.actorReference ? { commentActorReference: actor.actorReference } : {}),
                 contextType: 'ticket',
                 contextId: ticketId
               }
@@ -1738,7 +1743,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
 
     // Notify all assigned agents (if not internal comment)
     if (
-      !comment?.isInternal &&
+      (!comment?.isInternal || comment.audience === 'shared_it') &&
       shouldCreateTicketCommentNotification(suppression, 'internal')
     ) {
       const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
@@ -1764,8 +1769,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 id: comment?.id,
                 text: commentPreview,
                 author: authorName,
-                authorId: userId,
-                isInternal: false
+                authorId: userId || null,
+                ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
+                isInternal: Boolean(comment?.isInternal)
               }
             }
           });
@@ -1816,7 +1822,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
               id: comment?.id,
               text: commentPreview,
               author: authorName,
-              authorId: userId,
+              authorId: userId || null,
+              ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
               isInternal: false
             }
           }
@@ -1844,6 +1851,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
  */
 async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Promise<void> {
   const { payload } = event;
+  // Qualified edit/delete events are content-free invalidations. Their current
+  // content is read through the shared inbox boundary, never a cached mention.
+  if (payload.collaborationMutation) return;
   const { tenantId, ticketId, userId, oldComment, newComment } = payload;
 
   console.log('[InternalNotificationSubscriber] handleTicketCommentUpdated START', {
@@ -1911,8 +1921,9 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
         const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
-          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedNewlyMentionedUserIds);
+          .select('user_id', 'username', 'user_type', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .whereIn('user_id', resolvedNewlyMentionedUserIds)
+          .modify(query => { if (newComment?.isInternal) query.where('user_type', 'internal'); });
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -2972,6 +2983,25 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
   }
 
   const validatedEvent = eventSchema.parse(event);
+  if (validatedEvent.eventType === 'PROJECT_TASK_COMMENT_CREATED') {
+    const db = await getConnection(validatedEvent.payload.tenantId);
+    await consumeCoManagedConversationEvent(db, validatedEvent as any, 'internal-notifications', async (trx, current) => {
+      const payload = current.payload;
+      await persistCoManagedTaskCommentNotifications(trx, { eventId: validatedEvent.id, ownerTenant: payload.tenantId as string,
+        taskId: payload.taskId as string, commentId: payload.taskCommentId as string }, (currentTrx, notification) => registerNotificationCreatedEffects(currentTrx, notification, {
+          delivery: row => recoverCoManagedNotificationDeliveries(row.tenant, 3, row.internal_notification_id),
+        }));
+    });
+    // Neither a missing receipt nor a legacy raw payload authorizes a fallback.
+    return;
+  }
+
+  if (validatedEvent.eventType === 'TICKET_COMMENT_ADDED') {
+    const db = await getConnection(validatedEvent.payload.tenantId);
+    if (await consumeCoManagedConversationEvent(db, validatedEvent as any, 'internal-notifications', async (trx, current) => {
+      await dispatchInternalNotificationHandlers({ ...validatedEvent, payload: current.payload }, { db: trx, propagateErrors: true });
+    })) return;
+  }
 
   // Durable inbound outbox events carry a stable event id (the outbox row id).
   // The delivery ledger is a recoverable reservation, and internal notifications
@@ -3134,6 +3164,13 @@ async function dispatchInternalNotificationHandlers(
       await handleTicketClosed(validatedEvent as TicketClosedEvent, opts);
       break;
     case 'TICKET_COMMENT_ADDED':
+      // Preserve an inbound outbox's owning transaction. This fanout runs even
+      // when the customer has no local assignee/contact notification recipient.
+      // Failures propagate to the ledger/event bus; receipt replay is idempotent.
+      await persistCoManagedCommentNotifications(opts.db ?? await getConnection(validatedEvent.payload.tenantId),
+        validatedEvent, (trx, notification) => registerNotificationCreatedEffects(trx, notification, {
+          delivery: current => recoverCoManagedNotificationDeliveries(current.tenant, 3, current.internal_notification_id),
+        }));
       await handleTicketCommentAdded(validatedEvent as TicketCommentAddedEvent, opts);
       break;
     case 'TICKET_COMMENT_UPDATED':
@@ -3202,6 +3239,7 @@ export const internalNotificationSubscriberTestHarness = {
   handleTicketUpdated,
   handleTicketClosed,
   handleTicketCommentAdded,
+  handleTicketCommentUpdated,
   handleTransactionalOutboxDelivery,
   handleInternalNotificationEvent,
 };
@@ -3221,6 +3259,7 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'TICKET_CLOSED',
       'TICKET_COMMENT_ADDED',
       'TICKET_COMMENT_UPDATED',
+      'PROJECT_TASK_COMMENT_CREATED',
       'TASK_COMMENT_ADDED',
       'TASK_COMMENT_UPDATED',
       'PROJECT_CREATED',
@@ -3243,7 +3282,7 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
     const channel = 'internal-notifications';
 
     for (const eventType of eventTypes) {
-      await getEventBus().subscribe(eventType as any, handleInternalNotificationEvent, { channel });
+      await getEventBus().subscribe(eventType as any, handleInternalNotificationEvent, { channel, subscriberId: 'internal-notifications' });
       logger.info(`[InternalNotificationSubscriber] Subscribed to ${eventType} on channel "${channel}"`);
     }
 
@@ -3267,6 +3306,7 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'TICKET_CLOSED',
       'TICKET_COMMENT_ADDED',
       'TICKET_COMMENT_UPDATED',
+      'PROJECT_TASK_COMMENT_CREATED',
       'TASK_COMMENT_ADDED',
       'TASK_COMMENT_UPDATED',
       'PROJECT_CREATED',

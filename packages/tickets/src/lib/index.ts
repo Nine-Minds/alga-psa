@@ -31,6 +31,60 @@ export type {
   ResolvedTicketViewSettings,
   TicketViewSettings,
 } from './ticketViewSettings';
+export {
+  DEFAULT_TICKET_LIST_PRESENTATION,
+  NATIVE_TICKET_LIST_SCOPE,
+  TICKET_LIST_CLIENT_PARAM,
+  TICKET_LIST_DEFAULT_PAGE,
+  TICKET_LIST_DEFAULT_PAGE_SIZE,
+  TICKET_LIST_DIRECTION_PARAM,
+  TICKET_LIST_MAX_PAGE_SIZE,
+  TICKET_LIST_MAX_SEARCH_LENGTH,
+  TICKET_LIST_MIN_PAGE_SIZE,
+  TICKET_LIST_PAGE_PARAM,
+  TICKET_LIST_PAGE_SIZE_PARAM,
+  TICKET_LIST_QUEUE_VIEW_PARAM,
+  TICKET_LIST_SEARCH_PARAM,
+  TICKET_LIST_SORT_PARAM,
+  TICKET_LIST_STATE_PARAM,
+  TICKET_LIST_WORKSPACE_PARAM,
+  buildTicketListHref,
+  hasExplicitQualifiedScope,
+  isQualifiedTicketListScope,
+  isTicketQueueDirection,
+  isTicketQueueSort,
+  isTicketQueueState,
+  normalizeTicketListPage,
+  normalizeTicketListPageSize,
+  parseTicketListPresentation,
+  parseTicketListScope,
+  resetQualifiedTicketListPresentation,
+  serializeTicketListQuery,
+  switchTicketListView,
+  ticketListScopesEqual,
+  ticketListWorkspaceToken,
+} from './ticketListScope';
+export type {
+  NativeTicketListScope,
+  QualifiedTicketListScope,
+  TicketListPresentation,
+  TicketListScope,
+  TicketListWorkspace,
+  TicketQueueDirection,
+  TicketQueueSort,
+  TicketQueueState,
+  TicketQueueView,
+} from './ticketListScope';
+export {
+  isQualifiedHandbackEligible,
+  isSharedTicketListIdentity,
+  nativeTicketListIdentity,
+  sharedTicketListIdentity,
+  ticketListDetailHref,
+  ticketListIdentityFromQueueItem,
+  ticketListIdentityKey,
+} from './ticketListIdentity';
+export type { TicketListIdentity, TicketListIdentitySource } from './ticketListIdentity';
 export { calculateItilPriority, ItilLabels } from './itilUtils';
 export { getCommentResponseSource, getLatestCustomerResponseSource } from './responseSource';
 export { resolveCommentAuthor } from './commentAuthorResolution';

@@ -1,0 +1,43 @@
+{
+  "title": "Delegierte Administration",
+  "description": "Vom Kunden genehmigte Unterstützung bei ausgewählten Einstellungen und Benutzerdatensätzen.",
+  "banner": "Kunden-Workspace: {{customer}} · MSP: {{sponsor}}",
+  "loading": "Genehmigter Zugriff wird geladen…",
+  "refresh": "Zugriff aktualisieren",
+  "loadError": "Der Zugriff konnte nicht geladen werden. Aktualisieren Sie die Ansicht, um Ihre aktuellen Berechtigungen zu prüfen.",
+  "noWorkspaces": "Derzeit hat kein Kunden-Workspace genehmigte Administrationsaufgaben für Sie.",
+  "noGrants": "Derzeit sind keine Administrationsaufgaben genehmigt.",
+  "readOnly": "Dieser Workspace ist schreibgeschützt. Kundenadministratoren können den Zugriff weiterhin entziehen.",
+  "approveTitle": "Eine einzelne Administrationsaufgabe genehmigen",
+  "approvalHint": "Wählen Sie einen zugewiesenen MSP-Techniker oder ein Team, einen Vorgang und genau einen Kundendatensatz. Die Genehmigung gewährt keinen allgemeinen Administrationszugriff.",
+  "approvalSummary": "{{principal}} darf „{{operation}}“ für {{target}} ausführen.",
+  "principal": "Zugewiesener MSP-Techniker oder Team",
+  "target": "Kundendatensatz",
+  "operation": "Vorgang",
+  "search": "Datensätze suchen",
+  "previous": "Zurück",
+  "next": "Weiter",
+  "approve": "Aufgabe genehmigen",
+  "retry": "Dieselbe Anfrage wiederholen",
+  "revoke": "Zugriff entziehen",
+  "save": "Änderungen speichern",
+  "resend": "Genehmigte Einladung erneut senden",
+  "saveError": "Die Anfrage konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage oder aktualisieren Sie den Zugriff, bevor Sie eine weitere Änderung vornehmen.",
+  "unavailable": "Nicht verfügbarer Datensatz",
+  "unavailableHint": "Diese Genehmigung erlaubt keinen Zugriff mehr auf ihren Datensatz. Sie können sie entziehen.",
+  "invitationHint": "Beim erneuten Senden bleiben Empfänger, Rolle, Einrichtungslink und Ablaufdatum des Kunden unverändert. Die Einladung wird dadurch weder verlängert noch ersetzt.",
+  "invitationTerms": "Empfänger: {{email}} · Rolle: {{role}} · Läuft ab: {{expires}}",
+  "operations": {
+    "board_settings": "Anzeigeeinstellungen eines Boards bearbeiten",
+    "user_profile": "Profil einer Person ohne Administratorrechte bearbeiten",
+    "invitation_resend": "Eine vom Kunden erstellte Einladung erneut senden"
+  },
+  "fields": {
+    "board_name": "Board-Name",
+    "description": "Beschreibung",
+    "enable_live_ticket_timer": "Live-Ticket-Timer aktivieren",
+    "first_name": "Vorname",
+    "last_name": "Nachname",
+    "timezone": "Zeitzone"
+  }
+}

@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ChevronRight } from 'lucide-react';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { MspSsoLoginDomainsSettings } from '@alga-psa/integrations/components/settings/integrations/MspSsoLoginDomainsSettings';
@@ -73,6 +75,22 @@ export function MspSsoAdvancedSection(): React.JSX.Element {
                   defaultValue:
                     'No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations.',
                 })}
+                <div className="mt-2">
+                  {/* Identity/directory setup is the other way into provider
+                      credentials. The link is product-neutral because the page
+                      that holds them differs by product. */}
+                  <Button
+                    id="msp-sso-open-provider-setup"
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0"
+                    onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}
+                  >
+                    {t('security.sso.advanced.openProviderSetup', {
+                      defaultValue: 'Set up your own Google or Microsoft application',
+                    })}
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}

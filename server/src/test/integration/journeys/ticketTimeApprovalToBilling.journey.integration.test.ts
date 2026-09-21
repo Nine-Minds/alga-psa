@@ -59,9 +59,8 @@ vi.mock('@alga-psa/db', async () => {
   return {
     ...actual,
     createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
-    withTransaction: vi.fn(async (knexOrTrx: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
-      callback(knexOrTrx as unknown as Knex.Transaction),
-    ),
+    // The real withTransaction: it owns the transaction that after-commit hooks
+    // flush from, and lifecycle/ownership admission refuses a bare connection.
     requireTenantId: vi.fn(async () => tenantId),
     runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
   };

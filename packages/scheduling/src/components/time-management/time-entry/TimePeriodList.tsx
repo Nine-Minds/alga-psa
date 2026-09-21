@@ -232,7 +232,8 @@ export function TimePeriodList({
     };
   }, [t]);
 
-  const formatHoursEntered = React.useCallback((hoursEntered: number): string => {
+  const formatHoursEntered = React.useCallback((hoursEntered: number | null): string => {
+    if (hoursEntered == null) return '—';
     const formatted = formatNumber(hoursEntered, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 1
@@ -241,7 +242,8 @@ export function TimePeriodList({
     return `${formatted}${t('common.units.hoursShort', { defaultValue: 'h' })}`;
   }, [formatNumber, t]);
 
-  const formatDaysLogged = React.useCallback((daysLogged: number): string => {
+  const formatDaysLogged = React.useCallback((daysLogged: number | null): string => {
+    if (daysLogged == null) return '—';
     return `${daysLogged} ${daysLogged === 1
       ? t('common.units.dayOne', { defaultValue: 'day' })
       : t('common.units.dayOther', { defaultValue: 'days' })}`;
@@ -337,13 +339,13 @@ export function TimePeriodList({
       title: t('timePeriodList.columns.hoursEntered', { defaultValue: 'Hours Entered' }),
       dataIndex: 'hoursEntered',
       width: '12%',
-      render: (hoursEntered: number) => formatHoursEntered(hoursEntered)
+      render: (hoursEntered: number | null) => formatHoursEntered(hoursEntered)
     },
     {
       title: t('timePeriodList.columns.daysLogged', { defaultValue: 'Days Logged' }),
       dataIndex: 'daysLogged',
       width: '10%',
-      render: (daysLogged: number) => formatDaysLogged(daysLogged)
+      render: (daysLogged: number | null) => formatDaysLogged(daysLogged)
     },
     {
       title: t('timePeriodList.columns.lastEntry', { defaultValue: 'Last Entry' }),

@@ -112,7 +112,8 @@
       "advanced": {
         "title": "Avanzado: enrutamiento con proveedor de identidad personalizado",
         "description": "Dirija el inicio de sesión SSO del MSP a su propio proveedor de identidad mediante dominios de inicio de sesión verificados. Solo se necesita en instalaciones personalizadas o locales.",
-        "inertNotice": "No hay ningún proveedor de identidad del inquilino configurado, por lo que las declaraciones de dominio actualmente no tienen efecto. Configure Keycloak arriba, o en la Enterprise Edition las credenciales de su aplicación de Google o Microsoft, y luego reclame aquí su dominio de inicio de sesión."
+        "inertNotice": "No hay ningún proveedor de identidad del inquilino configurado, por lo que las declaraciones de dominio actualmente no tienen efecto. Configure Keycloak arriba, o en la Enterprise Edition las credenciales de su aplicación de Google o Microsoft, y luego reclame aquí su dominio de inicio de sesión.",
+        "openProviderSetup": "Configure su propia aplicación de Google o Microsoft"
       }
     },
     "userRoles": {

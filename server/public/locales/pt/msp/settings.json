@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "Provedores de e-mail e identidade",
+      "description": "Registre o seu próprio aplicativo Google ou Microsoft para e-mail recebido, login da equipe e configuração do diretório. Essas credenciais pertencem ao seu espaço de trabalho.",
+      "backToEmail": "Voltar às configurações de e-mail"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} alteração não salva",
     "unsavedChanges_other": "{{count}} alterações não salvas"

@@ -1,25 +1,11 @@
 'use server';
 
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, getSession, getApiKeyUserOverride } from '@alga-psa/auth';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 
-import {
-  resolveSearchAclPrincipal,
-  verifyResultVisibility,
-} from '@alga-psa/search/acl';
-import {
-  countSearchMatches,
-  runSearchTypeaheadQuery,
-} from '@alga-psa/search/query';
-import {
-  filterTypesByPermission,
-  resolveAllowedTypes,
-  resolveClientAccess,
-  runAppSearch,
-  toSearchResultRow,
-} from '@alga-psa/search/runAppSearch';
+import { runAppSearch, runAppTypeaheadSearch, type SearchAuthentication } from '@alga-psa/search/runAppSearch';
 import {
   SearchRateLimitError,
   searchAppInputSchema,
@@ -35,6 +21,13 @@ export type {
   SearchResultRow,
   SearchTypeaheadResult,
 } from '@alga-psa/search/actions/searchActionShared';
+
+// LEVERAGE: pattern co-managed-browser-identity — bind the tracked home session and reject API impersonation context.
+async function searchAuthentication(user: { user_id: string }, tenant: string): Promise<SearchAuthentication | undefined> {
+  const session = await getSession();
+  if (getApiKeyUserOverride() || session?.user?.id !== user.user_id || session?.user?.tenant !== tenant || !session.session_id) return undefined;
+  return { kind: 'session', sessionId: session.session_id };
+}
 
 const fullSearchLimiter = new RateLimiterMemory({ points: 10, duration: 1 });
 const typeaheadSearchLimiter = new RateLimiterMemory({ points: 30, duration: 1 });
@@ -79,7 +72,7 @@ export const searchAppAction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const result = await runAppSearch(knex, tenant, user, parsedInput);
+    const result = await runAppSearch(knex, tenant, user, parsedInput, await searchAuthentication(user, tenant));
 
     if (result.totalCount === 0) {
       emitSearchTelemetry('search.query.empty', {
@@ -120,37 +113,7 @@ export const searchAppTypeaheadAction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const requestedTypes = resolveAllowedTypes(parsedInput.types);
-    const clientAccess = resolveClientAccess(user);
-    const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
-    const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
-
-    const [hits, totalCount] = await Promise.all([
-      runSearchTypeaheadQuery({
-        knex,
-        tenant,
-        query: parsedInput.query,
-        allowedTypes,
-        cursor: parsedInput.cursor,
-        acl,
-      }),
-      countSearchMatches({
-        knex,
-        tenant,
-        query: parsedInput.query,
-        allowedTypes,
-        acl,
-      }),
-    ]);
-
-    const visibleHits = await verifyResultVisibility(knex, acl, hits);
-    const result: SearchTypeaheadResult = {
-      results: visibleHits.slice(0, 5).map((hit) => ({
-        ...toSearchResultRow(hit),
-        snippet: undefined,
-      })),
-      totalCount,
-    };
+    const result = await runAppTypeaheadSearch(knex, tenant, user, parsedInput, await searchAuthentication(user, tenant));
 
     if (result.totalCount === 0) {
       emitSearchTelemetry('search.query.empty', {

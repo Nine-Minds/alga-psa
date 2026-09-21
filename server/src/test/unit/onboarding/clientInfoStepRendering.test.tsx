@@ -153,6 +153,29 @@ describe('ClientInfoStep rendering', () => {
     });
   });
 
+  describe('administrator who already chose their own password', () => {
+    it('omits the password prompt entirely', () => {
+      render(
+        <ClientInfoStep data={makeWizardData()} updateData={vi.fn()} requiresPasswordReset={false} />
+      );
+
+      expect(screen.queryByText('Password Reset Required')).not.toBeInTheDocument();
+      expect(screen.queryByText('Set Your Password')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Create a strong password')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Re-enter your password')).not.toBeInTheDocument();
+    });
+
+    it('still collects the rest of the workspace identity', () => {
+      render(
+        <ClientInfoStep data={makeWizardData()} updateData={vi.fn()} requiresPasswordReset={false} />
+      );
+
+      expect(screen.getByPlaceholderText('John')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Doe')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Acme IT Solutions')).toBeInTheDocument();
+    });
+  });
+
   describe('password strength indicator', () => {
     it('shows weak for short simple password', () => {
       const data = makeWizardData({ newPassword: 'abc' });

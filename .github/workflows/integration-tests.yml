@@ -142,7 +142,25 @@ jobs:
         run: npm ci
 
       - name: Install PDF comparison tools
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        # poppler-utils provides pdftotext, a hard dependency of the invoice PDF
+        # integration tests (invoiceTicketImmutable / invoiceTicketProduction).
+        # The runner image ships third-party apt sources we do not control: on
+        # 2026-09-20 packages.microsoft.com returned HTTP 403 for the Ubuntu
+        # noble InRelease file, `apt-get update` exited 100, and the whole job
+        # died before running a single test. Drop those vendor lists, and treat
+        # a remaining update failure as non-fatal -- apt still refreshes the
+        # repositories it could reach, and the Ubuntu archive is the only one
+        # this package comes from. The install is NOT tolerated failing, and
+        # pdftotext is verified afterwards, so a genuinely unavailable tool
+        # still stops the job here rather than surfacing as an opaque test
+        # failure later.
+        run: |
+          set -uo pipefail
+          sudo rm -f /etc/apt/sources.list.d/*microsoft* /etc/apt/sources.list.d/*azure-cli*
+          sudo apt-get update || echo "::warning::apt-get update reported errors; continuing to the install, which must still succeed."
+          set -e
+          sudo apt-get install -y poppler-utils
+          pdftotext -v
 
       - name: Install locked collaboration server for integration tests
         run: npm ci --prefix hocuspocus --ignore-scripts
@@ -173,6 +191,26 @@ jobs:
           echo -n "test_password" > secrets/db_password_server
           chmod 600 secrets/*
 
+      # Build the CE+EE migration overlay this lane's test database is created
+      # from. Same recipe as setup/entrypoint.sh, citus-migration-smoke.yml and
+      # the enterprise-integration suite in run-additional-workspace-tests.mjs:
+      # EE files overlay CE collisions, and the directory stays under server/ so
+      # migration-relative helpers resolve. server/test-utils/dbConfig.ts already
+      # honours TEST_MIGRATIONS_DIR.
+      #
+      # Without it this lane builds test_database from server/migrations only, so
+      # it has no stripe_subscriptions, stripe_products, teams_integrations,
+      # tenant_workflow_schedule or scim_connections -- all EE-only. The
+      # co-managed bootstrap suite pg_dumps this database as its schema source,
+      # so on a CE-only source it fails with ~29 `relation ... does not exist`.
+      - name: Build the CE+EE migration overlay
+        run: |
+          rm -rf server/.ci-combined-migrations
+          mkdir -p server/.ci-combined-migrations
+          cp -r server/migrations/. server/.ci-combined-migrations/
+          cp -r ee/server/migrations/. server/.ci-combined-migrations/
+          echo "Combined migrations: $(ls server/.ci-combined-migrations/*.cjs | wc -l) files"
+
       # Manifest floor + every suite whose import graph reaches the diff
       # (scripts/run-tier1-integration.mjs). Schema/harness changes widen this
       # to the full directory; unavailable change evidence also requires full coverage.
@@ -184,7 +222,16 @@ jobs:
         env:
           TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
+          TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/.ci-combined-migrations
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          # CF002: the inbound-email diagnostics also append here, on pass and
+          # on failure alike. vitest's `silent: "passed-only"` discards console
+          # output for passing tests, so the console-only instrumentation went
+          # silent the moment the flaky requester-lifecycle case went green and
+          # a passing run produced no evidence at all. This file rides the
+          # existing `server-integration-shard-N` artifact, which uploads
+          # `if: always()`, so every run yields the disposition record.
+          ALGA_INBOUND_DIAGNOSTIC_FILE: ${{ github.workspace }}/test-results/integration/inbound-diagnostics-shard-${{ matrix.shard }}.ndjson
 
       - name: Run full integration suite
         id: full
@@ -196,7 +243,16 @@ jobs:
         env:
           TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
+          TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/.ci-combined-migrations
           TIER1_BASE_SHA: ''
+          # CF002: the inbound-email diagnostics also append here, on pass and
+          # on failure alike. vitest's `silent: "passed-only"` discards console
+          # output for passing tests, so the console-only instrumentation went
+          # silent the moment the flaky requester-lifecycle case went green and
+          # a passing run produced no evidence at all. This file rides the
+          # existing `server-integration-shard-N` artifact, which uploads
+          # `if: always()`, so every run yields the disposition record.
+          ALGA_INBOUND_DIAGNOSTIC_FILE: ${{ github.workspace }}/test-results/integration/inbound-diagnostics-shard-${{ matrix.shard }}.ndjson
 
       - name: Upload integration execution diagnostics
         if: always()

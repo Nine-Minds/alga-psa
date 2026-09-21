@@ -63,6 +63,30 @@ describe('NextAuth MSP SSO contract', () => {
     expect(source).toContain("issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`");
   });
 
+  /**
+   * CF007. `state` binds the callback to the browser that started it and `pkce`
+   * binds the code to the client that requested it, but only `nonce` binds the
+   * ID TOKEN to this authorization request. Auth.js sends and verifies a nonce
+   * only when it is listed in `checks`, and it was absent — the repo had already
+   * measured the consequence ("Observed one token request, zero JWKS requests
+   * and no nonce", ee/docs/plans/2026-09-05-production-regression-prevention/
+   * microsoft-coverage-boundaries.md).
+   *
+   * Both providers are pinned: the env-only fallback declared no `checks` at
+   * all, so which verification posture a deployment ran under depended on which
+   * provider it happened to build.
+   */
+  it('CF007: both Microsoft providers verify pkce, state AND nonce', () => {
+    // Scoped to the AzureAD registrations: a third `checks` belongs to the
+    // Playwright fake-Google provider and is not a Microsoft posture.
+    const azureBlocks = source.split('AzureADProvider({').slice(1);
+    expect(azureBlocks.length).toBe(2);
+    for (const block of azureBlocks) {
+      const declaration = block.slice(0, block.indexOf('profile:'));
+      expect(declaration).toContain("checks: ['pkce', 'state', 'nonce']");
+    }
+  });
+
   it('T149/T150: Teams auth can build request-scoped Microsoft-only auth options from the tenant-selected Teams profile', () => {
     expect(source).toContain('import { resolveTeamsMicrosoftProviderConfig } from "./sso/teamsMicrosoftProviderResolution";');
     expect(source).toContain('if (context?.teamsTenantId) {');

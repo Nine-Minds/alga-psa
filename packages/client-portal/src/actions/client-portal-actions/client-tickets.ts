@@ -1,16 +1,17 @@
 'use server'
-import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { persistCommentPublication, filterReadableCommentAttachments, reconcileCommentAttachments, withdrawCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
-import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
-import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+import { syncCoManagedTicketAwaitingClientSla, recordCoManagedTicketResolution, recordCoManagedTicketReopened } from '@alga-psa/co-managed';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
+import { commentAudienceSql } from '@shared/lib/commentAudience';
 import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -362,17 +363,25 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         'd.is_client_visible': true,
       });
 
-      // Only derive involved-user ids from comments the contact can actually
-      // see — internal-only commenters must not be enumerated here. Comment
-      // visibility mirrors the thread root (Comment model enforces replies
-      // match thread visibility), so the comment flag alone is sufficient.
-      const commentUserIdsSubquery = scopedDb.table('comments as c')
-        .select('c.user_id')
-        .where('c.ticket_id', ticketId)
-        .where('c.is_internal', false)
-        // Do not enumerate authors of scheduled/canceled comments before
-        // publication — mirror the conversations query's publish_state gate.
-        .where('c.publish_state', 'published');
+      // Body and author enumeration share one predicate: a public reply must
+      // belong to a published public root in this ticket and tenant. Legacy
+      // inconsistent rows do not gain requester visibility from a reply flag.
+      const visibleCommentsQuery = scopedDb.table('comments');
+      scopedDb.tenantJoin(visibleCommentsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', {
+        on: join => join.andOn('ct.ticket_id', '=', 'comments.ticket_id'),
+      });
+      scopedDb.tenantJoin(visibleCommentsQuery, 'comments as root', 'ct.root_comment_id', 'root.comment_id', {
+        on: join => join.andOn('root.thread_id', '=', 'ct.thread_id').andOn('root.ticket_id', '=', 'comments.ticket_id'),
+      });
+      visibleCommentsQuery.where({
+        'comments.ticket_id': ticketId,
+        'comments.publish_state': 'published',
+        'root.publish_state': 'published',
+      }).whereRaw('? = ?', [commentAudienceSql(trx, 'ct', 'root', 'comments'), 'requester']);
+      const commentUserIdsSubquery = visibleCommentsQuery.clone().select('comments.user_id')
+        .whereNull('comments.actor_reference_id')
+        .whereNull('comments.actor_display_name')
+        .whereNull('comments.actor_organization_name');
       const assignedUserIdSubquery = scopedDb.table('tickets as assigned_ticket')
         .select('assigned_ticket.assigned_to')
         .where('assigned_ticket.ticket_id', ticketId);
@@ -424,31 +433,36 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           'aa.relationship_type',
         );
 
-      // Portal contacts must never receive MSP-internal notes. A comment is
-      // hidden when its own is_internal flag is set or when it belongs to an
-      // internal thread (comment_threads.is_internal carries the thread root's
-      // flag — the same "internal thread" definition the MSP thread tabs use
-      // in buildTicketThreadTabState).
-      const conversationsQuery = scopedDb.table('comments');
-      scopedDb.tenantJoin(conversationsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
+      const conversationsQuery = visibleCommentsQuery.clone();
+      scopedDb.tenantJoin(conversationsQuery, 'comments as parent', 'comments.parent_comment_id', 'parent.comment_id', {
+        type: 'left', on: join => join.andOn('parent.thread_id', '=', 'ct.thread_id').andOn('parent.ticket_id', '=', 'comments.ticket_id'),
+      });
       // Read-time bundle provenance. Only the source comment id is selected:
       // a bundle can span clients, so the portal must never learn (or be able
       // to follow a link to) the master ticket.
       scopedDb.tenantJoin(conversationsQuery, 'ticket_bundle_mirrors as bm', 'comments.comment_id', 'bm.child_comment_id', { type: 'left' });
-      conversationsQuery
-        .select('comments.*', 'bm.source_comment_id as bundle_mirror_source_comment_id')
-        .where({
-          'comments.ticket_id': ticketId,
-          'comments.is_internal': false,
-          // Scheduled comments are an MSP-only draft state.  Keep this in the
-          // query (rather than the UI) so portal callers cannot infer them.
-          'comments.publish_state': 'published',
-        })
-        .where(function (this: Knex.QueryBuilder) {
-          this.whereNull('ct.is_internal')
-            .orWhere('ct.is_internal', false);
-        })
-        .orderBy('comments.created_at', 'asc');
+      // `visibleCommentsQuery` already restricts to published public roots with
+      // `commentAudienceSql(...) = 'requester'`, which requires thread, root and
+      // comment `is_internal` all FALSE. That subsumes the portal's
+      // "never receive MSP-internal notes" guarantee, so the explicit
+      // `comments.is_internal` / `ct.is_internal` filters are not repeated here.
+      conversationsQuery.select([
+        'comments.tenant', 'comments.comment_id', 'comments.ticket_id', 'comments.thread_id',
+        'comments.user_id', 'comments.contact_id', 'comments.author_type',
+        'comments.actor_reference_id', 'comments.actor_display_name', 'comments.actor_organization_name',
+        'comments.is_internal', 'comments.is_resolution', 'comments.is_system_generated',
+        'comments.created_at', 'comments.updated_at', 'comments.deleted_at',
+        'comments.publish_state', 'comments.published_at',
+        'bm.source_comment_id as bundle_mirror_source_comment_id',
+      ]).select({
+        // Retain tombstones and visible replies without exposing retained bodies
+        // or identifiers of unpublished/private intermediate parents.
+        note: trx.raw('CASE WHEN comments.deleted_at IS NULL THEN comments.note ELSE NULL END'),
+        markdown_content: trx.raw('CASE WHEN comments.deleted_at IS NULL THEN comments.markdown_content ELSE NULL END'),
+        metadata: trx.raw('CASE WHEN comments.deleted_at IS NULL THEN comments.metadata ELSE NULL END'),
+        parent_comment_id: trx.raw("CASE WHEN parent.publish_state = 'published' AND ? = 'requester' THEN parent.comment_id ELSE NULL END",
+          [commentAudienceSql(trx, 'ct', 'root', 'parent')]),
+      }).orderBy('comments.created_at', 'asc');
 
       const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
         ticketQuery,
@@ -613,6 +627,7 @@ export const addClientTicketComment = withAuth(async (
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
           user_id: userId
@@ -659,6 +674,7 @@ export const addClientTicketComment = withAuth(async (
             ticket_id: ticketId,
           })
           .update({ response_state: 'awaiting_internal' });
+        await syncCoManagedTicketAwaitingClientSla(trx, tenant, ticketId);
 
         await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, userId);
       }
@@ -691,6 +707,7 @@ export const addClientTicketComment = withAuth(async (
         },
         updatedAt: newComment.created_at instanceof Date ? newComment.created_at.toISOString() : new Date().toISOString(),
       });
+      await assertCoManagedOperationalWrite(trx, tenant);
     });
 
     return true; // Return true to indicate success
@@ -903,6 +920,7 @@ export const updateTicketStatus = withAuth(async (
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
           user_id: userId
@@ -998,6 +1016,9 @@ export const updateTicketStatus = withAuth(async (
           updated_by: userId
         });
 
+      if (isClosing) await recordCoManagedTicketResolution(trx, tenant, ticketId);
+      else if (isReopening) await recordCoManagedTicketReopened(trx, tenant, ticketId);
+
       // A bundled child reopened from the portal has left the "closed by
       // master" state. Revert its active propagation row in the same
       // transaction so the ledger agrees with tickets.is_closed and a later
@@ -1086,6 +1107,7 @@ export const updateTicketStatus = withAuth(async (
         occurredAt,
         changes: statusChanges,
       });
+      await assertCoManagedOperationalWrite(trx, tenant);
     });
 
   } catch (error) {

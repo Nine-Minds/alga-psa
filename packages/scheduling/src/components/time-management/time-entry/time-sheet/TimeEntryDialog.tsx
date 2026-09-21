@@ -85,6 +85,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     timeInputs,
     totalDurations,
     isLoading,
+    error,
     initializeEntries,
     updateEntry,
     updateTimeInputs,
@@ -147,16 +148,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     const entry = entries[index];
     if (!entry) return;
 
-    console.log('Entry to save:', entry);
-
     const isAdHoc = workItem.type === 'ad_hoc';
+    const operational = entry.billing_mode === 'operational';
 
-    if (!entry.service_id?.trim()) {
+    if (!operational && !entry.service_id?.trim()) {
       toast.error(t('messages.serviceRequired'));
       return;
     }
 
-    if (!isAdHoc) {
+    if (!operational && !isAdHoc) {
       const selectedService = services.find(s => s.id === entry.service_id);
       if (!selectedService) {
         toast.error(t('messages.invalidService'));
@@ -177,7 +177,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     try {
       setIsSaving(true);
       const { isNew, isDirty, tempId, ...cleanedEntry } = entry;
-      const durationToSend = isAdHoc ? 0 : entry.billable_duration;
+      const durationToSend = operational || isAdHoc ? 0 : entry.billable_duration;
 
       const timeEntry = {
         ...cleanedEntry,
@@ -365,6 +365,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
               })}
         </div>
       )}
+      {error && <p role="alert">{error}</p>}
       {isLoading ? (
         <TimeEntrySkeletons />
       ) : entries[0] ? (

@@ -6,7 +6,8 @@ const servicePath = path.resolve(import.meta.dirname, '../slaService.ts');
 
 describe('slaService tenant-scoped query contract', () => {
   it('uses structural tenant scoping for SLA lifecycle roots', () => {
-    const source = fs.readFileSync(servicePath, 'utf8');
+    const source = [servicePath, path.resolve(import.meta.dirname, '../../../../../shared/lib/sla/slaPolicyResolver.ts')]
+      .map(file => fs.readFileSync(file, 'utf8')).join('\n');
 
     expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
     expect(source).toContain('function tenantScopedTable(');

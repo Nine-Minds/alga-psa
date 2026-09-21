@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Co-managed schedule admission rejects a tenant or entry id that is not a
+// uuid before it reads anything, so the fixtures look like real identifiers.
+// Hoisted because the mock factories below are hoisted above module scope.
+const { TENANT, ENTRY_ID } = vi.hoisted(() => ({
+  TENANT: '00000000-0000-4000-8000-000000000001',
+  ENTRY_ID: '00000000-0000-4000-8000-000000000002',
+}));
+
 const publishEventMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 const scheduleEntryGetMock = vi.hoisted(() => vi.fn());
@@ -11,7 +19,7 @@ const maybePublishCapacityThresholdReachedMock = vi.hoisted(() => vi.fn());
 const authState = vi.hoisted(() => ({
   currentUser: {
     user_id: 'user-1',
-    tenant: 'tenant-1',
+    tenant: TENANT,
     email: 'creator@example.com',
   },
 }));
@@ -35,7 +43,10 @@ const dbState = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@alga-psa/db', () => {
+vi.mock('@alga-psa/db', async () => {
+  // The factory is hoisted above the imports, so the shared doubles are pulled
+  // in here rather than referenced from module scope.
+  const { INDEPENDENT_TENANT_ROW, fakeTable, fakeTransaction } = await import('@alga-psa/db/testing');
   const makeBuilder = (tableName: string) => {
     let whereInIds: unknown[] = [];
     const builder: any = {
@@ -62,8 +73,15 @@ vi.mock('@alga-psa/db', () => {
 
   return {
     createTenantKnex: async () => ({ knex: {}, tenant: authState.currentUser.tenant }),
-    tenantDb: () => ({ table: makeBuilder }),
-    withTransaction: async (_knex: unknown, fn: (trx: unknown) => Promise<unknown>) => fn({}),
+    tenantDb: () => ({
+      // Only online_meetings carries this suite's retraction state; every other
+      // table is read by co-managed lifecycle admission, which an independent
+      // PSA workspace answers with "not mine".
+      table: (tableName: string) => tableName === 'online_meetings'
+        ? makeBuilder(tableName)
+        : fakeTable({ tenantRow: { ...INDEPENDENT_TENANT_ROW, tenant: TENANT } }, TENANT, tableName.split(' ')[0]),
+    }),
+    withTransaction: async (_knex: unknown, fn: (trx: unknown) => Promise<unknown>) => fn(fakeTransaction()),
   };
 });
 
@@ -137,7 +155,7 @@ vi.mock('@alga-psa/workflow-streams', () => ({
 }));
 
 const EXISTING_ENTRY = {
-  entry_id: 'entry-1',
+  entry_id: ENTRY_ID,
   title: 'Kickoff call',
   scheduled_start: '2026-09-04T15:00:00.000Z',
   scheduled_end: '2026-09-04T16:00:00.000Z',
@@ -198,7 +216,7 @@ describe('deleteScheduleEntry Teams meeting retraction sweep', () => {
     ];
     const deleteScheduleEntry = await importAction();
 
-    const result = await deleteScheduleEntry('entry-1');
+    const result = await deleteScheduleEntry(ENTRY_ID);
 
     expect(result.success).toBe(true);
     expect(result.deleted).toBe(true);
@@ -207,12 +225,12 @@ describe('deleteScheduleEntry Teams meeting retraction sweep', () => {
     // already cancelled locally without a Graph retraction.
     expect(deleteTeamsMeetingMock).toHaveBeenCalledTimes(2);
     expect(deleteTeamsMeetingMock).toHaveBeenCalledWith(expect.objectContaining({
-      tenantId: 'tenant-1',
+      tenantId: TENANT,
       meetingId: 'graph-active',
       eventId: 'event-active',
     }));
     expect(deleteTeamsMeetingMock).toHaveBeenCalledWith(expect.objectContaining({
-      tenantId: 'tenant-1',
+      tenantId: TENANT,
       meetingId: 'graph-collapsed',
       eventId: 'event-collapsed',
     }));
@@ -243,7 +261,7 @@ describe('deleteScheduleEntry Teams meeting retraction sweep', () => {
     ];
     const deleteScheduleEntry = await importAction();
 
-    const result = await deleteScheduleEntry('entry-1');
+    const result = await deleteScheduleEntry(ENTRY_ID);
 
     expect(result.success).toBe(true);
     expect(deleteTeamsMeetingMock).not.toHaveBeenCalled();
@@ -267,7 +285,7 @@ describe('deleteScheduleEntry Teams meeting retraction sweep', () => {
     ];
     const deleteScheduleEntry = await importAction();
 
-    const result = await deleteScheduleEntry('entry-1');
+    const result = await deleteScheduleEntry(ENTRY_ID);
 
     expect(result.success).toBe(true);
     expect(result.deleted).toBe(true);
@@ -279,7 +297,7 @@ describe('deleteScheduleEntry Teams meeting retraction sweep', () => {
     dbState.onlineMeetingRows = [];
     const deleteScheduleEntry = await importAction();
 
-    const result = await deleteScheduleEntry('entry-1');
+    const result = await deleteScheduleEntry(ENTRY_ID);
 
     expect(result.success).toBe(true);
     expect(deleteTeamsMeetingMock).not.toHaveBeenCalled();

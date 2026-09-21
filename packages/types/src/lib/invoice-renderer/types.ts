@@ -79,6 +79,10 @@ export interface WasmInvoiceTimeEntry {
   workItemType: WasmInvoiceTimeWorkItemType | null;
   /** Ticket id or project-task id, per workItemType. */
   workItemId: string | null;
+  /** Qualified provenance for retained customer-owned work. */
+  sourceTenant?: string;
+  relationshipId?: string;
+  workReferenceId?: string | null;
   ticketNumber: string | null;
   /** Ticket title or project-task name. */
   title: string | null;
@@ -115,6 +119,10 @@ export interface WasmInvoiceTicketGroup {
   key: string;
   workItemType: WasmInvoiceTimeWorkItemType | null;
   workItemId: string | null;
+  /** Qualified provenance for retained customer-owned work. */
+  sourceTenant?: string;
+  relationshipId?: string;
+  workReferenceId?: string | null;
   ticketNumber: string | null;
   title: string | null;
   description: string | null;

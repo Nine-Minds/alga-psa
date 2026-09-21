@@ -6,7 +6,7 @@ type RegisteredAction = {
   id: string;
   inputSchema: { parse: (input: unknown) => any };
   outputSchema?: { parse: (output: unknown) => any };
-  handler: (input: any, ctx: { tenantId?: string }) => Promise<any>;
+  handler: (input: any, ctx: { tenantId?: string; runId?: string; knex?: unknown }) => Promise<any>;
 };
 
 const registeredActions: RegisteredAction[] = [];
@@ -21,6 +21,10 @@ const createTicketFromEmailMock = vi.fn(async (..._args: any[]) => ({
 }));
 const createCommentFromEmailMock = vi.fn(async (..._args: any[]) => 'comment-1');
 const findContactByEmailMock = vi.fn(async (..._args: any[]) => null);
+
+const { workflowTrx } = vi.hoisted(() => ({ workflowTrx: { isTransaction: true } }));
+vi.mock('@alga-psa/db', () => ({ withTransaction: async (_db: unknown, work: (trx: unknown) => Promise<unknown>) => work(workflowTrx) }));
+vi.mock('../businessOperations/shared', () => ({ resolveRunActorUserId: async () => 'workflow-user' }));
 
 vi.mock('../../registries/actionRegistry', () => ({
   getActionRegistryV2: () => getActionRegistryV2Mock(),
@@ -104,7 +108,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
         targetAuthorUserId: undefined,
         targetLocationId: null,
       },
-      { tenantId: 'tenant-1' }
+      { tenantId: 'tenant-1', runId: 'run-1', knex: {} }
     );
 
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(
@@ -112,7 +116,9 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
         ticket_id: 'ticket-1',
         contact_id: 'contact-1',
       }),
-      'tenant-1'
+      'tenant-1',
+      'workflow-user',
+      expect.objectContaining({ existingConnection: workflowTrx, workflowRunId: 'run-1' })
     );
   });
 
@@ -130,7 +136,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
         author_type: 'contact',
         contact_id: 'contact-1',
       },
-      { tenantId: 'tenant-1' }
+      { tenantId: 'tenant-1', runId: 'run-1', knex: {} }
     );
 
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(
@@ -138,7 +144,9 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
         ticket_id: 'ticket-1',
         contact_id: 'contact-1',
       }),
-      'tenant-1'
+      'tenant-1',
+      'workflow-user',
+      expect.objectContaining({ existingConnection: workflowTrx, workflowRunId: 'run-1' })
     );
   });
 
@@ -175,7 +183,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
           metadata: {},
         },
       },
-      { tenantId: 'tenant-1' }
+      { tenantId: 'tenant-1', runId: 'run-1', knex: {} }
     );
 
     expect(findContactByEmailMock).toHaveBeenCalledWith('contact@example.com', 'tenant-1', {
@@ -188,7 +196,9 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
         author_id: 'client-user-1',
         contact_id: 'contact-ticket-1',
       }),
-      'tenant-1'
+      'tenant-1',
+      'workflow-user',
+      expect.objectContaining({ existingConnection: workflowTrx, workflowRunId: 'run-1' })
     );
   });
 
@@ -209,7 +219,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
         ticketContactId: 'contact-1',
         defaultClientId: 'default-client-1',
       },
-      { tenantId: 'tenant-1' }
+      { tenantId: 'tenant-1', runId: 'run-1', knex: {} }
     );
 
     expect(findContactByEmailMock).toHaveBeenCalledWith('contact@example.com', 'tenant-1', {
@@ -273,7 +283,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       {
         email: 'billing@example.com',
       },
-      { tenantId: 'tenant-1' }
+      { tenantId: 'tenant-1', runId: 'run-1', knex: {} }
     );
 
     expect(action!.outputSchema?.parse(output)).toEqual({
@@ -315,7 +325,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
           metadata: {},
         },
       },
-      { tenantId: 'tenant-1' }
+      { tenantId: 'tenant-1', runId: 'run-1', knex: {} }
     );
 
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(
@@ -325,7 +335,9 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
         author_id: undefined,
         contact_id: undefined,
       }),
-      'tenant-1'
+      'tenant-1',
+      'workflow-user',
+      expect.objectContaining({ existingConnection: workflowTrx, workflowRunId: 'run-1' })
     );
   });
 
@@ -350,7 +362,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       {
         email: 'billing@example.com',
       },
-      { tenantId: 'tenant-1' }
+      { tenantId: 'tenant-1', runId: 'run-1', knex: {} }
     );
 
     const parsedFindContactResult = findContactAction!.outputSchema!.parse(findContactResult);
@@ -365,7 +377,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
         senderEmail: 'billing@example.com',
         providerId: 'provider-1',
       },
-      { tenantId: 'tenant-1' }
+      { tenantId: 'tenant-1', runId: 'run-1', knex: {} }
     );
 
     expect(contextResult.matchedClient).toMatchObject({

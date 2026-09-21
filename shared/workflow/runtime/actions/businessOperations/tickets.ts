@@ -1,3 +1,5 @@
+import { withWorkflowTicketMutation } from '../../registries/workflowTicketMutationRegistry';
+import { WorkflowEventPublisher } from '../../../adapters/workflowEventPublisher';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -175,7 +177,7 @@ const resolveWorkflowTicketAssignment = async (
         user_type: 'internal',
         is_inactive: false,
       })
-      .first();
+      .forShare().first();
 
     if (!user) {
       throwActionError(ctx, {
@@ -190,7 +192,7 @@ const resolveWorkflowTicketAssignment = async (
   } else if (primary.type === 'team') {
     const team = await tenantScopedTable(tx, 'teams')
       .where('team_id', primary.id)
-      .first();
+      .forShare().first();
 
     if (!team) {
       throwActionError(ctx, {
@@ -216,7 +218,7 @@ const resolveWorkflowTicketAssignment = async (
         user_type: 'internal',
         is_inactive: false,
       })
-      .first();
+      .forShare().first();
 
     if (!manager) {
       throwActionError(ctx, {
@@ -237,7 +239,7 @@ const resolveWorkflowTicketAssignment = async (
       .where('team_members.team_id', primary.id)
       .andWhere('users.user_type', 'internal')
       .andWhere('users.is_inactive', false)
-      .select('team_members.user_id as user_id') as Array<{ user_id: string }>;
+      .forShare('team_members', 'users').select('team_members.user_id as user_id') as Array<{ user_id: string }>;
 
     implicitAdditionalUsers.push(
       ...teamMembers
@@ -249,7 +251,7 @@ const resolveWorkflowTicketAssignment = async (
     const member = await tenantScopedTable(tx, 'team_members')
       .where('team_id', primary.id)
       .orderBy('created_at', 'asc')
-      .first();
+      .forShare().first();
 
     if (!member?.user_id) {
       throwActionError(ctx, {
@@ -266,7 +268,7 @@ const resolveWorkflowTicketAssignment = async (
         user_type: 'internal',
         is_inactive: false,
       })
-      .first();
+      .forShare().first();
 
     if (!resolvedUser) {
       throwActionError(ctx, {
@@ -284,7 +286,7 @@ const resolveWorkflowTicketAssignment = async (
     ? await tenantScopedTable(tx, 'users')
         .where({ user_type: 'internal', is_inactive: false })
         .whereIn('user_id', explicitAdditionalUserIds)
-        .select('user_id')
+        .forShare().select('user_id')
     : [];
 
   const validExplicitUserIds = new Set(
@@ -657,7 +659,7 @@ export function registerTicketActions(): void {
             },
             tx.tenantId,
             tx.trx,
-            undefined,
+            new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId, ticketAction: 'create' }),
             undefined,
             tx.actorUserId
           );
@@ -741,7 +743,7 @@ export function registerTicketActions(): void {
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
           undefined,
           tx.actorUserId
         );
@@ -796,6 +798,7 @@ export function registerTicketActions(): void {
           dependencyPrefix: 'patch.assignment'
         }).optional().describe('Atomic assignment replacement'),
         title: z.string().min(1).optional().describe('New title'),
+        response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional().describe('Ticket response state'),
         category_id: withWorkflowPicker(
           uuidSchema.nullable().optional(),
           'Category id',
@@ -835,7 +838,10 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Patch core ticket fields (status, priority, assignment, attributes)'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => withWorkflowTicketMutation(tx.trx, {
+      tenant: tx.tenantId, ticketId: input.ticket_id, workflowRunId: ctx.runId, actorUserId: tx.actorUserId, fields: Object.keys(input.patch),
+      readFields: ['ticket_id', 'updated_at', 'status_id', 'status', 'statuses', 'priority_id', 'priority', 'tags', 'attributes.tags'],
+    }, async () => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
       const current = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
@@ -931,6 +937,7 @@ export function registerTicketActions(): void {
         updated = await TicketModel.updateTicket(
           input.ticket_id,
           {
+            ...(input.patch.response_state !== undefined ? { response_state: input.patch.response_state } : {}),
             ...(input.patch.title ? { title: input.patch.title } : {}),
             ...(input.patch.status_id ? { status_id: input.patch.status_id } : {}),
             ...(input.patch.priority_id ? { priority_id: input.patch.priority_id } : {}),
@@ -1001,7 +1008,7 @@ export function registerTicketActions(): void {
         priority_id: (updated.priority_id as string | null) ?? null,
         tags: (after.tags as string[] | null) ?? null
       };
-    })
+    }))
   });
 
   // ---------------------------------------------------------------------------
@@ -1037,7 +1044,11 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Assign a ticket using the canonical workflow assignment model'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => withWorkflowTicketMutation(tx.trx, {
+      tenant: tx.tenantId, ticketId: input.ticket_id, workflowRunId: ctx.runId, actorUserId: tx.actorUserId,
+      fields: ['assignment', ...(input.comment ? ['conversation', 'comments', 'note'] : [])],
+      readFields: ['ticket_id', 'updated_at', 'assignment', 'assigned_to', 'assigned_team_id', 'ticket_resources'],
+    }, async () => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
@@ -1125,7 +1136,7 @@ export function registerTicketActions(): void {
             },
             tx.tenantId,
             tx.trx,
-            undefined,
+            new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
             undefined,
             tx.actorUserId
           );
@@ -1155,7 +1166,7 @@ export function registerTicketActions(): void {
         assigned_to: (updated.assigned_to as string | null) ?? null,
         updated_at: new Date(updated.updated_at ?? new Date().toISOString()).toISOString()
       };
-    })
+    }))
   });
 
   // ---------------------------------------------------------------------------
@@ -1192,10 +1203,16 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Close a ticket with resolution and optional notification'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => withWorkflowTicketMutation(tx.trx, {
+      tenant: tx.tenantId, ticketId: input.ticket_id, workflowRunId: ctx.runId, actorUserId: tx.actorUserId,
+      fields: ['status_id', 'resolution_code', 'resolution_text', ...(input.public_note || input.internal_note ? ['conversation', 'comments', 'note'] : [])],
+      readFields: ['ticket_id', 'closed_at', 'resolution_code', 'attributes.resolution_code', 'status_id',
+        ...(input.notify_requester ? ['contact_name_id', 'client_id', 'title', 'ticket_number', 'resolution_text', 'attributes.resolution_text'] : [])],
+      closeRulesAudited: true,
+    }, async (effects) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
-      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).forUpdate().first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
       }
@@ -1211,7 +1228,7 @@ export function registerTicketActions(): void {
             status_type: 'ticket',
             board_id: ticket.board_id,
           })
-          .first()
+          .forShare().first()
         : null;
       if (currentStatus?.is_closed) {
         throwActionError(ctx, { category: 'ActionError', code: 'CONFLICT', message: 'Ticket is already in a closed status', details: { status_id: ticket.status_id } });
@@ -1226,7 +1243,7 @@ export function registerTicketActions(): void {
         .andWhere('is_closed', true)
         .orderBy('is_default', 'desc')
         .orderBy('order_number', 'asc')
-        .first();
+        .forShare().first();
       if (!closedStatus) {
         throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'No closed ticket status configured' });
       }
@@ -1260,6 +1277,7 @@ export function registerTicketActions(): void {
         .update({
           status_id: closedStatus.status_id,
           is_closed: true,
+          response_state: null,
           closed_at: nowIso,
           closed_by: tx.actorUserId,
           attributes: mergedAttributes,
@@ -1280,7 +1298,7 @@ export function registerTicketActions(): void {
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
           undefined,
           tx.actorUserId
         );
@@ -1299,13 +1317,15 @@ export function registerTicketActions(): void {
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
           undefined,
           tx.actorUserId
         );
       }
 
-      if (input.notify_requester) {
+      if (input.notify_requester && effects.deferRequesterCloseEmail) {
+        await effects.deferRequesterCloseEmail({ operationKey: `${ctx.stepPath}:${ctx.idempotencyKey}`, email: input.email });
+      } else if (input.notify_requester) {
         const contactId = (ticket.contact_name_id as string | null) ?? null;
         if (!contactId) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Ticket has no requester contact to notify' });
@@ -1352,7 +1372,7 @@ export function registerTicketActions(): void {
         resolution_code: persistedResolutionCode,
         final_status_id: closedStatus.status_id as string
       };
-    })
+    }))
   });
 
   // ---------------------------------------------------------------------------
@@ -1524,7 +1544,7 @@ export function registerTicketActions(): void {
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
           undefined,
           tx.actorUserId
         );

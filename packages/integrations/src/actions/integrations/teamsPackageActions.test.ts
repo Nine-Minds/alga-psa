@@ -111,6 +111,18 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
+// Teams availability now asserts the workspace is a PSA product, which reads
+// `tenants` over the admin connection. This suite's workspace is a plain PSA
+// tenant; without the double the guard opens a real pool.
+vi.mock('@alga-psa/db/admin', async (importOriginal) => {
+  const { INDEPENDENT_TENANT_ROW, fakeTable } = await import('@alga-psa/db/testing');
+  return {
+    ...(await importOriginal<object>()),
+    getAdminConnection: async () => ((table: string) =>
+      fakeTable({ tenantRow: { ...INDEPENDENT_TENANT_ROW, tenant: 'tenant-1' } }, 'tenant-1', table)) as any,
+  };
+});
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: hoisted.knexMock }),
   tenantDb: (conn: any, tenant: string) => ({

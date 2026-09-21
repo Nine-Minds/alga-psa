@@ -55,7 +55,8 @@
     "settings": "Paramètres",
     "profile": "Profil",
     "logout": "Déconnexion",
-    "help": "Aide"
+    "help": "Aide",
+    "coManagedDelegation": "Administration déléguée"
   },
   "actions": {
     "save": "Enregistrer",
@@ -1603,6 +1604,18 @@
     "threecxCall": "Appeler via 3CX",
     "threecxDialing": "Numérotation depuis votre extension 3CX",
     "threecxFailed": "Le PBX n'a pas pu passer l'appel"
+  },
+  "users": {
+    "soloLicenseLimit": "L’offre Solo permet un seul technicien. Faites évoluer l’espace de travail avant d’activer un autre utilisateur.",
+    "coManagedAdmission": {
+      "allocationConflict": "L’attribution de licences de cet espace de travail a changé ou n’est plus disponible. Actualisez et réessayez.",
+      "invitationInvalid": "Cette invitation n’est plus valide. Demandez une nouvelle invitation à votre administrateur.",
+      "licenseLapsed": "La licence Pro du MSP responsable et ses licences cogérées doivent être rétablies avant d’ajouter des techniciens du client.",
+      "notActive": "Un administrateur du client doit activer la relation de cogestion avant que des techniciens puissent être ajoutés.",
+      "poolLimit": "Le MSP responsable n’a plus de licences cogérées disponibles pour augmenter cette attribution.",
+      "seatLimit": "Cet espace de travail a utilisé toutes les licences de technicien cogéré qui lui sont attribuées. Demandez au MSP responsable d’en attribuer davantage."
+    },
+    "technicianLicenseLimit": "Cet espace de travail ne peut pas activer de technicien supplémentaire. Vérifiez son état d’activation et les licences encore disponibles."
   },
   "editor": {
     "attachFiles": "Joindre des fichiers",

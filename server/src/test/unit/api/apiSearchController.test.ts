@@ -71,7 +71,7 @@ describe('ApiSearchController.search', () => {
     );
 
     vi.spyOn(controller as any, 'authenticate').mockResolvedValue(
-      Object.assign(req, { context: { tenant: 'tenant-1', user } }),
+      Object.assign(req, { context: { tenant: 'tenant-1', user, apiKeyId: 'key-1' } }),
     );
 
     const searchResult = {
@@ -91,6 +91,7 @@ describe('ApiSearchController.search', () => {
       'tenant-1',
       user,
       { query: 'laptop', types: ['ticket', 'project'], limit: 5, sort: 'recent' },
+      { kind: 'api_key', apiKeyId: 'key-1' },
     );
   });
 });

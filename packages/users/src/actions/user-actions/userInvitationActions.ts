@@ -8,7 +8,7 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected, type CoManagedAdmissionLimitCode } from '../../lib/internalUserLicenseGuard';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -30,7 +30,8 @@ export type UserInvitationErrorCode =
   | 'INVITATION_NOT_FOUND'
   | 'REVOKE_FAILED'
   | 'SOLO_PLAN_LIMIT'
-  | 'LICENSE_LIMIT_REACHED';
+  | 'LICENSE_LIMIT_REACHED'
+  | CoManagedAdmissionLimitCode;
 
 interface SendUserInvitationParams {
   email: string;
@@ -135,7 +136,7 @@ export const sendUserInvitation = withAuth(async (
       .first();
     const reservedSeats = parseInt(String(pendingRow?.count ?? '0'), 10);
 
-    const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats });
+    const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats, email: normalizedEmail, kind: 'invitation' });
     if (isInternalUserLicenseLimitRejected(licenseCheck)) {
       return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code };
     }
@@ -228,6 +229,7 @@ export const sendUserInvitation = withAuth(async (
  */
 export async function verifyUserInvitationToken(token: string): Promise<{
   success: boolean;
+  isCoManaged?: boolean;
   invitee?: { email: string; first_name: string; last_name: string; role_name: string | null };
   error?: string;
   errorCode?: UserInvitationErrorCode;
@@ -238,7 +240,7 @@ export async function verifyUserInvitationToken(token: string): Promise<{
     }
 
     const verificationResult = await UserInvitationService.verifyToken(token);
-    if (!verificationResult.valid || !verificationResult.invitee) {
+    if (!verificationResult.valid || !verificationResult.invitee || !verificationResult.tenant) {
       return {
         success: false,
         error: verificationResult.error || 'Invalid token',
@@ -246,7 +248,10 @@ export async function verifyUserInvitationToken(token: string): Promise<{
       };
     }
 
-    return { success: true, invitee: verificationResult.invitee };
+    const { knex } = await createTenantKnex(verificationResult.tenant);
+    const owner = await tenantDb(knex, verificationResult.tenant).table('tenants').first('product_code');
+    if (!owner) return { success: false, error: 'Invalid token', errorCode: 'INVALID_OR_EXPIRED_TOKEN' };
+    return { success: true, invitee: verificationResult.invitee, isCoManaged: owner.product_code === 'co_managed' };
   } catch (error) {
     console.error('Error verifying team invitation token:', error);
     return { success: false, error: 'Failed to verify token', errorCode: 'VERIFICATION_FAILED' };
@@ -306,7 +311,7 @@ export async function completeUserInvitationSetup(
       // the account row actually gets created (via runAsSystem, bypassing the
       // permission-gated path addUser uses), and seats can have filled up
       // between the invite being sent and this acceptance.
-      const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant);
+      const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { email: invitee.email, invitationToken: token });
       if (isInternalUserLicenseLimitRejected(licenseCheck)) {
         return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } as const;
       }
@@ -338,20 +343,9 @@ export async function completeUserInvitationSetup(
           const userService = new UserService();
           const systemContext = createSystemContext(tenant);
 
-          const user = await userService.create({
-            username: invitee.email,
-            email: invitee.email,
-            password,
-            first_name: invitee.first_name,
-            last_name: invitee.last_name,
-            user_type: 'internal',
-            is_inactive: false,
-            two_factor_enabled: false,
-            is_google_user: false,
-            // Assigned inside UserService.create's own transaction, so the
-            // account and its role land (or fail) together.
-            role_ids: [invitationRole.role_id]
-          }, systemContext);
+          // Revalidates the token and current role, creates the account, and
+          // consumes the invitation inside one admission transaction.
+          const user = await userService.createFromInvitation(token, password, systemContext);
 
           if (!user || !user.user_id) {
             throw new UserInvitationError('Team member account could not be created. Please try again.', 'CREATE_USER_FAILED');
@@ -375,11 +369,6 @@ export async function completeUserInvitationSetup(
         });
       } catch (prefError) {
         console.warn('Failed to set password reset preference:', prefError);
-      }
-
-      const tokenMarked = await UserInvitationService.markTokenAsUsed(token);
-      if (!tokenMarked) {
-        console.warn('Failed to mark team invitation token as used');
       }
 
       await UserInvitationService.cleanupExpiredTokens();

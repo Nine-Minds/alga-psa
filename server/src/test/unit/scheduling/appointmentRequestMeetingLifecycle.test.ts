@@ -51,11 +51,35 @@ const hoisted = vi.hoisted(() => {
         filters.push((row) => row[col] !== null && row[col] !== undefined);
         return chain;
       },
+      whereNull(col: string) {
+        filters.push((row) => row[col] === null || row[col] === undefined);
+        return chain;
+      },
       orderBy() {
         return chain;
       },
       limit() {
         return chain;
+      },
+      // Row-lock and modifier chaining is a no-op against the in-memory store;
+      // the co-managed admission path locks every row it reads.
+      forShare() {
+        return chain;
+      },
+      forUpdate() {
+        return chain;
+      },
+      skipLocked() {
+        return chain;
+      },
+      noWait() {
+        return chain;
+      },
+      distinct(..._cols: any[]) {
+        return chain;
+      },
+      pluck(col: string) {
+        return Promise.resolve(rows(tableName).filter(matches).map((row: Row) => row[col]));
       },
       select(..._cols: any[]) {
         return chain;
@@ -119,7 +143,7 @@ const hoisted = vi.hoisted(() => {
 
   const user = {
     user_id: 'approver-1',
-    tenant: 'tenant-1',
+    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     user_type: 'internal',
     email: 'approver@example.test',
     first_name: 'App',
@@ -150,14 +174,22 @@ const hoisted = vi.hoisted(() => {
 });
 
 vi.mock('@alga-psa/auth', () => ({
-  withAuth: (fn: any) => (...args: unknown[]) => fn(hoisted.user, { tenant: 'tenant-1' }, ...args),
+  withAuth: (fn: any) => (...args: unknown[]) => fn(hoisted.user, { tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }, ...args),
   hasPermission: hoisted.hasPermissionMock,
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' })),
   tenantDb: hoisted.tenantDbMock,
-  withTransaction: async (_knex: any, cb: any) => cb({}),
+  // The co-managed admission helpers assert they were handed a real
+  // transaction and build timestamps through trx.fn/trx.raw.
+  withTransaction: async (_knex: any, cb: any) =>
+    cb({
+      isTransaction: true,
+      fn: { now: () => new Date() },
+      raw: (sql: string, bindings?: unknown) => ({ sql, bindings }),
+    }),
+  registerAfterCommit: (_trx: any, run: () => Promise<void>) => run(),
   resolveEffectiveTimeZone: vi.fn(async () => 'UTC'),
   User: { getReportsToSubordinateIds: vi.fn(async () => []) },
 }));
@@ -235,7 +267,7 @@ import {
   updateAppointmentRequestDateTime,
 } from '@alga-psa/scheduling/actions/appointmentRequestManagementActions';
 
-const TENANT = 'tenant-1';
+const TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const REQ_ID = '11111111-1111-4111-8111-111111111111';
 const TECH_ID = '22222222-2222-4222-8222-222222222222';
 const SVC_ID = '33333333-3333-4333-8333-333333333333';
@@ -306,6 +338,12 @@ function seedBaseline(overrides: { request?: Record<string, any> } = {}) {
     { type_id: 'type-online-meeting', type_name: 'Online Meeting' },
   ]);
   hoisted.fakeDb.seed('online_meetings', []);
+  // Lifecycle admission (@alga-psa/licensing) reads the acting workspace's
+  // product before any appointment write: an independent PSA tenant is
+  // writable and short-circuits the co-managed relationship checks.
+  hoisted.fakeDb.seed('tenants', [
+    { tenant: TENANT, product_code: 'psa', plan: 'pro', suspended_at: null },
+  ]);
   hoisted.fakeDb.seed('clients', [
     { tenant: TENANT, client_id: CLIENT_ID, client_name: 'Acme Corp' },
   ]);

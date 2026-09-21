@@ -42,7 +42,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { getInboundDurableMode } from './inboundEmailDurableStore';
+import { getInboundDurableModeForTenant } from './inboundEmailDurableStore';
 import {
   reserveInboundOutboxEventDelivery,
   completeInboundOutboxEventDelivery,
@@ -119,13 +119,13 @@ export async function reserveInboundOutboxEventForConsumer(params: {
   leaseTtlMs?: number;
   failOpenOnLedgerError?: boolean;
 }): Promise<InboundOutboxEventReservation> {
-  if (getInboundDurableMode() === 'off') return { decision: 'deliver', failOpen: true };
   if (!INBOUND_OUTBOX_EVENT_TYPES.has(params.event.eventType)) return { decision: 'deliver', failOpen: true };
   const tenant = params.event.payload?.tenantId;
   const eventId = params.event.id;
   if (typeof tenant !== 'string' || !tenant || !eventId) return { decision: 'deliver', failOpen: true };
 
   try {
+    if (await getInboundDurableModeForTenant(tenant, params.db) === 'off') return { decision: 'deliver', failOpen: true };
     const isOutbox = await isInboundOutboxEvent(params.db, { tenant, eventId });
     if (!isOutbox) return { decision: 'deliver', failOpen: true };
     const claim = await reserveInboundOutboxEventDelivery(params.db, {

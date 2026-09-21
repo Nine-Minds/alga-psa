@@ -1,5 +1,6 @@
 'use server'
 
+import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { canAccessAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -54,7 +55,7 @@ import {
   documentActionErrorMessage,
   type DocumentActionError,
 } from './documentActionErrors';
-import { authorizeAndRedactDocuments as authorizeDocumentRows } from '@shared/lib/documentAuthorization';
+import { authorizeAndRedactDocuments as authorizeAndRedactDocumentsWithAdmission } from '@shared/lib/documentAuthorization';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 async function loadSharp() {
@@ -286,7 +287,17 @@ async function ensureEntityFoldersInitializedInternal(
   }
 }
 
-// Preserve the existing server-action entry point for document consumers.
+/**
+ * Document authorization lives in the shared engine (`@shared/lib/documentAuthorization`)
+ * because the ticket list, the Documents browser and every byte-serving route must
+ * make the *same* allow/deny decision. This wrapper only supplies the co-managed
+ * meeting-admission hook; it deliberately adds no authorization logic of its own, so
+ * there is exactly one place where a document becomes readable.
+ *
+ * Must stay `async`: this module is a `'use server'` boundary, and Next rejects any
+ * non-async export from one — a sync export here fails the whole module graph at
+ * compile time, so every route that imports it 500s. Typechecking does not catch it.
+ */
 export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
@@ -294,7 +305,14 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   documents: T[],
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
-  return authorizeDocumentRows(trx, tenant, user, documents, verifiedRecipientLifecycleAccess);
+  return authorizeAndRedactDocumentsWithAdmission(
+    trx,
+    tenant,
+    user,
+    documents,
+    verifiedRecipientLifecycleAccess,
+    admitMeetingDocumentsForBrowser
+  );
 }
 
 export async function getAuthorizedDocumentByFileId(

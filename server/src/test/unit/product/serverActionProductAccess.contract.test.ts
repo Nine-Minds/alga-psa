@@ -6,7 +6,6 @@ const repoRoot = join(__dirname, '../../../../..');
 
 const guardedFiles = [
   'packages/billing/src/actions/taxRateActions.ts',
-  'packages/projects/src/actions/projectTaskExportActions.ts',
   'packages/scheduling/src/actions/timeEntryTicketActions.ts',
   'packages/assets/src/actions/clientLookupActions.ts',
   'server/src/lib/actions/workflow-bundle-v1-actions.ts',

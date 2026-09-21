@@ -75,8 +75,13 @@ describe('Teams meeting job wiring', () => {
     expect(maintenanceFanoutSource).toContain(
       "import { teamsMeetingSweepHandler, TEAMS_MEETING_SWEEP_JOB } from './handlers/teamsMeetingSweepHandler';"
     );
-    expect(maintenanceFanoutSource).toContain(
-      "[TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithActiveTeams },"
+    // The selector is tenantsWithTeamsMaintenance, not tenantsWithActiveTeams:
+    // a tenant that removed its Teams integration can still own unfinished
+    // co-managed meeting creation operations that must be reconciled, and the
+    // sweep is admitted for suspended tenants for the same reason (it gates
+    // itself down to that compensation step — see teamsMeetingSweepHandler).
+    expect(maintenanceFanoutSource).toMatch(
+      /\[TEAMS_MEETING_SWEEP_JOB\]: \{ scope: 'tenant', run: \(tenantId\) => teamsMeetingSweepHandler\(\{ tenantId \}\), tenants: tenantsWithTeamsMaintenance, includeSuspended: true \}/
     );
   });
 

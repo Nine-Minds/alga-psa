@@ -1,8 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { tenantDb, withTransaction } from '@alga-psa/db';
-import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { v4 as uuidv4 } from 'uuid';
@@ -540,42 +539,37 @@ export const uploadClientTaskDocument = withAuth(async (
     // 1. Validate file before upload (follows fileActions.ts pattern)
     await StorageService.validateFileUpload(tenant, mimeType, file.size);
 
-    // 2. Upload file to storage (StorageService.uploadFile is static, doesn't support transactions)
+    // The file, document, and task association share storage's admitted write
+    // transaction. Transport still runs outside that transaction.
     const buffer = Buffer.from(await file.arrayBuffer());
-    const fileRecord = await StorageService.uploadFile(tenant, buffer, file.name, {
+    const documentId = uuidv4();
+    await StorageService.uploadFile(tenant, buffer, file.name, {
       mime_type: mimeType,
-      uploaded_by_id: user.user_id
-    });
-    // fileRecord is a FileStore with: file_id, storage_path, original_name, mime_type, file_size, etc.
-
-    // 3. Create document + association in transaction (matches documentActions.ts pattern)
-    const documentId = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const docId = uuidv4();
-      await tenantDb(trx, tenant).table('documents').insert({
-        document_id: docId,
-        document_name: file.name,
-        tenant,
-        file_id: fileRecord.file_id,           // From StorageService.uploadFile
-        storage_path: fileRecord.storage_path, // From StorageService.uploadFile
-        mime_type: fileRecord.mime_type,
-        file_size: fileRecord.file_size,
-        user_id: user.user_id,
-        created_by: user.user_id,
-        entered_at: new Date(),
-        updated_at: new Date(),
-        folder_path: folderPath ?? null,
-        is_client_visible: true,               // Client-uploaded docs are always visible to client portal
-      });
-
-      await tenantDb(trx, tenant).table('document_associations').insert({
-        tenant,
-        document_id: docId,
-        entity_type: 'project_task',
-        entity_id: taskId,
-        created_at: new Date()
-      });
-
-      return docId;
+      uploaded_by_id: user.user_id,
+      persistRelatedRecords: async (trx, fileRecord) => {
+        await tenantDb(trx, tenant).table('documents').insert({
+          document_id: documentId,
+          document_name: file.name,
+          tenant,
+          file_id: fileRecord.file_id,
+          storage_path: fileRecord.storage_path,
+          mime_type: fileRecord.mime_type,
+          file_size: fileRecord.file_size,
+          user_id: user.user_id,
+          created_by: user.user_id,
+          entered_at: new Date(),
+          updated_at: new Date(),
+          folder_path: folderPath ?? null,
+          is_client_visible: true,
+        });
+        await tenantDb(trx, tenant).table('document_associations').insert({
+          tenant,
+          document_id: documentId,
+          entity_type: 'project_task',
+          entity_id: taskId,
+          created_at: new Date(),
+        });
+      },
     });
 
     return { success: true, documentId };

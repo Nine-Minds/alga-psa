@@ -102,7 +102,10 @@
     "jobMonitoring": "Job Monitoring",
     "jobs": "Jobs",
     "emailLogs": "Email Logs",
-    "extensions": "Extensions"
+    "extensions": "Extensions",
+    "coManaged": "Co-managed IT",
+    "coManagedDelegation": "Delegated administration",
+    "coManagedAccess": "Co-managed access"
   },
   "marketing": {
     "dialogs": {

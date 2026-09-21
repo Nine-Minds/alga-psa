@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { collaborationActorPayloadIssue, collaborationActorReferenceSchema } from './collaborationActorSchemas';
+import { actorTypeSchema } from './domain/commonEventPayloadSchemas';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -535,6 +537,8 @@ export type EventType = z.infer<typeof EventTypeEnum>;
 
 // Base payload schema with tenant information
 export const BasePayloadSchema = z.object({
+  actorType: actorTypeSchema.optional(),
+  actorReference: collaborationActorReferenceSchema.optional(),
   tenantId: z.string().uuid(),
 });
 
@@ -566,6 +570,36 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
     isInternal: z.boolean().optional(),
     authorType: z.enum(['internal', 'client', 'unknown']).optional(),
   }).optional(),
+});
+
+/** Qualified comment events retain thread audience and foreign attribution.
+ * Ordinary producers still require their existing local user identity. */
+export const TicketCommentAddedPayloadSchema = TicketEventPayloadSchema.extend({
+  userId: z.string().uuid().optional(),
+  actorUserId: z.string().uuid().optional(),
+  commentId: z.string().uuid().optional(),
+  occurredAt: z.string().datetime().optional(),
+  thread_id: z.string().uuid().optional(),
+  parent_comment_id: z.string().uuid().nullable().optional(),
+  is_reply: z.boolean().optional(),
+  comment: TicketEventPayloadSchema.shape.comment.unwrap().extend({
+    audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
+    thread_id: z.string().uuid().optional(),
+    parent_comment_id: z.string().uuid().nullable().optional(),
+    is_reply: z.boolean().optional(),
+  }).optional(),
+}).superRefine((payload, context) => {
+  const fail = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
+  const foreign = payload.actorType === 'COLLABORATOR';
+  if (!foreign && !payload.userId && !payload.actorUserId) fail('A local comment event requires its local author');
+  const comment = payload.comment;
+  if (foreign && (!comment || !comment.audience || comment.authorType !== 'internal' || comment.audience === 'organization_private')) {
+    fail('A foreign comment requires an explicit requester or shared IT audience');
+  }
+  if (comment?.audience && comment.isInternal !== (comment.audience !== 'requester')) fail('Comment visibility must match its explicit audience');
+  if (payload.commentId && comment && payload.commentId !== comment.id) fail('Comment identities must agree');
+  if (payload.thread_id && comment?.thread_id && payload.thread_id !== comment.thread_id) fail('Thread identities must agree');
+  if (payload.parent_comment_id !== undefined && comment?.parent_comment_id !== undefined && payload.parent_comment_id !== comment.parent_comment_id) fail('Parent identities must agree');
 });
 
 // Ticket additional agent event payload schema
@@ -727,6 +761,41 @@ export const TaskCommentDeletedPayloadSchema = BasePayloadSchema.extend({
   timestamp: z.string().datetime().optional(),
 });
 
+/** Body-free qualified task invalidations. Local legacy producers retain their
+ * existing schemas; this variant never fabricates a customer-local user ID. */
+export const CoManagedTaskCommentChangePayloadSchema = z.object({
+  tenantId: z.string().uuid(),
+  taskId: z.string().uuid(), taskCommentId: z.string().uuid(),
+  collaboration: z.object({ kind: z.literal('project_task_comment'), threadId: z.string().uuid(),
+    audience: z.enum(['requester', 'shared_it', 'organization_private']), revision: z.number().int().positive().max(2147483647) }).strict(),
+}).strict();
+
+const ticketCommentMutationSchema = z.object({
+  kind: z.enum(['edit', 'delete', 'audience']), threadId: z.string().uuid(),
+  audience: z.enum(['requester', 'shared_it', 'organization_private']),
+}).strict();
+function validateTicketCommentMutation(payload: any, ctx: z.RefinementCtx, kind: 'edit' | 'delete') {
+  const mutation = payload.collaborationMutation;
+  if (!mutation) {
+    if (payload.actorReference || payload.actorType === 'COLLABORATOR' || (kind === 'edit' && !payload.userId)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Comment mutations require a qualified reference or local user.' });
+    }
+    return;
+  }
+  if ((mutation.kind !== kind && !(kind === 'edit' && mutation.kind === 'audience')) || !payload.commentId || payload.oldComment || payload.newComment || payload.comment ||
+      payload.isInternal !== (mutation.audience !== 'requester')) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Qualified mutation events contain identity and audience only.' });
+  }
+  if (payload.actorReference) {
+    if (payload.actorType !== 'COLLABORATOR' || payload.actorReference.ownerTenantId !== payload.tenantId ||
+        payload.actorReference.tenantId === payload.tenantId || payload.userId || mutation.audience === 'organization_private') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid qualified comment mutation actor.' });
+    }
+  } else if (!payload.userId || payload.actorType !== 'USER') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'A local mutation requires its local user.' });
+  }
+}
+
 // Ticket comment delete event payload schema.
 // commentId is top-level so the search index subscriber's extractObjectId can resolve it.
 export const TicketCommentDeletedPayloadSchema = BasePayloadSchema.extend({
@@ -734,10 +803,15 @@ export const TicketCommentDeletedPayloadSchema = BasePayloadSchema.extend({
   commentId: z.string().uuid(),
   userId: z.string().uuid().optional(),
   isInternal: z.boolean().optional(),
-});
+  collaborationMutation: ticketCommentMutationSchema.optional(),
+}).superRefine((payload, ctx) => validateTicketCommentMutation(payload, ctx, 'delete'));
 
 // Ticket comment update event payload schema
 export const TicketCommentUpdatedPayloadSchema = TicketEventPayloadSchema.extend({
+  userId: z.string().uuid().optional(),
+  commentId: z.string().uuid().optional(),
+  isInternal: z.boolean().optional(),
+  collaborationMutation: ticketCommentMutationSchema.optional(),
   oldComment: z.object({
     id: z.string().uuid(),
     content: z.string(),
@@ -750,7 +824,7 @@ export const TicketCommentUpdatedPayloadSchema = TicketEventPayloadSchema.extend
     author: z.string(),
     isInternal: z.boolean().optional(),
   }).optional(),
-});
+}).superRefine((payload, ctx) => validateTicketCommentMutation(payload, ctx, 'edit'));
 
 // Time entry event payload schema
 export const TimeEntryEventPayloadSchema = BasePayloadSchema.extend({
@@ -759,6 +833,7 @@ export const TimeEntryEventPayloadSchema = BasePayloadSchema.extend({
   workItemId: z.string().nullable().optional(),
   workItemType: z.string().nullable().optional(),
   approvedBy: z.string().uuid().optional(),
+  deletedBy: z.string().uuid().optional(),
   requestedBy: z.string().uuid().optional(),
   reason: z.string().optional(),
   changes: z.record(z.unknown()).optional(),
@@ -1207,7 +1282,7 @@ export const EventPayloadSchemas = {
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketAssignedPayloadSchema,
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
-  TICKET_COMMENT_ADDED: TicketEventPayloadSchema,
+  TICKET_COMMENT_ADDED: TicketCommentAddedPayloadSchema,
   TICKET_COMMENT_UPDATED: TicketCommentUpdatedPayloadSchema,
   TICKET_COMMENT_DELETED: TicketCommentDeletedPayloadSchema,
   TICKET_RESPONSE_STATE_CHANGED: TicketResponseStateChangedPayloadSchemaV2,
@@ -1278,9 +1353,9 @@ export const EventPayloadSchemas = {
   PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED: ProjectTaskAdditionalAgentPayloadSchema,
   TASK_COMMENT_ADDED: TaskCommentAddedPayloadSchema,
   TASK_COMMENT_UPDATED: TaskCommentUpdatedPayloadSchema,
-  PROJECT_TASK_COMMENT_CREATED: TaskCommentAddedPayloadSchema,
-  PROJECT_TASK_COMMENT_UPDATED: TaskCommentUpdatedPayloadSchema,
-  PROJECT_TASK_COMMENT_DELETED: TaskCommentDeletedPayloadSchema,
+  PROJECT_TASK_COMMENT_CREATED: z.union([CoManagedTaskCommentChangePayloadSchema, TaskCommentAddedPayloadSchema.extend({ collaboration: z.never().optional() })]),
+  PROJECT_TASK_COMMENT_UPDATED: z.union([CoManagedTaskCommentChangePayloadSchema, TaskCommentUpdatedPayloadSchema.extend({ collaboration: z.never().optional() })]),
+  PROJECT_TASK_COMMENT_DELETED: z.union([CoManagedTaskCommentChangePayloadSchema, TaskCommentDeletedPayloadSchema.extend({ collaboration: z.never().optional() })]),
 
   // Projects (domain expansion)
   PROJECT_STATUS_CHANGED: projectStatusChangedEventPayloadSchema,
@@ -1542,10 +1617,13 @@ if (missingPayloadSchemas.length > 0) {
 export const EventSchemas = Object.entries(EventPayloadSchemas).reduce(
   (schemas, [eventType, payloadSchema]) => ({
     ...schemas,
-    [eventType]: BaseEventSchema.extend({
+    [eventType]: BaseEventSchema.superRefine((event, context) => {
+      const issue = collaborationActorPayloadIssue(event.payload);
+      if (issue) context.addIssue({ code: z.ZodIssueCode.custom, path: ['payload', 'actorReference'], message: issue });
+    }).pipe(BaseEventSchema.extend({
       eventType: z.literal(eventType as EventType),
       payload: payloadSchema,
-    }),
+    })),
   }),
   {} as Record<EventType, z.ZodType>
 );

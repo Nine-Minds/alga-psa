@@ -1,5 +1,6 @@
 'use server';
 
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected, type CoManagedAdmissionLimitCode } from '../../lib/internalUserLicenseGuard';
 import User from '@alga-psa/db/models/user';
 import { DeletionValidationResult, IUser, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
@@ -51,6 +52,7 @@ export type AddUserErrorCode =
   | 'ROLE_CLIENT_NOT_ALLOWED_FOR_MSP'
   | 'EMAIL_ALREADY_EXISTS'
   | 'LICENSE_LIMIT_REACHED'
+  | CoManagedAdmissionLimitCode
   | 'SOLO_PLAN_LIMIT'
   | 'PERMISSION_DENIED'
   | 'USER_CREATE_FAILED';
@@ -60,6 +62,9 @@ type AddUserResult =
   | { success: false; code: AddUserErrorCode; error: string };
 
 export type UpdateUserErrorCode =
+  | 'SOLO_PLAN_LIMIT'
+  | 'LICENSE_LIMIT_REACHED'
+  | CoManagedAdmissionLimitCode
   | 'EMAIL_ALREADY_EXISTS'
   | 'REPORTS_TO_SELF'
   | 'REPORTS_TO_CYCLE'
@@ -551,57 +556,9 @@ export const addUser = withAuth(async (
 
       // Check license limits for  MSP (internal) users
       if (userData.userType !== 'client') {
-        const tenantRow = await tenantDb(trx, tenant).table('tenants')
-          .first('licensed_user_count', 'plan');
-
-        if (!tenantRow) {
-          throw new Error(`Tenant not found: ${tenant}`);
-        }
-
-        const usedResult = await tenantDb(trx, tenant).table('users')
-          .where({
-            user_type: 'internal',
-            is_inactive: false,
-          })
-          .count('* as count');
-
-        const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
-        const limit = tenantRow.licensed_user_count as number | null;
-        const plan = tenantRow.plan as string | null | undefined;
-
-        if (plan === 'solo' && used >= 1) {
-          return {
-            success: false,
-            code: 'SOLO_PLAN_LIMIT',
-            error: 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.',
-          };
-        }
-
-        if (limit !== null && used >= limit) {
-          return {
-            success: false,
-            code: 'LICENSE_LIMIT_REACHED',
-            error: "You've reached your MSP user license limit.",
-          };
-        }
-
-        // Appliance license seat limit — Enterprise Edition only. Resolves to a
-        // no-op stub on CE (`@enterprise` → packages/ee/src), so no appliance
-        // licensing concept ships in or runs on Community Edition.
-        const seatLimit = await (async () => {
-          try {
-            const { checkApplianceLicenseSeatLimit } = await import('@enterprise/lib/license/userSeatGuard');
-            return await checkApplianceLicenseSeatLimit(used);
-          } catch {
-            return null;
-          }
-        })();
-        if (seatLimit) {
-          return {
-            success: false,
-            code: 'LICENSE_LIMIT_REACHED',
-            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license. Add seats at nineminds.com/portal, then use "Refresh license now" on the License page.`,
-          };
+        const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { email: userData.email });
+        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+          return { success: false, code: licenseCheck.code, error: licenseCheck.error };
         }
 
       }
@@ -1085,6 +1042,14 @@ export const updateUser = withAuth(async (
           ...userData,
           email: normalizedEmail,
         };
+      }
+
+      if (normalizedUserData.is_inactive === false) {
+        const target = await tenantDb(trx, tenant).table('users').where('user_id', userId).first('user_type', 'email', 'is_inactive');
+        if (target?.user_type === 'internal') {
+          const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { email: target.email, existingUserId: userId });
+          if (isInternalUserLicenseLimitRejected(licenseCheck)) return { success: false, code: licenseCheck.code, error: licenseCheck.error };
+        }
       }
 
       await User.update(trx, userId, normalizedUserData);

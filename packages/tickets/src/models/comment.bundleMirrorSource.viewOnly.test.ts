@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { coManagedLifecycleMock } from '@alga-psa/db/testing';
 
 const state = vi.hoisted(() => ({
   updatePayloads: [] as Array<Record<string, unknown>>,
@@ -14,6 +15,8 @@ vi.mock('@alga-psa/db', () => ({
       const builder: Record<string, unknown> = {
         select: () => builder,
         where: () => builder,
+        forUpdate: () => builder,
+        forShare: () => builder,
         first: () => Promise.resolve(state.existingComment),
         update: (data: Record<string, unknown>) => {
           state.updatePayloads.push(data);
@@ -23,6 +26,14 @@ vi.mock('@alga-psa/db', () => ({
       return builder;
     },
   }),
+}));
+
+// The shared write path is wrapped in co-managed lifecycle admission, which
+// needs an open transaction and the licensing surface. This suite is about the
+// view-only field, so the lifecycle is the independent (writable) no-op.
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  ...coManagedLifecycleMock(),
 }));
 
 vi.mock('@shared/lib/ticketCommentAttachments', () => ({
@@ -49,7 +60,7 @@ describe('Comment.update view-only fields', () => {
 
   it('never persists bundle_mirror_source even when it is smuggled into the payload', async () => {
     await Comment.update(
-      {} as never,
+      { isTransaction: true } as never,
       'tenant-1',
       'comment-1',
       {

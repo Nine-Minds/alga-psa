@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "E-Mail- und Identitätsanbieter",
+      "description": "Registrieren Sie Ihre eigene Google- oder Microsoft-Anwendung für eingehende E-Mails, die Mitarbeiteranmeldung und die Verzeichniseinrichtung. Diese Zugangsdaten gehören zu Ihrem Arbeitsbereich.",
+      "backToEmail": "Zurück zu den E-Mail-Einstellungen"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} ungespeicherte Änderung",
     "unsavedChanges_other": "{{count}} ungespeicherte Änderungen"

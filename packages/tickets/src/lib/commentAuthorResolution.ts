@@ -17,7 +17,7 @@ export interface CommentContactAuthor {
 }
 
 export interface ResolvedCommentAuthor {
-  source: 'user' | 'contact' | 'system' | 'unknown';
+  source: 'user' | 'contact' | 'collaborator' | 'system' | 'unknown';
   displayName: string;
   email?: string;
   userId?: string;
@@ -25,6 +25,7 @@ export interface ResolvedCommentAuthor {
   userType?: string;
   avatarKind: 'user' | 'contact' | 'system' | 'unknown';
   avatarUrl: string | null;
+  avatarName?: string;
 }
 
 const UNKNOWN_AUTHOR: ResolvedCommentAuthor = {
@@ -34,6 +35,13 @@ const UNKNOWN_AUTHOR: ResolvedCommentAuthor = {
   avatarUrl: null,
 };
 
+type CommentAuthorFields = Pick<IComment, 'user_id' | 'contact_id' | 'is_system_generated' | 'actor_reference_id' | 'actor_display_name' | 'actor_organization_name'>;
+
+/** Partial or malformed foreign attribution must not trigger a local lookup. */
+export function hasCommentCollaborationAttribution(comment: CommentAuthorFields): boolean {
+  return [comment.actor_reference_id, comment.actor_display_name, comment.actor_organization_name].some(value => value != null);
+}
+
 const SYSTEM_AUTHOR: ResolvedCommentAuthor = {
   source: 'system',
   displayName: 'System',
@@ -42,12 +50,21 @@ const SYSTEM_AUTHOR: ResolvedCommentAuthor = {
 };
 
 export function resolveCommentAuthor(
-  comment: Pick<IComment, 'user_id' | 'contact_id' | 'is_system_generated'>,
+  comment: CommentAuthorFields,
   options: {
     userMap: Record<string, CommentUserAuthor>;
     contactMap?: Record<string, CommentContactAuthor>;
   }
 ): ResolvedCommentAuthor {
+  if (hasCommentCollaborationAttribution(comment)) {
+    // Never resolve an attributed foreign author through an owner-local user or
+    // contact map, even if a malformed/partial DTO also contains those IDs.
+    if (comment.user_id || comment.contact_id || typeof comment.actor_reference_id !== 'string' || !comment.actor_reference_id.trim() ||
+        typeof comment.actor_display_name !== 'string' || !comment.actor_display_name.trim() ||
+        typeof comment.actor_organization_name !== 'string' || !comment.actor_organization_name.trim()) return { ...UNKNOWN_AUTHOR, source: 'collaborator' };
+    return { source: 'collaborator', displayName: `${comment.actor_display_name} (${comment.actor_organization_name})`,
+      avatarName: comment.actor_display_name, avatarKind: 'user', avatarUrl: null };
+  }
   if (comment.user_id) {
     const user = options.userMap[comment.user_id];
     if (user) {

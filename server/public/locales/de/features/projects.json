@@ -1448,7 +1448,14 @@
     "addFailed": "Kommentar konnte nicht hinzugefügt werden",
     "submitting": "Wird gesendet...",
     "loading": "Laden...",
-    "empty": "Noch keine Kommentare. Seien Sie der Erste!"
+    "empty": "Noch keine Kommentare. Seien Sie der Erste!",
+    "audiences": {
+      "requester": "Anfragende und IT-Teams",
+      "shared_it": "Gemeinsame IT-Teams",
+      "organization_private": "Nur meine Organisation"
+    },
+    "authorUnavailable": "Autor nicht verfügbar",
+    "loadError": "Die Unterhaltung konnte nicht geladen werden. Aktualisieren Sie, um Ihren Zugriff zu prüfen."
   },
   "clientPortal": {
     "clientsWillSee": "Kunden werden sehen:",

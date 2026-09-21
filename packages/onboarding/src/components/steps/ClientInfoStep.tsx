@@ -9,7 +9,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Eye, EyeOff } from 'lucide-react';
-import type { StepProps } from '@alga-psa/types';
+import type { ProductCode, StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { translateFieldValidation, validateEmailAddressField } from '@alga-psa/validation';
 import { getAllCountries, type ICountry } from '@alga-psa/clients/actions';
@@ -23,9 +23,46 @@ import {
 
 interface ClientInfoStepProps extends StepProps {
   isRevisit?: boolean;
+  /**
+   * False once the administrator chose their own password — invited administrators do
+   * that while claiming the invitation, so this step must not ask for another one.
+   */
+  requiresPasswordReset?: boolean;
+  productCode?: ProductCode;
 }
 
-export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientInfoStepProps) {
+// This step collects the workspace's own identity. Only PSA and AlgaDesk onboard a
+// service provider, so only they may call it "your MSP" or mention invoices and
+// quotes; a co-managed customer is an internal IT department with no billing at all.
+const CLIENT_INFO_COPY_BY_PRODUCT: Partial<Record<ProductCode, {
+  headerTitle: { key: string; defaultValue: string };
+  headerDescription: { key: string; defaultValue: string };
+  addressDescription: { key: string; defaultValue: string };
+}>> = {
+  co_managed: {
+    headerTitle: {
+      key: 'clientInfoStep.header.coManagedTitle',
+      defaultValue: 'Your Organization & Admin Account',
+    },
+    headerDescription: {
+      key: 'clientInfoStep.header.coManagedDescription',
+      defaultValue: "Let's start with your organization's details and your admin login.",
+    },
+    addressDescription: {
+      key: 'clientInfoStep.address.coManagedDescription',
+      defaultValue: "Your organization's address. Review and correct it if needed.",
+    },
+  },
+};
+
+export function ClientInfoStep({
+  data,
+  updateData,
+  isRevisit = false,
+  requiresPasswordReset = true,
+  productCode = 'psa',
+}: ClientInfoStepProps) {
+  const productCopy = CLIENT_INFO_COPY_BY_PRODUCT[productCode];
   const { t } = useTranslation('msp/onboarding');
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
@@ -54,8 +91,9 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           })}
         </h3>
         <p className="text-sm text-gray-600">
-          {t('clientInfoStep.address.description', {
-            defaultValue: 'Prefilled from your billing details — review and correct if needed. This address appears on your invoices and quotes.'
+          {t(productCopy?.addressDescription.key ?? 'clientInfoStep.address.description', {
+            defaultValue: productCopy?.addressDescription.defaultValue
+              ?? 'Prefilled from your billing details — review and correct if needed. This address appears on your invoices and quotes.'
           })}
         </p>
       </div>
@@ -340,13 +378,14 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">
-          {t('clientInfoStep.header.title', {
-            defaultValue: 'Your Company & Admin Account'
+          {t(productCopy?.headerTitle.key ?? 'clientInfoStep.header.title', {
+            defaultValue: productCopy?.headerTitle.defaultValue ?? 'Your Company & Admin Account'
           })}
         </h2>
         <p className="text-sm text-gray-600">
-          {t('clientInfoStep.header.description', {
-            defaultValue: 'Let\'s start with your MSP\'s own company details and your admin login — not a client you support.'
+          {t(productCopy?.headerDescription.key ?? 'clientInfoStep.header.description', {
+            defaultValue: productCopy?.headerDescription.defaultValue
+              ?? 'Let\'s start with your MSP\'s own company details and your admin login — not a client you support.'
           })}
         </p>
       </div>
@@ -469,6 +508,7 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
 
       {companyAddressSection}
 
+      {requiresPasswordReset && (
       <div className="space-y-4 pt-4 border-t">
         <Alert variant="warning" className="mb-4">
           <AlertDescription>
@@ -633,6 +673,7 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           )}
         </div>
       </div>
+      )}
 
       <Alert variant="info">
         <AlertDescription>

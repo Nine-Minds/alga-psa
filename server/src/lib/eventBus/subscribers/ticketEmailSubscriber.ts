@@ -1,3 +1,8 @@
+import { handleCoManagedRequesterCommentEmailEvent, deliverCoManagedRequesterCommentEmailEvent } from './coManagedRequesterCommentEmailSubscriber';
+import { handleCoManagedCustomerCommentEmailEvent, deliverCoManagedCustomerCommentEmailEvent } from './coManagedCustomerCommentEmailSubscriber';
+import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
+import { handleCoManagedCommentEmailEvent } from './coManagedCommentEmailSubscriber';
+import { readTicketNotificationActor, resolveTicketNotificationActorNames, previousTicketChangeValue } from '../../notifications/ticketNotificationContext';
 import { getEventBus } from '../index';
 import {
   EventType,
@@ -67,6 +72,7 @@ function normalizeHost(host: string): string {
   return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
 }
 
+// LEVERAGE: pattern ticket-email-routing — requester worker transport resolves these same sender settings and active portal-domain links.
 async function resolveTicketingFromAddress(
   knex: Knex,
   tenantId: string
@@ -757,8 +763,9 @@ async function formatChanges(db: any, changes: Record<string, unknown>, tenantId
   const items = await Promise.all(
     Object.entries(changes).map(async ([field, value]): Promise<string> => {
       const fieldLabel = formatFieldName(field);
-      if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
-        const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
+      if (typeof value === 'object' && value !== null && ('old' in value || 'previous' in value || 'new' in value)) {
+        const oldVal = previousTicketChangeValue(value as Record<string, unknown>);
+        const newVal = (value as Record<string, unknown>).new;
         if (oldVal !== undefined && newVal !== undefined) {
           const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
           const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
@@ -1300,7 +1307,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
   const suppression = resolveTicketNotificationSuppression(payload);
   // Resolve userId from domain-specific field (updatedByUserId) or base field (actorUserId),
   // falling back to legacy userId for backward compatibility
-  const updaterUserId = (payload as any).updatedByUserId || payload.actorUserId || (payload as any).userId;
+  const updaterActor = readTicketNotificationActor(payload, tenantId,
+    (payload as any).updatedByUserId || payload.actorUserId || (payload as any).userId);
+  const updaterUserId = updaterActor.userId || undefined;
   const accumulator = NotificationAccumulator.getInstance();
 
   if (accumulator.isReady()) {
@@ -1455,11 +1464,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
 
     // Get updater's name
-    const updater = updaterUserId
-      ? await tenantDb(db, tenantId).table('users')
-          .where({ user_id: updaterUserId })
-          .first()
-      : null;
+    const [updaterName] = await resolveTicketNotificationActorNames(db, tenantId, [updaterActor]);
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
@@ -1486,7 +1491,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       categoryDetails,
       locationSummary,
       changes: formattedChanges,
-      updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : 'System'
+      updatedBy: updaterName
     };
 
     const buildContext = (url: string) => ({
@@ -1645,6 +1650,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 async function formatAccumulatedChanges(
   db: any,
   accumulatedChanges: AccumulatedChange[],
+  updaterNames: readonly string[],
   tenantId: string,
   timeZone: string = 'UTC',
   locale: string = 'en'
@@ -1653,14 +1659,7 @@ async function formatAccumulatedChanges(
 
   for (let i = 0; i < accumulatedChanges.length; i += 1) {
     const changeSet = accumulatedChanges[i];
-    const updater = changeSet.userId
-      ? await tenantDb(db, tenantId).table('users')
-          .where({ user_id: changeSet.userId })
-          .first()
-      : null;
-    const updaterName = updater
-      ? `${updater.first_name} ${updater.last_name}`
-      : (changeSet.userId || 'System');
+    const updaterName = updaterNames[i];
 
     const timestamp = new Date(changeSet.timestamp).toLocaleString(locale, {
       month: 'short',
@@ -1675,8 +1674,9 @@ async function formatAccumulatedChanges(
     const items = await Promise.all(
       Object.entries(changeSet.changes).map(async ([field, value]): Promise<string> => {
         const fieldLabel = formatFieldName(field);
-        if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
-          const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
+        if (typeof value === 'object' && value !== null && ('old' in value || 'previous' in value || 'new' in value)) {
+          const oldVal = previousTicketChangeValue(value as Record<string, unknown>);
+          const newVal = (value as Record<string, unknown>).new;
           if (oldVal !== undefined && newVal !== undefined) {
             const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
             const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
@@ -1749,10 +1749,10 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     const accumulatedChanges: AccumulatedChange[] = accumulatedEvents
       .map((accumulatedEvent) => ({
         timestamp: accumulatedEvent.timestamp,
-        userId: accumulatedEvent.userId,
+        ...readTicketNotificationActor(accumulatedEvent.payload, tenantId, accumulatedEvent.userId),
         changes: (
           (accumulatedEvent.payload as {
-            changes?: Record<string, { old?: unknown; new?: unknown }>;
+            changes?: Record<string, { old?: unknown; previous?: unknown; new?: unknown }>;
           }).changes ?? {}
         ),
       }))
@@ -1858,31 +1858,9 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     // Tenant-level locale (no single recipient); falls back to system default 'en'.
     const emailLocale = await getTenantDefaultLocale(tenantId);
 
-    // Format all accumulated changes
-    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
-
-    // Resolve display name for the "Updated By" row from the set of accumulated updaters.
-    const uniqueUpdaterIds = Array.from(
-      new Set(
-        accumulatedChanges
-          .map((c) => c.userId)
-          .filter((id): id is string => Boolean(id))
-      )
-    );
-    let updatedByDisplay = 'System';
-    if (uniqueUpdaterIds.length > 0) {
-      const updaterRows = await tenantDb(db, tenantId).table('users')
-        .whereIn('user_id', uniqueUpdaterIds)
-        .select('user_id', 'first_name', 'last_name');
-      const idToName = new Map<string, string>(
-        updaterRows.map((u: { user_id: string; first_name: string; last_name: string }) => [
-          u.user_id,
-          `${u.first_name} ${u.last_name}`,
-        ])
-      );
-      const orderedNames = uniqueUpdaterIds.map((id) => idToName.get(id) || id);
-      updatedByDisplay = orderedNames.join(', ');
-    }
+    const updaterNames = await resolveTicketNotificationActorNames(db, tenantId, accumulatedChanges, 'userId');
+    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, updaterNames, tenantId, emailTimeZone, emailLocale);
+    const updatedByDisplay = [...new Set(updaterNames)].join(', ') || 'System';
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
@@ -2472,14 +2450,22 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 }
 
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise<void> {
-  const { payload } = event;
+  let { payload } = event;
   const { tenantId } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
   // Resolve userId from base field, falling back to legacy
-  const commentUserId = payload.actorUserId || (payload as any).userId;
+  const commentActor = readTicketNotificationActor(payload, tenantId, payload.actorUserId || payload.userId);
+  const commentUserId = commentActor.userId || undefined;
 
   try {
     const db = await getConnection(tenantId);
+    // The durable consumer owns customer technician completion. Its separate
+    // targeted subscriber never replays the native notification fanout.
+    if (await handleCoManagedCustomerCommentEmailEvent(event, db)) suppression.suppressInternalNotifications = true;
+    const requesterEmailHandled = await handleCoManagedRequesterCommentEmailEvent(event, db);
+    const currentPayload = await resolveTicketCommentNotificationPayload(db, payload);
+    if (!currentPayload) return;
+    payload = currentPayload;
 
     // Get ticket details with all required fields
     const ticket = await fetchTicketForEmail(db, tenantId, payload.ticketId);
@@ -2551,7 +2537,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       return;
     }
 
-    if (!commentAuthorEmail && payload.comment?.author && isValidEmail(payload.comment.author)) {
+    if (!commentActor.actorReference && !commentAuthorEmail && payload.comment?.author && isValidEmail(payload.comment.author)) {
       commentAuthorEmail = payload.comment.author.trim();
     }
 
@@ -2723,6 +2709,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
     const sentEmails = new Set<string>();
+    // The primary queue owns this recipient only. Preserve native watcher
+    // eligibility checks while excluding a duplicate to the current primary.
+    if (requesterEmailHandled && primaryEmail) sentEmails.add(normalizeRecipientEmail(primaryEmail));
     const sendIfUnique = async (
       params: SendEmailParams,
       subtypeName: string,
@@ -2747,7 +2736,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // Event schema uses `isInternal` (camelCase); legacy payloads may omit it.
     const isPublicComment = !payload.comment?.isInternal;
 
-    let isFromAgent = false;
+    let isFromAgent = Boolean(commentActor.actorReference);
     if (commentAuthorUserId) {
       const author = await tenantDb(db, tenantId).table('users')
         .select('user_type')
@@ -2764,6 +2753,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Send to primary email if available - external user, no userId
     if (
+      !requesterEmailHandled &&
       primaryEmail &&
       isPublicComment &&
       isFromAgent &&
@@ -2808,8 +2798,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       await sendIfUnique(emailParams, 'Ticket Comment Added');
     }
 
-    // If this ticket is a bundle master, default behavior is to notify all child requesters for public comments.
-    if (isPublicComment && isFromAgent) {
+    // Shared comment authority currently covers the canonical ticket only.
+    // Child fanout requires a separately authorized child set at delivery time.
+    if (isPublicComment && isFromAgent && !commentActor.actorReference && !payload.comment?.audience) {
       const bundleChildren = shouldSendTicketCommentNotification(suppression, 'contact')
         ? await fetchBundleChildTicketsForEmail(db, tenantId, payload.ticketId)
         : [];
@@ -2983,7 +2974,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
   const { tenantId } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
   // Resolve userId from domain-specific field or base field, falling back to legacy
-  const closerUserId = (payload as any).closedByUserId || payload.actorUserId || (payload as any).userId;
+  const closerActor = readTicketNotificationActor(payload, tenantId,
+    (payload as any).closedByUserId || payload.actorUserId || (payload as any).userId);
+  const closerUserId = closerActor.userId || undefined;
 
   try {
     const db = await getConnection(tenantId);
@@ -3094,12 +3087,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
 
     // Get closer's name
-    const closer = closerUserId
-      ? await tenantDb(db, tenantId).table('users')
-          .where({ user_id: closerUserId })
-          .first()
-      : null;
-    const closedBy = closer ? `${closer.first_name} ${closer.last_name}` : 'System';
+    const [closedBy] = await resolveTicketNotificationActorNames(db, tenantId, [closerActor]);
 
     // Get the resolution comment (most recent comment with is_resolution = true)
     const resolutionComment = await tenantDb(db, tenantId).table('comments')
@@ -3503,6 +3491,9 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
     ] as const;
 
     const channel = getEmailEventChannel();
+    await getEventBus().subscribe('TICKET_COMMENT_ADDED', deliverCoManagedRequesterCommentEmailEvent, { channel, subscriberId: 'requester-email' });
+    await getEventBus().subscribe('TICKET_COMMENT_ADDED', deliverCoManagedCustomerCommentEmailEvent, { channel, subscriberId: 'customer-internal-email' });
+    await getEventBus().subscribe('TICKET_COMMENT_ADDED', handleCoManagedCommentEmailEvent, { channel, subscriberId: 'co-managed-email' });
     console.log(`[TicketEmailSubscriber] Using channel "${channel}" for ticket email events`);
 
     for (const eventType of ticketEventTypes) {
@@ -3522,6 +3513,8 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
  * Unregister email notification subscriber
  */
 export async function unregisterTicketEmailSubscriber(): Promise<void> {
+  await getEventBus().unsubscribe('TICKET_COMMENT_ADDED', deliverCoManagedCustomerCommentEmailEvent, { channel: getEmailEventChannel() });
+  await getEventBus().unsubscribe('TICKET_COMMENT_ADDED', handleCoManagedCommentEmailEvent, { channel: getEmailEventChannel() });
   try {
     const ticketEventTypes = [
       'TICKET_CREATED',

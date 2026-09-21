@@ -148,7 +148,7 @@ export function Input({
   return (
     <div className={containerClassName !== undefined ? containerClassName : "mb-0"}>
       {label && (
-        <label className={`block text-sm font-medium mb-1 ${hasErrorState ? 'text-destructive' : 'text-[rgb(var(--color-text-700))]'}`}>
+        <label htmlFor={id} className={`block text-sm font-medium mb-1 ${hasErrorState ? 'text-destructive' : 'text-[rgb(var(--color-text-700))]'}`}>
           {label}
           {required && <span className="text-[rgb(var(--color-text-500))] ml-0.5" aria-hidden="true">*</span>}
         </label>

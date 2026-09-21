@@ -102,7 +102,10 @@
       "forms": "Formulare",
       "channels": "Kanäle"
     },
-    "passwords": "Passwörter"
+    "passwords": "Passwörter",
+    "coManaged": "Co-Managed IT",
+    "coManagedDelegation": "Delegierte Administration",
+    "coManagedAccess": "Co-Managed-Zugriff"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",

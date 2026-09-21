@@ -1,4 +1,5 @@
 "use client";
+import { CoManagedRequesterTaskProvider } from '@/components/co-managed/CoManagedRequesterTaskConversation';
 
 import { AppSessionProvider } from "@alga-psa/auth/client";
 import { ClientPortalLayout } from "@alga-psa/client-portal/components";
@@ -15,6 +16,8 @@ import { ClientPortalDocumentsProvider } from "./ClientPortalDocumentsProvider";
 import { usePathname } from "next/navigation";
 import { resolveProductRouteBehavior } from "@/lib/productSurfaceRegistry";
 import { ProductRouteBoundary } from "@/components/product/ProductRouteBoundary";
+import { CoManagedPortalAttachmentsProvider } from '@/components/co-managed/CoManagedPortalAttachments';
+import { CoManagedWorkspaceBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
 
 interface Props {
   children: React.ReactNode;
@@ -46,26 +49,30 @@ export function ClientPortalLayoutClient({
 
   return (
     <AppSessionProvider session={session}>
+      <CoManagedWorkspaceBoundary productCode={productCode}>
       <PostHogUserIdentifier />
       <I18nWrapper portal="client" initialLocale={initialLocale || undefined}>
         <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
         <DateFormatProvider dateFormat={dateFormat}>
         <BrandingProvider initialBranding={branding}>
           <ClientPortalDocumentsProvider>
+          <CoManagedPortalAttachmentsProvider><CoManagedRequesterTaskProvider>
             <ClientPortalLayout
               productCode={productCode}
               appointmentsEnabled={appointmentsEnabled}
               initialSidebarCollapsed={initialSidebarCollapsed}
             >
-              {productCode === 'algadesk' && routeBehavior !== 'allowed'
+              {(productCode === 'algadesk' || productCode === 'co_managed') && routeBehavior !== 'allowed'
                 ? <ProductRouteBoundary behavior={routeBehavior} scope="client-portal" />
                 : children}
             </ClientPortalLayout>
+          </CoManagedRequesterTaskProvider></CoManagedPortalAttachmentsProvider>
           </ClientPortalDocumentsProvider>
         </BrandingProvider>
         </DateFormatProvider>
         </CurrencyFormatProvider>
       </I18nWrapper>
+      </CoManagedWorkspaceBoundary>
     </AppSessionProvider>
   );
 }

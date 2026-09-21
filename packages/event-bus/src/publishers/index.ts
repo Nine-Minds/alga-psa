@@ -24,6 +24,8 @@ export interface PublishOptions {
    * that already completed are skipped by their own idempotency ledger.
    */
   force?: boolean;
+  /** Recovery for one durable subscriber; bypasses normal channel fanout. */
+  targetSubscriber?: string;
 }
 
 const EMAIL_EVENT_TYPES = new Set<Event['eventType']>([
@@ -39,6 +41,7 @@ const EMAIL_EVENT_TYPES = new Set<Event['eventType']>([
   'PROJECT_ASSIGNED',
   'PROJECT_TASK_ASSIGNED',
   'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+  'PROJECT_TASK_COMMENT_CREATED',
   'PROJECT_MILESTONE_READY',
   'PROJECT_BUDGET_THRESHOLD_REACHED',
   'PROJECT_BUDGET_EXCEEDED',
@@ -62,6 +65,7 @@ const INTERNAL_NOTIFICATION_EVENT_TYPES = new Set<Event['eventType']>([
   'PROJECT_MILESTONE_READY',
   'PROJECT_BUDGET_THRESHOLD_REACHED',
   'PROJECT_BUDGET_EXCEEDED',
+  'PROJECT_TASK_COMMENT_CREATED',
   'TASK_COMMENT_ADDED',
   'INVOICE_GENERATED',
   'MESSAGE_SENT',
@@ -77,6 +81,10 @@ export async function publishEvent(
   options?: PublishOptions
 ): Promise<void> {
   try {
+    if (options?.targetSubscriber !== undefined) {
+      await getEventBus().publish(event as any, options);
+      return;
+    }
     const isEmailEvent = EMAIL_EVENT_TYPES.has(event.eventType as Event['eventType']);
     const isInternalNotificationEvent = INTERNAL_NOTIFICATION_EVENT_TYPES.has(event.eventType as Event['eventType']);
     const channel = options?.channel;

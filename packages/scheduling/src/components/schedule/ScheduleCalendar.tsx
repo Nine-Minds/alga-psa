@@ -203,6 +203,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   };
 
   const workItemColors: Record<WorkItemType, string> = {
+    co_managed: 'rgb(var(--color-primary-200))',
     ticket: 'rgb(var(--color-primary-200))',
     project_task: 'rgb(var(--color-secondary-100))',
     non_billable_category: 'rgb(var(--color-event-non-billable))',
@@ -213,6 +214,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   };
 
   const workItemHoverColors: Record<WorkItemType, string> = {
+    co_managed: 'rgb(var(--color-primary-200))',
     ticket: 'rgb(var(--color-primary-200))',
     project_task: 'rgb(var(--color-secondary-200))',
     non_billable_category: 'rgb(var(--color-event-non-billable-hover))',

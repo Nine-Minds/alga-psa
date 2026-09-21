@@ -45,6 +45,7 @@ export interface SendEmailParams {
    * template lookup (system_email_templates.language_code).
    */
   locale?: SupportedLocale;
+  retryPolicy?: 'queue' | 'caller';
 }
 
 export interface EmailSettingsValidation {
@@ -151,6 +152,10 @@ export class TenantEmailService extends BaseEmailService {
     // Check rate limits before sending
     const rateLimitResult = await this.checkRateLimits(params);
     if (!rateLimitResult.allowed) {
+      if (params.retryPolicy === 'caller') {
+        return { success: false, error: `Rate limit exceeded: ${rateLimitResult.reason}`,
+          metadata: { retryable: true, errorCode: 'rate_limited', retryAfterMs: rateLimitResult.retryAfterMs } };
+      }
       // Event retries must reconstruct comment attachments and recheck visibility.
       if (params.revalidateCommentOnRetry) return {
         success: false, error: 'Comment notification rate limited',
@@ -479,7 +484,8 @@ export class TenantEmailService extends BaseEmailService {
       from: params.from,
       fromName: params.fromName,
       tenantId,
-      locale: params.locale
+      locale: params.locale,
+      retryPolicy: params.retryPolicy
     };
 
     return service.sendEmail(baseParams);

@@ -134,7 +134,25 @@ jobs:
           done
 
       - name: Install PDF text extraction tools
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        # poppler-utils provides pdftotext, a hard dependency of the invoice PDF
+        # integration tests (invoiceTicketImmutable / invoiceTicketProduction).
+        # The runner image ships third-party apt sources we do not control: on
+        # 2026-09-20 packages.microsoft.com returned HTTP 403 for the Ubuntu
+        # noble InRelease file, `apt-get update` exited 100, and the whole job
+        # died before running a single test. Drop those vendor lists, and treat
+        # a remaining update failure as non-fatal -- apt still refreshes the
+        # repositories it could reach, and the Ubuntu archive is the only one
+        # this package comes from. The install is NOT tolerated failing, and
+        # pdftotext is verified afterwards, so a genuinely unavailable tool
+        # still stops the job here rather than surfacing as an opaque test
+        # failure later.
+        run: |
+          set -uo pipefail
+          sudo rm -f /etc/apt/sources.list.d/*microsoft* /etc/apt/sources.list.d/*azure-cli*
+          sudo apt-get update || echo "::warning::apt-get update reported errors; continuing to the install, which must still succeed."
+          set -e
+          sudo apt-get install -y poppler-utils
+          pdftotext -v
 
       - name: Run workflow and invoice regressions on distributed tables
         working-directory: server

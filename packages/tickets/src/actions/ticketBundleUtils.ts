@@ -3,6 +3,9 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
+import { recordCoManagedTicketReopened, recordCoManagedTicketResolution } from '@alga-psa/co-managed';
+import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import {
   getBoardCloseRulesRow,
   openBundleChildrenCount,
@@ -53,6 +56,27 @@ function tenantScopedTable(
   tenant: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+/**
+ * The open status to move a master to, scoped to the master's own board.
+ * A tenant-wide "first open ticket status" can belong to a different board
+ * entirely, which would move the master onto a status its board does not
+ * offer. `status_id` breaks ties so concurrent child replies agree on one
+ * answer, and the share lock holds the row for the rest of the transaction.
+ */
+async function findOpenTicketStatusId(trx: Knex.Transaction, tenant: string, boardId: string): Promise<string | null> {
+  const row = await tenantScopedTable(trx, 'statuses', tenant)
+    .select('status_id')
+    .where({ is_closed: false, board_id: boardId })
+    .andWhere(function () {
+      this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
+    })
+    .orderBy('is_default', 'desc')
+    .orderBy('order_number', 'asc')
+    .orderBy('status_id')
+    .forShare().first();
+  return row?.status_id ?? null;
 }
 
 export async function findDefaultOpenTicketStatusId(
@@ -194,7 +218,7 @@ export async function reopenBundleMasterOnly(
   }
 
   const master = await tenantScopedTable(trx, 'tickets', tenant)
-    .select('ticket_id', 'status_id')
+    .select('ticket_id', 'status_id', 'closed_at')
     .where({ ticket_id: masterTicketId })
     .first();
   if (!master) {
@@ -219,6 +243,14 @@ export async function reopenBundleMasterOnly(
       updated_at: reopenedAt,
     });
 
+  // Every genuine closed-to-open mutation of a co-managed master has to settle
+  // the SLA obligation, and after this extraction there are two of them: the
+  // child-reply path and applyClosedMasterChoice's reopen_master branch. It
+  // reads the ticket's *current* status, so it has to run after the update, and
+  // it no-ops unless the ticket carries a retained MSP-responsible obligation
+  // that had already been resolved.
+  await recordCoManagedTicketReopened(trx, tenant, masterTicketId);
+
   await writeTicketActivity(trx, {
     tenant,
     ticketId: masterTicketId,
@@ -230,7 +262,7 @@ export async function reopenBundleMasterOnly(
     occurredAt: reopenedAt,
     changes: {
       status_id: { old: previousStatusId, new: openStatusId },
-      closed_at: { old: null, new: null },
+      closed_at: { old: master.closed_at ?? null, new: null },
     },
     details: {
       reopen_trigger: options.trigger,
@@ -247,38 +279,36 @@ export async function maybeReopenBundleMasterFromChildReply(
   childTicketId: string,
   updatedByUserId: string | null
 ): Promise<{ reopened: boolean; masterTicketId: string | null }> {
+  await assertCoManagedOperationalWrite(trx, tenant);
   const child = await tenantScopedTable(trx, 'tickets', tenant)
     .select('ticket_id', 'master_ticket_id')
     .where({ ticket_id: childTicketId })
-    .first();
+    .forShare().first();
 
   const masterTicketId = child?.master_ticket_id ?? null;
   if (!masterTicketId) {
     return { reopened: false, masterTicketId: null };
   }
 
+  // Lock the master before its settings, matching bundle mutation ordering.
+  // Read its status only after retaining the row: concurrent child replies must
+  // not both infer a closed-to-open transition from an earlier join snapshot.
+  const master = await tenantScopedTable(trx, 'tickets', tenant)
+    .select('ticket_id', 'board_id', 'status_id', 'closed_at')
+    .where({ ticket_id: masterTicketId }).forUpdate().first();
+  if (!master?.board_id) return { reopened: false, masterTicketId };
+  const status = await tenantScopedTable(trx, 'statuses', tenant)
+    .where({ status_id: master.status_id }).forShare().first('is_closed');
+  if (!status?.is_closed) return { reopened: false, masterTicketId };
+
   const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
     .select('reopen_on_child_reply')
     .where({ master_ticket_id: masterTicketId })
-    .first();
+    .forShare().first();
+  if (!settings?.reopen_on_child_reply) return { reopened: false, masterTicketId };
 
-  if (!settings?.reopen_on_child_reply) {
-    return { reopened: false, masterTicketId };
-  }
-
-  const master = await tenantDb(trx, tenant)
-    .tenantJoin(
-      tenantScopedTable(trx, 'tickets as t', tenant),
-      'statuses as s',
-      't.status_id',
-      's.status_id',
-      { type: 'left' }
-    )
-    .select('t.ticket_id', 't.status_id', 's.is_closed')
-    .where({ 't.ticket_id': masterTicketId })
-    .first();
-
-  if (!master || !master.is_closed) {
+  const openStatusId = await findOpenTicketStatusId(trx, tenant, master.board_id);
+  if (!openStatusId) {
     return { reopened: false, masterTicketId };
   }
 
@@ -290,9 +320,11 @@ export async function maybeReopenBundleMasterFromChildReply(
     source: TICKET_ACTIVITY_SOURCE.SYSTEM,
     trigger: 'child_reply',
     eventType: TICKET_ACTIVITY_EVENT.BUNDLE_REOPENED,
+    openStatusId,
     details: { child_ticket_id: childTicketId },
   });
 
+  await assertCoManagedOperationalWrite(trx, tenant);
   return { reopened: result.reopened, masterTicketId };
 }
 
@@ -906,6 +938,11 @@ interface DerivedBundleChildRow {
   closed_at: string | null;
   closed_by: string | null;
   propagation_id: string | null;
+  // Close-rule inputs: a propagated close must clear the same board rules a
+  // direct close would, so the child's own routing fields travel with it.
+  board_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
 }
 
 function propagationDisplayName(user: BundlePropagationUser): string {
@@ -923,6 +960,32 @@ async function readStatusIsClosed(
     .where({ status_id: statusId })
     .first();
   return row ? Boolean(row.is_closed) : null;
+}
+
+async function readStatusBoardId(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusId: string | null | undefined
+): Promise<string | null> {
+  if (!statusId) return null;
+  const row = await tenantScopedTable(trx, 'statuses', tenant)
+    .select('board_id')
+    .where({ status_id: statusId })
+    .first();
+  return row ? ((row.board_id as string | null) ?? null) : null;
+}
+
+/**
+ * A co-managed collaborator is admitted to the master ticket, not to the
+ * bundle. Propagating its status would write rows on children the collaborator
+ * may never have been admitted to, so the whole edit is refused rather than
+ * silently narrowed to the visible children. Called before any child write on
+ * either propagation path.
+ */
+function assertBundlePropagationAuthority(ctx: BundleStatusPropagationContext): void {
+  if (ctx.collaborator) {
+    throw new Error('Shared bundle workflow edits require authority for every child ticket');
+  }
 }
 
 /**
@@ -965,6 +1028,9 @@ async function deriveBundleChildren(
       't.closed_at',
       't.closed_by',
       't.is_closed',
+      't.board_id',
+      't.category_id',
+      't.subcategory_id',
       'p.propagation_id'
     )
     .where({ 't.master_ticket_id': masterId });
@@ -980,6 +1046,9 @@ async function deriveBundleChildren(
     closed_at: (row.closed_at as string | null) ?? null,
     closed_by: (row.closed_by as string | null) ?? null,
     propagation_id: (row.propagation_id as string | null) ?? null,
+    board_id: (row.board_id as string | null) ?? null,
+    category_id: (row.category_id as string | null) ?? null,
+    subcategory_id: (row.subcategory_id as string | null) ?? null,
   }));
 }
 
@@ -1149,6 +1218,7 @@ export async function propagateBundleMasterStatus(
     if (Object.keys(propagateFields).length === 0) {
       return { propagated: false, action: null, affectedChildIds: [] };
     }
+    assertBundlePropagationAuthority(ctx);
 
     const childRows = await tenantScopedTable(trx, 'tickets', ctx.tenant)
       .where({ master_ticket_id: masterId })
@@ -1181,18 +1251,49 @@ export async function propagateBundleMasterStatus(
       .filter((child: Record<string, unknown>) => Boolean(child.is_closed))
       .map((child: Record<string, unknown>) => child.ticket_id as string);
 
+    // `assigned_to` moves the primary agent, and the child's ticket_resources
+    // rows have to move with it. Without this the incoming assignee is still
+    // recorded as an *additional* agent on the child, which the
+    // `assigned_to != additional_user_id` invariant will not carry, and the
+    // child's assignment does not survive the write. Same reason the
+    // boundary-crossing path below prepares reassignment; this path mirrors a
+    // bare assignment change and needs it just as much.
+    const legacyFinalizers: Array<() => Promise<void>> = [];
+    if (Object.prototype.hasOwnProperty.call(propagateFields, 'assigned_to')) {
+      for (const child of childRows as Array<Record<string, unknown>>) {
+        if (propagateFields.assigned_to !== child.assigned_to) {
+          legacyFinalizers.push(
+            await prepareTicketResourceReassignment(
+              trx,
+              ctx.tenant,
+              child.ticket_id as string,
+              child.assigned_to as string | null | undefined,
+              propagateFields.assigned_to as string | null | undefined
+            )
+          );
+        }
+      }
+    }
+
+    const legacyUpdatedBy = ctx.isSystemActor ? null : ctx.user.user_id;
     if (openChildIds.length > 0) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
         .whereIn('ticket_id', openChildIds)
-        .update({ ...propagateFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
+        .update({ ...propagateFields, updated_by: legacyUpdatedBy, updated_at: updatedAt });
     }
     if (closedChildIds.length > 0 && Object.keys(closedFields).length > 0) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
         .whereIn('ticket_id', closedChildIds)
-        .update({ ...closedFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
+        .update({ ...closedFields, updated_by: legacyUpdatedBy, updated_at: updatedAt });
     }
 
-    for (const publish of childPublishes) {
+    for (const finalize of legacyFinalizers) {
+      await finalize();
+    }
+
+    // System writes (the auto-close engine) publish no live UI update, exactly
+    // as the master update does; there is no open browser session to notify.
+    for (const publish of ctx.isSystemActor ? [] : childPublishes) {
       registerAfterCommit(
         trx,
         () =>
@@ -1227,6 +1328,10 @@ export async function propagateBundleMasterStatus(
     return { propagated: false, action: crossesBoundary, affectedChildIds: [] };
   }
 
+  // Refuse before prompting: there is no point asking an actor to confirm a
+  // propagation its authority will not permit.
+  assertBundlePropagationAuthority(ctx);
+
   if (options.propagateToChildren === undefined) {
     const preview = await previewBundleStatusPropagation(trx, ctx.tenant, masterId, nextStatusId as string);
     throw new BundlePropagationConfirmationRequiredError(preview);
@@ -1238,19 +1343,72 @@ export async function propagateBundleMasterStatus(
   }
 
   const propagateUpdatedAt = nowIso();
+  const propagatedStatusId = (master?.status_id ?? nextStatusId) as string | null;
   const propagate: Record<string, unknown> = {
-    status_id: master?.status_id ?? nextStatusId,
+    status_id: propagatedStatusId,
     is_closed: crossesBoundary === 'close',
     closed_at: crossesBoundary === 'close' ? master?.closed_at ?? null : null,
     closed_by: crossesBoundary === 'close' ? master?.closed_by ?? null : null,
-    updated_by: ctx.user.user_id,
+    updated_by: ctx.isSystemActor ? null : ctx.user.user_id,
     updated_at: propagateUpdatedAt,
   };
+  if (crossesBoundary === 'close') {
+    // A closed ticket never reloads as awaiting a response, on the master or
+    // on a child the master closed.
+    propagate.response_state = null;
+  }
   if (Object.prototype.hasOwnProperty.call(updateData, 'assigned_to')) {
     propagate.assigned_to = updateData.assigned_to;
   }
   if (Object.prototype.hasOwnProperty.call(updateData, 'priority_id')) {
     propagate.priority_id = updateData.priority_id;
+  }
+
+  // One attribution for every child effect below: the caller's actor when it
+  // supplied one, otherwise the propagating user (or SYSTEM for engine writes).
+  const propagationActor: TicketActivityActorInfo = ctx.actor ?? {
+    actorType: ctx.isSystemActor ? TICKET_ACTIVITY_ACTOR.SYSTEM : TICKET_ACTIVITY_ACTOR.USER,
+    ...(ctx.isSystemActor
+      ? {}
+      : { userId: ctx.user.user_id, displayName: propagationDisplayName(ctx.user) }),
+  };
+  const propagationSource = (ctx.source ??
+    (ctx.isSystemActor
+      ? TICKET_ACTIVITY_SOURCE.SYSTEM
+      : TICKET_ACTIVITY_SOURCE.UI)) as TicketActivitySource;
+
+  // Statuses are board-scoped. Stamping the master's status onto a child on a
+  // different board would leave the child pointing at a status its own board
+  // does not define, which no later read can repair.
+  const propagatedStatusBoardId = await readStatusBoardId(trx, ctx.tenant, propagatedStatusId);
+  for (const child of affected) {
+    if (child.board_id !== propagatedStatusBoardId) {
+      throw new Error('A bundled ticket cannot use a status from another board');
+    }
+  }
+
+  // A propagated close is still a close: it must clear the same board close
+  // rules a direct close would, and honour the same override/bypass. Evaluated
+  // for every affected child before any row is written, so a blocked child
+  // aborts the whole master status change rather than closing a subset.
+  // LEVERAGE: pattern ticket-close-transition — child notification ownership prevents using the full primary update as-is.
+  if (crossesBoundary === 'close') {
+    for (const child of affected) {
+      await enforceTicketCloseRules(trx, ctx.tenant, {
+        ticket: {
+          ticket_id: child.ticket_id,
+          board_id: child.board_id,
+          category_id: child.category_id,
+          subcategory_id: child.subcategory_id,
+          priority_id: (propagate.priority_id as string | null | undefined) ?? child.priority_id,
+          assigned_to: (propagate.assigned_to as string | null | undefined) ?? child.assigned_to,
+        },
+        override: options.overrideCloseRules,
+        bypass: options.bypassCloseRules,
+        actor: propagationActor,
+        source: propagationSource,
+      });
+    }
   }
 
   const childPublishes = affected
@@ -1260,9 +1418,66 @@ export async function propagateBundleMasterStatus(
     }))
     .filter((publish) => publish.updatedFields.length > 0);
 
+  // `assigned_to` moves the primary agent; the ticket_resources rows have to
+  // move with it or the child keeps a stale additional-agent row that violates
+  // the `assigned_to != additional_user_id` constraint.
+  const finalizeChildResources: Array<() => Promise<void>> = [];
+  if (Object.prototype.hasOwnProperty.call(propagate, 'assigned_to')) {
+    for (const child of affected) {
+      if (propagate.assigned_to !== child.assigned_to) {
+        finalizeChildResources.push(
+          await prepareTicketResourceReassignment(
+            trx,
+            ctx.tenant,
+            child.ticket_id,
+            child.assigned_to,
+            propagate.assigned_to as string | null | undefined
+          )
+        );
+      }
+    }
+  }
+
   await tenantScopedTable(trx, 'tickets', ctx.tenant)
     .whereIn('ticket_id', affectedChildIds)
     .update(propagate);
+
+  for (const finalize of finalizeChildResources) {
+    await finalize();
+  }
+
+  // Co-managed SLA/lifecycle bookkeeping is owned per ticket, not per bundle: a
+  // child closed or reopened by propagation is closed or reopened as far as the
+  // customer's own clocks are concerned.
+  for (const child of affected) {
+    if (crossesBoundary === 'close') {
+      await recordCoManagedTicketResolution(trx, ctx.tenant, child.ticket_id);
+    } else {
+      await recordCoManagedTicketReopened(trx, ctx.tenant, child.ticket_id);
+    }
+  }
+
+  // Each child gets its own timeline entry naming the master that moved it.
+  // The master's BUNDLE_STATUS_PROPAGATED row records the decision; these
+  // record the effect on the individual ticket.
+  for (const child of affected) {
+    await writeTicketActivity(trx, {
+      tenant: ctx.tenant,
+      ticketId: child.ticket_id,
+      eventType:
+        crossesBoundary === 'close' ? TICKET_ACTIVITY_EVENT.CLOSED : TICKET_ACTIVITY_EVENT.REOPENED,
+      entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+      entityId: child.ticket_id,
+      actor: propagationActor,
+      source: propagationSource,
+      occurredAt: propagateUpdatedAt,
+      changes: {
+        status_id: { old: child.status_id, new: propagate.status_id },
+        closed_at: { old: child.closed_at, new: propagate.closed_at },
+      },
+      details: { bundle_master_ticket_id: masterId },
+    });
+  }
 
   const occurredAt = nowIso();
   if (crossesBoundary === 'close') {
@@ -1297,7 +1512,8 @@ export async function propagateBundleMasterStatus(
       .update({ reverted_at: occurredAt, reverted_by: ctx.user.user_id });
   }
 
-  for (const publish of childPublishes) {
+  // As on the legacy path, a system-triggered propagation notifies no session.
+  for (const publish of ctx.isSystemActor ? [] : childPublishes) {
     registerAfterCommit(
       trx,
       () =>

@@ -102,7 +102,10 @@
       "forms": "Formulieren",
       "channels": "Kanalen"
     },
-    "passwords": "Wachtwoorden"
+    "passwords": "Wachtwoorden",
+    "coManaged": "Gezamenlijk beheerde IT",
+    "coManagedDelegation": "Gedelegeerd beheer",
+    "coManagedAccess": "Toegang voor gezamenlijk beheer"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

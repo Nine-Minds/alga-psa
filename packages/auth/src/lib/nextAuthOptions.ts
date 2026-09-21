@@ -1,3 +1,4 @@
+import type { ProductCode } from '@alga-psa/types';
 import CredentialsProvider from "next-auth/providers/credentials";
 import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
@@ -20,7 +21,7 @@ import {
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
-import { getLicenseStateRow, resolveSelfHostTier } from "@alga-psa/licensing";
+import { getTenantSelfHostLicenseState, resolveTenantTier } from "@alga-psa/licensing";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
 import type { OAuthProfileMappingInput, OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
@@ -57,19 +58,19 @@ import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel"
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
 
 /**
- * Effective tier override for self-host installs. Returns the tier resolved from
- * the offline `license_state` row (essentials/pro) when present, or
- * undefined in SaaS mode so the session falls back to the Stripe plan. Non-fatal
- * on any error (e.g. an un-migrated `license_state`) — returns undefined.
+ * Resolve the actual session tenant through the same licensing engine as backend
+ * authorization. Hosted sessions keep their existing plan/trial presentation.
+ * License read failures cannot revive a customer's cached paid tier; an older
+ * schema without licensing tables still uses the legacy plan resolution.
  */
-async function resolveSelfHostEffectiveTier(): Promise<string | undefined> {
+async function resolveSelfHostEffectiveTier(tenant: string): Promise<string | undefined> {
     try {
-        const selfHost = resolveSelfHostTier(await getLicenseStateRow());
-        if (selfHost !== null) return selfHost.tier;
-    } catch {
-        // Non-fatal — fall through to plan-based resolution.
+        if (await getTenantSelfHostLicenseState(tenant) === null) return undefined;
+        return await resolveTenantTier(tenant);
+    } catch (error) {
+        if ((error as { code?: string }).code === '42P01') return undefined;
+        return 'essentials';
     }
-    return undefined;
 }
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
@@ -178,7 +179,7 @@ async function checkTrackedSession(
  */
 interface TenantSubscriptionInfo {
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     addons?: string[];
     trial_end?: string | null;
     subscription_status?: string | null;
@@ -252,7 +253,7 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
 
     return {
         plan: tenantRecord?.plan ?? undefined,
-        product_code: tenantRecord?.product_code === 'algadesk' ? 'algadesk' : 'psa',
+        product_code: tenantRecord?.product_code ?? 'psa',
         addons: addOns,
         trial_end: trialEnd,
         subscription_status: subscriptionStatus,
@@ -627,7 +628,7 @@ interface ExtendedUser {
     clientId?: string;
     contactId?: string;
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     deviceInfo?: {
         ip: string;
         userAgent: string;
@@ -1391,7 +1392,18 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
                     issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
-                    checks: ['pkce', 'state'],
+                    // `nonce` is load-bearing, not belt-and-braces. `state` binds the
+                    // callback to the browser that started it; `pkce` binds the code to
+                    // the client that requested it; only `nonce` binds the *ID token*
+                    // to this authorization request, which is what stops a token minted
+                    // for another request being replayed into this session.
+                    //
+                    // It was absent, and the repo had already measured the consequence:
+                    // ee/docs/plans/2026-09-05-production-regression-prevention/microsoft-coverage-boundaries.md
+                    // records "Observed one token request, zero JWKS requests and no
+                    // nonce" against a real callback run. Auth.js only sends and
+                    // verifies a nonce when it is listed here.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
                         const emailCandidate =
@@ -1931,6 +1943,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 // Fetch tenant plan + subscription info on initial sign-in
                 if (extendedUser.tenant) {
                     try {
+                        token.effectiveTier = await resolveSelfHostEffectiveTier(extendedUser.tenant);
                         const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
                         token.plan = subInfo.plan;
                         token.product_code = subInfo.product_code;
@@ -1938,7 +1951,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -2080,6 +2092,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
                 if (shouldRefreshPlan) {
                     try {
+                        token.effectiveTier = await resolveSelfHostEffectiveTier(token.tenant as string);
                         const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
                         token.plan = subInfo.plan;
                         token.product_code = subInfo.product_code;
@@ -2087,7 +2100,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
@@ -2149,7 +2161,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
-                user.product_code = (token.product_code as 'psa' | 'algadesk' | undefined) ?? 'psa';
+                user.product_code = (token.product_code as ProductCode | undefined) ?? 'psa';
                 (user as any).addons = (token.addons as string[] | undefined) ?? [];
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;
@@ -2215,6 +2227,11 @@ export const options: NextAuthConfig = {
                     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
                     issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
+                    // Same checks as the async provider above. This env-only fallback
+                    // previously declared none at all, so the two Microsoft providers in
+                    // this file ran with different verification postures depending on
+                    // which one a deployment happened to build.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??
@@ -2704,6 +2721,7 @@ export const options: NextAuthConfig = {
                 // Fetch tenant plan + subscription info on initial sign-in
                 if (extendedUser.tenant) {
                     try {
+                        token.effectiveTier = await resolveSelfHostEffectiveTier(extendedUser.tenant);
                         const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
                         token.plan = subInfo.plan;
                         token.product_code = subInfo.product_code;
@@ -2711,7 +2729,6 @@ export const options: NextAuthConfig = {
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -2853,6 +2870,7 @@ export const options: NextAuthConfig = {
 
                 if (shouldRefreshPlan) {
                     try {
+                        token.effectiveTier = await resolveSelfHostEffectiveTier(token.tenant as string);
                         const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
                         token.plan = subInfo.plan;
                         token.product_code = subInfo.product_code;
@@ -2860,7 +2878,6 @@ export const options: NextAuthConfig = {
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
                         token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
@@ -2921,7 +2938,7 @@ export const options: NextAuthConfig = {
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
-                user.product_code = (token.product_code as 'psa' | 'algadesk' | undefined) ?? 'psa';
+                user.product_code = (token.product_code as ProductCode | undefined) ?? 'psa';
                 (user as any).addons = (token.addons as string[] | undefined) ?? [];
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;

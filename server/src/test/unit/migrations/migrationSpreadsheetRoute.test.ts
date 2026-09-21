@@ -22,9 +22,23 @@ vi.mock('@alga-psa/migration-connectors/csv', async (importOriginal) => {
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
   runWithTenant: vi.fn(async (_tenant: string, fn: () => unknown) => fn()),
+  // The upload re-checks co-managed admission when it records the file, inside a
+  // transaction (StorageService.persistUploadedFile -> withCoManagedOperationalTransaction).
+  withTransaction: vi.fn(async (_db: unknown, fn: (trx: unknown) => unknown) => fn({ isTransaction: true })),
   tenantDb: vi.fn(() => ({
     table: vi.fn(() => ({ insert: hoisted.insert })),
   })),
+}));
+
+// StorageService.uploadStream admits every upload against the co-managed lifecycle before
+// it touches the provider. That read is a multi-query transaction against a real knex; this
+// suite owns the migration upload route, not lifecycle admission, which has its own tests.
+// Stub the boundary rather than model its queries, or the upload throws before any
+// assertion here runs and every stage reads as a 400.
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getCoManagedOperationalState: vi.fn(async () => ({ canWrite: true })),
+  withCoManagedOperationalTransaction: vi.fn(async (_db: unknown, _tenant: string, fn: (trx: unknown) => unknown) => fn({ isTransaction: true })),
 }));
 
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({

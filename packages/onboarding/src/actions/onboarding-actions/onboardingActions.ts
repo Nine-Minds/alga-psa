@@ -1276,10 +1276,27 @@ export const getOnboardingInitialData = withAuth(async (
 ): Promise<{
   success: boolean;
   data?: Partial<ClientInfoData>;
+  requiresPasswordReset?: boolean;
   error?: string;
 }> => {
   try {
     const { knex } = await createTenantKnex();
+
+    // Whether this administrator still signs in with a password somebody else chose.
+    // Tenant creation mails the first MSP administrator a temporary password and
+    // records no preference, so an absent preference must keep asking. An invited
+    // administrator — the co-managed customer administrator among them — chose their
+    // own password while claiming the invitation and gets an explicit `true`; asking
+    // them to set another one during onboarding is a duplicate prompt.
+    //
+    // LEVERAGE: friction has-reset-password-default — the same preference is read with the
+    // OPPOSITE default in userActions.getPasswordResetStatus, which treats an absent
+    // preference as "already reset" (it is a post-hoc banner, so it fails quiet; onboarding
+    // gates a credential, so it fails loud). Two call sites, two defaults, one preference —
+    // this wants a single `passwordResetOwed(user)` helper that names the default once.
+    const UserPreferences = await import('@alga-psa/db/models/userPreferences').then(m => m.default);
+    const hasResetPassword = await UserPreferences.get(knex, currentUser.user_id, 'has_reset_password');
+    const requiresPasswordReset = hasResetPassword?.setting_value !== true;
 
     // Get the tenant's client information
     const client = await tenantDb(knex, tenant).table('clients')
@@ -1311,6 +1328,7 @@ export const getOnboardingInitialData = withAuth(async (
 
     return {
       success: true,
+      requiresPasswordReset,
       data: {
         firstName: currentUser.first_name || '',
         lastName: currentUser.last_name || '',

@@ -47,7 +47,10 @@ describe('Microsoft providers-first form contracts', () => {
     expect(emailFormSource).not.toContain('Redirect URI');
     expect(emailFormSource).toContain('Set it up in Providers');
     expect(emailFormSource).toContain('Open Providers');
-    expect(emailFormSource).toContain('/msp/settings/integrations?category=providers');
+    // Providers is reached through the product-neutral entry point; linking
+    // straight at the PSA integrations page dead-ends co-managed customers.
+    expect(emailFormSource).toContain('PROVIDER_SETUP_ENTRY_PATH');
+    expect(emailFormSource).not.toContain('/msp/settings/integrations?category=providers');
   });
 
   it('keeps direct Enterprise imports aligned with shared mailbox readiness', () => {
@@ -63,7 +66,10 @@ describe('Microsoft providers-first form contracts', () => {
     expect(emailFormSource).not.toContain('Microsoft is set up. Sign in as this mailbox to finish.');
     expect(emailFormSource).toContain("disabled={issuerOptionsLoading || !selectedIssuer || oauthStatus === 'authorizing'}");
     expect(emailFormSource).toContain('Sign in with Microsoft');
-    expect(emailFormSource).toContain('/msp/settings/integrations?category=providers');
+    // Providers is reached through the product-neutral entry point; linking
+    // straight at the PSA integrations page dead-ends co-managed customers.
+    expect(emailFormSource).toContain('PROVIDER_SETUP_ENTRY_PATH');
+    expect(emailFormSource).not.toContain('/msp/settings/integrations?category=providers');
   });
 
   it('records guided administrator consent before advancing the Email binding', () => {

@@ -89,8 +89,20 @@ jobs:
       # horizontal libs real-import tests pull in. @alga-psa/storage joined the
       # set once sla's email import chain started resolving its `/models/storage`
       # subpath through the same dist-only "exports" mechanism.
+      # @alga-psa/co-managed is listed because workspaceDistResolution.contract.test.ts
+      # walks its *built* barrel and resolves every @alga-psa/* subpath it reaches.
+      # @alga-psa/licensing is listed explicitly rather than left to co-managed's
+      # `dependsOn: ^build` cascade. That cascade did reach licensing, but until
+      # now it built nothing: packages/licensing/project.json declared
+      # `build: {executor: nx:noop}`, a leftover from when the package was
+      # src-only, so the cascade "succeeded" while dist/ was never written and the
+      # walk died with `Failed to resolve entry for package "@alga-psa/licensing"`.
+      # The noop is fixed, but naming licensing here keeps the guard's dependency
+      # visible instead of load-bearing on a transitive edge.
+      # The co-managed exports map is correct and must not be changed to
+      # paper over a lane that simply did not build a dependency.
       - name: Build shared libraries
-        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage --parallel=3
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/licensing,@alga-psa/co-managed --parallel=3
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -203,7 +215,7 @@ jobs:
       # resolution (onboarding seeds are .cjs) need the dists on disk; same
       # project set the nx job builds.
       - name: Build shared libraries
-        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage --parallel=3
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage,@alga-psa/licensing,@alga-psa/co-managed --parallel=3
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'

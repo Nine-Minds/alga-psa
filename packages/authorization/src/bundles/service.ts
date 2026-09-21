@@ -857,22 +857,28 @@ export async function upsertBundleRule(
 async function resolveRoleIdsForUser(
   knex: Knex | Knex.Transaction,
   tenant: string,
-  userId: string
+  userId: string,
+  lock = false
 ): Promise<string[]> {
-  const rows = await tenantDb(knex, tenant).table('user_roles')
+  const query = tenantDb(knex, tenant).table('user_roles')
     .where({ user_id: userId })
     .select<{ role_id: string }[]>('role_id');
+  if (lock) query.forShare();
+  const rows = await query;
   return rows.map((row) => row.role_id);
 }
 
 async function resolveTeamIdsForUser(
   knex: Knex | Knex.Transaction,
   tenant: string,
-  userId: string
+  userId: string,
+  lock = false
 ): Promise<string[]> {
-  const rows = await tenantDb(knex, tenant).table('team_members')
+  const query = tenantDb(knex, tenant).table('team_members')
     .where({ user_id: userId })
     .select<{ team_id: string }[]>('team_id');
+  if (lock) query.forShare();
+  const rows = await query;
   return rows.map((row) => row.team_id);
 }
 
@@ -896,10 +902,13 @@ function normalizeRuleIdList(value: unknown): string[] | undefined {
   return normalized.length > 0 ? normalized : [];
 }
 
+/** lock retains existing memberships, assignments, bundles and rules through a command transaction. */
 export async function resolveBundleNarrowingRulesForEvaluation(
   knex: Knex | Knex.Transaction,
-  input: AuthorizationEvaluationInput
+  input: AuthorizationEvaluationInput,
+  options: { lock?: boolean } = {}
 ): Promise<BundleNarrowingRule[]> {
+  if (options.lock && !knex.isTransaction) throw new Error('Retaining authorization bundle locks requires a transaction');
   const tenant = input.subject.tenant;
   const userId = input.subject.userId;
 
@@ -908,8 +917,8 @@ export async function resolveBundleNarrowingRulesForEvaluation(
   }
 
   const [roleIds, teamIds] = await Promise.all([
-    resolveRoleIdsForUser(knex, tenant, userId),
-    resolveTeamIdsForUser(knex, tenant, userId),
+    resolveRoleIdsForUser(knex, tenant, userId, options.lock),
+    resolveTeamIdsForUser(knex, tenant, userId, options.lock),
   ]);
 
   const targetClauses: Array<{ target_type: AuthorizationBundleTargetType; ids: string[] }> = [
@@ -924,7 +933,7 @@ export async function resolveBundleNarrowingRulesForEvaluation(
 
   const scopedDb = tenantDb(knex, tenant);
   const assignmentsQuery = scopedDb.table('authorization_bundle_assignments as a');
-  const assignments = await scopedDb.tenantJoin(
+  const assignedBundlesQuery = scopedDb.tenantJoin(
     assignmentsQuery,
     'authorization_bundles as b',
     'b.bundle_id',
@@ -949,6 +958,8 @@ export async function resolveBundleNarrowingRulesForEvaluation(
         revision_id: string;
       }>
     >('a.bundle_id', 'b.published_revision_id as revision_id');
+  if (options.lock) assignedBundlesQuery.forShare();
+  const assignments = await assignedBundlesQuery;
 
   const revisionIds = [
     ...new Set(
@@ -961,7 +972,7 @@ export async function resolveBundleNarrowingRulesForEvaluation(
     return emptyRuleSet();
   }
 
-  const rules = await scopedDb.table('authorization_bundle_rules')
+  const rulesQuery = scopedDb.table('authorization_bundle_rules')
     .whereIn('revision_id', revisionIds)
     .select<
       Array<{
@@ -973,6 +984,8 @@ export async function resolveBundleNarrowingRulesForEvaluation(
         config: Record<string, unknown>;
       }>
     >('rule_id', 'resource_type', 'action', 'template_key', 'constraint_key', 'config');
+  if (options.lock) rulesQuery.forShare();
+  const rules = await rulesQuery;
 
   return rules.map((rule) => ({
     id: rule.rule_id,

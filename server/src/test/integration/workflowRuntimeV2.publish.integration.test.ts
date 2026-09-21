@@ -144,6 +144,18 @@ async function ensureExtensionAvailabilityTables(knex: Knex) {
     });
   }
 
+  const hasVersionTable = await knex.schema.hasTable('extension_version');
+  if (!hasVersionTable) {
+    await knex.schema.createTable('extension_version', (table) => {
+      table.uuid('id').primary();
+      table.uuid('registry_id').notNullable();
+      table.string('version').notNullable();
+      table.string('runtime').notNullable();
+      table.string('main_entry').notNullable();
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+    });
+  }
+
   const hasInstallTable = await knex.schema.hasTable('tenant_extension_install');
   if (!hasInstallTable) {
     await knex.schema.createTable('tenant_extension_install', (table) => {
@@ -176,11 +188,24 @@ async function seedAvailableExtensionForTenant(
     updated_at: knex.fn.now(),
   });
 
+  // tenant_extension_install.version_id is NOT NULL and references
+  // extension_version in the real registry schema (EE), so the install needs a
+  // version row even though nothing here reads it.
+  const versionId = uuidv4();
+  await knex('extension_version').insert({
+    id: versionId,
+    registry_id: registryId,
+    version: '1.0.0',
+    runtime: 'wasm-js@1',
+    main_entry: 'dist/main.wasm',
+    created_at: knex.fn.now(),
+  });
+
   await knex('tenant_extension_install').insert({
     id: uuidv4(),
     tenant_id: input.tenantId,
     registry_id: registryId,
-    version_id: null,
+    version_id: versionId,
     granted_caps: JSON.stringify([]),
     config: JSON.stringify({}),
     is_enabled: true,

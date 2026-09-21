@@ -19,11 +19,12 @@ export interface TeamsMeetingParticipant {
 export function buildTeamsMeetingAttendees(participants: {
   contact?: TeamsMeetingParticipant | null;
   technician?: TeamsMeetingParticipant | null;
+  technicians?: TeamsMeetingParticipant[];
 }): TeamsMeetingAttendee[] {
   const attendees: TeamsMeetingAttendee[] = [];
   const seen = new Set<string>();
 
-  for (const participant of [participants.contact, participants.technician]) {
+  for (const participant of [participants.contact, participants.technician, ...(participants.technicians ?? [])]) {
     const email = participant?.email?.trim();
     if (!email) {
       continue;

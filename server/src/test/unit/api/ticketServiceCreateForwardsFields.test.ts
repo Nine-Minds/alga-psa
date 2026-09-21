@@ -24,7 +24,27 @@ const h = vi.hoisted(() => {
     insert: vi.fn(async () => undefined),
   };
   const fakeTenantDb = { table: vi.fn(() => builder) };
-  return { tenant, ticketId, reloadedTicket, builder, fakeTenantDb, fakeTrx: {} };
+  // `TicketService.createTicket` opens its transaction and immediately calls
+  // `assertCoManagedOperationalWrite`, which refuses a handle that does not
+  // declare itself a transaction. A stub standing in for a transaction has to
+  // say so, or the suite fails before reaching the create-field forwarding it
+  // is about.
+  return { tenant, ticketId, reloadedTicket, builder, fakeTenantDb, fakeTrx: { isTransaction: true } };
+});
+
+// Co-managed lifecycle admission now runs at every operational write boundary,
+// including this one. This suite is about create-field forwarding and says
+// nothing about co-management, so it takes the shared double, whose default is
+// an independent workspace: writable, not co-managed, admission a no-op. The
+// guard itself is covered by packages/licensing's own suites -- doubling it
+// here is the documented pattern (packages/db/src/testing/coManagedLifecycle.ts),
+// not a relaxation of it.
+vi.mock('@alga-psa/licensing', async (importOriginal) => {
+  const { coManagedLifecycleMock } = await import('@alga-psa/db/testing');
+  return {
+    ...(await importOriginal<object>()),
+    ...coManagedLifecycleMock({ fn: (implementation) => vi.fn(implementation as never) as never }),
+  };
 });
 
 // `withTransaction` runs the caller's callback against a stub handle so the

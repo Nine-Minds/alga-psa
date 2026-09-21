@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+#
+# Launch the co-managed review dev server.
+#
+# Exists so the dev-origin environment cannot be lost by retyping a service
+# registration. Every previous relaunch of this card's `dev-server` hand-typed
+# the command, and the one that omitted HOST/NEXTAUTH_URL/DEV_ALLOWED_ORIGINS
+# left Next 403ing /_next/* HMR, font and RSC requests from the reviewer's
+# browser: the page stalled at "Loading translations..." while curl still
+# returned 200, so the port check passed and nobody noticed.
+#
+# Register it as the card service command, not the raw entrypoint line:
+#   alga-dev workflow-ensure-service \
+#     --projectId=964ce5e0-45a5-41b2-8e2c-73903742a85a \
+#     --name=dev-server \
+#     --cwd=/home/robert/alga-copies/feature-co-managed-it/server \
+#     --command='../scripts/dev/run-co-managed-dev-server.sh' \
+#     --readinessPort=3374 --readinessPath=/auth/msp/signin
+#
+# Usage: scripts/dev/run-co-managed-dev-server.sh [--host <addr>] [--port <n>]
+#   ADVERTISED_HOST  address a reviewer's browser uses (default: 100.82.172.57)
+#   PORT             listen port (default: 3374)
+#
+set -euo pipefail
+
+ADVERTISED_HOST="${ADVERTISED_HOST:-100.82.172.57}"
+PORT="${PORT:-3374}"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --host) ADVERTISED_HOST="$2"; shift 2 ;;
+    --port) PORT="$2"; shift 2 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SERVER_DIR="$REPO_ROOT/server"
+
+# Development must run server/dev-server.ts, not `next dev`. Next's built-in dev
+# server owns the HTTP `upgrade` event and silently leaves upgrades it does not
+# recognise open; an unanswered handshake holds one of Chromium's per-origin
+# WebSocket slots and stalls HMR and hydration. dev-server.ts is the same Next
+# app wrapped in an http.Server whose single `upgrade` listener delegates
+# /_next/webpack-hmr back to Next, proxies /hocuspocus, and promptly 404s the
+# rest. server/src/test/unit/devScriptWiring.test.ts guards the npm scripts;
+# this launcher is the review-environment equivalent and must not drift from it.
+TSX_BIN="$REPO_ROOT/node_modules/.bin/tsx"
+if [ ! -x "$TSX_BIN" ]; then
+  echo "tsx not found at $TSX_BIN -- run npm install at the repo root" >&2
+  exit 1
+fi
+
+# `npm run dev` reaches the same entrypoint but goes through nx, whose
+# build-deps include server:build -- a full Next production build that has OOMed
+# repeatedly on this host even at 32GB. The workspace dists are prebuilt, so
+# invoke the entrypoint directly and skip nx entirely.
+
+# READINESS MUST BE AS DEEP AS WE CAN GET IT
+#
+# This service was registered with `/auth/signin` as its readiness and health
+# path, and that path could not have detected what human review blocker 6 hit,
+# whatever status it returned.
+#
+# The app was serving the root "404 - Page Not Found" for every /msp URL FOUR or
+# more path segments long -- the co-managed shared task, ticket and project
+# detail routes, but equally /msp/projects/<id>/tasks/<taskId>,
+# /msp/workflows/runs/<id>, /msp/time-entry/timesheet/<id> and
+# /msp/settings/integrations/entra. Three-segment routes like
+# /msp/tickets/import and /msp/co-management/tasks were fine throughout. The
+# truncation was in the running Turbopack dev server's app route table, not in
+# the tree: the same files, untouched, serve those routes before and after. See
+# docs/dev/co-managed-review-services.md.
+#
+# `/auth/signin` is TWO segments, so it sat two levels shallower than the
+# shallowest route that failed -- structurally blind to the failure. (It is a
+# perfectly real App Router page, server/src/app/auth/signin/page.tsx, and its
+# 307 is that page's own server-side redirect() to the portal-specific sign-in.
+# The redirect was never the problem; the depth was.) That is why the probe, the
+# bound port and the process record all looked correct for the whole window,
+# and the failure surfaced only when a human clicked a link.
+#
+# `/auth/msp/signin` is THREE segments -- the deepest any public route in this
+# app goes, since every page under src/app/auth bottoms out at three -- and it
+# renders a page rather than redirecting. It is the best a session-less probe
+# can do here, and it is an improvement, not a proof: it is still one level
+# shallower than the shallowest observed failure. The doc records that caveat.
+READINESS_PATH=/auth/msp/signin
+
+# Next blocks /_next/* asset, HMR and RSC requests from unrecognised origins.
+# DEV_ALLOWED_ORIGINS feeds next.config.mjs's allowedDevOrigins, which asserts
+# at startup that it covers whatever HOST/NEXTAUTH_URL advertise.
+export HOST="http://${ADVERTISED_HOST}:${PORT}"
+export NEXTAUTH_URL="http://${ADVERTISED_HOST}:${PORT}"
+export DEV_ALLOWED_ORIGINS="${ADVERTISED_HOST},localhost"
+export PORT
+export NODE_ENV=development
+# The dev server resolves workspace packages from the repo-root node_modules.
+export NODE_PATH="$REPO_ROOT/node_modules"
+# nx's dotenv loading fights .env.local; `npm run dev` disables it for the same
+# reason.
+export NX_LOAD_DOT_ENV_FILES=false
+
+# dev-server.ts binds `process.env.HOSTNAME ?? '0.0.0.0'`. Interactive bash
+# exports HOSTNAME as the machine name, which would bind the listener to that
+# name's single address (127.0.1.1 here) and make the tailnet review URL
+# unreachable while localhost still answered. `next dev -p` ignored HOSTNAME, so
+# this trap arrives with the custom entrypoint. Pin it.
+export HOSTNAME=0.0.0.0
+
+# Send the browser's notification/collaboration socket to this origin's
+# /hocuspocus, which dev-server.ts proxies to HOCUSPOCUS_HOST:HOCUSPOCUS_PORT.
+# server/.env.local ships NEXT_PUBLIC_HOCUSPOCUS_URL=ws://localhost:1235, which
+# names the *reviewer's own* machine once the app is served over the tailnet, so
+# it can never connect for a remote reviewer regardless of what runs here. Going
+# through the proxy means a missing upstream is answered by a bounded 502
+# instead of a browser-side error against the wrong host; the notification hook
+# then falls back to its 30s poll.
+export NEXT_PUBLIC_HOCUSPOCUS_URL="ws://${ADVERTISED_HOST}:${PORT}/hocuspocus"
+
+echo "co-managed dev server"
+echo "  repo        : $REPO_ROOT"
+echo "  entrypoint  : server/dev-server.ts (owns the upgrade event)"
+echo "  reviewer URL: $HOST"
+echo "  dev origins : $DEV_ALLOWED_ORIGINS"
+echo "  hocuspocus  : $NEXT_PUBLIC_HOCUSPOCUS_URL -> \${HOCUSPOCUS_HOST}:\${HOCUSPOCUS_PORT}"
+echo "  readiness   : curl -s -o /dev/null -w '%{http_code}' $HOST$READINESS_PATH  # expect 200"
+echo
+
+# `.next` must be a real directory INSIDE the repo, and the guard below is
+# load-bearing rather than defensive.
+#
+# This worktree carried `server/.next` as a symlink onto scratch storage under
+# /tmp, to keep several gigabytes of build churn out of the btrfs loopback
+# image whose exhaustion once killed every card service at once (EDQUOT; see
+# scripts/dev/run-card-service.sh, FAILURE MODE 3). Under Next 16's Turbopack
+# that arrangement cannot work, and it fails in a way nothing else detects.
+#
+# Turbopack writes each externalised package as a RELATIVE symlink,
+# `<.next>/dev/node_modules/<pkg>-<hash> -> ../../../../<path from repo root>`,
+# which the kernel resolves against the link's PHYSICAL path. With `.next` on
+# scratch storage, four levels up is the scratch root rather than the repo, so
+# every external resolves into nothing and the route that imports it 500s with
+# `Cannot find module '<pkg>-<hash>'`. Shadowing the scratch root does not fix
+# it either: the targets are not confined to the root `node_modules`. This tree
+# alone emits links into `packages/ee/node_modules`,
+# `ee/packages/calendar/node_modules` and `packages/jobs/node_modules`, so the
+# scratch root would have to reproduce the whole repo layout, and each new
+# nested dependency would break it again.
+#
+# What makes it worth a hard stop is that no probe catches it. The process is
+# healthy, the port is bound, `$READINESS_PATH` answers a real HTTP status, and
+# `/msp/dashboard` renders -- it is only the routes whose server actions touch
+# an externalised package that fail, and they fail as a 500 POST behind an
+# ordinary-looking "Unable to load tickets. Refresh to check your current
+# access." A reviewer would read that as the feature being broken.
+NEXT_DIR="$SERVER_DIR/.next"
+if [ -L "$NEXT_DIR" ]; then
+  echo "$NEXT_DIR is a symlink to $(readlink -m "$NEXT_DIR")." >&2
+  echo "Turbopack's externals are relative symlinks resolved against the link's" >&2
+  echo "physical path, so an out-of-tree .next makes every externalised package" >&2
+  echo "unresolvable and every server action that touches one returns 500 while" >&2
+  echo "the server still answers. Replace it with a real directory:" >&2
+  echo "    rm '$NEXT_DIR' && mkdir -p '$NEXT_DIR'" >&2
+  exit 1
+fi
+# Next mkdirs `.next/dev` non-recursively, so `.next` has to exist first.
+mkdir -p "$NEXT_DIR"
+
+cd "$SERVER_DIR"
+exec node "$TSX_BIN" dev-server.ts

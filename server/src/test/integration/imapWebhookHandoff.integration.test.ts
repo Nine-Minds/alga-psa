@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { fakeTable } from '@alga-psa/db/testing';
 
 let providerRow: any;
 const tableReads: string[] = [];
@@ -7,31 +8,23 @@ const tableReads: string[] = [];
 const getAdminConnectionMock = vi.fn(async () => knexMock);
 const enqueueUnifiedInboundEmailQueueJobMock = vi.fn();
 
-const whereMock = vi.fn(function where() {
-  return this;
-});
-const firstMock = vi.fn(async () => providerRow);
-
+// Table doubles come from the shared db test layer. This handler reads the
+// provider, the workspace product gate, and the co-managed inbound policy;
+// a hand-rolled chainable refuses whichever table the product added last.
 const knexMock = vi.fn((table: string) => {
   tableReads.push(table);
-  // Product gate: getTenantProduct reads tenants.product_code over the
-  // admin connection before the handler proceeds.
-  if (table.startsWith('tenants')) {
-    const tenantsBuilder: any = {
-      select: () => tenantsBuilder,
-      where: () => tenantsBuilder,
-      andWhere: () => tenantsBuilder,
-      first: async () => ({ product_code: 'psa' }),
-    };
-    return tenantsBuilder;
-  }
-  if (table !== 'email_providers') {
-    throw new Error(`Unexpected table read in IMAP webhook handler: ${table}`);
-  }
-  return {
-    where: whereMock,
-    first: firstMock,
-  };
+  return fakeTable({
+    strict: true,
+    tables: {
+      // A real IMAP provider row carries its provider_type: the handler looks
+      // the provider up by { id, provider_type: 'imap' }.
+      email_providers: providerRow ? [{ provider_type: 'imap', ...providerRow }] : [],
+      // Independent PSA workspace, no co-management: the product gate and the
+      // durable-intake policy both read these.
+      tenants: [{ tenant: providerRow?.tenant ?? 'tenant-1', product_code: 'psa' }],
+      co_management_relationships: [],
+    },
+  }, undefined, table.split(' ')[0]);
 });
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -58,8 +51,6 @@ describe('IMAP webhook handoff', () => {
       job: { jobId: 'job-imap-1' },
       queueDepth: 1,
     });
-    whereMock.mockClear();
-    firstMock.mockClear();
     knexMock.mockClear();
   });
 

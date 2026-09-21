@@ -2,7 +2,7 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput, RenderClientCoManagedIntegration } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
@@ -24,7 +24,11 @@ import ClientAssets from './MspClientAssets';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
 
-export function MspClientCrossFeatureProvider({ children }: { children: ReactNode }) {
+export function MspClientCrossFeatureProvider({ children, clientCoManagedIntegration }: {
+  children: ReactNode;
+  /** App-owned co-managed integration injected from the server workspace, never imported here. */
+  clientCoManagedIntegration?: RenderClientCoManagedIntegration;
+}) {
   const openTicketDetails = useTicketDetailsDrawer();
   const openOpportunityDetails = useOpportunityDetailsDrawer();
 
@@ -197,6 +201,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       scheduleTeamsMeeting,
       refreshMeetingRecordings,
       getSlaPolicies,
+      renderClientCoManagedIntegration: clientCoManagedIntegration,
     }),
     [
       renderQuickAddTicket,
@@ -216,6 +221,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       scheduleTeamsMeeting,
       refreshMeetingRecordings,
       getSlaPolicies,
+      clientCoManagedIntegration,
     ]
   );
 

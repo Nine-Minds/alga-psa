@@ -1,7 +1,6 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import path from 'node:path';
 import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -141,8 +140,12 @@ describe('Appointment Notification System Integration Tests', () => {
   const HOOK_TIMEOUT = 180_000;
 
   beforeAll(async () => {
+    // createTestDbConnection() already drops, recreates and migrates the test
+    // database. This suite used to follow it by dropping `public` CASCADE and
+    // re-migrating from server/migrations alone; that both threw away the
+    // CE+EE schema the integration lane builds and, at ~580 tables, exhausted
+    // max_locks_per_transaction ("out of shared memory") before it could.
     db = await createTestDbConnection();
-    await runMigrationsAndSeeds(db);
     ({ createAppointmentRequest } = await import('@alga-psa/client-portal/actions'));
     ({ approveAppointmentRequest, declineAppointmentRequest } = await import('@alga-psa/scheduling/actions'));
     ({ runWithTenant } = await import('server/src/lib/db'));
@@ -1351,17 +1354,6 @@ describe('Appointment Notification System Integration Tests', () => {
 });
 
 // Helper functions
-
-async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
-  await connection.raw('DROP SCHEMA IF EXISTS public CASCADE');
-  await connection.raw('CREATE SCHEMA public');
-  await connection.raw('GRANT ALL ON SCHEMA public TO public');
-
-  const migrationDir = path.resolve(__dirname, '../../../migrations');
-  await connection.migrate.latest({
-    directory: migrationDir
-  });
-}
 
 async function createContact(
   db: Knex,

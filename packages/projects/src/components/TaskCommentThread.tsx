@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { ArrowUpDown, Lock } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import TaskComment from './TaskComment';
@@ -45,6 +45,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const { t } = useTranslation(['features/projects', 'common']);
   const [comments, setComments] = useState<IProjectTaskCommentWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ user_id: string; name: string; avatarUrl: string | null } | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
@@ -67,32 +68,40 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     return () => { mounted.current = false; };
   }, []);
 
+  const loadSequence = useRef(0);
   const loadComments = async () => {
+    const request = ++loadSequence.current;
+    setLoadError(false);
+    setComments([]); setReactionsMap({}); setReactionUserNames({});
+    setReplyingToCommentId(null); setOpenPanelCommentId(null);
     try {
       setIsLoading(true);
       const fetchedComments = await getTaskComments(taskId);
-      if (!mounted.current) return;
+      if (request !== loadSequence.current) return;
       if (showReturnedActionError(fetchedComments)) {
-        return;
+        setLoadError(true); return;
       }
       setComments(fetchedComments);
-      onCommentCountChange?.(taskId, fetchedComments.length);
       // Load reactions for fetched comments
-      const commentIds = fetchedComments.map(c => c.taskCommentId).filter(Boolean);
+      const commentIds = fetchedComments.filter(c => c.canReact !== false).map(c => c.taskCommentId).filter(Boolean);
       if (commentIds.length > 0) {
         try {
           const { reactions, userNames } = await getTaskCommentsReactionsBatch(commentIds);
-          if (!mounted.current) return;
+          if (request !== loadSequence.current) return;
           setReactionsMap(reactions);
-          setReactionUserNames(prev => ({ ...prev, ...userNames }));
+          setReactionUserNames(userNames);
         } catch (err) {
+          if (request === loadSequence.current) { setLoadError(true); setComments([]); setReactionsMap({}); setReactionUserNames({}); }
           console.error('Failed to load reactions:', err);
+          return;
         }
       }
+      if (request === loadSequence.current) onCommentCountChange?.(taskId, fetchedComments.length);
     } catch (error) {
+      if (request === loadSequence.current) setLoadError(true);
       console.error('Failed to load comments:', error);
     } finally {
-      if (mounted.current) setIsLoading(false);
+      if (request === loadSequence.current) setIsLoading(false);
     }
   };
 
@@ -117,6 +126,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   useEffect(() => {
     loadComments();
     loadCurrentUser();
+    return () => { ++loadSequence.current; };
   }, [taskId]);
 
   const handleCommentAdded = async () => {
@@ -133,7 +143,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     await loadComments();
   };
 
-  usePageCreateShortcut(() => { setShowEditor(true); }, { enabled: !showEditor });
+  usePageCreateShortcut(() => { setShowEditor(true); }, { enabled: !showEditor && !isLoading && !loadError });
 
   const toggleCommentOrder = () => {
     setReverseOrder(!reverseOrder);
@@ -200,6 +210,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     parentCommentId: string;
     content: any[];
   }) => {
+    if (comments.find(comment => comment.taskCommentId === params.parentCommentId)?.canReply === false) return;
     const result = await createTaskComment({
       taskId,
       note: JSON.stringify(params.content),
@@ -271,7 +282,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
             <ArrowUpDown className="w-4 h-4" />
             <span>{reverseOrder ? t('comments.newestFirst', 'Newest first') : t('comments.oldestFirst', 'Oldest first')}</span>
           </button>
-          {!showEditor && (
+          {!showEditor && !isLoading && !loadError && (
             <Button
               id="task-comments-add-button"
               type="button"
@@ -288,7 +299,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       </div>
 
       {/* Comment Form at Top (when visible) */}
-      {showEditor && (
+      {showEditor && !isLoading && !loadError && (
         <div
           {...withDataAutomationId({ id: 'task-comment-form-container' })}
           className="border rounded-lg p-4 bg-gray-50"
@@ -327,7 +338,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       )}
 
       {/* Empty State */}
-      {!isLoading && comments.length === 0 && (
+      {!isLoading && !loadError && comments.length === 0 && (
         <div
           {...withDataAutomationId({ id: 'task-comments-empty' })}
           className="text-center py-8 text-gray-500"
@@ -336,8 +347,10 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
         </div>
       )}
 
+      {loadError && <p role="alert" className="text-sm text-[rgb(var(--color-text-500))]">{t('comments.loadError')}</p>}
+
       {/* Comments List */}
-      {!isLoading && comments.length > 0 && (
+      {!isLoading && !loadError && comments.length > 0 && (
         <div
           {...withDataAutomationId({ id: 'task-comments-list' })}
           className="space-y-3"
@@ -370,6 +383,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
         renderComment={(comment) => renderTaskComment(comment)}
         replyParentCommentId={openPanelComment?.taskCommentId ?? null}
         replyRoomName={(parentCommentId) => `task-${taskId}-reply-${parentCommentId}`}
+        canReply={openPanelComment?.canReply !== false}
         initialInternal={false}
         showInternalToggle={false}
         onSubmitReply={handleDrawerReplySubmit}

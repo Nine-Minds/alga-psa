@@ -75,3 +75,12 @@ describe('resolveSelfHostTier — per-tenant binding', () => {
     expect(result?.state).toBe('licensed');
   });
 });
+
+it.each([undefined, 'tenant-A', 'tenant-B'])('independent scope rejects unbound tokens even with expected tenant %s', expectedTenant => {
+  verifyLicenseMock.mockReturnValue(validResult());
+  expect(resolveSelfHostTier({ ...makeRow(), license_scope: 'tenant' }, expectedTenant)?.state).toBe('license_wrong_tenant');
+});
+it('independent scope requires a paid key instead of inheriting an installation trial', () => {
+  expect(resolveSelfHostTier({ ...makeRow({ license_token: null, trial_started_at: new Date() }), license_scope: 'tenant' }, 'tenant-A'))
+    .toMatchObject({ state: 'license_required', tier: 'essentials' });
+});

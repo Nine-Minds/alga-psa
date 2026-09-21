@@ -36,7 +36,8 @@
       "clientContact": "Client Contact",
       "billing": "Billing",
       "ticketing": "Ticketing",
-      "algadeskWorkspace": "Workspace"
+      "algadeskWorkspace": "Workspace",
+      "coManagedWorkspace": "Workspace"
     },
     "errors": {
       "saveClientInfo": "Failed to save client info",
@@ -65,7 +66,9 @@
       "title": "Setup Your System",
       "description": "Let's get your workspace configured and ready to use.",
       "algadeskTitle": "Set Up AlgaDesk",
-      "algadeskDescription": "Configure your help desk workspace, clients, and ticketing defaults."
+      "algadeskDescription": "Configure your help desk workspace, clients, and ticketing defaults.",
+      "coManagedTitle": "Set Up Your IT Workspace",
+      "coManagedDescription": "Configure your workspace, your IT team, and your ticketing defaults."
     }
   },
   "addClientStep": {
@@ -303,7 +306,9 @@
     },
     "header": {
       "title": "Your Company & Admin Account",
-      "description": "Let's start with your MSP's own company details and your admin login, not a client you support."
+      "description": "Let's start with your MSP's own company details and your admin login, not a client you support.",
+      "coManagedTitle": "Your Organization & Admin Account",
+      "coManagedDescription": "Let's start with your organization's details and your admin login."
     },
     "fields": {
       "firstName": {
@@ -354,7 +359,8 @@
           "label": "Country",
           "placeholder": "Select Country"
         }
-      }
+      },
+      "coManagedDescription": "Your organization's address. Review and correct it if needed."
     },
     "password": {
       "resetRequired": {

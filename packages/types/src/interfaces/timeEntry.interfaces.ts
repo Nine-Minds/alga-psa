@@ -30,11 +30,15 @@ export interface ITimePeriodSettings extends TenantEntity {
 }
 
 export interface ITimeEntry extends TenantEntity  {
+  /** Persisted owner-side billing semantics; operational history cannot become invoiceable after an upgrade. */
+  billing_mode?: 'commercial' | 'operational';
   entry_id?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
   work_item_id: string;
   work_item_type: WorkItemType;
+  /** MSP-local binding for a qualified customer-owned ticket or task. */
+  co_managed_work_reference_id?: string | null;
   start_time: ISO8601String;
   end_time: ISO8601String;
   /**
@@ -146,8 +150,8 @@ export interface ITimePeriodView extends Omit<ITimePeriod, 'start_date' | 'end_d
 export interface ITimePeriodWithStatusView extends Omit<ITimePeriodWithStatus, 'start_date' | 'end_date'> {
   start_date: string;
   end_date: string;
-  hoursEntered: number;
-  daysLogged: number;
+  hoursEntered: number | null;
+  daysLogged: number | null;
   lastEntryDate?: string;
   /** Id of the backing time_sheets row, or null when none exists yet (created lazily on view). */
   timeSheetId?: string | null;

@@ -1,3 +1,4 @@
+import { assertCoManagedOperationalWrite, CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { createKbArticle, publishKbArticleCreated } from '@alga-psa/shared/models/kbArticleModel';
@@ -129,6 +130,7 @@ export async function kbArticleImportHandler(
     const committedArticles: CreatedArticle[] = [];
     try {
       outcome = await knex.transaction(async (trx) => {
+        await assertCoManagedOperationalWrite(trx, tenant);
         // The row lock and article/staging writes share one transaction. If a
         // worker dies after article creation, PostgreSQL rolls both writes
         // back; an overlapping Temporal retry then waits for the lock and can
@@ -182,6 +184,9 @@ export async function kbArticleImportHandler(
     } catch (error) {
       // Whatever the transaction wrote is gone; nothing to announce.
       committedArticles.length = 0;
+      // A license pause is not a bad file. Keep pending source content intact
+      // so the same staged IDs can be retried after renewal.
+      if (error instanceof CoManagedLifecycleError) throw error;
 
       logger.error('[kbArticleImport] Failed to import staged file', {
         fileId,

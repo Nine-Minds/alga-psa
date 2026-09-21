@@ -85,7 +85,9 @@ describe('comment attachment delivery over isolated SMTP', () => {
     const row = await table('comments').where({ comment_id: comment }).first();
     const { sendEventEmail } = await import('@/lib/notifications/sendEventEmail');
     const { ticketEmailSubscriberTestHarness } = await import('@/lib/eventBus/subscribers/ticketEmailSubscriber');
-    const event = { id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId: tenant, ticketId: ticket, actorUserId: actor,
+    // The bus stamps every delivered event with an id and a timestamp
+    // (eventBus.publish), and BaseEventSchema requires both.
+    const event = { id: randomUUID(), timestamp: new Date().toISOString(), eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId: tenant, ticketId: ticket, actorUserId: actor,
       comment: { id: comment, content: row.note, author: 'Agent', isInternal: false } } } as any;
     const send = mode === 'direct'
       ? () => dbModule.runWithTenant(tenant, () => sendEventEmail({ tenantId: tenant, to: recipient, subject: 'Attachment smoke', template: 'ticket-comment-added', locale: 'en',

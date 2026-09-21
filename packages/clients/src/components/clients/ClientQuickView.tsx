@@ -94,7 +94,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   const { t } = useTranslation('msp/clients');
   const router = useRouter();
   const drawer = useDrawer();
-  const { renderQuickAddTicket, renderSurveySummaryCard, getSlaPolicies } = useClientCrossFeature();
+  const { renderQuickAddTicket, renderSurveySummaryCard, getSlaPolicies, renderClientCoManagedIntegration } = useClientCrossFeature();
   const resolvedClientId = clientId ?? initialClient?.client_id;
   const [client, setClient] = useState<IClientWithLocation | IClient | null>(initialClient ?? null);
   const [editedClient, setEditedClient] = useState<IClient | null>(initialClient ?? null);
@@ -963,6 +963,16 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
           )}
 
           <div className="flex items-center gap-2 mr-8" data-print-hide>
+            {renderClientCoManagedIntegration?.({
+              clientId: editedClient.client_id,
+              clientName: editedClient.client_name,
+              idPrefix: `${id}-quick`,
+              relationshipId: null,
+              section: null,
+              // Quick view stays Details-only; it offers the compact summary
+              // and a link to the full client's co-managed view.
+              children: (slots) => slots?.summary ?? null,
+            })}
             {showEntraSyncAction && (
               <div className="flex flex-col items-end gap-1">
                 <Button

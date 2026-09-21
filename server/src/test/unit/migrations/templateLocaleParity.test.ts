@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { LOCALE_CONFIG } from '../../../../../packages/email/src/lib/localeConfig';
+import { TEMPLATE_LOCALES } from '../../../../../packages/email/src/lib/localeConfig';
 
 const require = createRequire(import.meta.url);
 const migrationsDir = path.resolve(__dirname, '../../../../migrations');
@@ -279,7 +279,12 @@ describe('template locale parity', () => {
   });
 
   it('keeps the migration locale list aligned with the runtime locale config', () => {
-    expect([...SUPPORTED_LANGUAGES].sort()).toEqual([...LOCALE_CONFIG.supportedLocales].sort());
+    // The migrations cannot import the runtime config (they are .cjs), so they
+    // repeat the list. Compare against TEMPLATE_LOCALES rather than every
+    // selectable locale: regional variants render their fallback language's
+    // pack and the pseudo-locales are QA fills, so neither gets template rows.
+    // A genuinely new language still fails here until its templates ship.
+    expect([...SUPPORTED_LANGUAGES].sort()).toEqual([...TEMPLATE_LOCALES].sort());
   });
 
   it('covers every template the migrations write through a shared module', async () => {

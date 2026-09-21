@@ -41,6 +41,8 @@ function applyFilters(rows: Record<string, any>[], calls: Call[]) {
       out = out.filter((row) => (second as any[]).includes(row[first]));
     } else if (call.method === 'whereRaw' && String(first).includes('addon_key')) {
       out = out.filter((row) => !row.metadata?.addon_key);
+    } else if (call.method === 'whereRaw' && String(first).includes('subscription_kind')) {
+      out = out.filter((row) => row.metadata?.subscription_kind !== 'co_managed');
     } else if (call.method === 'orderByRaw' && String(first).includes("'active'")) {
       out = [...out].sort(
         (a, b) => (a.status === 'active' ? 0 : 1) - (b.status === 'active' ? 0 : 1),
@@ -156,6 +158,28 @@ function createState(subscriptions: Record<string, any>[]): FakeDbState {
 }
 
 describe('StripeService license subscription lifecycle', () => {
+  it.each(['handleSubscriptionUpdated', 'handleSubscriptionDeleted'])('routes co-managed %s without mutating MSP seats or deleting the tenant', async (method) => {
+    const state = createState([trialSubscription()]);
+    const { service, knex } = createService(state);
+    service.syncCoManagedSubscription = vi.fn().mockResolvedValue(undefined);
+    await service[method]({ data: { object: { id: 'sub_co_managed', metadata: { subscription_kind: 'co_managed' } } } }, TENANT, knex);
+    expect(service.syncCoManagedSubscription).toHaveBeenCalledWith(TENANT, 'sub_co_managed', knex);
+    expect(state.updates).toEqual([]);
+    expect(startTenantDeletionWorkflowMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps imported and completed co-managed subscriptions out of ordinary MSP licensing', async () => {
+    const state = createState([trialSubscription()]);
+    const { service, knex } = createService(state);
+    const coManaged = { id: 'sub_co_managed', metadata: { subscription_kind: 'co_managed' } };
+    service.syncCoManagedSubscription = vi.fn().mockResolvedValue(undefined);
+    service.stripe.subscriptions.retrieve = vi.fn().mockResolvedValue(coManaged);
+    await service.importSubscription(TENANT, 'customer', coManaged, knex);
+    await service.handleCheckoutCompleted({ data: { object: { id: 'checkout', subscription: coManaged.id } } }, TENANT, knex);
+    expect(service.syncCoManagedSubscription).toHaveBeenCalledTimes(2);
+    expect(state.updates).toEqual([]);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     startTenantDeletionWorkflowMock.mockResolvedValue({ available: true, workflowId: 'wf-1' });

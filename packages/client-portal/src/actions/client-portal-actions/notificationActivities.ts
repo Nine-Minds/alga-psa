@@ -1,6 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import { coManagedInboxScope } from '@alga-psa/notifications/lib/coManagedInbox';
 import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
@@ -53,7 +54,8 @@ export const fetchNotificationActivities = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const notifications = await tenantDb(trx, tenant).table('internal_notifications')
+    const scope = await coManagedInboxScope(trx, user, tenant);
+    const query = tenantDb(trx, tenant).table('internal_notifications')
       .where('user_id', user.user_id)
       .whereNull('deleted_at')
       .modify((queryBuilder) => {
@@ -76,6 +78,12 @@ export const fetchNotificationActivities = withAuth(async (
         }
       })
       .orderBy('created_at', 'desc');
+    scope.apply(query);
+    const rows = await query;
+    const notifications = rows.flatMap((row: any) => {
+      const current = scope.render(row);
+      return current ? [current] : [];
+    });
 
     const activities: NotificationActivity[] = notifications.map((notification: any): NotificationActivity => ({
       id: String(notification.internal_notification_id),
@@ -104,6 +112,7 @@ export const fetchNotificationActivities = withAuth(async (
       updatedAt: toIsoString(notification.updated_at),
     }));
 
+    await scope.assertCurrent();
     if (!filters.priority?.length) {
       return activities;
     }

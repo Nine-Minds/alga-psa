@@ -101,23 +101,21 @@ it('generates immutable ticket presentation from approved source records', async
     fs.writeFileSync(`${evidenceDir}/before-source-edit.html`, beforeHtml.html);
     fs.writeFileSync(`${evidenceDir}/before-source-edit.pdf`, await pdfBefore.generatePDF({ invoiceId: result.invoice_id, userId, templateId: template.template_id }));
     const beforeText = execFileSync('pdftotext', ['-layout', `${evidenceDir}/before-source-edit.pdf`, '-'], { encoding: 'utf8' });
-    // Historical foreign ownership must not leak through either standard or
-    // transformed detail rendering, even when legacy link FKs permit the IDs.
+    // Foreign ownership must be unrepresentable in storage, and neither the
+    // standard nor the transformed detail rendering may surface private work.
     const foreignLinkId = randomUUID(), foreignTenant = randomUUID();
     try {
       const foreignLink = { ...links[0], invoice_time_entry_id: foreignLinkId, tenant: foreignTenant,
         work_item_snapshot: { ...links[0].work_item_snapshot, title: 'FOREIGN_PRIVATE_SENTINEL' } };
-      if (process.env.TEST_DB_BACKEND === 'citus') {
-        // Citus currency migrations replace the legacy invoice-only FK with
-        // (tenant, invoice_id). Prove storage rejects foreign ownership rather
-        // than disabling that protection to manufacture an impossible row.
-        await expect(db('invoice_time_entries').insert(foreignLink)).rejects.toMatchObject({
-          code: '23503', constraint: 'invoice_time_entries_invoice_id_foreign',
-        });
-        expect(await db('invoice_time_entries').where({ invoice_time_entry_id: foreignLinkId })).toHaveLength(0);
-      } else {
-        await db('invoice_time_entries').insert(foreignLink);
-      }
+      // reject_operational_invoice_time resolves the referenced effort within
+      // the row's own tenant, so a foreign-tenant link finds no commercial time
+      // entry and is refused on every backend. Prove storage rejects foreign
+      // ownership rather than disabling that protection to manufacture an
+      // impossible row; the rendering assertions below then stand on their own.
+      await expect(db('invoice_time_entries').insert(foreignLink)).rejects.toMatchObject({
+        code: '23514', constraint: 'operational_time_not_invoiceable',
+      });
+      expect(await db('invoice_time_entries').where({ invoice_time_entry_id: foreignLinkId })).toHaveLength(0);
       expect(mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, tenant, result.invoice_id))).toEqual(vm);
       expect((await pdfBefore.renderInvoicePreview({ invoiceId: result.invoice_id, templateId: template.template_id })).html).toBe(beforeHtml.html);
       const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');

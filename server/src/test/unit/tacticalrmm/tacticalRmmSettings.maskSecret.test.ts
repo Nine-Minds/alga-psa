@@ -1,3 +1,5 @@
+vi.mock('@shared/services/productAccessGuard', () => ({ assertTenantProductCapability: vi.fn(async () => undefined), ProductAccessError: class extends Error {} }));
+
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // These are server actions (Next "use server") so we unit-test by mocking the wrappers and dependencies,

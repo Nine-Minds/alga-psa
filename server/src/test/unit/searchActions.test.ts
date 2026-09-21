@@ -1,3 +1,4 @@
+vi.mock('../../../../packages/search/src/projectSearchAccess', () => ({ withProjectSearchAccess: (db: any, _tenant: string, _user: any, _auth: any, work: any) => work(db) }));
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,6 +17,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (handler: unknown) => handler,
+  getSession: vi.fn().mockResolvedValue(null),
+  getApiKeyUserOverride: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', () => ({

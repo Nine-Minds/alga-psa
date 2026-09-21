@@ -1,5 +1,35 @@
 import { defineConfig } from 'vitest/config';
+import fs from 'fs';
 import path from 'path';
+
+const EE_SRC = path.resolve(__dirname, './src');
+const CE_SRC = path.resolve(__dirname, '../../server/src');
+const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
+
+/**
+ * Resolve a bare `@/<subpath>` against the EE source root, then the CE app
+ * source root, by asking the filesystem which one actually exists.
+ *
+ * This replaces a hand-maintained allowlist of `@/lib/db/db`, `@/config/*`,
+ * `@/models/*` and a dozen more. That allowlist had to grow every time a test
+ * reached a new `server/src` subdirectory, and a missing entry did not fail
+ * loudly: the generic `@/` rule silently resolved the specifier into
+ * `ee/server/src`, where it 404ed. One missing `@/lib/actions/*` entry took out
+ * the whole enterprise-unit-2 shard at collection, which in turn emptied the
+ * repository test inventory. EE still wins wherever it defines the module --
+ * `ee/server/src/lib/actions` exists and must keep shadowing the CE copy -- so
+ * order matters here, not the enumeration.
+ */
+function resolveEeThenCe(subpath: string): string | undefined {
+  for (const root of [EE_SRC, CE_SRC]) {
+    const base = path.resolve(root, subpath);
+    for (const candidate of [base, ...EXTENSIONS.map(ext => base + ext),
+      ...EXTENSIONS.map(ext => path.join(base, `index${ext}`))]) {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+    }
+  }
+  return undefined;
+}
 
 export default defineConfig({
   test: {
@@ -62,8 +92,16 @@ export default defineConfig({
       { find: /^@\/pages\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/pages')}/$1` },
       { find: /^@\/components\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/components')}/$1` },
 
-      // Generic `@/` => EE source root.
-      { find: /^@\//, replacement: `${path.resolve(__dirname, './src')}/` },
+      // Generic `@/` => EE source if it exists there, else the CE app source.
+      // The explicit entries above still win; this only catches what they miss,
+      // so adding a new `server/src` subdirectory no longer breaks collection.
+      {
+        find: /^@\/(.*)$/,
+        replacement: '$1',
+        customResolver(subpath: string) {
+          return resolveEeThenCe(subpath) ?? path.resolve(EE_SRC, subpath);
+        },
+      },
 
       // Root shared + server imports.
       { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },

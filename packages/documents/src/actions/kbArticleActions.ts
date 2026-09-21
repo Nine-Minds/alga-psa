@@ -1,8 +1,9 @@
 'use server';
 
 import { randomUUID } from 'crypto';
+import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction, getCoManagedOperationalState, CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -78,13 +79,17 @@ export interface IKBArticleCategory {
   name: string;
 }
 
-function tenantScopedTable(
+// LEVERAGE: pattern tenant-scoped-table -- this generic wrapper over tenantDb().table()
+// is now hand-written in at least five modules (packages/db/src/models/userPreferences.ts,
+// packages/db/src/lib/reassignTicketResources.ts, packages/documents, packages/projects x2).
+// It belongs in @alga-psa/db next to tenantDb.
+function tenantScopedTable<Row extends {} = any>(
   conn: Knex | Knex.Transaction,
   table: string,
   tenant: string,
   alias?: string,
-): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(alias ? `${table} as ${alias}` : table);
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(alias ? `${table} as ${alias}` : table);
 }
 
 async function publishKbArticleSearchEvent(
@@ -133,12 +138,11 @@ export const createArticle = withAuth(
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
-    const article = await createKbArticle(knex, { tenant, userId: user.user_id }, input);
-
-    // Published after the writes land, never from inside a transaction.
-    await publishKbArticleCreated(tenant, article, user.user_id);
-
-    return article;
+    return withTransaction(knex, async trx => {
+      const article = await createKbArticle(trx, { tenant, userId: user.user_id }, input);
+      registerAfterCommit(trx, () => publishKbArticleCreated(tenant, article, user.user_id), 'KB_ARTICLE_CREATED');
+      return article;
+    });
   }
 );
 
@@ -164,8 +168,10 @@ export const updateArticle = withAuth(
     }
 
     const article = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -228,20 +234,28 @@ export const updateArticle = withAuth(
         .where({ article_id: articleId })
         .update(updates);
 
+      if (input.audience !== undefined || input.status !== undefined) {
+        const audience = input.audience ?? existing.audience;
+        const status = input.status ?? existing.status;
+        await tenantScopedTable(trx, 'documents', tenant)
+          .where({ document_id: existing.document_id })
+          .update({ is_client_visible: status === 'published' && (audience === 'client' || audience === 'public'), updated_at: trx.fn.now() });
+      }
+
       const article = await tenantScopedTable(trx, 'kb_articles', tenant)
         .select(KB_ARTICLE_SELECT_COLUMNS)
         .where({ article_id: articleId })
         .first();
 
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
+        documentId: article.document_id,
+        userId: user.user_id,
+        changedFields: Object.keys(input),
+        status: article.status,
+      }), 'KB_ARTICLE_UPDATED');
       return article as unknown as IKBArticle;
     });
 
-    await publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
-      documentId: article.document_id,
-      userId: user.user_id,
-      changedFields: Object.keys(input),
-      status: article.status,
-    });
     return article;
   }
 );
@@ -267,8 +281,10 @@ export const publishArticle = withAuth(
     }
 
     const article = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -286,30 +302,24 @@ export const publishArticle = withAuth(
           updated_by: user.user_id,
         });
 
-      // Auto-set is_client_visible for client/public audience
-      if (existing.audience === 'client' || existing.audience === 'public') {
-        await tenantScopedTable(trx, 'documents', tenant)
-          .where({ document_id: existing.document_id })
-          .update({
-            is_client_visible: true,
-            updated_at: trx.fn.now(),
-          });
-      }
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where({ document_id: existing.document_id })
+        .update({ is_client_visible: existing.audience === 'client' || existing.audience === 'public', updated_at: trx.fn.now() });
 
       const article = await tenantScopedTable(trx, 'kb_articles', tenant)
         .select(KB_ARTICLE_SELECT_COLUMNS)
         .where({ article_id: articleId })
         .first();
 
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
+        documentId: article.document_id,
+        userId: user.user_id,
+        changedFields: ['status', 'published_at', 'is_client_visible'],
+        status: article.status,
+      }), 'KB_ARTICLE_UPDATED');
       return article as unknown as IKBArticle;
     });
 
-    await publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
-      documentId: article.document_id,
-      userId: user.user_id,
-      changedFields: ['status', 'published_at', 'is_client_visible'],
-      status: article.status,
-    });
     return article;
   }
 );
@@ -335,8 +345,10 @@ export const archiveArticle = withAuth(
     }
 
     const article = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -365,15 +377,15 @@ export const archiveArticle = withAuth(
         .where({ article_id: articleId })
         .first();
 
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
+        documentId: article.document_id,
+        userId: user.user_id,
+        changedFields: ['status', 'is_client_visible'],
+        status: article.status,
+      }), 'KB_ARTICLE_UPDATED');
       return article as unknown as IKBArticle;
     });
 
-    await publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
-      documentId: article.document_id,
-      userId: user.user_id,
-      changedFields: ['status', 'is_client_visible'],
-      status: article.status,
-    });
     return article;
   }
 );
@@ -400,9 +412,11 @@ export const deleteArticle = withAuth(
       throw new Error('articleId is required');
     }
 
-    const deleted = await withTransaction(knex, async (trx) => {
+    await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -429,16 +443,16 @@ export const deleteArticle = withAuth(
         .where({ document_id: existing.document_id })
         .del();
 
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_DELETED', tenant, articleId, {
+        documentId: existing.document_id,
+        userId: user.user_id,
+      }), 'KB_ARTICLE_DELETED');
       return {
         success: true as const,
         documentId: existing.document_id as string,
       };
     });
 
-    await publishKbArticleSearchEvent('KB_ARTICLE_DELETED', tenant, articleId, {
-      documentId: deleted.documentId,
-      userId: user.user_id,
-    });
     return { success: true };
   }
 );
@@ -468,50 +482,68 @@ export const submitForReview = withAuth(
       throw new Error('At least one reviewer is required');
     }
 
-    const existing = await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .first();
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .forUpdate()
+        .first();
 
-    if (!existing) {
-      throw new Error('Article not found');
-    }
+      if (!existing) {
+        throw new Error('Article not found');
+      }
 
-    // Update article status to review
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .update({
-        status: 'review',
-        updated_at: knex.fn.now(),
-        updated_by: user.user_id,
-      });
+      // Update article status to review
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .update({
+          status: 'review',
+          updated_at: trx.fn.now(),
+          updated_by: user.user_id,
+        });
 
-    // Validate all reviewer user IDs belong to this tenant
-    const validUsers = await tenantScopedTable(knex, 'users', tenant)
-      .select('user_id')
-      .whereIn('user_id', reviewerUserIds);
-    const validUserIds = new Set(validUsers.map((u: { user_id: string }) => u.user_id));
-    const invalidIds = reviewerUserIds.filter((id) => !validUserIds.has(id));
-    if (invalidIds.length > 0) {
-      throw new Error(`Invalid reviewer user IDs: ${invalidIds.join(', ')}`);
-    }
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where({ document_id: existing.document_id })
+        .update({ is_client_visible: false, updated_at: trx.fn.now() });
 
-    // Create reviewer assignments (remove existing pending ones first)
-    await tenantScopedTable(knex, 'kb_article_reviewers', tenant)
-      .where({ article_id: articleId, review_status: 'pending' })
-      .del();
+      reviewerUserIds = [...new Set(reviewerUserIds)];
+      // Validate all reviewer user IDs belong to this tenant
+      const validUsers = await tenantScopedTable(trx, 'users', tenant)
+        .select('user_id')
+        .whereIn('user_id', reviewerUserIds);
+      const validUserIds = new Set(validUsers.map((u: { user_id: string }) => u.user_id));
+      const invalidIds = reviewerUserIds.filter((id) => !validUserIds.has(id));
+      if (invalidIds.length > 0) {
+        throw new Error(`Invalid reviewer user IDs: ${invalidIds.join(', ')}`);
+      }
 
-    const reviewerRecords = reviewerUserIds.map((userId) => ({
-      tenant,
-      reviewer_id: randomUUID(),
-      article_id: articleId,
-      user_id: userId,
-      review_status: 'pending',
-      assigned_by: user.user_id,
-    }));
+      // Retain selected assignments and remove deselected pending reviewers.
+      await tenantScopedTable(trx, 'kb_article_reviewers', tenant)
+        .where({ article_id: articleId, review_status: 'pending' })
+        .whereNotIn('user_id', reviewerUserIds)
+        .del();
 
-    await tenantScopedTable(knex, 'kb_article_reviewers', tenant).insert(reviewerRecords);
+      const reviewerRecords = reviewerUserIds.map((userId) => ({
+        tenant,
+        reviewer_id: randomUUID(),
+        article_id: articleId,
+        user_id: userId,
+        review_status: 'pending',
+        assigned_by: user.user_id,
+        assigned_at: trx.fn.now(),
+        reviewed_at: null,
+        review_notes: null,
+      }));
 
-    return true;
+      await tenantScopedTable(trx, 'kb_article_reviewers', tenant).insert(reviewerRecords)
+        .onConflict(['tenant', 'article_id', 'user_id'])
+        .merge(['review_status', 'assigned_by', 'assigned_at', 'reviewed_at', 'review_notes']);
+
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, articleId, {
+        documentId: existing.document_id, userId: user.user_id, changedFields: ['status', 'is_client_visible'], status: 'review',
+      }), 'KB_ARTICLE_UPDATED');
+
+      return true;
+    });
   }
 );
 
@@ -537,33 +569,40 @@ export const completeReview = withAuth(
       throw new Error('articleId is required');
     }
 
-    // Update the reviewer record
-    const updated = await tenantScopedTable(knex, 'kb_article_reviewers', tenant)
-      .where({
-        article_id: articleId,
-        user_id: user.user_id,
-      })
-      .update({
-        review_status: status,
-        review_notes: notes || null,
-        reviewed_at: knex.fn.now(),
-      });
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      // Match submission's article-before-reviewer lock order.
+      const article = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId }).forUpdate().first();
+      if (!article) throw new Error('Article not found');
 
-    if (updated === 0) {
-      throw new Error('You are not assigned as a reviewer for this article');
-    }
+      // Update the reviewer record
+      const updated = await tenantScopedTable(trx, 'kb_article_reviewers', tenant)
+        .where({
+          article_id: articleId,
+          user_id: user.user_id,
+        })
+        .update({
+          review_status: status,
+          review_notes: notes || null,
+          reviewed_at: trx.fn.now(),
+        });
 
-    // Update article's last_reviewed metadata
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .update({
-        last_reviewed_at: knex.fn.now(),
-        last_reviewed_by: user.user_id,
-        updated_at: knex.fn.now(),
-        updated_by: user.user_id,
-      });
+      if (updated === 0) {
+        throw new Error('You are not assigned as a reviewer for this article');
+      }
 
-    return true;
+      // Update article's last_reviewed metadata
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .update({
+          last_reviewed_at: trx.fn.now(),
+          last_reviewed_by: user.user_id,
+          updated_at: trx.fn.now(),
+          updated_by: user.user_id,
+        });
+
+      return true;
+    });
   }
 );
 
@@ -983,11 +1022,16 @@ export const recordArticleView = withAuth(
       return false;
     }
 
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .increment('view_count', 1);
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .increment('view_count', 1);
 
-    return true;
+      return true;
+    }).catch(error => {
+      if (error instanceof CoManagedLifecycleError) return false;
+      throw error;
+    });
   }
 );
 
@@ -1009,13 +1053,15 @@ export const recordArticleFeedback = withAuth(
       return false;
     }
 
-    const column = helpful ? 'helpful_count' : 'not_helpful_count';
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      const column = helpful ? 'helpful_count' : 'not_helpful_count';
 
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .increment(column, 1);
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .increment(column, 1);
 
-    return true;
+      return true;
+    });
   }
 );
 
@@ -1073,7 +1119,7 @@ export interface IImportResult {
   failed: Array<{ filename: string; error: string }>;
 }
 
-export type ImportJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type ImportJobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'paused' | 'retry_required';
 
 export interface IStartArticleImportResult {
   jobId: string;
@@ -1087,13 +1133,87 @@ export interface IArticleImportStatus extends IImportResult {
 /** Job name is inlined: a vertical package must not import @alga-psa/jobs. */
 const KB_ARTICLE_IMPORT_JOB = 'kb-article-import';
 
-/** How long an unconsumed staging row may keep its file content. */
+/** Retention after a staged file settles; pending source is retained. */
 const KB_IMPORT_STAGING_TTL_MS = 24 * 60 * 60 * 1000;
 
 function importFileExtension(filename: string): string {
   const match = /\.[^.]+$/.exec(filename.trim().toLowerCase());
   return match ? match[0] : '';
 }
+
+function queueKbImportAfterCommit(
+  trx: Knex.Transaction, tenant: string, userId: string, batchId: string, fileIds: string[],
+): void {
+  registerAfterCommit(trx, async () => {
+    const { jobId } = await enqueueImmediateJob(KB_ARTICLE_IMPORT_JOB, {
+      tenantId: tenant, userId, fileIds,
+      metadata: { user_id: userId, tenantId: tenant, fileCount: fileIds.length },
+    });
+    // Scheduling bookkeeping may finish after admission expires. The worker
+    // separately admits each article write; use a fresh connection after commit.
+    const { knex } = await createTenantKnex(tenant);
+    await tenantScopedTable(knex, 'kb_import_files', tenant)
+      .where({ batch_id: batchId })
+      .update({ job_id: jobId, updated_at: new Date() });
+  }, `KB_ARTICLE_IMPORT batch=${batchId}`);
+}
+
+export interface IUnfinishedArticleImport {
+  jobId: string;
+  filename: string;
+  total: number;
+  pending: number;
+  createdAt: string;
+}
+
+/** Discover retained batches without exposing their source content. */
+export const getUnfinishedArticleImports = withAuth(async (user, { tenant }, offset: number = 0): Promise<{
+  imports: IUnfinishedArticleImport[]; hasMore: boolean; canResume: boolean;
+} | ActionPermissionError> => {
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'document', 'create'))) {
+    return permissionError('Permission denied', 'documents:errors.permissions.denied');
+  }
+  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid import offset');
+  const rows = await tenantScopedTable(knex, 'kb_import_files', tenant)
+    .select(knex.raw('COALESCE(batch_id, job_id) AS batch_id'))
+    .min('filename as filename').min('created_at as created_at')
+    .select(knex.raw("COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status = 'pending')::int AS pending"))
+    .groupByRaw('COALESCE(batch_id, job_id)')
+    .havingRaw("COUNT(*) FILTER (WHERE status = 'pending') > 0")
+    .orderBy('created_at', 'desc').orderBy('batch_id').offset(offset).limit(21);
+  const lifecycle = await getCoManagedOperationalState(knex, tenant);
+  return {
+    imports: rows.slice(0, 20).map(row => ({ jobId: row.batch_id, filename: row.filename,
+      total: Number(row.total), pending: Number(row.pending), createdAt: new Date(row.created_at).toISOString() })),
+    hasMore: rows.length > 20,
+    canResume: lifecycle.canWrite,
+  };
+});
+
+/** Reuses retained file identities; overlapping workers cannot duplicate articles. */
+export const resumeArticleImport = withAuth(async (user, { tenant }, jobId: string): Promise<IStartArticleImportResult | ActionPermissionError> => {
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'document', 'create'))) {
+    return permissionError('Permission denied', 'documents:errors.permissions.denied');
+  }
+  if (!jobId) throw new Error('jobId is required');
+  return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+    const rows = await tenantScopedTable(trx, 'kb_import_files', tenant)
+      .where(query => query.where({ batch_id: jobId }).orWhere({ job_id: jobId }))
+      .orderBy('import_file_id').forUpdate();
+    if (!rows.length) throw new Error('Import batch not found');
+    const batchId = rows[0].batch_id || jobId;
+    const pending = rows.filter(row => row.status === 'pending');
+    if (pending.length) {
+      await tenantScopedTable(trx, 'kb_import_files', tenant)
+        .whereIn('import_file_id', rows.map(row => row.import_file_id))
+        .update({ batch_id: batchId });
+      queueKbImportAfterCommit(trx, tenant, user.user_id, batchId, pending.map(row => row.import_file_id));
+    }
+    return { jobId: batchId, total: rows.length };
+  });
+});
 
 /**
  * Stages uploaded markdown/HTML files and hands the parsing to the
@@ -1146,25 +1266,14 @@ export const startArticleImport = withAuth(
       }
     }
 
-    // Swept opportunistically, whatever the row's status. Pending rows the
-    // handler never consumed — a crash between the insert and the enqueue below
-    // — would otherwise keep their file content forever, and settled rows would
-    // pile up one per imported file for the life of the tenant. The job itself
-    // finishes in minutes and nothing polls a batch after that, so a day is far
-    // past the point where any row is still of interest.
-    await tenantScopedTable(knex, 'kb_import_files', tenant)
-      .where('created_at', '<', new Date(Date.now() - KB_IMPORT_STAGING_TTL_MS))
-      .del()
-      .catch(() => {});
-
-    // Rows are written before the job is enqueued so the handler can never win
-    // the race and find nothing to import. The batch id is replaced by the job
-    // record id below, which is what the status action polls on.
+    // The batch identity survives job scheduling/retries, including an enqueue
+    // that starts a worker but loses its acknowledgement.
     const importBatchId = randomUUID();
     const now = new Date();
     const rows = files.map((file) => ({
       tenant,
       import_file_id: randomUUID(),
+      batch_id: importBatchId,
       job_id: importBatchId,
       filename: file.filename,
       content: file.content,
@@ -1176,42 +1285,19 @@ export const startArticleImport = withAuth(
       updated_at: now,
     }));
 
-    await tenantScopedTable(knex, 'kb_import_files', tenant).insert(rows);
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      // Pending source may be waiting through the entire license grace period
+      // and beyond. Only discard settled rows after their retention window.
+      await tenantScopedTable(trx, 'kb_import_files', tenant)
+        .whereIn('status', ['imported', 'failed'])
+        .where('updated_at', '<', new Date(Date.now() - KB_IMPORT_STAGING_TTL_MS))
+        .del();
+      await tenantScopedTable(trx, 'kb_import_files', tenant).insert(rows);
 
-    const fileIds = rows.map((row) => row.import_file_id);
+      queueKbImportAfterCommit(trx, tenant, user.user_id, importBatchId, rows.map(row => row.import_file_id));
 
-    // A failure here leaves the staged rows behind on purpose. On EE the enqueue
-    // can throw after the workflow has already started, and deleting the rows
-    // would pull the file content out from under a handler mid-import; the sweep
-    // above collects them a day later instead.
-    const { jobId } = await enqueueImmediateJob(KB_ARTICLE_IMPORT_JOB, {
-      tenantId: tenant,
-      userId: user.user_id,
-      fileIds,
-      metadata: { user_id: user.user_id, tenantId: tenant, fileCount: fileIds.length },
+      return { jobId: importBatchId, total: rows.length };
     });
-
-    // The rows were written under a batch id because the job record id does not
-    // exist until the job is enqueued. Re-key them so the status action can also
-    // see the job row — but never fail the import over it. The job is already
-    // running, and reporting failure would earn a retry that imports the whole
-    // batch a second time. Polling falls back to the batch id, which the rows
-    // still carry, and which the status action reads the same way.
-    let pollId = jobId;
-    try {
-      await tenantScopedTable(knex, 'kb_import_files', tenant)
-        .where({ job_id: importBatchId })
-        .update({ job_id: jobId, updated_at: new Date() });
-    } catch (error) {
-      pollId = importBatchId;
-      console.warn('[kbArticleImport] Could not re-key staged rows to the job id', {
-        jobId,
-        importBatchId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-
-    return { jobId: pollId, total: rows.length };
   }
 );
 
@@ -1234,31 +1320,27 @@ export const getArticleImportStatus = withAuth(
       throw new Error('jobId is required');
     }
 
-    const rows: Array<{ filename: string; status: string; error: string | null }> =
+    const rows: Array<{ filename: string; status: string; error: string | null; job_id: string }> =
       await tenantScopedTable(knex, 'kb_import_files', tenant)
-        .where({ job_id: jobId })
-        .select(['filename', 'status', 'error'])
+        .where(query => query.where({ batch_id: jobId }).orWhere({ job_id: jobId }))
+        .select(['filename', 'status', 'error', 'job_id'])
         .orderBy('created_at', 'asc');
 
     const job = await tenantScopedTable(knex, 'jobs', tenant)
-      .where({ job_id: jobId })
+      .where({ job_id: rows[0]?.job_id || jobId })
       .first('status');
 
-    const imported = rows.filter((row) => row.status === 'imported').length;
-    const failed = rows
-      .filter(
-        (row) => row.status === 'failed' || (job?.status === 'failed' && row.status !== 'imported'),
-      )
-      .map((row) => ({ filename: row.filename, error: row.error || 'Failed to import article' }));
-    const settled = imported + failed.length === rows.length && rows.length > 0;
-
-    let status: ImportJobStatus = 'processing';
-    if (job?.status === 'failed') {
-      status = 'failed';
-    } else if (settled || job?.status === 'completed') {
-      status = 'completed';
-    } else if (job?.status === 'pending' && imported + failed.length === 0) {
-      status = 'pending';
+    if (!rows.length) throw new Error('Import batch not found');
+    const imported = rows.filter(row => row.status === 'imported').length;
+    const failed = rows.filter(row => row.status === 'failed')
+      .map(row => ({ filename: row.filename, error: row.error || 'Failed to import article' }));
+    const pending = rows.length - imported - failed.length;
+    let status: ImportJobStatus = 'completed';
+    if (pending) {
+      const lifecycle = await getCoManagedOperationalState(knex, tenant);
+      if (!lifecycle.canWrite) status = 'paused';
+      else if (!job || job.status === 'failed' || job.status === 'completed') status = 'retry_required';
+      else status = job.status === 'pending' ? 'pending' : 'processing';
     }
 
     return { status, total: rows.length, imported, failed };
@@ -1318,15 +1400,15 @@ export const createArticleFromTicket = withAuth(
     ];
 
     // Create the article through the shared model (avoids nested withAuth calls)
-    const article = await createKbArticle(knex, { tenant, userId: user.user_id }, {
-      title,
-      articleType: 'troubleshooting',
-      audience: 'internal',
-      content,
+    return withTransaction(knex, async trx => {
+      const article = await createKbArticle(trx, { tenant, userId: user.user_id }, {
+        title,
+        articleType: 'troubleshooting',
+        audience: 'internal',
+        content,
+      });
+      registerAfterCommit(trx, () => publishKbArticleCreated(tenant, article, user.user_id), 'KB_ARTICLE_CREATED');
+      return article;
     });
-
-    await publishKbArticleCreated(tenant, article, user.user_id);
-
-    return article;
   }
 );

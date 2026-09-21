@@ -29,7 +29,7 @@ export function SettingsTab({ tabId, children }: SettingsTabProps): React.JSX.El
   const { hasFeature } = useTier();
   const meta = getSettingsTab(tabId);
 
-  const isAlgaDesk = productCode === 'algadesk';
+  const hasRestrictedSettings = productCode !== 'psa';
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const allowedTabIds = getAllowedSettingsTabIds(productCode);
 
@@ -38,7 +38,7 @@ export function SettingsTab({ tabId, children }: SettingsTabProps): React.JSX.El
   // should land back on the settings home rather than render an unavailable surface.
   const notAvailable =
     !meta ||
-    (isAlgaDesk && !allowedTabIds.has(tabId)) ||
+    (hasRestrictedSettings && !allowedTabIds.has(tabId)) ||
     (meta.eeOnly && !isEEAvailable && !meta.handlesEditionGateResponse);
 
   useEffect(() => {

@@ -54,6 +54,28 @@ export function isInboundDurableEnabled(): boolean {
   return getInboundDurableMode() !== 'off';
 }
 
+/** The installation rollout setting cannot disable the durable intake required
+ * by co-managed lifecycle pauses. Preserve that choice after an independent
+ * upgrade: retained inboxes must not fall back to the legacy processor. This
+ * uses customer-owned relationship history, never a caller-supplied tier/flag. */
+export async function getTenantInboundEmailPolicy(tenant: string, db?: DurableDb): Promise<{
+  mode: InboundEmailDurableMode; requiresDurable: boolean;
+}> {
+  if (!tenant) throw new Error('A tenant is required for inbound email policy');
+  const connection = db ?? await (await import('@alga-psa/db/admin')).getAdminConnection();
+  const scoped = tenantDb(connection, tenant);
+  const workspace = await scoped.table('tenants').first('product_code');
+  if (!workspace) throw new Error('The inbound email workspace does not exist');
+  const requiresDurable = workspace.product_code === 'co_managed' || Boolean(
+    await scoped.table('co_management_relationships').first('relationship_id'),
+  );
+  return { requiresDurable, mode: requiresDurable ? 'enforce' : getInboundDurableMode() };
+}
+
+export async function getInboundDurableModeForTenant(tenant: string, db?: DurableDb): Promise<InboundEmailDurableMode> {
+  return (await getTenantInboundEmailPolicy(tenant, db)).mode;
+}
+
 /** Claim lease TTL for Postgres durable rows (independent of the Redis claim). */
 export function getDurableLeaseTtlMs(): number {
   const raw = Number(process.env.UNIFIED_INBOUND_EMAIL_DURABLE_LEASE_TTL_MS);
@@ -601,6 +623,7 @@ export async function claimInbox(db: DurableDb, params: {
   const now = new Date();
   const patch = {
     status: 'processing',
+    error_details: db.raw("error_details - 'co_managed_lifecycle'"),
     attempt_count: db.raw('attempt_count + 1'),
     lease_owner: lease.lease_owner,
     lease_token: lease.lease_token,
@@ -612,6 +635,7 @@ export async function claimInbox(db: DurableDb, params: {
 
   let updated = await tenantDb(db, params.tenant).table('inbound_email_inbox')
     .where({ tenant: params.tenant, inbox_id: params.inbox_id, status: 'received' })
+    .andWhere((qb: any) => qb.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', db.fn.now()))
     .update(patch)
     .returning('*');
   if (updated.length === 0 && params.allowRetryable) {
@@ -629,6 +653,9 @@ export async function claimInbox(db: DurableDb, params: {
   if (!current) return { claimed: false, reason: 'missing' };
   if (['succeeded', 'skipped', 'terminal_failed'].includes(current.status)) {
     return { claimed: false, reason: 'terminal' };
+  }
+  if (current.status === 'received' && !isDue(current.next_attempt_at, now)) {
+    return { claimed: false, reason: 'not_due' };
   }
   if (current.status === 'retryable_failed') {
     // Over-cap due retryable rows are dead-lettered into a queryable terminal
@@ -762,6 +789,37 @@ export async function releaseInboxClaim(db: DurableDb, params: {
       updated_at: db.fn.now(),
     });
   return updated > 0;
+}
+
+/** Park durable work without terminalizing it or spending a processing attempt.
+ * Unclaimed work keeps its existing failure provenance and status. A claimed
+ * message can only be released by its exact lease owner; reclaims did not spend
+ * a new attempt and must not refund an earlier worker's attempt. */
+export async function deferInboxForCoManagedLifecycle(db: DurableDb, params: {
+  tenant: string;
+  inboxId: string;
+  state: 'pending_acceptance' | 'terminated' | 'read_only';
+  until: Date;
+  claim?: { owner: string; token: string; version: number; refundAttempt: boolean };
+}): Promise<boolean> {
+  const query = tenantDb(db, params.tenant).table('inbound_email_inbox')
+    .where({ inbox_id: params.inboxId });
+  const patch: Record<string, unknown> = {
+    next_attempt_at: params.until,
+    updated_at: db.fn.now(),
+    error_details: db.raw("COALESCE(error_details, '{}'::jsonb) || ?::jsonb", [JSON.stringify({
+      co_managed_lifecycle: { state: params.state, resumeCheckAt: params.until.toISOString() },
+    })]),
+  };
+  if (params.claim) {
+    query.where({ status: 'processing', lease_owner: params.claim.owner,
+      lease_token: params.claim.token, lease_version: params.claim.version });
+    Object.assign(patch, { status: 'received', lease_owner: null, lease_token: null, lease_expires_at: null });
+    if (params.claim.refundAttempt) patch.attempt_count = db.raw('GREATEST(0, attempt_count - 1)');
+  } else {
+    query.whereIn('status', ['received', 'retryable_failed']);
+  }
+  return await query.update(patch) > 0;
 }
 
 /**
@@ -942,6 +1000,7 @@ export interface InboundArtifactRecord {
   next_attempt_at: Date | string | null;
   file_id: string | null;
   document_id: string | null;
+  conversation_attachment_id?: string | null;
   last_error: string | null;
   completed_at: Date | string | null;
 }
@@ -1002,6 +1061,7 @@ export async function claimArtifact(db: DurableDb, params: {
   };
   const updated = await tenantDb(db, params.tenant).table('inbound_email_artifacts')
     .where({ tenant: params.tenant, inbox_id: params.inbox_id, artifact_key: params.artifact_key, status: 'pending' })
+    .andWhere((qb: any) => qb.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', db.fn.now()))
     .update(patch)
     .returning('*');
   if (updated.length > 0) return { claimed: true, row: updated[0] };
@@ -1019,6 +1079,7 @@ export async function claimArtifact(db: DurableDb, params: {
   if (['succeeded', 'skipped', 'terminal_failed'].includes(current.status)) {
     return { claimed: false, reason: 'terminal' };
   }
+  if (current.status === 'pending') return { claimed: false, reason: 'not_due' };
   if (current.status === 'retryable_failed') {
     if (isDue(current.next_attempt_at, now) && current.attempt_count >= maxAttempts) {
       await deadletterArtifact(db, current as InboundArtifactRecord);
@@ -1028,6 +1089,32 @@ export async function claimArtifact(db: DurableDb, params: {
   }
   return { claimed: false, reason: 'already_claimed' };
 }
+
+/** Retain paused attachments and their failure history without spending an
+ * attempt. Only the exact current lease may release claimed work. */
+export async function deferInboundArtifact(db: DurableDb, params: {
+  tenant: string;
+  inboxId: string;
+  artifactKey: string;
+  until: Date;
+  claim?: { owner: string; token: string; version: number; refundAttempt: boolean };
+}): Promise<boolean> {
+  const query = tenantDb(db, params.tenant).table('inbound_email_artifacts')
+    .where({ inbox_id: params.inboxId, artifact_key: params.artifactKey });
+  const patch: Record<string, unknown> = { next_attempt_at: params.until, updated_at: db.fn.now() };
+  if (params.claim) {
+    query.where({ status: 'processing', lease_owner: params.claim.owner,
+      lease_token: params.claim.token, lease_version: params.claim.version });
+    Object.assign(patch, { status: 'pending', lease_owner: null, lease_token: null, lease_expires_at: null });
+    if (params.claim.refundAttempt) patch.attempt_count = db.raw('GREATEST(0, attempt_count - 1)');
+  } else {
+    query.whereIn('status', ['pending', 'retryable_failed']);
+  }
+  return await query.update(patch) > 0;
+}
+
+/** Existing lifecycle callers share the same fenced, attempt-preserving pause. */
+export const deferArtifactForCoManagedLifecycle = deferInboundArtifact;
 
 /** Dead-letter an over-cap due retryable artifact row into `terminal_failed`. */
 export async function deadletterArtifact(db: DurableDb, row: InboundArtifactRecord): Promise<boolean> {
@@ -1091,9 +1178,12 @@ export async function transitionArtifact(db: DurableDb, params: {
   token: string;
   version: number;
   status: 'succeeded' | 'skipped' | 'retryable_failed' | 'terminal_failed';
+  requireUnexpired?: boolean;
   file_id?: string | null;
   document_id?: string | null;
   storage_key?: string | null;
+  conversation_attachment_id?: string | null;
+  content_digest?: string | null;
   nextAttemptAt?: Date | null;
   error?: string | null;
 }): Promise<boolean> {
@@ -1104,6 +1194,8 @@ export async function transitionArtifact(db: DurableDb, params: {
   if (params.file_id !== undefined) patch.file_id = params.file_id;
   if (params.document_id !== undefined) patch.document_id = params.document_id;
   if (params.storage_key !== undefined) patch.storage_key = params.storage_key;
+  if (params.conversation_attachment_id !== undefined) patch.conversation_attachment_id = params.conversation_attachment_id;
+  if (params.content_digest !== undefined) patch.content_digest = params.content_digest;
   if (['succeeded', 'skipped', 'terminal_failed'].includes(params.status)) {
     patch.completed_at = db.fn.now();
     patch.lease_owner = null;
@@ -1126,6 +1218,7 @@ export async function transitionArtifact(db: DurableDb, params: {
       lease_token: params.token,
       lease_version: params.version,
     })
+    .modify(query => { if (params.requireUnexpired) query.where('lease_expires_at', '>', db.raw('clock_timestamp()')); })
     .update(patch);
   return updated > 0;
 }
@@ -1169,6 +1262,7 @@ export interface InboundOutboxRecord {
  * event_key)` is unique so replay cannot create another logical notification;
  * a duplicate key is ignored.
  */
+// LEVERAGE: pattern transactional-event-intent — co-managed conversation events need the same durable publication semantics without an inbox identity.
 export async function insertOutboxRow(db: DurableDb, input: InboundOutboxInsert): Promise<{ inserted: boolean }> {
   const inserted = await tenantDb(db, input.tenant).table('inbound_email_outbox')
     .insert({
@@ -1778,9 +1872,8 @@ export async function findDueInbox(db: DurableDb, options: DueScanOptions): Prom
   const rows = await tenantDb(db, options.tenant).table('inbound_email_inbox')
     .where({ tenant: options.tenant })
     .andWhere(function (this: any) {
-      this.where({ status: 'received' })
-        .orWhere((inner: any) => {
-          inner.where({ status: 'retryable_failed' })
+      this.where((inner: any) => {
+          inner.whereIn('status', ['received', 'retryable_failed'])
             .where(function (due: any) {
               due.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', now.toISOString());
             });
@@ -1801,9 +1894,8 @@ export async function findDueArtifacts(db: DurableDb, options: DueScanOptions): 
   const rows = await tenantDb(db, options.tenant).table('inbound_email_artifacts')
     .where({ tenant: options.tenant })
     .andWhere(function (this: any) {
-      this.where({ status: 'pending' })
-        .orWhere((inner: any) => {
-          inner.where({ status: 'retryable_failed' })
+      this.where((inner: any) => {
+          inner.whereIn('status', ['pending', 'retryable_failed'])
             .where(function (due: any) {
               due.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', now.toISOString());
             });

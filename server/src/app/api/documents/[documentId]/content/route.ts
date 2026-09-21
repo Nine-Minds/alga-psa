@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
@@ -75,6 +77,16 @@ export async function GET(
 
       const { knex } = await createTenantKnex();
       const db = tenantDb(knex, tenantId);
+
+      // Resolve the document through the shared authorization engine rather than a
+      // raw lookup: a document:read permission alone does not mean this user may
+      // read *this* document, and a withdrawn comment attachment must stay unreadable.
+      const authorizedDocument = await withTransaction(knex, async (trx: Knex.Transaction) =>
+        getAuthorizedDocumentById(trx, tenantId as string, currentUser as any, documentId),
+      );
+      if (!authorizedDocument) {
+        return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+      }
 
       const [documentRecord, blockContentRecord, textContentRecord] = await Promise.all([
         db.table('documents')

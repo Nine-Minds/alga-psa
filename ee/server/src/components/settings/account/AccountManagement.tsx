@@ -49,6 +49,8 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import AiUsageSection from './AiUsageSection';
+import CoManagedPoolEditor from '@/components/co-managed/CoManagedPoolEditor';
+import { CoManagedFeatureBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
 import { useSession } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
 import { useProduct } from 'server/src/context/ProductContext';
@@ -1270,6 +1272,17 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
           })}
         </section>
       )}
+
+      {/* Co-managed IT sponsor pool. T21: the release boundary removes only this
+          block; ordinary account/subscription controls stay available when off. */}
+      <CoManagedFeatureBoundary>
+        <section id="account-co-managed" aria-labelledby="account-co-managed-heading" className="space-y-4">
+          <h2 id="account-co-managed-heading" className="text-2xl font-semibold">
+            {t('coManaged.accountTitle', { defaultValue: 'Co-managed IT' })}
+          </h2>
+          <CoManagedPoolEditor showTotals />
+        </section>
+      </CoManagedFeatureBoundary>
 
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (

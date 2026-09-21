@@ -84,7 +84,8 @@
     "rrule": "^2.8.1",
     "sharp": "^0.35.4",
     "zod-to-json-schema": "^3.25.1",
-    "ws": ">=8.21.0"
+    "ws": ">=8.21.0",
+    "@alga-psa/co-managed": "file:../../packages/co-managed"
   },
   "devDependencies": {
     "@temporalio/nyc-test-coverage": "~1.14.1",

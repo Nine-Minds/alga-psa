@@ -14,6 +14,8 @@ import {
 } from './common';
 import { approvalStatusSchema, timeEntryResponseSchema } from './timeEntry';
 
+const timeSheetCalendarDateSchema = z.union([z.string().date(), z.string().datetime()]);
+
 // Time period frequency schema
 export const timePeriodFrequencySchema = z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']);
 
@@ -41,10 +43,10 @@ export const timeSheetFilterSchema = baseFilterSchema.extend({
   approved_to: z.string().datetime().optional(),
   approved_by: uuidSchema.optional(),
   has_entries: booleanTransform.optional(),
-  period_start_from: dateSchema.optional(),
-  period_start_to: dateSchema.optional(),
-  period_end_from: dateSchema.optional(),
-  period_end_to: dateSchema.optional()
+  period_start_from: timeSheetCalendarDateSchema.optional(),
+  period_start_to: timeSheetCalendarDateSchema.optional(),
+  period_end_from: timeSheetCalendarDateSchema.optional(),
+  period_end_to: timeSheetCalendarDateSchema.optional()
 });
 
 // Time sheet list query schema
@@ -56,20 +58,20 @@ export const timeSheetResponseSchema = z.object({
   period_id: uuidSchema,
   user_id: uuidSchema,
   approval_status: approvalStatusSchema,
-  submitted_at: z.string().datetime().nullable(),
-  approved_at: z.string().datetime().nullable(),
-  approved_by: uuidSchema.nullable(),
-  notes: z.string().nullable(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  submitted_at: z.string().datetime().nullish(),
+  approved_at: z.string().datetime().nullish(),
+  approved_by: uuidSchema.nullish(),
+  notes: z.string().nullish(),
+  created_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
   tenant: uuidSchema,
   
   // Computed/joined fields
   user_name: z.string().optional(),
   approver_name: z.string().optional(),
-  total_hours: z.number().optional(),
-  billable_hours: z.number().optional(),
-  entry_count: z.number().optional()
+  total_hours: z.number().nullish(),
+  billable_hours: z.number().nullish(),
+  entry_count: z.number().nullish()
 });
 
 // Time sheet with details response schema
@@ -90,9 +92,9 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
   
   time_period: z.object({
     period_id: uuidSchema,
-    start_date: dateSchema,
-    end_date: dateSchema,
-    is_current: z.boolean()
+    start_date: timeSheetCalendarDateSchema,
+    end_date: timeSheetCalendarDateSchema,
+    is_current: z.boolean().optional()
   }).optional(),
   
   time_entries: z.array(timeEntryResponseSchema).optional(),
@@ -101,25 +103,25 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
     comment_id: uuidSchema,
     comment_text: z.string(),
     user_id: uuidSchema,
-    user_name: z.string(),
+    user_name: z.string().optional(),
     user_role: z.string(),
     created_at: z.string().datetime()
   })).optional(),
   
   summary: z.object({
-    total_hours: z.number(),
-    billable_hours: z.number(),
-    non_billable_hours: z.number(),
+    total_hours: z.number().nullable(),
+    billable_hours: z.number().nullable(),
+    non_billable_hours: z.number().nullable(),
     entries_by_type: z.record(z.number()),
     entries_by_day: z.record(z.number()),
-    approval_ready: z.boolean()
+    approval_ready: z.boolean().nullable()
   }).optional()
 });
 
 // Time period schemas
 export const createTimePeriodSchema = z.object({
-  start_date: dateSchema,
-  end_date: dateSchema,
+  start_date: timeSheetCalendarDateSchema,
+  end_date: timeSheetCalendarDateSchema,
   is_current: z.boolean().optional().default(false)
 });
 
@@ -127,11 +129,11 @@ export const updateTimePeriodSchema = createUpdateSchema(createTimePeriodSchema)
 
 export const timePeriodResponseSchema = z.object({
   period_id: uuidSchema,
-  start_date: dateSchema,
-  end_date: dateSchema,
-  is_current: z.boolean(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  start_date: timeSheetCalendarDateSchema,
+  end_date: timeSheetCalendarDateSchema,
+  is_current: z.boolean().optional(),
+  created_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
   tenant: uuidSchema,
   
   // Computed fields
@@ -142,15 +144,19 @@ export const timePeriodResponseSchema = z.object({
 });
 
 // Time period settings schemas
+// Native count/unit input is canonical. Legacy label/count pairs remain
+// accepted at the domain edge for existing API clients.
 export const createTimePeriodSettingsSchema = z.object({
-  frequency: timePeriodFrequencySchema,
-  frequency_unit: z.number().min(1).optional().default(1),
-  start_day: z.number().min(1).max(7).optional(), // 1=Monday, 7=Sunday
-  end_day: z.number().min(1).max(7).optional(),
-  start_month: z.number().min(1).max(12).optional(),
-  end_month: z.number().min(1).max(12).optional(),
-  effective_from: dateSchema,
-  effective_to: dateSchema.optional(),
+  frequency: z.union([timePeriodFrequencySchema, z.number().int().positive()]),
+  frequency_unit: z.union([z.enum(['day', 'week', 'month', 'year']), z.number().int().positive()]).optional(),
+  start_day: z.number().int().min(1).max(31).optional(),
+  end_day: z.number().int().min(0).max(31).optional(),
+  start_month: z.number().int().min(1).max(12).optional(),
+  end_month: z.number().int().min(1).max(12).optional(),
+  start_day_of_month: z.number().int().min(1).max(31).optional(),
+  end_day_of_month: z.number().int().min(0).max(31).optional(),
+  effective_from: timeSheetCalendarDateSchema,
+  effective_to: timeSheetCalendarDateSchema.nullable().optional(),
   is_active: z.boolean().optional().default(true)
 });
 
@@ -158,17 +164,20 @@ export const updateTimePeriodSettingsSchema = createUpdateSchema(createTimePerio
 
 export const timePeriodSettingsResponseSchema = z.object({
   settings_id: uuidSchema,
-  frequency: timePeriodFrequencySchema,
-  frequency_unit: z.number(),
-  start_day: z.number().nullable(),
-  end_day: z.number().nullable(),
-  start_month: z.number().nullable(),
-  end_month: z.number().nullable(),
-  effective_from: dateSchema,
-  effective_to: dateSchema.nullable(),
+  time_period_settings_id: uuidSchema.optional(),
+  frequency: z.number().int().positive(),
+  frequency_unit: z.enum(['day', 'week', 'month', 'year']),
+  start_day: z.number().nullish(),
+  end_day: z.number().nullish(),
+  start_month: z.number().nullish(),
+  end_month: z.number().nullish(),
+  start_day_of_month: z.number().nullish(),
+  end_day_of_month: z.number().nullish(),
+  effective_from: timeSheetCalendarDateSchema,
+  effective_to: timeSheetCalendarDateSchema.nullish(),
   is_active: z.boolean(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  created_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
   tenant: uuidSchema
 });
 
@@ -222,19 +231,19 @@ export const reverseApprovalSchema = z.object({
 export const timeSheetStatsResponseSchema = z.object({
   total_time_sheets: z.number(),
   pending_approval: z.number(),
-  approved_this_period: z.number(),
+  approved_this_period: z.number().nullable(),
   changes_requested: z.number(),
-  total_hours_this_period: z.number(),
-  billable_hours_this_period: z.number(),
+  total_hours_this_period: z.number().nullable(),
+  billable_hours_this_period: z.number().nullable(),
   time_sheets_by_status: z.record(z.number()),
   time_sheets_by_user: z.record(z.number()),
-  average_hours_per_sheet: z.number(),
+  average_hours_per_sheet: z.number().nullable(),
   approval_rate: z.number(),
-  on_time_submission_rate: z.number(),
+  on_time_submission_rate: z.number().nullable(),
   top_users_by_hours: z.array(z.object({
     user_id: uuidSchema,
     user_name: z.string(),
-    total_hours: z.number(),
+    total_hours: z.number().nullable(),
     sheet_count: z.number()
   }))
 });
@@ -246,8 +255,8 @@ export const timeSheetSearchSchema = z.object({
   approval_statuses: z.array(approvalStatusSchema).optional(),
   user_ids: z.array(uuidSchema).optional(),
   period_ids: z.array(uuidSchema).optional(),
-  date_from: dateSchema.optional(),
-  date_to: dateSchema.optional(),
+  date_from: timeSheetCalendarDateSchema.optional(),
+  date_to: timeSheetCalendarDateSchema.optional(),
   include_entries: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
@@ -261,17 +270,17 @@ export const timeSheetExportQuerySchema = z.object({
   approval_statuses: z.array(approvalStatusSchema).optional(),
   user_ids: z.array(uuidSchema).optional(),
   period_ids: z.array(uuidSchema).optional(),
-  date_from: dateSchema.optional(),
-  date_to: dateSchema.optional(),
+  date_from: timeSheetCalendarDateSchema.optional(),
+  date_to: timeSheetCalendarDateSchema.optional(),
   fields: z.array(z.string()).optional()
 });
 
 // Time period generation
 export const generateTimePeriodsSchema = z.object({
-  start_date: dateSchema,
-  end_date: dateSchema,
+  start_date: timeSheetCalendarDateSchema,
+  end_date: timeSheetCalendarDateSchema,
   frequency: timePeriodFrequencySchema,
-  frequency_unit: z.number().min(1).optional().default(1)
+  frequency_unit: z.number().int().min(1).optional().default(1)
 });
 
 // Base schedule entry schema (without refinements)
@@ -279,13 +288,13 @@ const baseScheduleEntrySchema = z.object({
   title: z.string().min(1, 'Title is required'),
   scheduled_start: z.string().datetime(),
   scheduled_end: z.string().datetime(),
-  work_item_id: uuidSchema.optional(),
-  work_item_type: z.enum(['ticket', 'project_task', 'meeting', 'break', 'other']).optional(),
+  work_item_id: uuidSchema.nullable().optional(),
+  work_item_type: z.enum(['ticket', 'project_task', 'ad_hoc', 'interaction', 'non_billable_category', 'meeting', 'break', 'other']).optional(),
   assigned_user_ids: z.array(uuidSchema).optional(),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
   is_private: z.boolean().optional().default(false),
   is_all_day: z.boolean().optional(),
-  recurrence_pattern: z.string().optional()
+  recurrence_pattern: z.union([z.string(), z.record(z.unknown())]).nullable().optional()
 });
 
 // Schedule entry schemas (simplified for time management context)
@@ -317,18 +326,19 @@ export const scheduleEntryResponseSchema = z.object({
   is_private: z.boolean(),
   is_all_day: z.boolean(),
   status: z.string(),
-  recurrence_pattern: z.string().nullable(),
-  created_by: uuidSchema,
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  recurrence_pattern: z.union([z.string(), z.record(z.unknown())]).nullable(),
+  created_by: uuidSchema.optional(),
+  created_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
   tenant: uuidSchema,
   
+  assigned_user_ids: z.array(uuidSchema).optional(),
   // Assigned users
   assigned_users: z.array(z.object({
     user_id: uuidSchema,
-    first_name: z.string(),
-    last_name: z.string(),
-    email: z.string()
+    first_name: z.string().optional(),
+    last_name: z.string().optional(),
+    email: z.string().optional()
   })).optional(),
   
   // Work item details
@@ -336,7 +346,7 @@ export const scheduleEntryResponseSchema = z.object({
     id: uuidSchema,
     title: z.string(),
     type: z.string()
-  }).optional(),
+  }).nullable().optional(),
   
   // Computed fields
   duration_hours: z.number().optional(),

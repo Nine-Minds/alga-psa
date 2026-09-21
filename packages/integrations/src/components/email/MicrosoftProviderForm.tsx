@@ -9,6 +9,7 @@ import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -669,7 +670,7 @@ export function MicrosoftProviderForm({
                       type="button"
                       variant="link"
                       className="h-auto p-0"
-                      onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                      onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}
                     >
                       {t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })}
                     </Button>
@@ -691,7 +692,7 @@ export function MicrosoftProviderForm({
                   type="button"
                   variant="link"
                   className="h-auto p-0 text-xs"
-                  onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                  onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}
                 >
                   {ownAppPendingConsent
                     ? t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })

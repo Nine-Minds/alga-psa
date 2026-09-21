@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { fakeTable } from '@alga-psa/db/testing';
 
 const enqueueUnifiedInboundEmailQueueJobMock = vi.fn();
 const getAdminConnectionMock = vi.fn();
@@ -110,7 +111,17 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     });
     (trxMock as any).raw = trxRawMock;
 
-    getAdminConnectionMock.mockResolvedValue({});
+    // The durable-intake policy reads the workspace product and its
+    // co-management history off the admin connection, so it has to be a real
+    // (if fake) knex, not an empty object. Shared doubles, not another
+    // hand-rolled chainable: an independent PSA workspace with no relationship.
+    getAdminConnectionMock.mockResolvedValue((table: string) => fakeTable({
+      strict: true,
+      tables: {
+        tenants: [{ tenant: 'tenant-ms-1', product_code: 'psa' }],
+        co_management_relationships: [],
+      },
+    }, undefined, table));
     withTransactionMock.mockImplementation(async (_conn: unknown, callback: (trx: any) => Promise<void>) => {
       await callback(trxMock);
     });

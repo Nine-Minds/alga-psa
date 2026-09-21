@@ -1,3 +1,8 @@
+import { coManagedSlaObservationHandler, CO_MANAGED_SLA_OBSERVATION_JOB } from './handlers/coManagedSlaObservationHandler';
+import { portableRestoreUploadCleanupHandler, PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB } from './handlers/portableRestoreUploadCleanupHandler';
+import { CO_MANAGED_UPLOAD_RETENTION_DAYS } from '@alga-psa/co-managed';
+import { coManagedUploadCleanupHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB } from './handlers/coManagedUploadCleanupHandler';
+import { coManagedNotificationRecoveryHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB } from './handlers/coManagedNotificationRecoveryHandler';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import type { TenantDb } from '@alga-psa/db';
@@ -61,7 +66,7 @@ export type MaintenanceJobExecutionOutcome = {
 };
 
 type MaintenanceJobDef =
-  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number }
+  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean }
   // System jobs may return anything; a result carrying numeric total/succeeded/
   // failed is treated as an execution outcome, everything else is a single unit.
   | { scope: 'system'; run: () => Promise<unknown> };
@@ -73,6 +78,51 @@ const tenantsWithActiveTeams: TenantSelector = (db) => db
   .where('install_status', 'active')
   .whereNotNull('selected_profile_id')
   .distinct('tenant');
+
+const tenantsWithTeamsMaintenance: TenantSelector = async (db) => {
+  const active = await tenantsWithActiveTeams(db);
+  const recovery = await db.unscoped<{ tenant: string }>('co_managed_meeting_creation_operations', 'Teams maintenance discovers retained creation recovery owners even after integration removal')
+    .whereNull('completed_at').distinct('tenant');
+  return [...new Map([...active, ...recovery].map(row => [row.tenant, row])).values()];
+};
+
+const tenantsWithAbandonedCoManagedUploads: TenantSelector = async (db) => {
+  const drafts = await db.unscoped<{ tenant: string }>('co_management_conversation_drafts', 'upload cleanup discovers owners of abandoned drafts')
+    .where('status', 'draft').whereNull('cleanup_completed_at')
+    .where(query => query.whereNotNull('abandoned_at').orWhereRaw("last_activity_at <= clock_timestamp() - ? * interval '1 day'", [CO_MANAGED_UPLOAD_RETENTION_DAYS])).distinct('tenant');
+  const files = await db.unscoped<{ tenant: string }>('co_management_conversation_attachments', 'upload cleanup discovers owners of discarded or stale pending files')
+    .whereNull('purged_at').where(query => query.whereNotNull('discarded_at').orWhere(pending => pending.where('status', 'pending').whereNull('draft_operation_id')
+      .whereRaw("last_activity_at <= clock_timestamp() - ? * interval '1 day'", [CO_MANAGED_UPLOAD_RETENTION_DAYS]))).distinct('tenant');
+  const transfers = await db.unscoped<{ tenant: string }>('co_management_thread_transfers', 'upload cleanup discovers owners of abandoned thread transfers')
+    .whereNull('cleaned_at').where(query => query.where('status', 'abandoned').orWhere(expired => expired.where('status', 'prepared')
+      .whereRaw("last_activity_at <= clock_timestamp() - ? * interval '1 day'", [CO_MANAGED_UPLOAD_RETENTION_DAYS]))).distinct('tenant');
+  const archives = await db.unscoped<{ tenant: string }>('co_managed_archive_files', 'upload maintenance discovers MSP-owned retained bytes independently of live customer trust')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  return [...new Set([...drafts, ...files, ...transfers, ...archives].map(row => row.tenant))].map(tenant => ({ tenant }));
+};
+
+const tenantsWithPendingCoManagedNotifications: TenantSelector = async db => {
+  const notifications = await db.unscoped<{ tenant: string }>('co_management_notification_deliveries', 'maintenance fanout selects MSPs with pending notification channel deliveries')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const events = await db.unscoped<{ tenant: string }>('co_management_event_outbox', 'maintenance fanout selects customer-owned conversation events awaiting publication')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const consumers = await db.unscoped<{ tenant: string }>('co_management_event_consumers', 'maintenance fanout selects unfinished conversation consumer obligations')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const emails = await db.unscoped<{ tenant: string }>('co_management_email_deliveries', 'maintenance fanout selects MSPs with pending co-managed email recipients')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const customerEmails = await db.unscoped<{ tenant: string }>('co_management_customer_email_deliveries', 'maintenance fanout selects customers with pending technician email deliveries')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const requesterEmails = await db.unscoped<{ tenant: string }>('co_management_requester_email_deliveries', 'maintenance fanout selects customers with pending requester email deliveries')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const workflowEmails = await db.unscoped<{ tenant: string }>('co_management_workflow_ticket_emails', 'maintenance fanout selects committed workflow closure emails awaiting delivery')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const routing = await db.unscoped<{ tenant: string }>('co_management_ticket_routing_recipients', 'maintenance fanout selects home-owned routing notifications and email awaiting delivery')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const schedules = await db.unscoped<{ tenant: string }>('comments', 'maintenance fanout selects co-managed schedules and legacy publication handoffs awaiting recovery')
+    .whereRaw("(scheduled_publish_retry_at IS NULL OR scheduled_publish_retry_at <= clock_timestamp()) AND ((publish_state = 'scheduled' AND scheduled_publish_at <= clock_timestamp()) OR (publish_state = 'published' AND scheduled_publish_event_id IS NOT NULL AND (scheduled_publish_dispatched_at IS NULL OR (scheduled_response_event_id IS NOT NULL AND scheduled_response_dispatched_at IS NULL))))")
+    .whereRaw("(EXISTS (SELECT 1 FROM tenants WHERE tenants.tenant = comments.tenant AND tenants.product_code = 'co_managed') OR EXISTS (SELECT 1 FROM co_management_relationships WHERE co_management_relationships.tenant = comments.tenant))").distinct('tenant');
+  return [...new Set([...notifications, ...events, ...consumers, ...emails, ...customerEmails, ...requesterEmails, ...workflowEmails, ...routing, ...schedules].map(row => row.tenant))].map(tenant => ({ tenant }));
+};
 
 const tenantsWithInboundEmail: TenantSelector = (db) => db
   .unscoped<{ tenant: string }>('email_providers', 'maintenance fanout narrows inbound-email recovery to tenants with an active provider')
@@ -116,6 +166,16 @@ const tenantsWithPendingCallArtifacts: TenantSelector = (db) => db
 // per tenant; here a single global run fans them out across all tenants. System
 // jobs run once. Edition gating lives in the schedule wiring, not here.
 const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
+  [CO_MANAGED_SLA_OBSERVATION_JOB]: { scope: 'tenant', run: tenantId => coManagedSlaObservationHandler({ tenantId }), concurrency: 3,
+    tenants: async db => {
+      const active = await db.unscoped<{ tenant: string }>('sla_organization_obligations', 'SLA observation discovers policy owners with unfinished obligations')
+        .whereRaw("clock #>> '{resolution,completedAt}' IS NULL").distinct('tenant');
+      const pending = await db.unscoped<{ tenant: string }>('sla_organization_notification_events', 'SLA fanout also recovers crossings from already completed obligations')
+        .where('status', 'pending').distinct('tenant');
+      const email = await db.unscoped<{ tenant: string }>('sla_organization_notification_recipients', 'SLA email recovery discovers pending sends after fanout completion')
+        .where('channel', 'email').where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+      return [...new Map([...active, ...pending, ...email].map(row => [row.tenant, row])).values()];
+    } },
   'expired-credits': { scope: 'tenant', run: (tenantId) => expiredCreditsHandler({ tenantId }) },
   'expiring-credits-notification': { scope: 'tenant', run: (tenantId) => expiringCreditsNotificationHandler({ tenantId }) },
   [PREPAID_BALANCE_ALERT_SCAN_JOB]: { scope: 'tenant', run: (tenantId) => prepaidBalanceAlertScanHandler({ tenantId }) },
@@ -131,7 +191,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }), tenants: tenantsWithActiveTeams },
   'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }), tenants: tenantsWithActiveTeamsPhone },
   [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }), tenants: tenantsWithPendingCallArtifacts },
-  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithActiveTeams },
+  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithTeamsMaintenance, includeSuspended: true },
   [THREECX_CALL_CONTROL_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxCallControlHandler({ tenantId }), tenants: tenantsWithActiveThreecx },
   [THREECX_CDR_BACKFILL_JOB]: { scope: 'tenant', run: (tenantId) => backfillThreecxCdrHandler({ tenantId }), tenants: tenantsWithThreecxCdrImport },
   [THREECX_PHONEBOOK_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxPhonebookHandler({ tenantId }), tenants: tenantsWithThreecxPhonebookSync },
@@ -139,6 +199,9 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
+  [PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB]: { scope: 'system', run: () => portableRestoreUploadCleanupHandler() },
+  [CO_MANAGED_UPLOAD_CLEANUP_JOB]: { scope: 'tenant', run: tenantId => coManagedUploadCleanupHandler({ tenantId }), tenants: tenantsWithAbandonedCoManagedUploads, concurrency: 3, includeSuspended: true },
+  [CO_MANAGED_NOTIFICATION_RECOVERY_JOB]: { scope: 'tenant', run: tenantId => coManagedNotificationRecoveryHandler({ tenantId }), tenants: tenantsWithPendingCoManagedNotifications, concurrency: 3 },
   'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }), tenants: tenantsWithInboundEmail, concurrency: 3 },
   'provider-disconnect-retry': { scope: 'tenant', run: (tenantId) => providerDisconnectRetryHandler({ tenantId }) },
   // The sweep owns tenant enumeration and per-tenant advisory locking itself,
@@ -224,10 +287,9 @@ export async function runMaintenanceJob(
   }
 
   const db = tenantDb(await getAdminConnection(), '__maintenance_job_fanout_tenant_enumeration__');
-  const active = await db
-    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
-    .whereNull('suspended_at')
-    .select('tenant');
+  const tenantQuery = db.unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs');
+  if (!def.includeSuspended) tenantQuery.whereNull('suspended_at');
+  const active = await tenantQuery.select('tenant');
   let tenants = active;
   if (def.tenants) {
     const eligible = new Set((await def.tenants(db)).map((row) => String(row.tenant)));

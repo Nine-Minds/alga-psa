@@ -147,6 +147,7 @@ export const updateTicketSchema = createUpdateSchema(
   })
 ).extend({
   contact_name_id: uuidSchema.nullable().optional(),
+  response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
   ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
   // ticket:close_override. Stripped before the row update.
