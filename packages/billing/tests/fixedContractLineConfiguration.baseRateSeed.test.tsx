@@ -148,4 +148,66 @@ describe('FixedContractLineConfiguration base-rate seeding', () => {
 
     await waitFor(() => expect(baseRateInput().value).toBe(''));
   });
+
+  it('T007: seeds from a service total reported before the empty fixed config resolves', async () => {
+    let resolveConfig: (value: unknown) => void = () => {};
+    actions.getContractLineFixedConfig.mockReturnValue(
+      new Promise((resolve) => {
+        resolveConfig = resolve;
+      }),
+    );
+    const { FixedPlanConfiguration } = await import(
+      '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration'
+    );
+
+    render(<FixedPlanConfiguration contractLineId="line-1" />);
+
+    // The plan header loads while the fixed config is still pending, so the
+    // service list can report its total first.
+    await screen.findByDisplayValue('Managed Support');
+    seed.totalCents = 5000;
+    fireEvent.click(screen.getByTestId('report-services-total'));
+    await waitFor(() => expect(baseRateInput().value).toBe(''));
+
+    // The config resolves empty: the held total must seed the field, and the
+    // dirty flag must survive the load completing.
+    resolveConfig({ base_rate: null, enable_proration: false, billing_cycle_alignment: 'start' });
+    await waitFor(() => expect(baseRateInput().value).toBe('50.00'));
+    const saveButton = screen.getByRole('button', { name: 'Save Changes' }) as HTMLButtonElement;
+    expect(saveButton.disabled).toBe(false);
+
+    // The seeded rate must survive the empty-config assignment: saving has to
+    // persist it rather than fail the required-base-rate validation.
+    fireEvent.click(saveButton);
+    await waitFor(() =>
+      expect(actions.updateContractLineFixedConfig).toHaveBeenCalledWith(
+        'line-1',
+        expect.objectContaining({ base_rate: 5000 }),
+      ),
+    );
+    expect(screen.queryByText('Base rate is required for fixed lines')).toBeNull();
+  });
+
+  it('T007: never replaces a populated persisted rate when the total arrives first', async () => {
+    let resolveConfig: (value: unknown) => void = () => {};
+    actions.getContractLineFixedConfig.mockReturnValue(
+      new Promise((resolve) => {
+        resolveConfig = resolve;
+      }),
+    );
+    const { FixedPlanConfiguration } = await import(
+      '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration'
+    );
+
+    render(<FixedPlanConfiguration contractLineId="line-1" />);
+
+    await screen.findByDisplayValue('Managed Support');
+    seed.totalCents = 5000;
+    fireEvent.click(screen.getByTestId('report-services-total'));
+    await waitFor(() => expect(baseRateInput().value).toBe(''));
+
+    // The config resolves populated: the held service total must be discarded.
+    resolveConfig({ base_rate: 12000, enable_proration: false, billing_cycle_alignment: 'start' });
+    await waitFor(() => expect(baseRateInput().value).toBe('120.00'));
+  });
 });

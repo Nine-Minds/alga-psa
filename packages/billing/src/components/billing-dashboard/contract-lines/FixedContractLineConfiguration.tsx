@@ -105,21 +105,44 @@ export function FixedPlanConfiguration({
   // Seeds an empty base-rate field once from the resolved associated-service
   // total. A populated/edited/resumed value is never replaced.
   const baseRateSeededRef = useRef(false);
+  // The persisted fixed config loads asynchronously and may resolve after the
+  // service list has already reported its total. Track that explicitly so a
+  // reported total is held until we can confirm the persisted rate is empty,
+  // instead of being overwritten by the later empty-config assignment.
+  const fixedConfigLoadedRef = useRef(false);
+  const pendingServicesTotalRef = useRef<number | null>(null);
 
-  const handleServicesTotalResolved = useCallback((totalCents: number) => {
+  const applyServiceTotalSeed = useCallback((totalCents: number) => {
     if (baseRateSeededRef.current) return;
     if (!Number.isFinite(totalCents) || totalCents <= 0) return;
-    if (baseRate !== undefined && baseRate !== null && baseRate !== 0) return;
     baseRateSeededRef.current = true;
     setBaseRate(totalCents);
     setBaseRateInput((totalCents / 100).toFixed(2));
     setIsDirty(true);
-  }, [baseRate]);
+  }, []);
+
+  const handleServicesTotalResolved = useCallback(
+    (totalCents: number) => {
+      if (baseRateSeededRef.current) return;
+      if (!Number.isFinite(totalCents) || totalCents <= 0) return;
+      // Hold the total while the persisted config is still loading. A later
+      // populated config wins; a later empty config seeds from this total.
+      if (!fixedConfigLoadedRef.current) {
+        pendingServicesTotalRef.current = totalCents;
+        return;
+      }
+      if (baseRate !== undefined && baseRate !== null && baseRate !== 0) return;
+      applyServiceTotalSeed(totalCents);
+    },
+    [baseRate, applyServiceTotalSeed],
+  );
 
   const fetchPlanData = useCallback(async () => {
     setPlanLoading(true);
     setError(null);
     baseRateSeededRef.current = false;
+    fixedConfigLoadedRef.current = false;
+    pendingServicesTotalRef.current = null;
     try {
       // Fetch the basic contract line data
       const fetchedPlan = await getContractLineById(contractLineId);
@@ -140,6 +163,7 @@ export function FixedPlanConfiguration({
         setCadenceOwner((fetchedPlan.cadence_owner ?? 'client') as 'client' | 'contract');
 
         // Fetch fixed config
+        let persistedBaseRate: number | null | undefined;
         if (fetchedPlan.contract_line_id) {
           const cfg = await getContractLineFixedConfig(fetchedPlan.contract_line_id);
           if (isReturnedActionError(cfg)) {
@@ -147,6 +171,7 @@ export function FixedPlanConfiguration({
             return;
           }
           if (cfg) {
+            persistedBaseRate = cfg.base_rate;
             setBaseRate(cfg.base_rate ?? undefined);
             if (cfg.base_rate !== undefined && cfg.base_rate !== null) {
               setBaseRateInput((cfg.base_rate / 100).toFixed(2));
@@ -160,8 +185,23 @@ export function FixedPlanConfiguration({
             );
           }
         }
-        // Do not clear the dirty flag if a service total seeded the empty
-        // base-rate field while this load was in flight.
+
+        // The persisted config has now resolved. A total reported while it was
+        // loading may seed, but only when the persisted rate is empty; a
+        // populated persisted rate always wins and never gets replaced.
+        fixedConfigLoadedRef.current = true;
+        const persistedIsPopulated =
+          persistedBaseRate !== undefined &&
+          persistedBaseRate !== null &&
+          persistedBaseRate !== 0;
+        const pendingTotal = pendingServicesTotalRef.current;
+        pendingServicesTotalRef.current = null;
+        if (!persistedIsPopulated && !baseRateSeededRef.current && pendingTotal) {
+          applyServiceTotalSeed(pendingTotal);
+        }
+
+        // Keep the dirty flag when a service total seeded the empty base rate
+        // while this load was in flight.
         if (!baseRateSeededRef.current) {
           setIsDirty(false);
         }
@@ -178,7 +218,7 @@ export function FixedPlanConfiguration({
     } finally {
       setPlanLoading(false);
     }
-  }, [contractLineId, t]);
+  }, [contractLineId, t, applyServiceTotalSeed]);
 
   useEffect(() => {
     fetchPlanData();
