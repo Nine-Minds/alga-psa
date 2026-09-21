@@ -153,7 +153,6 @@ describe('Quotes i18n wiring contract', () => {
       'quoteDetail.alerts.clientConfigurationSubmitted',
       'quoteDetail.clientSelections.selectedOptionalItem',
       'quoteDetail.dialogs.approval.approveDescription',
-      'quoteDetail.dialogs.send.message',
       'quoteDetail.errors.load',
       'quoteDetail.notices.templateAssigned',
       'quoteDetail.preview.loading',
@@ -230,9 +229,6 @@ describe('Quotes i18n wiring contract', () => {
       'quotesTab.filters.allClients',
       'quotesTab.empty.byCategory',
       'quotesTab.dialogs.delete.title',
-      'quotesTab.dialogs.send.title',
-      'quotesTab.dialogs.send.additionalRecipients',
-      'quotesTab.dialogs.send.messagePlaceholder',
       'quotesTab.errors.load',
       'quotesTab.loading',
       'common.columns.quoteNumber',
@@ -273,6 +269,56 @@ describe('Quotes i18n wiring contract', () => {
     for (const pattern of residualPatterns) {
       expect(source).not.toMatch(pattern);
     }
+  });
+
+  it('T031: QuoteSendDialog owns the shared send copy and both quote surfaces render it with their client context', () => {
+    const source = read('../../src/components/billing-dashboard/quotes/QuoteSendDialog.tsx');
+    const detailSource = read('../../src/components/billing-dashboard/quotes/QuoteDetail.tsx');
+    const listSource = read('../../src/components/billing-dashboard/quotes/QuotesTab.tsx');
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
+    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+
+    const keyChecks = [
+      'quoteForm.dialogs.send.title',
+      'quoteForm.dialogs.send.description',
+      'quoteForm.fields.recipients',
+      'quoteForm.fields.additionalEmails',
+      'quoteForm.fields.messageOptional',
+      'quoteForm.placeholders.additionalEmails',
+      'quoteForm.placeholders.message',
+      'common.actions.cancel',
+      'common.states.sending',
+      'quoteForm.actions.sendQuote',
+    ];
+
+    for (const key of keyChecks) {
+      expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    const residualPatterns = [
+      /title="Send Quote to Client"/,
+      />Recipients</,
+      />Additional email addresses \(comma-separated\)</,
+      />Message \(optional\)</,
+      />Send Quote</,
+      /placeholder="email@example\.com, another@example\.com"/,
+      />Add a personal note for the client\.\.\.</,
+    ];
+    for (const pattern of residualPatterns) {
+      expect(source).not.toMatch(pattern);
+    }
+
+    expect(detailSource).toContain('<QuoteSendDialog');
+    expect(detailSource).toContain('clientId={quote.client_id}');
+    expect(detailSource).not.toContain('QuoteSendRecipientsField');
+    expect(listSource).toContain('<QuoteSendDialog');
+    expect(listSource).toContain('clientId={sendDialogState.clientId}');
+    expect(listSource).not.toContain('QuoteSendRecipientsField');
   });
 
   it('T009: QuoteDocumentTemplateEditor uses msp/quotes translation keys for editor chrome, preview pipeline, and footer metadata', () => {
