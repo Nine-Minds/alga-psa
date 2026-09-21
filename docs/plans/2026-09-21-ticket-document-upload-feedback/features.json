@@ -1,0 +1,52 @@
+[
+  {
+    "id": "F001",
+    "description": "Keep terminal per-file outcomes and readable failure reasons visible after a failed or partially successful batch.",
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Show one batch failure toast without duplicating existing permission notifications.",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Explain drops with no File objects and avoid invoking upload or folder selection.",
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Return a deterministic batch summary and finalize uploading state after all attempts.",
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Refresh successful documents and close both Documents upload instances only after a fully successful batch.",
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Keep project task uploads open on failure while preserving per-file successful additions.",
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Prevent overlapping batches and allow same-file reselection after completion without automatic retry.",
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Preserve folder selection and previous outcomes when folder selection is canceled.",
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Keep successful upload outcomes distinct from callback or refresh failures.",
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Provide translated, accessible feedback using existing theme and notification conventions.",
+    "implemented": false
+  }
+]

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "T001",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004",
+      "F010"
+    ],
+    "description": "Component: parameterize returned error, permission error, and thrown error; after batch completion verify filename, inline reason/fallback, idle state and one failure notification.",
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "featureIds": [
+      "F001",
+      "F004",
+      "F005",
+      "F006",
+      "F009"
+    ],
+    "description": "Parent integration: success then failure, failure then success, all-success and all-failure batches; verify all files attempted, summary counts, refresh only with successes, no early unmount, retained partial failures, and successful project additions. Reject a refresh callback and verify uploaded files remain successful with separately handled refresh feedback.",
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "featureIds": [
+      "F003",
+      "F007"
+    ],
+    "description": "Component: empty DataTransfer shows guidance without upload/folder calls; a drop during a deferred upload cannot replace the active queue; selecting the same file after failure starts a fresh batch.",
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "featureIds": [
+      "F008",
+      "F010"
+    ],
+    "description": "Browser: ticket Documents manager > Upload file > folder dialog; cancel then reselect and confirm. Verify no upload on cancel, prior outcomes retained, intended destination on confirm, focus/keyboard navigation, and readable long errors in light/dark themes.",
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "featureIds": [
+      "F001",
+      "F005"
+    ],
+    "description": "Live isolated smoke: upload saved EML, XLS and XLSX fixtures through drop and Browse Files under permissive policy; reload ticket and verify associations/downloads. Exercise restricted MIME rejection, empty MIME metadata, and a request beyond the effective server-action body limit; confirm visible outcomes without policy bypass. Record effective settings and video-path comparison privately.",
+    "implemented": false
+  }
+]
