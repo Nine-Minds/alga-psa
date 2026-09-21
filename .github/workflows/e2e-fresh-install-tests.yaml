@@ -14,6 +14,8 @@ concurrency:
 
 permissions:
   contents: read
+  # Reading earlier runs' artifacts for verified image reuse.
+  actions: read
 
 jobs:
   changes:
@@ -137,15 +139,35 @@ jobs:
           fi
           df -h /
 
+      # An earlier run (this branch first, then main) whose build of this image
+      # had byte-identical inputs (scripts/image-inputs.json, proven by git tree
+      # hashes at both revisions) supplies the archive. Its record is verified
+      # against that run's identity, the archive against the record, and a new
+      # record is issued for this candidate carrying the reuse provenance. Any
+      # doubt means build it.
+      - name: Look for a verified reusable build
+        id: reuse
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          IMAGE_REUSE_DISABLED: ${{ inputs.no_cache == true && 'true' || 'false' }}
+          REUSE_BRANCHES: ${{ github.head_ref || github.ref_name }},main
+          BUILD_SERVICE: ${{ matrix.service }}
+          BUILD_IMAGE: ${{ matrix.image }}
+          BUILD_DOCKERFILE: ${{ matrix.dockerfile }}
+          BUILD_ARTIFACT: ${{ matrix.artifact || format('fresh-install-image-{0}', matrix.service) }}
+          IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
+          BUILD_RECORD: ${{ runner.temp }}/${{ matrix.service }}-build.json
+        run: node scripts/reuse-docker-archive-build.mjs
+
       - name: Set up emulator build runtime
-        if: matrix.service == 'algasim'
+        if: matrix.service == 'algasim' && steps.reuse.outputs.reused != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
       - name: Compile candidate emulator packages and verify controls
-        if: matrix.service == 'algasim'
+        if: matrix.service == 'algasim' && steps.reuse.outputs.reused != 'true'
         run: |
           npm install -g npm@11
           npm ci
@@ -160,9 +182,10 @@ jobs:
           node --test e2e-tests/harness/calendar-callback-proxy.test.mjs
 
       - uses: docker/setup-buildx-action@v3
+        if: steps.reuse.outputs.reused != 'true'
 
       - name: Provide memory headroom for production compilation
-        if: matrix.service == 'server' || matrix.service == 'server-ee'
+        if: (matrix.service == 'server' || matrix.service == 'server-ee') && steps.reuse.outputs.reused != 'true'
         run: |
           # EE's webpack build exceeded runner RAM and was killed by the OS.
           # Keep the actual production build and its bounded Node heap; provide
@@ -176,6 +199,7 @@ jobs:
 
       - name: Build and export ${{ matrix.service }}
         id: export_image
+        if: steps.reuse.outputs.reused != 'true'
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context || '.' }}
@@ -196,12 +220,14 @@ jobs:
           cache-to: ${{ matrix.cache && format('type=gha,version=2,scope=fresh-install-{0},mode=max,ignore-error=true,timeout=3m', matrix.service) || '' }}
 
       - name: Compress image for transfer
+        if: steps.reuse.outputs.reused != 'true'
         env:
           IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar
         run: |
           gzip -1 "$IMAGE_ARCHIVE"
 
       - name: Record actual image archive build identity
+        if: steps.reuse.outputs.reused != 'true'
         env:
           IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
           BUILD_RECORD: ${{ runner.temp }}/${{ matrix.service }}-build.json
