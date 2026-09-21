@@ -61,7 +61,7 @@ jobs:
         run: node scripts/select-tests-jev.mjs
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
-          JEV_SELECTION_MODE: shadow
+          JEV_SELECTION_MODE: ${{ vars.JEV_SELECTION_MODE || 'enforce' }}
           JEV_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           JEV_HEAD_SHA: ${{ github.sha }}
       # `warn`, not `error`: a crash before the script writes its outcome must
@@ -92,10 +92,12 @@ jobs:
     secrets: inherit
 
   integration:
+    needs: jev-selection
     uses: ./.github/workflows/integration-tests.yml
     secrets: inherit
 
   browser:
+    needs: jev-selection
     uses: ./.github/workflows/e2e-fresh-install-tests.yaml
     secrets: inherit
 
