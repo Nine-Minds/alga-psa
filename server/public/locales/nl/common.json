@@ -689,7 +689,16 @@
       "fileError": "Bestand kon niet worden geüpload",
       "associatedEntityTypeLabel": "Koppelen aan",
       "noAssociation": "Geen koppeling",
-      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt."
+      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt.",
+      "uploaded": "Geüpload",
+      "failed": "Mislukt",
+      "failureSummary": "{{failed}} van {{total}} bestanden konden niet worden geüpload. Bekijk de fouten hieronder.",
+      "outcomeSummary": "{{succeeded}} van {{total}} bestanden geüpload",
+      "emptyDropTitle": "Geen bestanden ontvangen",
+      "emptyDropMessage": "Er zijn geen bestanden ontvangen. Sla de bijlage of e-mail op uw computer op en sleep het opgeslagen bestand hierheen of gebruik ‘Bestanden bladeren’.",
+      "uploadInProgress": "Er is al een upload bezig. Wacht tot deze is voltooid voordat u meer bestanden toevoegt.",
+      "refreshFailed": "Uw bestanden zijn geüpload, maar de documentenlijst kon niet worden vernieuwd. Herlaad de pagina om ze te zien.",
+      "clearResults": "Resultaten wissen"
     },
     "folders": {
       "root": "Hoofdmap",

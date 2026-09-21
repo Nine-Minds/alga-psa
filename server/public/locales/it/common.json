@@ -779,7 +779,16 @@
       "fileError": "Impossibile caricare il file",
       "associatedEntityTypeLabel": "Associa a",
       "noAssociation": "Nessuna associazione",
-      "selectAssociatedEntityError": "Seleziona un'entità associata prima di caricare."
+      "selectAssociatedEntityError": "Seleziona un'entità associata prima di caricare.",
+      "uploaded": "Caricato",
+      "failed": "Non riuscito",
+      "failureSummary": "Non è stato possibile caricare {{failed}} di {{total}} file. Controlla gli errori di seguito.",
+      "outcomeSummary": "{{succeeded}} di {{total}} file caricati",
+      "emptyDropTitle": "Nessun file ricevuto",
+      "emptyDropMessage": "Non è stato ricevuto alcun file. Salva l'allegato o l'email sul computer, poi trascina qui il file salvato oppure usa «Sfoglia file».",
+      "uploadInProgress": "Un caricamento è già in corso. Attendi che finisca prima di aggiungere altri file.",
+      "refreshFailed": "I file sono stati caricati, ma l'elenco dei documenti non è stato aggiornato. Ricarica la pagina per visualizzarli.",
+      "clearResults": "Cancella risultati"
     },
     "folders": {
       "root": "Radice",

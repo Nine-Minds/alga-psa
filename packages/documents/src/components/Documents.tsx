@@ -1744,10 +1744,15 @@ const Documents = ({
                   entityId={entityId}
                   entityType={entityType}
                   folderPath={currentFolder}
-                  onUploadComplete={async () => {
-                    setShowUpload(false);
-                    await refreshDocuments();
-                    setFolderTreeKey(prev => prev + 1);
+                  onUploadComplete={() => {}}
+                  onAllUploadsComplete={async (summary) => {
+                    if (summary.succeeded > 0) {
+                      await refreshDocuments();
+                      setFolderTreeKey(prev => prev + 1);
+                    }
+                    if (summary.failed === 0) {
+                      setShowUpload(false);
+                    }
                   }}
                   onCancel={() => setShowUpload(false)}
                   getFoldersFn={getFoldersFn}
@@ -2032,12 +2037,17 @@ const Documents = ({
                   entityId={entityId}
                   entityType={entityType}
                   folderPath={forceUploadToRoot ? null : undefined}
-                  onUploadComplete={async () => {
-                    setShowUpload(false);
-                    // Refresh the documents list (triggers router.refresh() in entity mode)
-                    await refreshDocuments();
-                    if (inFolderMode) {
-                      setFolderTreeKey(prev => prev + 1);
+                  onUploadComplete={() => {}}
+                  onAllUploadsComplete={async (summary) => {
+                    if (summary.succeeded > 0) {
+                      // Refresh the documents list (triggers router.refresh() in entity mode)
+                      await refreshDocuments();
+                      if (inFolderMode) {
+                        setFolderTreeKey(prev => prev + 1);
+                      }
+                    }
+                    if (summary.failed === 0) {
+                      setShowUpload(false);
                     }
                   }}
                   onCancel={() => setShowUpload(false)}

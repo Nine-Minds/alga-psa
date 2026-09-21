@@ -8,7 +8,7 @@
       "F010"
     ],
     "description": "Component: parameterize returned error, permission error, and thrown error; after batch completion verify filename, inline reason/fallback, idle state and one failure notification.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T002",
@@ -20,7 +20,7 @@
       "F009"
     ],
     "description": "Parent integration: success then failure, failure then success, all-success and all-failure batches; verify all files attempted, summary counts, refresh only with successes, no early unmount, retained partial failures, and successful project additions. Reject a refresh callback and verify uploaded files remain successful with separately handled refresh feedback.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T003",
@@ -29,7 +29,7 @@
       "F007"
     ],
     "description": "Component: empty DataTransfer shows guidance without upload/folder calls; a drop during a deferred upload cannot replace the active queue; selecting the same file after failure starts a fresh batch.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T004",

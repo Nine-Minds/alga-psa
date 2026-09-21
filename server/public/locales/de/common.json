@@ -689,7 +689,16 @@
       "fileError": "Datei konnte nicht hochgeladen werden",
       "associatedEntityTypeLabel": "Verknüpfen mit",
       "noAssociation": "Keine Verknüpfung",
-      "selectAssociatedEntityError": "Wählen Sie vor dem Hochladen eine verknüpfte Entität aus."
+      "selectAssociatedEntityError": "Wählen Sie vor dem Hochladen eine verknüpfte Entität aus.",
+      "uploaded": "Hochgeladen",
+      "failed": "Fehlgeschlagen",
+      "failureSummary": "{{failed}} von {{total}} Dateien konnten nicht hochgeladen werden. Prüfen Sie die Fehler unten.",
+      "outcomeSummary": "{{succeeded}} von {{total}} Dateien hochgeladen",
+      "emptyDropTitle": "Keine Dateien empfangen",
+      "emptyDropMessage": "Es wurden keine Dateien empfangen. Speichern Sie den Anhang oder die E-Mail auf Ihrem Computer und ziehen Sie die gespeicherte Datei hierher oder verwenden Sie „Dateien durchsuchen“.",
+      "uploadInProgress": "Ein Upload läuft bereits. Warten Sie, bis er abgeschlossen ist, bevor Sie weitere Dateien hinzufügen.",
+      "refreshFailed": "Ihre Dateien wurden hochgeladen, aber die Dokumentliste konnte nicht aktualisiert werden. Laden Sie die Seite neu, um sie zu sehen.",
+      "clearResults": "Ergebnisse löschen"
     },
     "folders": {
       "root": "Stammordner",
