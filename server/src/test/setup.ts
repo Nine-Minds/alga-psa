@@ -1,4 +1,9 @@
 import '@testing-library/jest-dom'
+// Next's programmatic entrypoint installs this during app.prepare(), but the
+// single-fork integration worker collects server-action modules before any app
+// is prepared. Ensure those modules snapshot Node's real AsyncLocalStorage
+// instead of permanently caching Next's throwing browser fallback.
+import 'next/dist/server/node-environment-baseline';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -356,20 +361,49 @@ const i18nMocks = vi.hoisted(() => {
     },
   };
 
+  // formatDate has to answer to the DateFormatProvider exactly as the real hook
+  // does. Digit order, separator and clock come from the tenant's COUNTRY, so a
+  // stub that hands 'en' straight to Intl silently rewrites every country-format
+  // assertion back to US order — a GB tenant's 13/08/2026 re-rendered as
+  // 08/13/2026, with the test failing for a reason that exists only in the mock.
+  // Delegating to the real formatDateValue also keeps digit width honest
+  // (production pads dd/MM; bare Intl does not).
+  const buildUseFormatters = async () => {
+    const { formatDateValue } = await import('@alga-psa/ui/lib/i18n/formatDateValue');
+    const { useDateFormat } = await import('@alga-psa/ui/lib/dateFormat/useDateFormat');
+    // Referential stability still matters (see mockFormatters): key the cache on
+    // the resolved format object, which DateFormatProvider already memoises.
+    const byFormat = new WeakMap<object, typeof mockFormatters>();
+
+    return () => {
+      const dateFormat = useDateFormat();
+      let formatters = byFormat.get(dateFormat);
+      if (!formatters) {
+        formatters = {
+          ...mockFormatters,
+          formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+            formatDateValue(date, 'en', options, dateFormat),
+        };
+        byFormat.set(dateFormat, formatters);
+      }
+      return formatters;
+    };
+  };
+
   return {
     mockT,
     mockI18n,
     mockUseTranslation: () => ({ t: mockT, i18n: mockI18n }),
     mockFormatters,
-    mockUseFormatters: () => mockFormatters,
+    buildUseFormatters,
     // Stable i18n context value used by useI18n/useOptionalI18n (locale-aware
     // shared components like DatePicker/CurrencyInput read this).
     mockI18nContext: { locale: 'en', t: mockT, i18n: mockI18n },
   };
 });
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => ({
   useTranslation: i18nMocks.mockUseTranslation,
-  useFormatters: i18nMocks.mockUseFormatters,
+  useFormatters: await i18nMocks.buildUseFormatters(),
   useI18n: () => i18nMocks.mockI18nContext,
   useOptionalI18n: () => i18nMocks.mockI18nContext,
   detectClientLocale: () => 'en',

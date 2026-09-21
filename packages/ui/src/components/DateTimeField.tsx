@@ -11,7 +11,7 @@ import { useOptionalI18n } from '../lib/i18n/client';
 import { usePickerText } from '../lib/pickerText';
 import { LOCALE_CONFIG } from '../lib/i18n/config';
 import { getDateFnsLocale } from '../lib/dateFnsLocale';
-import { localeUses12HourClock } from '../lib/localeTimeFormat';
+import { useDateFormat } from '../lib/dateFormat/useDateFormat';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import type {
   DatePickerComponent,
@@ -59,9 +59,9 @@ export interface DateTimeFieldProps {
   minDate?: Date;
   /** Latest selectable date (inclusive) */
   maxDate?: Date;
-  /** Fixed date-fns display pattern; overrides the locale-derived format */
+  /** Fixed date-fns display pattern; overrides the country-derived format */
   displayFormat?: string;
-  /** Time format preference; when unset, derived from the active locale */
+  /** Time format preference; when unset, derived from the active country */
   timeFormat?: TimeFormatPreference;
   /** Rail granularity. Exact minutes stay reachable whatever this is. */
   minuteStep?: number;
@@ -113,9 +113,11 @@ export function DateTimeField({
   const t = usePickerText();
   const i18n = useOptionalI18n();
   const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
+  // Language names the months; the country orders the digits and picks the dial.
   const dateFnsLocale = getDateFnsLocale(locale);
+  const dateFormat = useDateFormat();
   const effectiveTimeFormat: TimeFormatPreference =
-    timeFormat ?? (localeUses12HourClock(locale) ? '12h' : '24h');
+    timeFormat ?? (dateFormat.hour12 ? '12h' : '24h');
 
   const showDate = variant !== 'time';
   const showTime = variant !== 'date';
@@ -129,8 +131,9 @@ export function DateTimeField({
   }, [variant, value, dateValue]);
 
   const dateDisplay = React.useCallback(
-    (date?: Date) => (date ? format(date, displayFormat ?? 'P', { locale: dateFnsLocale }) : ''),
-    [displayFormat, dateFnsLocale]
+    (date?: Date) =>
+      (date ? format(date, displayFormat ?? dateFormat.datePattern, { locale: dateFnsLocale }) : ''),
+    [displayFormat, dateFormat.datePattern, dateFnsLocale]
   );
   const timeDisplay = React.useCallback(
     (time?: string) => formatTimeDisplay(time, effectiveTimeFormat),
@@ -171,19 +174,19 @@ export function DateTimeField({
     [t]
   );
 
-  // What a half-typed entry is allowed to look like, in this locale.
+  // What a half-typed entry is allowed to look like, in this country.
   const typableDateOptions = React.useMemo(
     () => ({
-      separators: [getDateSeparator(locale)],
+      separators: [getDateSeparator(dateFormat)],
       words: [...relativeWords.today, ...relativeWords.tomorrow, ...relativeWords.yesterday],
     }),
-    [locale, relativeWords]
+    [dateFormat, relativeWords]
   );
 
   // What the panel should show: the text if it parses, otherwise the value.
   const parsedDateText = React.useMemo(
-    () => (dateText.trim() ? parseDateInput(dateText, locale, { relativeWords }) : null),
-    [dateText, locale, relativeWords]
+    () => (dateText.trim() ? parseDateInput(dateText, dateFormat, { relativeWords }) : null),
+    [dateText, dateFormat, relativeWords]
   );
   const parsedTimeText = React.useMemo(
     () => (timeText.trim() ? parseTimeInput(timeText) : null),
@@ -277,7 +280,7 @@ export function DateTimeField({
       return true;
     }
 
-    const parsed = parseDateInput(raw, locale, { relativeWords });
+    const parsed = parseDateInput(raw, dateFormat, { relativeWords });
     if (!parsed) {
       // Bad text never becomes a guess and never becomes empty: the old value stands.
       setDateError(true);
@@ -297,7 +300,7 @@ export function DateTimeField({
     clearable,
     clearFieldValue,
     dateDisplay,
-    locale,
+    dateFormat,
     relativeWords,
     minDate,
     maxDate,
@@ -524,7 +527,7 @@ export function DateTimeField({
   }, []);
 
   const datePlaceholder = showDate
-    ? (variant === 'date' ? placeholder : undefined) ?? getDatePlaceholder(locale)
+    ? (variant === 'date' ? placeholder : undefined) ?? getDatePlaceholder(dateFormat)
     : undefined;
   const timePlaceholder = showTime
     ? (variant === 'time' ? placeholder : undefined) ?? timeDisplay('09:00')

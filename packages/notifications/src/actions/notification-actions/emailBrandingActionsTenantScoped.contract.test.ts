@@ -94,9 +94,11 @@ describe('enterprise brand assets', () => {
     const body = decorator.slice(0, decorator.indexOf('\n}\n'));
 
     expect(body).toContain('if (!enterprise) return undefined;');
-    expect(body).toContain("palette.logo?.variant === 'wide'");
-    expect(body).toContain('branding?.logoWideUrl || branding?.logoUrl');
+    expect(body).toContain("palette.logo?.variant === 'wide' && branding?.logoWideUrl");
+    expect(body).toContain("{ variant, alt: branding?.clientName ?? '' }");
     expect(body).toContain('decorateBrandedHtml(html, { logo, hideAttribution })');
+    // The row references the logo by content-id; no URL is ever written into it.
+    expect(body).not.toContain('url:');
   });
 
   it('runs the decorator over everything the apply writes', () => {

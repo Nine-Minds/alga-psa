@@ -66,6 +66,9 @@ import {
 import { getTicketChecklistItems, type ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
 import type { ITicketExternalLinkView } from "../../actions/externalLinks/externalLinkActions";
 import type { CloseRuleFailure } from "../../lib/validateTicketClosure";
+import { previewBundleStatusPropagationAction } from "../../actions/ticketBundleActions";
+import { BundleStatusPropagationDialog } from "../BundleStatusPropagationDialog";
+import type { BundleStatusPropagationPreview } from "../../lib/ticketBundlePropagation";
 import TicketChecklistSection, { summarizeChecklist } from "./TicketChecklistSection";
 import { Dialog, DialogContent, DialogFooter } from "@alga-psa/ui/components/Dialog";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
@@ -111,13 +114,17 @@ import {
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
+    getBundleMasterClosedContextAction,
     promoteBundleMasterAction,
     removeChildFromBundleAction,
     unbundleMasterTicketAction,
     updateBundleSettingsAction,
     searchEligibleChildTicketsAction,
+    type BundleMasterClosedContextActionResult,
     type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
+import { ClosedMasterChoiceFields } from './ClosedMasterChoiceFields';
+import type { ClosedMasterChoice } from '../../lib/ticketBundlePolicy';
 import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
 import {
     resolveCommentReferencedImageDocuments,
@@ -182,10 +189,14 @@ interface TicketDetailsProps {
     currentUser?: IUser | null;
 
     // Optimized handlers
-    onTicketUpdate?: (field: string, value: any) => Promise<void>;
+    onTicketUpdate?: (
+        field: string,
+        value: any,
+        options?: { propagateToChildren?: boolean }
+    ) => Promise<void>;
     onBatchTicketUpdate?: (
         changes: Record<string, unknown>,
-        options?: TicketNotificationSuppressionValue
+        options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
@@ -325,7 +336,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 }) => {
     const { t } = useTranslation('features/tickets');
     // Hardcoded English, and a date that followed the browser's locale.
-    const { formatDate, locale } = useFormatters();
+    const { formatDate, locale, dateFormat } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -396,6 +407,81 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isResolutionCloseDialogOpen, setIsResolutionCloseDialogOpen] = useState(false);
     const [isSubmittingResolutionClose, setIsSubmittingResolutionClose] = useState(false);
 
+    // Bundle status propagation confirmation. The preview is fetched first; when
+    // it crosses the open/closed boundary with affected children we suspend the
+    // caller on a promise until the operator chooses propagate / master-only /
+    // cancel. This keeps the choice in one place for all four status-change sites.
+    const [bundlePropagationPreview, setBundlePropagationPreview] = useState<BundleStatusPropagationPreview | null>(null);
+    // Separate from the resolve/close-override dialogs' busy flags: the
+    // propagation confirm button must be enabled while the operator chooses, so
+    // this is armed only once a decision has resolved and the write is in flight.
+    const [isSubmittingBundlePropagation, setIsSubmittingBundlePropagation] = useState(false);
+    const bundleDecisionResolverRef = useRef<
+        ((decision: { proceed: boolean; propagateToChildren?: boolean }) => void) | null
+    >(null);
+
+    const resolveBundlePropagationDecision = useCallback(
+        (decision: { proceed: boolean; propagateToChildren?: boolean }) => {
+            const resolver = bundleDecisionResolverRef.current;
+            bundleDecisionResolverRef.current = null;
+            setBundlePropagationPreview(null);
+            resolver?.(decision);
+        },
+        [],
+    );
+
+    const confirmBundlePropagation = useCallback(
+        async (newStatusId: string): Promise<{ proceed: boolean; propagateToChildren?: boolean }> => {
+            if (!ticket.ticket_id) return { proceed: true };
+            try {
+                const preview = await previewBundleStatusPropagationAction({
+                    masterTicketId: ticket.ticket_id,
+                    newStatusId,
+                });
+                if (isActionMessageError(preview) || isActionPermissionError(preview)) {
+                    return { proceed: true };
+                }
+                if (preview.crossesBoundary && preview.affectedChildren.length > 0) {
+                    return await new Promise<{ proceed: boolean; propagateToChildren?: boolean }>((resolve) => {
+                        bundleDecisionResolverRef.current = resolve;
+                        setBundlePropagationPreview(preview);
+                    });
+                }
+            } catch (previewError) {
+                // Fall through to the write; the server still enforces the choice.
+                console.error('Bundle propagation preview failed:', previewError);
+            }
+            return { proceed: true };
+        },
+        [ticket.ticket_id],
+    );
+
+    const confirmStatusChange = useCallback(
+        async (newStatusId: string): Promise<{ proceed: boolean; propagateToChildren?: boolean }> => {
+            if (ticket.ticket_id) {
+                try {
+                    const check = await checkTicketClosure(ticket.ticket_id, newStatusId);
+                    if (check.wouldClose && !check.allowed) {
+                        setCloseOverrideReason('');
+                        setCloseBlockedDialog({
+                            isOpen: true,
+                            statusId: newStatusId,
+                            failures: check.failures,
+                            canOverride: check.canOverride,
+                            suppression: null,
+                        });
+                        return { proceed: false };
+                    }
+                } catch (checkError) {
+                    // Fall through to the write; the server still enforces.
+                    console.error('Close rules pre-check failed:', checkError);
+                }
+            }
+            return confirmBundlePropagation(newStatusId);
+        },
+        [confirmBundlePropagation, ticket.ticket_id],
+    );
+
     const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(
         bootstrap?.checklistItems ?? undefined,
     );
@@ -430,9 +516,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         if (!closeBlockedDialog.statusId || !ticket.ticket_id) return;
         setIsSubmittingCloseOverride(true);
         try {
+            // Close rules were already overridden, so only the propagation
+            // choice remains before we write.
+            const propagationDecision = await confirmBundlePropagation(closeBlockedDialog.statusId);
+            if (!propagationDecision.proceed) {
+                return;
+            }
+            setIsSubmittingBundlePropagation(true);
             const result = await updateTicketWithCache(ticket.ticket_id, { status_id: closeBlockedDialog.statusId }, {
                 overrideCloseRules: true,
                 overrideCloseRulesReason: closeOverrideReason.trim() || null,
+                propagateToChildren: propagationDecision.propagateToChildren,
                 ...(closeBlockedDialog.suppression?.suppressContactNotifications
                     ? {
                         suppressContactNotifications: true,
@@ -451,6 +545,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
         } finally {
             setIsSubmittingCloseOverride(false);
+            setIsSubmittingBundlePropagation(false);
         }
     };
     const [ticketDeleteValidation, setTicketDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -536,7 +631,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
-    const [dateTimeFormat, setDateTimeFormat] = useState<string>(bootstrap?.displaySettings?.dateTimeFormat ?? 'MMM d, yyyy h:mm a');
+    const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
     const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(bootstrap?.displaySettings?.responseStateTrackingEnabled ?? true);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
@@ -554,6 +649,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isUpdatingBundleSettings, setIsUpdatingBundleSettings] = useState(false);
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
+    const [isClosedMasterChoiceOpen, setIsClosedMasterChoiceOpen] = useState(false);
+    const [closedMasterContext, setClosedMasterContext] = useState<BundleMasterClosedContextActionResult | null>(null);
+    const [closedMasterChoice, setClosedMasterChoice] = useState<ClosedMasterChoice | null>(null);
+    const [pendingClosedMasterChildId, setPendingClosedMasterChildId] = useState<string | null>(null);
+    const [isLoadingClosedMasterContext, setIsLoadingClosedMasterContext] = useState(false);
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
     const [allContactsForWatchListLoading, setAllContactsForWatchListLoading] = useState(false);
@@ -1345,9 +1445,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const loadDisplaySettings = async () => {
             try {
                 const settings = await getTicketingDisplaySettings();
-                if (settings?.dateTimeFormat) {
-                    setDateTimeFormat(settings.dateTimeFormat);
-                }
+                setShowWeekday(settings?.showWeekday ?? false);
                 setResponseStateTrackingEnabled(settings?.responseStateTrackingEnabled ?? true);
             } catch (error) {
                 console.error('Failed to load ticketing display settings:', error);
@@ -1361,17 +1459,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const tz = getUserTimeZone();
         
         if (ticket.entered_at) {
-            const formattedDate = formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
+            const formattedDate = formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
             const distance = formatTicketRelativeToNow(ticket.entered_at, locale);
             setCreatedRelativeTime(`${formattedDate} (${distance})`);
         }
 
         if (ticket.updated_at) {
-            const formattedDate = formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
+            const formattedDate = formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
             const distance = formatTicketRelativeToNow(ticket.updated_at, locale);
             setUpdatedRelativeTime(`${formattedDate} (${distance})`);
         }
-    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat, locale]);
+    }, [ticket.entered_at, ticket.updated_at, dateFormat, showWeekday, locale]);
 
     // Fetch tags when component mounts
     useEffect(() => {
@@ -1760,27 +1858,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
-        // Pre-close check: when this status change would close the ticket,
-        // surface unmet close rules in a dialog instead of submitting a write
-        // that the server would reject. The dedicated toolbar action owns the
-        // convenience resolution flow; ordinary status edits stay ordinary.
-        if (field === 'status_id' && normalizedValue && ticket.ticket_id) {
-            try {
-                const check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
-                if (check.wouldClose && !check.allowed) {
-                    setCloseOverrideReason('');
-                    setCloseBlockedDialog({
-                        isOpen: true,
-                        statusId: normalizedValue,
-                        failures: check.failures,
-                        canOverride: check.canOverride,
-                        suppression: null,
-                    });
-                    return;
-                }
-            } catch (checkError) {
-                // Fall through to the write; the server still enforces.
-                console.error('Close rules pre-check failed:', checkError);
+        // Status changes run the full gate: close rules first, then the bundle
+        // propagation confirmation. A cancelled confirmation leaves the select
+        // on its current value with no write.
+        let propagationDecision: { proceed: boolean; propagateToChildren?: boolean } = { proceed: true };
+        if (field === 'status_id' && normalizedValue) {
+            propagationDecision = await confirmStatusChange(normalizedValue);
+            if (!propagationDecision.proceed) {
+                return;
             }
         }
 
@@ -1795,7 +1880,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             await runWithPendingLiveFields([field], async () => {
                 // Use the optimized handler if provided
                 if (onTicketUpdate) {
-                    await onTicketUpdate(field, normalizedValue);
+                    if (field === 'status_id') {
+                        await onTicketUpdate(field, normalizedValue, {
+                            propagateToChildren: propagationDecision.propagateToChildren,
+                        });
+                    } else {
+                        await onTicketUpdate(field, normalizedValue);
+                    }
                     updateSucceeded = true;
                     if (field === 'board_id') {
                         setSavedBoardId(normalizedValue);
@@ -2687,7 +2778,18 @@ const handleClose = () => {
 
         // If we have a batch handler from container, use it
         if (onBatchTicketUpdate) {
-            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes, options));
+            let propagateToChildren: boolean | undefined;
+            if (targetStatusId && ticket.ticket_id) {
+                const propagationDecision = await confirmBundlePropagation(targetStatusId);
+                if (!propagationDecision.proceed) {
+                    return false;
+                }
+                propagateToChildren = propagationDecision.propagateToChildren;
+            }
+            const batchOptions = propagateToChildren === undefined
+                ? options
+                : { ...(options ?? {}), propagateToChildren };
+            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes, batchOptions));
             if (success) {
                 // Update local ticket state with the saved changes
                 setTicket(prevTicket => ({
@@ -2742,6 +2844,7 @@ const handleClose = () => {
             return false;
         }
     }, [
+        confirmBundlePropagation,
         handleItilFieldChange,
         handleSelectChange,
         onBatchTicketUpdate,
@@ -2791,12 +2894,24 @@ const handleClose = () => {
                 console.error('Close rules check failed after adding resolution:', checkError);
             }
 
+            // Resolution comment is durable; ask about bundle propagation before
+            // the status write. Cancelling leaves the ticket open (the comment
+            // stays, as before).
+            const propagationDecision = await confirmBundlePropagation(statusId);
+            if (!propagationDecision.proceed) {
+                return resolutionSaved;
+            }
+            setIsSubmittingBundlePropagation(true);
+
             const result = await runWithPendingLiveFields(
                 ['status_id', 'response_state'],
                 () => updateTicketWithCache(
                     ticket.ticket_id!,
                     { status_id: statusId },
-                    suppression.suppressContactNotifications ? suppression : undefined,
+                    {
+                        ...(suppression.suppressContactNotifications ? suppression : {}),
+                        propagateToChildren: propagationDecision.propagateToChildren,
+                    },
                 ),
             );
             if (isReturnedActionError(result)) {
@@ -2817,8 +2932,9 @@ const handleClose = () => {
             return resolutionSaved;
         } finally {
             setIsSubmittingResolutionClose(false);
+            setIsSubmittingBundlePropagation(false);
         }
-    }, [addResolutionComment, closedStatusOptions, runWithPendingLiveFields, t, ticket.ticket_id]);
+    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, runWithPendingLiveFields, t, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -3004,9 +3120,13 @@ const handleClose = () => {
         }
     }, [ticket.ticket_id, router]);
 
-    const performAddChildToBundle = useCallback(async (childTicketId: string) => {
+    const performAddChildToBundle = useCallback(async (childTicketId: string, onClosedMaster?: ClosedMasterChoice) => {
         if (!ticket.ticket_id) return;
-        const result = await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] });
+        const result = await addChildrenToBundleAction({
+            masterTicketId: ticket.ticket_id,
+            childTicketIds: [childTicketId],
+            ...(onClosedMaster ? { onClosedMaster } : {}),
+        });
         if (isReturnedActionError(result)) {
             toast.error(getErrorMessage(result));
             return;
@@ -3015,7 +3135,38 @@ const handleClose = () => {
         setAddChildTicketNumber('');
         resetChildTicketPickerState();
         router.refresh();
-    }, [ticket.ticket_id, router, resetChildTicketPickerState]);
+    }, [ticket.ticket_id, t, router, resetChildTicketPickerState]);
+
+    // Fetch the master's closed context before linking. An open master links
+    // straight away; a closed master must go through the explicit choice
+    // dialog so the link never silently succeeds.
+    const beginAddChildToBundle = useCallback(async (childTicketId: string) => {
+        if (!ticket.ticket_id) return;
+        setIsLoadingClosedMasterContext(true);
+        try {
+            const context = await getBundleMasterClosedContextAction({ masterTicketId: ticket.ticket_id });
+            if (isReturnedActionError(context)) {
+                toast.error(getErrorMessage(context));
+                return;
+            }
+            if (!context.isClosed) {
+                await performAddChildToBundle(childTicketId);
+                return;
+            }
+            setClosedMasterContext(context);
+            setClosedMasterChoice(
+                context.allowedChoices.includes('keep_closed')
+                    ? 'keep_closed'
+                    : (context.allowedChoices[0] ?? null)
+            );
+            setPendingClosedMasterChildId(childTicketId);
+            setIsClosedMasterChoiceOpen(true);
+        } catch (error) {
+            handleTicketActionError(error, t('messages.addToBundleFailed'));
+        } finally {
+            setIsLoadingClosedMasterContext(false);
+        }
+    }, [ticket.ticket_id, t, performAddChildToBundle]);
 
     const handleAddChildToBundle = useCallback(async () => {
         if (!ticket.ticket_id) return;
@@ -3034,7 +3185,7 @@ const handleClose = () => {
                 setIsAddChildMultiClientConfirmOpen(true);
                 return;
             }
-            await performAddChildToBundle(selectedChildTicket.ticket_id);
+            await beginAddChildToBundle(selectedChildTicket.ticket_id);
             return;
         }
 
@@ -3064,11 +3215,11 @@ const handleClose = () => {
                 return;
             }
 
-            await performAddChildToBundle(found.ticket_id);
+            await beginAddChildToBundle(found.ticket_id);
         } catch (error) {
             handleTicketActionError(error, t('messages.addToBundleFailed'));
         }
-    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, performAddChildToBundle]);
+    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, beginAddChildToBundle]);
 
     const bundleHasMultipleClients = useMemo(() => {
         if (!bundle?.isBundleMaster || !Array.isArray(bundle.children)) return false;
@@ -3258,6 +3409,14 @@ const handleClose = () => {
                                                 {t('details.bundle.multipleClients', 'Multiple clients')}
                                             </span>
                                         ) : null}
+                                        {ticket.is_closed && (bundle?.openChildrenCount ?? 0) > 0 ? (
+                                            <span
+                                                id="ticket-bundle-master-open-children-badge"
+                                                className="ml-2 inline-flex items-center rounded bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:text-amber-200"
+                                            >
+                                                {t('details.bundle.openChildrenBadge', '{{count}} open children', { count: bundle?.openChildrenCount ?? 0 })}
+                                            </span>
+                                        ) : null}
                                     </div>
                                 ) : null}
 
@@ -3339,7 +3498,7 @@ const handleClose = () => {
                                                 id="ticket-bundle-add-child-button"
                                                 size="sm"
                                                 onClick={handleAddChildToBundle}
-                                                disabled={!addChildTicketNumber.trim()}
+                                                disabled={!addChildTicketNumber.trim() || isLoadingClosedMasterContext}
                                             >
                                                 {t('details.bundle.add', 'Add')}
                                             </Button>
@@ -3353,6 +3512,17 @@ const handleClose = () => {
                                                                 <a className="text-sm text-blue-600 hover:underline" href={`/msp/tickets/${child.ticket_id}`}>
                                                                     {child.ticket_number}
                                                                 </a>
+                                                                <span
+                                                                    className={`ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                                                                        child.closed_at || child.is_closed
+                                                                            ? 'bg-gray-100 text-gray-600'
+                                                                            : 'bg-emerald-100 text-emerald-700'
+                                                                    }`}
+                                                                >
+                                                                    {child.closed_at || child.is_closed
+                                                                        ? t('details.bundle.childClosedStatus', 'Closed')
+                                                                        : t('details.bundle.childOpenStatus', 'Open')}
+                                                                </span>
                                                                 <div className="text-xs text-gray-500 truncate">
                                                                     {(child.client_name ? `${child.client_name} · ` : '')}{child.title}
                                                                 </div>
@@ -3505,7 +3675,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.created', 'Created')} {createdRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
+                                return formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
                             })()}
                         </p>
                     )}
@@ -3513,7 +3683,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.updated', 'Updated')} {updatedRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
+                                return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
                             })()}
                         </p>
                     )}
@@ -3563,7 +3733,18 @@ const handleClose = () => {
                     deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                 />
-                
+
+                {/* Sync-mode bundle master: choose whether a boundary-crossing
+                    status change propagates to the affected children. */}
+                <BundleStatusPropagationDialog
+                    isOpen={bundlePropagationPreview !== null}
+                    preview={bundlePropagationPreview}
+                    isSubmitting={isSubmittingBundlePropagation}
+                    onCancel={() => resolveBundlePropagationDecision({ proceed: false })}
+                    onMasterOnly={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: false })}
+                    onPropagate={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: true })}
+                />
+
                 {/* Blocked-close dialog: unmet close rules with quick actions and
                     a permissioned "Close anyway" override. */}
                 <Dialog
@@ -3684,7 +3865,7 @@ const handleClose = () => {
                             return;
                         }
                         try {
-                            await performAddChildToBundle(pendingChildToAdd.ticket_id);
+                            await beginAddChildToBundle(pendingChildToAdd.ticket_id);
                         } catch (error) {
                             handleTicketActionError(error, t('messages.addToBundleFailed'));
                         } finally {
@@ -3697,6 +3878,65 @@ const handleClose = () => {
                     confirmLabel={t('actions.proceed', 'Proceed')}
                     cancelLabel={t('actions.cancel', 'Cancel')}
                 />
+
+                <Dialog
+                    id={`${id}-bundle-closed-master-choice-dialog`}
+                    isOpen={isClosedMasterChoiceOpen}
+                    onClose={() => {
+                        setIsClosedMasterChoiceOpen(false);
+                        setPendingClosedMasterChildId(null);
+                    }}
+                    className="max-w-lg"
+                >
+                    <DialogContent>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
+                        </h2>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
+                        </p>
+                        {closedMasterContext && (
+                            <div className="mt-4">
+                                <ClosedMasterChoiceFields
+                                    idPrefix={`${id}-bundle-closed-master`}
+                                    allowedChoices={closedMasterContext.allowedChoices}
+                                    value={closedMasterChoice}
+                                    onChange={setClosedMasterChoice}
+                                    hasResolutionComment={closedMasterContext.hasResolutionComment}
+                                    masterStatusName={closedMasterContext.masterStatusName}
+                                />
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-bundle-closed-master-cancel`}
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setIsClosedMasterChoiceOpen(false);
+                                    setPendingClosedMasterChildId(null);
+                                }}
+                            >
+                                {t('actions.cancel', 'Cancel')}
+                            </Button>
+                            <Button
+                                id={`${id}-bundle-closed-master-confirm`}
+                                type="button"
+                                disabled={!closedMasterChoice || !pendingClosedMasterChildId}
+                                onClick={async () => {
+                                    if (!pendingClosedMasterChildId || !closedMasterChoice) return;
+                                    const childId = pendingClosedMasterChildId;
+                                    const choice = closedMasterChoice;
+                                    setIsClosedMasterChoiceOpen(false);
+                                    setPendingClosedMasterChildId(null);
+                                    await performAddChildToBundle(childId, choice);
+                                }}
+                            >
+                                {t('details.bundle.add', 'Add')}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 <ConfirmationDialog
                     id={`${id}-time-period-dialog`}
@@ -3826,7 +4066,7 @@ const handleClose = () => {
                     onOpenScheduleEntry={handleOpenScheduleEntry}
                     scheduleRefreshKey={scheduleRefreshKey}
                     userId={userId || ''}
-                    dateTimeFormat={dateTimeFormat}
+                    showWeekday={showWeekday}
                     timeEntriesRefreshKey={timeEntriesRefreshKey}
                     onEditTimeEntry={handleEditTimeEntry}
                     onDeleteTimeEntry={handleRequestDeleteTimeEntry}

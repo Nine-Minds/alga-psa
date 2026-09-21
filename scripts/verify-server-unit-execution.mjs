@@ -5,7 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
-export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty = false, candidateRevision, sourceError, sourceAfter }) {
+// `shard` marks one partition of the full suite: { index, total, allFiles }
+// where allFiles is the complete sorted inventory every shard partitioned.
+// scripts/merge-server-unit-shards.mjs reconciles those partitions back into
+// the single full-selection bundle the aggregate gate consumes.
+export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty = false, candidateRevision, sourceError, sourceAfter,
+  reportPath = 'server/test-results.json', shard }) {
   const directory = path.join(root, 'test-results/server-coverage');
   let evidence;
   try {
@@ -14,7 +19,7 @@ export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty
       exitCode: outcome === 'success' ? 0 : 1,
       collected: read(path.join(directory, 'collected.json')),
       collectedTests: read(path.join(directory, 'collected-tests.json')),
-      report: read(path.join(root, 'server/test-results.json')),
+      report: read(path.resolve(root, reportPath)),
     });
   } catch (error) {
     evidence = { schemaVersion: 1, suite: 'server-unit', revision, status: 'failed', failures: [error.message] };
@@ -26,6 +31,10 @@ export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty
   evidence.source = { before, after };
   evidence.workingTreeDirty = before?.dirty !== false || after.dirty !== false;
   evidence.selection = { mode: 'full', filters: [] };
+  if (shard) {
+    evidence.selection.allFiles = shard.allFiles;
+    evidence.selection.shard = { index: shard.index, total: shard.total };
+  }
   for (const [phase, source] of Object.entries(evidence.source)) {
     if (source?.revision !== candidateRevision || source?.dirty !== false || !Array.isArray(source?.changes) || source.changes.length) {
       evidence.failures.push(`Unit source ${phase} is missing, stale or dirty`);

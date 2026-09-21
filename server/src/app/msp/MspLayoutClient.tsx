@@ -25,7 +25,8 @@ import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
 import { IncomingCallProvider } from '@/components/layout/IncomingCallProvider';
 import { MspBrandingProvider, type MspBranding } from '@/components/layout/MspBrandingContext';
-import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
+import { CurrencyFormatProvider, DateFormatProvider } from '@alga-psa/ui/lib';
+import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
 
 interface Props {
@@ -33,6 +34,8 @@ interface Props {
   session: Session | null;
   /** Tenant default currency (default_billing_settings) for CurrencyFormatProvider. */
   currencyCode?: string;
+  /** Date shape resolved from the tenant's country, for DateFormatProvider. */
+  dateFormat?: CountryDateFormat | null;
   productCode: ProductCode;
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
@@ -80,6 +83,7 @@ export function MspLayoutClient({
   children,
   session,
   currencyCode,
+  dateFormat,
   productCode,
   needsOnboarding,
   initialSidebarCollapsed,
@@ -223,7 +227,9 @@ export function MspLayoutClient({
   return (
     <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} preloadedResources={preloadedLocaleResources}>
       <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
-        {content}
+        <DateFormatProvider dateFormat={dateFormat}>
+          {content}
+        </DateFormatProvider>
       </CurrencyFormatProvider>
     </I18nWrapper>
   );

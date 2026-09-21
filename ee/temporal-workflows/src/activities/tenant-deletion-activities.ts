@@ -456,8 +456,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'board_close_rules',
 
   // === LEVEL 5: Tickets and related ===
-  // Ticket bundle settings and entity links must be deleted BEFORE tickets
-  'ticket_bundle_settings', 'ticket_entity_links',
+  // Ticket bundle settings and entity links must be deleted BEFORE tickets.
+  // ticket_bundle_status_propagations FKs to tickets twice (master and child),
+  // so it belongs in the same pre-tickets group.
+  'ticket_bundle_settings', 'ticket_entity_links', 'ticket_bundle_status_propagations',
 
   // Tickets MUST be deleted BEFORE categories, statuses, etc that it references
   // AND BEFORE client_locations that tickets reference via location_id

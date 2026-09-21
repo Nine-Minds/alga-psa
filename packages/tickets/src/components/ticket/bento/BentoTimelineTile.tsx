@@ -129,9 +129,12 @@ const defaultNotificationSuppression = (): TicketNotificationSuppressionValue =>
   suppressInternalNotifications: false,
 });
 
-function formatClock(iso: string, locale: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
+// The clock is 12h or 24h by COUNTRY, not by reading language, so this goes
+// through the central formatter rather than handing the locale tag to Intl.
+function formatClock(iso: string, formatDate: FormatDate): string {
+  return formatDate(new Date(iso), { hour: 'numeric', minute: '2-digit' });
 }
 
 function formatMinutes(minutes: number): string {
@@ -216,6 +219,40 @@ function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string 
   const activity = entry.activity;
   if (!activity) return t('bento.timeline.ticketUpdated', 'Ticket updated');
   const actor = activity.actor_display_name || t('bento.timeline.systemActor', 'System');
+
+  // Bundle propagation carries its own outcome in `details`; a bare event label
+  // ("bundle status propagated") cannot say whether children were touched.
+  // Mirrors TicketActivityTimeline.describeActivity.
+  // LEVERAGE: pattern propagation-event-labels — this branch duplicates the
+  // TICKET_BUNDLE_STATUS_PROPAGATED wording in TicketActivityTimeline.tsx; the
+  // two timeline renderers could share one event-label function.
+  if (activity.event_type === 'TICKET_BUNDLE_STATUS_PROPAGATED') {
+    const details = (activity.details ?? {}) as {
+      action?: string;
+      propagated?: boolean;
+      child_ticket_ids?: string[];
+    };
+    if (details.propagated === false) {
+      return t(
+        'bento.timeline.bundleStatusNotPropagated',
+        '{{actor}} changed the bundle master status (children not updated)',
+        { actor },
+      );
+    }
+    const count = details.child_ticket_ids?.length ?? 0;
+    return details.action === 'reopen'
+      ? t(
+          'bento.timeline.bundleStatusReopened',
+          '{{actor}} reopened the bundle master and {{count}} child ticket(s)',
+          { actor, count },
+        )
+      : t(
+          'bento.timeline.bundleStatusClosed',
+          '{{actor}} closed the bundle master and {{count}} child ticket(s)',
+          { actor, count },
+        );
+  }
+
   const changes = activity.changes ?? {};
   const changeLines = Object.entries(changes).map(([field, change]) => {
     const from = change?.oldLabel ?? null;
@@ -1078,7 +1115,7 @@ export function BentoTimelineTile({
 // Compact single-line rows for the non-comment lanes. The lane icon is drawn
 // by the spine pin in the gutter, so these render just the text + timestamp.
 function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: Translator }) {
-  const { locale } = useFormatters();
+  const { formatDate } = useFormatters();
   if (node.lane === 'time' && node.entry?.timeEntry) {
     const timeEntry = node.entry.timeEntry;
     return (
@@ -1094,7 +1131,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           {timeEntry.notes ? <> — {timeEntry.notes}</> : null}
         </p>
         <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-          {formatClock(node.occurredAt, locale)}
+          {formatClock(node.occurredAt, formatDate)}
         </span>
       </div>
     );
@@ -1114,7 +1151,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           ) : null}
         </p>
         <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-          {formatClock(node.occurredAt, locale)}
+          {formatClock(node.occurredAt, formatDate)}
         </span>
       </div>
     );
@@ -1127,7 +1164,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
         {node.entry ? describeSystemEntry(node.entry, t) : t('bento.timeline.ticketUpdated', 'Ticket updated')}
       </p>
       <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-        {formatClock(node.occurredAt, locale)}
+        {formatClock(node.occurredAt, formatDate)}
       </span>
     </div>
   );

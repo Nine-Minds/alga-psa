@@ -967,6 +967,7 @@ export class BillingEngine {
         "start_date",
         "end_date",
         "currency_code",
+        "cap_amount",
       );
     const rates: LoadedChargeTaxRate[] = rateRows.map((rate) => ({
       taxRateId: rate.tax_rate_id,
@@ -976,6 +977,7 @@ export class BillingEngine {
       startDate: toISODate(toPlainDate(rate.start_date)),
       endDate: rate.end_date ? toISODate(toPlainDate(rate.end_date)) : null,
       currencyCode: rate.currency_code ?? null,
+      capAmount: rate.cap_amount ?? null,
     }));
     const rateById = new Map(rates.map((rate) => [rate.taxRateId, rate]));
     const hasTaxableService = input.services.some((service) => {

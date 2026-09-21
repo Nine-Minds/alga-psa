@@ -580,7 +580,7 @@ vi.mock('../useQuickAddRichTextUploadSession', async () => {
   };
 });
 
-vi.mock('../lib/ticketRichText', () => ({
+vi.mock('../../lib/ticketRichText', () => ({
   parseTicketRichTextContent: (value: string) => {
     if (!value) {
       return [];
@@ -611,7 +611,7 @@ vi.mock('../lib/ticketRichText', () => ({
   serializeTicketRichTextContent: (content: unknown) => JSON.stringify(content ?? []),
 }));
 
-vi.mock('../lib/ticketRichTextImages', () => ({
+vi.mock('../../lib/ticketRichTextImages', () => ({
   removeTicketRichTextImageUrls: (content: any[], urlsToRemove: Set<string>) =>
     content.filter((block) => block?.type !== 'image' || !urlsToRemove.has(block?.props?.url)),
   replaceTicketRichTextImageUrls: (content: any[], replacementUrls: Map<string, string>) =>

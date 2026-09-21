@@ -6,7 +6,7 @@ import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { getInvoiceForRendering } from './invoiceQueries';
 import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { SystemEmailProviderFactory } from '@alga-psa/email';
+import { embedBrandLogo, SystemEmailProviderFactory } from '@alga-psa/email';
 import { EmailMessage, EmailAddress } from '@alga-psa/types';
 import { formatCurrency, dateValueToDate, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { resolveEmailLocale, getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -281,7 +281,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
       const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date
-        ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.invoice_date).toLocaleDateString(amountLocale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -289,7 +289,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         : null;
 
       const dueDate = invoice.due_date
-        ? dateValueToDate(invoice.due_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.due_date).toLocaleDateString(amountLocale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -524,7 +524,7 @@ export const sendInvoiceEmailAction = withAuth(async (
       const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date
-        ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.invoice_date).toLocaleDateString(amountLocale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -532,7 +532,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         : 'N/A';
 
       const dueDate = invoice.due_date
-        ? dateValueToDate(invoice.due_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.due_date).toLocaleDateString(amountLocale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -592,6 +592,15 @@ export const sendInvoiceEmailAction = withAuth(async (
         portalUrl: linkContext.portalUrl,
       });
 
+      // Invoice mail goes straight to the provider rather than through
+      // BaseEmailService, so the branded header logo is embedded here: a
+      // branded row references it by content-id and carries no URL to load.
+      const branded = await embedBrandLogo(html, {
+        tenantId: tenant,
+        knex,
+        context: { action: 'sendInvoiceEmail', invoiceId },
+      });
+
       const from: EmailAddress = { email: fromEmail, name: companyName };
       const to: EmailAddress[] = [{ email: recipientEmail, name: recipientName }];
 
@@ -599,7 +608,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         from,
         to,
         subject,
-        html,
+        html: branded.html,
         text,
         attachments: [
           {
@@ -607,6 +616,7 @@ export const sendInvoiceEmailAction = withAuth(async (
             content: pdfBuffer,
             contentType: 'application/pdf',
           },
+          ...branded.attachments,
         ],
       };
 

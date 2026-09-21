@@ -22,6 +22,7 @@ import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { useTicketStatusOptions } from "../features/ticketsList/useTicketStatusOptions";
 import { groupStatusesByName, resolveStatusIdsByName, statusNamesFromIds } from "./ticketsStatusFilter";
+import { DEFAULT_BUNDLE_VIEW, getTicketBundleRole, normalizeBundleView, type BundleView } from "./ticketsBundle";
 import { getCachedTicketDetail, getCachedTicketsList, setCachedTicketDetail, setCachedTicketsList } from "../cache/ticketsCache";
 import { getCachedTicketPriorities, setCachedTicketPriorities } from "../cache/referenceDataCache";
 import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
@@ -58,6 +59,8 @@ type TicketListFilters = {
   updatedSinceDate: string;
   sortField: "updated_at" | "entered_at" | "priority_name" | "status_name" | "client_name";
   sortOrder: "asc" | "desc";
+  /** Web parity: "bundled" hides bundle children under their master. */
+  bundleView: BundleView;
 };
 
 type TicketsListCacheValue = {
@@ -78,6 +81,7 @@ const DEFAULT_FILTERS: TicketListFilters = {
   updatedSinceDate: "",
   sortField: "entered_at",
   sortOrder: "desc",
+  bundleView: DEFAULT_BUNDLE_VIEW,
 };
 
 const NEXT_PAGE_PREFETCH_THRESHOLD = 0.6;
@@ -152,7 +156,8 @@ export function TicketsListScreen({ navigation, route }: Props) {
         const statusIds = Array.isArray((saved as any).statusIds) ? ((saved as any).statusIds as string[]) : [];
         const statusNames = Array.isArray((saved as any).statusNames) ? ((saved as any).statusNames as string[]) : [];
         const tags = normalizeSavedTags((saved as any).tags);
-        setFilters({ ...DEFAULT_FILTERS, ...saved, statusIds, statusNames, tags });
+        const bundleView = normalizeBundleView((saved as any).bundleView);
+        setFilters({ ...DEFAULT_FILTERS, ...saved, statusIds, statusNames, tags, bundleView });
       }
       setFiltersLoaded(true);
     };
@@ -215,6 +220,8 @@ export function TicketsListScreen({ navigation, route }: Props) {
       if (filters.status === "open") out.is_open = true;
       if (filters.status === "closed") out.is_closed = true;
     }
+
+    if (filters.bundleView === "bundled") out.bundle_view = "bundled";
 
     if (filters.assignee === "me") {
       const me = session.user?.id;
@@ -533,6 +540,7 @@ export function TicketsListScreen({ navigation, route }: Props) {
     filters.updatedSinceDate.trim() !== "" ||
     filters.sortField !== DEFAULT_FILTERS.sortField ||
     filters.sortOrder !== DEFAULT_FILTERS.sortOrder ||
+    filters.bundleView !== DEFAULT_FILTERS.bundleView ||
     search.trim() !== "";
 
   // The body switches between loading/error/empty/list states, but the
@@ -816,6 +824,9 @@ function FilterChipBar({
   if (filters.sortField !== DEFAULT_FILTERS.sortField || filters.sortOrder !== DEFAULT_FILTERS.sortOrder) {
     chips.push(t("filters.sortLabel", { field: filters.sortField, order: filters.sortOrder }));
   }
+  if (filters.bundleView !== DEFAULT_FILTERS.bundleView) {
+    chips.push(t("filters.bundleIndividualLabel", "Bundles: Individual"));
+  }
 
   if (chips.length === 0) return null;
   return (
@@ -1077,6 +1088,20 @@ function FiltersModal({
           value={filters.status}
           onChange={(status) => setFilters({ ...filters, status, statusIds: [], statusNames: [] })}
         />
+
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.bundles", "Bundles")}</Text>
+        <OptionRow
+          theme={theme}
+          options={[
+            { label: t("filters.bundled", "Bundled"), value: "bundled" },
+            { label: t("filters.individual", "Individual"), value: "individual" },
+          ]}
+          value={filters.bundleView}
+          onChange={(bundleView) => setFilters({ ...filters, bundleView })}
+        />
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.xs }}>
+          {t("filters.bundledHint", "Bundled hides child tickets under their master, like the web list.")}
+        </Text>
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.md }}>{t("filters.specificStatuses")}</Text>
         {statusOptionsLoading ? (
@@ -1434,6 +1459,7 @@ const TicketRow = memo(function TicketRow({
   const status = item.status_name ?? t("common:unknown");
   const priority = item.priority_name ?? null;
   const tags = Array.isArray(item.tags) ? item.tags : [];
+  const bundleRole = getTicketBundleRole(item);
 
   const [tagsRowWidth, setTagsRowWidth] = useState(0);
   const visibleTagCount = useMemo(
@@ -1469,6 +1495,15 @@ const TicketRow = memo(function TicketRow({
       <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
         <Badge label={status} tone={item.status_is_closed ? "neutral" : "info"} />
         {priority ? <Badge label={priority} tone={priorityTone(priority)} /> : null}
+        {bundleRole === "child" ? (
+          <Badge
+            label={t("list.bundledUnder", { number: item.bundle_master_ticket_number ?? t("list.bundleMaster", "master"), defaultValue: "Bundled → {{number}}" })}
+            tone="success"
+          />
+        ) : null}
+        {bundleRole === "master" ? (
+          <Badge label={t("list.bundleCount", { count: item.bundle_child_count ?? 0, defaultValue: "Bundle · {{count}}" })} tone="success" />
+        ) : null}
       </View>
 
       {tags.length > 0 ? (

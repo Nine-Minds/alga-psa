@@ -12,6 +12,13 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/scim-malicious/v2/connection-id/Users')).toBe(false);
   });
 
+  it('lets the smart ticket search stream authenticate its session in the route handler', () => {
+    expect(shouldSkipApiKeyAuth('/api/smart-search/ticket/stream')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/smart-search/project/stream')).toBe(true);
+    // Other ticket API routes still need an API key.
+    expect(shouldSkipApiKeyAuth('/api/tickets/123')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });

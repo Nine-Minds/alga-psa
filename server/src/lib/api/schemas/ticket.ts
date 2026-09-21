@@ -123,6 +123,10 @@ export const createTicketSchema = z.object({
   subcategory_id: uuidSchema.optional(),
   assigned_to: uuidSchema.optional(),
   priority_id: uuidSchema,
+  // Optional classification references; stored as nullable same-tenant UUIDs.
+  severity_id: uuidSchema.optional(),
+  urgency_id: uuidSchema.optional(),
+  impact_id: uuidSchema.optional(),
   attributes: ticketAttributesSchema,
   tags: z.array(z.string()).optional(),
   external_links: inlineTicketExternalLinksSchema,
@@ -131,14 +135,25 @@ export const createTicketSchema = z.object({
 // Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared).
 // `external_links` is create-only: it is written through the dedicated
 // external-links endpoints, never as part of an ordinary ticket update, so it is
-// omitted here and defensively stripped by the service.
-export const updateTicketSchema = createUpdateSchema(createTicketSchema.omit({ external_links: true })).extend({
+// omitted here and defensively stripped by the service. Classification
+// references are create-only in this API surface and are omitted for the same
+// reason, preserving the existing accepted update request set.
+export const updateTicketSchema = createUpdateSchema(
+  createTicketSchema.omit({
+    external_links: true,
+    severity_id: true,
+    urgency_id: true,
+    impact_id: true,
+  })
+).extend({
   contact_name_id: uuidSchema.nullable().optional(),
   ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
   // ticket:close_override. Stripped before the row update.
   override_close_rules: z.boolean().optional(),
   override_close_rules_reason: z.string().nullable().optional(),
+  // Sync-mode bundle master boundary changes require an explicit choice.
+  propagateToChildren: z.boolean().optional(),
 }).superRefine(validateTicketNotificationSuppression);
 
 // Ticket status update schema
@@ -148,7 +163,9 @@ export const updateTicketStatusSchema = z.object({
   closed_by: uuidSchema.optional(),
   ...ticketNotificationSuppressionSchema,
   override_close_rules: z.boolean().optional(),
-  override_close_rules_reason: z.string().nullable().optional()
+  override_close_rules_reason: z.string().nullable().optional(),
+  // Sync-mode bundle master boundary changes require an explicit choice.
+  propagateToChildren: z.boolean().optional()
 }).superRefine(validateTicketNotificationSuppression);
 
 // Ticket assignment schema
@@ -213,6 +230,10 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   board_name: z.string().optional(),
   external_system: z.string().optional(),
   external_id: z.string().optional(),
+  // 'bundled' collapses bundle children under their master (the web list's
+  // default); 'individual' lists every ticket. Omitted = individual, which
+  // keeps existing API consumers' result sets unchanged.
+  bundle_view: z.enum(['bundled', 'individual']).optional(),
   tags: z.union([
     z.array(z.string()),
     arrayTransform(z.string())
@@ -228,6 +249,9 @@ export const ticketResponseSchema = z.object({
   ticket_number: z.string(),
   title: z.string(),
   url: z.string().nullable(),
+  severity_id: uuidSchema.nullable().optional(),
+  urgency_id: uuidSchema.nullable().optional(),
+  impact_id: uuidSchema.nullable().optional(),
   board_id: uuidSchema,
   client_id: uuidSchema,
   location_id: uuidSchema.nullable(),

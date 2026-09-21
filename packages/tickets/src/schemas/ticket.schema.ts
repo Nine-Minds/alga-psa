@@ -127,6 +127,7 @@ export const ticketListItemSchema = baseTicketSchema.extend({
   entered_by_name: z.string(),
   assigned_to_name: z.string().nullable(),
   bundle_child_count: z.number().int().nonnegative().optional(),
+  bundle_open_child_count: z.number().int().nonnegative().optional(),
   bundle_master_ticket_number: z.string().nullable().optional(),
   bundle_distinct_client_count: z.number().int().nonnegative().optional(),
   // ITIL-specific fields for list items (for priority calculation)

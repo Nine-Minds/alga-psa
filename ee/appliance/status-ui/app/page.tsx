@@ -988,9 +988,12 @@ export default function StatusPage() {
               <p className={styles.muted}>
                 Re-runs the application bootstrap — database migrations,
                 onboarding seeds, and creation of the initial tenant and admin
-                user (only when no user exists yet). Use this if setup finished
-                but you cannot log in because the initial account was never
-                created.
+                user (only when no user exists yet). It also clears a stalled
+                application release (for example an update that stopped at
+                &ldquo;retries exceeded&rdquo;) and restarts its upgrade. Use this
+                if setup finished but you cannot log in because the initial
+                account was never created, or if an update never finished
+                rolling out.
               </p>
               <div className={styles.toolbar}>
                 <button

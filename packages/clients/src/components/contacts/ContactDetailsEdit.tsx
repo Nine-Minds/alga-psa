@@ -146,10 +146,12 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     let cancelled = false;
     (async () => {
       try {
+        // The preselected dial country is a nicety; it must not take the country
+        // list and the phone types down with it.
         const [countryRows, phoneTypeLabels, tenantCountry] = await Promise.all([
           getAllCountries(),
           listContactPhoneTypeSuggestions(),
-          getTenantDefaultCountry(),
+          getTenantDefaultCountry().catch(() => null),
         ]);
         if (cancelled) return;
         setCountries(countryRows);

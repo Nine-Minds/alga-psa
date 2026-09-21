@@ -30,6 +30,12 @@ on:
       - scripts/guard-no-legacy-workflows-shims.mjs
       - .github/workflows/workflows-ee-build-guard.yml
 
+# Stop superseded PR runs from holding a runner for the full 20-minute job.
+# Keep every main run.
+concurrency:
+  group: ee-workflows-build-guard-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ee-workflows-build-guard:
     runs-on: ubuntu-latest

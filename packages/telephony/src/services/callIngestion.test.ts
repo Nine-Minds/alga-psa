@@ -127,7 +127,13 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: hoisted.knexMock }),
   withTransaction: async (_knex: any, fn: (trx: any) => Promise<unknown>) => fn(hoisted.knexMock),
   tenantDb: (conn: any, tenant: string) => ({
-    table: (expression: string) => conn(expression).where({ tenant }),
+    // `countries` is registered 'global' in tenantTableMetadata, so the real
+    // tenantDb returns it unscoped; scoping it here would hide that.
+    table: (expression: string) => (
+      expression.split(' ')[0] === 'countries'
+        ? conn(expression)
+        : conn(expression).where({ tenant })
+    ),
     tenantJoin: (builder: any) => builder,
   }),
 }));
@@ -175,6 +181,13 @@ function setTenantCountry(countryCode: string): void {
     is_active: true,
     country_code: countryCode,
     phone: null,
+  });
+  // The shared tenancy resolver validates the code against the countries
+  // reference table, which is populated in every real deployment.
+  table('countries').push({
+    code: countryCode,
+    name: countryCode,
+    is_active: true,
   });
 }
 
@@ -283,6 +296,49 @@ describe('ingestCanonicalCall', () => {
       matched_contact_id: 'contact-london',
       matched_client_id: 'client-london',
     });
+  });
+
+  // Deliberate widening from the query this replaced, which required the
+  // strictly is_default location: the shared tenancy resolver falls back to the
+  // billing address, so a tenant whose only active location is their billing
+  // address now gets a numbering context instead of none.
+  it('falls back to the billing-address location for the numbering context', async () => {
+    table('tenant_companies').push({
+      tenant: TENANT,
+      client_id: 'client-own-company',
+      is_default: true,
+      deleted_at: null,
+    });
+    table('client_locations').push({
+      tenant: TENANT,
+      client_id: 'client-own-company',
+      is_default: false,
+      is_billing_address: true,
+      is_active: true,
+      country_code: 'GB',
+      phone: null,
+    });
+    table('countries').push({ code: 'GB', name: 'United Kingdom', is_active: true });
+    table('contact_phone_numbers').push({
+      tenant: TENANT,
+      contact_name_id: 'contact-london',
+      full_name: 'London Contact',
+      client_id: 'client-london',
+      normalized_phone_number: '442079460958',
+      phone_number: '+44 20 7946 0958',
+    });
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: {
+        ...inboundCall,
+        providerCallId: 'graph-call-gb-billing-only',
+        callerNumber: { raw: '020 7946 0958', e164: null },
+      },
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'matched' });
+    expect(table('telephony_call_records')[0].caller_number_e164).toBe('+442079460958');
   });
 
   it('leaves a national number unmatched when the tenant country is not configured', async () => {

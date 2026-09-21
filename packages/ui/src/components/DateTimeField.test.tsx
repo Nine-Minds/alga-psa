@@ -3,14 +3,18 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { countryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { DateTimeField } from './DateTimeField';
+import { DateFormatProvider } from '../lib/dateFormat/useDateFormat';
 import {
   buildTimeOptions,
+  getDatePlaceholder,
   isTypableDateText,
   isTypableTimeText,
   parseDateInput,
   parseTimeInput,
 } from '../lib/dateTimeInput';
+import { format as formatDateFns } from 'date-fns';
 
 /**
  * The family's contract, in the order it was argued for: you can type, the
@@ -54,10 +58,13 @@ describe('typing', () => {
     expect(onChange).toHaveBeenCalledWith('14:37');
   });
 
-  it('parses a date in the locale field order, including back-dated years', () => {
-    mockLocale = 'de';
+  it('parses a date in the country field order, including back-dated years', () => {
     const onChange = vi.fn();
-    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />);
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />
+      </DateFormatProvider>
+    );
 
     const [input] = fields();
     fireEvent.change(input, { target: { value: '1.3.2019' } });
@@ -94,9 +101,12 @@ describe('typing', () => {
   });
 
   it('keeps the previous value when the text does not parse', () => {
-    mockLocale = 'de';
     const onChange = vi.fn();
-    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />);
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />
+      </DateFormatProvider>
+    );
 
     const [input] = fields();
     fireEvent.change(input, { target: { value: '31.02.2026' } });
@@ -135,7 +145,7 @@ describe('the rail', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('reads on a 12-hour dial where the locale does', () => {
+  it('reads on a 12-hour dial where the country does', () => {
     render(<DateTimeField variant="time" value="14:35" onChange={() => {}} timeFormat="12h" />);
 
     fireEvent.focus(fields()[0]);
@@ -323,6 +333,23 @@ describe('keyboard', () => {
 });
 
 describe('parsing rules', () => {
+  // What the field prints must be what the field will take back. A display
+  // pattern and a parse order derived from different sources is how a date
+  // silently moves on a blur.
+  it('round-trips display -> parse in every country shape we ship', () => {
+    const date = new Date(2026, 7, 13);
+
+    for (const country of ['US', 'AU', 'GB', 'DE', 'CA', 'BR', 'NL', 'SE', 'HU', 'XX']) {
+      const shape = countryDateFormat(country);
+      const printed = formatDateFns(date, shape.datePattern);
+      expect(parseDateInput(printed, shape)).toEqual(date);
+      // The placeholder promises the same order the parser reads.
+      expect(getDatePlaceholder(shape)).toBe(
+        shape.datePattern.replace('MM', 'mm').replace('dd', 'dd')
+      );
+    }
+  });
+
   it('takes the shortcuts the timesheet already knew, and refuses nonsense', () => {
     expect(parseTimeInput('930p')).toBe('21:30');
     expect(parseTimeInput('9a')).toBe('09:00');
@@ -331,18 +358,21 @@ describe('parsing rules', () => {
     expect(parseTimeInput('25:00')).toBeNull();
   });
 
-  it('reads dates in the locale order, with relative words and offsets', () => {
+  it('reads dates in the country order, with relative words and offsets', () => {
     const today = new Date(2026, 7, 13);
 
-    expect(parseDateInput('13/8', 'it', { today })).toEqual(new Date(2026, 7, 13));
-    expect(parseDateInput('13/08/26', 'it', { today })).toEqual(new Date(2026, 7, 13));
-    expect(parseDateInput('130826', 'it', { today })).toEqual(new Date(2026, 7, 13));
-    expect(parseDateInput('08/13/2026', 'en', { today })).toEqual(new Date(2026, 7, 13));
-    // Pasted ISO reads as ISO in every locale, never as 2026 months.
-    expect(parseDateInput('2026-08-13', 'it', { today })).toEqual(new Date(2026, 7, 13));
-    expect(parseDateInput('yesterday', 'en', { today })).toEqual(new Date(2026, 7, 12));
-    expect(parseDateInput('+7', 'en', { today })).toEqual(new Date(2026, 7, 20));
-    expect(parseDateInput('31/02/2026', 'it', { today })).toBeNull();
+    const IT = countryDateFormat('IT');
+    const US = countryDateFormat('US');
+
+    expect(parseDateInput('13/8', IT, { today })).toEqual(new Date(2026, 7, 13));
+    expect(parseDateInput('13/08/26', IT, { today })).toEqual(new Date(2026, 7, 13));
+    expect(parseDateInput('130826', IT, { today })).toEqual(new Date(2026, 7, 13));
+    expect(parseDateInput('08/13/2026', US, { today })).toEqual(new Date(2026, 7, 13));
+    // Pasted ISO reads as ISO in every country, never as 2026 months.
+    expect(parseDateInput('2026-08-13', IT, { today })).toEqual(new Date(2026, 7, 13));
+    expect(parseDateInput('yesterday', US, { today })).toEqual(new Date(2026, 7, 12));
+    expect(parseDateInput('+7', US, { today })).toEqual(new Date(2026, 7, 20));
+    expect(parseDateInput('31/02/2026', IT, { today })).toBeNull();
   });
 
   it('lets only characters a valid entry could hold be typed', () => {

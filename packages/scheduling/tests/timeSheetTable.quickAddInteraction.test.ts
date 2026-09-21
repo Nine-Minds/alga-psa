@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import * as React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot, Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 
@@ -75,6 +75,15 @@ describe('TimeSheetTable quick add interaction state', () => {
     document.body.innerHTML = '';
     document.body.appendChild(container);
     root = createRoot(container);
+  });
+
+  afterEach(() => {
+    // Unmount before the jsdom environment is torn down; otherwise React's
+    // scheduler fires pending work afterwards ("window is not defined").
+    flushSync(() => {
+      root.unmount();
+    });
+    container.remove();
   });
 
   it('renders deterministic quick-add editor controls for the active cell', () => {

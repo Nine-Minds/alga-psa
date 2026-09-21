@@ -556,7 +556,7 @@ const renderQuoteEmail = async ({
     quote: {
       number: quote.quote_number ?? quote.quote_id,
       amount: formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD'),
-      validUntil: formatQuoteDate(quote.valid_until ?? null),
+      validUntil: formatQuoteDate(quote.valid_until ?? null, locale),
     },
     company: {
       name: companyName,

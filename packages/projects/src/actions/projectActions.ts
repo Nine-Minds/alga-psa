@@ -43,6 +43,8 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import { actionError, isActionMessageError, isActionPermissionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ITag } from '@alga-psa/types';
+import TagMapping from '@alga-psa/tags/models/tagMapping';
 import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
@@ -497,26 +499,124 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
             return await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
         });
 
-        // Use assigned user data already available from the JOIN in ProjectModel.getAll()
-        const projectsWithUsers = projects.map((project): IProject => {
-            if (project.assigned_to && (project as any).assigned_to_first_name) {
-                return {
-                    ...project,
-                    assigned_user: {
-                        user_id: project.assigned_to,
-                        first_name: (project as any).assigned_to_first_name,
-                        last_name: (project as any).assigned_to_last_name,
-                    } as any
-                };
-            }
-            return project;
-        });
-
-        return projectsWithUsers;
+        return withAssignedUsers(projects);
     } catch (error) {
         console.error('Error fetching projects:', error);
         throw error;
     }
+});
+
+/**
+ * Folds the manager columns ProjectModel joins in (`assigned_to_first_name`,
+ * `assigned_to_last_name`) into `assigned_user`, the shape the list renders.
+ * Shared by the full list and the by-id loader so both paths produce one row shape.
+ */
+function withAssignedUsers(projects: IProject[]): IProject[] {
+    return projects.map((project): IProject => {
+        if (project.assigned_to && (project as any).assigned_to_first_name) {
+            return {
+                ...project,
+                assigned_user: {
+                    user_id: project.assigned_to,
+                    first_name: (project as any).assigned_to_first_name,
+                    last_name: (project as any).assigned_to_last_name,
+                } as any
+            };
+        }
+        return project;
+    });
+}
+
+function uniqueProjectIds(projectIds: string[]): string[] {
+    return Array.from(new Set(projectIds.filter((id) => typeof id === 'string' && id.length > 0)));
+}
+
+/**
+ * The subset of `projectIds` this caller may read, in the order given. The
+ * Projects list is filtered in the browser, so a caller that already holds the
+ * chip-filtered ids (smart search) hands them back here to be re-authorized
+ * through the same per-row kernel decision `getProjects` applies.
+ */
+export const authorizeProjectIds = withAuth(async (
+  user,
+  { tenant },
+  projectIds: string[]
+): Promise<string[] | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+    const denied = await checkPermission(user, 'project', 'read', knex);
+    if (denied) return denied;
+
+    const requestedIds = uniqueProjectIds(projectIds);
+    if (requestedIds.length === 0) {
+        return [];
+    }
+
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+        const rows = await tenantScopedTable(trx, 'projects', tenant)
+            .whereIn('project_id', requestedIds)
+            .select<IProject[]>('project_id', 'assigned_to', 'client_id');
+        const authorized = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
+        const allowed = new Set(authorized.map((project) => project.project_id));
+        return requestedIds.filter((projectId) => allowed.has(projectId));
+    });
+});
+
+export interface ProjectListRowsWithMetadata {
+    projects: IProject[];
+    metadata: {
+        projectTags: Record<string, ITag[]>;
+    };
+}
+
+/**
+ * List rows for an explicit set of project ids, in the order the ids were
+ * given, through the same joins, authorization, and manager folding as
+ * `getProjects`, plus the projects' tags. A caller that already knows which
+ * projects it wants (smart search hydrating a scored batch) renders them with
+ * identical columns. Projects the caller cannot read are omitted.
+ */
+export const loadProjectListItemsByIds = withAuth(async (
+  user,
+  { tenant },
+  projectIds: string[]
+): Promise<ProjectListRowsWithMetadata | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+    const denied = await checkPermission(user, 'project', 'read', knex);
+    if (denied) return denied;
+
+    const requestedIds = uniqueProjectIds(projectIds);
+    if (requestedIds.length === 0) {
+        return { projects: [], metadata: { projectTags: {} } };
+    }
+
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+        const rows = await ProjectModel.getByIds(trx, tenant, requestedIds);
+        const authorized = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
+        const byId = new Map(authorized.map((project) => [project.project_id, project] as const));
+        const ordered = requestedIds
+            .map((projectId) => byId.get(projectId))
+            .filter((project): project is IProject => Boolean(project));
+
+        const projectTags: Record<string, ITag[]> = {};
+        if (ordered.length > 0) {
+            const tagRows = await TagMapping.getByEntities(trx, tenant, ordered.map((project) => project.project_id), 'project');
+            for (const tag of tagRows) {
+                const list = projectTags[tag.tagged_id] ?? (projectTags[tag.tagged_id] = []);
+                list.push({
+                    tag_id: tag.mapping_id,
+                    tenant,
+                    board_id: tag.board_id || undefined,
+                    tag_text: tag.tag_text,
+                    tagged_id: tag.tagged_id,
+                    tagged_type: tag.tagged_type,
+                    background_color: tag.background_color,
+                    text_color: tag.text_color,
+                });
+            }
+        }
+
+        return { projects: withAssignedUsers(ordered), metadata: { projectTags } };
+    });
 });
 
 function buildProjectListSearchPrefixTsquery(raw: string): string | null {

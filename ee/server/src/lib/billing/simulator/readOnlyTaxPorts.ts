@@ -43,6 +43,7 @@ export async function createReadOnlyTaxPorts(
           "start_date",
           "end_date",
           "currency_code",
+          "cap_amount",
         ),
       locationIds.length > 0
         ? db
@@ -70,6 +71,7 @@ export async function createReadOnlyTaxPorts(
     startDate: toISODate(toPlainDate(rate.start_date)),
     endDate: rate.end_date ? toISODate(toPlainDate(rate.end_date)) : null,
     currencyCode: rate.currency_code ?? null,
+    capAmount: rate.cap_amount ?? null,
   }));
   const locationRegions = new Map<string, string | null>(
     locationRows.map((row) => [row.location_id, row.region_code ?? null]),
