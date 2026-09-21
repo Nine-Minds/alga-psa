@@ -256,6 +256,96 @@ describeDb('interactions Teams path: opportunity and contact', () => {
     expect(actionForContact.map((row) => row.interaction_id)).toContain(interactionId);
   });
 
+  it('keeps BlockNote rich-text notes valid, appends a join-link block, and writes plain text to the schedule entry', async () => {
+    const { scheduleTeamsMeeting } = await import('@alga-psa/scheduling/actions/onlineMeetingSchedulingActions');
+
+    // Exactly what QuickAddInteraction sends: JSON.stringify(PartialBlock[]).
+    const paragraphProps = { textAlignment: 'left', backgroundColor: 'default', textColor: 'default' };
+    const richBlocks = [
+      {
+        id: 'rt-1',
+        type: 'paragraph',
+        props: paragraphProps,
+        content: [{ type: 'text', text: 'Contractor referral: 6-phone VoIP install.', styles: {} }],
+        children: [],
+      },
+      {
+        id: 'rt-2',
+        type: 'paragraph',
+        props: paragraphProps,
+        content: [
+          { type: 'text', text: 'Price is the ', styles: {} },
+          { type: 'text', text: 'deciding factor', styles: { bold: true } },
+        ],
+        children: [],
+      },
+    ];
+
+    // online_meetings is unique on (tenant, provider, provider_meeting_id); the
+    // suite-level mock's fixed id belongs to the other case.
+    createTeamsMeetingMock.mockResolvedValueOnce({
+      joinWebUrl: JOIN_URL,
+      meetingId: 'meeting-opportunity-richtext-456',
+      organizerUpn: 'organizer@example.com',
+      organizerUserId: 'organizer-object-1',
+      eventId: 'event-opportunity-richtext-456',
+    });
+
+    const result = await scheduleTeamsMeeting({
+      subject: 'VoIP scoping call',
+      startDateTime: '2026-08-21T14:00:00.000Z',
+      endDateTime: '2026-08-21T14:30:00.000Z',
+      client_id: clientId,
+      contact_name_id: contactId,
+      opportunity_id: opportunityId,
+      notes: JSON.stringify(richBlocks),
+      interactionUserId: userId,
+      createScheduleEntry: true,
+      attendees: [],
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    const interactionId = result.data.interaction_id;
+
+    const interaction = await tenantTable('interactions')
+      .where({ tenant: tenantId, interaction_id: interactionId })
+      .first();
+
+    // Still valid BlockNote JSON: the original blocks verbatim plus a link paragraph.
+    const storedBlocks = JSON.parse(interaction.notes);
+    expect(storedBlocks).toHaveLength(3);
+    expect(storedBlocks.slice(0, 2)).toEqual(richBlocks);
+    expect(storedBlocks[2].type).toBe('paragraph');
+    expect(storedBlocks[2].content[1]).toMatchObject({ type: 'link', href: JOIN_URL });
+
+    // The calendar textarea is plain text.
+    const scheduleEntry = await tenantTable('schedule_entries')
+      .where({ tenant: tenantId, work_item_type: 'interaction', work_item_id: interactionId })
+      .first();
+    expect(scheduleEntry).toBeTruthy();
+    expect(scheduleEntry.notes.startsWith('[')).toBe(false);
+    expect(scheduleEntry.notes).toContain('Contractor referral: 6-phone VoIP install.');
+    expect(scheduleEntry.notes).toContain('Price is the deciding factor');
+    expect(scheduleEntry.notes).toContain(JOIN_URL);
+
+    // Read back intact through the action the opportunity and contact feeds call.
+    const actionForOpportunity = await getInteractionsForEntity(opportunityId, 'opportunity');
+    const actionForContact = await getInteractionsForEntity(contactId, 'contact');
+    if (!Array.isArray(actionForOpportunity) || !Array.isArray(actionForContact)) {
+      throw new Error('getInteractionsForEntity returned an action error instead of interactions');
+    }
+    for (const rows of [actionForOpportunity, actionForContact]) {
+      const row = rows.find((candidate) => candidate.interaction_id === interactionId);
+      if (!row) {
+        throw new Error('interaction missing from feed readback');
+      }
+      expect(JSON.parse(row.notes ?? '')).toEqual(storedBlocks);
+    }
+  });
+
   it('rejects an opportunity that belongs to a different client', async () => {
     const { scheduleTeamsMeeting } = await import('@alga-psa/scheduling/actions/onlineMeetingSchedulingActions');
 
