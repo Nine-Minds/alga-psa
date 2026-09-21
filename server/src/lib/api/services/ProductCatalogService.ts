@@ -2,6 +2,7 @@ import type { IService } from '@/interfaces/billing.interfaces';
 import { normalizeGtin } from '@alga-psa/core';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
+import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
 import { ConflictError, NotFoundError } from '../middleware/apiMiddleware';
@@ -245,7 +246,8 @@ export class ProductCatalogService extends BaseService<IService> {
       default_rate: typeof rest.default_rate === 'string'
         ? parseFloat(rest.default_rate) || 0
         : rest.default_rate,
-      tax_rate_id: rest.tax_rate_id || null,
+      // Omitted inherits the tenant default; explicit null stays non-taxable.
+      tax_rate_id: await resolveCatalogTaxRateIdForCreate(knex, tenant, rest.tax_rate_id),
       category_id: rest.category_id ?? null,
       barcode: normalizeGtin(rest.barcode ?? '') || null,
     };

@@ -10,6 +10,10 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { isSupportedCurrency } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import {
+  isTaxRateUsableAsDefault,
+  readConfiguredDefaultTaxRateId,
+} from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import {
   actionError,
@@ -56,6 +60,16 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
         return actionError(
           'Tax rate not found or already deleted.',
           'msp/billing-settings:errors.taxRate.notFoundOrAlreadyDeleted'
+        );
+      case 'This tax rate is the tenant default and these changes would make it invalid. Choose a different default first, then edit this rate.':
+        return actionError(
+          'This tax rate is the tenant default and these changes would make it invalid. Choose a different default first, then edit this rate.',
+          'msp/billing-settings:errors.taxRate.defaultMutationBlocked'
+        );
+      case 'This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.':
+        return actionError(
+          'This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.',
+          'msp/billing-settings:errors.taxRate.defaultDeleteBlocked'
         );
     }
   }
@@ -245,6 +259,22 @@ export const updateTaxRate = withAuth(async (
         validateCurrency(effectiveCurrency);
       }
 
+      // Lifecycle guard: a configured tenant default must remain usable. Changing
+      // its region, deactivating it, or shifting its date range so it no longer
+      // applies today would silently invalidate every future default assignment.
+      const configuredDefaultId = await readConfiguredDefaultTaxRateId(trx, tenant);
+      if (configuredDefaultId === taxRateData.tax_rate_id) {
+        const nextRate = {
+          is_active: updateData.is_active !== undefined ? Boolean(updateData.is_active) : existingRate.is_active,
+          region_code: updateData.region_code ?? existingRate.region_code,
+          start_date: updateData.start_date ?? existingRate.start_date,
+          end_date: updateData.end_date === undefined ? existingRate.end_date : updateData.end_date,
+        };
+        if (!(await isTaxRateUsableAsDefault(trx, tenant, nextRate))) {
+          throw new Error('This tax rate is the tenant default and these changes would make it invalid. Choose a different default first, then edit this rate.');
+        }
+      }
+
       const [updatedTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
         .where({
           tax_rate_id: updateData.tax_rate_id,
@@ -281,6 +311,35 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
       };
     }
     const { knex } = await createTenantKnex();
+
+    // A configured tenant default cannot be deleted until it is cleared or
+    // replaced: deleting it would leave new clients/catalog items with no
+    // usable default.
+    const configuredDefaultId = await readConfiguredDefaultTaxRateId(knex, tenant);
+    if (configuredDefaultId === taxRateId) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'IS_DEFAULT',
+        message: 'This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.',
+        dependencies: [
+          {
+            type: 'tenant_default_tax_rate',
+            count: 1,
+            label: 'Tenant default tax rate',
+            description: 'New clients, products, and services inherit this rate.',
+          },
+        ],
+        alternatives: [
+          {
+            action: 'replace_default',
+            label: 'Choose a replacement default',
+            description: 'Set another rate as the tenant default in Billing Settings → Tax Rates, then delete this one.',
+          },
+        ],
+      };
+    }
+
     const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
       // Fail-fast tenant guard: confirm the tax rate belongs to this tenant before touching
       // child tables scoped through tax_rates.

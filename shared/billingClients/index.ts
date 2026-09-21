@@ -11,6 +11,7 @@ export * from './contractLines';
 export * from './contractsAdmin';
 export * from './services';
 export * from './taxRates';
+export * from './defaultTaxRate';
 export * from './invoiceTemplates';
 export * from './templateClone';
 export * from './taxSettings';

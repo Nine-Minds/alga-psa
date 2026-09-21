@@ -1,6 +1,7 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
+import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ListOptions } from '../controllers/types';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -252,7 +253,8 @@ export class ServiceCatalogService extends BaseService<IService> {
       default_rate: typeof serviceInput.default_rate === 'string'
         ? parseFloat(serviceInput.default_rate) || 0
         : serviceInput.default_rate,
-      tax_rate_id: serviceInput.tax_rate_id || null,
+      // Omitted inherits the tenant default; explicit null stays non-taxable.
+      tax_rate_id: await resolveCatalogTaxRateIdForCreate(knex, tenant, serviceInput.tax_rate_id),
     };
 
     const [created] = await tenantDb(knex, tenant).table('service_catalog')

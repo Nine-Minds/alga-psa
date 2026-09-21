@@ -9,6 +9,13 @@ import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  assertValidDefaultTaxRateCandidate,
+  InvalidDefaultTaxRateError,
+  InvalidTaxRateSelectionError,
+  readConfiguredDefaultTaxRateId,
+  resolveConfiguredDefaultTaxRate,
+} from '@alga-psa/shared/billingClients/defaultTaxRate';
+import {
   actionError,
   permissionError,
   type ActionMessageError,
@@ -19,6 +26,9 @@ type TaxSettingsActionError = ActionMessageError | ActionPermissionError;
 type TaxRegionActionError = TaxSettingsActionError;
 
 function taxSettingsActionErrorFrom(error: unknown): TaxSettingsActionError | null {
+  if (error instanceof InvalidDefaultTaxRateError || error instanceof InvalidTaxRateSelectionError) {
+    return actionError(error.message);
+  }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
@@ -286,7 +296,6 @@ export const updateTaxRegion = withAuth(async (
 
   // Ensure there's something to update
   if (Object.keys(updateData).length === 0) {
-    // Optionally, fetch and return the existing region or throw an error
      const existingRegion = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .where('region_code', region_code)
       .first();
@@ -297,6 +306,22 @@ export const updateTaxRegion = withAuth(async (
     // Or: throw new Error('No update data provided.');
   }
 
+    // Lifecycle guard: deactivating the region that owns a configured default
+    // would invalidate that default for future assignments.
+    if (data.is_active === false) {
+      const defaultRateId = await readConfiguredDefaultTaxRateId(knex, tenant);
+      if (defaultRateId) {
+        const defaultRate = await tenantScopedTable<ITaxRate>(knex, tenant, 'tax_rates')
+          .where({ tax_rate_id: defaultRateId })
+          .first('region_code');
+        if (defaultRate?.region_code === region_code) {
+          return actionError(
+            'This region contains the tenant default tax rate. Choose a different default before deactivating the region.',
+            'msp/billing-settings:errors.taxRegion.defaultRegionBlocked',
+          );
+        }
+      }
+    }
 
     const [updatedRegion] = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
       .where('region_code', region_code)
@@ -707,9 +732,20 @@ export const getClientTaxExemptStatus = withAuth(async (
  * the invoice is exported to, not configured in settings.
  * @returns A promise that resolves to the tenant tax settings.
  */
+export interface TenantDefaultTaxRateSummary {
+  tax_rate_id: string;
+  region_code: string;
+  region_name: string | null;
+  description: string | null;
+  tax_percentage: number;
+}
+
 export const getTenantTaxSettings = withAuth(async (user, { tenant }): Promise<{
   default_tax_source: 'internal' | 'external' | 'pending_external';
   allow_external_tax_override: boolean;
+  default_tax_rate_id: string | null;
+  default_tax_rate: TenantDefaultTaxRateSummary | null;
+  default_tax_rate_invalid: boolean;
 } | null | TaxSettingsActionError> => {
   try {
     if (!tenant) {
@@ -719,20 +755,48 @@ export const getTenantTaxSettings = withAuth(async (user, { tenant }): Promise<{
     const { knex } = await createTenantKnex();
 
     const settings = await tenantScopedTable(knex, tenant, 'tenant_settings')
-      .select('default_tax_source', 'allow_external_tax_override')
+      .select('default_tax_source', 'allow_external_tax_override', 'default_tax_rate_id')
       .first();
 
-    if (!settings) {
-      // Return defaults if no settings row exists
-      return {
-        default_tax_source: 'internal',
-        allow_external_tax_override: false,
-      };
+    const defaultTaxRateId =
+      typeof settings?.default_tax_rate_id === 'string' && settings.default_tax_rate_id.length > 0
+        ? (settings.default_tax_rate_id as string)
+        : null;
+
+    let defaultTaxRate: TenantDefaultTaxRateSummary | null = null;
+    let defaultTaxRateInvalid = false;
+    if (defaultTaxRateId) {
+      // Resolve through the same eligibility rules the assignment path uses so
+      // the panel can surface a configured-but-now-invalid default instead of
+      // pretending it is fine.
+      try {
+        const resolved = await resolveConfiguredDefaultTaxRate(knex, tenant);
+        if (resolved) {
+          const region = await tenantScopedTable(knex, tenant, 'tax_regions')
+            .where({ region_code: resolved.region_code })
+            .select('region_name')
+            .first();
+          defaultTaxRate = {
+            tax_rate_id: resolved.tax_rate_id,
+            region_code: resolved.region_code,
+            region_name: (region?.region_name as string | undefined) ?? null,
+            description: resolved.description ?? null,
+            tax_percentage: Number(resolved.tax_percentage),
+          };
+        } else {
+          defaultTaxRateInvalid = true;
+        }
+      } catch {
+        defaultTaxRateInvalid = true;
+      }
     }
 
     return {
-      default_tax_source: settings.default_tax_source || 'internal',
-      allow_external_tax_override: settings.allow_external_tax_override ?? false,
+      default_tax_source: (settings?.default_tax_source as 'internal' | 'external' | 'pending_external') || 'internal',
+      allow_external_tax_override: settings?.allow_external_tax_override ?? false,
+      default_tax_rate_id: defaultTaxRateId,
+      default_tax_rate: defaultTaxRate,
+      default_tax_rate_invalid: defaultTaxRateInvalid,
     };
   } catch (error) {
     const expected = taxSettingsActionErrorFrom(error);
@@ -740,6 +804,198 @@ export const getTenantTaxSettings = withAuth(async (user, { tenant }): Promise<{
     console.error('Error fetching tenant tax settings:', error);
     throw error;
   }
+});
+
+/**
+ * Set or clear the tenant-wide default tax rate without touching the tax-source
+ * settings. The selected rate must belong to the tenant, have an active region
+ * and rate, and apply on the assignment day. Clearing means "no default";
+ * it does not make existing clients tax-exempt.
+ */
+export const updateDefaultTaxRateSetting = withAuth(async (
+  user,
+  { tenant },
+  defaultTaxRateId: string | null
+): Promise<TenantDefaultTaxRateSummary | null | TaxSettingsActionError> => {
+  return withTaxSettingsActionErrors(async () => {
+    if (!(await hasPermission(user, 'billing', 'update'))) {
+      throw new Error('Permission denied: Cannot update tenant tax settings');
+    }
+    if (!tenant) {
+      throw new Error('SYSTEM_ERROR: Tenant context not found');
+    }
+    if (defaultTaxRateId !== null && (typeof defaultTaxRateId !== 'string' || !defaultTaxRateId.trim())) {
+      throw new Error('Invalid default tax rate selection.');
+    }
+
+    const { knex } = await createTenantKnex();
+
+    return withTransaction(knex, async (trx) => {
+      let summary: TenantDefaultTaxRateSummary | null = null;
+      if (defaultTaxRateId !== null) {
+        // Lock the candidate rate row while validating so a concurrent
+        // deactivation/region change cannot invalidate the default between the
+        // check and the settings write (see the documented lock order in the
+        // shared resolver).
+        const rate = await assertValidDefaultTaxRateCandidate(trx, tenant, defaultTaxRateId.trim(), {
+          forUpdate: true,
+        });
+        const region = await tenantScopedTable(trx, tenant, 'tax_regions')
+          .where({ region_code: rate.region_code })
+          .select('region_name')
+          .first();
+        summary = {
+          tax_rate_id: rate.tax_rate_id,
+          region_code: rate.region_code,
+          region_name: (region?.region_name as string | undefined) ?? null,
+          description: rate.description ?? null,
+          tax_percentage: Number(rate.tax_percentage),
+        };
+      }
+
+      // Upsert only the default-rate column so concurrent tax-source saves or
+      // unrelated settings writes are never clobbered, and a missing settings
+      // row is created safely without a select-then-insert race.
+      await tenantScopedTable(trx, tenant, 'tenant_settings')
+        .insert({ tenant, default_tax_rate_id: defaultTaxRateId })
+        .onConflict('tenant')
+        .merge({ default_tax_rate_id: defaultTaxRateId });
+
+      return summary;
+    });
+  });
+});
+
+export interface CatalogTaxRateBackfillPreviewItem {
+  service_id: string;
+  service_name: string;
+  item_kind: 'service' | 'product';
+}
+
+export interface CatalogTaxRateBackfillPreview {
+  default_tax_rate_id: string;
+  default_tax_rate: TenantDefaultTaxRateSummary;
+  items: CatalogTaxRateBackfillPreviewItem[];
+  count: number;
+}
+
+/**
+ * Preview the tenant-local catalog rows with no tax rate. NULL is a real value
+ * in the catalog (billing reads it as non-taxable), so this is an explicit,
+ * reviewable operation — never a migration or a settings-save side effect.
+ */
+export const previewCatalogTaxRateBackfill = withAuth(async (
+  user,
+  { tenant }
+): Promise<CatalogTaxRateBackfillPreview | TaxSettingsActionError> => {
+  return withTaxSettingsActionErrors(async () => {
+    if (!(await hasPermission(user, 'billing', 'read'))) {
+      throw new Error('Permission denied: Cannot read billing settings');
+    }
+    if (!tenant) {
+      throw new Error('SYSTEM_ERROR: Tenant context not found');
+    }
+
+    const { knex } = await createTenantKnex();
+
+    const configured = await resolveConfiguredDefaultTaxRate(knex, tenant);
+    if (!configured) {
+      throw new Error('Configure a valid default tax rate before applying it to existing catalog items.');
+    }
+
+    const region = await tenantScopedTable(knex, tenant, 'tax_regions')
+      .where({ region_code: configured.region_code })
+      .select('region_name')
+      .first();
+
+    const rows = await tenantScopedTable(knex, tenant, 'service_catalog')
+      .whereNull('tax_rate_id')
+      .orderBy('item_kind', 'asc')
+      .orderBy('service_name', 'asc')
+      .select('service_id', 'service_name', 'item_kind');
+
+    return {
+      default_tax_rate_id: configured.tax_rate_id,
+      default_tax_rate: {
+        tax_rate_id: configured.tax_rate_id,
+        region_code: configured.region_code,
+        region_name: (region?.region_name as string | undefined) ?? null,
+        description: configured.description ?? null,
+        tax_percentage: Number(configured.tax_percentage),
+      },
+      items: rows.map((row) => ({
+        service_id: row.service_id as string,
+        service_name: row.service_name as string,
+        item_kind: row.item_kind as 'service' | 'product',
+      })),
+      count: rows.length,
+    };
+  });
+});
+
+/**
+ * Apply the saved default to the selected still-NULL catalog rows. Revalidates
+ * the saved default (stale target rejected), tenant ownership, and the NULL
+ * predicate. Rows assigned since preview are skipped and counted; changing the
+ * setting and applying it are separate actions.
+ */
+export const applyCatalogTaxRateBackfill = withAuth(async (
+  user,
+  { tenant },
+  serviceIds: string[],
+  expectedDefaultTaxRateId?: string | null
+): Promise<{ changed: number; skipped: number } | TaxSettingsActionError> => {
+  return withTaxSettingsActionErrors(async () => {
+    if (!(await hasPermission(user, 'billing', 'update'))) {
+      throw new Error('Permission denied: Cannot update billing settings');
+    }
+    if (!(await hasPermission(user, 'service', 'update'))) {
+      throw new Error('Permission denied: Cannot update services/products');
+    }
+    if (!tenant) {
+      throw new Error('SYSTEM_ERROR: Tenant context not found');
+    }
+    if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
+      throw new Error('Select at least one catalog item to apply the default tax rate to.');
+    }
+
+    const { knex } = await createTenantKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const configured = await resolveConfiguredDefaultTaxRate(trx, tenant);
+      if (!configured) {
+        throw new Error('Configure a valid default tax rate before applying it to existing catalog items.');
+      }
+
+      // Reject a stale preview: the administrator reviewed a specific target
+      // rate. If the saved default changed in the meantime, applying now would
+      // assign a rate they never saw.
+      if (
+        expectedDefaultTaxRateId !== undefined &&
+        expectedDefaultTaxRateId !== null &&
+        expectedDefaultTaxRateId !== configured.tax_rate_id
+      ) {
+        throw new InvalidDefaultTaxRateError(
+          'The saved default tax rate changed since this preview was loaded. Refresh the preview and choose again.',
+        );
+      }
+
+      const eligible = await tenantScopedTable(trx, tenant, 'service_catalog')
+        .whereIn('service_id', serviceIds)
+        .select('service_id');
+      const eligibleIds = eligible.map((row) => row.service_id as string);
+
+      // service_catalog has no updated_at column; only the assignment changes.
+      const changed = eligibleIds.length
+        ? await tenantScopedTable(trx, tenant, 'service_catalog')
+            .whereIn('service_id', eligibleIds)
+            .whereNull('tax_rate_id')
+            .update({ tax_rate_id: configured.tax_rate_id })
+        : 0;
+
+      return { changed: Number(changed), skipped: serviceIds.length - Number(changed) };
+    });
+  });
 });
 
 /**

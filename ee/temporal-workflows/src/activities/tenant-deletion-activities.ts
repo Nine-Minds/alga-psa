@@ -1627,6 +1627,24 @@ async function breakCircularDependencies(
     });
   }
 
+  // Step 8: NULL out tenant_settings.default_tax_rate_id so tax_rates (deleted
+  // earlier in the order) is not blocked by the composite RESTRICT FK. The
+  // setting row itself is deleted later; clearing the reference first keeps the
+  // tenant from being left with orphaned tax rates.
+  try {
+    const result8 = await tenantScopedDb.table('tenant_settings')
+      .whereNotNull('default_tax_rate_id')
+      .update({ default_tax_rate_id: null });
+    if (result8 > 0) {
+      log.info('Cleared default_tax_rate_id references in tenant_settings', { count: result8 });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas before the setting).
+    log.debug('Could not clear default_tax_rate_id in tenant_settings (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
   log.info('Circular dependencies broken successfully');
 }
 

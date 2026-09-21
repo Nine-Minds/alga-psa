@@ -27,6 +27,8 @@ import ProductsManager from '../settings/billing/ProductsManager';
 import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
 import ServiceCategoriesSettings from '../settings/billing/ServiceCategoriesSettings';
 import { TaxSourceSettings } from '../settings/tax/TaxSourceSettings';
+import { DefaultTaxRateSettings } from '../settings/tax/DefaultTaxRateSettings';
+import { CatalogTaxRateBackfill } from '../settings/tax/CatalogTaxRateBackfill';
 import { TaxRegionsAndRates } from '../settings/tax/TaxRegionsAndRates';
 import TaxDelegationBanner from '../tax/TaxDelegationBanner';
 import AccountingExportsTab, { AccountingExportsAccessDenied } from './accounting/AccountingExportsTab';
@@ -233,6 +235,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
               settingsRevision={taxSettingsRevision}
               onSettingsChanged={invalidateTaxSettings}
             />
+            <DefaultTaxRateSettings
+              settingsRevision={taxSettingsRevision}
+              onSettingsChanged={invalidateTaxSettings}
+            />
+            <CatalogTaxRateBackfill />
             <TaxRegionsAndRates />
           </div>
         </Tabs.Content>

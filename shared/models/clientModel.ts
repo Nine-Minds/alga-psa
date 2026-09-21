@@ -23,6 +23,7 @@ import { ensureDefaultContractForClientIfBillingConfigured } from '../billingCli
 // make forgetting one impossible; today a missed call silently breaks billing for
 // clients created through that path.
 import { ensureClientDefaultBillingProfile } from '../billingClients/billingProfiles';
+import { initializeClientDefaultTax } from '../billingClients/defaultTaxRate';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -183,66 +184,19 @@ export class ClientModel {
   // Email domain extraction removed for security
 
   /**
-   * Create default tax settings for a client
-   * Delegates to TaxService for consistency with existing implementation
+   * Create default tax settings for a client.
+   *
+   * Delegates to the shared, transactional initializer so this path resolves
+   * the tenant's configured default (or the deterministic legacy fallback),
+   * writes one client-wide `is_default` association, and never fabricates a
+   * zero-rate or rounds a rate-global component.
    */
   static async createDefaultTaxSettings(
     clientId: string,
     tenant: string,
     trx: Knex.Transaction
   ): Promise<void> {
-    const db = tenantDb(trx, tenant);
-
-    // Get the first active tax rate to use as the default
-    const defaultTaxRate = await db.table('tax_rates')
-      .where('is_active', true)
-      .orderBy('created_at', 'asc')
-      .first();
-
-    if (!defaultTaxRate) {
-      // Create a default tax rate if none exists
-      const taxRateId = uuidv4();
-      const now = new Date().toISOString();
-      
-      await db.table('tax_rates').insert({
-        tax_rate_id: taxRateId,
-        tenant,
-        rate: 0,
-        name: 'Default Tax',
-        description: 'Default tax rate',
-        is_active: true,
-        created_at: now,
-        updated_at: now
-      });
-
-      // Link the tax rate to the client
-      await db.table('client_tax_rates').insert({
-        client_id: clientId,
-        tax_rate_id: taxRateId,
-        tenant
-      });
-    } else {
-      // Link existing default tax rate to the client
-      await db.table('client_tax_rates').insert({
-        client_id: clientId,
-        tax_rate_id: defaultTaxRate.tax_rate_id,
-        tenant
-      });
-    }
-
-    // Create default client tax settings. Keyed per billing profile since S7:
-    // reverse-charge applicability is per legal entity, and the client's
-    // default profile is the entity a freshly created client bills as.
-    const defaultBillingProfileId = await ensureClientDefaultBillingProfile(trx, tenant, clientId);
-    // client_tax_settings carries no created_at/updated_at columns; writing
-    // them errors, and inside a real transaction that error aborts the whole
-    // transaction even though the caller swallows it.
-    await db.table('client_tax_settings').insert({
-      client_id: clientId,
-      billing_profile_id: defaultBillingProfileId,
-      tenant,
-      is_reverse_charge_applicable: false
-    });
+    await initializeClientDefaultTax(trx, tenant, clientId);
   }
 
   // Email suffix functionality removed for security
@@ -311,14 +265,11 @@ export class ClientModel {
       clientId: client.client_id,
     });
     
-    // Create default tax settings if not skipped
+    // Create default tax settings if not skipped. Failures propagate so the
+    // caller's transaction rolls back rather than committing a client without
+    // usable tax configuration.
     if (!options.skipTaxSettings) {
-      try {
-        await this.createDefaultTaxSettings(client.client_id, tenant, trx);
-      } catch (error) {
-        // Log but don't fail client creation if tax settings fail
-        console.error('Failed to create default tax settings:', error);
-      }
+      await this.createDefaultTaxSettings(client.client_id, tenant, trx);
     }
     // Email suffix functionality removed for security - no automatic domain registration
     
