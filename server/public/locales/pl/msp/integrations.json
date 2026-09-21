@@ -3731,6 +3731,12 @@
         "disabled": "Wyłączone",
         "notConfigured": "Nieskonfigurowane"
       },
+      "setup": {
+        "configure": "Konfiguruj integrację",
+        "selectedAction": "Wybrana",
+        "currentIntegration": "Integracja telefoniczna",
+        "changeIntegration": "Wybierz inną"
+      },
       "providers": {
         "teamsPhone": {
           "description": "Zapisuje rozmowy Teams Phone jako interakcje po zakończeniu każdego połączenia. Historia rozmów, a nie podgląd na żywo.",
