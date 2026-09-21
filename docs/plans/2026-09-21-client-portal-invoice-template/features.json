@@ -1,0 +1,5 @@
+[
+  {"id":"F001","description":"Use the existing scoped invoice resolver and pass its matching template to the client portal renderer.","implemented":false,"prdRefs":["Implementation / F001"]},
+  {"id":"F002","description":"Preserve standard/first/empty fallback, load errors, and invoice access gates when resolving the portal template.","implemented":false,"prdRefs":["Implementation / F002"]},
+  {"id":"F003","description":"Resolve the template again when the preview loads another invoice.","implemented":false,"prdRefs":["Implementation / F003"]}
+]
