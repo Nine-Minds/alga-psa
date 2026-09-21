@@ -238,4 +238,46 @@ describe('allocateQuoteDiscounts', () => {
     expect(result.discounts[0]?.recurringAmount).toBe(545);
     expect(result.discounts[0]?.onetimeAmount).toBe(455);
   });
+
+  it('attributes a whole-quote discount to each cadence band and caps without driving a band negative', () => {
+    // Monthly $100, annual $159, one-time $250 — the grouped template's bands.
+    const bases = [
+      baseItem({ id: 'monthly', amount: 10000, isRecurring: true }),
+      baseItem({ id: 'annual', amount: 15900, isRecurring: true }),
+      baseItem({ id: 'onetime', amount: 25000, isRecurring: false }),
+    ];
+    const cadenceOf: Record<string, string> = {
+      monthly: 'monthly',
+      annual: 'annually',
+      onetime: 'onetime',
+    };
+
+    const result = allocateQuoteDiscounts(bases, [
+      discount({ id: 'disc-whole', fixedAmount: 1000 }),
+      discount({ id: 'disc-annual-oversized', fixedAmount: 20000, appliesToItemId: 'annual' }),
+    ]);
+
+    // Per-base allocations are the band attribution input the adapter uses.
+    expect(result.discounts[0]?.allocations).toEqual([
+      { baseItemId: 'monthly', amount: 197, isRecurring: true },
+      { baseItemId: 'annual', amount: 312, isRecurring: true },
+      { baseItemId: 'onetime', amount: 491, isRecurring: false },
+    ]);
+    expect(result.discounts[1]?.allocations).toEqual([
+      { baseItemId: 'annual', amount: 15900 - 312, isRecurring: true },
+    ]);
+
+    const bandTotals = new Map<string, number>();
+    for (const discountResult of result.discounts) {
+      for (const allocation of discountResult.allocations) {
+        const band = cadenceOf[allocation.baseItemId]!;
+        bandTotals.set(band, (bandTotals.get(band) ?? 0) + allocation.amount);
+      }
+    }
+
+    expect(bandTotals.get('monthly')).toBe(197);
+    expect(bandTotals.get('annually')).toBe(15900); // capped exactly at the annual base
+    expect(bandTotals.get('onetime')).toBe(491);
+    expect(result.totalDiscount).toBe(1000 + (15900 - 312));
+  });
 });

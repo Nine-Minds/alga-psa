@@ -37,7 +37,7 @@ import {
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
-import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
 import type { PartialBlock } from '@blocknote/core';
 import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
@@ -418,6 +418,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   // monthly rows through the allocation.
   const recurringMonthlySubtotal = useMemo(
     () => calculateDraftMonthlyRecurringNet(lineItems),
+    [lineItems],
+  );
+
+  // Per-cadence required nets and optional add-on totals, so the editor
+  // summary shows the same cadence bands the grouped PDF renders.
+  const cadenceSummary = useMemo(
+    () => calculateDraftCadenceSummary(lineItems),
     [lineItems],
   );
 
@@ -1196,6 +1203,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const formattedRecurringMonthly = recurringMonthlySubtotal > 0
     ? formatDraftQuoteMoney(recurringMonthlySubtotal, form.currency_code)
     : null;
+  const formattedOptionalTotal = draftTotals.optional_total > 0
+    ? formatDraftQuoteMoney(draftTotals.optional_total, form.currency_code)
+    : null;
+  const formattedCadenceSummary = cadenceSummary
+    .filter((entry) => entry.net > 0)
+    .map((entry) => ({
+      cadence_key: entry.cadence_key,
+      name: entry.name,
+      amount: formatDraftQuoteMoney(entry.net, form.currency_code),
+    }));
 
   const headerTitle = isTemplate
     ? (isEditMode
@@ -1708,6 +1725,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                     <dt className="text-muted-foreground">{t('quoteForm.sidebar.tax', { defaultValue: 'Tax' })}</dt>
                     <dd>{formattedTax}</dd>
                   </div>
+                  {formattedCadenceSummary.map((entry) => (
+                    <div key={entry.cadence_key} className="flex items-center justify-between">
+                      <dt className="text-muted-foreground">{entry.name}</dt>
+                      <dd>{entry.amount}</dd>
+                    </div>
+                  ))}
+                  {formattedOptionalTotal && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-muted-foreground">{t('quoteForm.sidebar.optionalIfSelected', { defaultValue: 'Optional if selected' })}</dt>
+                      <dd>{formattedOptionalTotal}</dd>
+                    </div>
+                  )}
                 </dl>
               </section>
 

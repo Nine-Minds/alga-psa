@@ -537,46 +537,125 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
           { id: 'scope-text', type: 'text', content: { type: 'binding', bindingId: 'scope' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
         ],
       },
-      // ── Monthly items table ───────────────────────────────────────
+      // ── Per-cadence bands: header + items table + subtotal/tax/total ──
+      // One iteration per non-empty cadence, in canonical order (monthly →
+      // quarterly → semi-annually → annually → other → one-time). The band
+      // name is data-driven (`groups_by_cadence[].name`, localized by the PDF
+      // service); the per-band figures are computed by the renderer.
       {
-        id: 'monthly-section-label',
-        type: 'text',
-        content: { type: 'i18n', i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' },
-        style: { inline: { fontSize: '14px', fontWeight: 700, color: '#ffffff', backgroundColor: '#7c45d3', padding: '6px 12px', borderRadius: '6px 6px 0 0', margin: '0' } },
-      },
-      {
-        id: 'monthly-items',
-        type: 'dynamic-table',
-        style: { inline: { margin: '0 0 16px 0', border: '1px solid #e5e7eb', borderRadius: '0 6px 6px 6px' } },
-        headerStyle: { inline: { backgroundColor: '#7c45d3', color: '#ffffff' } },
-        repeat: { sourceBinding: { bindingId: 'recurringItems' }, itemBinding: 'item' },
-        emptyStateText: { i18nKey: 'labels.emptyState.noMonthlyItems', defaultValue: 'No monthly items' },
-        columns: [
-          withItemDescriptionLines({ id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } }),
-          { id: 'unit-price', header: { i18nKey: 'labels.price', defaultValue: 'Price' }, value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
-          { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
-          { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+        id: 'cadence-bands',
+        type: 'stack',
+        direction: 'column',
+        style: { inline: { gap: '8px', margin: '0 0 16px 0' } },
+        repeat: { sourceBinding: { bindingId: 'groupsByCadence' }, itemBinding: 'group' },
+        children: [
+          {
+            id: 'cadence-band-header',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { gap: '2px', backgroundColor: '#7c45d3', color: '#ffffff', padding: '6px 12px', borderRadius: '6px 6px 0 0' } },
+            children: [
+              { id: 'cadence-band-name', type: 'text', content: { type: 'path', path: 'name' }, style: { inline: { fontSize: '14px', fontWeight: 700, color: '#ffffff' } } },
+            ],
+          },
+          {
+            id: 'cadence-band-items',
+            type: 'dynamic-table',
+            style: { inline: { margin: '0', border: '1px solid #e5e7eb', borderRadius: '0' } },
+            headerStyle: { inline: { backgroundColor: '#7c45d3', color: '#ffffff' } },
+            repeat: { sourceBinding: { bindingId: 'group.items' }, itemBinding: 'item' },
+            emptyStateText: { i18nKey: 'labels.emptyState.noLineItems', defaultValue: 'No line items' },
+            columns: [
+              withItemDescriptionLines({ id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } }),
+              { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
+              { id: 'unit-price', header: { i18nKey: 'labels.price', defaultValue: 'Price' }, value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+              { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+            ],
+          },
+          {
+            id: 'cadence-band-totals',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { padding: '6px 12px', backgroundColor: '#f9fafb', borderRadius: '0 0 6px 6px', gap: '2px' } },
+            children: [
+              {
+                id: 'cadence-band-subtotal',
+                type: 'stack',
+                direction: 'row',
+                style: { inline: { justifyContent: 'space-between' } },
+                children: [
+                  { id: 'cadence-band-subtotal-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' }, style: { inline: { fontWeight: 600 } } },
+                  { id: 'cadence-band-subtotal-value', type: 'text', content: { type: 'path', path: 'subtotal|currency' }, style: { inline: { fontWeight: 600, textAlign: 'right' } } },
+                ],
+              },
+              {
+                id: 'cadence-band-tax',
+                type: 'stack',
+                direction: 'row',
+                style: { inline: { justifyContent: 'space-between' } },
+                children: [
+                  { id: 'cadence-band-tax-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.tax', defaultValue: 'Tax' }, style: { inline: { color: '#4b5563' } } },
+                  { id: 'cadence-band-tax-value', type: 'text', content: { type: 'path', path: 'tax|currency' }, style: { inline: { color: '#4b5563', textAlign: 'right' } } },
+                ],
+              },
+              {
+                id: 'cadence-band-total',
+                type: 'stack',
+                direction: 'row',
+                style: { inline: { justifyContent: 'space-between' } },
+                children: [
+                  { id: 'cadence-band-total-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.total', defaultValue: 'Total' }, style: { inline: { fontWeight: 700 } } },
+                  { id: 'cadence-band-total-value', type: 'text', content: { type: 'path', path: 'total|currency' }, style: { inline: { fontWeight: 700, textAlign: 'right' } } },
+                ],
+              },
+            ],
+          },
         ],
       },
-      // ── One-time items table ──────────────────────────────────────
+      // ── Optional (if selected) bands ──────────────────────────────
+      // Only cadences that actually carry optional items iterate here, so an
+      // empty optional section is never rendered. Optional amounts are
+      // excluded from every base/required total.
       {
-        id: 'onetime-section-label',
-        type: 'text',
-        content: { type: 'i18n', i18nKey: 'labels.oneTimeItems', defaultValue: 'One-time Items' },
-        style: { inline: { fontSize: '14px', fontWeight: 700, color: '#ffffff', backgroundColor: '#7c45d3', padding: '6px 12px', borderRadius: '6px 6px 0 0', margin: '0' } },
-      },
-      {
-        id: 'onetime-items',
-        type: 'dynamic-table',
-        style: { inline: { margin: '0 0 16px 0', border: '1px solid #e5e7eb', borderRadius: '0 6px 6px 6px' } },
-        headerStyle: { inline: { backgroundColor: '#7c45d3', color: '#ffffff' } },
-        repeat: { sourceBinding: { bindingId: 'onetimeItems' }, itemBinding: 'item' },
-        emptyStateText: { i18nKey: 'labels.emptyState.noOneTimeItems', defaultValue: 'No one-time items' },
-        columns: [
-          withItemDescriptionLines({ id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } }),
-          { id: 'unit-price', header: { i18nKey: 'labels.price', defaultValue: 'Price' }, value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
-          { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
-          { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+        id: 'cadence-optional-bands',
+        type: 'stack',
+        direction: 'column',
+        style: { inline: { gap: '8px', margin: '0 0 16px 0' } },
+        repeat: { sourceBinding: { bindingId: 'groupsByCadenceWithOptionals' }, itemBinding: 'group' },
+        children: [
+          {
+            id: 'cadence-optional-header',
+            type: 'stack',
+            direction: 'row',
+            style: { inline: { justifyContent: 'space-between', alignItems: 'baseline', backgroundColor: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '6px 6px 0 0', padding: '6px 12px' } },
+            children: [
+              { id: 'cadence-optional-name', type: 'text', content: { type: 'path', path: 'name' }, style: { inline: { fontSize: '13px', fontWeight: 700 } } },
+              { id: 'cadence-optional-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.optionalSection', defaultValue: 'Optional (if selected)' }, style: { inline: { fontSize: '12px', color: '#6b7280' } } },
+            ],
+          },
+          {
+            id: 'cadence-optional-items',
+            type: 'dynamic-table',
+            style: { inline: { margin: '0', border: '1px solid #e5e7eb', borderRadius: '0' } },
+            repeat: { sourceBinding: { bindingId: 'group.optional_items' }, itemBinding: 'item' },
+            emptyStateText: { i18nKey: 'labels.emptyState.noLineItems', defaultValue: 'No line items' },
+            columns: [
+              withItemDescriptionLines({ id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } }),
+              { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
+              { id: 'unit-price', header: { i18nKey: 'labels.price', defaultValue: 'Price' }, value: { type: 'path', path: 'unit_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+              { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+            ],
+          },
+          {
+            id: 'cadence-optional-subtotal',
+            type: 'stack',
+            direction: 'row',
+            style: { inline: { justifyContent: 'space-between', padding: '6px 12px', backgroundColor: '#f9fafb', borderRadius: '0 0 6px 6px' } },
+            children: [
+              { id: 'cadence-optional-subtotal-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.optionalSubtotal', defaultValue: 'Optional Subtotal' }, style: { inline: { fontWeight: 600 } } },
+              { id: 'cadence-optional-subtotal-value', type: 'text', content: { type: 'path', path: 'optional_subtotal|currency' }, style: { inline: { fontWeight: 600, textAlign: 'right' } } },
+            ],
+          },
         ],
       },
       // ── Notes + Totals side-by-side ───────────────────────────────
@@ -602,12 +681,11 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
             style: { inline: { flex: '1', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 12px', backgroundColor: '#f9fafb' } },
             sourceBinding: { bindingId: 'lineItems' },
             rows: [
-              { id: 'monthly-subtotal', label: { i18nKey: 'labels.monthly', defaultValue: 'Monthly' }, value: { type: 'binding', bindingId: 'recurringSubtotal' }, format: 'currency' },
-              { id: 'monthly-tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, value: { type: 'binding', bindingId: 'recurringTax' }, format: 'currency' },
-              { id: 'monthly-total', label: { i18nKey: 'labels.monthlyTotal', defaultValue: 'Monthly Total' }, value: { type: 'binding', bindingId: 'recurringTotal' }, format: 'currency', emphasize: true, style: { inline: { backgroundColor: '#7c45d3', color: '#ffffff', padding: '4px 6px', borderRadius: '4px', margin: '2px 0' } } },
-              { id: 'onetime-subtotal', label: { i18nKey: 'labels.oneTime', defaultValue: 'One-time' }, value: { type: 'binding', bindingId: 'onetimeSubtotal' }, format: 'currency' },
-              { id: 'onetime-tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, value: { type: 'binding', bindingId: 'onetimeTax' }, format: 'currency' },
-              { id: 'onetime-total', label: { i18nKey: 'labels.oneTimeTotal', defaultValue: 'One-time Total' }, value: { type: 'binding', bindingId: 'onetimeTotal' }, format: 'currency', emphasize: true, style: { inline: { backgroundColor: '#7c45d3', color: '#ffffff', padding: '4px 6px', borderRadius: '4px', margin: '2px 0' } } },
+              { id: 'subtotal', label: { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' }, value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
+              { id: 'discounts', label: { i18nKey: 'labels.discounts', defaultValue: 'Discounts' }, value: { type: 'binding', bindingId: 'discountTotal' }, format: 'currency' },
+              { id: 'tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
+              { id: 'grand-total', label: { i18nKey: 'labels.total', defaultValue: 'Total' }, value: { type: 'binding', bindingId: 'total' }, format: 'currency', emphasize: true, style: { inline: { backgroundColor: '#7c45d3', color: '#ffffff', padding: '4px 6px', borderRadius: '4px', margin: '2px 0' } } },
+              { id: 'optional-total', label: { i18nKey: 'labels.optionalTotal', defaultValue: 'Optional if selected' }, value: { type: 'binding', bindingId: 'optionalTotal' }, format: 'currency' },
             ],
           },
         ],

@@ -194,8 +194,17 @@ vi.mock('../../src/components/billing-dashboard/quotes/quoteLineItemDraft', () =
     is_taxable: item.is_taxable ?? true,
     location_id: null,
   }),
-  calculateDraftQuoteTotals: () => ({ subtotal: 0, discount_total: 0, tax: 0, total_amount: 0 }),
+  calculateDraftQuoteTotals: () => ({
+    subtotal: 0,
+    discount_total: 0,
+    tax: 0,
+    total_amount: 0,
+    optional_subtotal: 0,
+    optional_tax: 0,
+    optional_total: 0,
+  }),
   calculateDraftMonthlyRecurringNet: () => 0,
+  calculateDraftCadenceSummary: () => [],
   formatDraftQuoteMoney: (value: number) => `$${(Number(value ?? 0) / 100).toFixed(2)}`,
   resolveDraftDiscountAmounts: () => new Map(),
 }));

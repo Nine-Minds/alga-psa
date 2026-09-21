@@ -256,6 +256,27 @@ export interface QuoteViewModelLocationGroup {
   total: number;
 }
 
+/**
+ * One cadence band of a quote (Monthly / Quarterly / Semi-annually / Annually /
+ * any other recurring cadence / One-time). Required items and their per-band
+ * subtotal/tax/total are the base price; `optional_items` and `optional_*`
+ * carry the "if selected" add-ons that are excluded from every base total.
+ */
+export interface QuoteViewModelCadenceGroup {
+  cadence_key: string;
+  /** Localized band label; English fallback is emitted by the adapter. */
+  name?: string | null;
+  is_recurring: boolean;
+  items: QuoteViewModelLineItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  optional_items: QuoteViewModelLineItem[];
+  optional_subtotal: number;
+  optional_tax: number;
+  optional_total: number;
+}
+
 export interface QuoteViewModel {
   quote_id: string;
   quote_number: string;
@@ -305,6 +326,23 @@ export interface QuoteViewModel {
    * bands. When items span only one location (or none), this may be empty.
    */
   groups_by_location?: QuoteViewModelLocationGroup[];
+  /**
+   * Pre-computed cadence bands for templates that want per-cadence sections.
+   * Only non-empty bands are emitted, in canonical cadence order (monthly →
+   * quarterly → semi-annually → annually → other → one-time). Band
+   * `subtotal/tax/total` are required-only; `optional_*` carry the add-ons.
+   */
+  groups_by_cadence?: QuoteViewModelCadenceGroup[];
+  /**
+   * The subset of `groups_by_cadence` that actually carries optional items.
+   * Templates render the "Optional (if selected)" sections from this so empty
+   * optional sections are omitted without a node-level conditional.
+   */
+  groups_by_cadence_with_optionals?: QuoteViewModelCadenceGroup[];
+  /** Optional (if-selected) add-on totals, excluded from `subtotal`/`total_amount`. */
+  optional_subtotal?: number;
+  optional_tax?: number;
+  optional_total?: number;
   /**
    * True when items span ≥2 distinct locations — a convenience flag for
    * templates that auto-branch between flat and grouped layouts.

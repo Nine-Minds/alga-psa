@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  calculateDraftCadenceSummary,
   calculateDraftMonthlyRecurringNet,
   calculateDraftQuoteTotals,
   createCustomDraftQuoteItem,
@@ -179,7 +180,7 @@ describe('quoteLineItemDraft monthly recurring net (sidebar)', () => {
     expect(calculateDraftMonthlyRecurringNet(items)).toBe(2000); // $25 - $5; optional excluded
   });
 
-  it('treats an optional item with a null/default selection as selected', () => {
+  it('excludes optional items from the required net regardless of selection', () => {
     const items = [
       serviceItem({ local_id: 'svc-a', description: 'Managed Support', unit_price: 2500, is_recurring: true, billing_frequency: 'monthly' }),
       serviceItem({
@@ -193,6 +194,50 @@ describe('quoteLineItemDraft monthly recurring net (sidebar)', () => {
       }),
     ];
 
-    expect(calculateDraftMonthlyRecurringNet(items)).toBe(4000);
+    expect(calculateDraftMonthlyRecurringNet(items)).toBe(2500);
+  });
+});
+
+describe('quoteLineItemDraft cadence summary (editor == PDF)', () => {
+  // Same one-time + monthly + annual + optional fixture the adapter suite uses,
+  // so the draft's per-cadence nets and if-selected figures must match the
+  // rendered PDF bands exactly.
+  const mixedCadenceItems = (): DraftQuoteItem[] => [
+    serviceItem({ local_id: 'monthly-req', description: 'Managed Support', unit_price: 10000, is_recurring: true, billing_frequency: 'monthly' }),
+    serviceItem({ local_id: 'annual-req', description: 'Annual Firewall Subscription', unit_price: 15900, is_recurring: true, billing_frequency: 'annually' }),
+    serviceItem({ local_id: 'onetime-req', description: 'Onboarding', unit_price: 25000, is_recurring: false }),
+    serviceItem({ local_id: 'monthly-opt', description: 'Optional Endpoint Backup', unit_price: 4000, is_recurring: true, billing_frequency: 'monthly', is_optional: true, is_selected: true }),
+    serviceItem({ local_id: 'annual-opt', description: 'Optional Annual Security Review', unit_price: 5000, is_recurring: true, billing_frequency: 'annually', is_optional: true, is_selected: false }),
+    fixedDiscount('disc-annual', 1000, { applies_to_item_id: 'annual-req' }),
+  ];
+
+  it('draft base totals exclude optional add-ons and report them as optional_*', () => {
+    const totals = calculateDraftQuoteTotals(mixedCadenceItems());
+
+    expect(totals.subtotal).toBe(50900); // required only, optional excluded
+    expect(totals.discount_total).toBe(1000);
+    expect(totals.tax).toBe(0);
+    expect(totals.total_amount).toBe(49900);
+    expect(totals.optional_subtotal).toBe(9000);
+    expect(totals.optional_tax).toBe(0);
+    expect(totals.optional_total).toBe(9000);
+  });
+
+  it('per-cadence nets and optional totals match the adapter bands on the same fixture', () => {
+    const summary = calculateDraftCadenceSummary(mixedCadenceItems());
+    const byKey = Object.fromEntries(summary.map((entry) => [entry.cadence_key, entry]));
+
+    expect(summary.map((entry) => entry.cadence_key)).toEqual(['monthly', 'annually', 'onetime']);
+
+    // Required nets equal the adapter's per-band `subtotal`; the discount lands
+    // on the annual band only.
+    expect(byKey.monthly?.net).toBe(10000);
+    expect(byKey.annually?.net).toBe(14900);
+    expect(byKey.onetime?.net).toBe(25000);
+
+    // Optional figures equal the adapter's per-band `optional_subtotal`.
+    expect(byKey.monthly?.optional_total).toBe(4000);
+    expect(byKey.annually?.optional_total).toBe(5000);
+    expect(byKey.onetime?.optional_total).toBe(0);
   });
 });

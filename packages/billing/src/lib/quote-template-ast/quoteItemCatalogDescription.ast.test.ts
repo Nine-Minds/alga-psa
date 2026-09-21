@@ -107,8 +107,8 @@ describe('quote catalog-description stacked table cells', () => {
     const ast = requireAst(getStandardQuoteTemplateAstByCode('standard-quote-grouped'));
     const roundTripped = roundTripAst(ast);
 
-    const sourceTables = [findNodeById<TemplateDynamicTableNode>(ast.layout, 'monthly-items'),
-      findNodeById<TemplateDynamicTableNode>(ast.layout, 'onetime-items')].filter((n): n is TemplateDynamicTableNode => Boolean(n));
+    const sourceTables = [findNodeById<TemplateDynamicTableNode>(ast.layout, 'cadence-band-items'),
+      findNodeById<TemplateDynamicTableNode>(ast.layout, 'cadence-optional-items')].filter((n): n is TemplateDynamicTableNode => Boolean(n));
     expect(sourceTables.length).toBeGreaterThan(0);
 
     const collectTables = (root: TemplateAst): TemplateDynamicTableNode[] => {

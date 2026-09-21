@@ -772,6 +772,244 @@ describe('quoteAdapters discount group allocation', () => {
   });
 });
 
+describe('quoteAdapters cadence bands and optional add-ons', () => {
+  beforeEach(() => {
+    fetchTenantPartyMock.mockReset();
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Northwind MSP',
+      address: '400 SW Main',
+      email: 'billing@example.com',
+      phone: '555-0100',
+      logo_url: null,
+    });
+  });
+
+  // One-time + monthly + one annual ($159) + optional monthly/annual, with a
+  // fixed discount targeted at the annual base. Every figure below is asserted
+  // so the annual line can never silently rejoin the monthly band.
+  const mixedCadenceQuote = (overrides: Record<string, unknown> = {}) =>
+    buildQuote({
+      subtotal: 50900,
+      discount_total: 1000,
+      tax: 2800,
+      total_amount: 52700,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-req',
+          description: 'Managed Support',
+          unit_price: 10000,
+          total_price: 10000,
+          tax_amount: 800,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_item_kind: 'service',
+          display_order: 1,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'annual-req',
+          description: 'Annual Firewall Subscription',
+          unit_price: 15900,
+          total_price: 15900,
+          tax_amount: 0,
+          is_recurring: true,
+          billing_frequency: 'annually',
+          service_item_kind: 'service',
+          display_order: 2,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'onetime-req',
+          description: 'Onboarding',
+          unit_price: 25000,
+          total_price: 25000,
+          tax_amount: 2000,
+          is_recurring: false,
+          billing_frequency: null,
+          display_order: 3,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'monthly-opt',
+          description: 'Optional Endpoint Backup',
+          unit_price: 4000,
+          total_price: 4000,
+          tax_amount: 320,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          is_optional: true,
+          is_selected: true,
+          display_order: 4,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'annual-opt',
+          description: 'Optional Annual Security Review',
+          unit_price: 5000,
+          total_price: 5000,
+          tax_amount: 0,
+          is_recurring: true,
+          billing_frequency: 'annually',
+          is_optional: true,
+          is_selected: false,
+          display_order: 5,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-annual',
+          description: 'Annual discount',
+          unit_price: 1000,
+          total_price: 1000,
+          is_discount: true,
+          discount_type: 'fixed',
+          applies_to_item_id: 'annual-req',
+          is_recurring: false,
+          billing_frequency: null,
+          display_order: 6,
+        }),
+      ],
+      ...overrides,
+    });
+
+  it('groups recurring items by cadence with the annual line in its own band, in canonical order', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
+    const bands = viewModel.groups_by_cadence ?? [];
+
+    // monthly → annually → one-time; empty quarterly/semi-annual bands omitted.
+    expect(bands.map((band) => band.cadence_key)).toEqual(['monthly', 'annually', 'onetime']);
+    expect(bands.every((band) => band.items.length > 0)).toBe(true);
+
+    const monthly = bands.find((band) => band.cadence_key === 'monthly')!;
+    const annual = bands.find((band) => band.cadence_key === 'annually')!;
+    const onetime = bands.find((band) => band.cadence_key === 'onetime')!;
+
+    expect(monthly.items.map((item) => item.quote_item_id)).toEqual(['monthly-req']);
+    expect(annual.items.map((item) => item.quote_item_id)).toEqual(['annual-req', 'disc-annual']);
+    expect(onetime.items.map((item) => item.quote_item_id)).toEqual(['onetime-req']);
+
+    // The annual base never appears in the monthly band.
+    expect(monthly.items.some((item) => item.quote_item_id === 'annual-req')).toBe(false);
+    expect(annual.is_recurring).toBe(true);
+    expect(onetime.is_recurring).toBe(false);
+  });
+
+  it('computes required per-band subtotal/tax/total from the renderer and attributes the discount to the annual band', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
+    const bands = viewModel.groups_by_cadence ?? [];
+    const monthly = bands.find((band) => band.cadence_key === 'monthly')!;
+    const annual = bands.find((band) => band.cadence_key === 'annually')!;
+    const onetime = bands.find((band) => band.cadence_key === 'onetime')!;
+
+    expect(monthly.subtotal).toBe(10000);
+    expect(monthly.tax).toBe(800);
+    expect(monthly.total).toBe(10800);
+
+    // $159 annual less the $10 annual-targeted discount.
+    expect(annual.subtotal).toBe(14900);
+    expect(annual.tax).toBe(0);
+    expect(annual.total).toBe(14900);
+
+    expect(onetime.subtotal).toBe(25000);
+    expect(onetime.tax).toBe(2000);
+    expect(onetime.total).toBe(27000);
+  });
+
+  it('excludes optional add-ons from band and base subtotals and reports them as optional_*', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
+
+    // Optional rows are absent from every required band's items and subtotal.
+    const bands = viewModel.groups_by_cadence ?? [];
+    for (const band of bands) {
+      expect(band.items.every((item) => item.is_optional !== true)).toBe(true);
+    }
+    const monthlyRequired = bands.find((band) => band.cadence_key === 'monthly')!;
+    expect(monthlyRequired.subtotal).toBe(10000); // not 14000
+
+    const optionalBands = viewModel.groups_by_cadence_with_optionals ?? [];
+    expect(optionalBands.map((band) => band.cadence_key)).toEqual(['monthly', 'annually']);
+    const monthlyOptional = optionalBands.find((band) => band.cadence_key === 'monthly')!;
+    const annualOptional = optionalBands.find((band) => band.cadence_key === 'annually')!;
+    expect(monthlyOptional.optional_items.map((item) => item.quote_item_id)).toEqual(['monthly-opt']);
+    expect(monthlyOptional.optional_subtotal).toBe(4000);
+    expect(monthlyOptional.optional_tax).toBe(320);
+    expect(monthlyOptional.optional_total).toBe(4320);
+    expect(annualOptional.optional_items.map((item) => item.quote_item_id)).toEqual(['annual-opt']);
+    expect(annualOptional.optional_subtotal).toBe(5000);
+    expect(annualOptional.optional_tax).toBe(0);
+    expect(annualOptional.optional_total).toBe(5000);
+
+    // Overall base totals exclude optional; the if-selected bucket carries them.
+    expect(viewModel.subtotal).toBe(50900);
+    expect(viewModel.discount_total).toBe(1000);
+    expect(viewModel.tax).toBe(2800);
+    expect(viewModel.total_amount).toBe(52700);
+    expect(viewModel.optional_subtotal).toBe(9000);
+    expect(viewModel.optional_tax).toBe(320);
+    expect(viewModel.optional_total).toBe(9320);
+  });
+
+  it('keeps the legacy recurring_*/onetime_* bindings on their all-recurring meaning', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
+
+    // Legacy recurring includes every recurring row (annual too) and the
+    // discount share; the unselected optional is listed but not counted.
+    expect(viewModel.recurring_items?.map((item) => item.quote_item_id)).toEqual([
+      'monthly-req',
+      'annual-req',
+      'monthly-opt',
+      'annual-opt',
+      'disc-annual',
+    ]);
+    expect(viewModel.recurring_subtotal).toBe(10000 + 15900 + 4000 - 1000);
+    expect(viewModel.recurring_tax).toBe(1120);
+    expect(viewModel.recurring_total).toBe(30020);
+
+    expect(viewModel.onetime_items?.map((item) => item.quote_item_id)).toEqual(['onetime-req']);
+    expect(viewModel.onetime_subtotal).toBe(25000);
+    expect(viewModel.onetime_tax).toBe(2000);
+    expect(viewModel.onetime_total).toBe(27000);
+  });
+
+  it('defaults a blank recurring cadence to monthly and gives an unrecognized cadence its own band', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(
+      fakeKnex,
+      'tenant-1',
+      buildQuote({
+        quote_items: [
+          baseQuoteItem({
+            quote_item_id: 'blank-frequency',
+            description: 'Unset frequency',
+            unit_price: 1000,
+            total_price: 1000,
+            is_recurring: true,
+            billing_frequency: null,
+            display_order: 1,
+          }),
+          baseQuoteItem({
+            quote_item_id: 'biweekly',
+            description: 'Biweekly service',
+            unit_price: 2000,
+            total_price: 2000,
+            is_recurring: true,
+            billing_frequency: 'biweekly',
+            display_order: 2,
+          }),
+          baseQuoteItem({
+            quote_item_id: 'onetime',
+            description: 'One time',
+            unit_price: 3000,
+            total_price: 3000,
+            is_recurring: false,
+            billing_frequency: null,
+            display_order: 3,
+          }),
+        ],
+      })
+    );
+
+    const keys = (viewModel.groups_by_cadence ?? []).map((band) => band.cadence_key);
+    // Unknown recurring cadences sort after the canonical ones and before one-time.
+    expect(keys).toEqual(['monthly', 'biweekly', 'onetime']);
+    const monthly = viewModel.groups_by_cadence?.find((band) => band.cadence_key === 'monthly');
+    expect(monthly?.items.map((item) => item.quote_item_id)).toEqual(['blank-frequency']);
+  });
+});
+
 describe('quoteAdapters catalog-description mapping', () => {
   const catalogItem = (overrides: Record<string, unknown> = {}): never =>
     ({

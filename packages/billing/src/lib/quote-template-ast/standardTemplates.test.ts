@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import path from 'node:path';
 import {
   autoSelectStandardQuoteTemplateCode,
   getStandardQuoteTemplateAstByCode,
@@ -74,5 +75,46 @@ describe('standard quote template AST definitions', () => {
     expect(first).toBeTruthy();
     expect(second).toBeTruthy();
     expect(first).not.toBe(second);
+  });
+
+  it('renders grouped cadences as a repeating cadence-bands stack with an optional sub-stack', () => {
+    const ast = getStandardQuoteTemplateAstByCode('standard-quote-grouped');
+    expect(ast).toBeTruthy();
+    const serialized = JSON.stringify(ast?.layout);
+
+    // Required bands: repeating stack over groupsByCadence, per-band table on
+    // the scope-named `group.items`, renderer-computed subtotal/tax/total.
+    expect(serialized).toContain('"id":"cadence-bands"');
+    expect(serialized).toContain('"bindingId":"groupsByCadence"');
+    expect(serialized).toContain('"id":"cadence-band-items"');
+    expect(serialized).toContain('"bindingId":"group.items"');
+    expect(serialized).toContain('"id":"cadence-band-subtotal"');
+    expect(serialized).toContain('"id":"cadence-band-total"');
+
+    // Optional (if selected) bands: separate repeat so an empty section is
+    // never emitted, bound to the optional-only groups.
+    expect(serialized).toContain('"id":"cadence-optional-bands"');
+    expect(serialized).toContain('"bindingId":"groupsByCadenceWithOptionals"');
+    expect(serialized).toContain('"bindingId":"group.optional_items"');
+    expect(serialized).toContain('"id":"cadence-optional-subtotal"');
+
+    // The old hard-coded monthly table and total are gone from the grouped AST.
+    expect(serialized).not.toContain('Monthly Items');
+    expect(serialized).not.toContain('Monthly Total');
+  });
+
+  it('ships a catalog migration whose grouped AST literal matches the code AST', async () => {
+    const migration = await import(
+      /* @vite-ignore */ path.resolve(
+        __dirname,
+        '../../../../../server/migrations/20260920120000_update_grouped_quote_template_cadence_bands.cjs'
+      )
+    );
+    const literal =
+      (migration as any).__GROUPED_QUOTE_AST ?? (migration as any).default?.__GROUPED_QUOTE_AST;
+    expect(literal).toBeTruthy();
+    // Guards R4: editing buildStandardQuoteGroupedAst without regenerating the
+    // migration literal would leave existing environments on the old layout.
+    expect(literal).toEqual(getStandardQuoteTemplateAstByCode('standard-quote-grouped'));
   });
 });

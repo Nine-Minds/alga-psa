@@ -2686,7 +2686,7 @@ describe('Quote infrastructure', () => {
     const service = createPDFGenerationService(context.tenantId);
     const preview = await service.renderQuotePreview({ quoteId: quote.quote_id });
 
-    expect(preview.html).toContain('Monthly Items');
+    expect(preview.html).toContain('Monthly');
     // The renderer emits the ast-table-cell-line class deliberately (7feee8b23c,
     // "Each line <div> now renders class=ast-... alongside its inline style"),
     // but these exact-string assertions were not updated with it, so they fail
@@ -2722,7 +2722,7 @@ describe('Quote infrastructure', () => {
       expect(Buffer.isBuffer(pdf)).toBe(true);
       expect(pdf.toString('utf8')).toContain('%PDF-quote-lines');
       expect(capturedHtml.value).toContain('<!doctype html>');
-      expect(capturedHtml.value).toContain('Monthly Items');
+      expect(capturedHtml.value).toContain('Monthly');
       expect(capturedHtml.value).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support A</div>');
       expect(capturedHtml.value).toContain('-$5.00');
       expect(capturedHtml.value).toContain('$50.00');
@@ -2730,5 +2730,36 @@ describe('Quote infrastructure', () => {
       getBrowserSpy.mockRestore();
       releaseSpy.mockRestore();
     }
+  });
+
+  it('T221: the migrated grouped catalog row is the cadence-band layout bound to groupsByCadence', async () => {
+    const row = await context.db('standard_quote_document_templates')
+      .where({ standard_quote_document_template_code: 'standard-quote-grouped' })
+      .first<{ templateAst: any }>();
+
+    expect(row).toBeTruthy();
+    const serialized = JSON.stringify(row.templateAst.layout);
+
+    // Required cadence bands: repeating stack over the renderer-computed
+    // groups_by_cadence, with a nested table on the scope-named group.items.
+    expect(serialized).toContain('"id":"cadence-bands"');
+    expect(serialized).toContain('"bindingId":"groupsByCadence"');
+    expect(serialized).toContain('"id":"cadence-band-items"');
+    expect(serialized).toContain('"bindingId":"group.items"');
+    // Optional add-on bands.
+    expect(serialized).toContain('"id":"cadence-optional-bands"');
+    expect(serialized).toContain('"bindingId":"groupsByCadenceWithOptionals"');
+    expect(serialized).toContain('"bindingId":"group.optional_items"');
+
+    // The old hard-coded monthly table/total are gone from the shipped catalog.
+    expect(serialized).not.toContain('Monthly Items');
+    expect(serialized).not.toContain('Monthly Total');
+
+    // The bindings the layout references are declared on the row.
+    expect(row.templateAst.bindings.collections.groupsByCadence.path).toBe('groups_by_cadence');
+    expect(row.templateAst.bindings.collections.groupsByCadenceWithOptionals.path).toBe(
+      'groups_by_cadence_with_optionals',
+    );
+    expect(row.templateAst.bindings.values.optionalTotal.path).toBe('optional_total');
   });
 });

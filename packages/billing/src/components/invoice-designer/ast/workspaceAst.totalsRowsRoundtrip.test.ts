@@ -9,12 +9,12 @@ import type { DesignerWorkspaceSnapshot } from '../state/designerStore';
 const PURPLE_BG = '#7c45d3';
 const PURPLE_TEXT = '#ffffff';
 
-const findTotalsRows = (ast: TemplateAst): Array<Record<string, any>> => {
+const findTotalsRows = (ast: TemplateAst, anchorId = 'monthly-total'): Array<Record<string, any>> => {
   const totals = listNodesByType(ast.layout, 'totals').find((node) =>
-    node.rows.some((row) => row.id === 'monthly-total' || row.id === 'onetime-total')
+    node.rows.some((row) => row.id === anchorId)
   );
   if (!totals) {
-    throw new Error('Grouped totals node not found');
+    throw new Error(`Grouped totals node (anchor ${anchorId}) not found`);
   }
   return totals.rows as unknown as Array<Record<string, any>>;
 };
@@ -58,14 +58,15 @@ const setWorkspaceRowColors = (
 
 const applyExpectedRowColors = (
   ast: TemplateAst,
-  colors: Record<string, { backgroundColor: string; color: string }>
+  colors: Record<string, { backgroundColor: string; color: string }>,
+  anchorId = 'monthly-total'
 ): TemplateAst => {
   const next = cloneAst(ast);
   const totals = listNodesByType(next.layout, 'totals').find((node) =>
-    node.rows.some((row) => row.id === 'monthly-total' || row.id === 'onetime-total')
+    node.rows.some((row) => row.id === anchorId)
   );
   if (!totals || totals.type !== 'totals') {
-    throw new Error('Grouped totals node not found');
+    throw new Error(`Grouped totals node (anchor ${anchorId}) not found`);
   }
   totals.rows = totals.rows.map((row) => {
     const target = colors[row.id];
@@ -82,55 +83,56 @@ describe('workspaceAst totals-row branding round trips', () => {
     'onetime-total': { backgroundColor: '#b91c1c', color: '#fef2f2' },
   } as Record<string, { backgroundColor: string; color: string }>;
 
+  // The grouped quote's totals card is now a single required summary (subtotal
+  // / discounts / tax / grand total) plus the optional-if-selected line, so the
+  // editable branded rows are `grand-total` and `optional-total`.
+  const EDITED_QUOTE = {
+    'grand-total': { backgroundColor: '#0f766e', color: '#022c22' },
+    'optional-total': { backgroundColor: '#b91c1c', color: '#fef2f2' },
+  } as Record<string, { backgroundColor: string; color: string }>;
+
   it('T004 quote AST round trip preserves edited colors, ids, i18n labels, bindings, formats, emphasis, ordering, and unrelated styles', () => {
     const source = getStandardQuoteTemplateAstByCode('standard-quote-grouped');
     expect(source).toBeTruthy();
     if (!source) return;
 
     const baseline = roundTripAst(source);
-    const baselineRows = findTotalsRows(baseline);
-    const monthlyBaseline = baselineRows.find((row) => row.id === 'monthly-total');
-    expect(monthlyBaseline).toBeTruthy();
-    if (!monthlyBaseline) return;
-    expect(monthlyBaseline.label).toEqual({ i18nKey: 'labels.monthlyTotal', defaultValue: 'Monthly Total' });
-    expect(monthlyBaseline.style?.inline?.backgroundColor).toBe(PURPLE_BG);
-    expect(monthlyBaseline.style?.inline?.color).toBe(PURPLE_TEXT);
-    expect(monthlyBaseline.emphasize).toBe(true);
-    expect(monthlyBaseline.value).toEqual({ type: 'binding', bindingId: 'recurringTotal' });
-    expect(monthlyBaseline.format).toBe('currency');
+    const baselineRows = findTotalsRows(baseline, 'grand-total');
+    const grandBaseline = baselineRows.find((row) => row.id === 'grand-total');
+    expect(grandBaseline).toBeTruthy();
+    if (!grandBaseline) return;
+    expect(grandBaseline.label).toEqual({ i18nKey: 'labels.total', defaultValue: 'Total' });
+    expect(grandBaseline.style?.inline?.backgroundColor).toBe(PURPLE_BG);
+    expect(grandBaseline.style?.inline?.color).toBe(PURPLE_TEXT);
+    expect(grandBaseline.emphasize).toBe(true);
+    expect(grandBaseline.value).toEqual({ type: 'binding', bindingId: 'total' });
+    expect(grandBaseline.format).toBe('currency');
 
     // Unstyled rows must not gain synthetic style wrappers from a designer pass.
-    const subtotalBaseline = baselineRows.find((row) => row.id === 'monthly-subtotal');
+    const subtotalBaseline = baselineRows.find((row) => row.id === 'subtotal');
     expect(subtotalBaseline).toBeTruthy();
     if (subtotalBaseline) {
       expect(Object.prototype.hasOwnProperty.call(subtotalBaseline, 'style')).toBe(false);
     }
     const ids = baselineRows.map((row) => row.id);
-    expect(ids).toEqual([
-      'monthly-subtotal',
-      'monthly-tax',
-      'monthly-total',
-      'onetime-subtotal',
-      'onetime-tax',
-      'onetime-total',
-    ]);
+    expect(ids).toEqual(['subtotal', 'discounts', 'tax', 'grand-total', 'optional-total']);
 
     // Simulate the widget writing edited colors into metadata.totalsRows.
     const workspace = importTemplateAstToWorkspace(cloneAst(source));
     const totalsNode = findWorkspaceNode(workspace, 'totals');
     expect(totalsNode).toBeTruthy();
     if (!totalsNode) return;
-    setWorkspaceRowColors(workspace, totalsNode.id, EDITED);
+    setWorkspaceRowColors(workspace, totalsNode.id, EDITED_QUOTE);
     const exported = exportWorkspaceToTemplateAst(workspace);
 
-    const expected = applyExpectedRowColors(baseline, EDITED);
+    const expected = applyExpectedRowColors(baseline, EDITED_QUOTE, 'grand-total');
     expect(exported).toEqual(expected);
 
-    const editedRows = findTotalsRows(exported);
-    const editedMonthly = editedRows.find((row) => row.id === 'monthly-total');
-    expect(editedMonthly?.style?.inline).toMatchObject({ ...EDITED['monthly-total'], padding: '4px 6px', borderRadius: '4px', margin: '2px 0' });
-    expect(editedRows.find((row) => row.id === 'onetime-total')?.style?.inline?.backgroundColor).toBe('#b91c1c');
-    expect(editedRows.find((row) => row.id === 'monthly-subtotal')).toBeTruthy();
+    const editedRows = findTotalsRows(exported, 'grand-total');
+    const editedGrand = editedRows.find((row) => row.id === 'grand-total');
+    expect(editedGrand?.style?.inline).toMatchObject({ ...EDITED_QUOTE['grand-total'], padding: '4px 6px', borderRadius: '4px', margin: '2px 0' });
+    expect(editedRows.find((row) => row.id === 'optional-total')?.style?.inline?.backgroundColor).toBe('#b91c1c');
+    expect(editedRows.find((row) => row.id === 'subtotal')).toBeTruthy();
   });
 
   it('T005 invoice AST round trip exercises the same widget contract and keeps unstyled rows free of synthetic styles', () => {
@@ -180,24 +182,24 @@ describe('workspaceAst totals-row branding round trips', () => {
     expect(totalsNode).toBeTruthy();
     if (!totalsNode) return;
     const openedRows = ((totalsNode.props as { metadata?: Record<string, unknown> })?.metadata?.totalsRows ?? []) as Array<Record<string, any>>;
-    expect(openedRows.find((row) => row.id === 'monthly-total')?.style?.inline?.backgroundColor).toBe(PURPLE_BG);
-    expect(openedRows.find((row) => row.id === 'monthly-total')?.style?.inline?.color).toBe(PURPLE_TEXT);
+    expect(openedRows.find((row) => row.id === 'grand-total')?.style?.inline?.backgroundColor).toBe(PURPLE_BG);
+    expect(openedRows.find((row) => row.id === 'grand-total')?.style?.inline?.color).toBe(PURPLE_TEXT);
 
     // User edits two rows in the designer, then saves (export) and reopens (import).
-    setWorkspaceRowColors(workspaceOpen, totalsNode.id, EDITED);
+    setWorkspaceRowColors(workspaceOpen, totalsNode.id, EDITED_QUOTE);
     const savedAst = exportWorkspaceToTemplateAst(workspaceOpen);
     const reopenedWorkspace = importTemplateAstToWorkspace(cloneAst(savedAst));
     const reopenedTotals = findWorkspaceNode(reopenedWorkspace, 'totals');
     expect(reopenedTotals).toBeTruthy();
     if (!reopenedTotals) return;
     const reopenedRows = ((reopenedTotals.props as { metadata?: Record<string, unknown> })?.metadata?.totalsRows ?? []) as Array<Record<string, any>>;
-    expect(reopenedRows.find((row) => row.id === 'monthly-total')?.style?.inline?.backgroundColor).toBe('#0f766e');
-    expect(reopenedRows.find((row) => row.id === 'monthly-total')?.style?.inline?.color).toBe('#022c22');
-    expect(reopenedRows.find((row) => row.id === 'onetime-total')?.style?.inline?.color).toBe('#fef2f2');
+    expect(reopenedRows.find((row) => row.id === 'grand-total')?.style?.inline?.backgroundColor).toBe('#0f766e');
+    expect(reopenedRows.find((row) => row.id === 'grand-total')?.style?.inline?.color).toBe('#022c22');
+    expect(reopenedRows.find((row) => row.id === 'optional-total')?.style?.inline?.color).toBe('#fef2f2');
 
     // Header/table branding outside the edited rows is byte-identical to the round trip.
     const reopenedExport = exportWorkspaceToTemplateAst(reopenedWorkspace);
-    expect(reopenedExport).toEqual(applyExpectedRowColors(baseline, EDITED));
+    expect(reopenedExport).toEqual(applyExpectedRowColors(baseline, EDITED_QUOTE, 'grand-total'));
 
     const baselineHeaders = listNodesByType(baseline.layout, 'dynamic-table').map((table) => table.headerStyle);
     const reopenedHeaders = listNodesByType(reopenedExport.layout, 'dynamic-table').map((table) => table.headerStyle);
@@ -214,7 +216,7 @@ describe('workspaceAst totals-row branding round trips', () => {
     const totalsNode = findWorkspaceNode(workspace, 'totals');
     expect(totalsNode).toBeTruthy();
     if (!totalsNode) return;
-    setWorkspaceRowColors(workspace, totalsNode.id, EDITED);
+    setWorkspaceRowColors(workspace, totalsNode.id, EDITED_QUOTE);
     expect(JSON.stringify(source)).toBe(before);
   });
 });
@@ -223,11 +225,14 @@ describe('grouped standard template row fixture sanity', () => {
   it('both grouped standards carry purple/white saved row styles (no migration target)', () => {
     const quote = STANDARD_QUOTE_TEMPLATE_ASTS['standard-quote-grouped'];
     const invoice = getStandardTemplateAstByCode('standard-grouped');
-    for (const ast of [quote, invoice]) {
-      if (!ast) continue;
-      const rows = findTotalsRows(ast);
-      expect(rows.find((row) => row.id === 'monthly-total')?.style?.inline?.backgroundColor).toBe(PURPLE_BG);
-      expect(rows.find((row) => row.id === 'onetime-total')?.style?.inline?.color).toBe(PURPLE_TEXT);
+    if (quote) {
+      const quoteRows = findTotalsRows(quote, 'grand-total');
+      expect(quoteRows.find((row) => row.id === 'grand-total')?.style?.inline?.backgroundColor).toBe(PURPLE_BG);
+    }
+    if (invoice) {
+      const invoiceRows = findTotalsRows(invoice);
+      expect(invoiceRows.find((row) => row.id === 'monthly-total')?.style?.inline?.backgroundColor).toBe(PURPLE_BG);
+      expect(invoiceRows.find((row) => row.id === 'onetime-total')?.style?.inline?.color).toBe(PURPLE_TEXT);
     }
   });
 });
