@@ -327,6 +327,29 @@ const EVIDENCE = {
       + 'do NOT constitute a real inbound-email journey against a live mail source - that is CF008/CF009, '
       + 'explicitly out of scope this round and still unproven.',
   },
+  'f010-shell-extraction': {
+    type: 'analysis',
+    sha: 'ROUND5_CANDIDATE',
+    command: 'Side-by-side code read of packages/tickets/src/components/TicketListShell.tsx and the frame '
+      + 'of packages/tickets/src/components/TicketingDashboard.tsx (3123 lines), plus grep for TicketListShell '
+      + 'across packages/ and server/',
+    result: 'TicketingDashboard.tsx contains ZERO occurrences of TicketListShell; the shell\'s only consumer '
+      + 'is QualifiedTicketList.tsx:22,:346. F010 ("extract from the actual dashboard frame ... preserving '
+      + 'native structure and IDs") is therefore unmet and T005 has no subject. New this round: the '
+      + 'extraction is BLOCKED rather than merely unstarted. The dashboard puts BoardHeader, the sticky '
+      + 'toolbar and the results inside one card (:2257) with BoardTabStrip outside it (:2251); '
+      + 'TicketListShell renders board/toolbar/children as flat siblings with no wrapper (:44-65), so that '
+      + 'grouping cannot be expressed. Two further conflicts: the shell owns a root id (:45) that the '
+      + 'dashboard\'s ReflectionContainer already carries, and it wraps scope in mb-4 (:61) where the '
+      + 'dashboard renders scopeControls bare. Conclusion: the SHELL must change to serve the dashboard, '
+      + 'not the row be reworded down to the parallel frame.',
+    artifact: 'f010-shell-extraction.md',
+    artifactNote: 'A code read, not an execution - and by EVIDENCE type "analysis" it is structurally '
+      + 'incapable of moving a row to verified (see NON_ACCEPTING_EVIDENCE_TYPES in '
+      + 'scripts/lib/co-managed-completion.mjs). ticketList:F010 and ticketList:T005 stay missing-code. It '
+      + 'does NOT establish that any proposed shell revision is correct; it establishes only what obstructs '
+      + 'the one the row asks for.',
+  },
   'ticket-list-reconciliation': {
     type: 'analysis',
     sha: 'ROUND3_CANDIDATE',
@@ -628,9 +651,19 @@ const TICKET_LIST_RECONCILIATION = {
     why:
       'PARTIAL, and not what the row asks. TicketListShell.tsx exists with the required slots, but its only '
       + 'consumer is the qualified list (QualifiedTicketList.tsx:346). TicketingDashboard.tsx never imports '
-      + 'it and still renders heading/actions/board inline (:2245). Nothing was extracted from the actual '
-      + 'dashboard frame; a parallel frame was written, so the native structure this row exists to preserve '
-      + 'is not going through it.',
+      + 'it and still renders heading/actions/board inline (:2196-2200). Nothing was extracted from the '
+      + 'actual dashboard frame; a parallel frame was written, so the native structure this row exists to '
+      + 'preserve is not going through it. SHARPENED this round (f010-shell-extraction.md): the extraction '
+      + 'is BLOCKED, not merely unstarted. The dashboard groups BoardHeader, toolbar and results inside one '
+      + 'card (TicketingDashboard.tsx:2257) with BoardTabStrip outside it (:2251), while TicketListShell '
+      + 'emits board/toolbar/children as flat siblings with no wrapper (TicketListShell.tsx:44-65), so that '
+      + 'grouping is inexpressible; the shell also owns a root id (:45) the dashboard already carries on its '
+      + 'ReflectionContainer, and wraps scope in mb-4 (:61) where the dashboard renders it bare. F010 '
+      + 'requires preserving native structure AND ids, so the shell contract has to change before the '
+      + 'dashboard can render through it. Deliberately NOT attempted this round: no render test exists over '
+      + 'TicketingDashboard to catch a DOM or automation-id regression on the primary PSA ticket screen. '
+      + 'The row is NOT reworded down to what the parallel frame already does.',
+    evidence: ['f010-shell-extraction'],
   },
   'ticketList:F012': {
     status: 'implemented-unverified',
@@ -836,7 +869,8 @@ const TICKET_LIST_RECONCILIATION = {
   'ticketList:T005': {
     status: 'missing-code',
     why:
-      'Cannot exist as written while F010 is unmet: the dashboard does not render through TicketListShell, '
+      'Cannot exist as written while F010 is unmet (see f010-shell-extraction.md for the blocking shell '
+      + 'contract mismatch): the dashboard does not render through TicketListShell, '
       + 'so \'native dashboard rendered through the new frame\' has no subject. Pre-existing native regressions '
       + 'do exist (ticketColumns.prefetch.contract, boardArrival.contract, ticketColumnOrder, '
       + 'ticketViewSettings) and are unaffected.',
