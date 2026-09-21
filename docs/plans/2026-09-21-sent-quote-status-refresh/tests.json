@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Manual smoke: open an Active quote in detail view, send it successfully, return to the list without a browser refresh, and verify it is absent from Active, present in Sent, and both counts changed; repeat a successful resend and approval to confirm the list snapshot refreshes without a loading flash.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F003", "F004", "F006", "F007"]
   }
 ]
