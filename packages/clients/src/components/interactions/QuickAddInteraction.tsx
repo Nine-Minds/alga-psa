@@ -153,7 +153,11 @@ export function QuickAddInteraction({
   const meetingContactId = !isEditMode
     ? (isStandaloneCreate
         ? (selectedContactId || null)
-        : (entityType === 'contact' ? (entityId ?? null) : null))
+        : (entityType === 'contact'
+            ? (entityId ?? null)
+            : entityType === 'opportunity'
+              ? (contactId ?? null)
+              : null))
     : null;
   const selectedInteractionType = useMemo(
     () => interactionTypes.find((type) => type.type_id === typeId) ?? null,
