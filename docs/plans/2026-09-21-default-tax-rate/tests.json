@@ -1,0 +1,119 @@
+[
+  {
+    "id": "T001",
+    "description": "DB migration up/down and real settings round-trip with two tenants: cross-tenant/default deletion FK violations fail; unrelated settings survive.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F004"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB resolver matrix: configured 10% beats older rate; inactive/missing/foreign/expired/future or inactive-region configuration fails; date boundaries, absent setting and no-active-rate fallback match policy.",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Settings action/UI flow saves and reloads a region-labelled default; permission denial and concurrent source-setting save preserve data; empty and invalid configuration states are actionable.",
+    "implemented": false,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F018"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed lifecycle guards reject deletion/deactivation/re-regioning or date invalidation of a configured default; replacement/clear allows applicable mutation; race with assignment cannot create invalid links.",
+    "implemented": false,
+    "featureIds": [
+      "F006",
+      "F018"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB initializer creates one default association and profile-keyed settings, visible through the real region reader; repeated and concurrent calls and a second profile preserve overrides and component counts, including fractional rates.",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB initializer repair covers existing nondefault association and conflicting location association without destroying location data or violating uniqueness.",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Parameterized client entrypoint tests cover UI action, API, shared model and Entra success and forced tax failure rollback; AlgaDesk and explicit skip behavior remain valid.",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F010",
+      "F011",
+      "F019"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed UI-action/service-API/product-API create matrix covers omitted, explicit NULL, explicit valid UUID, invalid/foreign ID and no configured default; schema parsing retains omission.",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F019"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Quick-add interaction tests verify inherited display/payload, explicit rate/non-taxable, reset, late fetch preserving choice, and product edit retaining saved NULL/UUID.",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB backfill preview/apply with services/products, other tenant, existing assignments and excluded rows updates only selected NULLs; retry is idempotent and reports counts.",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB backfill guard tests cover denied permissions, foreign IDs, changed default, rate invalidation, concurrent explicit assignment and newly created NULL rows outside preview; invalid requests do not partially mutate.",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Billing regression: single uncapped 10% GST rate yields 10.00 on 100.00 net for inherited client/catalog; non-taxable, exempt and external-source paths retain behavior; changing default does not rewrite existing assignments/invoices.",
+    "implemented": false,
+    "featureIds": [
+      "F008",
+      "F012",
+      "F013",
+      "F020"
+    ]
+  }
+]
