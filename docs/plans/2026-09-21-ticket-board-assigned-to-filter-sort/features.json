@@ -1,0 +1,56 @@
+[
+  {
+    "id": "F001",
+    "description": "The ticket board accepts assigned_to_name as a list sort key and sorts by the primary assignee display name.",
+    "implemented": false,
+    "prdRefs": ["Requirements > R1 — One supported sort-key contract", "Requirements > R2 — Complete SQL mapping"]
+  },
+  {
+    "id": "F002",
+    "description": "The ticket list accepts assigned_team_name and updated_at as sort keys in ascending and descending order.",
+    "implemented": false,
+    "prdRefs": ["Requirements > R1 — One supported sort-key contract", "Requirements > R2 — Complete SQL mapping"]
+  },
+  {
+    "id": "F003",
+    "description": "Supported ticket-list sort keys survive URL updates, browser history, reload, and server-rendered first load.",
+    "implemented": false,
+    "prdRefs": ["Requirements > R1 — One supported sort-key contract"]
+  },
+  {
+    "id": "F004",
+    "description": "Previous and next ticket navigation uses the same primary and tie-break ordering as the visible ticket list.",
+    "implemented": false,
+    "prdRefs": ["Requirements > R2 — Complete SQL mapping"]
+  },
+  {
+    "id": "F005",
+    "description": "A user-safe action error returned by a ticket-list fetch is shown even when the caller supplies a generic fallback message.",
+    "implemented": false,
+    "prdRefs": ["Requirements > R3 — Returned action messages outrank fallbacks"]
+  },
+  {
+    "id": "F006",
+    "description": "An unexpected thrown ticket-list error continues to show the operation-specific fallback rather than raw exception text.",
+    "implemented": false,
+    "prdRefs": ["Requirements > R3 — Returned action messages outrank fallbacks", "Security / permissions"]
+  },
+  {
+    "id": "F007",
+    "description": "Malformed assignee identifiers in a stored board or tenant view are removed before ticket-list validation, including during SSR without a known-user list.",
+    "implemented": false,
+    "prdRefs": ["Requirements > R4 — Saved assignee IDs are safe at every boundary"]
+  },
+  {
+    "id": "F008",
+    "description": "Valid stored assignee UUIDs remain active and duplicate UUIDs are normalized without changing unassigned-filter semantics.",
+    "implemented": false,
+    "prdRefs": ["Requirements > R4 — Saved assignee IDs are safe at every boundary"]
+  },
+  {
+    "id": "F009",
+    "description": "Saving a board view rejects non-UUID assignedToIds instead of persisting a document that the ticket-list schema cannot read.",
+    "implemented": false,
+    "prdRefs": ["Requirements > R4 — Saved assignee IDs are safe at every boundary"]
+  }
+]
