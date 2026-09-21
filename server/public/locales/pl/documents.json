@@ -13,6 +13,7 @@
       "quarterly": "Kwartalnie",
       "semiAnnually": "Półrocznie"
     },
+    "cadenceTotal": "Suma {{cadence}}",
     "date": "Data",
     "description": "Opis",
     "discounts": "Rabaty",

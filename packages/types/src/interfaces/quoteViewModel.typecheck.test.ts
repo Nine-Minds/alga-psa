@@ -25,6 +25,7 @@ describe('QuoteViewModel typing contract', () => {
     const cadenceGroup: QuoteViewModelCadenceGroup = {
       cadence_key: 'monthly',
       name: 'Monthly',
+      total_label: 'Monthly Total',
       is_recurring: true,
       items: [],
       subtotal: 0,

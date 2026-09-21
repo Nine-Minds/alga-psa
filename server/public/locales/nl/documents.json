@@ -13,6 +13,7 @@
       "quarterly": "Per kwartaal",
       "semiAnnually": "Halfjaarlijks"
     },
+    "cadenceTotal": "Totaal {{cadence}}",
     "date": "Datum",
     "description": "Omschrijving",
     "discounts": "Kortingen",

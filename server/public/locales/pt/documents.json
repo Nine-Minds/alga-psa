@@ -13,6 +13,7 @@
       "quarterly": "Trimestral",
       "semiAnnually": "Semestral"
     },
+    "cadenceTotal": "Total {{cadence}}",
     "date": "Data",
     "description": "Descrição",
     "discounts": "Descontos",

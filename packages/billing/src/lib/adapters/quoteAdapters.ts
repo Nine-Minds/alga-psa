@@ -396,6 +396,7 @@ function buildCadenceGroups(
       group = {
         cadence_key: cadenceKey,
         name: cadenceDefaultName(cadenceKey),
+        total_label: `${cadenceDefaultName(cadenceKey)} Total`,
         is_recurring: isRecurringCadenceKey(cadenceKey),
         items: [],
         subtotal: 0,

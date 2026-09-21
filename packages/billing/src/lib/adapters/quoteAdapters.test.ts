@@ -907,6 +907,13 @@ describe('quoteAdapters cadence bands and optional add-ons', () => {
     expect(onetime.subtotal).toBe(25000);
     expect(onetime.tax).toBe(2000);
     expect(onetime.total).toBe(27000);
+
+    // The band footer label is renderer-computed per cadence.
+    expect(monthly.name).toBe('Monthly');
+    expect(monthly.total_label).toBe('Monthly Total');
+    expect(annual.name).toBe('Annually');
+    expect(annual.total_label).toBe('Annually Total');
+    expect(onetime.total_label).toBe('One-time Total');
   });
 
   it('excludes optional add-ons from band and base subtotals and reports them as optional_*', async () => {
@@ -1007,6 +1014,9 @@ describe('quoteAdapters cadence bands and optional add-ons', () => {
     expect(keys).toEqual(['monthly', 'biweekly', 'onetime']);
     const monthly = viewModel.groups_by_cadence?.find((band) => band.cadence_key === 'monthly');
     expect(monthly?.items.map((item) => item.quote_item_id)).toEqual(['blank-frequency']);
+    const biweekly = viewModel.groups_by_cadence?.find((band) => band.cadence_key === 'biweekly');
+    expect(biweekly?.name).toBe('Biweekly');
+    expect(biweekly?.total_label).toBe('Biweekly Total');
   });
 });
 

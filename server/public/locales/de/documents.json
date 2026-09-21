@@ -13,6 +13,7 @@
       "quarterly": "Vierteljährlich",
       "semiAnnually": "Halbjährlich"
     },
+    "cadenceTotal": "{{cadence}} gesamt",
     "date": "Datum",
     "description": "Beschreibung",
     "discounts": "Rabatte",

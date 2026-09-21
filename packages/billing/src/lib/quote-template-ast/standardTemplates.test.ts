@@ -90,6 +90,10 @@ describe('standard quote template AST definitions', () => {
     expect(serialized).toContain('"bindingId":"group.items"');
     expect(serialized).toContain('"id":"cadence-band-subtotal"');
     expect(serialized).toContain('"id":"cadence-band-total"');
+    // The band footer label is renderer-computed ("Monthly Total" /
+    // "Annually Total"), not a bare AST "Total".
+    expect(serialized).toContain('"id":"cadence-band-total-label"');
+    expect(serialized).toContain('"path":"total_label"');
 
     // Optional (if selected) bands: separate repeat so an empty section is
     // never emitted, bound to the optional-only groups.

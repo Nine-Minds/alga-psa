@@ -266,6 +266,12 @@ export interface QuoteViewModelCadenceGroup {
   cadence_key: string;
   /** Localized band label; English fallback is emitted by the adapter. */
   name?: string | null;
+  /**
+   * Localized "{{cadence}} Total" band-footer label (e.g. "Monthly Total").
+   * English fallback (`${name} Total`) is emitted by the adapter and replaced
+   * with the localized template by the PDF service.
+   */
+  total_label?: string | null;
   is_recurring: boolean;
   items: QuoteViewModelLineItem[];
   subtotal: number;

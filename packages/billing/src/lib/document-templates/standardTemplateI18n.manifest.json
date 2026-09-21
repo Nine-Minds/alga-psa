@@ -1274,7 +1274,7 @@
       "$.layout.children[4].children[2].children[1].children[1].content.path=tax|currency",
       "$.layout.children[4].children[2].children[1].children[1].id=cadence-band-tax-value",
       "$.layout.children[4].children[2].children[1].id=cadence-band-tax",
-      "$.layout.children[4].children[2].children[2].children[0].content.i18nKey=labels.total",
+      "$.layout.children[4].children[2].children[2].children[0].content.path=total_label",
       "$.layout.children[4].children[2].children[2].children[0].id=cadence-band-total-label",
       "$.layout.children[4].children[2].children[2].children[1].content.path=total|currency",
       "$.layout.children[4].children[2].children[2].children[1].id=cadence-band-total-value",

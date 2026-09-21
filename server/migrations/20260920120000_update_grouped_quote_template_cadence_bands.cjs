@@ -10,7 +10,8 @@
  * This migration replaces the shared `standard-quote-grouped` catalog row's
  * AST with the cadence-aware layout:
  *   - one repeating `cadence-bands` stack over `groupsByCadence` (renderer-
- *     computed per-cadence subtotal/tax/total, non-empty bands only), and
+ *     computed per-cadence subtotal/tax/total and "{{cadence}} Total" footer,
+ *     non-empty bands only), and
  *   - one repeating `cadence-optional-bands` stack over
  *     `groupsByCadenceWithOptionals` for the "Optional (if selected)" add-ons
  *     that are excluded from every base total.
@@ -966,9 +967,8 @@ const GROUPED_QUOTE_AST = {
                     "id": "cadence-band-total-label",
                     "type": "text",
                     "content": {
-                      "type": "i18n",
-                      "i18nKey": "labels.total",
-                      "defaultValue": "Total"
+                      "type": "path",
+                      "path": "total_label"
                     },
                     "style": {
                       "inline": {

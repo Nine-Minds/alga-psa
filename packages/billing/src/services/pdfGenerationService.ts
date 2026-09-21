@@ -47,13 +47,15 @@ import { resolveSalesOrderTemplateAst } from '../lib/sales-order-template-ast/te
 import { browserPoolService } from './browserPoolService';
 
 /**
- * Localize the data-driven cadence band names on a quote view model.
+ * Localize the data-driven cadence band names and footer totals on a quote
+ * view model.
  *
- * The band headers bind a `path 'name'` rather than an AST i18n key (the set of
- * cadences is not known when the template is authored), so the PDF service
- * resolves each band's `labels.cadence.*` key from the same `documents`
+ * The band headers bind a `path 'name'` and the band footers bind a
+ * `path 'total_label'` rather than AST i18n keys (the set of cadences is not
+ * known when the template is authored), so the PDF service resolves each band's
+ * `labels.cadence.*` and `labels.cadenceTotal` keys from the same `documents`
  * namespace `localizeTemplateAstForLocale` uses. Unknown cadences keep their
- * English fallback name.
+ * English fallback name and `${name} Total`.
  */
 async function localizeQuoteCadenceGroups(
   viewModel: QuoteViewModel,
@@ -71,13 +73,28 @@ async function localizeQuoteCadenceGroups(
     const cache = new Map<string, string>();
     const localize = (group: QuoteViewModelCadenceGroup): void => {
       const key = cadenceI18nKey(group.cadence_key);
-      if (!key) return;
+      if (!key) {
+        group.total_label = group.total_label ?? `${group.name ?? ''} Total`;
+        return;
+      }
       let label = cache.get(key);
       if (label === undefined) {
         label = String(t(key, { defaultValue: group.name ?? '' }));
         cache.set(key, label);
       }
       group.name = label;
+
+      // The "{{cadence}} Total" template is cached per cadence so a quote with
+      // monthly + annual bands interpolates each band's own localized name.
+      const totalKey = `total::${group.cadence_key}`;
+      let totalLabel = cache.get(totalKey);
+      if (totalLabel === undefined) {
+        totalLabel = String(
+          t('labels.cadenceTotal', { cadence: label, defaultValue: `${label} Total` }),
+        );
+        cache.set(totalKey, totalLabel);
+      }
+      group.total_label = totalLabel;
     };
     groups.forEach(localize);
     optionalGroups.forEach(localize);

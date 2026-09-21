@@ -163,6 +163,7 @@ describe('on-screen previews render in the recipient locale', () => {
                   { id: 'amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total_price' }, format: 'currency' },
                 ],
               },
+              { id: 'cadence-band-total-label', type: 'text', content: { type: 'path', path: 'total_label' } },
               { id: 'cadence-band-total', type: 'text', content: { type: 'path', path: 'total|currency' } },
             ],
           },
@@ -233,6 +234,21 @@ describe('on-screen previews render in the recipient locale', () => {
           optional_tax: 0,
           optional_total: 0,
         },
+        {
+          // Unknown cadence: no `labels.cadence.*` key, so the band keeps its
+          // English fallback name and the `${name} Total` fallback footer.
+          cadence_key: 'biweekly',
+          name: 'Biweekly',
+          is_recurring: true,
+          items: [{ quote_item_id: 'b', description: 'Biweekly Check', quantity: 1, unit_price: 2000, total_price: 2000 }],
+          subtotal: 2000,
+          tax: 0,
+          total: 2000,
+          optional_items: [],
+          optional_subtotal: 0,
+          optional_tax: 0,
+          optional_total: 0,
+        },
       ],
       groups_by_cadence_with_optionals: [
         {
@@ -262,6 +278,13 @@ describe('on-screen previews render in the recipient locale', () => {
     expect(preview.html).toContain('Monatlich');
     expect(preview.html).toContain('Jährlich');
     expect(preview.html).toContain('Optional (falls ausgewählt)');
+    // Band footers interpolate the localized cadence into `labels.cadenceTotal`.
+    expect(preview.html).toContain('Monatlich gesamt');
+    expect(preview.html).toContain('Jährlich gesamt');
+    // An unknown cadence has no translation: it keeps the English fallback name
+    // and the `${name} Total` footer rather than rendering a raw key/blank.
+    expect(preview.html).toContain('Biweekly');
+    expect(preview.html).toContain('Biweekly Total');
     // Totals reconcile: annual band total and the optional subtotal.
     expect(preview.html).toContain('159,00');
     expect(preview.html).toContain('40,00');

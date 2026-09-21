@@ -42,6 +42,17 @@ import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
 import type { PartialBlock } from '@blocknote/core';
 import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 
+// Cadence key -> the `quoteForm.sidebar.cadence.*` leaf. Unknown cadences fall
+// back to the adapter's English `entry.name` so a new cadence never renders a
+// raw key.
+const CADENCE_SIDEBAR_LABEL_KEYS: Record<string, string> = {
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  'semi-annually': 'semiAnnually',
+  annually: 'annually',
+  onetime: 'oneTime',
+};
+
 interface QuoteFormProps {
   quoteId?: string | null;
   initialIsTemplate?: boolean;
@@ -1211,6 +1222,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     .map((entry) => ({
       cadence_key: entry.cadence_key,
       name: entry.name,
+      labelKey: CADENCE_SIDEBAR_LABEL_KEYS[entry.cadence_key] ?? null,
       amount: formatDraftQuoteMoney(entry.net, form.currency_code),
     }));
 
@@ -1727,7 +1739,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   </div>
                   {formattedCadenceSummary.map((entry) => (
                     <div key={entry.cadence_key} className="flex items-center justify-between">
-                      <dt className="text-muted-foreground">{entry.name}</dt>
+                      <dt className="text-muted-foreground">
+                        {entry.labelKey
+                          ? t(`quoteForm.sidebar.cadence.${entry.labelKey}`, { defaultValue: entry.name })
+                          : entry.name}
+                      </dt>
                       <dd>{entry.amount}</dd>
                     </div>
                   ))}

@@ -604,7 +604,7 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
                 direction: 'row',
                 style: { inline: { justifyContent: 'space-between' } },
                 children: [
-                  { id: 'cadence-band-total-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.total', defaultValue: 'Total' }, style: { inline: { fontWeight: 700 } } },
+                  { id: 'cadence-band-total-label', type: 'text', content: { type: 'path', path: 'total_label' }, style: { inline: { fontWeight: 700 } } },
                   { id: 'cadence-band-total-value', type: 'text', content: { type: 'path', path: 'total|currency' }, style: { inline: { fontWeight: 700, textAlign: 'right' } } },
                 ],
               },
