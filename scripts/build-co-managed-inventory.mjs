@@ -28,6 +28,7 @@ import {
   foundationContracts,
   planRows,
 } from './lib/co-managed-plan-ids.mjs';
+import { markArtifactAvailability } from './lib/co-managed-completion.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const argv = process.argv.slice(2);
@@ -284,7 +285,7 @@ const EVIDENCE = {
     sha: 'ROUND5_CANDIDATE',
     command: 'node --test scripts/tests/co-managed-completion.test.mjs; '
       + 'node scripts/verify-co-managed-completion.mjs',
-    result: '63 pass, 0 fail (was 59 before this round added the analysis-evidence cases). The suite is '
+    result: '64 pass, 0 fail (was 59 at the start of this round). The suite is '
       + 'built as "start from a fixture that passes all three predicates, break exactly one thing, assert the '
       + 'named predicate goes false", so each case is its own mutation. It covers every negative CT026 '
       + 'enumerates: missing/duplicate/unmapped requirement, open defect flags, stale SHA, missing artifact, '
@@ -293,8 +294,14 @@ const EVIDENCE = {
       + 'for the required set - plus the positive case, where one complete fixture reaches humanReviewReady '
       + 'while unaccepted external provider prerequisites keep productionReady false. This round\'s two '
       + 'additions are separately mutation-verified: removing "analysis" from EVIDENCE_TYPES fails 3 cases, '
-      + 'and neutering the executed-evidence floor fails 2 different ones. Run against the real 193-row '
-      + 'manifest the verifier reports zero malformed-manifest blockers and all three verdicts false.',
+      + 'and neutering the executed-evidence floor fails 2 different ones. The 64th case closes a '
+      + 'collector/verifier asymmetry found while reviewing the above: the verifier blocked on '
+      + 'artifactAvailable === false, but the collector never SET the field, and it writes manifest.json '
+      + 'before exiting non-zero - so a manifest kept from a failed collection could cite an artifact no '
+      + 'reviewer can open and still pass. markArtifactAvailability now stamps it, shared by both sides, and '
+      + 'the case asserts the stamp and the block end to end. Also mutation-verified in both halves: forcing '
+      + 'the stamp to true fails 1 case, and neutering the verifier\'s block fails 2. Run against the real '
+      + '193-row manifest the verifier reports zero malformed-manifest blockers and all three verdicts false.',
     artifact: 'raw-logs/gate-self-test.txt',
     artifactNote: 'Scope limit: this exercises the PURE decision function over manifests, and the CLI over '
       + 'the committed manifest. It does NOT prove the packet COLLECTION is faithful - that a collected '
@@ -307,7 +314,7 @@ const EVIDENCE = {
     command: 'server: vitest run ../ee/temporal-workflows/src/__tests__/integration/'
       + 'coManagedBootstrap.integration.test.ts (whole file, VITEST_SEED=20260610, DB_NAME_SERVER='
       + 'server_co_managed, CE+EE overlay via TEST_MIGRATIONS_DIR)',
-    result: '1418 passed, 0 failed (whole file, 315.6s) - the documented green baseline, unchanged. The '
+    result: '1418 passed, 0 failed (whole file, 307.5s) - the documented green baseline, unchanged. The '
       + 'specific assertions this row was blocked on are named and passing: "retains pending and '
       + 'expired-workspace mail without source fetches, processing attempts, or terminal acknowledgements" '
       + '(defer x7 on co_managed_pending_acceptance, then co_managed_read_only, with {status: received, '
@@ -321,7 +328,12 @@ const EVIDENCE = {
       + 'for retry if a durable worker has no qualified admission adapter", each asserting disposition '
       + 'retry, status retryable_failed and zero effects at the two separate worker entry points.',
     artifact: 'raw-logs/cf003-cf004-refund-assertions.txt',
-    artifactNote: 'Scope limit: these are integration tests that substitute ONLY source-fetch and '
+    artifactNote: 'EXECUTED AT THE CANDIDATE, not relabelled onto it. An earlier capture of this same '
+      + 'file in this round ran at 40423ed9f3; because CF003/CF004 are flipped to verified on it, it was '
+      + 're-run in full against the exact source tree committed as the candidate rather than having its SHA '
+      + 'rewritten (PRD C8 forbids a silent relabel). Both the whole-file pass and all five named cases were '
+      + 'reproduced; the only delta is wall-clock (307.5s vs 315.6s). Scope limit: these are integration '
+      + 'tests that substitute ONLY source-fetch and '
       + 'sender/routing policy (intake.read / intake.parse / intake.process). Canonical ticket and comment '
       + 'writes, the transactional outbox, effects rows and terminal inbox state are all real. They therefore '
       + 'do NOT constitute a real inbound-email journey against a live mail source - that is CF008/CF009, '
@@ -348,7 +360,11 @@ const EVIDENCE = {
       + 'incapable of moving a row to verified (see NON_ACCEPTING_EVIDENCE_TYPES in '
       + 'scripts/lib/co-managed-completion.mjs). ticketList:F010 and ticketList:T005 stay missing-code. It '
       + 'does NOT establish that any proposed shell revision is correct; it establishes only what obstructs '
-      + 'the one the row asks for.',
+      + 'the one the row asks for. DEPENDENCY ANALYSIS for the candidate SHA (PRD C8 forbids a silent '
+      + 'relabel): the read was performed earlier in this round, and the three files it reasons about - '
+      + 'TicketListShell.tsx, TicketingDashboard.tsx and QualifiedTicketList.tsx - are byte-identical at the '
+      + 'candidate to the revision that was read, verified by git blob hash, so every line number quoted '
+      + 'above still resolves. No later commit in this round touched them.',
   },
   'ticket-list-reconciliation': {
     type: 'analysis',
@@ -997,15 +1013,17 @@ const EXTERNAL = {
 /** Known-open defects. `functional`, `security` and `data-integrity` block implementationReady. */
 const OPEN_DEFECTS = [
   {
-    id: 'CF002-requester-deferral',
+    id: 'reporter-serialization-stack-overflow',
     kind: 'functional',
-    summary: 'Integration shard 1 reports `retry` where `defer` is required for the separately compiled '
-      + 'admission adapter case -- four completed CI runs now: green at bda945b640, then failing at '
-      + '7b0b52c6c3, 618019c3e3 and fb2e696645, so it is a deterministic regression, not a flake. FIRST ERROR '
-      + 'NAMED at fb2e696645: RangeError "Maximum call stack size exceeded" thrown inside the commit '
-      + 'transaction, so the lifecycle classification correctly declines it. The recursion SITE is still '
-      + 'unknown and does not reproduce on this workstation in either arm of the control. Bounded stack frames '
-      + 'were added this candidate to name it on the next CI read. See cf002-requester-deferral.md.',
+    summary: 'CORRECTED this round: the previous text here said "the recursion SITE is still unknown", which '
+      + 'the repository now contradicts. The site WAS found and repaired -- withAdminTransaction read '
+      + 'error.stack unguarded inside its catch, so the lazy getter\'s own RangeError propagated in place of '
+      + 'the throw below it -- fixed in 899ae2e1cc, and CF002 is verified at 5e71e4efd2 with integration '
+      + 'shard 1 green (run 35543087189, job 106164529115: 2173 passed, 0 failed) and a mutation-verified '
+      + 'regression. What remains genuinely OPEN, and why this stays a blocking functional defect rather than '
+      + 'being deleted: the underlying reporter-level serialization overflow is NOT fixed in general. That '
+      + 'round only made one recurring site finite, so any other unguarded read of a lazily serialized error '
+      + 'can reproduce the same RangeError. See cf002-requester-deferral.md.',
   },
   {
     id: 'algadesk-provider-dead-end',
@@ -1041,6 +1059,33 @@ const OPEN_DEFECTS = [
       + 'and writes the cursor", expected pending to be completed. Unrelated to co-managed - it is a job-queue '
       + 'delivery race - and shard 4 passed at the two preceding candidates, so it is intermittent. Recorded '
       + 'rather than retried away; it is why the aggregate mandatory CI is not green even though shard 1 is.',
+  },
+  {
+    id: 'xero-locale-resources-loading-race',
+    kind: 'test-reliability',
+    summary: 'Unit shard 1 failed at 871646d601 (run 35548365704, job 106178368274) on 1 of 764 files: '
+      + '"XeroIntegrationSettings loaded-locale copy > renders the updated English mapping and reauthorization '
+      + 'copy". TestingLibraryElementError - the scopeReconnectNote copy is absent because the connection card '
+      + 'still reads "Loading Xero settings...". The test awaits findByText for the mapping alert at line 133, '
+      + 'then reads scopeReconnectNote with a SYNCHRONOUS getByText at line 134, so that second assertion '
+      + 'races the connection card\'s own load. Neither a regression from this branch nor co-managed: the '
+      + 'test, the component and the English locale resource it loads are byte-identical to origin/main '
+      + '(blobs 300dbc5e9d, 08ff58c1af and d2eded439f on both refs), and the ONLY diff between 353786ce91 -- '
+      + 'where this same shard passed, run 35544309336 -- and 871646d601 is four files under '
+      + 'docs/evidence/co-managed-completion. Same source, different result, so it is intermittent. Recorded '
+      + 'rather than retried away, and the test was not touched; it is why aggregate mandatory CI is not green.',
+  },
+  {
+    id: 'webhook-sink-smoke-duplicate-record-local-only',
+    kind: 'test-reliability',
+    summary: 'A SEPARATE local observation, not the cause of the CI failure above - kept distinct so the two '
+      + 'are not conflated. packages/emulators/webhook-sink/tests/smoke.test.ts > "records requests and '
+      + 'answers 200 by default" fails deterministically on this workstation, both inside a full shard-1 '
+      + 'reproduction and in isolation, recording 2 requests where it asserts 1. It PASSES in CI at these same '
+      + 'revisions (shard 1 at 353786ce91), and the sink package and @alga-psa/emulator-host are unchanged on '
+      + 'this branch versus origin/main, with express resolving to 5.2.1 exactly as package-lock specifies - '
+      + 'so the divergence is environmental and remains unexplained. Out of this card\'s scope (emulator '
+      + 'harness, not co-managed); reported, not fixed, and the test was not touched.',
   },
   {
     id: 'microsoft-login-base-url-ungated-in-production',
@@ -1218,13 +1263,14 @@ for (const row of rows) {
 // An artifact reference that does not resolve is worse than none: it reads as
 // corroboration a reviewer can open, and cannot be.
 for (const [id, item] of Object.entries(EVIDENCE)) {
-  if (!item.artifact) { failures.push(`evidence ${id}: no artifact reference`); continue; }
-  if (!existsSync(path.join(outDir, item.artifact))) {
-    failures.push(`evidence ${id}: artifact ${item.artifact} does not exist`);
-  }
-  if (item.artifactCompare && !existsSync(path.join(outDir, item.artifactCompare))) {
-    failures.push(`evidence ${id}: artifactCompare ${item.artifactCompare} does not exist`);
-  }
+  if (!item.artifact) failures.push(`evidence ${id}: no artifact reference`);
+}
+// Stamps `artifactAvailable` onto each record. The failures below stop this
+// run, but manifest.json is written before the exit, so the flag is what makes
+// the verifier block independently on a manifest kept from a failed
+// collection. Shared with the verifier so the two cannot drift.
+for (const { id, field, reference } of markArtifactAvailability(EVIDENCE, (rel) => existsSync(path.join(outDir, rel)))) {
+  failures.push(`evidence ${id}: ${field} ${reference} does not exist`);
 }
 const expected = EXPECTED_COUNTS;
 const counts = {};

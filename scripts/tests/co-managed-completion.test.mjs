@@ -5,6 +5,7 @@ import {
   REQUIREMENT_STATUSES,
   evaluateCoManagedCompletion,
   headOnlyRewritesItsOwnEvidence,
+  markArtifactAvailability,
 } from '../lib/co-managed-completion.mjs';
 
 /**
@@ -411,4 +412,46 @@ test('an empty or unusable diff never grants the exception', () => {
   assert.equal(headOnlyRewritesItsOwnEvidence(null, DIR), false);
   assert.equal(headOnlyRewritesItsOwnEvidence([`${DIR}/manifest.json`], ''), false);
   assert.equal(headOnlyRewritesItsOwnEvidence([`${DIR}/manifest.json`], null), false);
+});
+
+/**
+ * The collector stamps `artifactAvailable`; the verifier blocks on it. Before
+ * this pair existed the two halves did not meet: the collector detected an
+ * unresolved artifact and exited non-zero, but manifest.json had already been
+ * written *without* the flag, so a manifest kept from that failed collection
+ * cited an artifact no reviewer could open and the verifier — which reads only
+ * the manifest — passed it. PRD C8 requires failing closed on unavailable
+ * artifacts, so the stamp and the block are tested together, end to end.
+ */
+test('the collector stamps artifact availability and the verifier blocks on it', () => {
+  const present = new Set(['raw-logs/there.txt', 'raw-logs/compare.txt']);
+  const exists = (rel) => present.has(rel);
+
+  // Both references resolve -> available, and nothing is reported.
+  const good = { ok: { artifact: 'raw-logs/there.txt', artifactCompare: 'raw-logs/compare.txt' } };
+  assert.deepEqual(markArtifactAvailability(good, exists), []);
+  assert.equal(good.ok.artifactAvailable, true);
+
+  // A missing primary artifact is stamped false and named.
+  const missing = { gone: { artifact: 'raw-logs/absent.txt' } };
+  assert.deepEqual(markArtifactAvailability(missing, exists),
+    [{ id: 'gone', field: 'artifact', reference: 'raw-logs/absent.txt' }]);
+  assert.equal(missing.gone.artifactAvailable, false);
+
+  // A missing comparison artifact is just as unavailable as a missing primary.
+  const halfMissing = { half: { artifact: 'raw-logs/there.txt', artifactCompare: 'raw-logs/absent.txt' } };
+  assert.deepEqual(markArtifactAvailability(halfMissing, exists),
+    [{ id: 'half', field: 'artifactCompare', reference: 'raw-logs/absent.txt' }]);
+  assert.equal(halfMissing.half.artifactAvailable, false);
+
+  // The round trip: a manifest carrying the collector's stamp is refused.
+  const manifest = passingManifest();
+  assert.equal(evaluate(manifest).implementationReady, true, 'fixture should start ready');
+  markArtifactAvailability(manifest.evidence, () => false);
+  const verdict = evaluate(manifest);
+  assert.equal(verdict.implementationReady, false);
+  assert.ok(
+    verdict.blocking.implementation.some((reason) => /artifact .* is unavailable/.test(reason)),
+    `expected an unavailable-artifact reason, got:\n  ${verdict.blocking.implementation.join('\n  ')}`,
+  );
 });

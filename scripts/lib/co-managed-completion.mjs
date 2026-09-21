@@ -133,6 +133,41 @@ function checkEvidence(manifest, candidate, blocking) {
  * `verified` row on this candidate without an explicit, recorded dependency
  * analysis saying the change does not affect it.
  */
+/**
+ * Resolve every evidence artifact reference and record the outcome on the
+ * record itself.
+ *
+ * The collector writes manifest.json *before* it exits non-zero, so a manifest
+ * kept from a failed collection would cite an artifact no reviewer can open
+ * while the verifier — which reads only the manifest — saw nothing wrong.
+ * Recording the unresolved reference in the manifest closes that gap: the
+ * verifier blocks on `artifactAvailable === false` at checkEvidence. Shared by
+ * both sides so they cannot drift on what "available" means.
+ *
+ * PRD C8: fail closed for unavailable artifacts.
+ *
+ * @param evidence manifest evidence map, mutated in place
+ * @param exists predicate resolving a packet-relative path to a readable file
+ * @returns one entry per unresolved reference, for the caller to report
+ */
+export function markArtifactAvailability(evidence, exists) {
+  const unresolved = [];
+  if (!isPlainObject(evidence)) return unresolved;
+  for (const [id, item] of Object.entries(evidence)) {
+    if (!isPlainObject(item) || !isNonEmptyString(item.artifact)) continue;
+    let available = true;
+    for (const field of ['artifact', 'artifactCompare']) {
+      const reference = item[field];
+      if (!isNonEmptyString(reference)) continue;
+      if (exists(reference)) continue;
+      unresolved.push({ id, field, reference });
+      available = false;
+    }
+    item.artifactAvailable = available;
+  }
+  return unresolved;
+}
+
 function evidenceAppliesToCandidate(item, candidate) {
   if (!isNonEmptyString(item?.sha)) return false;
   if (candidate.startsWith(item.sha) || item.sha.startsWith(candidate)) return true;
