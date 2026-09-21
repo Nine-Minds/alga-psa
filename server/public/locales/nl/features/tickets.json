@@ -78,7 +78,8 @@
     "paused": "Gepauzeerd",
     "allResponseStatuses": "Alle antwoordstatussen",
     "responseStatus": "Antwoordstatus",
-    "board": "Filteren op bord"
+    "board": "Filteren op bord",
+    "searchSmart": "Tickets en opmerkingen doorzoeken… Enter voor slim zoeken"
   },
   "create": {
     "title": "Supportticket aanmaken",
@@ -1920,5 +1921,29 @@
       "systemRequired": "Kies een extern systeem.",
       "urlRequired": "Voor systemen zonder URL-sjabloon is een URL vereist."
     }
+  },
+  "smartSearch": {
+    "run": "Slim zoeken",
+    "runTitle": "Gefilterde tickets beoordelen op deze zoekopdracht",
+    "relevanceColumn": "Overeenkomst",
+    "relevance": "{{percent}}% overeenkomst",
+    "strong": "Sterke matches",
+    "possible": "Mogelijke matches",
+    "unlikely": "Onwaarschijnlijke matches",
+    "emptyBucketRunning": "Nog geen",
+    "emptyBucket": "Geen",
+    "scoring": "{{scored}} van {{total}} tickets beoordeeld",
+    "summary": "{{total}} tickets beoordeeld · {{strong}} sterk · {{possible}} mogelijk",
+    "cancelled": "Zoeken geannuleerd na {{scored}} van {{total}} tickets",
+    "errorTitle": "Slim zoeken gestopt",
+    "starting": "Slim zoeken wordt gestart…",
+    "rerun": "Filters gewijzigd. Opnieuw uitvoeren",
+    "retry": "Opnieuw proberen",
+    "cancel": "Annuleren",
+    "exit": "Terug naar lijst",
+    "notConfigured": "Slim zoeken is niet geconfigureerd op deze server",
+    "failedCount": "{{count}} tickets konden niet worden beoordeeld",
+    "unscored": "Niet beoordeeld",
+    "addOnRequired": "Slim zoeken vereist de AI-assistent-add-on"
   }
 }

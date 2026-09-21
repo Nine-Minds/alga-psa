@@ -174,6 +174,8 @@ interface TicketingDashboardContainerProps {
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
   allowSlaStatusFilter?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
+  /** Decided by the page's server component: every smart search gate passed for this caller. */
+  smartSearchAvailable?: boolean;
 }
 
 export default function TicketingDashboardContainer({
@@ -189,6 +191,7 @@ export default function TicketingDashboardContainer({
   renderClientDetails,
   allowSlaStatusFilter = true,
   useAlgaDeskQuickAddForm = false,
+  smartSearchAvailable = false,
 }: TicketingDashboardContainerProps) {
   const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
@@ -977,6 +980,7 @@ export default function TicketingDashboardContainer({
       canUpdateTickets={canUpdateTickets}
       onNavigateAway={markNavigatingAway}
         allowSlaStatusFilter={allowSlaStatusFilter}
+        smartSearchAvailable={smartSearchAvailable}
         useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
         viewPresentation={viewPresentation}
         onViewPresentationChange={handleViewPresentationChange}

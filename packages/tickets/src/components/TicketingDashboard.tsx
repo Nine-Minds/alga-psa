@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
@@ -10,6 +11,21 @@ import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
+import type { SmartSearchResultsProps } from '@alga-psa/ui/components/SmartSearchResults';
+import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
+import {
+  buildSelectedTicketDetails,
+  collectSelectedTicketRows,
+  createSmartSearchRunCache,
+  mergeSmartSearchRunRows,
+  pruneSelectedTicketIds,
+  selectAllMatchingFallbackIds,
+  selectAllMatchingScope,
+  selectMatchingTickets,
+  smartSearchRunCandidateIds,
+  smartSearchRunRows,
+  type SmartSearchRunCache,
+} from '../lib/smartSearchSelection';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -49,8 +65,8 @@ import {
 } from '../actions/ticketBundleActions';
 import { ClosedMasterChoiceFields } from './ticket/ClosedMasterChoiceFields';
 import type { ClosedMasterChoice } from '../lib/ticketBundlePolicy';
-import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
-import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter } from 'lucide-react';
+import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -109,6 +125,21 @@ import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './ticket/TicketNotificationSuppressionControl';
 
+type AnySmartSearchResultsProps = SmartSearchResultsProps<unknown, Record<string, unknown>, unknown>;
+
+const EnterpriseSmartSearchResults = dynamic(
+  () => import('@enterprise/components/smartSearch/SmartSearchResults').then(
+    (mod) => mod.SmartSearchResults as unknown as React.ComponentType<AnySmartSearchResultsProps>
+  ),
+  { ssr: false, loading: () => null }
+);
+
+function SmartSearchResults<TScope, TRow extends object, TMetadata>(
+  props: SmartSearchResultsProps<TScope, TRow, TMetadata>
+) {
+  return <EnterpriseSmartSearchResults {...(props as unknown as AnySmartSearchResultsProps)} />;
+}
+
 const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
   suppressContactNotifications: false,
   suppressInternalNotifications: false,
@@ -151,6 +182,8 @@ interface TicketingDashboardProps {
    */
   onNavigateAway?: () => void;
   allowSlaStatusFilter?: boolean;
+  /** Decided by the page's server component: every smart search gate passed for this caller. */
+  smartSearchAvailable?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
   /**
    * The resolved board→tenant→catalog view. Owned by the container so that
@@ -308,6 +341,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   canUpdateTickets = true,
   onNavigateAway,
   allowSlaStatusFilter = true,
+  smartSearchAvailable = false,
   useAlgaDeskQuickAddForm = false,
   viewPresentation,
   onViewPresentationChange,
@@ -417,6 +451,37 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Search query needs local state for responsive typing, debounced before emitting
   const [searchQuery, setSearchQuery] = useState<string>(filterValues.searchQuery ?? '');
+
+  // Smart search (enterprise): Enter or the Smart search button switches the box
+  // into Jev mode over the chip-filtered set. Deliberately not URL-mirrored so a
+  // reload never spends tokens. `scope` is the candidate set captured when the
+  // run started and is the only scope the active run ever enumerates, hydrates,
+  // prints, or selects over; `filtersKey` is the same chip set as a string, so a
+  // later chip change can offer a rerun instead of silently rerunning.
+  const [smartSearch, setSmartSearch] = useState<{
+    active: boolean;
+    query: string;
+    runToken: number;
+    filtersKey: string;
+    scope: ITicketListFilters | null;
+  }>({
+    active: false,
+    query: '',
+    runToken: 0,
+    filtersKey: '',
+    scope: null,
+  });
+
+  // Rows the current smart search run has streamed, keyed by id. The ordinary
+  // paginated list never holds a streamed off-page row, so this is the
+  // authoritative source for bulk actions, the bundle master picker, and
+  // printing while smart mode is active. Scoped to one run: a rerun clears it
+  // and a stale report from a superseded run is discarded, so board A's rows
+  // never leak into board B's candidate set.
+  const smartSearchGenerationRef = useRef(0);
+  const [smartSearchRunCache, setSmartSearchRunCache] = useState<SmartSearchRunCache<ITicketListItem>>(
+    () => createSmartSearchRunCache<ITicketListItem>(String(smartSearch.runToken), smartSearchGenerationRef.current)
+  );
 
   // Assignee filter values from props
   const selectedAssignees = filterValues.assignedToIds ?? EMPTY_STRING_ARRAY;
@@ -564,6 +629,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useEffect(() => {
     if (isFirstSearchEmit.current) {
       isFirstSearchEmit.current = false;
+      return;
+    }
+    if (smartSearch.active) {
+      // In smart mode the typed text is the Jev query, not a keyword filter.
       return;
     }
     lastEmittedSearchRef.current = debouncedSearchQuery;
@@ -1004,31 +1073,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     [ticketsWithIds]
   );
 
+  // Drop selections the ordinary list no longer holds after a page refresh.
+  // While smart mode is active the candidate set comes from the panel, not this
+  // page, so a streamed off-page selection must survive; exiting smart mode
+  // clears the selection explicitly.
   useEffect(() => {
-    setSelectedTicketIds(prev => {
-      if (prev.size === 0) {
-        return prev;
-      }
-
-      const validIds = new Set(selectableTicketIds);
-      let changed = false;
-      const next = new Set<string>();
-
-      prev.forEach(id => {
-        if (validIds.has(id)) {
-          next.add(id);
-        } else {
-          changed = true;
-        }
-      });
-
-      if (!changed && next.size === prev.size) {
-        return prev;
-      }
-
-      return next;
-    });
-  }, [selectableTicketIds]);
+    setSelectedTicketIds(prev => pruneSelectedTicketIds(prev, new Set(selectableTicketIds), smartSearch.active));
+  }, [selectableTicketIds, smartSearch.active]);
 
   const rangeSelect = useRangeSelection<string>({
     items: visibleTicketIds,
@@ -1078,48 +1129,190 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [visibleTicketIds]);
 
-  const handleSelectAllMatchingTickets = useCallback(async () => {
-    try {
-      const filters: ITicketListFilters = {
-        boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
-        excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
-        statusId: selectedStatus,
-        priorityId: selectedPriority,
-        categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
-        excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
-        clientId: selectedClient ?? undefined,
-        searchQuery: debouncedSearchQuery,
-        boardFilterState: boardFilterState,
-        showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
-        assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
-        assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
-        includeUnassigned: includeUnassigned || undefined,
-        dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
-        responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
-        slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
-        bundleView,
-      };
-      const allIds = await getAllMatchingTicketIds(filters);
-      if (isActionMessageError(allIds) || isActionPermissionError(allIds)) {
-        toast.error(getErrorMessage(allIds));
-        setSelectedTicketIds(new Set(selectableTicketIds));
-        setAllMatchingMode(true);
-        return;
-      }
-      setSelectedTicketIds(new Set(allIds));
-      setAllMatchingMode(true);
-    } catch (error) {
-      console.error('Failed to fetch all matching ticket IDs:', error);
-      // Fall back to selecting current page only
-      setSelectedTicketIds(new Set(selectableTicketIds));
-      setAllMatchingMode(true);
-    }
-  }, [
+  const clearSelection = useCallback(() => {
+    setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
+    setAllMatchingMode(false);
+    setOffPageBoardById(prev => (Object.keys(prev).length === 0 ? prev : {}));
+  }, []);
+
+  const exportFilters = useMemo((): ITicketListFilters => ({
+    boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
+    excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
+    statusId: selectedStatus,
+    priorityId: selectedPriority,
+    categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
+    excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
+    clientId: selectedClient ?? undefined,
+    searchQuery: debouncedSearchQuery,
+    boardFilterState: boardFilterState,
+    showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
+    assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+    assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
+    includeUnassigned: includeUnassigned || undefined,
+    dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+    dueDateFrom: filterValues.dueDateFrom,
+    dueDateTo: filterValues.dueDateTo,
+    responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
+    slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
+    sortBy,
+    sortDirection,
+    bundleView,
+  }), [
     selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
-    selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, bundleView, selectableTicketIds,
+    filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
+    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
+  ]);
+
+  // Smart search runs over the chips alone; the typed text is the Jev query.
+  const smartSearchFilters = useMemo((): ITicketListFilters => ({ ...exportFilters, searchQuery: '' }), [exportFilters]);
+  const smartSearchFiltersKey = useMemo(() => JSON.stringify(smartSearchFilters), [smartSearchFilters]);
+  const smartSearchFiltersStale = smartSearch.active && smartSearch.filtersKey !== smartSearchFiltersKey;
+
+  const smartSearchRunKey = String(smartSearch.runToken);
+  const activeSmartSearchRunKey = smartSearch.active ? smartSearchRunKey : null;
+
+  // Begin a fresh run: bump the generation so any in-flight report from the
+  // previous run is discarded, and replace the cache so its rows cannot leak
+  // into the new candidate set.
+  const beginSmartSearchRun = useCallback((runToken: number) => {
+    const generation = smartSearchGenerationRef.current + 1;
+    smartSearchGenerationRef.current = generation;
+    setSmartSearchRunCache(createSmartSearchRunCache<ITicketListItem>(String(runToken), generation));
+  }, []);
+
+  const runSmartSearch = useCallback((rawQuery: string) => {
+    const query = rawQuery.trim();
+    if (!smartSearchAvailable || query.length === 0) {
+      return;
+    }
+    beginSmartSearchRun(smartSearch.runToken + 1);
+    clearSelection();
+    // Leave keyword mode: the container must not keep filtering by the typed text.
+    if ((filterValues.searchQuery ?? '') !== '') {
+      lastEmittedSearchRef.current = '';
+      onFilterChange({ searchQuery: '' });
+    }
+    setSmartSearch(() => ({
+      active: true,
+      query,
+      runToken: smartSearch.runToken + 1,
+      filtersKey: smartSearchFiltersKey,
+      scope: smartSearchFilters,
+    }));
+  }, [smartSearchAvailable, smartSearch.runToken, beginSmartSearchRun, clearSelection, filterValues.searchQuery, onFilterChange, smartSearchFilters, smartSearchFiltersKey]);
+
+  const rerunSmartSearch = useCallback(() => {
+    // A rerun captures the latest chips and scores that different candidate set,
+    // so the previous selections and streamed rows are no longer actionable;
+    // clear them with the old rows.
+    beginSmartSearchRun(smartSearch.runToken + 1);
+    clearSelection();
+    setSmartSearch((prev) => ({
+      ...prev,
+      runToken: prev.runToken + 1,
+      filtersKey: smartSearchFiltersKey,
+      scope: smartSearchFilters,
+    }));
+  }, [smartSearch.runToken, beginSmartSearchRun, clearSelection, smartSearchFilters, smartSearchFiltersKey]);
+
+  const exitSmartSearch = useCallback(() => {
+    smartSearchGenerationRef.current += 1;
+    setSmartSearchRunCache(createSmartSearchRunCache<ITicketListItem>('', smartSearchGenerationRef.current));
+    clearSelection();
+    setSmartSearch((prev) => (prev.active ? { ...prev, active: false } : prev));
+  }, [clearSelection]);
+
+  // Rows streamed by smart search carry their own tags and avatar urls; fold
+  // them into the same stores the main table's columns read from.
+  const handleSmartSearchRowMetadata = useCallback((metadata: TicketSmartSearchRowMetadata) => {
+    ticketTagsRef.current = { ...ticketTagsRef.current, ...metadata.ticketTags };
+    setTagsVersion((v) => v + 1);
+    setAdditionalAgentAvatarUrls((prev) => ({ ...prev, ...metadata.agentAvatarUrls }));
+    setTeamAvatarUrls((prev) => ({ ...prev, ...metadata.teamAvatarUrls }));
+  }, []);
+
+  // Every row the current run's panel holds, streamed or hydrated, so a
+  // selection made from a bucket resolves against an authoritative row even
+  // when the ordinary list has never loaded it. The run key and generation are
+  // frozen into this callback: a report from a previous run is dropped instead
+  // of merging into the current cache.
+  const mergeSmartSearchRows = useMemo(() => {
+    const runKey = smartSearchRunKey;
+    // The cache carries the generation of the run it belongs to; freezing it
+    // here means a callback from an earlier run reports the old generation and
+    // is dropped by mergeSmartSearchRunRows.
+    const generation = smartSearchRunCache.generation;
+    return (rows: ITicketListItem[]) => {
+      setSmartSearchRunCache((prev) => mergeSmartSearchRunRows(prev, { runKey, generation, rows }));
+    };
+  }, [smartSearchRunKey, smartSearchRunCache.generation]);
+  const smartSearchRows = useMemo(
+    () => smartSearchRunRows(smartSearchRunCache, activeSmartSearchRunKey),
+    [smartSearchRunCache, activeSmartSearchRunKey]
+  );
+  const smartCandidateIds = useMemo(
+    () => smartSearchRunCandidateIds(smartSearchRunCache, activeSmartSearchRunKey),
+    [smartSearchRunCache, activeSmartSearchRunKey]
+  );
+
+  // The panel hydrates rows the stream could not score through the same by-id
+  // loader the server uses, so they render with identical columns.
+  const hydrateSmartSearchRows = useCallback(async (scope: ITicketListFilters, ids: string[]) => {
+    const result = await loadTicketListItemsByIds(scope, ids);
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      return result;
+    }
+    return { rows: result.tickets, metadata: result.metadata };
+  }, []);
+  const smartSearchRowId = useCallback((record: ITicketListItem) => record.ticket_id as string, []);
+
+  // Clearing the box (or Escape) leaves smart mode and restores the keyword list.
+  useEffect(() => {
+    if (smartSearch.active && searchQuery === '') {
+      exitSmartSearch();
+    }
+  }, [smartSearch.active, searchQuery, exitSmartSearch]);
+
+  const handleSelectAllMatchingTickets = useCallback(async () => {
+    // Smart mode's candidate set is the scope captured when the active run
+    // started; the typed text is the Jev query, so enumerating the export
+    // filters would keep the keyword narrowing and select far fewer tickets.
+    // The current chips are deliberately not used here: they may have changed
+    // while the run is still showing (the rerun prompt is up), and enumerating
+    // them would enumerate a set the panel never scored.
+    const scope = selectAllMatchingScope(smartSearch.active, smartSearch.scope ?? smartSearchFilters, exportFilters);
+    const fallbackIds = selectAllMatchingFallbackIds(smartSearch.active, smartCandidateIds, selectableTicketIds);
+    const generation = smartSearchGenerationRef.current;
+    await selectMatchingTickets({
+      loadIds: async () => {
+        const allIds = await getAllMatchingTicketIds(scope);
+        if (isActionMessageError(allIds) || isActionPermissionError(allIds)) {
+          throw new Error(getErrorMessage(allIds));
+        }
+        return allIds;
+      },
+      // Both successful enumeration and fallback must belong to this run.
+      isCurrent: () => generation === smartSearchGenerationRef.current,
+      fallbackIds,
+      onSelect: (ids) => {
+        setSelectedTicketIds(new Set(ids));
+        setAllMatchingMode(true);
+      },
+      onError: (error) => {
+        console.error('Failed to fetch all matching ticket IDs:', error);
+        toast.error(getErrorMessage(error));
+      },
+    });
+  }, [
+    smartSearch.active,
+    smartSearch.scope,
+    smartSearchFilters,
+    exportFilters,
+    smartCandidateIds,
+    selectableTicketIds,
   ]);
 
   const handleBulkMoveBoardChange = useCallback(async (boardId: string) => {
@@ -1165,11 +1358,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [t]);
 
-  const clearSelection = useCallback(() => {
-    setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
-    setAllMatchingMode(false);
-    setOffPageBoardById(prev => (Object.keys(prev).length === 0 ? prev : {}));
-  }, []);
 
   const visibleTicketIdSet = useMemo(() => new Set(visibleTicketIds.filter((id): id is string => !!id)), [visibleTicketIds]);
   const allVisibleTicketsSelected = visibleTicketIds.length > 0 && visibleTicketIds.every(id => selectedTicketIds.has(id));
@@ -1179,33 +1367,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     [selectedTicketIdsArray, visibleTicketIdSet]
   );
   const isSelectionIndeterminate = selectedTicketIds.size > 0 && !allVisibleTicketsSelected;
-  const selectedTicketDetails = useMemo(() => {
-    if (selectedTicketIds.size === 0) {
-      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_id?: string | null; client_name?: string; board_id?: string | null }>;
-    }
-
-    const selectedSet = new Set(selectedTicketIds);
-
-    return tickets
-      .filter(ticket => ticket.ticket_id && selectedSet.has(ticket.ticket_id))
-      .map(ticket => ({
-        ticket_id: ticket.ticket_id as string,
-        ticket_number: ticket.ticket_number,
-        title: ticket.title,
-        client_id: ticket.client_id ?? null,
-        client_name: ticket.client_name,
-        board_id: ticket.board_id ?? null,
-      }))
-      .sort((a, b) => {
-        if (a.ticket_number && b.ticket_number) {
-          return a.ticket_number.localeCompare(b.ticket_number, undefined, { numeric: true, sensitivity: 'base' });
-        }
-        if (a.title && b.title) {
-          return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-        }
-        return 0;
-      });
-  }, [tickets, selectedTicketIds]);
+  // Resolved against the ordinary list and the rows smart search streamed, so a
+  // streamed off-page selection still reaches the bundle master picker, the
+  // cross-client warning, and the bulk-error labels.
+  const selectedTicketDetails = useMemo(
+    () => buildSelectedTicketDetails(selectedTicketIds, [tickets, smartSearchRows]),
+    [tickets, selectedTicketIds, smartSearchRows]
+  );
 
   const isSelectedBundleMultiClient = useMemo(() => {
     const uniqueClientIds = new Set(
@@ -1783,36 +1951,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     void performBundleTickets();
   }, [isSelectedBundleMultiClient, performBundleTickets]);
 
-  const exportFilters = useMemo((): ITicketListFilters => ({
-    boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
-    excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
-    statusId: selectedStatus,
-    priorityId: selectedPriority,
-    categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
-    excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
-    clientId: selectedClient ?? undefined,
-    searchQuery: debouncedSearchQuery,
-    boardFilterState: boardFilterState,
-    showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
-    tags: selectedTags.length > 0 ? selectedTags : undefined,
-    assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
-    assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
-    includeUnassigned: includeUnassigned || undefined,
-    dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
-    dueDateFrom: filterValues.dueDateFrom,
-    dueDateTo: filterValues.dueDateTo,
-    responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
-    slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
-    sortBy,
-    sortDirection,
-    bundleView,
-  }), [
-    selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
-    selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
-    selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
-    filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
-    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
-  ]);
 
   useEffect(() => {
     setTicketsRouteFilters(exportFilters);
@@ -1911,11 +2049,44 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   } = usePrintColumnSelection('print-columns:tickets-list', printColumns);
 
   const preparePrintTickets = useCallback(async () => {
+    // An active run prints the candidate set captured at run start, not the
+    // current chips, so a stale-filter prompt cannot change what is printed.
+    const scope = smartSearch.active ? smartSearch.scope ?? smartSearchFilters : exportFilters;
+
     if (hasSelection && !allMatchingMode) {
-      const selectedRows = displayedTickets.filter((ticket) => (
-        Boolean(ticket.ticket_id && selectedTicketIds.has(ticket.ticket_id))
-      ));
-      setPrintTickets(selectedRows);
+      // Rows the ordinary list does not hold (streamed smart results, or an
+      // off-page paginate-then-select) are hydrated through the same authorized
+      // by-id loader the stream uses rather than silently dropped from the print.
+      const { rows, missingIds } = collectSelectedTicketRows(selectedTicketIdsArray, [
+        displayedTickets,
+        smartSearchRows,
+      ]);
+      if (missingIds.length === 0) {
+        setPrintTickets(rows);
+        return;
+      }
+      const generation = smartSearchGenerationRef.current;
+      const hydrated = await loadTicketListItemsByIds(scope, missingIds);
+      // A rerun or exit while hydrating makes this result actionable for a run
+      // that no longer exists; drop it rather than print stale rows.
+      if (generation !== smartSearchGenerationRef.current) {
+        return;
+      }
+      if (isActionMessageError(hydrated) || isActionPermissionError(hydrated)) {
+        toast.error(getErrorMessage(hydrated));
+        setPrintTickets(rows);
+        return;
+      }
+      mergeSmartSearchRows(hydrated.tickets);
+      ticketTagsRef.current = {
+        ...ticketTagsRef.current,
+        ...hydrated.metadata.ticketTags,
+      };
+      const hydratedById = new Map(hydrated.tickets.map((ticket) => [ticket.ticket_id, ticket]));
+      const complete = selectedTicketIdsArray
+        .map((id) => hydratedById.get(id) ?? rows.find((row) => row.ticket_id === id))
+        .filter((ticket): ticket is ITicketListItem => Boolean(ticket));
+      setPrintTickets(complete);
       return;
     }
 
@@ -1925,7 +2096,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       pageSize,
       TICKET_PRINT_FALLBACK_PAGE_SIZE
     );
-    const result = await fetchTicketsWithPagination(exportFilters, 1, printPageSize);
+    const result = await fetchTicketsWithPagination(scope, 1, printPageSize);
     if (isActionMessageError(result) || isActionPermissionError(result)) {
       toast.error(getErrorMessage(result));
       setPrintTickets([]);
@@ -1944,8 +2115,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     displayedTickets,
     exportFilters,
     hasSelection,
+    mergeSmartSearchRows,
     pageSize,
     selectedTicketIds,
+    selectedTicketIdsArray,
+    smartSearch.active,
+    smartSearch.scope,
+    smartSearchFilters,
+    smartSearchRows,
     totalCount,
   ]);
 
@@ -2026,9 +2203,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const handleResetFilters = useCallback(() => {
     setSearchQuery('');
     lastEmittedSearchRef.current = '';
+    exitSmartSearch();
     setClientFilterState('active');
     setClientTypeFilter('all');
-    clearSelection();
 
     onFilterChange({
       boardId: undefined,
@@ -2054,7 +2231,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       slaStatusFilter: undefined,
       bundleView: 'bundled',
     });
-  }, [onFilterChange, clearSelection]);
+  }, [onFilterChange, exitSmartSearch]);
 
   // LEVERAGE: pattern filter-descriptor-table — per-dimension "is-active / label / clear" logic is
   // now duplicated three ways (toolbar controls, activeFilterCount, activeFilterChips). One
@@ -2267,12 +2444,36 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <Input
                   id={`${id}-search-tickets-input`}
-                  placeholder={t('filters.search', 'Search tickets and comments...')}
+                  placeholder={smartSearchAvailable
+                    ? t('filters.searchSmart', 'Search tickets and comments… Enter for smart search')
+                    : t('filters.search', 'Search tickets and comments...')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && smartSearchAvailable && searchQuery.trim().length > 0) {
+                      e.preventDefault();
+                      runSmartSearch(searchQuery);
+                    } else if (e.key === 'Escape' && smartSearch.active) {
+                      e.preventDefault();
+                      setSearchQuery('');
+                    }
+                  }}
                   className="h-[38px] w-full text-sm"
                   containerClassName="flex-1 min-w-[260px] max-w-[460px]"
                 />
+                {smartSearchAvailable && (
+                  <Button
+                    id={`${id}-smart-search-run`}
+                    variant={smartSearch.active ? 'soft' : 'outline'}
+                    onClick={() => runSmartSearch(searchQuery)}
+                    disabled={searchQuery.trim().length === 0}
+                    className="shrink-0 flex items-center gap-1.5 h-[38px]"
+                    title={t('smartSearch.runTitle', 'Score the filtered tickets against this query')}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {t('smartSearch.run', 'Smart search')}
+                  </Button>
+                )}
                 <Button
                   id={`${id}-toggle-filters`}
                   variant={showFilters ? 'soft' : 'outline'}
@@ -2556,8 +2757,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </div>
 
         <div className={densityClasses.bodyPadding}>
-        {/* isLoadingMore prop now correctly reflects loading state from container for pagination or filter changes */}
-        {isLoadingMore ? (
+        {/* The smart search panel owns its run: an ordinary-list refresh (a chip
+            change, pagination, or a background fetch) must not unmount it, or it
+            would restart its stream over whatever scope it remounts with. Only
+            the ordinary table gets replaced by the loading spinner. */}
+        {isLoadingMore && !smartSearch.active ? (
           <Spinner size="md" className="h-32 w-full" />
         ) : (
           <>
@@ -2604,6 +2808,39 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               </Alert>
             )}
             <ShortcutActiveRegion id="tickets-shortcut-region" className="outline-none">
+              {smartSearch.active ? (
+                <SmartSearchResults<ITicketListFilters, ITicketListItem, TicketSmartSearchRowMetadata>
+                  // Each run is a fresh panel: the old one unmounts, so its
+                  // in-flight hydration cannot report into the new run.
+                  key={smartSearch.runToken}
+                  id={id}
+                  entity="ticket"
+                  i18nNamespace="features/tickets"
+                  scope={smartSearch.scope ?? smartSearchFilters}
+                  query={smartSearch.query}
+                  runToken={smartSearch.runToken}
+                  scopeStale={smartSearchFiltersStale}
+                  onRerun={rerunSmartSearch}
+                  columns={columns}
+                  relevanceColumnIndex={1}
+                  rowId={smartSearchRowId}
+                  hydrateRows={hydrateSmartSearchRows}
+                  rowClassName={(record: ITicketListItem) =>
+                    `${densityClasses.tableRowDensity} cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none focus-visible:ring-0 hover:!bg-table-hover ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
+                      ? '!bg-table-selected'
+                      : ''}`
+                  }
+                  onRowClick={(record: ITicketListItem) => {
+                    if (record.ticket_id) {
+                      handleTicketClick(record.ticket_id);
+                    }
+                  }}
+                  onVisibleRowsChange={handleVisibleRowsChange}
+                  onRowsChange={mergeSmartSearchRows}
+                  onRowMetadata={handleSmartSearchRowMetadata}
+                  onExit={exitSmartSearch}
+                />
+              ) : (
               <DataTable
                 key={`${currentPage}-${pageSize}`}
                 {...withDataAutomationId({ id: `${id}-tickets-table` })}
@@ -2631,6 +2868,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 sortDirection={sortDirection}
                 onSortChange={handleTableSortChange}
               />
+              )}
             </ShortcutActiveRegion>
           </>
         )}
