@@ -140,6 +140,34 @@ function buildAttachmentTrailOutcome(
   };
 }
 
+/**
+ * The original-email `.eml` is persisted on its own (system-artifact) path, so
+ * it needs its own trail outcome. Its failures/skips must surface on the ticket
+ * exactly like a user attachment's do.
+ */
+function buildOriginalEmailTrailOutcome(
+  emailId: string,
+  persistResult: Record<string, any> | null | undefined
+): InboundAttachmentTrailOutcome | null {
+  if (!persistResult) return null;
+
+  const isSkipped = persistResult.success === true && persistResult.skipped === true;
+  const isFailed = persistResult.success === false;
+  if (!isSkipped && !isFailed) return null;
+
+  return {
+    attachmentId: ORIGINAL_EMAIL_ATTACHMENT_ID,
+    fileName: String(persistResult.fileName ?? '') || buildOriginalEmailFileName(emailId),
+    contentType: String(persistResult.contentType ?? '') || 'message/rfc822',
+    fileSize: typeof persistResult.fileSize === 'number' ? persistResult.fileSize : null,
+    status: isSkipped ? 'skipped' : 'failed',
+    reason:
+      String(persistResult.message ?? '') ||
+      String(persistResult.reason ?? '') ||
+      'original email not archived',
+  };
+}
+
 function buildAttachmentTrailBlocks(outcomes: InboundAttachmentTrailOutcome[]): unknown[] {
   return outcomes.map((outcome) => ({
     type: 'paragraph',
@@ -173,10 +201,14 @@ function parseTrailFilesFromMetadata(metadata: unknown): InboundAttachmentTrailO
  * manual upload. Returns null when storage config is unavailable (the
  * validator still enforces the ceiling itself; this only drives the cheap
  * pre-download early-out).
+ *
+ * Loads the narrow `config/storage` subpath, never the package barrel: the
+ * built email-service worker (native Node, `tsc` + `tsc-alias`) cannot resolve
+ * the barrel's transitive `@alga-psa/validation` source exports.
  */
 async function resolveInboundMaxAttachmentBytes(): Promise<number | null> {
   try {
-    const { getStorageConfig } = await import('@alga-psa/storage');
+    const { getStorageConfig } = await import('@alga-psa/storage/config/storage');
     const config = await getStorageConfig();
     const provider = config?.providers?.[config.defaultProvider];
     return typeof provider?.maxFileSize === 'number' ? provider.maxFileSize : null;
@@ -189,35 +221,95 @@ async function resolveInboundMaxAttachmentBytes(): Promise<number | null> {
 }
 
 /**
+ * The only rejections the shared storage policy raises for a user upload
+ * (`packages/storage/src/config/storage.ts`). Matching these exact errors keeps
+ * a genuine policy rejection distinct from an infrastructure failure (a failed
+ * module load, config error, or DB error), which must never be relabeled as
+ * "too large" or "type not allowed".
+ */
+const STORAGE_SIZE_LIMIT_PATTERN = /^File size exceeds limit of \d+ bytes$/;
+const STORAGE_TYPE_NOT_ALLOWED_MESSAGE = 'File type not allowed';
+
+type StoragePolicyCheck =
+  | { status: 'allowed' }
+  | { status: 'rejected'; kind: 'size' | 'type' }
+  | { status: 'infrastructure_error'; message: string };
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function classifyStoragePolicyError(error: unknown): StoragePolicyCheck {
+  const message = errorMessage(error);
+  if (STORAGE_SIZE_LIMIT_PATTERN.test(message)) {
+    return { status: 'rejected', kind: 'size' };
+  }
+  if (message === STORAGE_TYPE_NOT_ALLOWED_MESSAGE) {
+    return { status: 'rejected', kind: 'type' };
+  }
+  return { status: 'infrastructure_error', message };
+}
+
+/**
  * Validate a real inbound attachment against the same policy manual upload
- * uses (`StorageService.validateFileUpload`).
+ * uses. Loads the narrow `config/storage` subpath so the built worker can run
+ * it, and returns a classified outcome instead of collapsing every thrown
+ * error into a policy rejection.
  */
 // LEVERAGE: friction inbound-revalidates-storage-policy — inbound email
 // re-derives the storage MIME/size gate that StorageService.validateFileUpload
 // already owns for manual uploads; both should route through the shared policy.
 async function validateInboundAttachmentUpload(input: {
-  tenantId: string;
   mimeType: string;
   fileSize: number;
-  maxAttachmentBytes: number | null;
-}): Promise<{ allowed: boolean; reason: string }> {
-  const { StorageService } = await import('@alga-psa/storage');
+}): Promise<StoragePolicyCheck> {
+  let validateFileUpload: (mimeType: string, fileSize: number) => Promise<void>;
   try {
-    await StorageService.validateFileUpload(input.tenantId, input.mimeType, input.fileSize);
-    return { allowed: true, reason: '' };
+    ({ validateFileUpload } = await import('@alga-psa/storage/config/storage'));
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const isSizeRejection =
-      input.maxAttachmentBytes !== null
-        ? input.fileSize > input.maxAttachmentBytes
-        : /size/i.test(message);
-    return {
-      allowed: false,
-      reason: isSizeRejection
-        ? `attachment_too_large:${input.fileSize}`
-        : `attachment_type_not_allowed:${input.mimeType}`,
-    };
+    return { status: 'infrastructure_error', message: errorMessage(error) };
   }
+
+  try {
+    await validateFileUpload(input.mimeType, input.fileSize);
+    return { status: 'allowed' };
+  } catch (error) {
+    return classifyStoragePolicyError(error);
+  }
+}
+
+/**
+ * Validate a product-generated artifact (the original `.eml`, synthetic
+ * embedded images) against the shared size ceiling only — the tenant
+ * attachment allow-list never applies. Same runtime-safe subpath as the
+ * user-upload validator.
+ */
+async function validateInboundSystemArtifact(fileSize: number): Promise<StoragePolicyCheck> {
+  let validateSystemArtifact: (fileSize: number) => Promise<void>;
+  try {
+    ({ validateSystemArtifact } = await import('@alga-psa/storage/config/storage'));
+  } catch (error) {
+    return { status: 'infrastructure_error', message: errorMessage(error) };
+  }
+
+  try {
+    await validateSystemArtifact(fileSize);
+    return { status: 'allowed' };
+  } catch (error) {
+    return classifyStoragePolicyError(error);
+  }
+}
+
+function isStorageInfrastructureError(
+  check: StoragePolicyCheck
+): check is { status: 'infrastructure_error'; message: string } {
+  return check.status === 'infrastructure_error';
+}
+
+function isStoragePolicyRejection(
+  check: StoragePolicyCheck
+): check is { status: 'rejected'; kind: 'size' | 'type' } {
+  return check.status === 'rejected';
 }
 
 /**
@@ -290,6 +382,7 @@ async function postInboundAttachmentTrailComment(input: {
           content: JSON.stringify(buildAttachmentTrailBlocks(mergedFiles)),
           is_internal: true,
           is_resolution: false,
+          is_system_generated: true,
           author_type: 'system',
           metadata,
         },
@@ -597,6 +690,43 @@ async function markProcessedAttachment(
       error_message: args.errorMessage,
       updated_at: new Date(),
     });
+}
+
+/**
+ * Last-resort recovery for an unexpected error thrown after an attachment was
+ * claimed: only a row still in `processing` is moved to `failed`, so a success
+ * written before the error is never regressed. Best-effort — a failure here
+ * must not mask the original error.
+ */
+async function markProcessedAttachmentFailedIfProcessing(
+  args: {
+    tenantId: string;
+    providerId: string;
+    emailId: string;
+    attachmentId: string;
+    errorMessage: string;
+  }
+): Promise<void> {
+  try {
+    const knex = await getAdminKnex();
+    await tenantDb(knex, args.tenantId).table('email_processed_attachments')
+      .where({
+        provider_id: args.providerId,
+        email_id: args.emailId,
+        attachment_id: args.attachmentId,
+      })
+      .andWhere('processing_status', 'processing')
+      .update({
+        processing_status: 'failed',
+        error_message: args.errorMessage,
+        updated_at: new Date(),
+      });
+  } catch (error) {
+    console.warn('processInboundEmailInApp: failed to recover stuck attachment row (continuing)', {
+      attachmentId: args.attachmentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 async function resolveTicketAttachmentFolder(
@@ -1073,46 +1203,64 @@ async function persistInboundEmailAttachment(input: PersistAttachmentInput): Pro
     // body), so the tenant attachment allow-list does not apply — only the
     // size ceiling does. This keeps inline image embedding working for
     // tenants with a restrictive upload policy.
-    try {
-      const { validateSystemArtifact } = await import('@alga-psa/storage');
-      await validateSystemArtifact(buffer.length);
-    } catch {
+    const artifactCheck = await validateInboundSystemArtifact(buffer.length);
+    if (isStorageInfrastructureError(artifactCheck)) {
+      await markProcessedAttachment(knex, {
+        tenantId: input.tenantId,
+        providerId: input.providerId,
+        emailId: input.emailId,
+        attachmentId: input.attachmentId,
+        status: 'failed',
+        errorMessage: artifactCheck.message,
+      });
+      return { success: false, message: artifactCheck.message };
+    }
+    if (isStoragePolicyRejection(artifactCheck)) {
+      const reason = `attachment_too_large:${buffer.length}`;
       await markProcessedAttachment(knex, {
         tenantId: input.tenantId,
         providerId: input.providerId,
         emailId: input.emailId,
         attachmentId: input.attachmentId,
         status: 'skipped',
-        errorMessage: `attachment_too_large:${buffer.length}`,
+        errorMessage: reason,
       });
-      return {
-        success: true,
-        skipped: true,
-        reason: 'too_large',
-        message: `attachment_too_large:${buffer.length}`,
-      };
+      return { success: true, skipped: true, reason: 'too_large', message: reason };
     }
   } else {
     const uploadValidation = await validateInboundAttachmentUpload({
-      tenantId: input.tenantId,
       mimeType: resolvedMimeType,
       fileSize: buffer.length,
-      maxAttachmentBytes,
     });
-    if (!uploadValidation.allowed) {
+    if (isStorageInfrastructureError(uploadValidation)) {
+      await markProcessedAttachment(knex, {
+        tenantId: input.tenantId,
+        providerId: input.providerId,
+        emailId: input.emailId,
+        attachmentId: input.attachmentId,
+        status: 'failed',
+        errorMessage: uploadValidation.message,
+      });
+      return { success: false, message: uploadValidation.message };
+    }
+    if (isStoragePolicyRejection(uploadValidation)) {
+      const reason =
+        uploadValidation.kind === 'size'
+          ? `attachment_too_large:${buffer.length}`
+          : `attachment_type_not_allowed:${resolvedMimeType}`;
       await markProcessedAttachment(knex, {
         tenantId: input.tenantId,
         providerId: input.providerId,
         emailId: input.emailId,
         attachmentId: input.attachmentId,
         status: 'skipped',
-        errorMessage: uploadValidation.reason,
+        errorMessage: reason,
       });
       return {
         success: true,
         skipped: true,
-        reason: uploadValidation.reason.startsWith('attachment_too_large') ? 'too_large' : 'type_not_allowed',
-        message: uploadValidation.reason,
+        reason: uploadValidation.kind === 'size' ? 'too_large' : 'type_not_allowed',
+        message: reason,
       };
     }
   }
@@ -1225,26 +1373,31 @@ async function persistInboundOriginalEmail(input: PersistOriginalEmailInput): Pr
     return { success: false, message };
   }
 
-  try {
-    // The original-email `.eml` is a system artifact, not a user upload: the
-    // tenant attachment allow-list must never suppress the raw-email archive.
-    const { validateSystemArtifact } = await import('@alga-psa/storage');
-    await validateSystemArtifact(buffer.length);
-  } catch {
+  // The original-email `.eml` is a system artifact, not a user upload: the
+  // tenant attachment allow-list must never suppress the raw-email archive.
+  const artifactCheck = await validateInboundSystemArtifact(buffer.length);
+  if (isStorageInfrastructureError(artifactCheck)) {
+    await markProcessedAttachment(knex, {
+      tenantId: input.tenantId,
+      providerId: input.providerId,
+      emailId: input.emailId,
+      attachmentId,
+      status: 'failed',
+      errorMessage: artifactCheck.message,
+    });
+    return { success: false, message: artifactCheck.message };
+  }
+  if (isStoragePolicyRejection(artifactCheck)) {
+    const reason = `attachment_too_large:${buffer.length}`;
     await markProcessedAttachment(knex, {
       tenantId: input.tenantId,
       providerId: input.providerId,
       emailId: input.emailId,
       attachmentId,
       status: 'skipped',
-      errorMessage: `attachment_too_large:${buffer.length}`,
+      errorMessage: reason,
     });
-    return {
-      success: true,
-      skipped: true,
-      reason: 'too_large',
-      message: `attachment_too_large:${buffer.length}`,
-    };
+    return { success: true, skipped: true, reason: 'too_large', message: reason };
   }
 
   const persistResult = await persistDocumentForBuffer({
@@ -1433,6 +1586,14 @@ export async function processInboundEmailArtifactsBestEffort(
         url: `/api/documents/view/${fileId}`,
       });
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await markProcessedAttachmentFailedIfProcessing({
+        tenantId: input.tenantId,
+        providerId: input.providerId,
+        emailId: input.emailData.id,
+        attachmentId: String(attachment?.id ?? ''),
+        errorMessage: message,
+      });
       attachmentTrailOutcomes.push({
         attachmentId: String(attachment?.id ?? ''),
         fileName: String(attachment?.name ?? '') || '(unnamed attachment)',
@@ -1442,47 +1603,53 @@ export async function processInboundEmailArtifactsBestEffort(
             ? (attachment as any).size
             : null,
         status: 'failed',
-        reason: error instanceof Error ? error.message : String(error),
+        reason: message,
       });
       console.warn(`processInboundEmailInApp:[${input.scopeLabel}] attachment processing failed (continuing)`, {
         emailId: input.emailData.id,
         attachmentId: attachment?.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: message,
       });
     }
   });
 
-  await postInboundAttachmentTrailComment({
-    tenantId: input.tenantId,
-    providerId: input.providerId,
-    ticketId: input.ticketId,
-    emailId: input.emailData.id,
-    outcomes: attachmentTrailOutcomes,
-  });
-
+  let originalEmailResult: Record<string, any> | null = null;
   try {
-    const originalResult = await persistInboundOriginalEmail({
+    originalEmailResult = await persistInboundOriginalEmail({
       tenantId: input.tenantId,
       providerId: input.providerId,
       emailId: input.emailData.id,
       ticketId: input.ticketId,
       emailData: input.emailData,
     });
-    if (!originalResult?.success) {
+    if (!originalEmailResult?.success) {
       console.warn(`processInboundEmailInApp:[${input.scopeLabel}] original-email persistence failed`, {
         emailId: input.emailData.id,
-        reason: originalResult?.message || originalResult?.reason || 'unknown',
+        reason: originalEmailResult?.message || originalEmailResult?.reason || 'unknown',
       });
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    originalEmailResult = { success: false, message };
     console.warn(
       `processInboundEmailInApp:[${input.scopeLabel}] original-email persistence errored (continuing)`,
       {
         emailId: input.emailData.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: message,
       }
     );
   }
+
+  const originalEmailOutcome = buildOriginalEmailTrailOutcome(input.emailData.id, originalEmailResult);
+  await postInboundAttachmentTrailComment({
+    tenantId: input.tenantId,
+    providerId: input.providerId,
+    ticketId: input.ticketId,
+    emailId: input.emailData.id,
+    outcomes: originalEmailOutcome
+      ? [...attachmentTrailOutcomes, originalEmailOutcome]
+      : attachmentTrailOutcomes,
+  });
 
   return result;
 }

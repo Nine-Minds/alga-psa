@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resolveCommentAuthor } from '../../../../packages/tickets/src/lib/commentAuthorResolution';
 
 /**
  * These tests exercise the IMAP/in-app artifact pipeline end to end at the
@@ -13,6 +14,14 @@ const h = vi.hoisted(() => {
   const tables = new Map<string, Row[]>();
   const comments: Row[] = [];
   const uploads: Row[] = [];
+  // Injected storage-policy behaviour: a thrown error exercises the
+  // infrastructure-failure classification without a real broken import.
+  const storageState = {
+    policyError: null as Error | null,
+    artifactError: null as Error | null,
+    policyCalls: [] as Array<{ mimeType: string; fileSize: number }>,
+    artifactCalls: [] as number[],
+  };
 
   const getTable = (name: string): Row[] => {
     if (!tables.has(name)) tables.set(name, []);
@@ -141,7 +150,7 @@ const h = vi.hoisted(() => {
   knex.raw = async () => undefined;
   knex.fn = { now: () => new Date() };
 
-  return { knex, tables, comments, uploads, getTable };
+  return { knex, tables, comments, uploads, getTable, storageState };
 });
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -189,7 +198,9 @@ function fakeStorageModule() {
     (process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES || '*/*').split(',').map((value) => value.trim());
   const maxFileSize = () => Number(process.env.STORAGE_LOCAL_MAX_FILE_SIZE || '524288000');
 
-  const validateFileUpload = async (_tenant: string, mimeType: string, fileSize: number) => {
+  const validateFileUpload = async (mimeType: string, fileSize: number) => {
+    h.storageState.policyCalls.push({ mimeType, fileSize });
+    if (h.storageState.policyError) throw h.storageState.policyError;
     if (fileSize > maxFileSize()) {
       throw new Error(`File size exceeds limit of ${maxFileSize()} bytes`);
     }
@@ -203,6 +214,8 @@ function fakeStorageModule() {
   };
 
   const validateSystemArtifact = async (fileSize: number) => {
+    h.storageState.artifactCalls.push(fileSize);
+    if (h.storageState.artifactError) throw h.storageState.artifactError;
     if (fileSize > maxFileSize()) {
       throw new Error(`File size exceeds limit of ${maxFileSize()} bytes`);
     }
@@ -225,14 +238,23 @@ function fakeStorageModule() {
         local: { maxFileSize: maxFileSize(), allowedMimeTypes: allowedMimeTypes() },
       },
     }),
-    StorageService: { validateFileUpload },
+    validateFileUpload,
     validateSystemArtifact,
     StorageProviderFactory: { createProvider },
     generateStoragePath,
   };
 }
 
-vi.mock('@alga-psa/storage', () => fakeStorageModule());
+// The production code loads the narrow `config/storage` subpath so the built
+// email-service worker can resolve it; mock that exact module, not the barrel.
+vi.mock('@alga-psa/storage/config/storage', () => {
+  const module = fakeStorageModule();
+  return {
+    getStorageConfig: module.getStorageConfig,
+    validateFileUpload: module.validateFileUpload,
+    validateSystemArtifact: module.validateSystemArtifact,
+  };
+});
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => {
   const module = fakeStorageModule();
   return {
@@ -245,6 +267,10 @@ function seedTables() {
   h.tables.clear();
   h.comments.length = 0;
   h.uploads.length = 0;
+  h.storageState.policyError = null;
+  h.storageState.artifactError = null;
+  h.storageState.policyCalls.length = 0;
+  h.storageState.artifactCalls.length = 0;
   h.tables.set('users', [{ user_id: 'system-user', created_at: '2020-01-01T00:00:00.000Z' }]);
   for (const table of [
     'email_processed_attachments',
@@ -346,11 +372,76 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
     expect(String(processed.error_message)).toContain('attachment_type_not_allowed:audio/wav');
 
     expect(h.getTable('documents').some((doc) => doc.mime_type === 'audio/wav')).toBe(false);
+    // The raw .eml is a system artifact: a restrictive user allow-list must not
+    // suppress the archive, and it must not appear as a trail skip.
+    expect(h.getTable('documents').some((doc) => doc.mime_type === 'message/rfc822')).toBe(true);
 
     expect(h.comments).toHaveLength(1);
-    expect(h.comments[0]).toMatchObject({ is_internal: true, author_type: 'system' });
+    expect(h.comments[0]).toMatchObject({
+      is_internal: true,
+      author_type: 'system',
+      is_system_generated: true,
+    });
     expect(h.comments[0].content).toContain('voicemail.wav');
     expect(h.comments[0].content).toContain('attachment_type_not_allowed:audio/wav');
+
+    // The stored comment is authorless but system-generated, so the UI resolves
+    // it to System rather than Unknown User.
+    const resolved = resolveCommentAuthor(
+      { user_id: null, contact_id: null, is_system_generated: true },
+      { userMap: {} }
+    );
+    expect(resolved.source).toBe('system');
+    expect(resolved.displayName).toBe('System');
+  });
+
+  it('skips a genuinely oversized attachment as attachment_too_large and lists it in the trail', async () => {
+    process.env.STORAGE_LOCAL_MAX_FILE_SIZE = '10';
+
+    await run({ attachments: [wavAttachment()] });
+
+    const processed = h.getTable('email_processed_attachments').find(
+      (row) => row.attachment_id === 'attachment-wav-1'
+    );
+    expect(processed.processing_status).toBe('skipped');
+    expect(processed.error_message).toBe('attachment_too_large:12');
+
+    expect(h.comments).toHaveLength(1);
+    expect(h.comments[0].content).toContain('voicemail.wav');
+    expect(h.comments[0].content).toContain('attachment_too_large:12');
+  });
+
+  it('marks an arbitrary validator failure as failed (not skipped, not too_large) and reports the real error', async () => {
+    h.storageState.policyError = new Error('storage config unavailable');
+
+    await run({ attachments: [wavAttachment()] });
+
+    const processed = h.getTable('email_processed_attachments').find(
+      (row) => row.attachment_id === 'attachment-wav-1'
+    );
+    expect(processed.processing_status).toBe('failed');
+    expect(processed.error_message).toBe('storage config unavailable');
+    expect(String(processed.error_message)).not.toContain('too_large');
+    expect(String(processed.error_message)).not.toContain('not_allowed');
+
+    expect(h.comments).toHaveLength(1);
+    expect(h.comments[0].content).toContain('storage config unavailable');
+  });
+
+  it('reports an original-email infrastructure failure in the trail instead of silently omitting it', async () => {
+    h.storageState.artifactError = new Error('artifact storage unavailable');
+
+    await run({ attachments: [wavAttachment()] });
+
+    const original = h.getTable('email_processed_attachments').find(
+      (row) => row.attachment_id === '__original_email_source__'
+    );
+    expect(original.processing_status).toBe('failed');
+    expect(original.error_message).toBe('artifact storage unavailable');
+
+    expect(h.comments).toHaveLength(1);
+    expect(h.comments[0].content).toContain('original-email');
+    expect(h.comments[0].content).toContain('artifact storage unavailable');
   });
 
   it('does not duplicate the trail comment when the same email is processed again', async () => {
