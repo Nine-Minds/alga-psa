@@ -523,6 +523,43 @@ export const saveTimeEntry = withAuth(async (
     await db.transaction(async (trx) => {
       const trxTenantDb = tenantDb(trx, tenant) as any;
       console.log('Starting transaction for time entry');
+
+      // Status is the editability gate: only DRAFT and CHANGES_REQUESTED sheets
+      // accept writes. Lock the target sheet (and, on an update, the sheet the
+      // entry is currently attached to) before any entry or billing write so a
+      // concurrent submission cannot slip through and a caller cannot bypass a
+      // locked original by pointing the entry at another sheet. Locking in
+      // sorted id order keeps the lock order stable against other writers.
+      const editableStatuses = new Set(['DRAFT', 'CHANGES_REQUESTED']);
+      const sheetIdsToLock = new Set<string>();
+      if (cleanedEntry.time_sheet_id) {
+        sheetIdsToLock.add(cleanedEntry.time_sheet_id);
+      }
+      if (entry_id) {
+        const originalSheet = await trxTenantDb.table('time_entries')
+          .where({ entry_id })
+          .first('time_sheet_id');
+        if (originalSheet?.time_sheet_id) {
+          sheetIdsToLock.add(originalSheet.time_sheet_id);
+        }
+      }
+      for (const sheetId of Array.from(sheetIdsToLock).sort()) {
+        const lockedSheet = await trxTenantDb.table('time_sheets')
+          .where({ id: sheetId })
+          .forUpdate()
+          .first('approval_status');
+        if (!lockedSheet) {
+          throw new Error('Time sheet not found');
+        }
+        if (!editableStatuses.has(lockedSheet.approval_status)) {
+          throw new Error(
+            sheetId === cleanedEntry.time_sheet_id
+              ? 'Time sheet is not editable'
+              : 'Original time sheet is not editable',
+          );
+        }
+      }
+
       let oldDuration = 0; // Initialize oldDuration
       let oldEntrySpan: {
         service_id?: string | null;

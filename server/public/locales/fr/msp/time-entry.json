@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Seules les feuilles de temps en brouillon peuvent être supprimées.",
       "removeEntriesFirst": "Supprimez les entrées de temps avant de supprimer cette feuille de temps.",
       "onlyApprovedReopenable": "Seules les feuilles de temps approuvées peuvent être rouvertes.",
-      "invoicedCannotReopen": "Cette feuille de temps contient du temps facturé et ne peut pas être rouverte."
+      "invoicedCannotReopen": "Cette feuille de temps contient du temps facturé et ne peut pas être rouverte.",
+      "notEditable": "Cette feuille de temps est verrouillée. Choisissez une feuille brouillon ou une feuille avec modifications demandées."
     },
     "timeEntry": {
       "notFoundRefresh": "Entrée de temps introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
@@ -506,5 +507,24 @@
       "missingField": "Un champ obligatoire du paramètre de période est manquant.",
       "missingFieldNamed": "Un champ obligatoire du paramètre de période est manquant : {{field}}."
     }
+  },
+  "periodPicker": {
+    "title": "Ajouter une nouvelle entrée de temps pour {{name}}",
+    "label": "Période de temps",
+    "placeholder": "Choisir une période de temps",
+    "current": "Actuelle",
+    "continue": "Continuer",
+    "continueLoading": "Chargement…",
+    "cancel": "Annuler",
+    "status": {
+      "DRAFT": "Brouillon",
+      "SUBMITTED": "Soumis",
+      "APPROVED": "Approuvé",
+      "CHANGES_REQUESTED": "Modifications demandées",
+      "UNKNOWN": "Inconnu"
+    },
+    "locked": "Cette feuille de temps est {{status}}. Choisissez une feuille brouillon ou une feuille avec modifications demandées.",
+    "statusChanged": "Cette feuille de temps est maintenant {{status}}. Choisissez une feuille brouillon ou une feuille avec modifications demandées.",
+    "outsidePeriod": "Les heures de début et de fin fournies sont en dehors de cette période ; l'entrée commence donc le {{date}} à 08:00."
   }
 }

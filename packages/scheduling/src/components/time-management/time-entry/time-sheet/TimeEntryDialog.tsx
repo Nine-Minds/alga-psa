@@ -49,6 +49,8 @@ interface TimeEntryDialogProps {
   timeSheetId?: string;
   onTimeEntriesUpdate?: (entries: ITimeEntryWithWorkItemString[]) => void;
   inDrawer?: boolean;
+  /** Optional selected-period context shown under the drawer title. */
+  periodContextLabel?: string;
 }
 
 function splitPaymentWarning(message: string): [string, string] {
@@ -74,6 +76,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     timeSheetId,
     onTimeEntriesUpdate,
     inDrawer,
+    periodContextLabel,
   } = props;
   const { t } = useTranslation('msp/time-entry');
   // Injected from the composition layer (billing owns the warning action).
@@ -340,6 +343,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       data-automation-type="container"
     >
       {inDrawer && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
+      {inDrawer && periodContextLabel && (
+        <p className="mb-3 text-sm text-[rgb(var(--color-text-600))]">{periodContextLabel}</p>
+      )}
       {hasProjectPaymentWarning && (
         <Alert id={`${id}-project-payment-warning`} variant="warning" className="mb-3">
           <AlertDescription>

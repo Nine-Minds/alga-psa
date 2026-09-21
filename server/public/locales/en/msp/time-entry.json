@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Only draft time sheets can be removed.",
       "removeEntriesFirst": "Remove time entries before removing this time sheet.",
       "onlyApprovedReopenable": "Only approved time sheets can be reopened.",
-      "invoicedCannotReopen": "This time sheet contains invoiced time and cannot be reopened."
+      "invoicedCannotReopen": "This time sheet contains invoiced time and cannot be reopened.",
+      "notEditable": "This time sheet is locked. Choose a draft sheet or a sheet with changes requested."
     },
     "timeEntry": {
       "notFoundRefresh": "Time entry not found. It may have been deleted. Please refresh and try again.",
@@ -506,5 +507,24 @@
       "missingField": "Missing required time period setting field.",
       "missingFieldNamed": "Missing required time period setting field: {{field}}."
     }
+  },
+  "periodPicker": {
+    "title": "Add New Time Entry for {{name}}",
+    "label": "Time period",
+    "placeholder": "Choose a time period",
+    "current": "Current",
+    "continue": "Continue",
+    "continueLoading": "Loading…",
+    "cancel": "Cancel",
+    "status": {
+      "DRAFT": "Draft",
+      "SUBMITTED": "Submitted",
+      "APPROVED": "Approved",
+      "CHANGES_REQUESTED": "Changes Requested",
+      "UNKNOWN": "Unknown"
+    },
+    "locked": "This time sheet is {{status}}. Choose a draft sheet or a sheet with changes requested.",
+    "statusChanged": "This time sheet is now {{status}}. Choose a draft sheet or a sheet with changes requested.",
+    "outsidePeriod": "The supplied start and end times are outside this period, so the entry starts on {{date}} at 08:00."
   }
 }

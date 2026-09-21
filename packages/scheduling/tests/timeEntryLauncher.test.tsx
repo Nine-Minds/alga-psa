@@ -1,82 +1,75 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { launchTimeEntryForWorkItem } from '../src/lib/timeEntryLauncher';
 
-// vi.hoisted: mock factories run while the test module's imports evaluate —
-// plain consts would still be in their temporal dead zone at that point.
-const { getCurrentUser, getCurrentTimePeriod, fetchOrCreateTimeSheet, saveTimeEntry, toastError } =
-  vi.hoisted(() => ({
-    getCurrentUser: vi.fn(),
-    getCurrentTimePeriod: vi.fn(),
-    fetchOrCreateTimeSheet: vi.fn(),
-    saveTimeEntry: vi.fn(),
-    toastError: vi.fn(),
-  }));
+// Launcher construction coverage: the work item handed to whichever stage opens
+// keeps ticket/project/interaction context, and existing entries route to their
+// saved sheet instead of the period picker. Behavioral feedback lives in
+// timeEntryLauncher.launchFeedback.test.ts; rendered picker behavior lives in
+// timeEntryPeriodLauncher.test.tsx.
 
-// timeEntryLauncher imports getCurrentUser from user-composition; mock both
-// specifiers so the interception holds regardless of which config resolves it.
-vi.mock('@alga-psa/users/actions', () => ({
+const {
   getCurrentUser,
+  getCurrentTimePeriod,
+  getTimeEntryUserTimeZone,
+  fetchTimePeriods,
+  fetchOrCreateTimeSheet,
+  getTimeEntryById,
+  fetchTimeSheet,
+} = vi.hoisted(() => ({
+  getCurrentUser: vi.fn(),
+  getCurrentTimePeriod: vi.fn(),
+  getTimeEntryUserTimeZone: vi.fn(),
+  fetchTimePeriods: vi.fn(),
+  fetchOrCreateTimeSheet: vi.fn(),
+  getTimeEntryById: vi.fn(),
+  fetchTimeSheet: vi.fn(),
 }));
-vi.mock('@alga-psa/user-composition/actions', () => ({
-  getCurrentUser,
-}));
+
+vi.mock('@alga-psa/users/actions', () => ({ getCurrentUser }));
+vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser }));
 
 vi.mock('../src/actions/timePeriodsActions', () => ({
   getCurrentTimePeriod,
+  getTimeEntryUserTimeZone,
 }));
 
 vi.mock('../src/actions/timeEntryActions', () => ({
+  fetchTimePeriods,
   fetchOrCreateTimeSheet,
-  saveTimeEntry,
+  saveTimeEntry: vi.fn(),
+  getTimeEntryById,
 }));
 
-vi.mock('react-hot-toast', () => ({
-  toast: { error: toastError },
+vi.mock('../src/actions/timeSheetActions', () => ({ fetchTimeSheet }));
+
+vi.mock('react-hot-toast', () => ({ toast: { error: vi.fn(), loading: vi.fn(), dismiss: vi.fn(), success: vi.fn() } }));
+
+vi.mock('../src/components/time-management/time-entry/time-sheet/TimeEntryDialog', () => ({
+  default: () => null,
 }));
+
+vi.mock('../src/components/time-management/time-entry/time-sheet/TimeEntryPeriodLauncher', () => ({
+  default: () => null,
+}));
+
+// The drawer receives a React element but never renders it here, so read the
+// props off the element rather than from a component body.
+const openedProps = (openDrawer: ReturnType<typeof vi.fn>): any => openDrawer.mock.calls[0][0].props;
+
+const periods = [
+  { period_id: 'period-1', start_date: '2026-09-01', end_date: '2026-09-08', timeSheetStatus: 'DRAFT', timeSheetId: 'sheet-1' },
+];
 
 beforeEach(() => {
   getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
-  getCurrentTimePeriod.mockResolvedValue({
-    period_id: 'period-1',
-    start_date: '2026-01-01',
-    end_date: '2026-01-31',
-  });
+  getCurrentTimePeriod.mockResolvedValue({ period_id: 'period-1', start_date: '2026-09-01', end_date: '2026-09-08' });
+  getTimeEntryUserTimeZone.mockResolvedValue('America/New_York');
+  fetchTimePeriods.mockResolvedValue(periods);
   fetchOrCreateTimeSheet.mockResolvedValue({ id: 'sheet-1' });
-  saveTimeEntry.mockResolvedValue({});
+  getTimeEntryById.mockResolvedValue(null);
 });
 
 describe('launchTimeEntryForWorkItem', () => {
-  it('fetches current time period before opening the dialog', async () => {
-    const openDrawer = vi.fn();
-    await launchTimeEntryForWorkItem({
-      openDrawer,
-      closeDrawer: vi.fn(),
-      context: {
-        workItemId: 'ticket-1',
-        workItemType: 'ticket',
-        workItemName: 'Ticket 1',
-      },
-    });
-
-    expect(getCurrentTimePeriod).toHaveBeenCalled();
-    expect(openDrawer).toHaveBeenCalled();
-  });
-
-  it('creates or fetches a time sheet for the current user and period', async () => {
-    await launchTimeEntryForWorkItem({
-      openDrawer: vi.fn(),
-      closeDrawer: vi.fn(),
-      context: {
-        workItemId: 'ticket-1',
-        workItemType: 'ticket',
-        workItemName: 'Ticket 1',
-      },
-    });
-
-    expect(fetchOrCreateTimeSheet).toHaveBeenCalledWith('user-1', 'period-1');
-  });
-
   it('builds a ticket work item with ticket context', async () => {
     const openDrawer = vi.fn();
     await launchTimeEntryForWorkItem({
@@ -92,13 +85,13 @@ describe('launchTimeEntryForWorkItem', () => {
       },
     });
 
-    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
-    expect(element.props.workItem.work_item_id).toBe('ticket-1');
-    expect(element.props.workItem.type).toBe('ticket');
-    expect(element.props.workItem.name).toBe('Ticket 1');
-    expect(element.props.workItem.ticket_number).toBe('T-123');
-    expect(element.props.workItem.client_name).toBe('Acme');
-    expect(element.props.workItem.description).toBe('Worked on issue');
+    const workItem = openedProps(openDrawer).workItem;
+    expect(workItem.work_item_id).toBe('ticket-1');
+    expect(workItem.type).toBe('ticket');
+    expect(workItem.name).toBe('Ticket 1');
+    expect(workItem.ticket_number).toBe('T-123');
+    expect(workItem.client_name).toBe('Acme');
+    expect(workItem.description).toBe('Worked on issue');
   });
 
   it('builds an interaction work item with interaction context', async () => {
@@ -120,18 +113,17 @@ describe('launchTimeEntryForWorkItem', () => {
       },
     });
 
-    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
-    expect(element.props.workItem.work_item_id).toBe('interaction-1');
-    expect(element.props.workItem.type).toBe('interaction');
-    expect(element.props.workItem.interaction_type).toBe('Call');
-    expect(element.props.workItem.client_name).toBe('Globex');
-    expect(element.props.workItem.startTime).toEqual(start);
-    expect(element.props.workItem.endTime).toEqual(end);
+    const workItem = openedProps(openDrawer).workItem;
+    expect(workItem.work_item_id).toBe('interaction-1');
+    expect(workItem.type).toBe('interaction');
+    expect(workItem.interaction_type).toBe('Call');
+    expect(workItem.client_name).toBe('Globex');
+    expect(workItem.startTime).toEqual(start);
+    expect(workItem.endTime).toEqual(end);
   });
 
   it('builds a project task work item with task context', async () => {
     const openDrawer = vi.fn();
-
     await launchTimeEntryForWorkItem({
       openDrawer,
       closeDrawer: vi.fn(),
@@ -147,110 +139,40 @@ describe('launchTimeEntryForWorkItem', () => {
       },
     });
 
-    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
-    expect(element.props.workItem.type).toBe('project_task');
-    expect(element.props.workItem.project_name).toBe('Project A');
-    expect(element.props.workItem.phase_name).toBe('Phase 2');
-    expect(element.props.workItem.task_name).toBe('Build feature');
-    expect(element.props.workItem.service_id).toBe('service-1');
-    expect(element.props.workItem.service_name).toBe('Implementation');
+    const workItem = openedProps(openDrawer).workItem;
+    expect(workItem.type).toBe('project_task');
+    expect(workItem.project_name).toBe('Project A');
+    expect(workItem.phase_name).toBe('Phase 2');
+    expect(workItem.task_name).toBe('Build feature');
+    expect(workItem.service_id).toBe('service-1');
+    expect(workItem.service_name).toBe('Implementation');
   });
 
-  it('shows a toast error when no active time period exists', async () => {
+  it('routes existing entries to their saved sheet without creating today’s sheet', async () => {
+    getTimeEntryById.mockResolvedValueOnce({
+      entry_id: 'entry-1',
+      time_sheet_id: 'sheet-old',
+      start_time: '2026-02-10T14:00:00.000Z',
+      end_time: '2026-02-10T15:00:00.000Z',
+    });
+    fetchTimeSheet.mockResolvedValueOnce({
+      id: 'sheet-old',
+      approval_status: 'DRAFT',
+      tenant: 'tenant-1',
+      time_period: { period_id: 'period-old', start_date: '2026-02-01', end_date: '2026-02-08' },
+    });
     const openDrawer = vi.fn();
-    getCurrentTimePeriod.mockResolvedValueOnce(null);
 
     await launchTimeEntryForWorkItem({
       openDrawer,
       closeDrawer: vi.fn(),
-      context: {
-        workItemId: 'ticket-1',
-        workItemType: 'ticket',
-        workItemName: 'Ticket 1',
-      },
+      existingEntryId: 'entry-1',
+      context: { workItemId: 'ticket-9', workItemType: 'ticket', workItemName: 'Ticket 9' },
     });
 
-    expect(toastError).toHaveBeenCalled();
-    expect(openDrawer).not.toHaveBeenCalled();
-  });
-
-  it('opens TimeEntryDialog in drawer mode with time period and time sheet', async () => {
-    const openDrawer = vi.fn();
-    await launchTimeEntryForWorkItem({
-      openDrawer,
-      closeDrawer: vi.fn(),
-      context: {
-        workItemId: 'ticket-2',
-        workItemType: 'ticket',
-        workItemName: 'Ticket 2',
-      },
-    });
-
-    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
-    expect(element.props.inDrawer).toBe(true);
-    expect(element.props.timePeriod.period_id).toBe('period-1');
-    expect(element.props.timeSheetId).toBe('sheet-1');
-  });
-
-  it('prefills service information for project tasks', async () => {
-    const openDrawer = vi.fn();
-    await launchTimeEntryForWorkItem({
-      openDrawer,
-      closeDrawer: vi.fn(),
-      context: {
-        workItemId: 'task-2',
-        workItemType: 'project_task',
-        workItemName: 'Configure service',
-        serviceId: 'service-99',
-        serviceName: 'Deployment',
-      },
-    });
-
-    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
-    expect(element.props.workItem.service_id).toBe('service-99');
-    expect(element.props.workItem.service_name).toBe('Deployment');
-  });
-
-  it('saves time entry and closes the drawer on success', async () => {
-    const openDrawer = vi.fn();
-    const closeDrawer = vi.fn();
-
-    await launchTimeEntryForWorkItem({
-      openDrawer,
-      closeDrawer,
-      context: {
-        workItemId: 'ticket-3',
-        workItemType: 'ticket',
-        workItemName: 'Ticket 3',
-      },
-    });
-
-    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
-    await element.props.onSave({ id: 'entry-1' });
-
-    expect(saveTimeEntry).toHaveBeenCalled();
-    expect(closeDrawer).toHaveBeenCalled();
-  });
-
-  it('invokes onComplete after successful save', async () => {
-    const openDrawer = vi.fn();
-    const closeDrawer = vi.fn();
-    const onComplete = vi.fn();
-
-    await launchTimeEntryForWorkItem({
-      openDrawer,
-      closeDrawer,
-      onComplete,
-      context: {
-        workItemId: 'ticket-4',
-        workItemType: 'ticket',
-        workItemName: 'Ticket 4',
-      },
-    });
-
-    const element = openDrawer.mock.calls[0][0] as React.ReactElement;
-    await element.props.onSave({ id: 'entry-2' });
-
-    expect(onComplete).toHaveBeenCalled();
+    expect(fetchOrCreateTimeSheet).not.toHaveBeenCalled();
+    const props = openedProps(openDrawer);
+    expect(props.existingEntries[0].entry_id).toBe('entry-1');
+    expect(props.timeSheetId).toBe('sheet-old');
   });
 });

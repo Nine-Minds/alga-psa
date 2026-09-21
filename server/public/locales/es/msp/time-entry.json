@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Solo se pueden quitar las hojas de horas en borrador.",
       "removeEntriesFirst": "Quite las entradas de tiempo antes de quitar esta hoja de horas.",
       "onlyApprovedReopenable": "Solo se pueden reabrir las hojas de horas aprobadas.",
-      "invoicedCannotReopen": "Esta hoja de horas contiene tiempo facturado y no se puede reabrir."
+      "invoicedCannotReopen": "Esta hoja de horas contiene tiempo facturado y no se puede reabrir.",
+      "notEditable": "Esta hoja de tiempo está bloqueada. Elige una hoja borrador o una hoja con cambios solicitados."
     },
     "timeEntry": {
       "notFoundRefresh": "No se encontró la entrada de tiempo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
@@ -506,5 +507,24 @@
       "missingField": "Falta un campo obligatorio de la configuración del período.",
       "missingFieldNamed": "Falta un campo obligatorio de la configuración del período: {{field}}."
     }
+  },
+  "periodPicker": {
+    "title": "Agregar nueva entrada de tiempo para {{name}}",
+    "label": "Período de tiempo",
+    "placeholder": "Elegir un período de tiempo",
+    "current": "Actual",
+    "continue": "Continuar",
+    "continueLoading": "Cargando…",
+    "cancel": "Cancelar",
+    "status": {
+      "DRAFT": "Borrador",
+      "SUBMITTED": "Enviado",
+      "APPROVED": "Aprobado",
+      "CHANGES_REQUESTED": "Cambios solicitados",
+      "UNKNOWN": "Desconocido"
+    },
+    "locked": "Esta hoja de tiempo está {{status}}. Elige una hoja borrador o una hoja con cambios solicitados.",
+    "statusChanged": "Esta hoja de tiempo ahora está {{status}}. Elige una hoja borrador o una hoja con cambios solicitados.",
+    "outsidePeriod": "Las horas de inicio y fin proporcionadas están fuera de este período, por lo que la entrada comienza el {{date}} a las 08:00."
   }
 }

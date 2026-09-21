@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Rendered launcher: current period preselected; choose prior DRAFT and CHANGES_REQUESTED periods; assert Continue resolves only selected sheet and mounts matching ID/bounds. Browsing creates no sheets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
@@ -14,7 +14,7 @@
   {
     "id": "T002",
     "description": "Rendered launcher: SUBMITTED/APPROVED/unknown statuses block Continue; a sheet becoming locked during resolution remains at selection; failed requests, double Continue, and cancellation cannot advance stale state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F003",
@@ -24,7 +24,7 @@
   {
     "id": "T003",
     "description": "Launcher feedback: no current period with historical options permits explicit selection; empty catalog and returned auth/permission errors provide actionable feedback without opening an editable form.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F004",
@@ -34,7 +34,7 @@
   {
     "id": "T004",
     "description": "Default-date behavior: nonweekly period, inclusive first/last day and exclusive end, subject/browser timezone mismatch and DST; valid timer defaults remain, out-of-period defaults use selected first day with explanation. Include schedule/ad-hoc overrides.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
@@ -43,7 +43,7 @@
   {
     "id": "T005",
     "description": "Existing-entry behavior: historical entry uses its own sheet, period and status even without a current period; never creates a sheet or exposes transfer. Retain ownership and invoice restrictions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F009"
@@ -52,7 +52,7 @@
   {
     "id": "T006",
     "description": "Rendered save lifecycle: server action error and thrown exception retain the form without success toast, close, or completion; successful ticket and project saves close/refresh exactly once and retain work-item/service context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F010"

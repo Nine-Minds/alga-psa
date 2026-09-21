@@ -484,7 +484,8 @@
       "onlyDraftRemovable": "Usunąć można tylko robocze arkusze czasu pracy.",
       "removeEntriesFirst": "Usuń wpisy czasu przed usunięciem tego arkusza czasu pracy.",
       "onlyApprovedReopenable": "Ponownie otworzyć można tylko zatwierdzone arkusze czasu pracy.",
-      "invoicedCannotReopen": "Ten arkusz czasu pracy zawiera rozliczony czas i nie można go ponownie otworzyć."
+      "invoicedCannotReopen": "Ten arkusz czasu pracy zawiera rozliczony czas i nie można go ponownie otworzyć.",
+      "notEditable": "Ten arkusz czasu jest zablokowany. Wybierz arkusz roboczy lub arkusz z poproszonymi zmianami."
     },
     "timeEntry": {
       "notFoundRefresh": "Nie znaleziono wpisu czasu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
@@ -510,5 +511,24 @@
       "missingField": "Brakuje wymaganego pola ustawienia okresu.",
       "missingFieldNamed": "Brakuje wymaganego pola ustawienia okresu: {{field}}."
     }
+  },
+  "periodPicker": {
+    "title": "Dodaj nowy wpis czasu dla {{name}}",
+    "label": "Okres czasu",
+    "placeholder": "Wybierz okres czasu",
+    "current": "Bieżący",
+    "continue": "Kontynuuj",
+    "continueLoading": "Ładowanie…",
+    "cancel": "Anuluj",
+    "status": {
+      "DRAFT": "Wersja robocza",
+      "SUBMITTED": "Przesłano",
+      "APPROVED": "Zatwierdzono",
+      "CHANGES_REQUESTED": "Poproszono o zmiany",
+      "UNKNOWN": "Nieznany"
+    },
+    "locked": "Ten arkusz czasu ma status {{status}}. Wybierz arkusz roboczy lub arkusz z poproszonymi zmianami.",
+    "statusChanged": "Ten arkusz czasu ma teraz status {{status}}. Wybierz arkusz roboczy lub arkusz z poproszonymi zmianami.",
+    "outsidePeriod": "Podane godziny rozpoczęcia i zakończenia są poza tym okresem, więc wpis rozpoczyna się {{date}} o 08:00."
   }
 }
