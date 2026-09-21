@@ -1,15 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+type ClientRow = { client_id: string; default_currency_code: string };
+
 type MockState = {
   existingSettings: Record<string, unknown> | null;
   updates: Array<{ table: string; filters: Record<string, unknown>; payload: Record<string, unknown> }>;
   inserts: Array<{ table: string; payload: Record<string, unknown> }>;
+  clients: ClientRow[];
+  lockedSettingsReads: number;
 };
 
 const mockState: MockState = {
   existingSettings: null,
   updates: [],
   inserts: [],
+  clients: [],
+  lockedSettingsReads: 0,
 };
 
 const mockCreateTenantKnex = vi.fn(async () => ({ knex: {} }));
@@ -21,20 +27,40 @@ function createMockQuery(
   state: MockState
 ) {
   let filters = { ...initialFilters };
+  let countRequested = false;
 
-  return {
+  const query = {
     where(nextFilters: Record<string, unknown>) {
       filters = { ...filters, ...nextFilters };
-      return this;
+      return query;
+    },
+    forUpdate() {
+      state.lockedSettingsReads += 1;
+      return query;
+    },
+    count() {
+      countRequested = true;
+      return query;
     },
     async first() {
       if (table === 'default_billing_settings') {
         return state.existingSettings;
       }
+      if (countRequested && table === 'clients') {
+        return { count: String(state.clients.length) };
+      }
       return null;
     },
     async update(payload: Record<string, unknown>) {
       state.updates.push({ table, filters: { ...filters }, payload });
+      if (table === 'clients') {
+        const match = filters.default_currency_code;
+        const affected = state.clients.filter((client) => client.default_currency_code === match);
+        for (const client of affected) {
+          client.default_currency_code = String(payload.default_currency_code);
+        }
+        return affected.length;
+      }
       return 1;
     },
     async insert(payload: Record<string, unknown>) {
@@ -42,6 +68,8 @@ function createMockQuery(
       return [payload];
     },
   };
+
+  return query;
 }
 
 function createMockTransaction(state: MockState) {
@@ -94,12 +122,18 @@ const baseSettings = {
   defaultCurrencyCode: 'AUD',
 };
 
+const settingsUpdates = () =>
+  mockState.updates.filter((update) => update.table === 'default_billing_settings');
+const clientUpdates = () =>
+  mockState.updates.filter((update) => update.table === 'clients');
+
 describe('getDefaultBillingSettings — default currency', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.existingSettings = null;
     mockState.updates = [];
     mockState.inserts = [];
+    mockState.clients = [];
   });
 
   it('returns USD when no settings row exists', async () => {
@@ -163,9 +197,12 @@ describe('updateDefaultBillingSettings — default currency', () => {
       tenant: 'tenant-1',
       zero_dollar_invoice_handling: 'normal',
       suppress_zero_dollar_invoices: false,
+      default_currency_code: 'USD',
     };
     mockState.updates = [];
     mockState.inserts = [];
+    mockState.clients = [];
+    mockState.lockedSettingsReads = 0;
   });
 
   it('persists defaultCurrencyCode when updating existing settings', async () => {
@@ -179,11 +216,29 @@ describe('updateDefaultBillingSettings — default currency', () => {
       baseSettings
     );
 
-    expect(result).toEqual({ success: true });
-    expect(mockState.updates).toHaveLength(1);
-    expect(mockState.updates[0]?.payload).toMatchObject({
+    expect(result).toMatchObject({
+      success: true,
+      previousCurrencyCode: 'USD',
+      currencyCode: 'AUD',
+    });
+    expect(settingsUpdates()).toHaveLength(1);
+    expect(settingsUpdates()[0]?.payload).toMatchObject({
       default_currency_code: 'AUD',
     });
+  });
+
+  it('locks the settings row before deciding whether to propagate', async () => {
+    const { updateDefaultBillingSettings } = await import(
+      '../src/actions/billingSettingsActions'
+    );
+
+    await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      baseSettings
+    );
+
+    expect(mockState.lockedSettingsReads).toBe(1);
   });
 
   it('persists defaultCurrencyCode when inserting new settings', async () => {
@@ -199,7 +254,7 @@ describe('updateDefaultBillingSettings — default currency', () => {
       baseSettings
     );
 
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true, previousCurrencyCode: 'USD', currencyCode: 'AUD' });
     expect(mockState.inserts).toHaveLength(1);
     expect(mockState.inserts[0]?.payload).toMatchObject({
       default_currency_code: 'AUD',
@@ -232,15 +287,117 @@ describe('updateDefaultBillingSettings — default currency', () => {
       '../src/actions/billingSettingsActions'
     );
 
-    await updateDefaultBillingSettings(
+    const result = await updateDefaultBillingSettings(
       { user_id: 'user-1' },
       { tenant: 'tenant-1' },
       { ...baseSettings, defaultCurrencyCode: '' }
     );
 
-    expect(mockState.updates[0]?.payload).toMatchObject({
+    expect(settingsUpdates()[0]?.payload).toMatchObject({
       default_currency_code: 'USD',
     });
+    // Empty normalizes to the existing default, so no propagation is claimed.
+    expect(result).toMatchObject({ success: true, currencyCode: 'USD' });
+    expect(result).not.toHaveProperty('propagatedClientCount');
+  });
+});
+
+describe('updateDefaultBillingSettings — client currency propagation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockState.existingSettings = {
+      tenant: 'tenant-1',
+      zero_dollar_invoice_handling: 'normal',
+      suppress_zero_dollar_invoices: false,
+      default_currency_code: 'USD',
+    };
+    mockState.updates = [];
+    mockState.inserts = [];
+    mockState.clients = [
+      { client_id: 'client-1', default_currency_code: 'USD' },
+      { client_id: 'client-2', default_currency_code: 'EUR' },
+      { client_id: 'client-3', default_currency_code: 'USD' },
+    ];
+    mockState.lockedSettingsReads = 0;
+  });
+
+  it('updates clients on the previous default and preserves clients on another currency', async () => {
+    const { updateDefaultBillingSettings } = await import(
+      '../src/actions/billingSettingsActions'
+    );
+
+    const result = await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultCurrencyCode: 'AUD' }
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      previousCurrencyCode: 'USD',
+      currencyCode: 'AUD',
+      propagatedClientCount: 2,
+      preservedClientCount: 1,
+    });
+    expect(mockState.clients).toEqual([
+      { client_id: 'client-1', default_currency_code: 'AUD' },
+      { client_id: 'client-2', default_currency_code: 'EUR' },
+      { client_id: 'client-3', default_currency_code: 'AUD' },
+    ]);
+    expect(clientUpdates()).toHaveLength(1);
+    expect(clientUpdates()[0]?.filters).toMatchObject({ default_currency_code: 'USD' });
+    expect(clientUpdates()[0]?.payload).toMatchObject({ default_currency_code: 'AUD' });
+  });
+
+  it('does not touch clients when the normalized currency is unchanged', async () => {
+    const { updateDefaultBillingSettings } = await import(
+      '../src/actions/billingSettingsActions'
+    );
+
+    const result = await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultCurrencyCode: 'USD' }
+    );
+
+    expect(result).toMatchObject({ success: true, previousCurrencyCode: 'USD', currencyCode: 'USD' });
+    expect(result).not.toHaveProperty('propagatedClientCount');
+    expect(clientUpdates()).toHaveLength(0);
+    expect(mockState.clients.map((client) => client.default_currency_code)).toEqual(['USD', 'EUR', 'USD']);
+  });
+
+  it('does not touch clients for an unrelated partial billing-settings save', async () => {
+    const { updateDefaultBillingSettings } = await import(
+      '../src/actions/billingSettingsActions'
+    );
+
+    const result = await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultRenewalMode: 'manual', defaultNoticePeriodDays: 30 }
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(clientUpdates()).toHaveLength(0);
+    expect(settingsUpdates()).toHaveLength(1);
+  });
+
+  it('issues no client writes when the permission check fails', async () => {
+    mockHasPermission.mockResolvedValueOnce(false);
+
+    const { updateDefaultBillingSettings } = await import(
+      '../src/actions/billingSettingsActions'
+    );
+
+    await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultCurrencyCode: 'AUD' }
+    );
+
+    expect(mockState.updates).toHaveLength(0);
+    expect(mockState.lockedSettingsReads).toBe(0);
+    expect(mockState.clients.map((client) => client.default_currency_code)).toEqual(['USD', 'EUR', 'USD']);
   });
 });
 
@@ -258,6 +415,7 @@ describe('updateDefaultBillingSettings — partial saves do not clobber other se
     };
     mockState.updates = [];
     mockState.inserts = [];
+    mockState.clients = [];
   });
 
   it('a renewal-only save leaves default_currency_code unwritten', async () => {
@@ -272,13 +430,13 @@ describe('updateDefaultBillingSettings — partial saves do not clobber other se
     );
 
     expect(result).toEqual({ success: true });
-    expect(mockState.updates).toHaveLength(1);
-    expect(mockState.updates[0]?.payload).toMatchObject({
+    expect(settingsUpdates()).toHaveLength(1);
+    expect(settingsUpdates()[0]?.payload).toMatchObject({
       default_renewal_mode: 'manual',
       default_notice_period_days: 30,
     });
-    expect(mockState.updates[0]?.payload).not.toHaveProperty('default_currency_code');
-    expect(mockState.updates[0]?.payload).not.toHaveProperty('zero_dollar_invoice_handling');
+    expect(settingsUpdates()[0]?.payload).not.toHaveProperty('default_currency_code');
+    expect(settingsUpdates()[0]?.payload).not.toHaveProperty('zero_dollar_invoice_handling');
   });
 
   it('a currency-only save writes only the currency column', async () => {
@@ -292,9 +450,9 @@ describe('updateDefaultBillingSettings — partial saves do not clobber other se
       { defaultCurrencyCode: 'EUR' }
     );
 
-    expect(result).toEqual({ success: true });
-    expect(mockState.updates).toHaveLength(1);
-    expect(Object.keys(mockState.updates[0]?.payload ?? {}).sort()).toEqual([
+    expect(result).toMatchObject({ success: true, currencyCode: 'EUR', previousCurrencyCode: 'GBP' });
+    expect(settingsUpdates()).toHaveLength(1);
+    expect(Object.keys(settingsUpdates()[0]?.payload ?? {}).sort()).toEqual([
       'default_currency_code',
       'updated_at',
     ]);

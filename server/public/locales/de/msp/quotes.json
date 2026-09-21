@@ -299,7 +299,15 @@
       "currencyPlaceholder": "Währung auswählen",
       "quoteDate": "Angebotsdatum",
       "validUntil": "Gültig bis",
-      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab."
+      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab.",
+      "currencySource": {
+        "tenant": "Mandantenstandard",
+        "client": "Kundenstandard für {{clientName}}",
+        "template": "Aus Angebotsvorlage {{templateTitle}}",
+        "saved": "In diesem Angebot gespeichert",
+        "savedTemplate": "In dieser Vorlage gespeichert",
+        "manual": "Manuell ausgewählt"
+      }
     },
     "lineItems": {
       "title": "Positionen",

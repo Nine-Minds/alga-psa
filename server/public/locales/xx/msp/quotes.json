@@ -299,7 +299,15 @@
       "currencyPlaceholder": "⟦Şḗŀḗƈŧ ƈŭřřḗƞƈẏ⟧",
       "quoteDate": "⟦Ɋŭȯŧḗ ḓȧŧḗ⟧",
       "validUntil": "⟦Ṽȧŀīḓ ŭƞŧīŀ⟧",
-      "validUntilHelp": "⟦Ɋŭȯŧḗ ȧŭŧȯ-ḗẋƥīřḗş ȯƞ ŧħīş ḓȧŧḗ.⟧"
+      "validUntilHelp": "⟦Ɋŭȯŧḗ ȧŭŧȯ-ḗẋƥīřḗş ȯƞ ŧħīş ḓȧŧḗ.⟧",
+      "currencySource": {
+        "tenant": "⟦Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ⟧",
+        "client": "⟦Ƈŀīḗƞŧ ḓḗƒȧŭŀŧ ƒȯř {{clientName}}⟧",
+        "template": "⟦Ƒřȯḿ ʠŭȯŧḗ ŧḗḿƥŀȧŧḗ {{templateTitle}}⟧",
+        "saved": "⟦Şȧṽḗḓ ȯƞ ŧħīş ʠŭȯŧḗ⟧",
+        "savedTemplate": "⟦Şȧṽḗḓ ȯƞ ŧħīş ŧḗḿƥŀȧŧḗ⟧",
+        "manual": "⟦Şḗŀḗƈŧḗḓ ḿȧƞŭȧŀŀẏ⟧"
+      }
     },
     "lineItems": {
       "title": "⟦Ŀīƞḗ īŧḗḿş⟧",

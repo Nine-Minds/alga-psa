@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "La moneda predeterminada ha sido actualizada."
+        "updated": "La moneda predeterminada ha sido actualizada.",
+        "propagated": "Moneda predeterminada cambiada a {{currency}}. {{updated}} valores predeterminados de clientes actualizados; {{preserved}} anulaciones de clientes conservadas."
       },
       "errors": {
         "load": "No se pudo cargar la configuración",
         "save": "No se pudo guardar la configuración"
-      }
+      },
+      "propagationNote": "Cambiar esto actualiza los clientes que aún usan la moneda predeterminada anterior. Los clientes con una moneda diferente se conservan, y los documentos y plantillas existentes no cambian."
     },
     "invoiceNumbering": {
       "title": "Numeración de facturas",

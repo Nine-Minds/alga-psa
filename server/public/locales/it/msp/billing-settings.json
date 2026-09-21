@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "La valuta predefinita è stata aggiornata."
+        "updated": "La valuta predefinita è stata aggiornata.",
+        "propagated": "Valuta predefinita cambiata in {{currency}}. {{updated}} valute predefinite dei clienti aggiornate; {{preserved}} sostituzioni dei clienti conservate."
       },
       "errors": {
         "load": "Impossibile caricare le impostazioni",
         "save": "Impossibile salvare le impostazioni"
-      }
+      },
+      "propagationNote": "La modifica aggiorna i clienti che utilizzano ancora la valuta predefinita precedente. I clienti con una valuta diversa vengono preservati e i documenti e i modelli esistenti non cambiano."
     },
     "invoiceNumbering": {
       "title": "Numerazione delle fatture",

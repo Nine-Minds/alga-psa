@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actions = vi.hoisted(() => ({
@@ -35,6 +35,7 @@ const getAllClientsMock = vi.hoisted(() => vi.fn());
 const getActiveLocationsMock = vi.hoisted(() => vi.fn());
 const getContactsMock = vi.hoisted(() => vi.fn());
 const getDefaultBillingSettingsMock = vi.hoisted(() => vi.fn());
+const quickAddClientMock = vi.hoisted(() => ({ current: null as null | Record<string, any> }));
 const lineItemsEditorMock = vi.hoisted(() => ({ current: null as null | { items?: unknown[] } }));
 const termsEditorMock = vi.hoisted(() => ({ current: null as null | { onContentChange?: (blocks: unknown[]) => void } }));
 
@@ -68,12 +69,25 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     formatDate: (value: string) => String(value),
   }),
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    t: (key: string, options?: { defaultValue?: string; [token: string]: unknown }) => {
+      let value = options?.defaultValue ?? key;
+      for (const [token, replacement] of Object.entries(options ?? {})) {
+        if (token !== 'defaultValue') {
+          value = value.split(`{{${token}}}`).join(String(replacement));
+        }
+      }
+      return value;
+    },
   }),
 }));
 
 vi.mock('@alga-psa/ui/context', () => ({
-  useQuickAddClient: () => ({ renderQuickAddClient: () => null }),
+  useQuickAddClient: () => ({
+    renderQuickAddClient: (config: Record<string, any>) => {
+      quickAddClientMock.current = config;
+      return null;
+    },
+  }),
 }));
 
 vi.mock('@radix-ui/themes', () => ({
@@ -114,10 +128,22 @@ vi.mock('@alga-psa/ui/components/CurrencyPicker', () => ({
       { id, value: value ?? '', onChange: (event: any) => onValueChange(event.target.value) },
       React.createElement('option', { key: 'USD', value: 'USD' }, 'USD'),
       React.createElement('option', { key: 'EUR', value: 'EUR' }, 'EUR'),
+      React.createElement('option', { key: 'GBP', value: 'GBP' }, 'GBP'),
+      React.createElement('option', { key: 'AUD', value: 'AUD' }, 'AUD'),
     ),
 }));
 
-vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: () => null }));
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
+  ClientPicker: ({ id, clients, selectedClientId, onSelect }: any) =>
+    React.createElement(
+      'select',
+      { id, value: selectedClientId ?? '', onChange: (event: any) => onSelect(event.target.value) },
+      React.createElement('option', { key: '', value: '' }, ''),
+      (clients ?? []).map((client: any) =>
+        React.createElement('option', { key: client.client_id, value: client.client_id }, client.client_name),
+      ),
+    ),
+}));
 vi.mock('@alga-psa/ui/components/ContactPicker', () => ({ ContactPicker: () => null }));
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({ DatePicker: () => null }));
 vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({ default: () => null }));
@@ -258,6 +284,7 @@ describe('QuoteForm template instantiation', () => {
     vi.clearAllMocks();
     lineItemsEditorMock.current = null;
     termsEditorMock.current = null;
+    quickAddClientMock.current = null;
     actions.listQuotes.mockResolvedValue({
       data: [{ quote_id: 'tmpl-1', title: 'Template Title', currency_code: 'EUR' }],
     });
@@ -442,5 +469,130 @@ describe('QuoteForm template instantiation', () => {
     expect(payload.terms_and_conditions_block).toEqual([
       { type: 'paragraph', content: [{ type: 'text', text: 'Net 30. See https://example.com/terms', styles: {} }] },
     ]);
+  });
+});
+
+describe('QuoteForm currency source resolution', () => {
+  const readCurrency = () =>
+    (document.getElementById('quote-currency') as HTMLSelectElement).value;
+  const readSource = () =>
+    document.getElementById('quote-currency-source')?.textContent ?? '';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lineItemsEditorMock.current = null;
+    termsEditorMock.current = null;
+    quickAddClientMock.current = null;
+    actions.listQuotes.mockResolvedValue({
+      data: [{ quote_id: 'tmpl-1', title: 'Template Title', currency_code: 'EUR' }],
+    });
+    getQuoteDocumentTemplatesMock.mockResolvedValue([]);
+    actions.getQuoteApprovalSettings.mockResolvedValue({ approvalRequired: false });
+    getDefaultBillingSettingsMock.mockResolvedValue({ defaultCurrencyCode: 'USD' });
+    getAllClientsMock.mockResolvedValue([]);
+    getActiveLocationsMock.mockResolvedValue([]);
+    getContactsMock.mockResolvedValue([]);
+    actions.createQuote.mockResolvedValue({ quote_id: 'new-2', quote_items: [] });
+    actions.updateQuote.mockResolvedValue({ quote_id: 'quote-1' });
+    actions.createQuoteFromTemplate.mockResolvedValue({ quote_id: 'new-1', quote_items: [] });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('F008/F009/F015: seeds the initial-context client currency and re-resolves on select and clear', async () => {
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-aud', client_name: 'Aussie Co', default_currency_code: 'AUD' },
+      { client_id: 'client-gbp', client_name: 'Brit Co', default_currency_code: 'GBP' },
+    ]);
+
+    renderForm({ initialContext: { clientId: 'client-aud' } });
+
+    await screen.findByLabelText('Title');
+    await waitFor(() => expect(readSource()).toBe('Client default for Aussie Co'));
+    expect(readCurrency()).toBe('AUD');
+
+    fireEvent.change(document.getElementById('quote-client') as HTMLSelectElement, {
+      target: { value: 'client-gbp' },
+    });
+    await waitFor(() => expect(readSource()).toBe('Client default for Brit Co'));
+    expect(readCurrency()).toBe('GBP');
+
+    fireEvent.change(document.getElementById('quote-client') as HTMLSelectElement, {
+      target: { value: '' },
+    });
+    await waitFor(() => expect(readSource()).toBe('Tenant default'));
+    expect(readCurrency()).toBe('USD');
+  });
+
+  it('F010: quick-adding a client applies its default currency and client source', async () => {
+    renderForm();
+
+    await screen.findByLabelText('Title');
+    await waitFor(() => expect(quickAddClientMock.current).not.toBeNull());
+
+    act(() => {
+      quickAddClientMock.current!.onClientAdded({
+        client_id: 'client-new',
+        client_name: 'New Co',
+        default_currency_code: 'GBP',
+      });
+    });
+
+    await waitFor(() => expect(readSource()).toBe('Client default for New Co'));
+    expect(readCurrency()).toBe('GBP');
+  });
+
+  it('F011/F012: a business template overrides the client currency and a manual pick sets manual source', async () => {
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-aud', client_name: 'Aussie Co', default_currency_code: 'AUD' },
+      { client_id: 'client-gbp', client_name: 'Brit Co', default_currency_code: 'GBP' },
+    ]);
+    actions.getQuote.mockResolvedValue(template);
+
+    renderForm({ initialContext: { clientId: 'client-aud' } });
+
+    await waitFor(() => expect(readSource()).toBe('Client default for Aussie Co'));
+
+    fireEvent.change(document.getElementById('quote-form-template-picker') as HTMLSelectElement, {
+      target: { value: 'tmpl-1' },
+    });
+    await waitFor(() => expect(readSource()).toBe('From quote template Template Title'));
+    expect(readCurrency()).toBe('EUR');
+
+    // A source template outranks client defaulting: changing the client keeps
+    // the template currency and its source label.
+    fireEvent.change(document.getElementById('quote-client') as HTMLSelectElement, {
+      target: { value: 'client-gbp' },
+    });
+    await waitFor(() => expect(readSource()).toBe('From quote template Template Title'));
+    expect(readCurrency()).toBe('EUR');
+
+    fireEvent.change(document.getElementById('quote-currency') as HTMLSelectElement, {
+      target: { value: 'GBP' },
+    });
+    await waitFor(() => expect(readSource()).toBe('Selected manually'));
+    expect(readCurrency()).toBe('GBP');
+  });
+
+  it('F013: editing a saved quote keeps its currency and labels it saved rather than re-defaulting', async () => {
+    getDefaultBillingSettingsMock.mockResolvedValue({ defaultCurrencyCode: 'AUD' });
+    actions.getQuote.mockResolvedValue({ ...editQuote, currency_code: 'USD' });
+
+    renderForm({ quoteId: 'quote-1' });
+
+    await screen.findByLabelText('Title');
+    await waitFor(() => expect(readSource()).toBe('Saved on this quote'));
+    expect(readCurrency()).toBe('USD');
+  });
+
+  it('F014: editing a saved business template labels the saved-on-template source', async () => {
+    actions.getQuote.mockResolvedValue({ ...template, is_template: true, currency_code: 'EUR' });
+
+    renderForm({ quoteId: 'tmpl-1', initialIsTemplate: true });
+
+    await waitFor(() => expect(readSource()).toBe('Saved on this template'));
+    expect(readCurrency()).toBe('EUR');
   });
 });

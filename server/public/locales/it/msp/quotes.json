@@ -299,7 +299,15 @@
       "currencyPlaceholder": "Seleziona valuta",
       "quoteDate": "Data preventivo",
       "validUntil": "Valido fino al",
-      "validUntilHelp": "Il preventivo scade automaticamente in questa data."
+      "validUntilHelp": "Il preventivo scade automaticamente in questa data.",
+      "currencySource": {
+        "tenant": "Predefinita del tenant",
+        "client": "Predefinita del cliente per {{clientName}}",
+        "template": "Dal modello di preventivo {{templateTitle}}",
+        "saved": "Salvata su questo preventivo",
+        "savedTemplate": "Salvata su questo modello",
+        "manual": "Selezionata manualmente"
+      }
     },
     "lineItems": {
       "title": "Voci",

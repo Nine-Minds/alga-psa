@@ -299,7 +299,15 @@
       "currencyPlaceholder": "Seleccionar moneda",
       "quoteDate": "Fecha de la cotización",
       "validUntil": "Válido hasta",
-      "validUntilHelp": "La cotización caduca automáticamente en esta fecha."
+      "validUntilHelp": "La cotización caduca automáticamente en esta fecha.",
+      "currencySource": {
+        "tenant": "Predeterminada del inquilino",
+        "client": "Predeterminada del cliente para {{clientName}}",
+        "template": "Desde la plantilla de cotización {{templateTitle}}",
+        "saved": "Guardada en esta cotización",
+        "savedTemplate": "Guardada en esta plantilla",
+        "manual": "Seleccionada manualmente"
+      }
     },
     "lineItems": {
       "title": "Líneas",
