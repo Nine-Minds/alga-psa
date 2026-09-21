@@ -406,7 +406,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              id="view-client-contract-details-menu-item"
+              id={`view-client-contract-details-menu-item-${record.client_contract_id}`}
               onClick={(event) => {
                 event.stopPropagation();
                 navigateToContract(record.contract_id, record.client_contract_id);

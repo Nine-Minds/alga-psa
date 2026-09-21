@@ -196,4 +196,45 @@ describe('ClientContractAssignment contract-detail navigation', () => {
     expect(await screen.findByTestId('client-contract-dialog')).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
   });
+
+  it('gives each row a distinct View details menu item id', async () => {
+    getClientContractsMock.mockResolvedValue([
+      {
+        client_contract_id: 'cc-1',
+        client_id: 'client-1',
+        contract_id: 'contract-1',
+        start_date: '2026-01-01',
+        end_date: null,
+        is_active: true,
+      },
+      {
+        client_contract_id: 'cc-2',
+        client_id: 'client-1',
+        contract_id: 'contract-2',
+        start_date: '2026-01-01',
+        end_date: null,
+        is_active: true,
+      },
+    ]);
+    getDetailedClientContractMock.mockImplementation(async (clientContractId: string) => ({
+      contract_name: clientContractId === 'cc-1' ? 'Managed Services' : 'Backup',
+      description: 'Service',
+      contract_line_count: 0,
+      contract_line_names: [],
+    }));
+
+    render(<ClientContractAssignment clientId="client-1" />);
+
+    await screen.findByTestId('client-contract-name-cc-2');
+
+    const ids = Array.from(
+      document.querySelectorAll('[id^="view-client-contract-details-menu-item-"]'),
+    ).map((element) => element.id);
+
+    expect(ids).toEqual([
+      'view-client-contract-details-menu-item-cc-1',
+      'view-client-contract-details-menu-item-cc-2',
+    ]);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
 });
