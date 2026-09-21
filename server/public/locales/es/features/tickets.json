@@ -1548,6 +1548,8 @@
     "deleteConfirmTitle": "¿Eliminar entrada de tiempo?",
     "deleteConfirmMessage": "Esto eliminará permanentemente la entrada de tiempo. Esta acción no se puede deshacer.",
     "deleteConfirmAction": "Eliminar",
+    "billable": "Facturable",
+    "nonBillable": "No facturable",
     "duration": {
       "hr": "h",
       "hrs": "h",

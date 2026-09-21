@@ -1548,6 +1548,8 @@
     "deleteConfirmTitle": "Eliminare la registrazione tempo?",
     "deleteConfirmMessage": "Questa registrazione tempo verrà eliminata definitivamente. Questa azione non può essere annullata.",
     "deleteConfirmAction": "Elimina",
+    "billable": "Fatturabile",
+    "nonBillable": "Non fatturabile",
     "duration": {
       "hr": "h",
       "hrs": "h",

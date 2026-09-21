@@ -1682,6 +1682,8 @@
     "deleteConfirmTitle": "Usunąć wpis czasu?",
     "deleteConfirmMessage": "Wpis czasu zostanie trwale usunięty. Tej akcji nie można cofnąć.",
     "deleteConfirmAction": "Usuń",
+    "billable": "Rozliczalne",
+    "nonBillable": "Nierozliczalne",
     "duration": {
       "hr": "godz.",
       "hrs": "godz.",
