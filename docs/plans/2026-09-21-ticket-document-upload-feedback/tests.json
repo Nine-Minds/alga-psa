@@ -38,7 +38,7 @@
       "F010"
     ],
     "description": "Browser: ticket Documents manager > Upload file > folder dialog; cancel then reselect and confirm. Verify no upload on cancel, prior outcomes retained, intended destination on confirm, focus/keyboard navigation, and readable long errors in light/dark themes.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T005",
@@ -47,6 +47,6 @@
       "F005"
     ],
     "description": "Live isolated smoke: upload saved EML, XLS and XLSX fixtures through drop and Browse Files under permissive policy; reload ticket and verify associations/downloads. Exercise restricted MIME rejection, empty MIME metadata, and a request beyond the effective server-action body limit; confirm visible outcomes without policy bypass. Record effective settings and video-path comparison privately.",
-    "implemented": false
+    "implemented": true
   }
 ]

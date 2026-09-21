@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Documents from './Documents.tsx';
 import { uploadDocument, getDocumentsByEntity } from '../actions/documentActions';
 
@@ -30,7 +30,13 @@ vi.mock('@alga-psa/user-composition/hooks', () => ({
   useUserPreference: () => ({ value: 'grid', setValue: vi.fn() }),
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
+vi.mock('@alga-psa/tenancy/actions', () => ({
+  getExperimentalFeatures: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@alga-psa/storage', () => ({}));
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: vi.fn().mockResolvedValue({
     user_id: 'user-1',
     first_name: 'Test',
@@ -77,6 +83,7 @@ vi.mock('./DocumentStorageCard', () => ({ default: () => null }));
 vi.mock('./FolderTreeView', () => ({ default: () => null }));
 vi.mock('./FolderManager', () => ({ default: () => null }));
 vi.mock('./FolderSelectorModal', () => ({ default: () => null }));
+vi.mock('./DocumentCredentialsSection', () => ({ DocumentCredentialsSection: () => null }));
 vi.mock('./AssociatedEntityPicker', () => ({ default: () => null }));
 vi.mock('./DocumentsPagination', () => ({ default: () => null }));
 vi.mock('./DocumentListView', () => ({ default: () => null }));
@@ -125,9 +132,14 @@ vi.mock('@alga-psa/ui/components/ViewSwitcher', () => ({
   default: () => null,
 }));
 
+const { toastError, toastFn } = vi.hoisted(() => ({
+  toastError: vi.fn(),
+  toastFn: vi.fn(),
+}));
+
 vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
-  toast: { success: vi.fn(), error: vi.fn() },
+  default: Object.assign(toastFn, { success: vi.fn(), error: toastError }),
+  toast: Object.assign(toastFn, { success: vi.fn(), error: toastError }),
 }));
 
 const makeDocument = (name: string) => ({
@@ -232,6 +244,66 @@ describe('Documents parent integration with batch uploads', () => {
     expect(screen.getByText('First failed')).toBeInTheDocument();
     expect(mockUpload).toHaveBeenCalledTimes(2);
     expect(mockEntityRefresh).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /Browse Files/i })).toBeInTheDocument();
+  });
+
+  it('holds the batch guard until a deferred parent refresh settles', async () => {
+    let resolveRefresh: (value: unknown) => void = () => {};
+    mockUpload
+      .mockResolvedValueOnce({ success: true, document: makeDocument('good.pdf') })
+      .mockResolvedValueOnce({ success: false, error: 'Blocked MIME type' });
+    mockEntityRefresh.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveRefresh = resolve; }),
+    );
+    const { container } = renderEntityDocuments();
+
+    await openUploaderAndSelect(container, [makeFile('good.pdf'), makeFile('bad.eml')]);
+
+    // The batch finished and the parent refresh is still pending.
+    await waitFor(() => expect(mockEntityRefresh).toHaveBeenCalledTimes(1));
+    expect(mockUpload).toHaveBeenCalledTimes(2);
+
+    // A drop while finalizing must not start a second batch.
+    const dropZone = container.querySelector('.border-dashed') as HTMLElement;
+    fireEvent.drop(dropZone, { dataTransfer: { files: [makeFile('second.pdf')] } });
+    // The file input is disabled during finalization too.
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input).toBeDisabled();
+    fireEvent.change(input, { target: { files: [makeFile('second.pdf')] } });
+
+    expect(mockUpload).toHaveBeenCalledTimes(2);
+    expect(toastFn).toHaveBeenCalledWith(
+      'An upload is already in progress. Wait for it to finish before adding more files.',
+    );
+
+    await act(async () => {
+      resolveRefresh({ documents: [], totalCount: 0, totalPages: 0 });
+    });
+
+    // The first batch's mixed outcome survives the parent refresh, and the
+    // second batch never started.
+    expect(mockUpload).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('good.pdf')).toBeInTheDocument();
+    expect(screen.getByText('bad.eml')).toBeInTheDocument();
+    expect(screen.getByText('Blocked MIME type')).toBeInTheDocument();
+    expect(screen.queryByText('second.pdf')).not.toBeInTheDocument();
+  });
+
+  it('reports a parent refresh failure with reload guidance without relabeling the file', async () => {
+    mockUpload.mockResolvedValueOnce({ success: true, document: makeDocument('good.pdf') });
+    mockEntityRefresh.mockRejectedValueOnce(new Error('network down'));
+    const { container } = renderEntityDocuments();
+
+    await openUploaderAndSelect(container, [makeFile('good.pdf')]);
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(
+      'Your files were uploaded, but the document list could not refresh. Reload the page to see them.',
+    ));
+    // The stored file is not relabeled as an upload failure, and the uploader
+    // stays open rather than closing over a stale list.
+    expect(screen.getByText('good.pdf')).toBeInTheDocument();
+    expect(screen.getByText('Uploaded')).toBeInTheDocument();
+    expect(screen.queryByText('Failed')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Browse Files/i })).toBeInTheDocument();
   });
 });

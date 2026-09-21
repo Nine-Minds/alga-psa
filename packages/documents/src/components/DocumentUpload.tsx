@@ -91,6 +91,11 @@ export default function DocumentUpload({
 }: DocumentUploadProps): React.JSX.Element {
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    // True from the moment file processing ends until the parent's
+    // onAllUploadsComplete handler settles. Keeps controls disabled and the
+    // synchronous guard held so a new batch cannot start underneath the
+    // parent refresh and then be unmounted by the previous batch's callback.
+    const [isFinalizing, setIsFinalizing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showEmptyDrop, setShowEmptyDrop] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +107,9 @@ export default function DocumentUpload({
     const [selectedEntityId, setSelectedEntityId] = useState<string>('');
     const [selectedEntityLabel, setSelectedEntityLabel] = useState<string | undefined>();
     const canSelectAssociation = !entityId && !entityType;
+    // Any in-flight work (file processing or the parent refresh that follows)
+    // keeps selection controls disabled.
+    const isBusy = isUploading || isFinalizing;
 
     // Folder selection state - only used if folderPath not provided
     const [showFolderModal, setShowFolderModal] = useState(false);
@@ -217,16 +225,20 @@ export default function DocumentUpload({
         resetFileInput();
 
         // Accumulate terminal outcomes locally so the summary does not depend
-        // on React state timing.
+        // on React state timing. Per-file callback failures are tracked so the
+        // batch can report reload guidance without relabeling a stored file.
         const outcomes: FileAttemptResult[] = [];
+        const callbackErrors = { onUploadComplete: false };
         try {
             for (let i = 0; i < files.length; i++) {
                 setCurrentFileIndex(i);
-                outcomes.push(await processFileUpload(i, files[i], targetFolderPath));
+                outcomes.push(await processFileUpload(i, files[i], targetFolderPath, callbackErrors));
             }
         } finally {
+            // Processing is done: show outcomes, but stay busy (guard held,
+            // controls disabled) until the parent refresh below settles.
             setIsUploading(false);
-            isUploadingRef.current = false;
+            setIsFinalizing(true);
             resetFileInput();
         }
 
@@ -249,19 +261,40 @@ export default function DocumentUpload({
             }));
         }
 
-        if (onAllUploadsComplete) {
-            try {
+        // A rejected per-file success callback (e.g. TaskDocumentsSimple's
+        // refresh) means the parent list may be stale even though the file is
+        // stored. Report reload guidance once, separately from upload failure.
+        let refreshGuidanceShown = callbackErrors.onUploadComplete;
+        if (callbackErrors.onUploadComplete) {
+            toast.error(t('documents.uploadSection.refreshFailed', 'Your files were uploaded, but the document list could not refresh. Reload the page to see them.'));
+        }
+
+        try {
+            if (onAllUploadsComplete) {
                 await onAllUploadsComplete(summary);
-            } catch (callbackError) {
-                console.error('Uploads completed but onAllUploadsComplete handler failed:', callbackError);
-                if (succeeded > 0) {
-                    toast.error(t('documents.uploadSection.refreshFailed', 'Your files were uploaded, but the document list could not refresh. Reload the page to see them.'));
-                }
             }
+        } catch (callbackError) {
+            console.error('Uploads completed but onAllUploadsComplete handler failed:', callbackError);
+            if (succeeded > 0 && !refreshGuidanceShown) {
+                refreshGuidanceShown = true;
+                toast.error(t('documents.uploadSection.refreshFailed', 'Your files were uploaded, but the document list could not refresh. Reload the page to see them.'));
+            }
+        } finally {
+            // Release the batch guard only after the parent refresh settles so
+            // a new batch cannot start and then be unmounted by this batch's
+            // completion callback.
+            setIsFinalizing(false);
+            isUploadingRef.current = false;
+            resetFileInput();
         }
     };
 
-    const processFileUpload = async (index: number, file: File, targetFolderPath: string | null | undefined): Promise<FileAttemptResult> => {
+    const processFileUpload = async (
+        index: number,
+        file: File,
+        targetFolderPath: string | null | undefined,
+        callbackErrors: { onUploadComplete: boolean }
+    ): Promise<FileAttemptResult> => {
         // Update status to uploading
         setUploadQueue(prev => prev.map((item, idx) =>
             idx === index ? { ...item, status: 'uploading' as const, error: undefined } : item
@@ -351,6 +384,10 @@ export default function DocumentUpload({
                 await onUploadComplete({ success: true, document: outcome.document });
             } catch (callbackError) {
                 console.error('Document uploaded but onUploadComplete handler failed:', callbackError);
+                // The file is stored; only the consumer's post-upload refresh
+                // failed. Surface reload guidance after the batch without
+                // relabeling this file as an upload failure.
+                callbackErrors.onUploadComplete = true;
             }
         }
 
@@ -375,7 +412,7 @@ export default function DocumentUpload({
                             allowedEntityTypes={UPLOAD_ASSOCIATION_ENTITY_TYPES}
                             noEntityTypeLabel={t('documents.uploadSection.noAssociation', 'No association')}
                             entityTypeLabel={t('documents.uploadSection.associatedEntityTypeLabel', 'Associate With')}
-                            disabled={isUploading}
+                            disabled={isBusy}
                             onEntityTypeChange={setSelectedEntityType}
                             onEntityChange={(value: string, label?: string) => {
                                 setSelectedEntityId(value);
@@ -391,7 +428,7 @@ export default function DocumentUpload({
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    aria-busy={isUploading}
+                    aria-busy={isBusy}
                 >
                     <div className="space-y-4">
                         <div className="flex flex-col items-center justify-center text-[rgb(var(--color-text-600))]">
@@ -406,7 +443,7 @@ export default function DocumentUpload({
                                 id="select-file-button"
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                disabled={isUploading}
+                                disabled={isBusy}
                                 variant="outline"
                                 className="mt-2 inline-flex items-center"
                             >
@@ -422,7 +459,7 @@ export default function DocumentUpload({
                                 onChange={handleFileSelect}
                                 className="hidden"
                                 multiple
-                                disabled={isUploading}
+                                disabled={isBusy}
                             />
                         </div>
 
@@ -463,6 +500,7 @@ export default function DocumentUpload({
                                             type="button"
                                             variant="ghost"
                                             size="sm"
+                                            disabled={isBusy}
                                             onClick={() => {
                                                 setUploadQueue([]);
                                                 setShowEmptyDrop(false);
@@ -541,7 +579,7 @@ export default function DocumentUpload({
                         id="cancel-button"
                         variant="outline"
                         onClick={onCancel}
-                        disabled={isUploading}
+                        disabled={isBusy}
                         className="inline-flex items-center"
                     >
                         <X className="w-4 h-4 mr-2" />

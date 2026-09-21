@@ -211,6 +211,27 @@ describe('DocumentUpload outcome feedback', () => {
     expect(screen.queryByText('Failed')).not.toBeInTheDocument();
   });
 
+  it('reports a rejected per-file success callback with reload guidance without relabeling', async () => {
+    (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
+      success: true,
+      document: makeDocument('good.pdf'),
+    });
+    const onUploadComplete = vi.fn().mockRejectedValue(new Error('consumer refresh boom'));
+    const { input } = renderUpload({ onUploadComplete });
+
+    selectFiles(input, [makeFile('good.pdf')]);
+
+    await waitFor(() => expect(onUploadComplete).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        'Your files were uploaded, but the document list could not refresh. Reload the page to see them.',
+      ),
+    );
+    // The stored file stays a success.
+    expect(screen.getByText('Uploaded')).toBeInTheDocument();
+    expect(screen.queryByText('Failed')).not.toBeInTheDocument();
+  });
+
   it('reports a refresh callback rejection separately without relabeling the upload', async () => {
     (uploadDocument as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce({
       success: true,

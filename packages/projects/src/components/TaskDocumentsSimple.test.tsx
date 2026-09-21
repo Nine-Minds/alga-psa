@@ -3,9 +3,16 @@
 import '@testing-library/jest-dom/vitest';
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import TaskDocumentsSimple from './TaskDocumentsSimple';
+
+afterEach(() => {
+  // Explicit cleanup: @testing-library/react's module-level auto-cleanup is
+  // not registered reliably when the module is externalized, and this project
+  // config does not provide a global cleanup setup file.
+  cleanup();
+});
 
 const uploadState = vi.hoisted(() => ({ props: null as any }));
 
@@ -136,5 +143,28 @@ describe('TaskDocumentsSimple upload batch lifecycle', () => {
     });
 
     await waitFor(() => expect(screen.queryByTestId('upload-stub')).not.toBeInTheDocument());
+  });
+
+  it('rejects the per-file success callback when its refresh path fails', async () => {
+    // The uploader awaits onUploadComplete and turns a rejection into reload
+    // guidance, so the parent path must actually reject rather than swallow.
+    const onDocumentCreated = vi.fn().mockRejectedValue(new Error('refresh boom'));
+    const { container } = render(
+      <TaskDocumentsSimple taskId="task-1" onDocumentCreated={onDocumentCreated} />,
+    );
+
+    await openUploader(container);
+
+    await expect(
+      uploadState.props.onUploadComplete({
+        success: true,
+        document: {
+          document_id: 'doc-1',
+          document_name: 'good.pdf',
+          mime_type: 'application/pdf',
+          file_id: 'file-1',
+        },
+      }),
+    ).rejects.toThrow('refresh boom');
   });
 });

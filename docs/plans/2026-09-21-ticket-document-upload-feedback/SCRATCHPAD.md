@@ -29,4 +29,48 @@ Storage defaults permit all MIME types, with local/S3 environment overrides and 
 ## Test setup notes
 
 Existing component examples: `packages/documents/src/components/Documents.drawer.test.tsx` and `packages/tickets/src/components/ticket/bento/DocumentsTile.test.tsx`.
-`packages/documents/vitest.config.ts` includes only `tests/**/*.test.ts` in a Node environment. New TSX component tests need an explicitly selected compatible jsdom configuration or a narrowly scoped config update; report actual discovery and execution counts.
+
+`packages/documents/vitest.config.ts` now defines two Vitest projects so the
+workspace command discovers the feedback suites: `documents-node`
+(`tests/**/*.test.ts`) and `documents-upload-feedback` (`src/**/*.test.tsx`
+under jsdom, with `vitest.setup.ts`, workspace source aliases and a load-only
+storage stub). Broader `src/**` suites still run under the root/server config.
+
+Supported commands:
+
+- `npm -w @alga-psa/documents test` — node contract suites + the two upload
+  feedback suites (26 files / 67 tests).
+- `npm -w @alga-psa/documents test -- src/components/DocumentUpload.test.tsx`
+  — single suite.
+- `npm -w @alga-psa/projects test -- src/components/TaskDocumentsSimple.test.tsx`
+  — project-task parent integration.
+- Root/server cross-check: from `server/`,
+  `npx vitest run ../packages/documents/src/components/DocumentUpload.test.tsx
+  ../packages/documents/src/components/Documents.uploadBatch.test.tsx
+  ../packages/projects/src/components/TaskDocumentsSimple.test.tsx`.
+
+### Live evidence (port 3798, ticket 48a3d221, DocumentUpload manager)
+
+- Drop and Browse Files both reach the folder selector; Confirm uploads and the
+  all-success batch closes the uploader after refresh.
+- `.eml` (message/rfc822), `.xls` (application/vnd.ms-excel) and `.xlsx`
+  uploaded, refreshed, and remained in the ticket's Documents tile after reload;
+  DB rows in `documents` + `document_associations` (entity_type `ticket`).
+- Empty MIME metadata (`type: ""`) uploaded and stored as
+  `application/octet-stream`.
+- Mixed batch (good + 21 MB file): uploader stayed open with `1 of 2 files
+  uploaded`, inline Failed row `Failed to upload file`, and the success refreshed.
+- Folder dialog Cancel left prior documents intact and uploaded nothing;
+  reselecting and Confirming uploaded. Focus stayed inside the nested dialog.
+- Long filenames wrap and the failure reason is readable in light and dark
+  themes (screenshots under `/tmp/ghostty-pane-ide/screenshots/`).
+- Restricted MIME rejected at the isolated storage layer: with
+  `STORAGE_LOCAL_ALLOWED_MIME_TYPES=application/pdf`, `application/pdf` is
+  allowed and `message/rfc822` throws `File type not allowed`. A restricted
+  server was not booted because its `initializeApp` would rotate the shared dev
+  credential, which the review forbids.
+
+Remaining external blockers: hosted MIME allowlist/limits remain unverified; the
+Escape-to-cancel keyboard path did not close the Radix folder dialog under
+automation (button Cancel verified); a long server-side error string could not
+be induced locally, so long-text wrapping was checked with long filenames.
