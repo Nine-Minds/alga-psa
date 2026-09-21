@@ -32,8 +32,10 @@ import {
 interface InteractionsFeedProps {
   id?: string; // Made optional to maintain backward compatibility
   entityId: string;
-  entityType: 'contact' | 'client';
+  entityType: 'contact' | 'client' | 'opportunity';
   clientId?: string;
+  /** The deal's contact, so a new opportunity interaction can carry contact_name_id. */
+  contactId?: string;
   interactions: IInteraction[];
   setInteractions: React.Dispatch<React.SetStateAction<IInteraction[]>>;
 }
@@ -46,6 +48,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   entityId, 
   entityType, 
   clientId, 
+  contactId,
   interactions, 
   setInteractions 
 }) => {
@@ -313,7 +316,10 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
                 </div>
                 <div className="flex-grow">
                   <p className="font-semibold">{interaction.title}</p>
-                  <p className="text-sm text-gray-500">{new Date(interaction.interaction_date).toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">
+                    {new Date(interaction.interaction_date).toLocaleString()}
+                    {interaction.user_name ? ` · ${interaction.user_name}` : ''}
+                  </p>
                   {interaction.status_name && (
                     <p className="text-xs text-gray-600">{interaction.status_name}</p>
                   )}
@@ -388,6 +394,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         entityId={entityId}
         entityType={entityType}
         clientId={clientId}
+        contactId={contactId}
         onInteractionAdded={handleInteractionAdded}
       />
     </ReflectionContainer>
