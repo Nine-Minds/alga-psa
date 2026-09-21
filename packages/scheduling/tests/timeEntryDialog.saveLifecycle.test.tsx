@@ -165,6 +165,8 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   function primeProvider() {
@@ -174,6 +176,67 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
     mocks.fetchTaxRegions.mockResolvedValue([]);
     mocks.getClientIdForWorkItem.mockResolvedValue(null);
   }
+
+  it.each([
+    {
+      name: 'saves a subject-day entry that crosses browser midnight',
+      start: '2026-08-09T23:30:00Z',
+      end: '2026-08-10T00:30:00Z',
+      workTimeZone: 'Pacific/Auckland',
+      canSave: true,
+    },
+    {
+      name: 'rejects subject-midnight crossings within one browser day',
+      start: '2026-08-10T11:30:00Z',
+      end: '2026-08-10T12:30:00Z',
+      workTimeZone: 'Pacific/Auckland',
+      canSave: false,
+    },
+    {
+      name: 'retains browser-day validation when no subject timezone is provided',
+      start: '2026-08-09T23:30:00Z',
+      end: '2026-08-10T00:30:00Z',
+      workTimeZone: undefined,
+      canSave: false,
+    },
+  ])('$name', async ({ start, end, workTimeZone, canSave }) => {
+    vi.stubEnv('TZ', 'UTC');
+    const alertMock = vi.fn();
+    vi.stubGlobal('alert', alertMock);
+    primeProvider();
+    mocks.saveTimeEntry.mockResolvedValue({ entry_id: 'entry-1' });
+
+    const onComplete = vi.fn();
+    const { onClose } = renderDialog({
+      onSave: createTimeEntrySaveHandler(onComplete),
+      date: new Date(start),
+      defaultStartTime: new Date(start),
+      defaultEndTime: new Date(end),
+      timePeriod: { ...timePeriod, start_date: '2026-08-10', end_date: '2026-08-17' },
+      workTimeZone,
+    });
+    await waitForForm();
+    fireEvent.change(screen.getByTestId('dialog-note-input'), { target: { value: 'timezone boundary' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    if (canSave) {
+      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+      expect(mocks.saveTimeEntry).toHaveBeenCalledTimes(1);
+      expect(new Date(mocks.saveTimeEntry.mock.calls[0][0].start_time).toISOString()).toBe(new Date(start).toISOString());
+      expect(new Date(mocks.saveTimeEntry.mock.calls[0][0].end_time).toISOString()).toBe(new Date(end).toISOString());
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      expect(mocks.toast.success).toHaveBeenCalledTimes(1);
+      expect(alertMock).not.toHaveBeenCalled();
+    } else {
+      await waitFor(() => expect(mocks.toast.error).toHaveBeenCalled());
+      expect(alertMock).toHaveBeenCalledWith('Time entry must end on the same day');
+      expect(mocks.saveTimeEntry).not.toHaveBeenCalled();
+      expect(onComplete).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(mocks.toast.success).not.toHaveBeenCalled();
+      expect(screen.getByTestId('dialog-note-input')).toHaveValue('timezone boundary');
+    }
+  });
 
   it('a returned action error through the save adapter keeps values and never closes, completes, or toasts success', async () => {
     primeProvider();

@@ -173,7 +173,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       // is nothing to validate here. See billingEngine.getTaxInfoFromService.
     }
 
-    if (!validateTimeEntry(entry)) {
+    if (!validateTimeEntry(entry, workTimeZone)) {
       toast.error(t('messages.invalidTimeEntry'));
       return;
     }
@@ -225,7 +225,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     } finally {
       setIsSaving(false);
     }
-  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, services, timeSheetId, workItem]);
+  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, services, timeSheetId, workItem, workTimeZone]);
 
   const deleteTimeEntryAtIndex = async (index: number) => {
     try {

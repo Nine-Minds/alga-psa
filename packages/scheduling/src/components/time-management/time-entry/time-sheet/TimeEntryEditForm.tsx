@@ -21,7 +21,6 @@ import { calculateDuration, clampDurationToSameDay, clampDurationToZonedSameDay,
 import {
   dateOnlyToLocalDate,
   dateToPlainDate,
-  endOfZonedDay,
   formatZonedTime,
   formatZonedTimeSeconds,
   instantAtZonedTime,
@@ -233,7 +232,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
     setValidationErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [entry?.start_time, entry?.end_time, t]);
+  }, [entry?.start_time, entry?.end_time, t, useSubjectZone, workTimeZone]);
 
   // Get client ID from entry or work item
   useEffect(() => {

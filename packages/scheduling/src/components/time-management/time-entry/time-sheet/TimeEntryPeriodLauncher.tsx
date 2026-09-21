@@ -275,11 +275,11 @@ export default function TimeEntryPeriodLauncher({
           </Alert>
         )}
 
-        {selectedDefaults?.adjusted && (
+        {selectedPeriod && selectedDefaults?.adjusted && (
           <Alert id="time-entry-period-outside-warning" variant="warning">
             <AlertDescription>
               {t('periodPicker.outsidePeriod', {
-                date: formatDate(selectedDefaults.defaultStartTime, { dateStyle: 'medium' }),
+                date: formatDate(dateOnlyToLocalDate(selectedPeriod.start_date), { dateStyle: 'medium' }),
                 defaultValue:
                   'The supplied start and end times are outside this period, so the entry starts on {{date}} at 08:00.',
               })}

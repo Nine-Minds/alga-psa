@@ -22,15 +22,23 @@ export function calculateDuration(startTime: Date, endTime: Date): number {
   return Math.max(0, Math.round((endTime.getTime() - startTime.getTime()) / 60000));
 }
 
-export function validateTimeEntry(timeEntry: ITimeEntryWithNew): boolean {
+export function validateTimeEntry(timeEntry: ITimeEntryWithNew, workTimeZone?: string): boolean {
   const startTime = parseISO(timeEntry.start_time);
   const endTime = parseISO(timeEntry.end_time);
 
+  if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+    return false;
+  }
   if (startTime >= endTime) {
     alert('Start time must be before end time');
     return false;
   }
-  if (!isSameDay(startTime, endTime)) {
+  // Match the calendar day shown by the entry form; fixed-sheet callers that
+  // omit a subject timezone retain their browser-local validation.
+  const sameWorkDay = workTimeZone
+    ? workDateInTimeZone(startTime, workTimeZone) === workDateInTimeZone(endTime, workTimeZone)
+    : isSameDay(startTime, endTime);
+  if (!sameWorkDay) {
     alert('Time entry must end on the same day');
     return false;
   }

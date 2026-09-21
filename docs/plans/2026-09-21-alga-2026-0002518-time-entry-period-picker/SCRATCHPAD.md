@@ -31,3 +31,13 @@
 
 - `python3 /home/robert/.codex/skills/alga-plan/scripts/validate_plan.py docs/plans/2026-09-21-alga-2026-0002518-time-entry-period-picker` passed: 12 features, 8 tests, valid references.
 - `git diff --check` passed. Application tests were not run because this change contains design artifacts only.
+
+## Implementation and takeover validation (2026-09-21)
+
+- Builder commits implement the shared period picker, saved-sheet anchoring, transactional sheet-status guards, localization, and subject-timezone form controls. The integration suite now creates a separate bucket client per test and resets its authenticated actor before each case, avoiding shuffled-order contamination.
+- The final review found a remaining mismatch: `TimeEntryDialog` called browser-local `validateTimeEntry` even when the form used the subject timezone. In a UTC browser, Auckland 11:30–12:30 crosses browser midnight and was incorrectly rejected; Auckland 23:30–00:30 was incorrectly accepted. The final save validator now accepts the same optional `workTimeZone` as the form. Callers omitting it retain browser-local behavior.
+- Three real-dialog Save regressions cover those two cases and the omitted-timezone fallback. The first two failed before the repair and pass afterward. Existing save-adapter tests verify returned action errors and thrown exceptions retain typed values without completion, closure, or success feedback.
+- The rebased-default warning formats the selected period's first calendar date rather than an instant, so browsers west of the subject timezone do not show the previous day in its explanation.
+- Verification during takeover: full scheduling suite (71 files / 398 tests); scheduling and UI `tsc --noEmit`; translation validator (9 locales, no errors); DB integration (8 tests) plus real-form date-field suite (5 tests), each passing with `VITEST_SEED=1789967777652` and `42`. Tests run against isolated `test_period_picker_review_2518` on local Postgres port 5472, not the application database. Test credentials come from the worktree's `secrets/` files and must not be printed.
+- Builder reported browser smoke on port 3518 for prior-period persistence, ticket refresh, locked/no-current states, keyboard selection, light/dark themes, and Cancel/relaunch. Takeover did not repeat those browser checks. Current-period default has automated coverage only because no current period existed in the smoke data. True concurrent submission versus save has not been exercised; stale status and transactional guard cases have DB-backed coverage.
+- Keep the unpublished draft local: no push or PR. Preserve the unrelated `package-lock.json` modification outside the task commit.

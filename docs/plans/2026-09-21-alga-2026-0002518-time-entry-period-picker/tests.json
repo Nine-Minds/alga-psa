@@ -51,7 +51,7 @@
   },
   {
     "id": "T006",
-    "description": "Rendered save lifecycle: server action error and thrown exception retain the form without success toast, close, or completion; successful ticket and project saves close/refresh exactly once and retain work-item/service context.",
+    "description": "Rendered save lifecycle: server action error and thrown exception retain the form without success toast, close, or completion; successful ticket and project saves close/refresh exactly once and retain work-item/service context. Save validates the subject calendar day across browser-midnight boundaries, retaining browser-day behavior when no subject timezone is supplied.",
     "implemented": true,
     "featureIds": [
       "F007",
@@ -73,6 +73,7 @@
   {
     "id": "T008",
     "description": "Manual smoke: ticket Add time -> current default -> prior period -> dated entry -> Save -> verify prior timesheet and ticket refresh. Exercise locked/no-current states, keyboard control, light/dark themes, localized date/year/status, and Cancel/relaunch to change period.",
+    "notes": "Builder reported prior-period persistence, ticket refresh, locked/no-current states, keyboard selection, light/dark themes, and Cancel/relaunch on port 3518. Current-period default is covered by automated tests, but was not browser-smoked because the dev data had no period covering today. Browser smoke was not repeated during takeover.",
     "implemented": true,
     "featureIds": [
       "F001",

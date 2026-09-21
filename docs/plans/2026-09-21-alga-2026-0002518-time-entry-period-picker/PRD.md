@@ -1,7 +1,7 @@
 # Choose a time period when adding time from a work item
 
 Ticket: **alga-2026-0002518**
-Status: proposed design; implementation pending
+Status: draft implemented locally; validation details and limitations in SCRATCHPAD.md
 Code baseline: `2dc8454a4ccf4b701ba0b6c1e66c12a6f75f6b04`
 
 ## Problem and outcome
