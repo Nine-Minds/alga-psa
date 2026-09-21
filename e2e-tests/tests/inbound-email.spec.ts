@@ -62,6 +62,14 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
   const firstId = `<new-${actors.runId}@example.test>`;
   const inlineQuote = `Keep this customer quotation ${actors.runId}`;
   const firstBody = `Investigate the connection ${actors.runId}`;
+  // A tiny but structurally valid PCM WAV, so a real voicemail-style audio
+  // attachment travels the same MIME path a phone system would produce.
+  const wavBytes = Buffer.concat([
+    Buffer.from('RIFF'), Buffer.from([0x24, 0x00, 0x00, 0x00]), Buffer.from('WAVE'),
+    Buffer.from('fmt '), Buffer.from([0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00]),
+    Buffer.from([0x40, 0x1f, 0x00, 0x00, 0x80, 0x3e, 0x00, 0x00, 0x02, 0x00, 0x10, 0x00]),
+    Buffer.from('data'), Buffer.from([0x00, 0x00, 0x00, 0x00]),
+  ]);
   const boundary = `mime-${actors.runId}`;
   const raw = [
     `From: Customer <${tenant.portal.email}>`, `To: ${mailbox}`, `Subject: ${title}`,
@@ -74,7 +82,10 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     `<p>${firstBody}</p><blockquote>${inlineQuote}</blockquote><p>My answer follows the quotation.</p>`,
     `--${boundary}`, 'Content-Type: text/plain; name="diagnostic.txt"',
     'Content-Disposition: attachment; filename="diagnostic.txt"', 'Content-Transfer-Encoding: base64', '',
-    Buffer.from(`Attachment bytes ${actors.runId}`).toString('base64'), `--${boundary}--`, '',
+    Buffer.from(`Attachment bytes ${actors.runId}`).toString('base64'),
+    `--${boundary}`, 'Content-Type: audio/wav; name="voicemail.wav"',
+    'Content-Disposition: attachment; filename="voicemail.wav"', 'Content-Transfer-Encoding: base64', '',
+    wavBytes.toString('base64'), `--${boundary}--`, '',
   ].join('\r\n');
   async function send(message: string) {
     const result = await transport.sendMail({ envelope: { from: tenant.portal.email, to: [mailbox] }, raw: message });
@@ -104,6 +115,21 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     const download = await page.request.get(`/api/documents/download/${attachments[0].file_id}`);
     expect(download.status()).toBe(200);
     expect(await download.body()).toEqual(Buffer.from(`Attachment bytes ${actors.runId}`));
+
+    // A voicemail-style .wav must land as a downloadable ticket document under
+    // the same upload policy manual uploads use (regression: alga-2026-0002491).
+    const audioAttachments = await database('documents as d')
+      .join('document_associations as a', function () {
+        this.on('a.tenant', '=', 'd.tenant').andOn('a.document_id', '=', 'd.document_id');
+      }).where({ 'd.tenant': tenant.tenantId, 'a.entity_id': ticket.ticket_id, 'd.document_name': 'voicemail.wav' })
+      .select('d.file_id', 'd.mime_type', 'd.storage_path');
+    expect(audioAttachments).toHaveLength(1);
+    expect(audioAttachments[0]).toMatchObject({ mime_type: 'audio/wav' });
+    expect(audioAttachments[0].file_id).toBeTruthy();
+    expect(audioAttachments[0].storage_path).toBeTruthy();
+    const audioDownload = await page.request.get(`/api/documents/view/${audioAttachments[0].file_id}`);
+    expect(audioDownload.status()).toBe(200);
+    expect(await audioDownload.body()).toEqual(wavBytes);
 
     const agentReply = `Agent transport response ${actors.runId}`;
     const conversation = page.locator('#ticket-details-bento-timeline-tile');

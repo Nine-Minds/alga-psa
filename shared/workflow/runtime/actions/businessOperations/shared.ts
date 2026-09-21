@@ -329,8 +329,21 @@ export async function attachDocumentToTicket(
     if (typeof fileRecord.file_size === 'number' && fileRecord.file_size > MAX_ATTACHMENT_BYTES) {
       throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
     }
-    if (!isAllowedAttachmentMimeType(fileRecord.mime_type ?? null)) {
-      throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment mime_type not allowed' });
+    // Unify with the same MIME/size policy manual upload uses so workflow
+    // attachments (including audio) accept exactly what a tenant may upload.
+    try {
+      const { StorageService } = await import('@alga-psa/storage');
+      await StorageService.validateFileUpload(
+        tx.tenantId,
+        fileRecord.mime_type ?? 'application/octet-stream',
+        Number(fileRecord.file_size ?? 0)
+      );
+    } catch (error) {
+      throwActionError(ctx, {
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: error instanceof Error ? error.message : 'Attachment mime_type not allowed'
+      });
     }
   } else if (input.source.url) {
     const url = new URL(input.source.url);
@@ -360,8 +373,16 @@ export async function attachDocumentToTicket(
     if (buffer.length > MAX_ATTACHMENT_BYTES) {
       throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
     }
-    if (!isAllowedAttachmentMimeType(contentType)) {
-      throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment mime_type not allowed' });
+    // Same shared policy as manual upload (see the file_id branch above).
+    try {
+      const { StorageService } = await import('@alga-psa/storage');
+      await StorageService.validateFileUpload(tx.tenantId, contentType ?? 'application/octet-stream', buffer.length);
+    } catch (error) {
+      throwActionError(ctx, {
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: error instanceof Error ? error.message : 'Attachment mime_type not allowed'
+      });
     }
 
     const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/storage');
