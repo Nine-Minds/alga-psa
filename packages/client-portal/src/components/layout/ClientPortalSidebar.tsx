@@ -325,13 +325,17 @@ export function ClientPortalSidebar({
             <img
               src={wideLogoUrl}
               alt={brandLabel}
-              className="h-8 w-auto max-w-full object-contain"
+              className="h-12 w-auto max-w-full object-contain object-left"
               onError={() => setFailedWideLogoUrl(wideLogoUrl)}
             />
           ) : (
             <>
               {sidebarLogoUrl ? (
-                <div className="w-8 h-8 rounded-full bg-sidebar-text/5 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div
+                  className={`${
+                    sidebarOpen ? 'w-12 h-12' : 'w-8 h-8'
+                  } bg-sidebar-text/5 flex items-center justify-center overflow-hidden flex-shrink-0`}
+                >
                   <img
                     src={sidebarLogoUrl}
                     alt={branding?.clientName || 'Client Logo'}
@@ -349,7 +353,7 @@ export function ClientPortalSidebar({
                   />
                 </div>
               )}
-              <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>
+              <span className={`text-xl font-semibold truncate min-w-0 ${sidebarOpen ? '' : 'hidden'}`}>
                 {brandLabel}
               </span>
             </>
