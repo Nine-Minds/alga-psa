@@ -1,0 +1,62 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: the authoring-rate resolver prefers an exact contract-currency price, falls back to default_rate when absent, preserves a configured zero, and reports none for invalid input.",
+    "implemented": false,
+    "featureIds": ["F001", "F012"]
+  },
+  {
+    "id": "T002",
+    "description": "Component: GenericContractLineServicesList shows and submits default_rate without rendering a required manual-rate input when the contract-currency price is absent.",
+    "implemented": false,
+    "featureIds": ["F002", "F003", "F012"]
+  },
+  {
+    "id": "T003",
+    "description": "Component: GenericContractLineServicesList uses an exact contract-currency price ahead of default_rate and still blocks an unresolved selection until a valid manual rate is entered.",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Component: ServiceSelectionDialog returns the resolved rate in customRate and typeConfig and excludes products for hourly and usage lines while allowing them for fixed lines.",
+    "implemented": false,
+    "featureIds": ["F004", "F005"]
+  },
+  {
+    "id": "T005",
+    "description": "Component: selecting multiple fixed services seeds the recurring base rate with the quantity-weighted resolved-rate sum and updates it for replacement, removal, and quantity changes.",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F008"]
+  },
+  {
+    "id": "T006",
+    "description": "Component: a manually edited or resumed fixed base rate remains unchanged after service changes, while a missing or zero base rate continues to fail fixed-line validation.",
+    "implemented": false,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T007",
+    "description": "Component: FixedContractLineConfiguration seeds only an empty base-rate field from its service total and never replaces an existing value.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T008",
+    "description": "DB integration happy path: add a tenant-owned service membership with a fallback-resolved custom rate and verify the stored configuration and type-specific rate use integer minor units.",
+    "implemented": false,
+    "featureIds": ["F002", "F004"]
+  },
+  {
+    "id": "T009",
+    "description": "DB integration guard: reject or ignore a cross-tenant service membership addition and verify no configuration row is written for the target contract line.",
+    "implemented": false,
+    "featureIds": ["F002", "F004", "F005"]
+  },
+  {
+    "id": "T010",
+    "description": "Submission unit: fixed-service draft rate/source metadata is omitted from ClientContractWizardSubmission while service id, name, and quantity remain intact.",
+    "implemented": false,
+    "featureIds": ["F006"]
+  }
+]
