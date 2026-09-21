@@ -584,6 +584,8 @@ export const createService = withAuth(async (
             trx,
             tenant,
             serviceData.tax_rate_id,
+            undefined,
+            { lock: true },
         );
         const finalServiceData = {
             ...serviceData,

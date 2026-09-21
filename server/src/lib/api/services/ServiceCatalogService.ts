@@ -1,5 +1,5 @@
 import type { IService } from '@/interfaces/billing.interfaces';
-import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -230,14 +230,6 @@ export class ServiceCatalogService extends BaseService<IService> {
     const tenant = context.tenant;
 
     const { custom_service_type_id } = data;
-    if (custom_service_type_id) {
-      const serviceType = await tenantDb(knex, tenant).table('service_types')
-        .where('id', custom_service_type_id)
-        .first();
-      if (!serviceType) {
-        throw new ValidationError(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
-      }
-    }
 
     const rawData = data as any;
     const {
@@ -246,28 +238,49 @@ export class ServiceCatalogService extends BaseService<IService> {
       ...serviceInput
     } = rawData;
 
-    const serviceData = {
-      category_id: serviceInput.category_id ?? null,
-      ...serviceInput,
-      tenant,
-      default_rate: typeof serviceInput.default_rate === 'string'
-        ? parseFloat(serviceInput.default_rate) || 0
-        : serviceInput.default_rate,
-      // Omitted inherits the tenant default; explicit null stays non-taxable.
-      tax_rate_id: await resolveCatalogTaxRateIdForCreate(knex, tenant, serviceInput.tax_rate_id),
-    };
+    // Resolve the inherited default and insert inside one transaction, holding
+    // the documented rate/region locks until the catalog row is persisted.
+    const createdServiceId = await withTransaction(knex, async (trx) => {
+      if (custom_service_type_id) {
+        const serviceType = await tenantDb(trx, tenant).table('service_types')
+          .where('id', custom_service_type_id)
+          .first();
+        if (!serviceType) {
+          throw new ValidationError(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
+        }
+      }
 
-    const [created] = await tenantDb(knex, tenant).table('service_catalog')
-      .insert(serviceData)
-      .returning('*');
+      const serviceData = {
+        category_id: serviceInput.category_id ?? null,
+        ...serviceInput,
+        tenant,
+        default_rate: typeof serviceInput.default_rate === 'string'
+          ? parseFloat(serviceInput.default_rate) || 0
+          : serviceInput.default_rate,
+        // Omitted inherits the tenant default; explicit null stays non-taxable.
+        tax_rate_id: await resolveCatalogTaxRateIdForCreate(
+          trx,
+          tenant,
+          serviceInput.tax_rate_id,
+          undefined,
+          { lock: true },
+        ),
+      };
 
-    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, created.service_id, {
-      userId: context.userId,
-      itemKind: created.item_kind,
-      changedFields: Object.keys(serviceData),
+      const [created] = await tenantDb(trx, tenant).table('service_catalog')
+        .insert(serviceData)
+        .returning('*');
+
+      await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, created.service_id, {
+        userId: context.userId,
+        itemKind: created.item_kind,
+        changedFields: Object.keys(serviceData),
+      });
+
+      return created.service_id;
     });
 
-    return this.getById(created.service_id, context) as Promise<IService>;
+    return this.getById(createdServiceId, context) as Promise<IService>;
   }
 
   async update(id: string, data: Partial<IService>, context: ServiceContext): Promise<IService> {

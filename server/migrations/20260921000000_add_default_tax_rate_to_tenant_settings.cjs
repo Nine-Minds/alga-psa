@@ -15,9 +15,13 @@
  * explicitly choose the default, and catalog backfill is a separate
  * preview/apply operation. NULL means "no default configured".
  *
- * Citus note: `tenant_settings` and `tax_rates` are both tenant-distributed and
- * expected to be colocated on tenant. The composite FK is only valid when the
- * two tables are colocated; the integration/migration-smoke suites assert this.
+ * Citus note: the composite FK is only valid when `tenant_settings` and
+ * `tax_rates` are both distributed on `tenant` and colocated. The billing
+ * integration suites run on plain PostgreSQL and DO NOT assert distribution or
+ * colocation. This must be verified against a real Citus cluster (the
+ * citus-migration-smoke workflow runs the combined chain on single-node Citus);
+ * `tax_rates` already carries the same tenant-qualified composite key that the
+ * existing `service_catalog` FK references, but that is precedent, not proof.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }

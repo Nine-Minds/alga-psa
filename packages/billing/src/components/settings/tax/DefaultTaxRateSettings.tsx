@@ -95,7 +95,7 @@ export function DefaultTaxRateSettings({
       {
         value: UNSET_VALUE,
         label: t('tax.defaultRate.options.none', {
-          defaultValue: 'No default (leave catalog items non-taxable unless set)',
+          defaultValue: 'No default (new clients use the oldest active rate; catalog items are non-taxable)',
         }),
       },
       ...rateOptions,
@@ -196,7 +196,7 @@ export function DefaultTaxRateSettings({
           <p className="text-xs text-muted-foreground">
             {t('tax.defaultRate.help', {
               defaultValue:
-                'Clearing this setting means no default is applied — it does not make every client tax-exempt. Existing client and catalog assignments remain authoritative.',
+                'When this is cleared, new clients are not made tax-exempt: they fall back to the oldest active rate. New products and services created without a chosen rate are left non-taxable (no rate). Existing client and catalog assignments and issued invoices are unchanged.',
             })}
           </p>
         </div>

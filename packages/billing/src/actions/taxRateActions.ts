@@ -12,6 +12,7 @@ import { isSupportedCurrency } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import {
   isTaxRateUsableAsDefault,
+  lockTaxRegionRow,
   readConfiguredDefaultTaxRateId,
 } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
@@ -258,6 +259,13 @@ export const updateTaxRate = withAuth(async (
         if (effectiveCurrency == null) throw new Error('Tax rate cap requires an explicit currency.');
         validateCurrency(effectiveCurrency);
       }
+
+      // Lock the effective region (lock order: tax_rates -> tax_regions) before
+      // reading the configured default, so a concurrent region deactivation
+      // cannot slip between this check and the update.
+      const effectiveRegionCode =
+        (updateData as Partial<ITaxRate>).region_code ?? existingRate.region_code;
+      await lockTaxRegionRow(trx, tenant, effectiveRegionCode);
 
       // Lifecycle guard: a configured tenant default must remain usable. Changing
       // its region, deactivating it, or shifting its date range so it no longer

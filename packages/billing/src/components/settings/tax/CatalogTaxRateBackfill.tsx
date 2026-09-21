@@ -32,6 +32,10 @@ export function CatalogTaxRateBackfill() {
   const loadPreview = async () => {
     setIsLoading(true);
     setError(null);
+    // Clear any previous preview/selection up front so a failed reload cannot
+    // leave stale, hidden selections submittable.
+    setPreview(null);
+    setExcluded(new Set());
     try {
       const result = await previewCatalogTaxRateBackfill();
       if (isActionPermissionError(result)) {
@@ -112,7 +116,7 @@ export function CatalogTaxRateBackfill() {
       <Button
         id="apply-catalog-tax-backfill-button"
         onClick={handleApply}
-        disabled={isApplying || eligibleIds.length === 0}
+        disabled={isApplying || isLoading || Boolean(error) || !preview || eligibleIds.length === 0}
       >
         {isApplying
           ? t('tax.backfill.actions.applying', { defaultValue: 'Applying...' })

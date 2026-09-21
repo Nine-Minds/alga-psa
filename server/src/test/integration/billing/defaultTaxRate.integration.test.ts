@@ -47,9 +47,13 @@ function authModuleMock() {
   };
 }
 
+const permissionState = vi.hoisted(() => ({ allowed: true }));
+
 vi.mock('@alga-psa/auth', () => authModuleMock());
 vi.mock('@alga-psa/auth/withAuth', () => authModuleMock());
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async () => permissionState.allowed,
+}));
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: { capture: vi.fn(), identify: vi.fn(), trackPerformance: vi.fn(), getClient: () => null },
 }));
@@ -518,9 +522,172 @@ describe('tenant default tax rate assignment', () => {
       });
     });
 
+    it('requires the previewed default id and does not apply when it is omitted', async () => {
+      await createRegion(tenantA, 'AU-MANDATORY');
+      const configured = await createRate({ tenant: tenantA, regionCode: 'AU-MANDATORY', percentage: 10 });
+      await setConfiguredDefault(tenantA, configured);
+
+      const result = await (applyCatalogTaxRateBackfill as unknown as (
+        ids: string[],
+        expected?: string,
+      ) => Promise<unknown>)([uuidv4()]);
+      expect(result).toMatchObject({
+        actionError: expect.stringContaining('previewed default tax rate is required'),
+      });
+    });
+
     it('refuses to preview or apply without a configured default', async () => {
       mockState.tenantId = tenantEmpty;
       await expect(previewCatalogTaxRateBackfill()).rejects.toBeTruthy();
+    });
+
+    it('denies preview and apply when the caller lacks permission', async () => {
+      permissionState.allowed = false;
+      try {
+        const preview = await previewCatalogTaxRateBackfill();
+        expect(preview).toMatchObject({ permissionError: expect.any(String) });
+
+        const apply = await applyCatalogTaxRateBackfill([uuidv4()], uuidv4());
+        expect(apply).toMatchObject({ permissionError: expect.any(String) });
+      } finally {
+        permissionState.allowed = true;
+      }
+    });
+  });
+
+  describe('initializer association lookup and explicit defaults', () => {
+    it('returns early when the client already has a valid explicit default, even with an invalid tenant default', async () => {
+      await createRegion(tenantA, 'AU-EXPLICIT');
+      const valid = await createRate({ tenant: tenantA, regionCode: 'AU-EXPLICIT', percentage: 10 });
+      const expired = await createRate({
+        tenant: tenantA,
+        regionCode: 'AU-EXPLICIT',
+        percentage: 5,
+        endDate: '2025-02-01',
+      });
+      await setConfiguredDefault(tenantA, expired);
+
+      const clientId = await createClient(tenantA, 'Explicit Default Client');
+      await table(tenantA, 'client_tax_rates').insert({
+        tenant: tenantA,
+        client_id: clientId,
+        tax_rate_id: valid,
+        is_default: true,
+        location_id: null,
+      });
+
+      await expect(initializeClientDefaultTax(db, tenantA, clientId)).resolves.toBeTruthy();
+
+      const defaults = await table(tenantA, 'client_tax_rates')
+        .where({ client_id: clientId, is_default: true })
+        .whereNull('location_id');
+      expect(defaults).toHaveLength(1);
+      expect(defaults[0].tax_rate_id).toBe(valid);
+    });
+
+    it('promotes an existing association for the resolved rate instead of inserting a duplicate', async () => {
+      await createRegion(tenantA, 'AU-MATCH');
+      const configured = await createRate({ tenant: tenantA, regionCode: 'AU-MATCH', percentage: 10 });
+      const older = await createRate({ tenant: tenantA, regionCode: 'AU-MATCH', percentage: 5 });
+      await setConfiguredDefault(tenantA, configured);
+
+      const clientId = await createClient(tenantA, 'Matching Association Client');
+      await table(tenantA, 'client_tax_rates').insert([
+        {
+          tenant: tenantA,
+          client_id: clientId,
+          tax_rate_id: older,
+          is_default: false,
+          location_id: null,
+          created_at: '2020-01-01T00:00:00.000Z',
+        },
+        {
+          tenant: tenantA,
+          client_id: clientId,
+          tax_rate_id: configured,
+          is_default: false,
+          location_id: null,
+          created_at: '2021-01-01T00:00:00.000Z',
+        },
+      ]);
+
+      await initializeClientDefaultTax(db, tenantA, clientId);
+
+      const rows = await table(tenantA, 'client_tax_rates').where({ client_id: clientId });
+      expect(rows.filter((row) => row.tax_rate_id === configured)).toHaveLength(1);
+      expect(rows.filter((row) => row.is_default)).toHaveLength(1);
+      expect(rows.find((row) => row.is_default)?.tax_rate_id).toBe(configured);
+      expect(rows.find((row) => row.tax_rate_id === older)?.is_default).toBe(false);
+    });
+  });
+
+  describe('lock coordination (concurrency)', () => {
+    it('serializes a default save behind a region lock and refuses once the region is deactivated', async () => {
+      await createRegion(tenantA, 'AU-RACE-REGION');
+      const rate = await createRate({ tenant: tenantA, regionCode: 'AU-RACE-REGION', percentage: 10 });
+
+      const holder = await db.transaction();
+      try {
+        await holder('tax_regions')
+          .where({ tenant: tenantA, region_code: 'AU-RACE-REGION' })
+          .forUpdate()
+          .select('region_code');
+
+        const savePromise = updateDefaultTaxRateSetting(rate);
+        const outcome = await Promise.race([
+          savePromise.then(() => 'settled').catch(() => 'settled'),
+          new Promise((resolve) => setTimeout(() => resolve('pending'), 250)),
+        ]);
+        expect(outcome).toBe('pending');
+
+        await holder('tax_regions')
+          .where({ tenant: tenantA, region_code: 'AU-RACE-REGION' })
+          .update({ is_active: false });
+        await holder.commit();
+
+        const result = await savePromise;
+        expect(result).toMatchObject({
+          actionError: expect.stringContaining('cannot be used as the tenant default'),
+        });
+      } finally {
+        await holder.rollback().catch(() => undefined);
+      }
+    });
+
+    it('re-validates a client default under the rate lock instead of trusting pre-lock validation', async () => {
+      await createRegion(tenantA, 'AU-RACE-RATE');
+      const configured = await createRate({ tenant: tenantA, regionCode: 'AU-RACE-RATE', percentage: 10 });
+      await setConfiguredDefault(tenantA, configured);
+      const clientId = await createClient(tenantA, 'Race Rate Client');
+
+      const holder = await db.transaction();
+      try {
+        await holder('tax_rates')
+          .where({ tenant: tenantA, tax_rate_id: configured })
+          .forUpdate()
+          .select('tax_rate_id');
+        await holder('tax_rates')
+          .where({ tenant: tenantA, tax_rate_id: configured })
+          .update({ is_active: false });
+
+        const initPromise = db.transaction((trx) =>
+          initializeClientDefaultTax(trx, tenantA, clientId),
+        );
+        const outcome = await Promise.race([
+          initPromise.then(() => 'settled').catch(() => 'settled'),
+          new Promise((resolve) => setTimeout(() => resolve('pending'), 250)),
+        ]);
+        expect(outcome).toBe('pending');
+
+        await holder.commit();
+        await expect(initPromise).rejects.toBeInstanceOf(InvalidDefaultTaxRateError);
+      } finally {
+        await holder.rollback().catch(() => undefined);
+      }
+
+      const defaults = await table(tenantA, 'client_tax_rates')
+        .where({ client_id: clientId, is_default: true });
+      expect(defaults).toHaveLength(0);
     });
   });
 

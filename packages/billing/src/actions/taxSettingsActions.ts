@@ -12,6 +12,8 @@ import {
   assertValidDefaultTaxRateCandidate,
   InvalidDefaultTaxRateError,
   InvalidTaxRateSelectionError,
+  lockTaxRegionRow,
+  lockTenantSettingsRow,
   readConfiguredDefaultTaxRateId,
   resolveConfiguredDefaultTaxRate,
 } from '@alga-psa/shared/billingClients/defaultTaxRate';
@@ -43,6 +45,11 @@ function taxSettingsActionErrorFrom(error: unknown): TaxSettingsActionError | nu
       case 'Tenant context is required':
       case 'SYSTEM_ERROR: Tenant context not found':
         return actionError('No tenant context. Please refresh and try again.', 'msp/billing:errors.context.noTenantContext');
+      case 'The previewed default tax rate is required. Reload the preview and try again.':
+        return actionError(
+          'The previewed default tax rate is required. Reload the preview and try again.',
+          'msp/billing-settings:errors.tax.backfillPreviewRequired',
+        );
       case 'No active tax rates found in the system to assign as default.':
       case 'Failed to create default tax settings':
         return actionError('Configure at least one active tax rate before creating default tax settings.', 'msp/billing-settings:errors.tax.defaultRequiresActiveRate');
@@ -306,33 +313,44 @@ export const updateTaxRegion = withAuth(async (
     // Or: throw new Error('No update data provided.');
   }
 
-    // Lifecycle guard: deactivating the region that owns a configured default
-    // would invalidate that default for future assignments.
-    if (data.is_active === false) {
-      const defaultRateId = await readConfiguredDefaultTaxRateId(knex, tenant);
-      if (defaultRateId) {
-        const defaultRate = await tenantScopedTable<ITaxRate>(knex, tenant, 'tax_rates')
-          .where({ tax_rate_id: defaultRateId })
-          .first('region_code');
-        if (defaultRate?.region_code === region_code) {
-          return actionError(
-            'This region contains the tenant default tax rate. Choose a different default before deactivating the region.',
-            'msp/billing-settings:errors.taxRegion.defaultRegionBlocked',
-          );
+    // Lock + guard + update in one transaction. Holding the region lock means a
+    // concurrent default save (which locks the rate and then this region) blocks
+    // until this mutation commits, then re-validates the region as inactive and
+    // refuses to save an invalid default.
+    return withTransaction(knex, async (trx) => {
+      const regionLocked = await lockTaxRegionRow(trx, tenant, region_code);
+      if (!regionLocked) {
+        return actionError(`Tax region with code "${region_code}" not found.`, 'msp/billing-settings:errors.taxRegion.notFoundCode', { code: region_code });
+      }
+
+      // Lifecycle guard: deactivating the region that owns a configured default
+      // would invalidate that default for future assignments.
+      if (data.is_active === false) {
+        const defaultRateId = await readConfiguredDefaultTaxRateId(trx, tenant);
+        if (defaultRateId) {
+          const defaultRate = await tenantScopedTable<ITaxRate>(trx, tenant, 'tax_rates')
+            .where({ tax_rate_id: defaultRateId })
+            .first('region_code');
+          if (defaultRate?.region_code === region_code) {
+            return actionError(
+              'This region contains the tenant default tax rate. Choose a different default before deactivating the region.',
+              'msp/billing-settings:errors.taxRegion.defaultRegionBlocked',
+            );
+          }
         }
       }
-    }
 
-    const [updatedRegion] = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
-      .where('region_code', region_code)
-      .update(updateData)
-      .returning('*');
+      const [updatedRegion] = await tenantScopedTable<ITaxRegion>(trx, tenant, 'tax_regions')
+        .where('region_code', region_code)
+        .update(updateData)
+        .returning('*');
 
-    if (!updatedRegion) {
-      return actionError(`Tax region with code "${region_code}" not found.`, 'msp/billing-settings:errors.taxRegion.notFoundCode', { code: region_code });
-    }
+      if (!updatedRegion) {
+        return actionError(`Tax region with code "${region_code}" not found.`, 'msp/billing-settings:errors.taxRegion.notFoundCode', { code: region_code });
+      }
 
-    return updatedRegion;
+      return updatedRegion;
+    });
   } catch (error) {
     const expected = taxSettingsActionErrorFrom(error);
     if (expected) return expected;
@@ -943,7 +961,7 @@ export const applyCatalogTaxRateBackfill = withAuth(async (
   user,
   { tenant },
   serviceIds: string[],
-  expectedDefaultTaxRateId?: string | null
+  expectedDefaultTaxRateId: string
 ): Promise<{ changed: number; skipped: number } | TaxSettingsActionError> => {
   return withTaxSettingsActionErrors(async () => {
     if (!(await hasPermission(user, 'billing', 'update'))) {
@@ -958,22 +976,31 @@ export const applyCatalogTaxRateBackfill = withAuth(async (
     if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
       throw new Error('Select at least one catalog item to apply the default tax rate to.');
     }
+    // The previewed target is mandatory: without it a caller could bypass the
+    // stale-preview protection by omitting the argument.
+    if (typeof expectedDefaultTaxRateId !== 'string' || !expectedDefaultTaxRateId.trim()) {
+      throw new Error('The previewed default tax rate is required. Reload the preview and try again.');
+    }
 
     const { knex } = await createTenantKnex();
 
     return withTransaction(knex, async (trx) => {
-      const configured = await resolveConfiguredDefaultTaxRate(trx, tenant);
+      // Lock the rate/region while comparing and applying so a concurrent
+      // lifecycle mutation serializes behind this transaction.
+      const configured = await resolveConfiguredDefaultTaxRate(trx, tenant, undefined, { lock: true });
       if (!configured) {
         throw new Error('Configure a valid default tax rate before applying it to existing catalog items.');
       }
 
-      // Reject a stale preview: the administrator reviewed a specific target
-      // rate. If the saved default changed in the meantime, applying now would
-      // assign a rate they never saw.
+      // Lock the settings row last (lock order: tax_rates -> tax_regions ->
+      // tenant_settings) and re-read the saved target under that lock. This
+      // serializes against updateDefaultTaxRateSetting's conflicting upsert, so
+      // a default changed after the preview cannot be silently applied.
+      await lockTenantSettingsRow(trx, tenant);
+      const currentDefaultId = await readConfiguredDefaultTaxRateId(trx, tenant);
       if (
-        expectedDefaultTaxRateId !== undefined &&
-        expectedDefaultTaxRateId !== null &&
-        expectedDefaultTaxRateId !== configured.tax_rate_id
+        configured.tax_rate_id !== expectedDefaultTaxRateId.trim() ||
+        configured.tax_rate_id !== currentDefaultId
       ) {
         throw new InvalidDefaultTaxRateError(
           'The saved default tax rate changed since this preview was loaded. Refresh the preview and choose again.',
