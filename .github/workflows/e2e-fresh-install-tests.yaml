@@ -14,8 +14,6 @@ concurrency:
 
 permissions:
   contents: read
-  # Reading earlier runs' artifacts for verified image reuse.
-  actions: read
 
 jobs:
   changes:
@@ -80,6 +78,10 @@ jobs:
     if: needs.changes.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Only this job reads earlier runs' artifacts, for verified image reuse.
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:

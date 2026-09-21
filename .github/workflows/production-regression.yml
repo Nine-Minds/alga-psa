@@ -18,8 +18,6 @@ on:
 
 permissions:
   contents: read
-  # The fresh-install workflow reads earlier runs' artifacts for verified image reuse.
-  actions: read
 
 concurrency:
   group: production-regression-${{ github.event.pull_request.number || github.run_id }}
@@ -102,6 +100,10 @@ jobs:
     needs: jev-selection
     uses: ./.github/workflows/e2e-fresh-install-tests.yaml
     secrets: inherit
+    # Its build-images job reads earlier runs' artifacts for verified image reuse.
+    permissions:
+      contents: read
+      actions: read
 
   temporal:
     needs: selection
