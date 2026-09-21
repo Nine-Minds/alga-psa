@@ -9,6 +9,7 @@ import { fetchTenantParty } from './tenantPartyAdapter';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
 import { cadenceDefaultName, compareCadenceKeys, isRecurringCadenceKey, resolveCadenceKey } from '../quoteItemCadence';
 import { isOptional, isQuoteItemIncluded, isRequired } from '../quoteItemInclusion';
+import { presentedTaxAmount } from '../quoteItemTax';
 
 type QuoteItemGroupSummary = {
   items: QuoteViewModelLineItem[];
@@ -480,7 +481,7 @@ function buildCadenceGroups(
     group.tax = group.items.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
     group.total = group.subtotal + group.tax;
     group.optional_subtotal = group.optional_items.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
-    group.optional_tax = group.optional_items.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
+    group.optional_tax = group.optional_items.reduce((sum, item) => sum + presentedTaxAmount(item), 0);
     group.optional_total = group.optional_subtotal + group.optional_tax;
   }
 
@@ -715,7 +716,7 @@ export async function mapLoadedQuoteToViewModel(
 
   const derivedTotal = derivedSubtotal - derivedDiscountTotal + derivedTax;
   const optionalSubtotal = optionalBases.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
-  const optionalTax = optionalBases.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
+  const optionalTax = optionalBases.reduce((sum, item) => sum + presentedTaxAmount(item), 0);
   const optionalTotal = optionalSubtotal - optionalDiscountTotal + optionalTax;
 
   return {

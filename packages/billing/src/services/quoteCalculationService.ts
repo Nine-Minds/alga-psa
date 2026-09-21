@@ -339,26 +339,30 @@ export async function recalculateQuoteFinancials(
       ? (discountAmountById.get(item.quote_item_id) ?? 0)
       : (toNumber(item.quantity) * toNumber(item.unit_price));
 
-    let netAmount = isIncludedInTotals ? resolvedTotalPrice : 0;
+    const netAmount = isIncludedInTotals ? resolvedTotalPrice : 0;
     let taxAmount = 0;
-    let taxRate = isIncludedInTotals ? toNumber(item.tax_rate) : 0;
+    let taxRate = toNumber(item.tax_rate);
 
     if (!isDiscount) {
       subtotal += isIncludedInTotals ? resolvedTotalPrice : 0;
 
-      if (isIncludedInTotals && quote.client_id && taxSource === 'internal') {
+      // The rate is resolved for every base row (an unselected optional row
+      // keeps its rate so the presented "if selected" tax can be derived from
+      // it); only included rows contribute a persisted tax_amount and count
+      // toward the stored quote totals.
+      if (quote.client_id && taxSource === 'internal') {
         const taxResult = await calculateTaxWithConnection(
           knexOrTrx,
           tenant,
           quote.client_id,
-          netAmount,
+          resolvedTotalPrice,
           quoteDate,
           taxRegion ?? undefined,
           item.is_taxable !== false,
           currencyCode
         );
 
-        taxAmount = taxResult.taxAmount;
+        taxAmount = isIncludedInTotals ? taxResult.taxAmount : 0;
         taxRate = Math.round(Number(taxResult.taxRate ?? 0));
       } else if (taxSource !== 'internal') {
         taxAmount = 0;

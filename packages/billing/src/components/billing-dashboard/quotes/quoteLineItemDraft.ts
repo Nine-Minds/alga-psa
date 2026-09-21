@@ -3,6 +3,7 @@ import type { IQuoteItem } from '@alga-psa/types';
 import { allocateQuoteDiscounts } from '../../../services/quoteDiscountAllocation';
 import { compareCadenceKeys, cadenceDefaultName, isRecurringCadenceKey, resolveCadenceKey } from '../../../lib/quoteItemCadence';
 import { isOptional, isQuoteItemIncluded, isRequired } from '../../../lib/quoteItemInclusion';
+import { hypotheticalTaxAmount } from '../../../lib/quoteItemTax';
 
 export type DraftQuoteItem = {
   local_id: string;
@@ -257,16 +258,13 @@ export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTo
     }
   }
 
-  const taxFor = (baseItems: DraftQuoteItem[]): number => {
-    let tax = 0;
-    for (const item of baseItems) {
-      const totalPrice = item.quantity * item.unit_price;
-      if (item.is_taxable !== false && item.tax_rate) {
-        tax += Math.round(totalPrice * (item.tax_rate / 100));
-      }
-    }
-    return tax;
-  };
+  // Draft rows carry the persisted rate, so the editor derives tax the same
+  // way the adapter does for unselected optional rows (ceil to the cent).
+  const taxFor = (baseItems: DraftQuoteItem[]): number =>
+    baseItems.reduce(
+      (sum, item) => sum + hypotheticalTaxAmount({ ...item, total_price: item.quantity * item.unit_price }),
+      0,
+    );
 
   const tax = taxFor(requiredBaseItems);
   const optionalTax = taxFor(optionalBaseItems);

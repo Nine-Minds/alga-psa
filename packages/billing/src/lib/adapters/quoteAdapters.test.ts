@@ -1091,3 +1091,127 @@ describe('quoteAdapters catalog-description mapping', () => {
       .toBeNull();
   });
 });
+
+describe('quoteAdapters optional if-selected tax (alga-2026-0002383 SMOKE-2383-TAX)', () => {
+  beforeEach(() => {
+    fetchTenantPartyMock.mockReset();
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Northwind MSP',
+      address: '400 SW Main',
+      email: 'billing@example.com',
+      phone: '555-0100',
+      logo_url: null,
+    });
+  });
+
+  // Required base $759.00 at 6% ($45.54 tax, $804.54 total) plus optional
+  // monthly $40 and optional annual $50. The persisted recalculation zeroes
+  // tax_amount on an unselected optional row but keeps its tax_rate, so the
+  // presented "if selected" tax must be the same whichever way the annual
+  // row is toggled: $5.40 tax, $95.40 total.
+  const taxQuote = (annualSelected: boolean) =>
+    buildQuote({
+      subtotal: annualSelected ? 84900 : 79900,
+      discount_total: 0,
+      tax: annualSelected ? 5094 : 4794,
+      total_amount: annualSelected ? 89994 : 84694,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-req',
+          description: 'Managed Support',
+          unit_price: 10000,
+          total_price: 10000,
+          tax_amount: 600,
+          tax_rate: 6,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          display_order: 1,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'annual-req',
+          description: 'Annual Firewall Subscription',
+          unit_price: 15900,
+          total_price: 15900,
+          tax_amount: 954,
+          tax_rate: 6,
+          is_recurring: true,
+          billing_frequency: 'annually',
+          display_order: 2,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'onetime-req',
+          description: 'Onboarding',
+          unit_price: 50000,
+          total_price: 50000,
+          tax_amount: 3000,
+          tax_rate: 6,
+          is_recurring: false,
+          billing_frequency: null,
+          display_order: 3,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'monthly-opt',
+          description: 'Optional Endpoint Backup',
+          unit_price: 4000,
+          total_price: 4000,
+          tax_amount: 240,
+          tax_rate: 6,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          is_optional: true,
+          is_selected: true,
+          display_order: 4,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'annual-opt',
+          description: 'Optional Annual Security Review',
+          unit_price: 5000,
+          total_price: 5000,
+          tax_amount: annualSelected ? 300 : 0,
+          tax_rate: 6,
+          is_recurring: true,
+          billing_frequency: 'annually',
+          is_optional: true,
+          is_selected: annualSelected,
+          display_order: 5,
+        }),
+      ],
+    });
+
+  it.each([
+    ['unselected', false],
+    ['selected', true],
+  ])('reports optional tax $5.40 / total $95.40 with the annual add-on %s, base unchanged', async (_label, annualSelected) => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', taxQuote(annualSelected));
+
+    expect(viewModel.subtotal).toBe(75900);
+    expect(viewModel.tax).toBe(4554);
+    expect(viewModel.total_amount).toBe(80454);
+
+    expect(viewModel.optional_subtotal).toBe(9000);
+    expect(viewModel.optional_tax).toBe(540);
+    expect(viewModel.optional_total).toBe(9540);
+
+    const optionalBands = viewModel.groups_by_cadence_with_optionals ?? [];
+    const monthlyOptional = optionalBands.find((band) => band.cadence_key === 'monthly')!;
+    const annualOptional = optionalBands.find((band) => band.cadence_key === 'annually')!;
+    expect(monthlyOptional.optional_tax).toBe(240);
+    expect(monthlyOptional.optional_total).toBe(4240);
+    expect(annualOptional.optional_tax).toBe(300);
+    expect(annualOptional.optional_total).toBe(5300);
+
+    // Required bands never pick up hypothetical optional tax.
+    const bands = viewModel.groups_by_cadence ?? [];
+    expect(bands.reduce((sum, band) => sum + band.tax, 0)).toBe(4554);
+  });
+
+  it('does not invent tax for an unselected optional row that is not taxable', async () => {
+    const quote = taxQuote(false);
+    const annualOpt = quote.quote_items!.find((item) => item.quote_item_id === 'annual-opt')!;
+    annualOpt.tax_rate = 0; // recalculation persists rate 0 for non-taxable rows
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+    expect(viewModel.optional_tax).toBe(240);
+    expect(viewModel.optional_total).toBe(9240);
+  });
+});

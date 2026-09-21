@@ -2762,4 +2762,83 @@ describe('Quote infrastructure', () => {
     );
     expect(row.templateAst.bindings.values.optionalTotal.path).toBe('optional_total');
   });
+
+  it('T222: save/reload keeps tax_rate on an unselected optional row so the if-selected tax is quotable (SMOKE-2383-TAX)', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-WA', is_tax_exempt: false });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-WA', taxPercentage: 6 });
+
+    const createItems = async (annualSelected: boolean) => {
+      const quote = await Quote.create(context.db, context.tenantId, {
+        client_id: context.clientId,
+        title: `Optional tax ${annualSelected ? 'selected' : 'unselected'}`,
+        quote_date: '2026-09-21T00:00:00.000Z',
+        valid_until: '2026-10-21T00:00:00.000Z',
+        subtotal: 0,
+        discount_total: 0,
+        tax: 0,
+        total_amount: 0,
+        currency_code: 'USD',
+        is_template: false,
+        created_by: context.userId,
+      });
+
+      const rows = [
+        { description: 'Managed Support', unit_price: 10000, is_recurring: true, billing_frequency: 'monthly', is_optional: false, is_selected: true },
+        { description: 'Annual Firewall Subscription', unit_price: 15900, is_recurring: true, billing_frequency: 'annually', is_optional: false, is_selected: true },
+        { description: 'Onboarding', unit_price: 50000, is_recurring: false, billing_frequency: null, is_optional: false, is_selected: true },
+        { description: 'Optional Endpoint Backup', unit_price: 4000, is_recurring: true, billing_frequency: 'monthly', is_optional: true, is_selected: true },
+        { description: 'Optional Annual Security Review', unit_price: 5000, is_recurring: true, billing_frequency: 'annually', is_optional: true, is_selected: annualSelected },
+      ];
+      const ids: Record<string, string> = {};
+      for (const row of rows) {
+        const created = await QuoteItem.create(context.db, context.tenantId, {
+          quote_id: quote.quote_id,
+          quantity: 1,
+          is_taxable: true,
+          created_by: context.userId,
+          ...row,
+        } as any);
+        ids[row.description] = created.quote_item_id;
+      }
+      return { quote, ids };
+    };
+
+    for (const annualSelected of [false, true]) {
+      const { quote, ids } = await createItems(annualSelected);
+
+      const stored = await context.db('quote_items')
+        .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+        .select('quote_item_id', 'tax_rate', 'tax_amount', 'net_amount');
+      const byId = new Map(stored.map((row: any) => [row.quote_item_id, row]));
+      const annualOpt = byId.get(ids['Optional Annual Security Review'])!;
+      const monthlyOpt = byId.get(ids['Optional Endpoint Backup'])!;
+
+      // The rate is persisted regardless of selection; the amount only while included.
+      expect(Number(annualOpt.tax_rate)).toBe(6);
+      expect(Number(annualOpt.tax_amount)).toBe(annualSelected ? 300 : 0);
+      expect(Number(annualOpt.net_amount)).toBe(annualSelected ? 5000 : 0);
+      expect(Number(monthlyOpt.tax_rate)).toBe(6);
+      expect(Number(monthlyOpt.tax_amount)).toBe(240);
+
+      // Persisted quote totals keep the legacy rule (required + selected optional).
+      const storedQuote = await context.db('quotes')
+        .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+        .first();
+      expect(Number(storedQuote.subtotal)).toBe(annualSelected ? 84900 : 79900);
+      expect(Number(storedQuote.tax)).toBe(annualSelected ? 5094 : 4794);
+      expect(Number(storedQuote.total_amount)).toBe(annualSelected ? 89994 : 84694);
+
+      // The presented quote reports the same if-selected figures either way.
+      const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+      expect(viewModel).toBeTruthy();
+      expect(viewModel!.subtotal).toBe(75900);
+      expect(viewModel!.tax).toBe(4554);
+      expect(viewModel!.total_amount).toBe(80454);
+      expect(viewModel!.optional_subtotal).toBe(9000);
+      expect(viewModel!.optional_tax).toBe(540);
+      expect(viewModel!.optional_total).toBe(9540);
+    }
+  });
 });

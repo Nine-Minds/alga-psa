@@ -241,3 +241,40 @@ describe('quoteLineItemDraft cadence summary (editor == PDF)', () => {
     expect(byKey.onetime?.optional_total).toBe(0);
   });
 });
+
+describe('quoteLineItemDraft optional if-selected tax (alga-2026-0002383 SMOKE-2383-TAX)', () => {
+  // Same fixture as the adapter suite: required $759 at 6% plus optional
+  // monthly $40 (selected) and annual $50 toggled either way. Draft rows carry
+  // the persisted tax_rate, so both selection states must present $5.40 tax /
+  // $95.40 optional total while the base stays $45.54 / $804.54.
+  const taxItems = (annualSelected: boolean): DraftQuoteItem[] => [
+    serviceItem({ local_id: 'monthly-req', description: 'Managed Support', unit_price: 10000, is_recurring: true, billing_frequency: 'monthly', tax_rate: 6 }),
+    serviceItem({ local_id: 'annual-req', description: 'Annual Firewall Subscription', unit_price: 15900, is_recurring: true, billing_frequency: 'annually', tax_rate: 6 }),
+    serviceItem({ local_id: 'onetime-req', description: 'Onboarding', unit_price: 50000, is_recurring: false, tax_rate: 6 }),
+    serviceItem({ local_id: 'monthly-opt', description: 'Optional Endpoint Backup', unit_price: 4000, is_recurring: true, billing_frequency: 'monthly', is_optional: true, is_selected: true, tax_rate: 6 }),
+    serviceItem({ local_id: 'annual-opt', description: 'Optional Annual Security Review', unit_price: 5000, is_recurring: true, billing_frequency: 'annually', is_optional: true, is_selected: annualSelected, tax_rate: 6 }),
+  ];
+
+  it.each([
+    ['unselected', false],
+    ['selected', true],
+  ])('presents optional tax $5.40 / total $95.40 with the annual add-on %s, base unchanged', (_label, annualSelected) => {
+    const totals = calculateDraftQuoteTotals(taxItems(annualSelected));
+
+    expect(totals.subtotal).toBe(75900);
+    expect(totals.tax).toBe(4554);
+    expect(totals.total_amount).toBe(80454);
+    expect(totals.optional_subtotal).toBe(9000);
+    expect(totals.optional_tax).toBe(540);
+    expect(totals.optional_total).toBe(9540);
+  });
+
+  it('honours is_taxable=false on an optional row', () => {
+    const items = taxItems(false);
+    items.find((item) => item.local_id === 'annual-opt')!.is_taxable = false;
+
+    const totals = calculateDraftQuoteTotals(items);
+    expect(totals.optional_tax).toBe(240);
+    expect(totals.optional_total).toBe(9240);
+  });
+});
