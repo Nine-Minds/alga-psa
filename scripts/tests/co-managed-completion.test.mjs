@@ -315,7 +315,61 @@ test('counts are reported for every status present', () => {
 test('the status vocabulary is the one the inventory uses', () => {
   assert.deepEqual(REQUIREMENT_STATUSES,
     ['missing-code', 'implemented-unverified', 'failed', 'blocked-external', 'verified']);
-  assert.deepEqual(EVIDENCE_TYPES, ['automated', 'browser', 'database', 'simulator', 'external']);
+  assert.deepEqual(EVIDENCE_TYPES,
+    ['automated', 'browser', 'database', 'simulator', 'external', 'analysis']);
+});
+
+
+/**
+ * `analysis` — a recorded code read. It is a real, citable artifact (the
+ * ticket-list reconciliation is one), so recording it must not be a
+ * malformed-manifest error. But it observes source, not behaviour, so it can
+ * never accept a requirement on its own. Both halves are load-bearing: drop the
+ * first and the gate reports a false blocker, drop the second and "the code
+ * looks right" becomes a path to `verified`.
+ */
+
+/** Replace every evidence ref on CF006 with a single analysis-only record. */
+function analysisOnlyCF006(manifest) {
+  manifest.evidence['code-read'] = {
+    type: 'analysis', sha: CANDIDATE, command: 'row-by-row read of the ticket-list rows',
+    result: '39 rows classified', artifact: 'ticket-list-reconciliation.md',
+  };
+  const row = manifest.requirements.find((r) => r.key === 'CF006');
+  row.evidence = [{ id: 'code-read' }];
+}
+
+test('analysis is a recordable evidence type, not a malformed manifest', () => {
+  const manifest = passingManifest();
+  analysisOnlyCF006(manifest);
+  const verdict = evaluate(manifest);
+  assert.ok(
+    !verdict.blocking.implementation.some((r) => /unknown type/.test(r)),
+    `no "unknown type" blocker expected, got:\n  ${verdict.blocking.implementation.join('\n  ')}`,
+  );
+});
+
+rejects('a row verified by a code read alone', analysisOnlyCF006,
+  'implementationReady', /^CF006: verified only by analysis evidence — nothing was executed$/);
+
+test('analysis alongside an executed run is fine — it is a supplement, not a substitute', () => {
+  const manifest = passingManifest();
+  analysisOnlyCF006(manifest);
+  // Put the automated run back beside the code read.
+  manifest.requirements.find((r) => r.key === 'CF006').evidence.push({ id: 'regression' });
+  const verdict = evaluate(manifest);
+  assert.deepEqual(verdict.blocking, { implementation: [], humanReview: [], production: [] });
+  assert.equal(verdict.implementationReady, true);
+});
+
+test('the analysis floor is per-row, not per-manifest', () => {
+  // CF005 keeps its browser walk and regression run; only CF006 is starved.
+  const manifest = passingManifest();
+  analysisOnlyCF006(manifest);
+  const reasons = evaluate(manifest).blocking.implementation;
+  assert.equal(reasons.filter((r) => /nothing was executed/.test(r)).length, 1,
+    `exactly CF006 should be blocked, got:\n  ${reasons.join('\n  ')}`);
+  assert.ok(reasons.every((r) => !r.startsWith('CF005:')), 'CF005 must be unaffected');
 });
 
 

@@ -29,7 +29,21 @@ export const REQUIREMENT_STATUSES = [
 /** Statuses that permit `implementationReady`. Only one qualifies. */
 const ACCEPTING_STATUSES = new Set(['verified']);
 
-export const EVIDENCE_TYPES = ['automated', 'browser', 'database', 'simulator', 'external'];
+export const EVIDENCE_TYPES = ['automated', 'browser', 'database', 'simulator', 'external', 'analysis'];
+
+/**
+ * Evidence kinds that record a *reading* of the system rather than a *run* of
+ * it. A row-by-row code read is a legitimate, citable artifact — it is how the
+ * inventory learns which third of a requirement is missing — but it observes
+ * only the source, never the behaviour. Letting one accept a requirement would
+ * reintroduce exactly the "the code looks right, so it works" failure this gate
+ * exists to reject.
+ *
+ * So `analysis` is a valid type (it may be recorded, referenced and reviewed)
+ * that is nonetheless never sufficient on its own: a `verified` row must cite
+ * at least one evidence item that actually executed something.
+ */
+const NON_ACCEPTING_EVIDENCE_TYPES = new Set(['analysis']);
 
 /** A mandatory check must have reached exactly this conclusion. */
 const CHECK_SUCCESS = 'success';
@@ -192,6 +206,7 @@ export function evaluateCoManagedCompletion(input) {
       blocking.implementation.push(`${row.key}: ${row.status} — not accepted on this candidate`);
       continue;
     }
+    let executedEvidence = 0;
     for (const ref of row.evidence ?? []) {
       const id = typeof ref === 'string' ? ref : ref?.id;
       const item = evidenceById.get(id);
@@ -199,10 +214,16 @@ export function evaluateCoManagedCompletion(input) {
         blocking.implementation.push(`${row.key}: evidence ${id} is not in manifest.evidence`);
         continue;
       }
+      if (!NON_ACCEPTING_EVIDENCE_TYPES.has(item.type)) executedEvidence += 1;
       if (!evidenceAppliesToCandidate(item, candidate)) {
         blocking.implementation.push(
           `${row.key}: evidence ${id} ran at ${item.sha}, not the candidate, with no recorded dependency analysis`);
       }
+    }
+    // Structural floor: a code read cannot accept a requirement by itself.
+    if (executedEvidence === 0) {
+      blocking.implementation.push(
+        `${row.key}: verified only by ${[...NON_ACCEPTING_EVIDENCE_TYPES].join('/')} evidence — nothing was executed`);
     }
   }
 
