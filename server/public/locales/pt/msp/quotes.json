@@ -299,7 +299,15 @@
       "currencyPlaceholder": "Selecione a moeda",
       "quoteDate": "Data da cotação",
       "validUntil": "Válido até",
-      "validUntilHelp": "A cotação expira automaticamente nesta data."
+      "validUntilHelp": "A cotação expira automaticamente nesta data.",
+      "currencySource": {
+        "tenant": "Padrão do locatário",
+        "client": "Padrão do cliente para {{clientName}}",
+        "template": "Do modelo de cotação {{templateTitle}}",
+        "saved": "Salva nesta cotação",
+        "savedTemplate": "Salva neste modelo",
+        "manual": "Selecionada manualmente"
+      }
     },
     "lineItems": {
       "title": "Itens de linha",

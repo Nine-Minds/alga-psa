@@ -299,7 +299,15 @@
       "currencyPlaceholder": "Wybierz walutę",
       "quoteDate": "Data oferty",
       "validUntil": "Ważne do",
-      "validUntilHelp": "Oferta automatycznie wygasa w tym dniu."
+      "validUntilHelp": "Oferta automatycznie wygasa w tym dniu.",
+      "currencySource": {
+        "tenant": "Domyślna organizacji",
+        "client": "Domyślna klienta dla {{clientName}}",
+        "template": "Z szablonu oferty {{templateTitle}}",
+        "saved": "Zapisano w tej ofercie",
+        "savedTemplate": "Zapisano w tym szablonie",
+        "manual": "Wybrano ręcznie"
+      }
     },
     "lineItems": {
       "title": "Pozycje",

@@ -299,7 +299,15 @@
       "currencyPlaceholder": "Select currency",
       "quoteDate": "Quote date",
       "validUntil": "Valid until",
-      "validUntilHelp": "Quote auto-expires on this date."
+      "validUntilHelp": "Quote auto-expires on this date.",
+      "currencySource": {
+        "tenant": "Tenant default",
+        "client": "Client default for {{clientName}}",
+        "template": "From quote template {{templateTitle}}",
+        "saved": "Saved on this quote",
+        "savedTemplate": "Saved on this template",
+        "manual": "Selected manually"
+      }
     },
     "lineItems": {
       "title": "Line items",

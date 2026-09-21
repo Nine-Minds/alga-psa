@@ -36,6 +36,28 @@ const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<Ac
   return null;
 };
 
+/**
+ * Effective tenant currencies fall back to USD, and the requested new value is
+ * normalized before it is compared or persisted so whitespace/casing cannot
+ * trigger a spurious client-default propagation.
+ */
+const normalizeCurrencyCode = (value: string | null | undefined): string => {
+  const normalized = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  return normalized || 'USD';
+};
+
+export interface DefaultBillingSettingsUpdateResult {
+  success: boolean;
+  /** Present when `defaultCurrencyCode` was supplied. */
+  previousCurrencyCode?: string;
+  /** Present when `defaultCurrencyCode` was supplied. */
+  currencyCode?: string;
+  /** Present only when the effective currency actually changed. */
+  propagatedClientCount?: number;
+  /** Present only when the effective currency actually changed. */
+  preservedClientCount?: number;
+}
+
 export interface BillingSettings {
   zeroDollarInvoiceHandling: 'normal' | 'finalized';
   suppressZeroDollarInvoices: boolean;
@@ -146,7 +168,7 @@ export const updateDefaultBillingSettings = withAuth(async (
   user,
   { tenant },
   data: Partial<BillingSettings>
-): Promise<{ success: boolean } | BillingSettingsActionError> => {
+): Promise<DefaultBillingSettingsUpdateResult | BillingSettingsActionError> => {
   const denied = await requireBillingSettingsUpdatePermission(user);
   if (denied) return denied;
 
@@ -155,111 +177,163 @@ export const updateDefaultBillingSettings = withAuth(async (
   // row; only keys present in `data` are written, so one section's save can't
   // clobber another section's just-saved values with its stale snapshot.
   const has = (key: keyof BillingSettings) => Object.prototype.hasOwnProperty.call(data, key);
+  const currencySupplied = has('defaultCurrencyCode');
+
+  let propagation: {
+    previousCurrencyCode: string;
+    requestedCurrencyCode: string;
+    currencyChanged: boolean;
+    propagatedClientCount: number;
+    preservedClientCount: number;
+  };
 
   try {
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+    propagation = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Lock the settings row so concurrent currency saves cannot both decide
+      // to propagate from a stale previous default.
       const existingSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
+        .forUpdate()
         .first();
 
-    if (has('renewalTicketBoardId') || has('renewalTicketStatusId')) {
-      await assertBoardScopedTicketStatusSelection({
-        trx,
-        tenant,
-        boardId: (has('renewalTicketBoardId') ? data.renewalTicketBoardId : existingSettings?.renewal_ticket_board_id) ?? null,
-        statusId: (has('renewalTicketStatusId') ? data.renewalTicketStatusId : existingSettings?.renewal_ticket_status_id) ?? null,
-        statusLabel: 'Renewal ticket status',
-      });
-    }
+      // A tenant currency change propagates to client currency snapshots that
+      // still equal the previous tenant default; clients on any other currency
+      // are preserved. Historical client rows carry no provenance bit, so a
+      // value equal to the old default is treated as inherited (documented
+      // limitation: an explicit same-value override follows the tenant).
+      const previousCurrencyCode = normalizeCurrencyCode(existingSettings?.default_currency_code);
+      const requestedCurrencyCode = currencySupplied
+        ? normalizeCurrencyCode(data.defaultCurrencyCode)
+        : previousCurrencyCode;
+      const currencyChanged = currencySupplied && requestedCurrencyCode !== previousCurrencyCode;
 
-    const renewalMode =
-      data.defaultRenewalMode === 'none' ||
-      data.defaultRenewalMode === 'manual' ||
-      data.defaultRenewalMode === 'auto'
-        ? data.defaultRenewalMode
-        : DEFAULT_RENEWAL_MODE;
+      let propagatedClientCount = 0;
+      let preservedClientCount = 0;
+      if (currencyChanged) {
+        const totalClientsRow = await tenantScopedTable(trx, tenant, 'clients')
+          .count({ count: '*' })
+          .first();
+        const totalClients = Number(
+          (totalClientsRow as { count?: string | number } | undefined)?.count ?? 0
+        );
 
-    const noticePeriodDays =
-      Number.isInteger(data.defaultNoticePeriodDays) && (data.defaultNoticePeriodDays as number) >= 0
-        ? data.defaultNoticePeriodDays
-        : DEFAULT_NOTICE_PERIOD_DAYS;
+        propagatedClientCount = await tenantScopedTable(trx, tenant, 'clients')
+          .where({ default_currency_code: previousCurrencyCode })
+          .update({
+            default_currency_code: requestedCurrencyCode,
+            updated_at: trx.fn.now(),
+          });
 
-    const renewalDueDateActionPolicy =
-      data.renewalDueDateActionPolicy === 'queue_only' ||
-      data.renewalDueDateActionPolicy === 'create_ticket'
-        ? data.renewalDueDateActionPolicy
-        : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY;
-
-    const columnValues: Record<string, unknown> = {};
-    if (has('defaultCurrencyCode')) columnValues.default_currency_code = data.defaultCurrencyCode || 'USD';
-    if (has('defaultRenewalMode')) columnValues.default_renewal_mode = renewalMode;
-    if (has('defaultNoticePeriodDays')) columnValues.default_notice_period_days = noticePeriodDays;
-    if (has('renewalDueDateActionPolicy')) columnValues.renewal_due_date_action_policy = renewalDueDateActionPolicy;
-    if (has('renewalTicketBoardId')) columnValues.renewal_ticket_board_id = data.renewalTicketBoardId ?? null;
-    if (has('renewalTicketStatusId')) columnValues.renewal_ticket_status_id = data.renewalTicketStatusId ?? null;
-    if (has('renewalTicketPriority')) columnValues.renewal_ticket_priority = data.renewalTicketPriority ?? null;
-    if (has('renewalTicketAssigneeId')) columnValues.renewal_ticket_assignee_id = data.renewalTicketAssigneeId ?? null;
-    if (has('zeroDollarInvoiceHandling')) columnValues.zero_dollar_invoice_handling = data.zeroDollarInvoiceHandling;
-    if (has('suppressZeroDollarInvoices')) columnValues.suppress_zero_dollar_invoices = data.suppressZeroDollarInvoices;
-    if (has('enableCreditExpiration')) columnValues.enable_credit_expiration = data.enableCreditExpiration;
-    if (has('creditExpirationDays')) columnValues.credit_expiration_days = data.creditExpirationDays;
-    if (has('creditExpirationNotificationDays')) columnValues.credit_expiration_notification_days = data.creditExpirationNotificationDays;
-    if (has('creditAutoApplyEnabled')) columnValues.credit_auto_apply_enabled = data.creditAutoApplyEnabled ?? true;
-    if (has('creditApplicationOrder')) columnValues.credit_application_order = data.creditApplicationOrder ?? 'expiration_first';
-
-    // Service-type restriction: mode is the source of truth; derive a single
-    // consistent mode + ids pair so the DB CHECK constraints always hold.
-    const creditRestriction = (() => {
-      const modeProvided = has('creditServiceTypeRestrictionMode');
-      const idsProvided = has('creditEligibleServiceTypeIds');
-      const ids = data.creditEligibleServiceTypeIds;
-      const idsArray = Array.isArray(ids) && ids.length > 0 ? ids : null;
-
-      if (modeProvided) {
-        const mode = data.creditServiceTypeRestrictionMode === 'restricted' ? 'restricted' as const : 'all' as const;
-        return { mode, ids: mode === 'restricted' && idsArray ? JSON.stringify(idsArray) : null };
+        preservedClientCount = Math.max(0, totalClients - propagatedClientCount);
       }
-      if (idsProvided) {
-        return idsArray
-          ? { mode: 'restricted' as const, ids: JSON.stringify(idsArray) }
-          : { mode: 'all' as const, ids: null };
-      }
-      return null;
-    })();
 
-    if (creditRestriction) {
-      columnValues.credit_service_type_restriction_mode = creditRestriction.mode;
-      columnValues.credit_eligible_service_type_ids = creditRestriction.ids;
-    }
-
-    if (existingSettings) {
-      if (Object.keys(columnValues).length === 0) return;
-      return await tenantScopedTable(trx, tenant, 'default_billing_settings')
-        .update({
-          ...columnValues,
-          updated_at: trx.fn.now()
+      if (has('renewalTicketBoardId') || has('renewalTicketStatusId')) {
+        await assertBoardScopedTicketStatusSelection({
+          trx,
+          tenant,
+          boardId: (has('renewalTicketBoardId') ? data.renewalTicketBoardId : existingSettings?.renewal_ticket_board_id) ?? null,
+          statusId: (has('renewalTicketStatusId') ? data.renewalTicketStatusId : existingSettings?.renewal_ticket_status_id) ?? null,
+          statusLabel: 'Renewal ticket status',
         });
-    } else {
-      return await tenantScopedTable(trx, tenant, 'default_billing_settings').insert({
-        tenant,
-        zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling ?? 'normal',
-        suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices ?? false,
-        enable_credit_expiration: data.enableCreditExpiration ?? true,
-        credit_expiration_days: data.creditExpirationDays ?? 365,
-        credit_expiration_notification_days: data.creditExpirationNotificationDays ?? [30, 7, 1],
-        default_currency_code: data.defaultCurrencyCode || 'USD',
-        default_renewal_mode: renewalMode,
-        default_notice_period_days: noticePeriodDays,
-        renewal_due_date_action_policy: renewalDueDateActionPolicy,
-        renewal_ticket_board_id: data.renewalTicketBoardId ?? null,
-        renewal_ticket_status_id: data.renewalTicketStatusId ?? null,
-        renewal_ticket_priority: data.renewalTicketPriority ?? null,
-        renewal_ticket_assignee_id: data.renewalTicketAssigneeId ?? null,
-        credit_auto_apply_enabled: data.creditAutoApplyEnabled ?? true,
-        credit_application_order: data.creditApplicationOrder ?? 'expiration_first',
-        credit_service_type_restriction_mode: creditRestriction?.mode ?? 'all',
-        credit_eligible_service_type_ids: creditRestriction?.ids ?? null,
-      });
-    }
+      }
+
+      const renewalMode =
+        data.defaultRenewalMode === 'none' ||
+        data.defaultRenewalMode === 'manual' ||
+        data.defaultRenewalMode === 'auto'
+          ? data.defaultRenewalMode
+          : DEFAULT_RENEWAL_MODE;
+
+      const noticePeriodDays =
+        Number.isInteger(data.defaultNoticePeriodDays) && (data.defaultNoticePeriodDays as number) >= 0
+          ? data.defaultNoticePeriodDays
+          : DEFAULT_NOTICE_PERIOD_DAYS;
+
+      const renewalDueDateActionPolicy =
+        data.renewalDueDateActionPolicy === 'queue_only' ||
+        data.renewalDueDateActionPolicy === 'create_ticket'
+          ? data.renewalDueDateActionPolicy
+          : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY;
+
+      const columnValues: Record<string, unknown> = {};
+      if (currencySupplied) columnValues.default_currency_code = requestedCurrencyCode;
+      if (has('defaultRenewalMode')) columnValues.default_renewal_mode = renewalMode;
+      if (has('defaultNoticePeriodDays')) columnValues.default_notice_period_days = noticePeriodDays;
+      if (has('renewalDueDateActionPolicy')) columnValues.renewal_due_date_action_policy = renewalDueDateActionPolicy;
+      if (has('renewalTicketBoardId')) columnValues.renewal_ticket_board_id = data.renewalTicketBoardId ?? null;
+      if (has('renewalTicketStatusId')) columnValues.renewal_ticket_status_id = data.renewalTicketStatusId ?? null;
+      if (has('renewalTicketPriority')) columnValues.renewal_ticket_priority = data.renewalTicketPriority ?? null;
+      if (has('renewalTicketAssigneeId')) columnValues.renewal_ticket_assignee_id = data.renewalTicketAssigneeId ?? null;
+      if (has('zeroDollarInvoiceHandling')) columnValues.zero_dollar_invoice_handling = data.zeroDollarInvoiceHandling;
+      if (has('suppressZeroDollarInvoices')) columnValues.suppress_zero_dollar_invoices = data.suppressZeroDollarInvoices;
+      if (has('enableCreditExpiration')) columnValues.enable_credit_expiration = data.enableCreditExpiration;
+      if (has('creditExpirationDays')) columnValues.credit_expiration_days = data.creditExpirationDays;
+      if (has('creditExpirationNotificationDays')) columnValues.credit_expiration_notification_days = data.creditExpirationNotificationDays;
+      if (has('creditAutoApplyEnabled')) columnValues.credit_auto_apply_enabled = data.creditAutoApplyEnabled ?? true;
+      if (has('creditApplicationOrder')) columnValues.credit_application_order = data.creditApplicationOrder ?? 'expiration_first';
+
+      // Service-type restriction: mode is the source of truth; derive a single
+      // consistent mode + ids pair so the DB CHECK constraints always hold.
+      const creditRestriction = (() => {
+        const modeProvided = has('creditServiceTypeRestrictionMode');
+        const idsProvided = has('creditEligibleServiceTypeIds');
+        const ids = data.creditEligibleServiceTypeIds;
+        const idsArray = Array.isArray(ids) && ids.length > 0 ? ids : null;
+
+        if (modeProvided) {
+          const mode = data.creditServiceTypeRestrictionMode === 'restricted' ? 'restricted' as const : 'all' as const;
+          return { mode, ids: mode === 'restricted' && idsArray ? JSON.stringify(idsArray) : null };
+        }
+        if (idsProvided) {
+          return idsArray
+            ? { mode: 'restricted' as const, ids: JSON.stringify(idsArray) }
+            : { mode: 'all' as const, ids: null };
+        }
+        return null;
+      })();
+
+      if (creditRestriction) {
+        columnValues.credit_service_type_restriction_mode = creditRestriction.mode;
+        columnValues.credit_eligible_service_type_ids = creditRestriction.ids;
+      }
+
+      if (existingSettings) {
+        if (Object.keys(columnValues).length > 0) {
+          await tenantScopedTable(trx, tenant, 'default_billing_settings')
+            .update({
+              ...columnValues,
+              updated_at: trx.fn.now()
+            });
+        }
+      } else {
+        await tenantScopedTable(trx, tenant, 'default_billing_settings').insert({
+          tenant,
+          zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling ?? 'normal',
+          suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices ?? false,
+          enable_credit_expiration: data.enableCreditExpiration ?? true,
+          credit_expiration_days: data.creditExpirationDays ?? 365,
+          credit_expiration_notification_days: data.creditExpirationNotificationDays ?? [30, 7, 1],
+          default_currency_code: requestedCurrencyCode,
+          default_renewal_mode: renewalMode,
+          default_notice_period_days: noticePeriodDays,
+          renewal_due_date_action_policy: renewalDueDateActionPolicy,
+          renewal_ticket_board_id: data.renewalTicketBoardId ?? null,
+          renewal_ticket_status_id: data.renewalTicketStatusId ?? null,
+          renewal_ticket_priority: data.renewalTicketPriority ?? null,
+          renewal_ticket_assignee_id: data.renewalTicketAssigneeId ?? null,
+          credit_auto_apply_enabled: data.creditAutoApplyEnabled ?? true,
+          credit_application_order: data.creditApplicationOrder ?? 'expiration_first',
+          credit_service_type_restriction_mode: creditRestriction?.mode ?? 'all',
+          credit_eligible_service_type_ids: creditRestriction?.ids ?? null,
+        });
+      }
+
+      return {
+        previousCurrencyCode,
+        requestedCurrencyCode,
+        currencyChanged,
+        propagatedClientCount,
+        preservedClientCount,
+      };
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'BoardScopedTicketStatusSelectionError') {
@@ -268,7 +342,16 @@ export const updateDefaultBillingSettings = withAuth(async (
     throw error;
   }
 
-  return { success: true };
+  const result: DefaultBillingSettingsUpdateResult = { success: true };
+  if (currencySupplied) {
+    result.previousCurrencyCode = propagation.previousCurrencyCode;
+    result.currencyCode = propagation.requestedCurrencyCode;
+    if (propagation.currencyChanged) {
+      result.propagatedClientCount = propagation.propagatedClientCount;
+      result.preservedClientCount = propagation.preservedClientCount;
+    }
+  }
+  return result;
 });
 
 export const getClientContractLineSettings = withAuth(async (

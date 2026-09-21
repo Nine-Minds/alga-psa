@@ -350,4 +350,39 @@ describe('QuoteDetail accepted optional item review state', () => {
     expect(screen.queryByText('Create Draft Invoice')).toBeNull();
     expect(screen.getByText('Create Draft Contract')).toBeTruthy();
   });
+
+  it('T010: quote detail formats minor-unit summary amounts at one-hundredth magnitude', async () => {
+    getQuoteMock.mockResolvedValueOnce({
+      quote_id: 'quote-money-1',
+      quote_number: 'Q-0100',
+      version: 1,
+      client_id: 'client-1',
+      contact_id: null,
+      title: 'Currency magnitude',
+      description: null,
+      quote_date: '2026-03-10T00:00:00.000Z',
+      valid_until: '2026-03-25T00:00:00.000Z',
+      status: 'draft',
+      currency_code: 'AUD',
+      subtotal: 12345,
+      discount_total: 2345,
+      tax: 678,
+      total_amount: 10678,
+      quote_items: [],
+      activities: [],
+    });
+
+    const QuoteDetail = (await import('../../src/components/billing-dashboard/quotes/QuoteDetail')).default;
+    render(<QuoteDetail quoteId="quote-money-1" onBack={vi.fn()} onEdit={vi.fn()} onSelectVersion={vi.fn()} />);
+
+    await waitFor(() => expect(getQuoteMock).toHaveBeenCalledWith('quote-money-1'));
+
+    // 12,345 minor units must render as 123.45 — not 12,345.00.
+    expect(await screen.findByText('$123.45')).toBeTruthy();
+    expect(screen.getByText('$23.45')).toBeTruthy();
+    expect(screen.getByText('$6.78')).toBeTruthy();
+    // Total renders in both the header summary and the totals grid.
+    expect(screen.getAllByText('$106.78').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('$12345.00')).toBeNull();
+  });
 });

@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "Default currency has been updated."
+        "updated": "Default currency has been updated.",
+        "propagated": "Default currency changed to {{currency}}. {{updated}} client defaults updated; {{preserved}} client overrides preserved."
       },
       "errors": {
         "load": "Failed to load settings",
         "save": "Failed to save settings"
-      }
+      },
+      "propagationNote": "Changing this updates clients currently using the previous default currency. Clients with a different currency are preserved, and existing documents and templates do not change."
     },
     "invoiceNumbering": {
       "title": "Invoice Numbering",

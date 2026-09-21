@@ -2,109 +2,109 @@
   {
     "id": "F001",
     "description": "A tenant default currency change updates tenant-scoped clients whose stored currency equals the previous tenant default.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 1-4"]
   },
   {
     "id": "F002",
     "description": "A tenant default currency change preserves client currencies that differ from the previous tenant default.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 3"]
   },
   {
     "id": "F003",
     "description": "Client propagation and the tenant settings write execute in one transaction and roll back together.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 4"]
   },
   {
     "id": "F004",
     "description": "Billing-settings saves that omit currency or resave the same effective currency do not update clients.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 5", "Risks > Shared settings action"]
   },
   {
     "id": "F005",
     "description": "The default-billing-settings action returns previous/new currency and updated/preserved client counts after a currency save.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
     "id": "F006",
     "description": "Billing Settings explains that matching client defaults follow a tenant currency change while distinct client currencies and existing documents/templates remain unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Billing Settings"]
   },
   {
     "id": "F007",
     "description": "Billing Settings reports propagated and preserved client counts after a successful tenant currency change.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Billing Settings"]
   },
   {
     "id": "F008",
     "description": "A new quote seeded with a client uses that client's default currency and identifies the client as the source.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows > Create a quote for a client"]
   },
   {
     "id": "F009",
     "description": "Changing or clearing the client on a new quote re-resolves the currency to the new client default or tenant default and updates the source label.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 8-9"]
   },
   {
     "id": "F010",
     "description": "The quick-add-client quote flow applies the new client's default currency and source consistently with normal selection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 9"]
   },
   {
     "id": "F011",
     "description": "Applying a business quote template uses the template currency and identifies that template as the source.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows > Create a quote from a business template"]
   },
   {
     "id": "F012",
     "description": "Directly changing the quote currency picker identifies the currency as manually selected.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 11"]
   },
   {
     "id": "F013",
     "description": "Editing an existing quote preserves its currency and identifies it as saved on the quote instead of applying current defaults.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 12"]
   },
   {
     "id": "F014",
     "description": "Editing an existing business quote template preserves its currency and identifies it as saved on the template.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 12"]
   },
   {
     "id": "F015",
     "description": "QuoteForm resolves tenant settings and clients deterministically so asynchronous loading cannot restore USD over a client or template choice.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 8", "Risks > Asynchronous form initialization"]
   },
   {
     "id": "F016",
     "description": "Server-side quote creation retains explicit, client, tenant, then USD currency precedence for non-form callers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 13"]
   },
   {
     "id": "F017",
     "description": "Quote Detail formats subtotal, discount, tax, and total by converting stored minor units to major units exactly once.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements 14"]
   },
   {
     "id": "F018",
     "description": "All new billing-settings and quote-form source copy uses the existing i18n namespaces with English fallback text.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Non-functional Requirements"]
   }
 ]

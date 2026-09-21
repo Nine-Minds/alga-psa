@@ -962,6 +962,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     );
   }
 
+  // Quote summary amounts are persisted in minor units; the major-unit
+  // formatter would inflate them 100x if passed directly, so convert once here.
+  const formatSummaryAmount = (minorUnits: number | null | undefined): string =>
+    formatCurrency((Number(minorUnits) || 0) / 100, quote.currency_code || 'USD');
+
   return (
     <Card size="2">
       <Box p="4" className="space-y-6">
@@ -1064,26 +1069,26 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.total', { defaultValue: 'Total' })}</div>
-            <div className="mt-1 font-medium">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 font-medium">{formatSummaryAmount(quote.total_amount)}</div>
           </div>
         </section>
 
         <section className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-4">
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.subtotal', { defaultValue: 'Subtotal' })}</div>
-            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.subtotal, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatSummaryAmount(quote.subtotal)}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.discounts', { defaultValue: 'Discounts' })}</div>
-            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.discount_total, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatSummaryAmount(quote.discount_total)}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.tax', { defaultValue: 'Tax' })}</div>
-            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.tax, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatSummaryAmount(quote.tax)}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.total', { defaultValue: 'Total' })}</div>
-            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatSummaryAmount(quote.total_amount)}</div>
           </div>
         </section>
 

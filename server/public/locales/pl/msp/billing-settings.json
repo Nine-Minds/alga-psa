@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "Domyślna waluta została zaktualizowana."
+        "updated": "Domyślna waluta została zaktualizowana.",
+        "propagated": "Zmieniono domyślną walutę na {{currency}}. Zaktualizowano {{updated}} ustawień domyślnych klientów; zachowano {{preserved}} nadpisań klientów."
       },
       "errors": {
         "load": "Nie udało się załadować ustawień",
         "save": "Nie udało się zapisać ustawień"
-      }
+      },
+      "propagationNote": "Zmiana ta aktualizuje klientów, którzy nadal używają poprzedniej domyślnej waluty. Klienci z inną walutą pozostają bez zmian, a istniejące dokumenty i szablony nie zmieniają się."
     },
     "invoiceNumbering": {
       "title": "Numeracja faktur",

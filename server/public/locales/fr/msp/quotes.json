@@ -299,7 +299,15 @@
       "currencyPlaceholder": "Sélectionner une devise",
       "quoteDate": "Date du devis",
       "validUntil": "Valable jusqu'au",
-      "validUntilHelp": "Le devis expire automatiquement à cette date."
+      "validUntilHelp": "Le devis expire automatiquement à cette date.",
+      "currencySource": {
+        "tenant": "Par défaut du locataire",
+        "client": "Par défaut du client pour {{clientName}}",
+        "template": "Depuis le modèle de devis {{templateTitle}}",
+        "saved": "Enregistrée sur ce devis",
+        "savedTemplate": "Enregistrée sur ce modèle",
+        "manual": "Sélectionnée manuellement"
+      }
     },
     "lineItems": {
       "title": "Lignes",

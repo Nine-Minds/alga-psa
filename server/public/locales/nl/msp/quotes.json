@@ -299,7 +299,15 @@
       "currencyPlaceholder": "Valuta selecteren",
       "quoteDate": "Offertedatum",
       "validUntil": "Geldig tot",
-      "validUntilHelp": "Offerte verloopt automatisch op deze datum."
+      "validUntilHelp": "Offerte verloopt automatisch op deze datum.",
+      "currencySource": {
+        "tenant": "Standaard van tenant",
+        "client": "Klantstandaard voor {{clientName}}",
+        "template": "Van offertesjabloon {{templateTitle}}",
+        "saved": "Opgeslagen op deze offerte",
+        "savedTemplate": "Opgeslagen op dit sjabloon",
+        "manual": "Handmatig geselecteerd"
+      }
     },
     "lineItems": {
       "title": "Regels",
