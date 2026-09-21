@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Knex } from 'knex';
+import knexFactory, { type Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -7,12 +7,15 @@ import { v4 as uuidv4 } from 'uuid';
  * alga-2026-0002527): drive the real ServiceCatalogService and
  * ProductCatalogService against the migrated database instead of only the
  * shared resolver. Verifies omitted-inherits, explicit NULL, explicit override,
- * invalid override, and that an invalid configured default aborts before a
- * catalog row is written.
+ * invalid override, abort-before-write on an invalid configured default, and
+ * that SERVICE_CATALOG_CREATED is published only after commit (visible on a
+ * separate connection) and never on rollback.
  */
 
+const eventBus = vi.hoisted(() => ({ publishEvent: vi.fn(async () => undefined) }));
+
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEvent: vi.fn(async () => undefined),
+  publishEvent: eventBus.publishEvent,
 }));
 
 import { tenantDb } from '@alga-psa/db';
@@ -24,6 +27,7 @@ import { InvalidDefaultTaxRateError, InvalidTaxRateSelectionError } from '@alga-
 const HOOK_TIMEOUT = 300_000;
 
 let db: Knex;
+let otherConnection: Knex;
 let tenantId: string;
 let regionCode: string;
 let configuredRateId: string;
@@ -72,6 +76,9 @@ describe('catalog create entrypoints honour the tenant default contract', () => 
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     db = await createTestDbConnection({ databaseName: 'test_db_default_tax_entrypoints' });
+    // A genuinely separate connection/pool, so publication-time reads prove the
+    // create committed rather than merely being visible inside the transaction.
+    otherConnection = knexFactory({ client: 'pg', connection: db.client.config.connection });
 
     tenantId = uuidv4();
     await tenantDb(db, tenantId)
@@ -110,10 +117,12 @@ describe('catalog create entrypoints honour the tenant default contract', () => 
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
+    await otherConnection?.destroy();
     await db?.destroy();
   }, HOOK_TIMEOUT);
 
   beforeEach(async () => {
+    eventBus.publishEvent.mockClear();
     await setConfiguredDefault(null);
   }, HOOK_TIMEOUT);
 
@@ -235,5 +244,60 @@ describe('catalog create entrypoints honour the tenant default contract', () => 
       .where({ service_name: 'Aborted Service' })
       .select('service_id');
     expect(after).toHaveLength(before.length);
+  }, HOOK_TIMEOUT);
+
+  it('publishes SERVICE_CATALOG_CREATED only after the row is visible on another connection', async () => {
+    await setConfiguredDefault(configuredRateId);
+    let visibleOnOtherConnection: boolean | null = null;
+    eventBus.publishEvent.mockImplementationOnce(async (event: any) => {
+      const row = await otherConnection('service_catalog')
+        .where({ tenant: tenantId, service_id: event.payload.serviceId })
+        .first('service_id');
+      visibleOnOtherConnection = Boolean(row);
+      return undefined;
+    });
+
+    const created = await serviceCatalog.create(
+      {
+        service_name: 'Published Service',
+        custom_service_type_id: serviceTypeId,
+        billing_method: 'fixed',
+        is_active: true,
+        is_license: false,
+      } as never,
+      context,
+    );
+
+    expect(visibleOnOtherConnection).toBe(true);
+    expect(eventBus.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'SERVICE_CATALOG_CREATED' }),
+    );
+    expect((await serviceRow(created.service_id))?.tax_rate_id).toBe(configuredRateId);
+  }, HOOK_TIMEOUT);
+
+  it('publishes no event and leaves no row when the transaction rolls back after insert', async () => {
+    await setConfiguredDefault(configuredRateId);
+    const priceFailure = vi
+      .spyOn(productCatalog as unknown as { setServicePrices: (...args: unknown[]) => unknown }, 'setServicePrices')
+      .mockRejectedValueOnce(new Error('post-insert failure'));
+
+    await expect(
+      productCatalog.create(
+        {
+          service_name: 'Rollback Product',
+          custom_service_type_id: serviceTypeId,
+          is_active: true,
+          is_license: false,
+          prices: [{ currency_code: 'USD', rate: 100 }],
+        } as never,
+        context,
+      ),
+    ).rejects.toThrow('post-insert failure');
+
+    priceFailure.mockRestore();
+    expect(eventBus.publishEvent).not.toHaveBeenCalled();
+    expect(
+      await table('service_catalog').where({ service_name: 'Rollback Product' }).select('service_id'),
+    ).toHaveLength(0);
   }, HOOK_TIMEOUT);
 });

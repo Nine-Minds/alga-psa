@@ -240,7 +240,9 @@ export class ServiceCatalogService extends BaseService<IService> {
 
     // Resolve the inherited default and insert inside one transaction, holding
     // the documented rate/region locks until the catalog row is persisted.
-    const createdServiceId = await withTransaction(knex, async (trx) => {
+    // Publication happens only after commit so an external search consumer
+    // cannot read the event before its own connection can see the row.
+    const createdResult = await withTransaction(knex, async (trx) => {
       if (custom_service_type_id) {
         const serviceType = await tenantDb(trx, tenant).table('service_types')
           .where('id', custom_service_type_id)
@@ -271,16 +273,20 @@ export class ServiceCatalogService extends BaseService<IService> {
         .insert(serviceData)
         .returning('*');
 
-      await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, created.service_id, {
-        userId: context.userId,
+      return {
+        serviceId: created.service_id,
         itemKind: created.item_kind,
         changedFields: Object.keys(serviceData),
-      });
-
-      return created.service_id;
+      };
     });
 
-    return this.getById(createdServiceId, context) as Promise<IService>;
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, createdResult.serviceId, {
+      userId: context.userId,
+      itemKind: createdResult.itemKind,
+      changedFields: createdResult.changedFields,
+    });
+
+    return this.getById(createdResult.serviceId, context) as Promise<IService>;
   }
 
   async update(id: string, data: Partial<IService>, context: ServiceContext): Promise<IService> {

@@ -38,6 +38,7 @@ import {
 } from '@alga-psa/shared/billingClients/defaultContract';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
+import { resolveProductCode } from '@alga-psa/types';
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
@@ -359,11 +360,17 @@ export class ClientService extends BaseService<IClient> {
         clientId: client.client_id,
       });
 
-      // Tax initialization shares the client transaction: an invalid/missing
-      // configuration must roll the client back rather than commit a client
-      // with no usable tax setup. The shared initializer resolves the tenant
-      // default and writes exactly one client-wide default association.
-      await initializeClientDefaultTax(trx, context.tenant, client.client_id);
+      // Tax initialization shares the client transaction: for PSA tenants an
+      // invalid/missing configuration must roll the client back rather than
+      // commit a client with no usable tax setup. AlgaDesk tenants have no tax
+      // rates (the product intentionally excludes billing) and keep the same
+      // exemption as the UI and shared client-writer paths.
+      const tenantProduct = await tenantDb(trx, context.tenant)
+        .table('tenants')
+        .first('product_code');
+      if (resolveProductCode(tenantProduct?.product_code).productCode !== 'algadesk') {
+        await initializeClientDefaultTax(trx, context.tenant, client.client_id);
+      }
 
       // Handle tags if provided
       if ((data as any).tags && (data as any).tags.length > 0) {
