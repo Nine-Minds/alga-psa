@@ -279,6 +279,54 @@ const EVIDENCE = {
       + 'candidate on an unrelated RMM/pg-boss delivery timing flake (1 of 520, "expected pending to be '
       + 'completed"), which is recorded as an open defect rather than waved through.',
   },
+  'gate-self-test': {
+    type: 'automated',
+    sha: 'ROUND5_CANDIDATE',
+    command: 'node --test scripts/tests/co-managed-completion.test.mjs; '
+      + 'node scripts/verify-co-managed-completion.mjs',
+    result: '63 pass, 0 fail (was 59 before this round added the analysis-evidence cases). The suite is '
+      + 'built as "start from a fixture that passes all three predicates, break exactly one thing, assert the '
+      + 'named predicate goes false", so each case is its own mutation. It covers every negative CT026 '
+      + 'enumerates: missing/duplicate/unmapped requirement, open defect flags, stale SHA, missing artifact, '
+      + 'pending/failed/skipped/cancelled/wrong-SHA/absent mandatory CI, conflicting and unknown mergeability, '
+      + 'wrong-revision app and worker, prose-only completion, and a green-check tally that cannot substitute '
+      + 'for the required set - plus the positive case, where one complete fixture reaches humanReviewReady '
+      + 'while unaccepted external provider prerequisites keep productionReady false. This round\'s two '
+      + 'additions are separately mutation-verified: removing "analysis" from EVIDENCE_TYPES fails 3 cases, '
+      + 'and neutering the executed-evidence floor fails 2 different ones. Run against the real 193-row '
+      + 'manifest the verifier reports zero malformed-manifest blockers and all three verdicts false.',
+    artifact: 'raw-logs/gate-self-test.txt',
+    artifactNote: 'Scope limit: this exercises the PURE decision function over manifests, and the CLI over '
+      + 'the committed manifest. It does NOT prove the packet COLLECTION is faithful - that a collected '
+      + 'manifest truthfully reflects the repository and CI - which is CF031, still unverified. A gate that '
+      + 'reasons correctly about a lying manifest is still a gate that can be lied to.',
+  },
+  'requester-deferral-refund-asserted': {
+    type: 'automated',
+    sha: 'ROUND5_CANDIDATE',
+    command: 'server: vitest run ../ee/temporal-workflows/src/__tests__/integration/'
+      + 'coManagedBootstrap.integration.test.ts (whole file, VITEST_SEED=20260610, DB_NAME_SERVER='
+      + 'server_co_managed, CE+EE overlay via TEST_MIGRATIONS_DIR)',
+    result: '1418 passed, 0 failed (whole file, 315.6s) - the documented green baseline, unchanged. The '
+      + 'specific assertions this row was blocked on are named and passing: "retains pending and '
+      + 'expired-workspace mail without source fetches, processing attempts, or terminal acknowledgements" '
+      + '(defer x7 on co_managed_pending_acceptance, then co_managed_read_only, with {status: received, '
+      + 'attempt_count: 0, completed_at: null} and inbound_email_effects length 0); "refunds the claim when '
+      + 'grace expires during source fetch and resumes the same inbox exactly once after renewal" '
+      + '({status: received, attempt_count: 0, lease_owner: null, lease_token: null, completed_at: null}, '
+      + 'then exactly-once resumption of the SAME inbox after entitlement renewal); "does not release '
+      + 'another worker lease or refund a reclaimed attempt, and preserves prior error provenance" (the '
+      + 'negative control that bounds the refund); and the two unknown-failure cases, "retains requester '
+      + 'email for retry when its worker lacks the required admission adapter" and "retains technician mail '
+      + 'for retry if a durable worker has no qualified admission adapter", each asserting disposition '
+      + 'retry, status retryable_failed and zero effects at the two separate worker entry points.',
+    artifact: 'raw-logs/cf003-cf004-refund-assertions.txt',
+    artifactNote: 'Scope limit: these are integration tests that substitute ONLY source-fetch and '
+      + 'sender/routing policy (intake.read / intake.parse / intake.process). Canonical ticket and comment '
+      + 'writes, the transactional outbox, effects rows and terminal inbox state are all real. They therefore '
+      + 'do NOT constitute a real inbound-email journey against a live mail source - that is CF008/CF009, '
+      + 'explicitly out of scope this round and still unproven.',
+  },
   'ticket-list-reconciliation': {
     type: 'analysis',
     sha: 'ROUND3_CANDIDATE',
@@ -376,7 +424,7 @@ const EVIDENCE = {
 
 // Evidence recorded as collected at "this round's candidate" resolves here, so
 // the manifest can never carry a placeholder into the readiness calculation.
-const CANDIDATE_PLACEHOLDERS = new Set(['ROUND2_CANDIDATE', 'ROUND3_CANDIDATE']);
+const CANDIDATE_PLACEHOLDERS = new Set(['ROUND2_CANDIDATE', 'ROUND3_CANDIDATE', 'ROUND5_CANDIDATE']);
 for (const item of Object.values(EVIDENCE)) {
   if (CANDIDATE_PLACEHOLDERS.has(item.sha)) item.sha = candidate;
 }
@@ -444,33 +492,47 @@ const OVERRIDES = {
       'cf002-cause-established', 'cf002-repair-confirmed', 'cf002-verified-green-shard'],
   },
   CF003: {
-    status: 'failed',
-    why: 'A real latent defect was repaired at its owner: the two separately compiled worker admission adapters '
-      + 'classified CoManagedSharedWorkError by `instanceof`, which cannot hold across this package\'s split '
-      + 'export map, so an authorization rejection was rethrown unclassified and the durable inbox reported '
-      + '`retry`. It is now duck-typed like its sibling isCoManagedLifecycleError and pinned at both call sites. '
-      + 'The CONTROL RUN REFUTES THE CAUSAL CLAIM: the faithful 78-file shard passes with the predicate reverted '
-      + 'to `instanceof` just as it passes with the fix, so the repair is not demonstrated to be the cause of the '
-      + 'CI failure. The CI read at fb2e696645 now REFUTES it outright: the case still fails with the fix in '
-      + 'place, and the `admission` diagnostic stage -- which both adapters emit before rethrowing anything they '
-      + 'do not recognise -- never fired, so no shared-work rejection crossed that boundary at all. The real '
-      + 'first error is a RangeError stack overflow raised after admission returns. The duck-typing repair is '
-      + 'kept on its own merits (the split export map really can put two constructors in one process) but it is '
-      + 'NOT the repair this row needs, and the recursion site is still unknown. Row stays failed.',
-    evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure', 'inbound-diagnostics-regression',
-      'requester-deferral-local-pass', 'requester-deferral-control-run', 'admission-adapter-callsites'],
+    status: 'verified',
+    why: 'CORRECTED on measurement. This row stayed `failed` on a reading that is now superseded: it said the '
+      + 'recursion site was unknown and the duck-typing repair was "NOT the repair this row needs". Both '
+      + 'halves have since been resolved - the cause WAS established (withAdminTransaction read error.stack '
+      + 'unguarded inside its catch, so V8\'s lazy formatter threw in place of the real error) and repaired at '
+      + 'its owner in 899ae2e1cc, which is CF002, now verified. With that repair in place every clause of '
+      + 'this row\'s wording is asserted by a named test that passes: separately compiled admission pauses '
+      + 'DEFER ("retains pending and expired-workspace mail...", asserting disposition defer with reason '
+      + 'co_managed_pending_acceptance seven times and then co_managed_read_only); effects ROLL BACK '
+      + '(inbound_email_effects toHaveLength(0) in that case and in both retry cases); claims are REFUNDED '
+      + '("refunds the claim when grace expires during source fetch...", asserting status received, '
+      + 'attempt_count 0, lease_owner null, lease_token null, completed_at null); and unknown failures RETRY, '
+      + 'at BOTH worker entry points - "retains requester email for retry when its worker lacks the required '
+      + 'admission adapter" and "retains technician mail for retry if a durable worker has no qualified '
+      + 'admission adapter", each asserting disposition retry, status retryable_failed and zero effects. The '
+      + 'refund is bounded rather than blanket by its own negative control, "does not release another worker '
+      + 'lease or refund a reclaimed attempt, and preserves prior error provenance". Flipped on those named '
+      + 'assertions executing and passing, NOT on "shard 1 is green" - the green shard is corroboration, not '
+      + 'the evidence. LIMITATION: source fetch and sender/routing policy are substituted in these tests, so '
+      + 'no real inbound-email journey is proven here (CF008/CF009, out of scope, still unproven).',
+    evidence: ['requester-deferral-refund-asserted', 'cf002-verified-green-shard', 'admission-adapter-callsites',
+      'inbound-diagnostics-regression'],
   },
   CF004: {
-    status: 'failed',
-    why: 'Round-4 note: shard 1 is now GREEN at 5e71e4efd2 (job 106164529115) and the requester lifecycle-pause case passes, so the defer/co_managed_read_only disposition IS now observed on a passing candidate. This row is still not flipped because its wording also requires the refund half - attempt_count=0 and inbox back to received - and that specific assertion has not been separately confirmed here. Depends on CF003 being proven at a candidate. The requester audience/token isolation and both worker '
-      + 'entry points are untouched by this round\'s change except that the technician adapter '
-      + '(inboundEmailReply) got the same duck-typed classification, which needs the same shard proof. The '
-      + 'fb2e696645 read shows the pause never reaches the classification at all, so the rollback/refund '
-      + 'behaviour this row requires is still unobserved on a passing candidate. Round 3 note: shard 1 PASSED at '
-      + '023076a648, but with silent:"passed-only" that pass produced no record of which path ran, so it cannot '
-      + 'be read as observing the rollback/refund behaviour either. The file sink added this round is what will '
-      + 'make a green run say.',
-    evidence: ['requester-deferral-ci-diagnosed', 'requester-deferral-ci-failure'],
+    status: 'verified',
+    why: 'CORRECTED on measurement. The blocker this row recorded - that the refund half, "attempt_count=0 and '
+      + 'the inbox row back to received", was never separately asserted - is FALSE against the repository. '
+      + 'That assertion exists in two places and has for some time: '
+      + 'coManagedBootstrap.integration.test.ts:727 asserts {status: received, attempt_count: 0, '
+      + 'completed_at: null} immediately after the co_managed_read_only defer, and :743 asserts {status: '
+      + 'received, attempt_count: 0, lease_owner: null, lease_token: null, completed_at: null} in a case '
+      + 'literally named "refunds the claim". The row was blocked on a fact that could have been checked by '
+      + 'opening the file. Each remaining clause of the wording is also asserted: BOTH WORKER ENTRY POINTS by '
+      + 'the paired requester and technician retry cases; EXACTLY-ONCE RENEWAL REPLAY by the second half of '
+      + 'the refund case, which reconciles the entitlement, advances only that record\'s wakeup and resumes '
+      + 'the SAME inbox once, with the negative control "does not release another worker lease or refund a '
+      + 'reclaimed attempt" proving the refund does not over-apply; and REQUESTER AUDIENCE/TOKEN ISOLATION by '
+      + 'the requester reply-token and content-audience cases carried in the same file. All executed and '
+      + 'passing locally at VITEST_SEED=20260610. LIMITATION: same substitution caveat as CF003 - this is '
+      + 'integration-level with source fetch and routing policy mocked, not a real mail journey.',
+    evidence: ['requester-deferral-refund-asserted', 'cf002-verified-green-shard'],
   },
   CF005: {
     status: 'verified',
@@ -504,9 +566,24 @@ const OVERRIDES = {
     evidence: ['cf007-authority-hardening'],
   },
   CF030: {
-    status: 'missing-code',
-    why: 'Deliberately not started this round. It is the last scope item and the budget went to CF002-CF006 and '
-      + 'this inventory. Its independent tests must be written and passing before it is used as a gate.',
+    status: 'verified',
+    why: 'CORRECTED: the previous justification ("deliberately not started this round") was refuted by the '
+      + 'repository. All three artifacts this row requires exist and are exercised - '
+      + 'scripts/verify-co-managed-completion.mjs (read-only CLI, writes nothing, exits non-zero unless '
+      + 'humanReviewReady), scripts/lib/co-managed-completion.mjs (the pure calculation) and '
+      + 'scripts/tests/co-managed-completion.test.mjs (63 passing negative-and-positive cases). The row\'s '
+      + 'three clauses are each met: COMPLETE-ID, because expected IDs are read independently from the plans '
+      + 'on disk via coManagedRequirementKeys() and compared BOTH ways, so a row vanishing from a plan and a '
+      + 'row appearing from nowhere are both blockers; FAIL-CLOSED, because a missing manifest, unreadable '
+      + 'plan, unsupplied ID set, unknown status or unparseable JSON all produce false rather than an '
+      + 'exception or a pass; and SEPARATE VERDICTS, because implementationReady, humanReviewReady and '
+      + 'productionReady are calculated independently and proved separable by a case where review stability '
+      + 'moves the last two while the first stays true. An inventory that is wrong about its own repository '
+      + 'destroys the gate\'s credibility, which is why this is corrected rather than carried forward. '
+      + 'LIMITATIONS, recorded rather than waved past: the evidence exercises the decision function and the '
+      + 'CLI, NOT the faithfulness of packet collection (CF031, unverified); and the gate is not yet wired '
+      + 'into required CI, so nothing yet FORCES it to run before review is requested.',
+    evidence: ['gate-self-test'],
   },
 };
 
