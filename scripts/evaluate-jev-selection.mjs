@@ -5,7 +5,7 @@
 import { appendFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { evaluateSelection, renderEvaluationMarkdown } from './lib/jev-selection-evaluation.mjs';
+import { classifyReportPath, evaluateSelection, renderEvaluationMarkdown } from './lib/jev-selection-evaluation.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).map(arg => arg.replace(/^--/, '').split('=')));
@@ -26,9 +26,9 @@ function walk(directory) {
 
 const read = file => { try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; } };
 const selection = read(selectionPath);
-const reports = walk(inputs).map(file => ({ file, report: read(file) })).filter(entry => entry.report);
-const integrationReports = reports.filter(({ report }) => Array.isArray(report.testResults)).map(({ report }) => report);
-const browserReports = reports.filter(({ report }) => Array.isArray(report.suites) && report.config).map(({ report }) => report);
+const reports = walk(inputs).map(file => ({ file, kind: classifyReportPath(file), report: read(file) })).filter(entry => entry.kind && entry.report);
+const integrationReports = reports.filter(({ kind, report }) => kind === 'integration' && Array.isArray(report.testResults)).map(({ report }) => report);
+const browserReports = reports.filter(({ kind, report }) => kind === 'browser' && Array.isArray(report.suites) && report.config).map(({ report }) => report);
 const evaluation = evaluateSelection({ selection, integrationReports, browserReports });
 evaluation.inputs = { selection: path.relative(root, selectionPath), integration_reports: integrationReports.length, browser_reports: browserReports.length };
 writeFileSync(path.join(output, 'jev-evaluation.json'), JSON.stringify(evaluation, null, 2) + '\n');

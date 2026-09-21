@@ -94,6 +94,23 @@ export function evaluateSelection({ selection, integrationReports = [], browserR
   return result;
 }
 
+/**
+ * Which downloaded results.json files are the runs Jev judged. Integration
+ * shards write results.json at their artifact root; the production browser
+ * gate writes e2e-tests/execution-evidence/results.json. The Playwright
+ * artifact also carries harness-results (intentional failures) and the
+ * upgrade and Teams gates' reports, which judge nothing.
+ */
+export function classifyReportPath(file) {
+  const parts = file.split(/[\\/]/);
+  const parent = parts.at(-2) ?? '';
+  const grandparent = parts.at(-3) ?? '';
+  if (parts.at(-1) !== 'results.json') return null;
+  if (parent === 'execution-evidence' && grandparent === 'e2e-tests') return 'browser';
+  if (/^server-integration-shard-\d+$/.test(parent)) return 'integration';
+  return null;
+}
+
 export function renderEvaluationMarkdown(evaluation) {
   const lines = [`## Jev test selection (shadow)`, ''];
   if (evaluation.selection_status !== 'judged') {

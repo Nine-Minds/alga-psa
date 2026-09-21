@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateSelection, executedBrowserTests, executedSuites, renderEvaluationMarkdown } from '../lib/jev-selection-evaluation.mjs';
+import { classifyReportPath, evaluateSelection, executedBrowserTests, executedSuites, renderEvaluationMarkdown } from '../lib/jev-selection-evaluation.mjs';
 
 const runner = '/home/runner/work/alga-psa/alga-psa/server/';
 const vitestReport = (entries) => ({ testResults: entries.map(([file, status]) => ({ name: runner + file, status, assertionResults: [{ status }] })) });
@@ -76,4 +76,13 @@ test('missing reports are recorded as missing inputs, never scored as zero execu
   const markdown = renderEvaluationMarkdown(evaluation);
   assert.match(markdown, /Integration suites\n\n\*\*Not scored:\*\* No integration shard reports/);
   assert.match(markdown, /Shadow mode: non-gating/);
+});
+
+test('only shard roots and the production browser evidence count as judged reports', () => {
+  assert.equal(classifyReportPath('in/integration/server-integration-shard-3/results.json'), 'integration');
+  assert.equal(classifyReportPath('in/browser/fresh-install-playwright-enterprise/alga-psa/alga-psa/e2e-tests/execution-evidence/results.json'), 'browser');
+  for (const other of ['in/browser/x/e2e-tests/harness-results/results.json', 'in/browser/x/e2e-tests/upgrade-evidence/results.json',
+    'in/browser/x/e2e-tests/execution-evidence/collected.json', 'in/integration/server-integration-shard-3/collected-tests.json', 'in/other/execution-evidence/results.json']) {
+    assert.equal(classifyReportPath(other), null, other);
+  }
 });
