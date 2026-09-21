@@ -727,7 +727,8 @@
         "enterRatePlaceholder": "Insira a taxa",
         "metadata": "Tipo de serviço: {{type}} | Método: {{method}}",
         "noCurrencyPrice": "Sem preço {{currency}}",
-        "rateDetail": "Taxa: {{symbol}}{{amount}}"
+        "rateDetail": "Taxa: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Padrão do catálogo: {{symbol}}{{amount}}"
       },
       "unknownService": "Serviço desconhecido"
     },

@@ -1,7 +1,7 @@
 // server/src/components/billing-dashboard/FixedPlanConfiguration.tsx
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle, Package, Clock, Activity } from 'lucide-react';
@@ -102,9 +102,24 @@ export function FixedPlanConfiguration({
 
   const markDirty = () => setIsDirty(true);
 
+  // Seeds an empty base-rate field once from the resolved associated-service
+  // total. A populated/edited/resumed value is never replaced.
+  const baseRateSeededRef = useRef(false);
+
+  const handleServicesTotalResolved = useCallback((totalCents: number) => {
+    if (baseRateSeededRef.current) return;
+    if (!Number.isFinite(totalCents) || totalCents <= 0) return;
+    if (baseRate !== undefined && baseRate !== null && baseRate !== 0) return;
+    baseRateSeededRef.current = true;
+    setBaseRate(totalCents);
+    setBaseRateInput((totalCents / 100).toFixed(2));
+    setIsDirty(true);
+  }, [baseRate]);
+
   const fetchPlanData = useCallback(async () => {
     setPlanLoading(true);
     setError(null);
+    baseRateSeededRef.current = false;
     try {
       // Fetch the basic contract line data
       const fetchedPlan = await getContractLineById(contractLineId);
@@ -145,7 +160,11 @@ export function FixedPlanConfiguration({
             );
           }
         }
-        setIsDirty(false);
+        // Do not clear the dirty flag if a service total seeded the empty
+        // base-rate field while this load was in flight.
+        if (!baseRateSeededRef.current) {
+          setIsDirty(false);
+        }
       } else {
         setError(t('configuration.fixed.errors.invalidContractLineTypeOrNotFound', {
           defaultValue: 'Invalid contract line type or contract line not found.',
@@ -569,6 +588,7 @@ export function FixedPlanConfiguration({
           <CardContent>
               <FixedPlanServicesList
                   planId={contractLineId}
+                  onServicesTotalResolved={handleServicesTotalResolved}
                   onServiceAdded={() => {
                       // Refresh the plan data when a service is added
                       fetchPlanData();

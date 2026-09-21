@@ -1560,7 +1560,8 @@
       "label": "Servizi",
       "quantityLabel": "Quantità",
       "selectServicePlaceholder": "Seleziona un servizio",
-      "serviceItemLabel": "Servizio {{index}}"
+      "serviceItemLabel": "Servizio {{index}}",
+      "catalogDefaultHint": "Nessun prezzo di catalogo in {{currency}}; viene usato il valore predefinito del catalogo."
     }
   },
   "wizardProducts": {
@@ -1608,7 +1609,8 @@
       "serviceItem": "Servizio {{index}}",
       "setBucketOfHours": "Imposta pacchetto di ore",
       "noCurrencyPriceEnterRate": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa oraria.",
-      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa oraria in {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa oraria in {{currency}}.",
+      "catalogDefaultRateHint": "Nessun prezzo di catalogo in {{currency}}; viene usato il valore predefinito del catalogo."
     },
     "minimumBillableTime": {
       "hint": "es., 15 minuti - qualsiasi registrazione di tempo inferiore verrà arrotondata per eccesso",
@@ -1668,7 +1670,8 @@
       "unitOfMeasureHint": "Scegli l'unità su cui questo servizio viene fatturato.",
       "unitOfMeasurePlaceholder": "es., GB, chiamata API, utente",
       "noCurrencyPriceEnterRate": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa unitaria.",
-      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa unitaria in {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa unitaria in {{currency}}.",
+      "catalogDefaultRateHint": "Nessun prezzo di catalogo in {{currency}}; viene usato il valore predefinito del catalogo."
     },
     "summary": {
       "labels": {

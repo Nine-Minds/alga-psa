@@ -1564,7 +1564,8 @@
       "label": "Usługi",
       "quantityLabel": "Ilość",
       "selectServicePlaceholder": "Wybierz usługę",
-      "serviceItemLabel": "Usługa {{index}}"
+      "serviceItemLabel": "Usługa {{index}}",
+      "catalogDefaultHint": "Brak ceny katalogowej w {{currency}}; używana jest domyślna stawka katalogowa."
     }
   },
   "wizardProducts": {
@@ -1612,7 +1613,8 @@
       "serviceItem": "Usługa {{index}}",
       "setBucketOfHours": "Ustaw pakiet godzin",
       "noCurrencyPriceEnterRate": "Brak ceny w {{currency}} w katalogu. Wprowadź stawkę godzinową.",
-      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę godzinową w {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę godzinową w {{currency}}.",
+      "catalogDefaultRateHint": "Brak ceny katalogowej w {{currency}}; używana jest domyślna stawka katalogowa."
     },
     "minimumBillableTime": {
       "hint": "np. 15 minut — dowolny wpis czasu krótszy od tego zostanie zaokrąglony w górę",
@@ -1672,7 +1674,8 @@
       "unitOfMeasureHint": "Wybierz jednostkę, według której rozliczana jest ta usługa.",
       "unitOfMeasurePlaceholder": "np. GB, wywołanie API, użytkownik",
       "noCurrencyPriceEnterRate": "Brak ceny w {{currency}} w katalogu. Wprowadź stawkę jednostkową.",
-      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę jednostkową w {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę jednostkową w {{currency}}.",
+      "catalogDefaultRateHint": "Brak ceny katalogowej w {{currency}}; używana jest domyślna stawka katalogowa."
     },
     "summary": {
       "labels": {

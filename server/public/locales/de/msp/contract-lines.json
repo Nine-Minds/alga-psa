@@ -727,7 +727,8 @@
         "enterRatePlaceholder": "Geben Sie den Tarif ein",
         "metadata": "Diensttyp: {{type}} | Methode: {{method}}",
         "noCurrencyPrice": "Kein {{currency}}-Preis",
-        "rateDetail": "Satz: {{symbol}}{{amount}}"
+        "rateDetail": "Satz: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Katalogstandard: {{symbol}}{{amount}}"
       },
       "unknownService": "Unbekannter Dienst"
     },

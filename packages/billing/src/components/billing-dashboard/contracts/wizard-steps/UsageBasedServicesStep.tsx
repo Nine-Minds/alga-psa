@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import { BucketPoolDraftEditor } from './BucketPoolDraftEditor';
+import { resolveContractAuthoringRate } from '../../../../lib/contractAuthoringRate';
 
 interface UsageBasedServicesStepProps {
   data: ContractWizardData;
@@ -84,17 +85,15 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
 
   const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...(data.usage_services ?? [])];
-    const currencyRate =
-      typeof item.currency_rate === 'number' && item.currency_rate > 0
-        ? item.currency_rate
-        : undefined;
+    // Shared authoring precedence: contract-currency price, then the
+    // currency-untagged catalog default_rate, else manual entry.
+    const resolved = resolveContractAuthoringRate(item, data.currency_code);
+    const resolvedRate = resolved.rate ?? undefined;
     next[index] = {
       ...next[index],
       service_id: item.service_id,
       service_name: item.service_name,
-      // Only prefill when a price exists in the contract's currency. Legacy default_rate is
-      // untagged and likely USD — don't paste it into a non-USD contract.
-      unit_rate: currencyRate,
+      unit_rate: resolvedRate,
       unit_of_measure: item.unit_of_measure || next[index].unit_of_measure || 'unit',
     };
     updateData({ usage_services: next });
@@ -102,13 +101,22 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
       ...prev,
       [index]: item.default_rate > 0 ? item.default_rate : null,
     }));
-    setMissingCurrencyPrice((prev) => ({ ...prev, [index]: currencyRate === undefined }));
+    // A resolved catalog default still means there is no exact contract-currency
+    // price, so the row keeps its provenance hint.
+    setMissingCurrencyPrice((prev) => ({ ...prev, [index]: resolved.source !== 'currency-price' }));
   };
 
   const handleRateChange = (index: number, cents: number) => {
     const next = [...(data.usage_services ?? [])];
+    const previousRate = next[index].unit_rate;
     next[index] = { ...next[index], unit_rate: cents };
     updateData({ usage_services: next });
+    // A changed rate is the author's own value; stop attributing it to the
+    // catalog. An unchanged blur keeps the provenance hint.
+    if (previousRate !== cents) {
+      setMissingCurrencyPrice((prev) => ({ ...prev, [index]: false }));
+      setLegacyDefaultRates((prev) => ({ ...prev, [index]: null }));
+    }
   };
 
   const handleUnitChange = (index: number, unit: string) => {
@@ -226,20 +234,23 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                       : t('wizardUsage.labels.enterUnitRate', { defaultValue: 'Enter the unit rate' })}
                   </p>
                   {service.service_id && missingCurrencyPrice[index] ? (
-                    <p className="text-xs text-amber-700">
-                      {legacyDefaultRates[index]
-                        ? t('wizardUsage.labels.noCurrencyPriceWithLegacyHint', {
-                            defaultValue:
-                              'No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit rate in {{currency}}.',
-                            currency: data.currency_code,
-                            rate: ((legacyDefaultRates[index] ?? 0) / 100).toFixed(2),
-                          })
-                        : t('wizardUsage.labels.noCurrencyPriceEnterRate', {
-                            defaultValue:
-                              'No {{currency}} price in the catalog. Enter a unit rate.',
-                            currency: data.currency_code,
-                          })}
-                    </p>
+                    legacyDefaultRates[index] ? (
+                      <p className="text-xs text-[rgb(var(--color-text-400))]">
+                        {t('wizardUsage.labels.catalogDefaultRateHint', {
+                          defaultValue:
+                            'No {{currency}} catalog price; using the catalog default rate.',
+                          currency: data.currency_code,
+                        })}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-700">
+                        {t('wizardUsage.labels.noCurrencyPriceEnterRate', {
+                          defaultValue:
+                            'No {{currency}} price in the catalog. Enter a unit rate.',
+                          currency: data.currency_code,
+                        })}
+                      </p>
+                    )
                   ) : null}
                 </div>
 

@@ -1560,7 +1560,8 @@
       "label": "Serviços",
       "quantityLabel": "Quantidade",
       "selectServicePlaceholder": "Selecione um serviço",
-      "serviceItemLabel": "Serviço {{index}}"
+      "serviceItemLabel": "Serviço {{index}}",
+      "catalogDefaultHint": "Sem preço de catálogo em {{currency}}; a usar o valor predefinido do catálogo."
     }
   },
   "wizardProducts": {
@@ -1608,7 +1609,8 @@
       "serviceItem": "Serviço {{index}}",
       "setBucketOfHours": "Definir intervalo de horas",
       "noCurrencyPriceEnterRate": "Nenhum preço {{currency}} no catálogo. Insira uma taxa por hora.",
-      "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira uma taxa horária em {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira uma taxa horária em {{currency}}.",
+      "catalogDefaultRateHint": "Sem preço de catálogo em {{currency}}; a usar o valor predefinido do catálogo."
     },
     "minimumBillableTime": {
       "hint": "por exemplo, 15 minutos - qualquer tempo menor que esse será arredondado para cima",
@@ -1668,7 +1670,8 @@
       "unitOfMeasureHint": "Escolha a unidade em que este serviço será cobrado.",
       "unitOfMeasurePlaceholder": "por exemplo, GB, chamada de API, usuário",
       "noCurrencyPriceEnterRate": "Nenhum preço {{currency}} no catálogo. Insira uma taxa unitária.",
-      "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira uma taxa unitária em {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira uma taxa unitária em {{currency}}.",
+      "catalogDefaultRateHint": "Sem preço de catálogo em {{currency}}; a usar o valor predefinido do catálogo."
     },
     "summary": {
       "labels": {
