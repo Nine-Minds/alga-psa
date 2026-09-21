@@ -1,0 +1,62 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: changing tenant A from USD to AUD updates tenant A clients stored as USD, preserves tenant A clients stored as EUR, and leaves tenant B clients untouched against the migrated schema.",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration guard: an injected failure during the tenant settings write rolls back the preceding matching-client currency updates.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Action test: an unrelated partial billing-settings save and a same-currency save issue no client currency update, while permission failure issues no writes.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T004",
+    "description": "Action/UI test: a real currency change returns updated/preserved counts and DefaultCurrencySettings renders the propagation explanation and count-aware success message.",
+    "implemented": false,
+    "featureIds": ["F005", "F006", "F007", "F018"]
+  },
+  {
+    "id": "T005",
+    "description": "QuoteForm component test: a create form seeded with an AUD client shows AUD with client-source text; selecting a GBP client updates both; clearing the client restores the tenant default and tenant-source text.",
+    "implemented": false,
+    "featureIds": ["F008", "F009", "F015", "F018"]
+  },
+  {
+    "id": "T006",
+    "description": "QuoteForm component test: quick-adding a client applies that client's default currency and client-source text.",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T007",
+    "description": "QuoteForm component test: applying a USD business template overrides an AUD client default and shows template-source text; a later picker change shows manual-source text.",
+    "implemented": false,
+    "featureIds": ["F011", "F012", "F015"]
+  },
+  {
+    "id": "T008",
+    "description": "QuoteForm component test: editing a saved quote and editing a saved business template retain their persisted currencies and saved-source labels despite current client/tenant defaults.",
+    "implemented": false,
+    "featureIds": ["F013", "F014"]
+  },
+  {
+    "id": "T009",
+    "description": "Quote action test: omitted currency resolves to client default, then tenant default, then USD, while explicit currency wins.",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T010",
+    "description": "QuoteDetail component test: representative non-round minor-unit subtotal, discount, tax, and total values render at one-hundredth magnitude and use the quote currency.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  }
+]
