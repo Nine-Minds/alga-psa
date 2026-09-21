@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, waitFor } from '@testing-library/react';
 import AgentScheduleView from '../src/components/schedule/AgentScheduleView';
 import toast from 'react-hot-toast';
+import { createForWorkItem } from '../src/lib/scheduleEntryLauncher';
+import { defaultWorkItemSlot } from '../src/lib/workItemScheduling';
 
 // vi.hoisted: mock factories run while this module's imports evaluate —
 // plain consts would still be in their temporal dead zone at that point.
@@ -517,7 +519,7 @@ describe('AgentScheduleView', () => {
     expect(queryByText(/Drag to create, move or resize entries/)).toBeNull();
   });
 
-  it('pins month-view slots to 8am for the default one-hour duration', async () => {
+  it('uses the launcher time for month-view slots with the default one-hour duration', async () => {
     const { getByTestId } = render(
       <AgentScheduleView
         agentId="agent-1"
@@ -535,6 +537,7 @@ describe('AgentScheduleView', () => {
     });
 
     const monthProps = calendarSpy.mock.calls.at(-1)[0];
+    const expectedStart = defaultWorkItemSlot().start;
     act(() => {
       monthProps.onSelectSlot({
         start: new Date(2026, 0, 5),
@@ -547,8 +550,8 @@ describe('AgentScheduleView', () => {
     await waitFor(() => expect(getByTestId('entry-popup')).toBeTruthy());
 
     const popupProps = entryPopupSpy.mock.calls.at(-1)[0];
-    expect(popupProps.slot.start.getHours()).toBe(8);
-    expect(popupProps.slot.start.getMinutes()).toBe(0);
+    expect(popupProps.slot.start.getHours()).toBe(expectedStart.getHours());
+    expect(popupProps.slot.start.getMinutes()).toBe(expectedStart.getMinutes());
     expect(popupProps.slot.end.getTime() - popupProps.slot.start.getTime()).toBe(60 * 60 * 1000);
   });
 
@@ -615,5 +618,28 @@ describe('AgentScheduleView', () => {
       expect(props.allDayAccessor(sameDay)).toBe(false);
       await waitFor(() => expect(rowHidden(container)).toBe(true));
     });
+  });
+});
+
+describe('createForWorkItem shared drafts', () => {
+  const context = { workItemId: 'ticket-1', workItemType: 'ticket' as const, title: 'Printer offline', defaultAssigneeId: 'ticket-assignee' };
+  const now = new Date('2026-09-17T10:07:30');
+
+  it('defaults the tile to the ticket assignee and the agent drawer to its locked viewed agent', () => {
+    expect(createForWorkItem(context, { now }).assigneeIds).toEqual(['ticket-assignee']);
+    expect(createForWorkItem(context, { now, viewedAgentId: 'viewed-agent' }).assigneeIds).toEqual(['viewed-agent']);
+    expect(createForWorkItem({ ...context, defaultAssigneeId: null }, { now }).assigneeIds).toBeUndefined();
+  });
+
+  it('uses the launcher time and duration on the selected month date', () => {
+    const tile = createForWorkItem(context, { now });
+    const month = createForWorkItem(context, { now, view: 'month', selection: { start: new Date('2026-09-22T00:00:00'), end: new Date('2026-09-23T00:00:00') } });
+    expect(month.slot.start).toEqual(new Date('2026-09-22T10:15:00'));
+    expect(month.slot.end.getTime() - month.slot.start.getTime()).toBe(tile.slot.end.getTime() - tile.slot.start.getTime());
+  });
+
+  it('keeps the selected timed range when dragging', () => {
+    const selection = { start: new Date('2026-09-22T13:00:00'), end: new Date('2026-09-22T15:00:00'), action: 'select' as const };
+    expect(createForWorkItem(context, { now, view: 'week', selection }).slot).toEqual({ start: selection.start, end: selection.end });
   });
 });

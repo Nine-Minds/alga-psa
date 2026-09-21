@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import EntryPopup from '../src/components/schedule/EntryPopup';
@@ -302,5 +302,22 @@ describe('EntryPopup draft persistence across async host rerenders', () => {
 
     const start = document.getElementById('scheduled_start') as HTMLInputElement;
     expect(new Date(start.value).toISOString()).toBe(movedStart.toISOString());
+  });
+});
+
+describe('EntryPopup linked work item loading', () => {
+  it.each([true, false])('shows a skeleton until the linked ticket resolves (viewOnly=%s)', async (viewOnly) => {
+    let resolveWorkItem!: (value: any) => void;
+    getWorkItemById.mockReturnValueOnce(new Promise((resolve) => { resolveWorkItem = resolve; }));
+    render(<EntryPopup
+      event={{ entry_id: 'entry-1', title: 'Printer offline', work_item_id: 'ticket-1', work_item_type: 'ticket', scheduled_start: SLOT_START, scheduled_end: SLOT_END, assigned_user_ids: ['tech-1'] } as any}
+      onClose={() => {}} onSave={vi.fn()} canAssignMultipleAgents={false} users={[]} currentUserId="tech-1"
+      canModifySchedule={!viewOnly} viewOnly={viewOnly}
+    />);
+    expect(screen.queryByText('Ad-hoc entry (no work item)')).toBeNull();
+    const loading = screen.getByRole('status', { name: 'Loading work item…' });
+    expect(loading.className).toContain('skeleton-fill');
+    await act(async () => { resolveWorkItem({ work_item_id: 'ticket-1', type: 'ticket', name: 'Printer offline' }); });
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading work item…' })).toBeNull());
   });
 });

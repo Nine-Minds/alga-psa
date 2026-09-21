@@ -613,3 +613,22 @@ describe('BentoHero unsaved change model', () => {
     });
   });
 });
+
+it('opens the additional agents popover and selects each agent independently', async () => {
+  const onAgentClick = vi.fn();
+  renderHero({
+    onAgentClick,
+    additionalAgents: [{ additional_user_id: 'agent-a' }, { additional_user_id: 'agent-b' }] as any,
+    availableAgents: [{ user_id: 'agent-a', first_name: 'Alex', last_name: 'Agent' }, { user_id: 'agent-b', first_name: 'Blair', last_name: 'Agent' }] as any,
+  });
+  const trigger = screen.getByRole('button', { name: 'bento.hero.additionalAgentsTooltip' });
+  expect(trigger).toHaveTextContent('+2');
+  fireEvent.click(trigger);
+  expect(onAgentClick).not.toHaveBeenCalled();
+  fireEvent.click(await screen.findByRole('button', { name: 'Blair Agent' }));
+  expect(onAgentClick).toHaveBeenLastCalledWith('agent-b');
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Alex Agent' })).not.toBeInTheDocument());
+  fireEvent.click(trigger);
+  fireEvent.click(await screen.findByRole('button', { name: 'Alex Agent' }));
+  expect(onAgentClick).toHaveBeenLastCalledWith('agent-a');
+});
