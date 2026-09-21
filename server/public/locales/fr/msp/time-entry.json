@@ -526,5 +526,13 @@
     "locked": "Cette feuille de temps est {{status}}. Choisissez une feuille brouillon ou une feuille avec modifications demandées.",
     "statusChanged": "Cette feuille de temps est maintenant {{status}}. Choisissez une feuille brouillon ou une feuille avec modifications demandées.",
     "outsidePeriod": "Les heures de début et de fin fournies sont en dehors de cette période ; l'entrée commence donc le {{date}} à 08:00."
+  },
+  "launch": {
+    "noUser": "Impossible de charger l'utilisateur actuel pour la saisie du temps.",
+    "entryNotFound": "Entrée de temps introuvable.",
+    "entryMissingSheet": "Cette entrée de temps n'est pas rattachée à une feuille de temps et ne peut donc pas être modifiée ici.",
+    "entryMissingPeriod": "La feuille de temps de cette entrée n'a pas de période et ne peut pas être ouverte.",
+    "noPeriods": "Aucune période de temps n'est configurée, la saisie du temps est donc impossible. Demandez à un administrateur de créer des périodes de temps sous Paramètres → Saisie du temps.",
+    "prepareFailed": "Une erreur s'est produite lors de la préparation de l'entrée de temps. Veuillez réessayer."
   }
 }

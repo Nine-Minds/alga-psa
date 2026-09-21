@@ -526,5 +526,13 @@
     "locked": "Questa scheda attività è {{status}}. Scegli una bozza o una scheda con modifiche richieste.",
     "statusChanged": "Questa scheda attività ora è {{status}}. Scegli una bozza o una scheda con modifiche richieste.",
     "outsidePeriod": "Gli orari di inizio e fine forniti sono al di fuori di questo periodo, quindi la voce inizia il {{date}} alle 08:00."
+  },
+  "launch": {
+    "noUser": "Impossibile caricare l'utente corrente per la voce di tempo.",
+    "entryNotFound": "Voce di tempo non trovata.",
+    "entryMissingSheet": "Questa voce di tempo non è collegata a una scheda attività e non può essere modificata qui.",
+    "entryMissingPeriod": "Alla scheda attività di questa voce manca il periodo e non può essere aperta.",
+    "noPeriods": "Non sono ancora stati configurati periodi di tempo, quindi non è possibile registrare tempo. Chiedi a un amministratore di creare periodi di tempo in Impostazioni → Registrazione tempo.",
+    "prepareFailed": "Si è verificato un errore durante la preparazione della voce di tempo. Riprova."
   }
 }

@@ -526,5 +526,13 @@
     "locked": "Esta folha de horas está {{status}}. Escolha uma folha de rascunho ou uma folha com alterações solicitadas.",
     "statusChanged": "Esta folha de horas está agora {{status}}. Escolha uma folha de rascunho ou uma folha com alterações solicitadas.",
     "outsidePeriod": "As horas de início e fim fornecidas estão fora deste período, pelo que a entrada começa em {{date}} às 08:00."
+  },
+  "launch": {
+    "noUser": "Não foi possível carregar o utilizador atual para o registo de tempo.",
+    "entryNotFound": "Entrada de tempo não encontrada.",
+    "entryMissingSheet": "Esta entrada de tempo não está associada a uma folha de horas e não pode ser editada aqui.",
+    "entryMissingPeriod": "A folha de horas desta entrada não tem período e não pode ser aberta.",
+    "noPeriods": "Ainda não estão configurados períodos de tempo, pelo que não é possível registar tempo. Peça a um administrador para criar períodos de tempo em Definições → Registo de tempo.",
+    "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente."
   }
 }

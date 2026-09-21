@@ -45,6 +45,13 @@ vi.mock('../src/actions/timeSheetActions', () => ({ fetchTimeSheet }));
 
 vi.mock('react-hot-toast', () => ({ toast: { error: toastError } }));
 
+// The launcher translates imperative messages through the module-level helper.
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useFormatters: () => ({ formatDate: (value: Date | string) => new Date(value).toISOString().slice(0, 10) }),
+  useTranslation: () => ({ t: (_key: string, options?: any) => options?.defaultValue ?? _key }),
+  translate: (_namespace: string, _key: string, options?: any) => options?.defaultValue ?? _key,
+}));
+
 vi.mock('../src/components/time-management/time-entry/time-sheet/TimeEntryDialog', () => ({
   default: () => null,
 }));
@@ -157,12 +164,12 @@ describe('launchTimeEntryForWorkItem launch feedback', () => {
 
     expect(fetchOrCreateTimeSheet).not.toHaveBeenCalled();
     const props = openedProps(openDrawer);
-    expect(props.timeSheetId).toBe('sheet-old');
-    expect(props.timePeriod.period_id).toBe('period-old');
-    expect(props.isEditable).toBe(true);
+    expect(props.savedSheet.id).toBe('sheet-old');
+    expect(props.savedSheet.time_period.period_id).toBe('period-old');
+    expect(props.existingEntry.entry_id).toBe('entry-1');
   });
 
-  it('opens a locked existing sheet read-only', async () => {
+  it('opens a locked existing sheet through the anchored dialog with its locked status', async () => {
     getTimeEntryById.mockResolvedValueOnce({
       entry_id: 'entry-2',
       time_sheet_id: 'sheet-submitted',
@@ -179,7 +186,9 @@ describe('launchTimeEntryForWorkItem launch feedback', () => {
 
     await launchTimeEntryForWorkItem({ openDrawer, closeDrawer: vi.fn(), context: baseContext, existingEntryId: 'entry-2' });
 
-    expect(openedProps(openDrawer).isEditable).toBe(false);
+    const props = openedProps(openDrawer);
+    expect(props.savedSheet.approval_status).toBe('SUBMITTED');
+    expect(props.existingEntry.time_sheet_id).toBe('sheet-submitted');
   });
 
   it('reports a saved sheet lookup failure and does not open a form', async () => {

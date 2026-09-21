@@ -69,10 +69,15 @@ export default function TimeEntryPeriodLauncher({
   const { formatDate } = useFormatters();
 
   const mountedRef = useRef(true);
+  // Every Continue (and every selection change or cancel) bumps this token. A
+  // response whose token is stale is dropped, so a slow resolution can never
+  // open a form for a period the user has already moved away from.
+  const resolutionTokenRef = useRef(0);
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      resolutionTokenRef.current += 1;
     };
   }, []);
 
@@ -134,12 +139,15 @@ export default function TimeEntryPeriodLauncher({
       return;
     }
 
+    const token = ++resolutionTokenRef.current;
     setIsResolving(true);
     setError(null);
 
     try {
       const result = await fetchOrCreateTimeSheet(userId, selectedPeriodId);
-      if (!mountedRef.current) {
+      // A selection change or cancel while this request was in flight makes the
+      // token stale; ignore the response so it cannot open the wrong sheet.
+      if (token !== resolutionTokenRef.current || !mountedRef.current) {
         return;
       }
 
@@ -173,7 +181,7 @@ export default function TimeEntryPeriodLauncher({
         status: result.approval_status,
       });
     } catch (resolveError) {
-      if (mountedRef.current) {
+      if (token === resolutionTokenRef.current && mountedRef.current) {
         setError(getErrorMessage(resolveError));
       }
     } finally {
@@ -254,6 +262,9 @@ export default function TimeEntryPeriodLauncher({
             options={options}
             value={selectedPeriodId}
             onValueChange={(value) => {
+              // Invalidate any in-flight resolution: its response belongs to the
+              // previous selection and must not open that period's form.
+              resolutionTokenRef.current += 1;
               setSelectedPeriodId(value);
               setError(null);
             }}
@@ -297,7 +308,12 @@ export default function TimeEntryPeriodLauncher({
           id="time-entry-period-cancel"
           type="button"
           variant="outline"
-          onClick={closeDrawer}
+          onClick={() => {
+            // Drop any pending resolution so closing can never be followed by a
+            // late response opening a form.
+            resolutionTokenRef.current += 1;
+            closeDrawer();
+          }}
         >
           {t('periodPicker.cancel', { defaultValue: 'Cancel' })}
         </Button>

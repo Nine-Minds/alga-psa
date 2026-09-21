@@ -526,5 +526,13 @@
     "locked": "Deze urenstaat is {{status}}. Kies een conceptstaat of een staat met aangevraagde wijzigingen.",
     "statusChanged": "Deze urenstaat is nu {{status}}. Kies een conceptstaat of een staat met aangevraagde wijzigingen.",
     "outsidePeriod": "De opgegeven begin- en eindtijden vallen buiten deze periode, dus de registratie begint op {{date}} om 08:00."
+  },
+  "launch": {
+    "noUser": "Kan de huidige gebruiker voor tijdregistratie niet laden.",
+    "entryNotFound": "Tijdregistratie niet gevonden.",
+    "entryMissingSheet": "Deze tijdregistratie is niet aan een urenstaat gekoppeld en kan hier niet worden bewerkt.",
+    "entryMissingPeriod": "De urenstaat van deze registratie mist de periode en kan niet worden geopend.",
+    "noPeriods": "Er zijn nog geen tijdsperioden ingesteld, dus er kan geen tijd worden geregistreerd. Vraag een beheerder om tijdsperioden aan te maken onder Instellingen → Tijdregistratie.",
+    "prepareFailed": "Er is een fout opgetreden bij het voorbereiden van de tijdregistratie. Probeer het opnieuw."
   }
 }

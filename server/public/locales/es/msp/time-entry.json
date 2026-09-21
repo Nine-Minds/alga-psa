@@ -526,5 +526,13 @@
     "locked": "Esta hoja de tiempo está {{status}}. Elige una hoja borrador o una hoja con cambios solicitados.",
     "statusChanged": "Esta hoja de tiempo ahora está {{status}}. Elige una hoja borrador o una hoja con cambios solicitados.",
     "outsidePeriod": "Las horas de inicio y fin proporcionadas están fuera de este período, por lo que la entrada comienza el {{date}} a las 08:00."
+  },
+  "launch": {
+    "noUser": "No se pudo cargar el usuario actual para la entrada de tiempo.",
+    "entryNotFound": "Entrada de tiempo no encontrada.",
+    "entryMissingSheet": "Esta entrada de tiempo no está asociada a una hoja de tiempo, por lo que no se puede editar aquí.",
+    "entryMissingPeriod": "La hoja de tiempo de esta entrada no tiene período y no se puede abrir.",
+    "noPeriods": "Aún no hay períodos de tiempo configurados, por lo que no se puede registrar tiempo. Pide a un administrador que cree períodos de tiempo en Configuración → Entrada de tiempo.",
+    "prepareFailed": "Se produjo un error al preparar la entrada de tiempo. Inténtalo de nuevo."
   }
 }

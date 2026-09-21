@@ -526,5 +526,13 @@
     "locked": "Dieser Stundenzettel ist {{status}}. Wählen Sie einen Entwurf oder einen Stundenzettel mit angeforderten Änderungen.",
     "statusChanged": "Dieser Stundenzettel ist jetzt {{status}}. Wählen Sie einen Entwurf oder einen Stundenzettel mit angeforderten Änderungen.",
     "outsidePeriod": "Die angegebenen Start- und Endzeiten liegen außerhalb dieses Zeitraums, daher beginnt der Eintrag am {{date}} um 08:00."
+  },
+  "launch": {
+    "noUser": "Der aktuelle Benutzer für den Zeiteintrag konnte nicht geladen werden.",
+    "entryNotFound": "Zeiteintrag nicht gefunden.",
+    "entryMissingSheet": "Dieser Zeiteintrag ist keinem Stundenzettel zugeordnet und kann hier nicht bearbeitet werden.",
+    "entryMissingPeriod": "Dem Stundenzettel dieses Eintrags fehlt der Zeitraum und er kann nicht geöffnet werden.",
+    "noPeriods": "Es sind noch keine Zeiträume eingerichtet, daher kann keine Zeit erfasst werden. Bitten Sie einen Administrator, unter Einstellungen → Zeiterfassung Zeiträume anzulegen.",
+    "prepareFailed": "Beim Vorbereiten des Zeiteintrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
   }
 }

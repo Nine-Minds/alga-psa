@@ -156,6 +156,10 @@ describe('TimeEntryPeriodLauncher', () => {
     expect(mocks.dialogProps[0].timeSheetId).toBe('sheet-prior-draft');
     expect(mocks.dialogProps[0].timePeriod.start_date).toBe('2026-08-01');
     expect(mocks.dialogProps[0].isEditable).toBe(true);
+    // No context timestamps: the entry starts on the selected period's first
+    // day at 08:00 in the subject (New York) timezone, not the browser's.
+    expect(mocks.dialogProps[0].defaultStartTime.toISOString()).toBe('2026-08-01T12:00:00.000Z');
+    expect(mocks.dialogProps[0].defaultEndTime.toISOString()).toBe('2026-08-01T13:00:00.000Z');
   });
 
   it('renders CHANGES_REQUESTED periods as editable and selectable', async () => {
@@ -233,6 +237,60 @@ describe('TimeEntryPeriodLauncher', () => {
       time_period: { period_id: 'period-current', start_date: '2026-09-01', end_date: '2026-09-08' },
     });
     await waitFor(() => expect(screen.getByTestId('time-entry-dialog-stub')).toBeInTheDocument());
+  });
+
+  it('drops a resolution that arrives after the user changed the selection', async () => {
+    let resolve!: (value: unknown) => void;
+    mocks.fetchOrCreateTimeSheet.mockReturnValue(
+      new Promise((res) => {
+        resolve = res;
+      }),
+    );
+    renderLauncher();
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    // The user moves to another period while the first resolution is pending.
+    fireEvent.change(screen.getByTestId('time-entry-period-select'), {
+      target: { value: 'period-prior-draft' },
+    });
+
+    resolve({
+      id: 'sheet-current',
+      approval_status: 'DRAFT',
+      tenant: 'tenant-1',
+      time_period: { period_id: 'period-current', start_date: '2026-09-01', end_date: '2026-09-08' },
+    });
+
+    await waitFor(() => expect(mocks.fetchOrCreateTimeSheet).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.queryByTestId('time-entry-dialog-stub')).not.toBeInTheDocument();
+    expect(screen.getByTestId('time-entry-period-select')).toHaveValue('period-prior-draft');
+  });
+
+  it('drops a resolution that arrives after cancellation', async () => {
+    let resolve!: (value: unknown) => void;
+    mocks.fetchOrCreateTimeSheet.mockReturnValue(
+      new Promise((res) => {
+        resolve = res;
+      }),
+    );
+    const closeDrawer = vi.fn();
+    renderLauncher({ closeDrawer });
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(closeDrawer).toHaveBeenCalledTimes(1);
+
+    resolve({
+      id: 'sheet-current',
+      approval_status: 'DRAFT',
+      tenant: 'tenant-1',
+      time_period: { period_id: 'period-current', start_date: '2026-09-01', end_date: '2026-09-08' },
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.queryByTestId('time-entry-dialog-stub')).not.toBeInTheDocument();
   });
 
   it('cancel closes the drawer', () => {

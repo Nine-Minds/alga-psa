@@ -526,5 +526,13 @@
     "locked": "This time sheet is {{status}}. Choose a draft sheet or a sheet with changes requested.",
     "statusChanged": "This time sheet is now {{status}}. Choose a draft sheet or a sheet with changes requested.",
     "outsidePeriod": "The supplied start and end times are outside this period, so the entry starts on {{date}} at 08:00."
+  },
+  "launch": {
+    "noUser": "Unable to load current user for time entry.",
+    "entryNotFound": "Time entry not found.",
+    "entryMissingSheet": "This time entry is not attached to a time sheet, so it can’t be edited here.",
+    "entryMissingPeriod": "The time sheet for this entry is missing its period and can’t be opened.",
+    "noPeriods": "No time periods are set up yet, so time can’t be entered. Ask an administrator to create time periods under Settings → Time Entry.",
+    "prepareFailed": "An error occurred while preparing the time entry. Please try again."
   }
 }

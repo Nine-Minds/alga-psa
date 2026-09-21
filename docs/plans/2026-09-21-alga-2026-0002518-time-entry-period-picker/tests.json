@@ -61,7 +61,7 @@
   {
     "id": "T007",
     "description": "DB-backed integration against migrated schema: select a prior period without a sheet, resolve/create it and save a ticket entry, verify owner/period/work_date and reuse on repeat resolution; reject submitted/approved sheets (including status changed before save), locked original update, wrong owner or tenant, and out-of-period endpoints with no entry or bucket mutation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F006",
@@ -73,7 +73,7 @@
   {
     "id": "T008",
     "description": "Manual smoke: ticket Add time -> current default -> prior period -> dated entry -> Save -> verify prior timesheet and ticket refresh. Exercise locked/no-current states, keyboard control, light/dark themes, localized date/year/status, and Cancel/relaunch to change period.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",

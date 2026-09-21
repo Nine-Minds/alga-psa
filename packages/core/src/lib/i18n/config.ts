@@ -197,8 +197,11 @@ export const ROUTE_NAMESPACES = {
   '/msp/schedule': ['common', 'msp/core', 'msp/schedule'],
   '/msp/knowledge-base': ['common', 'msp/core', 'features/documents', 'msp/knowledge-base'],
   '/msp/jobs': ['common', 'msp/core', 'msp/jobs'],
-  '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
-  '/msp/projects': ['common', 'msp/core', 'features/projects'],
+  // msp/time-entry loads on ticket and project surfaces because the shared
+  // time-entry launcher (period picker + blocked-launch feedback) is opened
+  // from both.
+  '/msp/tickets': ['common', 'msp/core', 'features/tickets', 'msp/time-entry'],
+  '/msp/projects': ['common', 'msp/core', 'features/projects', 'msp/time-entry'],
   '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits'],
   '/msp/reports': ['common', 'msp/core', 'msp/reports'],
   '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing', 'msp/billing-settings'],

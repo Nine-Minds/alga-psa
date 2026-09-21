@@ -44,6 +44,12 @@ vi.mock('../src/actions/timeSheetActions', () => ({ fetchTimeSheet }));
 
 vi.mock('react-hot-toast', () => ({ toast: { error: vi.fn(), loading: vi.fn(), dismiss: vi.fn(), success: vi.fn() } }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useFormatters: () => ({ formatDate: (value: Date | string) => new Date(value).toISOString().slice(0, 10) }),
+  useTranslation: () => ({ t: (_key: string, options?: any) => options?.defaultValue ?? _key }),
+  translate: (_namespace: string, _key: string, options?: any) => options?.defaultValue ?? _key,
+}));
+
 vi.mock('../src/components/time-management/time-entry/time-sheet/TimeEntryDialog', () => ({
   default: () => null,
 }));
@@ -172,7 +178,7 @@ describe('launchTimeEntryForWorkItem', () => {
 
     expect(fetchOrCreateTimeSheet).not.toHaveBeenCalled();
     const props = openedProps(openDrawer);
-    expect(props.existingEntries[0].entry_id).toBe('entry-1');
-    expect(props.timeSheetId).toBe('sheet-old');
+    expect(props.existingEntry.entry_id).toBe('entry-1');
+    expect(props.savedSheet.id).toBe('sheet-old');
   });
 });
