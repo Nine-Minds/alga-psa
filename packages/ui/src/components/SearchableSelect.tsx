@@ -13,6 +13,8 @@ import { useTranslation } from '../lib/i18n/client';
 export interface SelectOption {
   value: string;
   label: string;
+  /** Muted second line under the label; omit to keep the row single-line. */
+  secondaryLabel?: string;
 }
 
 type SelectSize = 'sm' | 'md' | 'lg';
@@ -131,8 +133,9 @@ export function SearchableSelect({
     if (!search) return options;
     
     const searchLower = search.toLowerCase();
-    return options.filter((option: SelectOption) => 
-      option.label.toString().toLowerCase().includes(searchLower)
+    return options.filter((option: SelectOption) =>
+      option.label.toString().toLowerCase().includes(searchLower) ||
+      (option.secondaryLabel?.toLowerCase().includes(searchLower) ?? false)
     );
   }, [options, search]);
 
@@ -310,7 +313,16 @@ export function SearchableSelect({
                   value === option.value && 'bg-muted'
                 )}
               >
-                <span className="flex-1">{option.label}</span>
+                {option.secondaryLabel ? (
+                  <span className="flex-1 min-w-0">
+                    <span className="block truncate">{option.label}</span>
+                    <span className="block truncate text-xs text-[rgb(var(--color-text-400))]">
+                      {option.secondaryLabel}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="flex-1">{option.label}</span>
+                )}
                 {value === option.value && (
                   <Check className="w-4 h-4 text-primary-600" />
                 )}
