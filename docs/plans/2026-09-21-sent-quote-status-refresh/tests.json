@@ -2,13 +2,13 @@
   {
     "id": "T001",
     "description": "QuoteForm component regression: successful send, resend, and approve actions each await and invoke the parent refresh callback exactly once; representative returned action errors and thrown failures do not invoke it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F002", "F003", "F004", "F005"]
   },
   {
     "id": "T002",
     "description": "QuotesTab component regression: the callback passed to a detail-view QuoteForm runs loadData in background mode, fetches a new list snapshot, updates Active/Sent membership and counts from draft or approved to sent, and does not replace the detail form with the initial loading state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F007", "F008"]
   },
   {
