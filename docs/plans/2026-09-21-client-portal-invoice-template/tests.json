@@ -1,7 +1,7 @@
 [
-  {"id":"T001","description":"Component selection matrix observes the resolved custom or non-first standard template at TemplateRenderer; covers standard/first/empty fallback and verifies invoice ID passed to resolver.","implemented":false,"featureIds":["F001","F002"]},
-  {"id":"T002","description":"Component request rejection and invoice/template action errors preserve the error UI without rendering invoice content; completed sequential invoice loads update the selected template.","implemented":false,"featureIds":["F002","F003"]},
-  {"id":"T003","description":"DB-backed resolver sanity suite on migrated schema verifies client override then tenant assignment for an authorized finalized invoice, and null for other-client, draft, and cross-tenant invoices.","implemented":false,"featureIds":["F001","F002"]},
-  {"id":"T004","description":"Update the existing service-period test's resolver mock and verify canonical invoice service periods still reach the renderer.","implemented":false,"featureIds":["F001"]},
-  {"id":"T005","description":"Portal smoke verifies client override, tenant default, and fallback with visibly distinct templates; compare MSP preview and newly generated PDF under unchanged settings.","implemented":false,"featureIds":["F001","F002","F003"]}
+  {"id":"T001","description":"Component selection matrix observes the resolved custom or non-first standard template at TemplateRenderer; covers standard/first/empty fallback and verifies invoice ID passed to resolver.","implemented":true,"featureIds":["F001","F002"]},
+  {"id":"T002","description":"Component request rejection and invoice/template action errors preserve the error UI without rendering invoice content; completed sequential invoice loads update the selected template.","implemented":true,"featureIds":["F002","F003"]},
+  {"id":"T003","description":"DB-backed resolver sanity suite on migrated schema verifies client override then tenant assignment for an authorized finalized invoice, and null for other-client, draft, and cross-tenant invoices.","implemented":true,"featureIds":["F001","F002"]},
+  {"id":"T004","description":"Update the existing service-period test's resolver mock and verify canonical invoice service periods still reach the renderer.","implemented":true,"featureIds":["F001"]},
+  {"id":"T005","description":"Portal smoke verifies client override, tenant default, and fallback with visibly distinct templates; compare MSP preview and newly generated PDF under unchanged settings.","implemented":true,"featureIds":["F001","F002","F003"]}
 ]
