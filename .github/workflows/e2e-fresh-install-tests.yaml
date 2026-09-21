@@ -1111,12 +1111,14 @@ jobs:
         run: |
           set -euo pipefail
           image=alga-e2e-test_server_ee_local:latest
-          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$GITHUB_SHA"
+          # A reused image carries its original build's revision; the verified
+          # build record says which (scripts/expected-image-revision.mjs).
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$(node scripts/expected-image-revision.mjs server-ee)"
           expected_image=$(docker image inspect --format '{{.Id}}' "$image")
           node e2e-tests/harness/create-upgrade-pgbouncer.mjs "$RUNNER_TEMP/fresh-install-compose.json" "$RUNNER_TEMP/upgrade-pooler"
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json"
           pooler_image=$(jq -r '.services["upgrade-pgbouncer"].image' "$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json")
-          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$pooler_image")" = "$GITHUB_SHA"
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$pooler_image")" = "$(node scripts/expected-image-revision.mjs pgbouncer)"
           expected_pooler_image=$(docker image inspect --format '{{.Id}}' "$pooler_image")
           docker-compose -p alga-e2e-test up --no-build --no-deps -d upgrade-pgbouncer
           pooler_container=$(docker-compose -p alga-e2e-test ps -q upgrade-pgbouncer)
@@ -1260,7 +1262,7 @@ jobs:
         run: |
           set -euo pipefail
           image=alga-e2e-test_server_ee_local:latest
-          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$GITHUB_SHA"
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$(node scripts/expected-image-revision.mjs server-ee)"
           expected_image=$(docker image inspect --format '{{.Id}}' "$image")
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
