@@ -13,10 +13,8 @@ an isolated database and existing emulator services, then use
 headed, with no retries, and writes results under `test-results/local/` with
 `releaseValidation: false` and a host-development lifecycle label. It does not
 produce the production runner's execution evidence. Supply the same isolated
-database and real sign-in credentials described below. A host dev server can set
-`NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true` at startup for the
-billed-time designer journey. Reserve full production image builds for final
-packaging and installation validation.
+database and real sign-in credentials described below. Reserve full production
+image builds for final packaging and installation validation.
 
 Match the database schema to the application edition. An EE host app needs the
 merged CE+EE migrations, with EE files overriding same-named CE files, as in
@@ -71,15 +69,13 @@ web application; it does not provide Temporal, extension-runner, or Citus proof.
 `E2E_REVISION` to the tested checkout for local report attribution; CI supplies
 its actual checkout SHA. This metadata does not prove image digest provenance.
 
-The fresh-install CE and EE images enable `release-v1-6-feature` using the
-existing client build override `NEXT_PUBLIC_FORCE_FEATURE_FLAGS`. Both server
-Dockerfiles accept that build argument and default to an empty override for
-normal builds. Local runs of the billed-time designer journey require an image
-built with `--build-arg NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true`.
-Set `E2E_BUILD_FEATURE_FLAGS=release-v1-6-feature:true` when running that image to
-record its declared configuration. The variable records metadata; it does not
-enable a feature in an already built image or override server-side flag checks.
-The designer journey verifies that the enabled controls are actually available.
+Both server Dockerfiles accept the client build override
+`NEXT_PUBLIC_FORCE_FEATURE_FLAGS` as a build argument and default to an empty
+override for normal builds. When an image is built with a forced flag, set
+`E2E_BUILD_FEATURE_FLAGS` to the same value when running it so the Playwright
+metadata records the declared configuration. The variable records metadata; it
+does not enable a feature in an already built image or override server-side
+flag checks.
 
 ## Add a journey
 

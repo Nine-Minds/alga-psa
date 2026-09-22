@@ -1,6 +1,5 @@
 'use client'
 
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -91,7 +90,6 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   onCreditApplied
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const router = useRouter();
   const [detailedInvoiceData, setDetailedInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
   const [poSummary, setPoSummary] = useState<InvoicePurchaseOrderSummary | null>(null);
@@ -423,11 +421,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             </div>
           </div>
           <CustomSelect
-            options={templates.filter(template =>
-              releaseV16Enabled ||
-              template.standard_invoice_template_code !== 'standard-invoice-by-ticket' ||
-              template.template_id === effectiveTemplateId || !template.isStandard
-            ).map((template) => ({
+            options={templates.map((template) => ({
               value: template.template_id,
               label: (
                 <div className="flex items-center gap-2">

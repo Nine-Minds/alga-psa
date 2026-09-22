@@ -15,9 +15,8 @@ const templateRendererMock = vi.fn();
 const paperInvoiceMock = vi.fn();
 const routerPushMock = vi.fn();
 
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
@@ -122,7 +121,6 @@ const defaultViewModel = {
 
 describe('InvoicePreviewPanel', () => {
   beforeEach(() => {
-    releaseFlag.enabled = true;
     cleanup();
     routerPushMock.mockReset();
     getEnrichedInvoiceViewModelMock.mockReset();
@@ -183,22 +181,4 @@ describe('InvoicePreviewPanel', () => {
     expect(await screen.findByText('INV-1001::tpl-first')).toBeTruthy();
     expect(templateRendererMock.mock.calls.at(-1)?.[0]?.template?.template_id).toBe('tpl-first');
   });
-  it.each([false, true])('offers new by-ticket layouts only with the release flag enabled (%s)', async enabled => {
-    releaseFlag.enabled = enabled;
-    render(<InvoicePreviewPanel invoiceId="inv-1" selectedTemplateId="tpl-first" onTemplateChange={vi.fn()} isFinalized={false}
-      templates={[...defaultTemplates, { template_id: 'by-ticket', name: 'By Ticket', isStandard: true, standard_invoice_template_code: 'standard-invoice-by-ticket' }] as any} />);
-    await screen.findByText('INV-1001::tpl-first');
-    const options = Array.from((screen.getByRole('combobox', { name: 'Invoice layout' }) as HTMLSelectElement).options, option => option.value);
-    expect(options.includes('by-ticket')).toBe(enabled);
-    expect(options).toContain('tpl-first');
-  });
-
-  it('keeps a previously selected by-ticket invoice renderable with the flag off', async () => {
-    releaseFlag.enabled = false;
-    render(<InvoicePreviewPanel invoiceId="inv-1" selectedTemplateId="by-ticket" onTemplateChange={vi.fn()} isFinalized={false}
-      templates={[...defaultTemplates, { template_id: 'by-ticket', name: 'By Ticket', isStandard: true, standard_invoice_template_code: 'standard-invoice-by-ticket' }] as any} />);
-    await screen.findByText('INV-1001::by-ticket');
-    expect((screen.getByRole('combobox', { name: 'Invoice layout' }) as HTMLSelectElement).value).toBe('by-ticket');
-  });
-
 });

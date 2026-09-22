@@ -186,7 +186,6 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
-            NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true
           outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.service }}.tar
           no-cache: ${{ inputs.no_cache == true }}
           # The server/email workspace layers are huge; exporting them to the
@@ -923,7 +922,6 @@ jobs:
           E2E_EDITION: ${{ matrix.edition }}
           E2E_REVISION: ${{ github.sha }}
           E2E_ARTIFACT_MANIFEST: ${{ runner.temp }}/browser-artifact-manifest.json
-          E2E_BUILD_FEATURE_FLAGS: release-v1-6-feature:true
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
           E2E_DATABASE_ISOLATED: 'true'
@@ -1308,7 +1306,7 @@ jobs:
           volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-static-chunks`, target: '/app/teams-static-chunks' });
           volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-webpack-cache`, target: '/app/server/node_modules/.cache/webpack' });
           const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
-            environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_PUBLIC_FORCE_FEATURE_FLAGS: 'release-v1-6-feature:true', NEXT_DIST_DIR: '.next/teams-development',
+            environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_DIST_DIR: '.next/teams-development',
               E2E_TEAMS_DEVELOPMENT: 'true', E2E_DATABASE_ISOLATED: 'true', E2E_STATIC_CHUNK_DIAGNOSTICS_DIR: '/app/teams-static-chunks',
               DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
               TEAMS_BOT_APP_ID: 'e2e-teams-bot', TEAMS_BOT_APP_TENANT_ID: 'e2e-bot-tenant', TEAMS_BOT_APP_PASSWORD: 'synthetic-e2e-teams-bot-secret',

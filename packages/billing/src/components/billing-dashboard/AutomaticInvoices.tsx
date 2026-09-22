@@ -1,6 +1,5 @@
 'use client'
 
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { UsagePeriodTotalQuickEntry } from './UsagePeriodTotalQuickEntry';
@@ -681,7 +680,6 @@ const matchesAutomaticInvoiceView = (
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, onRefreshNeeded, refreshTrigger = 0 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const { formatDate } = useFormatters();
   const router = useRouter();
   const translateAssignmentContext = (contextValue: string | null): string | null => {
@@ -2992,8 +2990,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     return null;
                   }
                   const summary = record.group.parentSummary;
-                  const monthEndCloseEligible =
-                    releaseV16Enabled && record.group.candidate.monthEndCloseEligible === true;
+                  const monthEndCloseEligible = record.group.candidate.monthEndCloseEligible === true;
                   return (
                     <div className="space-y-0.5">
                       {renderStatusPill(summary, countSeparateInvoices(record.group.childExecutionRows))}
@@ -3921,7 +3918,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
       <ConfirmationDialog
         id="calendar-month-end-close-confirmation"
-        isOpen={releaseV16Enabled && monthEndCloseGroup !== null}
+        isOpen={monthEndCloseGroup !== null}
         onClose={() => {
           if (!isMonthEndClosing) {
             setMonthEndCloseGroup(null);
