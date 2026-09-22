@@ -8,12 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import {
   PlatformReportAuditService,
   extractClientInfo,
 } from '@ee/lib/platformReports';
+import { assertMasterTenantAccess, isMasterTenantAuthError } from '@ee/lib/auth/masterTenantAccess';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,53 +32,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // API KEY AUTH
-    const apiKey = request.headers.get('x-api-key');
-    const extensionId = request.headers.get('x-alga-extension');
-    let userId: string | undefined;
-    let userEmail: string | undefined;
-
-    if (apiKey) {
-      const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-      if (keyRecord) {
-        if (keyRecord.tenant !== MASTER_BILLING_TENANT_ID) {
-          return NextResponse.json(
-            { success: false, error: 'Access denied' },
-            { status: 403 }
-          );
-        }
-        // Get user info from headers (forwarded by runner from ext-proxy)
-        const headerUserId = request.headers.get('x-user-id');
-        const headerUserEmail = request.headers.get('x-user-email');
-
-        userId = headerUserId || (extensionId ? `extension:${extensionId}` : keyRecord.user_id);
-        userEmail = headerUserEmail || undefined;
-      } else {
-        console.warn('[platform-reports/access] Invalid API key');
-      }
-    }
-
-    // SESSION AUTH if API key auth didn't succeed
-    if (!userId) {
-      const user = await getCurrentUser();
-
-      if (!user) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required' },
-          { status: 401 }
-        );
-      }
-
-      if (user.tenant !== MASTER_BILLING_TENANT_ID) {
-        return NextResponse.json(
-          { success: false, error: 'Access denied' },
-          { status: 403 }
-        );
-      }
-
-      userId = user.user_id;
-      userEmail = user.email;
-    }
+    const { userId, userEmail } = await assertMasterTenantAccess(request);
 
     const auditService = new PlatformReportAuditService(MASTER_BILLING_TENANT_ID);
     const clientInfo = extractClientInfo(request);
@@ -106,6 +59,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ success: true, message: 'Access logged' });
   } catch (error) {
+    if (isMasterTenantAuthError(error)) {
+      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
+    }
     console.error('[platform-reports/access] POST error:', error);
 
     return NextResponse.json(

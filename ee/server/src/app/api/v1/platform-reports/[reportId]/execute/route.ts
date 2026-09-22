@@ -7,69 +7,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import {
   PlatformReportService,
   PlatformReportAuditService,
   extractClientInfo,
 } from '@ee/lib/platformReports';
 import { ReportParameters } from 'server/src/lib/reports/core/types';
+import { assertMasterTenantAccess } from '@ee/lib/auth/masterTenantAccess';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
-
-/**
- * Verify the caller has access to platform reports.
- * Supports both API key auth and session auth.
- */
-async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
-  if (!MASTER_BILLING_TENANT_ID) {
-    throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
-  }
-
-  // API KEY AUTH: Check for x-api-key header (used by extension uiProxy)
-  const apiKey = request.headers.get('x-api-key');
-  const extensionId = request.headers.get('x-alga-extension');
-
-  if (apiKey) {
-    const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-    if (keyRecord) {
-      if (keyRecord.tenant === MASTER_BILLING_TENANT_ID) {
-        // Get user info from headers (forwarded by runner from ext-proxy)
-        const headerUserId = request.headers.get('x-user-id');
-        const headerUserEmail = request.headers.get('x-user-email');
-
-        return {
-          tenantId: MASTER_BILLING_TENANT_ID,
-          userId: headerUserId || (extensionId ? `extension:${extensionId}` : keyRecord.user_id),
-          userEmail: headerUserEmail || undefined,
-        };
-      }
-      throw new Error('Access denied: API key not authorized for platform reports');
-    }
-    console.warn('[platform-reports/execute] Invalid API key');
-  }
-
-  // SESSION AUTH
-  const user = await getCurrentUser();
-
-  if (!user) {
-    throw new Error('Authentication required');
-  }
-
-  if (user.tenant !== MASTER_BILLING_TENANT_ID) {
-    throw new Error('Access denied: Platform reports require master tenant access');
-  }
-
-  return {
-    tenantId: MASTER_BILLING_TENANT_ID,
-    userId: user.user_id,
-    userEmail: user.email,
-  };
-}
 
 interface RouteContext {
   params: Promise<{ reportId: string }>;
