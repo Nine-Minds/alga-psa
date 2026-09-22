@@ -1218,6 +1218,7 @@
         "followTheme": "Wenn aktiviert, verwendet das Kundenportal das unter Einstellungen → Erscheinungsbild gewählte Design. Wenn deaktiviert, überschreiben die Farben unten dieses Design.",
         "followThemeActive": "Die Farben unten bleiben gespeichert, werden aber nicht angewendet, solange das Portal dem Organisationsdesign folgt."
       },
+      "cropHelp": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im Seitenbereich des Portals und in allen runden Rahmen erscheint. Ihr breites Logo bleibt unverändert.",
       "heroGradient": {
         "primaryShades": "Primärfarbe zu Primärfarbton",
         "primarySecondary": "Primärfarbe zu Sekundärfarbe"
@@ -1487,7 +1488,8 @@
     "whiteLabel": {
       "title": "MSP-App mit eigener Marke",
       "description": "Laden Sie Ihr Logo einmal hoch. Es ersetzt die Alga-Marke im MSP-Seitenmenü, und das Kundenportal verwendet dieselben Bilder.",
-      "logoHelp": "Das quadratische Zeichen wird überall dort verwendet, wo der Platz quadratisch ist: im eingeklappten Seitenmenü und in runden Rahmen. Das optionale breite Logo ersetzt im ausgeklappten Seitenmenü das Zeichen und den Namen — laden Sie daher eines hoch, das Ihren Firmennamen bereits enthält. Das Seitenmenü richtet sich nach seinem eigenen Hintergrund: bei dunklem Menü die Varianten für dunkle Hintergründe, bei hellem Menü die hellen — und andernfalls die Variante, die Sie hochgeladen haben.",
+      "logoHelp": "Das quadratische Zeichen wird überall dort verwendet, wo der Platz quadratisch ist: im eingeklappten Seitenmenü und in runden Rahmen. Legen Sie ein breites Logo in ein quadratisches Feld, wählen Sie, welcher Ausschnitt zum Zeichen wird; sobald ein breites Logo hochgeladen ist, können Sie das Zeichen auch direkt daraus ausschneiden. Das optionale breite Logo ersetzt im ausgeklappten Seitenmenü das Zeichen und den Namen — laden Sie daher eines hoch, das Ihren Firmennamen bereits enthält. Das Seitenmenü richtet sich nach seinem eigenen Hintergrund: bei dunklem Menü die Varianten für dunkle Hintergründe, bei hellem Menü die hellen — und andernfalls die Variante, die Sie hochgeladen haben.",
+      "cropHelp": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im eingeklappten Seitenmenü und in allen runden Rahmen erscheint. Ihr breites Logo bleibt unverändert.",
       "fields": {
         "mark": "Quadratisches Zeichen",
         "markDark": "Quadratisches Zeichen für dunkle Hintergründe",

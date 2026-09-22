@@ -568,7 +568,16 @@
       "deleteError": "Nie udało się usunąć.",
       "deleteConfirm": "Czy na pewno chcesz to usunąć? Tej operacji nie można cofnąć.",
       "linking": "Łączenie...",
-      "linkDocument": "Połącz dokument"
+      "linkDocument": "Połącz dokument",
+      "cropTitle": "Wybierz kwadratowy znak",
+      "cropHelp": "Przeciągnij logo i powiększ, aby wybrać część widoczną w małych, kwadratowych miejscach. Pełne logo również zostaje zachowane.",
+      "zoom": "Powiększenie",
+      "cropPreview": "Podgląd",
+      "applyCrop": "Użyj tego kadru",
+      "adjustMark": "Dostosuj znak",
+      "cropFromWide": "Wycinij z szerokiego logo",
+      "recropSuccess": "Znak zaktualizowany.",
+      "recropError": "Nie udało się zaktualizować znaku."
     },
     "validation": {
       "clientNameRequired": "Nazwa klienta jest wymagana",

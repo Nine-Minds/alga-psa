@@ -1224,6 +1224,7 @@
         "followTheme": "Gdy włączone, portal klienta używa motywu wybranego w Ustawienia → Wygląd. Gdy wyłączone, kolory poniżej go zastępują.",
         "followThemeActive": "Kolory poniżej pozostają zapisane, ale nie są stosowane, dopóki portal podąża za motywem organizacji."
       },
+      "cropHelp": "Przeciągaj i powiększaj, aby wybrać część widoczną w panelu bocznym portalu i w każdej okrągłej ramce. Szerokie logo pozostaje bez zmian.",
       "heroGradient": {
         "primaryShades": "Kolor główny do odcienia głównego",
         "primarySecondary": "Kolor główny do koloru dodatkowego"
@@ -1493,7 +1494,8 @@
     "whiteLabel": {
       "title": "Własna marka w aplikacji MSP",
       "description": "Prześlij swoje logo jeden raz. Zastępuje ono znak Alga w menu bocznym MSP, a portal klienta korzysta z tych samych obrazów.",
-      "logoHelp": "Kwadratowy znak jest używany wszędzie tam, gdzie miejsce jest kwadratowe: w zwiniętym menu bocznym i w okrągłych ramkach. Opcjonalne szerokie logo zastępuje znak i nazwę w rozwiniętym menu bocznym, prześlij więc takie, które zawiera już nazwę Twojej firmy. Menu boczne dopasowuje się do własnego tła: przy ciemnym menu używa wariantów na ciemne tła, przy jasnym — jasnych, a jeśli pasującego brakuje, sięga po ten, który przesłano.",
+      "logoHelp": "Kwadratowy znak jest używany wszędzie tam, gdzie miejsce jest kwadratowe: w zwiniętym menu bocznym i w okrągłych ramkach. Wrzuć szerokie logo do kwadratowego pola i wybierz, która część stanie się znakiem; po przesłaniu szerokiego logo możesz też wyciąć znak bezpośrednio z niego. Opcjonalne szerokie logo zastępuje znak i nazwę w rozwiniętym menu bocznym, prześlij więc takie, które zawiera już nazwę Twojej firmy. Menu boczne dopasowuje się do własnego tła: przy ciemnym menu używa wariantów na ciemne tła, przy jasnym — jasnych, a jeśli pasującego brakuje, sięga po ten, który przesłano.",
+      "cropHelp": "Przeciągaj i powiększaj, aby wybrać część widoczną w zwiniętym menu bocznym i w każdej okrągłej ramce. Szerokie logo pozostaje bez zmian.",
       "fields": {
         "mark": "Znak kwadratowy",
         "markDark": "Znak kwadratowy na ciemne tła",

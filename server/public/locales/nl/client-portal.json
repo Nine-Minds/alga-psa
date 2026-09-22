@@ -566,7 +566,16 @@
       "deleteError": "Verwijderen is mislukt.",
       "deleteConfirm": "Weet u zeker dat u dit wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
       "linking": "Koppelen...",
-      "linkDocument": "Document koppelen"
+      "linkDocument": "Document koppelen",
+      "cropTitle": "Kies het vierkante beeldmerk",
+      "cropHelp": "Sleep het logo en zoom om het deel te kiezen dat in kleine, vierkante ruimtes wordt getoond. Het volledige logo blijft ook bewaard.",
+      "zoom": "Zoom",
+      "cropPreview": "Voorbeeld",
+      "applyCrop": "Deze uitsnede gebruiken",
+      "adjustMark": "Beeldmerk aanpassen",
+      "cropFromWide": "Uitsnijden uit breed logo",
+      "recropSuccess": "Beeldmerk bijgewerkt.",
+      "recropError": "Het beeldmerk kon niet worden bijgewerkt."
     },
     "validation": {
       "clientNameRequired": "Bedrijfsnaam is verplicht",

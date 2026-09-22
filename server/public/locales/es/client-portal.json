@@ -566,7 +566,16 @@
       "deleteError": "No se pudo eliminar.",
       "deleteConfirm": "¿Seguro que quiere eliminar esto? Esta acción no se puede deshacer.",
       "linking": "Vinculando...",
-      "linkDocument": "Vincular documento"
+      "linkDocument": "Vincular documento",
+      "cropTitle": "Elegir la marca cuadrada",
+      "cropHelp": "Arrastra el logotipo y haz zoom para elegir la parte que se muestra en espacios pequeños y cuadrados. El logotipo completo también se conserva.",
+      "zoom": "Zoom",
+      "cropPreview": "Vista previa",
+      "applyCrop": "Usar este recorte",
+      "adjustMark": "Ajustar marca",
+      "cropFromWide": "Recortar del logotipo ancho",
+      "recropSuccess": "Marca actualizada.",
+      "recropError": "No se pudo actualizar la marca."
     },
     "validation": {
       "clientNameRequired": "El nombre de la empresa es obligatorio",

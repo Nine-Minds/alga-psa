@@ -566,7 +566,16 @@
       "deleteError": "Impossibile eliminare.",
       "deleteConfirm": "Sei sicuro di voler eliminare questo elemento? Questa azione non può essere annullata.",
       "linking": "Collegamento...",
-      "linkDocument": "Collega documento"
+      "linkDocument": "Collega documento",
+      "cropTitle": "Scegli il simbolo quadrato",
+      "cropHelp": "Trascina il logo e ingrandisci per scegliere la parte mostrata negli spazi piccoli e quadrati. Anche il logo completo viene conservato.",
+      "zoom": "Zoom",
+      "cropPreview": "Anteprima",
+      "applyCrop": "Usa questo ritaglio",
+      "adjustMark": "Regola simbolo",
+      "cropFromWide": "Ritaglia dal logo largo",
+      "recropSuccess": "Simbolo aggiornato.",
+      "recropError": "Impossibile aggiornare il simbolo."
     },
     "validation": {
       "clientNameRequired": "Il nome dell'azienda è obbligatorio",

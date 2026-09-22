@@ -615,7 +615,16 @@
       "deleteError": "Falha ao excluir.",
       "deleteConfirm": "Tem certeza de que deseja excluir isto? Esta ação não pode ser desfeita.",
       "linking": "Vinculando...",
-      "linkDocument": "Vincular documento"
+      "linkDocument": "Vincular documento",
+      "cropTitle": "Escolher a marca quadrada",
+      "cropHelp": "Arraste o logotipo e amplie para escolher a parte mostrada em espaços pequenos e quadrados. O logotipo completo também é mantido.",
+      "zoom": "Zoom",
+      "cropPreview": "Pré-visualização",
+      "applyCrop": "Usar este recorte",
+      "adjustMark": "Ajustar marca",
+      "cropFromWide": "Recortar do logotipo largo",
+      "recropSuccess": "Marca atualizada.",
+      "recropError": "Não foi possível atualizar a marca."
     },
     "validation": {
       "clientNameRequired": "O nome do cliente é obrigatório",

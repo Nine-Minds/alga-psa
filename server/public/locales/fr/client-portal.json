@@ -566,7 +566,16 @@
       "deleteError": "Échec de la suppression.",
       "deleteConfirm": "Voulez-vous vraiment supprimer ceci ? Cette action est irréversible.",
       "linking": "Liaison...",
-      "linkDocument": "Associer un document"
+      "linkDocument": "Associer un document",
+      "cropTitle": "Choisir le symbole carré",
+      "cropHelp": "Faites glisser le logo et zoomez pour choisir la partie affichée dans les petits espaces carrés. Le logo complet est également conservé.",
+      "zoom": "Zoom",
+      "cropPreview": "Aperçu",
+      "applyCrop": "Utiliser ce cadrage",
+      "adjustMark": "Ajuster le symbole",
+      "cropFromWide": "Découper depuis le logo large",
+      "recropSuccess": "Symbole mis à jour.",
+      "recropError": "Impossible de mettre à jour le symbole."
     },
     "validation": {
       "clientNameRequired": "Le nom de l'entreprise est obligatoire",
