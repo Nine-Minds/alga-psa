@@ -95,6 +95,10 @@ export function createSetupRetry(options = {}) {
   const readInstallState = options.readInstallState
     || (() => readJson(stateFile).value);
   const workflowOwnerAlive = options.workflowOwnerAlive || (() => true);
+  // Optional async predicate consulted before an automatic launch. When it
+  // reports not-ready (e.g. cluster DNS activation is still pending) the retry is
+  // deferred without consuming an attempt or dropping the failure snapshot.
+  const readyBeforeLaunch = options.readyBeforeLaunch || null;
 
   let reconcileRunning = false;
 
@@ -262,6 +266,25 @@ export function createSetupRetry(options = {}) {
             lastReason: 'network still unhealthy'
           });
           return { skipped: 'network-unhealthy', attempts };
+        }
+      }
+
+      if (typeof readyBeforeLaunch === 'function') {
+        let readiness;
+        try {
+          readiness = await readyBeforeLaunch();
+        } catch {
+          readiness = { ok: false, reason: 'Readiness check failed.' };
+        }
+        if (readiness && readiness.ok === false) {
+          safeWrite({
+            ...value,
+            attempts,
+            maxAttempts,
+            nextAttemptAt: timestamp + backoffMs(Math.max(attempts, 1), baseMs, maxMs),
+            lastReason: readiness.reason || 'not ready to launch'
+          });
+          return { skipped: readiness.pending ? 'dns-pending' : 'not-ready', attempts };
         }
       }
 

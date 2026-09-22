@@ -33,6 +33,7 @@ type Blocker = {
     exhausted?: boolean;
     nextAttemptInSeconds?: number;
   } | null;
+  pending?: boolean;
   loginBlocking?: boolean;
 };
 type EventItem = {
@@ -82,6 +83,7 @@ type StatusResponse = {
     suspectedCause?: string;
     suggestedNextStep?: string;
     retrySafe?: boolean;
+    pending?: boolean;
     autoRetry?: {
       attempts?: number;
       maxAttempts?: number;
@@ -115,8 +117,10 @@ type StatusResponse = {
   };
   engineLog?: { file?: string | null; error?: string | null } | null;
   dnsReconcile?: {
-    ok?: boolean;
+    ok?: boolean | null;
+    state?: string | null;
     error?: string | null;
+    activation?: { stage?: string | null; error?: string | null } | null;
     at?: string | null;
     logFile?: string | null;
   } | null;
@@ -283,7 +287,9 @@ function blockers(status: StatusResponse | null): Blocker[] {
     details: failure.details,
     nextAction: failure.suggestedNextStep,
     autoRetry: failure.autoRetry,
-    loginBlocking: failure.category !== "background-services",
+    pending: failure.pending,
+    loginBlocking:
+      failure.category !== "background-services" && failure.pending !== true,
   }));
   if (fromFailures.length > 0) return fromFailures;
   // A retained install-state failure must always read as a blocker, even when

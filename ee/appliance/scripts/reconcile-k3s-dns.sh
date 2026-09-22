@@ -4,11 +4,19 @@ set -euo pipefail
 # Reconcile the host cluster resolver from the control plane.
 #
 # The control-plane pod runs as UID 10001 with no host-root mount, so it cannot
-# write /etc/rancher/k3s itself. Following the storage prepare-job precedent,
-# this launcher creates a narrowly scoped privileged Job that mounts host root
-# and runs the fixed helper (configure-k3s-dns.sh) with only validated DNS
-# configuration. The Job uses the currently running control-plane image, cached
-# on the node with IfNotPresent, so a broken resolver cannot block the pull.
+# write /etc/rancher/k3s or restart k3s. Following the storage prepare-job
+# precedent, this launcher creates a narrowly scoped privileged Job that:
+#   1. runs as UID 0 with host root and host PID (the image defaults to 10001),
+#   2. stages the fixed DNS helper and a kubectl wrapper onto the host,
+#   3. launches a host-owned transient systemd service that owns the lock,
+#      restart, readiness checks, rollout and the durable activation record.
+# Because activation is host-owned it survives this Job, the control plane, and
+# a control-plane replacement. The Job only stages and triggers; callers read the
+# durable activation status from the shared hostPath.
+#
+# The Job uses the currently running control-plane image (identified by the pod's
+# imageID when available) with IfNotPresent so a broken resolver cannot block a
+# registry pull.
 
 KUBECTL_BIN="${ALGA_APPLIANCE_KUBECTL:-kubectl}"
 KUBECONFIG_PATH="${ALGA_APPLIANCE_KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
@@ -19,9 +27,12 @@ JOB_NAME="${ALGA_APPLIANCE_DNS_JOB_NAME:-alga-appliance-dns-reconcile}"
 # Runs under the namespace default service account: the helper performs its
 # rollouts through the host k3s admin kubeconfig, so the pod needs no extra RBAC.
 JOB_SA="${ALGA_APPLIANCE_DNS_JOB_SA:-default}"
+CONTROL_PLANE_NAMESPACE="${ALGA_APPLIANCE_CONTROL_PLANE_NAMESPACE:-alga-appliance-control-plane}"
 CONTROL_PLANE_DEPLOYMENT="${ALGA_APPLIANCE_CONTROL_PLANE_DEPLOYMENT:-appliance-control-plane}"
-HELPER_PATH="${ALGA_APPLIANCE_DNS_HELPER_PATH:-/opt/alga-appliance/scripts/configure-k3s-dns.sh}"
-JOB_TIMEOUT_SECONDS="${ALGA_APPLIANCE_DNS_JOB_TIMEOUT_SECONDS:-900}"
+IMAGE_PULL_POLICY="${ALGA_APPLIANCE_DNS_IMAGE_PULL_POLICY:-IfNotPresent}"
+HOST_STAGE_DIR="${ALGA_APPLIANCE_DNS_STAGE_DIR:-/var/lib/alga-appliance/dns}"
+ACTIVATION_UNIT="${ALGA_APPLIANCE_DNS_UNIT:-alga-appliance-dns-activate}"
+JOB_TIMEOUT_SECONDS="${ALGA_APPLIANCE_DNS_JOB_TIMEOUT_SECONDS:-180}"
 DRY_RUN=false
 WAIT=true
 
@@ -31,31 +42,37 @@ Usage: reconcile-k3s-dns.sh [options]
 
 Options:
   --kubeconfig <path>  Kubeconfig path
-  --no-wait            Trigger the reconcile Job and return without waiting; used
-                       by the periodic reconciler, whose host is restarted by the
-                       activation itself
+  --no-wait            Apply the staging Job and return without waiting
   --dry-run            Print the reconcile Job manifest without applying it
   --help               Show this help
 
 Environment:
   ALGA_APPLIANCE_CONTROL_PLANE_IMAGE   Override the image (defaults to the
-                                       running control-plane Deployment image)
+                                       running control-plane image/digest)
 EOF
 }
 
 log() { printf '%s\n' "$*"; }
 
+# Prefer the running container's imageID (immutable digest); fall back to the
+# Deployment spec image.
 resolve_control_plane_image() {
   if [ -n "${ALGA_APPLIANCE_CONTROL_PLANE_IMAGE:-}" ]; then
     printf '%s' "$ALGA_APPLIANCE_CONTROL_PLANE_IMAGE"
     return 0
   fi
-  "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n alga-appliance-control-plane \
-    get deployment "$CONTROL_PLANE_DEPLOYMENT" \
-    -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null
+  local image
+  image="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$CONTROL_PLANE_NAMESPACE" \
+    get pods -l app.kubernetes.io/name=appliance-control-plane \
+    -o jsonpath='{.items[0].status.containerStatuses[0].imageID}' 2>/dev/null || true)"
+  if [ -z "$image" ]; then
+    image="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$CONTROL_PLANE_NAMESPACE" \
+      get deployment "$CONTROL_PLANE_DEPLOYMENT" \
+      -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)"
+  fi
+  printf '%s' "$image"
 }
 
-# Ensure the privileged support namespace exists and admits the host-root Job.
 ensure_namespace() {
   "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" get namespace "$JOB_NAMESPACE" >/dev/null 2>&1 \
     || "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" create namespace "$JOB_NAMESPACE" >/dev/null
@@ -66,8 +83,67 @@ ensure_namespace() {
     --overwrite >/dev/null
 }
 
+# True when a previous staging Job is still running; we never delete active work.
+job_is_active() {
+  local active
+  active="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$JOB_NAMESPACE" \
+    get job "$JOB_NAME" -o jsonpath='{.status.active}' 2>/dev/null || true)"
+  [ -n "$active" ] && [ "$active" != "0" ]
+}
+
+# The container command is assembled from a quoted, indentation-neutral heredoc
+# and then uniformly re-indented for the YAML literal block. Building it inline
+# in the manifest would put the nested heredoc terminator at column zero and
+# break the block scalar (the manifest would not parse as YAML).
+container_command() {
+  cat <<'CONTAINER_COMMAND'
+set -euo pipefail
+if ! command -v nsenter >/dev/null 2>&1; then
+  echo "nsenter is not available in the control-plane image" >&2
+  exit 1
+fi
+if ! nsenter -t 1 -m -u -i -n -p -- command -v systemd-run >/dev/null 2>&1; then
+  echo "host systemd-run is not available; cannot launch a host-owned activation service" >&2
+  exit 1
+fi
+stage="/host__HOST_STAGE_DIR__"
+stage_path="__HOST_STAGE_DIR__"
+mkdir -p "$stage"
+install -m 0755 /opt/alga-appliance/scripts/configure-k3s-dns.sh "$stage/configure-k3s-dns.sh"
+printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'for candidate in /usr/local/bin/k3s /opt/alga-appliance/bin/k3s /usr/bin/k3s; do' \
+  '  if [ -x "$candidate" ]; then exec "$candidate" kubectl "$@"; fi' \
+  'done' \
+  'echo "k3s binary not found on host" >&2' \
+  'exit 1' > "$stage/kubectl"
+chmod 0755 "$stage/kubectl"
+if nsenter -t 1 -m -u -i -n -p -- systemctl is-active --quiet "__ACTIVATION_UNIT__"; then
+  echo "DNS activation service is already running; nothing to do."
+  exit 0
+fi
+nsenter -t 1 -m -u -i -n -p -- systemctl reset-failed "__ACTIVATION_UNIT__" >/dev/null 2>&1 || true
+nsenter -t 1 -m -u -i -n -p -- systemd-run \
+  --unit="__ACTIVATION_UNIT__" \
+  --collect \
+  --property=Type=oneshot \
+  --property=TimeoutStartSec=1800 \
+  --property=WorkingDirectory=/ \
+  --setenv="ALGA_APPLIANCE_KUBECTL=${stage_path}/kubectl" \
+  --setenv="ALGA_APPLIANCE_KUBECONFIG=/etc/rancher/k3s/k3s.yaml" \
+  /bin/bash "${stage_path}/configure-k3s-dns.sh" --activate
+echo "Launched host-owned DNS activation service __ACTIVATION_UNIT__."
+CONTAINER_COMMAND
+}
+
 build_manifest() {
   local image="$1"
+  local command
+  command="$(container_command)"
+  command="${command//__HOST_STAGE_DIR__/$HOST_STAGE_DIR}"
+  command="${command//__ACTIVATION_UNIT__/$ACTIVATION_UNIT}"
+  local indented
+  indented="$(printf '%s\n' "$command" | sed 's/^/              /')"
   cat <<EOF
 apiVersion: batch/v1
 kind: Job
@@ -89,25 +165,22 @@ spec:
       serviceAccountName: ${JOB_SA}
       hostPID: true
       hostNetwork: true
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
       containers:
         - name: reconcile
           image: ${image}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: ${IMAGE_PULL_POLICY}
           securityContext:
             privileged: true
+            runAsUser: 0
+            runAsGroup: 0
           command:
             - bash
-            - ${HELPER_PATH}
-            - --host-root
-            - /host
-            - --activate
-          env:
-            - name: ALGA_APPLIANCE_DNS_ROOT
-              value: /host
-            - name: ALGA_APPLIANCE_KUBECONFIG
-              value: /host/etc/rancher/k3s/k3s.yaml
-            - name: ALGA_APPLIANCE_DNS_RESTART_COMMAND
-              value: nsenter -t 1 -m -u -i -n -p -- systemctl restart k3s
+            - -c
+            - |
+${indented}
           volumeMounts:
             - name: host-root
               mountPath: /host
@@ -125,12 +198,12 @@ while [ "$#" -gt 0 ]; do
       KUBECONFIG_PATH="$2"
       shift 2
       ;;
-    --dry-run)
-      DRY_RUN=true
-      shift
-      ;;
     --no-wait)
       WAIT=false
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=true
       shift
       ;;
     --help|-h)
@@ -158,22 +231,27 @@ if $DRY_RUN; then
   exit 0
 fi
 
-log "Reconciling cluster DNS with the running control-plane image $IMAGE."
+if job_is_active; then
+  log "DNS reconcile Job $JOB_NAME is already active; leaving it in place."
+  exit 0
+fi
+
+log "Staging cluster DNS reconciliation with control-plane image $IMAGE."
 ensure_namespace
 "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$JOB_NAMESPACE" \
   delete job "$JOB_NAME" --ignore-not-found --wait=true >/dev/null
 printf '%s\n' "$MANIFEST" | "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" apply -f -
 
 if ! $WAIT; then
-  log "DNS reconciliation job $JOB_NAME triggered; activation continues on the host."
+  log "DNS reconcile Job $JOB_NAME applied; activation continues on the host."
   exit 0
 fi
 
 if ! "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$JOB_NAMESPACE" \
   wait --for=condition=complete --timeout="${JOB_TIMEOUT_SECONDS}s" "job/$JOB_NAME"; then
-  echo "DNS reconciliation job $JOB_NAME failed or timed out; recent logs:" >&2
+  echo "DNS reconcile staging Job $JOB_NAME failed or timed out; recent logs:" >&2
   "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$JOB_NAMESPACE" logs "job/$JOB_NAME" --tail=200 >&2 || true
   exit 1
 fi
 
-log "DNS reconciliation completed."
+log "DNS reconcile Job completed; host-owned activation continues in ${ACTIVATION_UNIT}."

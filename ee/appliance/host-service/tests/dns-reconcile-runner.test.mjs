@@ -23,25 +23,45 @@ function harness(options = {}) {
   const dir = options.dir || tempDir();
   const scriptPath = options.scriptPath || path.join(dir, 'reconcile-k3s-dns.sh');
   if (!options.scriptMissing) fs.writeFileSync(scriptPath, '#!/usr/bin/env bash\n', { mode: 0o755 });
+  const activationFile = path.join(dir, 'dns-activation.json');
+  const resultFile = path.join(dir, 'dns-reconcile.json');
   const spawnCalls = [];
   const children = [];
+  let clock = 1_000_000;
   const spawnImpl = (cmd, args, opts) => {
     spawnCalls.push({ cmd, args, opts });
     const child = fakeChild();
     children.push(child);
     return child;
   };
+  const writeActivation = (value) => fs.writeFileSync(activationFile, `${JSON.stringify(value)}\n`);
   const reconciler = createDnsReconciler({
     scriptPath,
     kubeconfigPath: '/tmp/k3s.yaml',
-    resultFile: path.join(dir, 'dns-reconcile.json'),
+    resultFile,
     logFile: path.join(dir, 'dns-reconcile.log'),
+    activationFile,
+    now: () => clock,
+    sleep: async () => {
+      clock += 10_000;
+      if (options.onSleep) options.onSleep({ dir, activationFile, resultFile, writeActivation });
+    },
+    pollIntervalMs: 1_000,
+    maxActivationWaitMs: options.maxActivationWaitMs || 5_000,
     spawnImpl,
     logger: { error: () => {} },
     ...options.reconciler
   });
-  return { dir, reconciler, spawnCalls, children };
-}
+  return {
+    dir,
+    reconciler,
+    spawnCalls,
+    children,
+    resultFile,
+    activationFile,
+    readResult: () => JSON.parse(fs.readFileSync(resultFile, 'utf8')),
+    writeActivation: (value) => fs.writeFileSync(activationFile, `${JSON.stringify(value)}\n`)
+  };}
 
 function resolveNext(child, code, stdout = '', stderr = '') {
   setImmediate(() => {
@@ -51,29 +71,75 @@ function resolveNext(child, code, stdout = '', stderr = '') {
   });
 }
 
-test('a successful reconcile records ok and appends the log', async () => {
-  const h = harness();
+test('a submitted Job stays pending until the host reports activation active', async () => {
+  const h = harness({
+    onSleep: ({ writeActivation }) => {
+      // The host helper republishes `active` only after rollouts are verified.
+      writeActivation({ stage: 'active', fingerprint: 'f'.repeat(64), updatedAt: '2026-09-22T00:00:05.000Z' });
+    }
+  });
   const pending = h.reconciler.runOnce('startup');
-  resolveNext(h.children[0], 0, 'DNS reconciliation completed.\n');
+
+  // The submission is already recorded as pending before the Job returns.
+  assert.equal(h.readResult().ok, null);
+  assert.equal(h.readResult().state, 'submitted');
+
+  resolveNext(h.children[0], 0, 'DNS reconcile Job completed; host-owned activation continues.\n');
   const result = await pending;
   assert.equal(result.ok, true);
+  assert.equal(result.state, 'active');
   assert.equal(h.spawnCalls.length, 1);
   assert.equal(h.spawnCalls[0].cmd, 'bash');
   assert.deepEqual(h.spawnCalls[0].args.slice(1, 3), ['--kubeconfig', '/tmp/k3s.yaml']);
-  const persisted = JSON.parse(fs.readFileSync(path.join(h.dir, 'dns-reconcile.json'), 'utf8'));
-  assert.equal(persisted.ok, true);
-  assert.match(fs.readFileSync(path.join(h.dir, 'dns-reconcile.log'), 'utf8'), /DNS reconciliation completed/);
+  assert.equal(h.spawnCalls[0].args.includes('--no-wait'), false);
+  assert.equal(h.readResult().ok, true);
+  assert.match(fs.readFileSync(path.join(h.dir, 'dns-reconcile.log'), 'utf8'), /DNS reconcile trigger/);
 });
 
-test('a failed reconcile records the error for status', async () => {
+test('a staging Job failure is recorded with the launcher error', async () => {
   const h = harness();
   const pending = h.reconciler.runOnce('periodic');
-  resolveNext(h.children[0], 1, '', 'no usable upstream');
+  resolveNext(h.children[0], 1, '', 'host systemd-run is not available\n');
   const result = await pending;
   assert.equal(result.ok, false);
-  assert.match(result.error, /no usable upstream/);
-  const persisted = JSON.parse(fs.readFileSync(path.join(h.dir, 'dns-reconcile.json'), 'utf8'));
-  assert.equal(persisted.ok, false);
+  assert.equal(result.state, 'failed');
+  assert.match(result.error, /systemd-run is not available/);
+  assert.equal(h.readResult().ok, false);
+});
+
+test('a host activation failure reaches the durable result', async () => {
+  const h = harness({
+    onSleep: ({ writeActivation }) => {
+      writeActivation({ stage: 'failed', fingerprint: 'f'.repeat(64), updatedAt: '2026-09-22T00:00:05.000Z', error: 'Rollout of deployment/coredns did not complete.' });
+    }
+  });
+  const pending = h.reconciler.runOnce('periodic');
+  resolveNext(h.children[0], 0);
+  const result = await pending;
+  assert.equal(result.ok, false);
+  assert.equal(result.state, 'failed');
+  assert.match(result.error, /coredns/);
+  assert.equal(h.readResult().activation.stage, 'failed');
+});
+
+test('a stale active record never counts as this submission completing', async () => {
+  const h = harness();
+  h.writeActivation({ stage: 'active', fingerprint: 'a'.repeat(64), updatedAt: '2026-09-21T00:00:00.000Z' });
+  const pending = h.reconciler.runOnce('periodic');
+  resolveNext(h.children[0], 0);
+  const result = await pending;
+  assert.equal(result.ok, false);
+  assert.match(result.error, /Timed out/);
+  assert.equal(h.readResult().state, 'failed');
+});
+
+test('an absent activation record times out instead of reporting success', async () => {
+  const h = harness();
+  const pending = h.reconciler.runOnce('periodic');
+  resolveNext(h.children[0], 0);
+  const result = await pending;
+  assert.equal(result.ok, false);
+  assert.match(result.error, /Timed out/);
 });
 
 test('overlapping ticks are single-flight', async () => {
@@ -83,6 +149,7 @@ test('overlapping ticks are single-flight', async () => {
   assert.equal(second.skipped, 'running');
   assert.equal(h.spawnCalls.length, 1);
   resolveNext(h.children[0], 0);
+  h.writeActivation({ stage: 'active', fingerprint: 'f'.repeat(64), updatedAt: '2026-09-22T00:00:05.000Z' });
   await first;
 });
 

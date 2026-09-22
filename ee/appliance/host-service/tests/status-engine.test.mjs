@@ -766,6 +766,34 @@ test('a failed cluster-DNS reconcile is a distinct blocker', async () => {
   assert.equal(snapshot.topBlockers.some((item) => item.step === 'reconcile-cluster-dns'), true);
 });
 
+test('a pending cluster-DNS activation surfaces an actionable blocker', async () => {
+  const stateFile = writeStateFile({ phase: 'dns', status: 'setup-blocked', failure: {
+    step: 'reconcile-cluster-dns', phase: 'dns', message: 'Cluster DNS is not ready.', retrySafe: true
+  } });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    dnsReconcile: {
+      ok: null,
+      state: 'submitted',
+      at: '2026-09-22T00:00:00.000Z',
+      logFile: '/var/lib/alga-appliance/dns-reconcile.log'
+    }
+  });
+
+  const blocker = snapshot.failures.find((item) => item.step === 'reconcile-cluster-dns');
+  assert.ok(blocker, 'pending DNS activation must surface as a blocker');
+  assert.equal(blocker.pending, true);
+  assert.match(blocker.suspectedCause, /in progress/i);
+  const topBlocker = snapshot.topBlockers.find((item) => item.step === 'reconcile-cluster-dns');
+  assert.ok(topBlocker, 'pending activation must appear in top blockers');
+  assert.equal(topBlocker.loginBlocking, false);
+  assert.equal(snapshot.dnsReconcile.ok, null);
+});
+
 test('a successful or absent DNS reconcile adds no blocker', async () => {
   const stateFile = writeStateFile({ phase: 'preflight', status: 'preflight-running', failure: null });
   const snapshot = await collectStatusSnapshotAsync({

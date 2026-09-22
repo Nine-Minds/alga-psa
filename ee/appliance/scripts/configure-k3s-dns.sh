@@ -11,8 +11,17 @@ set -euo pipefail
 # controllers such as Flux — without relying on manifest-level dnsConfig.
 #
 # This one implementation owns resolver selection, validation, file generation,
-# change detection and activation. It runs on the host at bootstrap and via the
-# control-plane reconciliation Job on existing installs.
+# change detection, activation and the durable activation record. It runs on the
+# host (bootstrap and the host-owned activation service) and, for write-only
+# reconciliation, inside the control-plane Job with a rooted host mount.
+#
+# Activation is staged in <status-file>:
+#   restarting -> restart-confirmed -> rolling-out -> active
+#                                            \-> failed
+# A prior stage for the current fingerprint is only resumed when the k3s start
+# token proves the restart actually happened, so a failed restart can never be
+# mistaken for a completed activation. A failed rollout also already restarted
+# k3s, so resuming skips the restart and only re-verifies the rollout.
 
 ROOT_PREFIX="${ALGA_APPLIANCE_DNS_ROOT:-}"
 SETUP_INPUTS_FILE="${ALGA_APPLIANCE_SETUP_INPUTS_FILE:-/var/lib/alga-appliance/setup-inputs.json}"
@@ -20,15 +29,21 @@ SYSTEMD_RESOLV_CONF="${ALGA_APPLIANCE_SYSTEM_RESOLV_CONF:-/run/systemd/resolve/r
 HOST_RESOLV_CONF="${ALGA_APPLIANCE_HOST_RESOLV_CONF:-/etc/resolv.conf}"
 K3S_RESOLV_CONF="${ALGA_APPLIANCE_K3S_RESOLV_CONF:-/etc/rancher/k3s/resolv.conf}"
 K3S_DNS_DROPIN="${ALGA_APPLIANCE_K3S_DNS_DROPIN:-/etc/rancher/k3s/config.yaml.d/30-alga-dns.yaml}"
-DNS_ACTIVATION_FILE="${ALGA_APPLIANCE_DNS_ACTIVATION_FILE:-/var/lib/alga-appliance/dns-activation.json}"
-DNS_PENDING_FILE="${ALGA_APPLIANCE_DNS_PENDING_FILE:-/var/lib/alga-appliance/dns-activation-pending.json}"
+DNS_STATUS_FILE="${ALGA_APPLIANCE_DNS_STATUS_FILE:-/var/lib/alga-appliance/dns-activation.json}"
 DNS_LOCK_PATH="${ALGA_APPLIANCE_DNS_LOCK_PATH:-/var/lib/alga-appliance/dns-reconcile.lock}"
 K3S_SERVICE="${ALGA_APPLIANCE_K3S_SERVICE:-k3s}"
 KUBECTL_BIN="${ALGA_APPLIANCE_KUBECTL:-kubectl}"
 KUBECONFIG_PATH="${ALGA_APPLIANCE_KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 DNS_API_TIMEOUT_SECONDS="${ALGA_APPLIANCE_DNS_API_TIMEOUT_SECONDS:-300}"
+DNS_ROLLOUT_TIMEOUT_SECONDS="${ALGA_APPLIANCE_DNS_ROLLOUT_TIMEOUT_SECONDS:-300}"
 DNS_LOCK_ATTEMPTS="${ALGA_APPLIANCE_DNS_LOCK_ATTEMPTS:-150}"
 DNS_RESTART_COMMAND="${ALGA_APPLIANCE_DNS_RESTART_COMMAND:-}"
+DNS_K3S_ACTIVE_COMMAND="${ALGA_APPLIANCE_DNS_K3S_ACTIVE_COMMAND:-systemctl is-active --quiet ${K3S_SERVICE}}"
+DNS_K3S_START_COMMAND="${ALGA_APPLIANCE_DNS_K3S_START_COMMAND:-systemctl show -p ActiveEnterTimestamp --value ${K3S_SERVICE}}"
+# Ordered namespace groups: CoreDNS/kube-system first, then storage + Flux, then
+# the application plane, then the control plane last. Every Deployment,
+# StatefulSet and DaemonSet in each group is restarted and verified.
+DNS_NAMESPACE_GROUPS="${ALGA_APPLIANCE_DNS_NAMESPACE_GROUPS:-kube-system local-path-storage flux-system msp alga-system alga-appliance-control-plane}"
 DRY_RUN=false
 ACTIVATE_OVERRIDE=""
 INITIAL_MODE=false
@@ -40,51 +55,22 @@ Usage: configure-k3s-dns.sh [options]
 Options:
   --root <path>        Prefix host paths (tests / staged roots). Default: ""
   --host-root <path>   Alias for --root (Job mount)
-  --initial            First boot: write files and record activation (k3s has not
-                       started yet; no restart)
-  --activate           Perform k3s restart and workload rollout after writing
-  --no-activate        Write the files only (no restart)
+  --initial            First boot only: write files and record activation when
+                       k3s has not started yet (otherwise falls back to activate)
+  --activate           Write files, restart k3s if needed, roll out and record
+  --no-activate        Write the files only (no restart, no activation record)
   --dry-run            Print planned actions without mutating anything
   --help               Show this help
 
-The default with no mode flag is to write the files and activate only when the
-content changed or a prior activation is still pending. Activation is resumable:
-a pending record is persisted before k3s is restarted, so a process killed by
-the restart resumes the rollout instead of restarting k3s again.
+The default with no mode flag activates only when the content changed or a prior
+activation is still pending/verified incomplete.
 EOF
 }
 
 log() { printf '%s\n' "$*"; }
 plan() { printf 'PLAN: %s\n' "$*"; }
 
-# All host paths are rooted so tests can operate on a temporary tree.
 rooted() { printf '%s%s' "$ROOT_PREFIX" "$1"; }
-rp() { printf '%s%s' "$ROOT_PREFIX" "$1"; }
-
-read_setup_dns() {
-  local file
-  file="$(rooted "$SETUP_INPUTS_FILE")"
-  DNS_MODE="system"
-  DNS_SERVERS=""
-  if [ -z "$file" ] || [ ! -f "$file" ]; then
-    return 0
-  fi
-  # JSON parser only — never shell-evaluate operator input.
-  local parsed
-  parsed="$(node -e '
-    const fs = require("fs");
-    try {
-      const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-      const mode = typeof value.dnsMode === "string" ? value.dnsMode : "system";
-      const servers = typeof value.dnsServers === "string" ? value.dnsServers : "";
-      process.stdout.write(`${mode}\n${servers}`);
-    } catch {
-      process.stdout.write("system\n");
-    }
-  ' "$file" 2>/dev/null || printf 'system\n')"
-  DNS_MODE="$(printf '%s' "$parsed" | sed -n '1p')"
-  DNS_SERVERS="$(printf '%s' "$parsed" | sed -n '2p')"
-}
 
 trim() {
   local value="$1"
@@ -93,39 +79,99 @@ trim() {
   printf '%s' "$value"
 }
 
-is_ipv4() {
-  local value="$1"
-  [[ "$value" =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$ ]] || return 1
-  local octet
-  for octet in "${BASH_REMATCH[@]:1:4}"; do
-    [ "$((10#$octet))" -le 255 ] || return 1
-  done
-}
-
-is_ipv6() {
-  local value="$1"
-  [[ "$value" == *:* ]] || return 1
-  [[ "$value" =~ ^[0-9A-Fa-f:]+$ ]] || return 1
-}
-
-is_usable_resolver() {
-  local value="$1"
-  [ -n "$value" ] || return 1
-  if is_ipv4 "$value"; then
-    [[ "$value" == 127.* ]] && return 1
-    [[ "$value" == 0.0.0.0 ]] && return 1
+# Parse setup inputs with a JSON parser, never shell evaluation. Invalid JSON is
+# a visible failure: silently falling back to system DNS could hide a typo.
+read_setup_dns() {
+  local file
+  file="$(rooted "$SETUP_INPUTS_FILE")"
+  DNS_MODE="system"
+  DNS_SERVERS=""
+  if [ -z "$file" ] || [ ! -f "$file" ]; then
     return 0
   fi
-  if is_ipv6 "$value"; then
-    case "${value,,}" in
-      "::1"|"::") return 1 ;;
+  local parsed
+  if ! parsed="$(node -e '
+    const fs = require("fs");
+    let value;
+    try {
+      value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    } catch (error) {
+      process.stderr.write(`setup inputs are not valid JSON: ${error.message}\n`);
+      process.exit(2);
+    }
+    const mode = typeof value.dnsMode === "string" ? value.dnsMode : "system";
+    let servers = value.dnsServers;
+    if (Array.isArray(servers)) servers = servers.join(",");
+    servers = typeof servers === "string" ? servers : "";
+    process.stdout.write(`${mode}\n${servers}`);
+  ' "$file" 2>&1)"; then
+    printf '%s\n' "$parsed" >&2
+    return 1
+  fi
+  DNS_MODE="$(printf '%s' "$parsed" | sed -n '1p')"
+  DNS_SERVERS="$(printf '%s' "$parsed" | sed -n '2p')"
+  case "$DNS_MODE" in
+    system|custom) ;;
+    *) DNS_MODE="system" ;;
+  esac
+}
+
+# Validate candidate resolvers with Node's IP parser and normalize IPv6 so
+# equivalent loopback spellings (127.0.0.53, ::1, 0:0:0:0:0:0:0:1,
+# ::ffff:127.0.0.1) are all rejected. Prints "OK <canonical>" / "BAD <raw>".
+validate_candidates() {
+  local mode="$1"
+  VALIDATED_RESOLVERS=()
+  INVALID_CANDIDATES=()
+  local results
+  if ! results="$(VALIDATE_MODE="$mode" node -e '
+    const fs = require("fs");
+    const net = require("net");
+    const raw = fs.readFileSync(0, "utf8").split("\n").map((line) => line.trim()).filter(Boolean);
+    const canonical = (ip) => {
+      const version = net.isIP(ip);
+      if (version === 0) return null;
+      if (version === 4) return ip;
+      try {
+        return new URL(`http://[${ip}]/`).hostname.replace(/^\[|\]$/g, "");
+      } catch {
+        return null;
+      }
+    };
+    const unusable = (value) => {
+      if (!value) return true;
+      if (value === "0.0.0.0" || value === "::" || value === "::1") return true;
+      if (/^127\./.test(value)) return true;
+      if (/^::ffff:127\./i.test(value)) return true;
+      return false;
+    };
+    const seen = new Set();
+    for (const candidate of raw) {
+      const value = canonical(candidate);
+      if (!value || unusable(value)) {
+        process.stdout.write(`BAD ${candidate}\n`);
+        continue;
+      }
+      if (seen.has(value)) continue;
+      seen.add(value);
+      process.stdout.write(`OK ${value}\n`);
+    }
+  ')" 2>/dev/null; then
+    if [ "$mode" = "custom" ]; then
+      printf 'DNS configuration failure: could not validate the configured DNS servers.\n' >&2
+      return 1
+    fi
+    return 0
+  fi
+  local line
+  while IFS= read -r line; do
+    case "$line" in
+      OK\ *) VALIDATED_RESOLVERS+=("${line#OK }") ;;
+      BAD\ *) INVALID_CANDIDATES+=("${line#BAD }") ;;
     esac
-    return 0
-  fi
-  return 1
+  done <<< "$results"
 }
 
-# Prints candidate nameservers (one per line) from a resolv.conf-shaped file.
 nameservers_from() {
   local file="$1"
   [ -f "$file" ] || return 0
@@ -153,31 +199,19 @@ gather_resolvers() {
     fi
   fi
 
-  RESOLVERS=()
-  local candidate existing seen
-  for candidate in "${candidates[@]}"; do
-    [ -n "$candidate" ] || continue
-    if ! is_usable_resolver "$candidate"; then
-      if [ "$DNS_MODE" = "custom" ]; then
-        echo "DNS configuration failure: custom DNS server '$candidate' is not a usable literal address." >&2
-        return 1
-      fi
-      continue
-    fi
-    seen=false
-    for existing in "${RESOLVERS[@]:-}"; do
-      if [ "$existing" = "$candidate" ]; then
-        seen=true
-        break
-      fi
+  validate_candidates "$DNS_MODE" < <(printf '%s\n' "${candidates[@]:-}")
+  if [ "$DNS_MODE" = "custom" ] && [ "${#INVALID_CANDIDATES[@]}" -gt 0 ]; then
+    local bad
+    for bad in "${INVALID_CANDIDATES[@]}"; do
+      printf "DNS configuration failure: custom DNS server '%s' is not a usable literal address.\n" "$bad" >&2
     done
-    $seen || RESOLVERS+=("$candidate")
-  done
-
-  if [ "${#RESOLVERS[@]}" -eq 0 ]; then
-    echo "DNS configuration failure: no usable upstream resolver was found (mode=$DNS_MODE). Refusing to write an empty resolver file." >&2
     return 1
   fi
+  if [ "${#VALIDATED_RESOLVERS[@]}" -eq 0 ]; then
+    printf 'DNS configuration failure: no usable upstream resolver was found (mode=%s). Refusing to write an empty resolver file.\n' "$DNS_MODE" >&2
+    return 1
+  fi
+  RESOLVERS=("${VALIDATED_RESOLVERS[@]}")
 }
 
 render_files() {
@@ -194,46 +228,13 @@ file_matches() {
   local file="$1"
   local desired="$2"
   [ -f "$file" ] || return 1
-  # Command substitution strips the trailing newline on both sides, so equal
-  # logical content compares equal regardless of the final newline.
   [ "$(cat "$file")" = "$(printf '%s' "$desired")" ]
-}
-
-activation_is_current() {
-  local file
-  file="$(rooted "$DNS_ACTIVATION_FILE")"
-  [ -f "$file" ] || return 1
-  local recorded
-  recorded="$(node -e '
-    const fs = require("fs");
-    try { process.stdout.write(String(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).fingerprint || "")); }
-    catch { process.stdout.write(""); }
-  ' "$file" 2>/dev/null || true)"
-  [ "$recorded" = "$DESIRED_FINGERPRINT" ]
-}
-
-# A pending record means a prior invocation wrote the files and was about to
-# restart k3s (or was killed by that restart). Its presence for the current
-# fingerprint is what makes activation resumable without a second restart.
-pending_is_current() {
-  local file
-  file="$(rooted "$DNS_PENDING_FILE")"
-  [ -f "$file" ] || return 1
-  local recorded
-  recorded="$(node -e '
-    const fs = require("fs");
-    try { process.stdout.write(String(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).fingerprint || "")); }
-    catch { process.stdout.write(""); }
-  ' "$file" 2>/dev/null || true)"
-  [ "$recorded" = "$DESIRED_FINGERPRINT" ]
 }
 
 write_file_atomic() {
   local target="$1"
   local content="$2"
-  local dir
-  dir="$(dirname "$target")"
-  mkdir -p "$dir"
+  mkdir -p "$(dirname "$target")"
   local tmp="${target}.tmp.$$"
   printf '%s' "$content" > "$tmp"
   chmod 0644 "$tmp"
@@ -245,34 +246,77 @@ write_files() {
   write_file_atomic "$(rooted "$K3S_DNS_DROPIN")" "$DESIRED_DROPIN"
 }
 
-write_record() {
-  local file="$1"
-  local stage="$2"
+# Durable activation record. Every stage write preserves the original start time
+# and accumulates the evidence ({stage, fingerprint, resolvers, restartFrom,
+# restartVerified, error, timestamps}) so the control plane can read the true
+# state from the shared hostPath. Written 0644 (addresses only, no secrets) so the
+# control-plane host-service running as UID 10001 can read it from the state
+# volume; a root-only 0600 file would be invisible to it.
+write_status() {
+  local stage="$1"
+  local error="${2:-}"
   local target
-  target="$(rooted "$file")"
+  target="$(rooted "$DNS_STATUS_FILE")"
   mkdir -p "$(dirname "$target")"
   local tmp="${target}.tmp.$$"
+  STATUS_STAGE="$stage" \
+  STATUS_ERROR="$error" \
+  STATUS_FINGERPRINT="${DESIRED_FINGERPRINT:-}" \
+  STATUS_RESOLVERS="${DESIRED_RESOLV:-}" \
+  STATUS_RESTART_FROM="${RESTART_FROM:-}" \
+  STATUS_RESTART_TOKEN="${RESTART_TOKEN:-}" \
+  STATUS_FILES_RESOLV="$K3S_RESOLV_CONF" \
+  STATUS_FILES_DROPIN="$K3S_DNS_DROPIN" \
   node -e '
     const fs = require("fs");
     const target = process.argv[1];
+    let previous = {};
+    try { previous = JSON.parse(fs.readFileSync(target, "utf8")) || {}; } catch { /* first write */ }
+    const now = new Date().toISOString();
     const payload = {
-      fingerprint: process.argv[2],
-      stage: process.argv[3],
-      resolvers: process.argv[4].split("\n").filter(Boolean),
-      recordedAt: process.argv[5],
-      files: { resolver: process.argv[6], dropin: process.argv[7] }
+      stage: process.env.STATUS_STAGE,
+      fingerprint: process.env.STATUS_FINGERPRINT || previous.fingerprint || null,
+      resolvers: (process.env.STATUS_RESOLVERS || "").split("\n").filter(Boolean),
+      restartFrom: process.env.STATUS_RESTART_FROM || previous.restartFrom || null,
+      restartToken: process.env.STATUS_RESTART_TOKEN || previous.restartToken || null,
+      error: process.env.STATUS_ERROR || null,
+      files: { resolver: process.env.STATUS_FILES_RESOLV, dropin: process.env.STATUS_FILES_DROPIN },
+      startedAt: previous.startedAt || now,
+      updatedAt: now,
+      finishedAt: ["active", "failed"].includes(process.env.STATUS_STAGE) ? now : null
     };
-    fs.writeFileSync(target, JSON.stringify(payload, null, 2) + "\n", { mode: 0o600 });
-  ' "$tmp" "$DESIRED_FINGERPRINT" "$stage" "$DESIRED_RESOLV" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$K3S_RESOLV_CONF" "$K3S_DNS_DROPIN"
+    fs.writeFileSync(target, JSON.stringify(payload, null, 2) + "\n", { mode: 0o644 });
+    // The process umask can mask the create mode; force world-read so UID 10001
+    // can read it regardless of the host umask.
+    fs.chmodSync(target, 0o644);
+  ' "$tmp"
   mv -f "$tmp" "$target"
 }
 
-record_activation() {
-  write_record "$DNS_ACTIVATION_FILE" "active"
+status_field() {
+  local field="$1"
+  local target
+  target="$(rooted "$DNS_STATUS_FILE")"
+  [ -f "$target" ] || return 0
+  node -e '
+    const fs = require("fs");
+    try {
+      const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+      process.stdout.write(String(value?.[process.argv[2]] ?? ""));
+    } catch { process.stdout.write(""); }
+  ' "$target" "$field" 2>/dev/null || true
 }
 
-record_pending() {
-  write_record "$DNS_PENDING_FILE" "restart-requested"
+activation_is_active() {
+  [ "$(status_field stage)" = "active" ] && [ "$(status_field fingerprint)" = "$DESIRED_FINGERPRINT" ]
+}
+
+k3s_is_running() {
+  bash -c "$DNS_K3S_ACTIVE_COMMAND" >/dev/null 2>&1
+}
+
+k3s_start_token() {
+  bash -c "$DNS_K3S_START_COMMAND" 2>/dev/null || true
 }
 
 acquire_lock() {
@@ -316,7 +360,8 @@ restart_k3s() {
     systemctl restart "$K3S_SERVICE"
     return
   fi
-  echo "No systemctl available to restart k3s; skipping restart." >&2
+  echo "No systemctl available to restart k3s; restart cannot be performed." >&2
+  return 1
 }
 
 wait_for_api() {
@@ -333,64 +378,136 @@ wait_for_api() {
   done
 }
 
-rollout_restart() {
-  local namespace="$1" kind="$2" name="$3"
-  if ! "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get "$kind" "$name" >/dev/null 2>&1; then
-    log "Skipping absent ${kind}/${name} in ${namespace}."
+# Restart and verify every workload in a namespace, in a stable order. Rollout
+# status proves the new pods (and their resolv.conf) actually became ready.
+reconcile_namespace() {
+  local namespace="$1"
+  local resources
+  resources="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get deploy,statefulset,daemonset -o name 2>/dev/null || true)"
+  if [ -z "$resources" ]; then
+    log "No workloads found in ${namespace}."
     return 0
   fi
-  "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout restart "$kind/$name"
+  local resource
+  while IFS= read -r resource; do
+    [ -n "$resource" ] || continue
+    if ! "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout restart "$resource" >/dev/null; then
+      echo "Could not restart ${resource} in ${namespace}." >&2
+      return 1
+    fi
+  done <<< "$resources"
+  local failed=0
+  while IFS= read -r resource; do
+    [ -n "$resource" ] || continue
+    if ! "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout status "$resource" --timeout="${DNS_ROLLOUT_TIMEOUT_SECONDS}s" >/dev/null; then
+      echo "Rollout of ${resource} in ${namespace} did not complete within ${DNS_ROLLOUT_TIMEOUT_SECONDS}s." >&2
+      failed=1
+    fi
+  done <<< "$resources"
+  return "$failed"
 }
 
-# Ordered rollout: CoreDNS first (so new pods can resolve), then storage
-# provisioner and Flux controllers (third-party controllers included), then
-# appliance application controllers, control plane last. StatefulSets and
-# DaemonSets are restarted through the same kubectl rollout path.
-default_restart_targets() {
-  cat <<'EOF'
-kube-system daemonset coredns
-kube-system deployment coredns
-local-path-storage deployment local-path-provisioner
-flux-system deployment source-controller
-flux-system deployment kustomize-controller
-flux-system deployment helm-controller
-flux-system deployment notification-controller
-alga-system deployment alga-core
-alga-system statefulset postgresql
-alga-system statefulset redis
-alga-appliance-control-plane deployment appliance-control-plane
-EOF
+# Report pods that are not owned by a restarted controller so the operator knows
+# they still carry the old resolver and were not repaired by this helper.
+report_unmanaged_pods() {
+  local namespace="$1"
+  local json
+  json="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get pods -o json 2>/dev/null || true)"
+  [ -n "$json" ] || return 0
+  local names
+  names="$(printf '%s' "$json" | node -e '
+    const fs = require("fs");
+    let value;
+    try { value = JSON.parse(fs.readFileSync(0, "utf8")); } catch { process.exit(0); }
+    const controlledKinds = new Set(["Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job"]);
+    for (const pod of value.items || []) {
+      const owners = pod.metadata?.ownerReferences || [];
+      const controlled = owners.some((owner) => controlledKinds.has(owner.kind));
+      const phase = pod.status?.phase;
+      if (!controlled && (phase === "Running" || phase === "Pending")) {
+        process.stdout.write(`${pod.metadata.name}\n`);
+      }
+    }
+  ' 2>/dev/null || true)"
+  local name
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    log "Unmanaged pod ${namespace}/${name} still carries the previous resolver and was not recreated; recreate it manually."
+  done <<< "$names"
 }
 
-rollout_existing_pods() {
-  local targets
-  targets="${ALGA_APPLIANCE_DNS_RESTART_TARGETS:-$(default_restart_targets)}"
-  local line namespace kind name
-  while IFS= read -r line; do
-    [ -n "$(trim "$line")" ] || continue
-    namespace="$(printf '%s' "$line" | awk '{print $1}')"
-    kind="$(printf '%s' "$line" | awk '{print $2}')"
-    name="$(printf '%s' "$line" | awk '{print $3}')"
-    rollout_restart "$namespace" "$kind" "$name"
-  done <<< "$targets"
-  log "Existing standalone pods and completed Jobs are not recreated by this helper."
+restart_existing_workloads() {
+  local namespace
+  for namespace in $DNS_NAMESPACE_GROUPS; do
+    log "Recreating workloads in ${namespace} so new pods adopt the resolver."
+    reconcile_namespace "$namespace" || return 1
+  done
+  for namespace in $DNS_NAMESPACE_GROUPS; do
+    report_unmanaged_pods "$namespace"
+  done
 }
 
-# Activation is resumable: when no pending record exists we persist one BEFORE
-# restarting k3s, so a process killed by the restart resumes at the rollout step
-# on the next invocation instead of restarting k3s again (which without the
-# pending record would loop forever).
 activate() {
-  if pending_is_current; then
-    log "Resuming a pending DNS activation; k3s was already restarted for fingerprint ${DESIRED_FINGERPRINT:0:12}."
-  else
-    record_pending
-    log "DNS configuration changed; restarting k3s once and recreating affected pods."
-    restart_k3s
+  local stored_from stored_fp current_token
+  stored_from="$(status_field restartFrom)"
+  stored_fp="$(status_field fingerprint)"
+  current_token="$(k3s_start_token)"
+
+  # A previous restart is only trusted when it belongs to the current
+  # fingerprint AND the k3s start token actually changed. A stage record alone
+  # never proves the restart succeeded. This check is independent of the stored
+  # stage: a prior *failed rollout* also already restarted k3s, so resuming must
+  # skip the restart instead of restarting the cluster again on every reconcile.
+  local restart_already_done=false
+  if [ "$stored_fp" = "$DESIRED_FINGERPRINT" ] \
+    && [ -n "$stored_from" ] && [ -n "$current_token" ] && [ "$stored_from" != "$current_token" ]; then
+    restart_already_done=true
   fi
-  wait_for_api || return 1
-  rollout_existing_pods
-  record_activation
+
+  if $restart_already_done; then
+    log "Resuming a pending DNS activation; k3s was already restarted for fingerprint ${DESIRED_FINGERPRINT:0:12}."
+    write_status restart-confirmed
+  else
+    do_restart "$current_token" || return 1
+  fi
+
+  # Re-verify the host files survived the restart before claiming the new
+  # resolver is in effect.
+  if ! file_matches "$RESOLV_TARGET" "$DESIRED_RESOLV" || ! file_matches "$DROPIN_TARGET" "$DESIRED_DROPIN"; then
+    write_status failed "k3s resolver files changed during activation; refusing to record completion."
+    return 1
+  fi
+
+  write_status rolling-out
+  if ! restart_existing_workloads; then
+    write_status failed "One or more workload rollouts did not become ready."
+    return 1
+  fi
+  write_status active
+  log "Activated resolver configuration fingerprint ${DESIRED_FINGERPRINT:0:12}."
+}
+
+do_restart() {
+  local current_token="$1"
+  log "Restarting k3s once to apply the resolver configuration."
+  RESTART_FROM="$current_token"
+  write_status restarting
+  if ! restart_k3s; then
+    write_status failed "k3s restart command failed."
+    return 1
+  fi
+  if ! wait_for_api; then
+    write_status failed "Kubernetes API did not become ready after the k3s restart."
+    return 1
+  fi
+  local after
+  after="$(k3s_start_token)"
+  if [ -n "$current_token" ] && [ -n "$after" ] && [ "$current_token" = "$after" ]; then
+    write_status failed "k3s start time did not change after the restart; activation is not verified."
+    return 1
+  fi
+  RESTART_TOKEN="$after"
+  write_status restart-confirmed
 }
 
 while [ "$#" -gt 0 ]; do
@@ -433,34 +550,45 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-read_setup_dns
-gather_resolvers
-render_files
-
 RESOLV_TARGET="$(rooted "$K3S_RESOLV_CONF")"
 DROPIN_TARGET="$(rooted "$K3S_DNS_DROPIN")"
 
-resolv_current=false
-dropin_current=false
-file_matches "$RESOLV_TARGET" "$DESIRED_RESOLV" && resolv_current=true
-file_matches "$DROPIN_TARGET" "$DESIRED_DROPIN" && dropin_current=true
-
 if $DRY_RUN; then
+  if ! read_setup_dns; then
+    exit 1
+  fi
+  gather_resolvers
+  render_files
   plan "write ${K3S_RESOLV_CONF} (${#RESOLVERS[@]} nameserver lines, no search domains)"
   plan "write ${K3S_DNS_DROPIN} (resolv-conf: ${K3S_RESOLV_CONF})"
-  if $INITIAL_MODE; then
+  if $INITIAL_MODE && ! k3s_is_running; then
     plan "record activation for the imminent k3s start (no restart)"
-  elif $resolv_current && $dropin_current && activation_is_current; then
+  elif activation_is_active; then
     plan "no change; k3s restart skipped"
-  elif pending_is_current; then
-    plan "resume a pending activation; recreate pods without another k3s restart"
   else
-    plan "restart k3s and recreate: CoreDNS, provisioner, Flux, appliance, control plane"
+    plan "restart k3s and recreate workloads: CoreDNS, storage, Flux, application, control plane"
   fi
   exit 0
 fi
 
 acquire_lock
+
+# Re-read and re-render under the lock: setup inputs may have changed while we
+# waited, and we must generate from the current configuration.
+if ! read_setup_dns; then
+  write_status failed "Could not read setup inputs."
+  exit 1
+fi
+if ! gather_resolvers; then
+  write_status failed "No usable resolver configuration."
+  exit 1
+fi
+render_files
+
+resolv_current=false
+dropin_current=false
+file_matches "$RESOLV_TARGET" "$DESIRED_RESOLV" && resolv_current=true
+file_matches "$DROPIN_TARGET" "$DESIRED_DROPIN" && dropin_current=true
 
 content_changed=false
 if ! $resolv_current || ! $dropin_current; then
@@ -474,13 +602,18 @@ else
   log "DNS resolver files already match the desired configuration."
 fi
 
-# First boot: k3s has not started yet, so it will read these files on the way up.
-# Record activation now so the first running reconcile does not restart k3s just
-# to re-apply a configuration every fresh pod already received.
+# First boot. Only claim activation when k3s has genuinely not started; if it is
+# already running the files were written too late to reach kubelet, so activate.
 if $INITIAL_MODE; then
-  record_activation
-  log "Recorded DNS activation for the imminent k3s start."
-  exit 0
+  if k3s_is_running; then
+    log "k3s is already running; --initial cannot record activation. Activating instead."
+    INITIAL_MODE=false
+    ACTIVATE_OVERRIDE="true"
+  else
+    write_status active
+    log "Recorded DNS activation for the imminent k3s start."
+    exit 0
+  fi
 fi
 
 if [ "$ACTIVATE_OVERRIDE" = "false" ]; then
@@ -488,8 +621,10 @@ if [ "$ACTIVATE_OVERRIDE" = "false" ]; then
   exit 0
 fi
 
-if activation_is_current; then
+if activation_is_active; then
+  write_status active
   log "DNS configuration already active for fingerprint ${DESIRED_FINGERPRINT:0:12}; no restart."
-else
-  activate
+  exit 0
 fi
+
+activate

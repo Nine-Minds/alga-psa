@@ -467,8 +467,12 @@ function normalizeReadinessTiers(tiers) {
 
 function blockerFromFailure(failure) {
   const isBackground = failure.category === 'background-services';
+  // A pending DNS activation is actionable but not a hard failure: show it so the
+  // operator is not told "no blockers" while setup is gated, without styling it
+  // as a critical login blocker.
+  const isPendingDns = failure.pending === true;
   return {
-    severity: isBackground ? 'background' : 'critical',
+    severity: isPendingDns ? 'info' : (isBackground ? 'background' : 'critical'),
     component: failure.category,
     layer: failure.phase,
     step: failure.step || null,
@@ -476,7 +480,8 @@ function blockerFromFailure(failure) {
     details: failure.details || null,
     nextAction: failure.suggestedNextStep || guidanceForCategory(failure.category),
     autoRetry: failure.autoRetry || null,
-    loginBlocking: !isBackground
+    pending: isPendingDns ? true : undefined,
+    loginBlocking: !isBackground && !isPendingDns
   };
 }
 
@@ -703,10 +708,20 @@ function buildStatusSnapshot({
     });
   }
 
-  // A failed cluster-DNS activation is its own blocker: setup cannot safely
-  // redeem or let Flux pull against a resolver that still leaks the customer
-  // search suffix, and this failure is independent of the setup retry budget.
+  // A failed or pending cluster-DNS activation is its own blocker: setup cannot
+  // safely redeem or let Flux pull against a resolver that still leaks the
+  // customer search suffix, and this is independent of the setup retry budget.
+  // The DNS reconcile record is authoritative for this step, so drop any
+  // derived/retained failure carrying the same step (a retryable setup run
+  // writes a `reconcile-cluster-dns` failure too) rather than double-listing it
+  // and hiding the pending flag behind the generic record.
+  const removeDnsStepFailures = () => {
+    for (let i = failures.length - 1; i >= 0; i -= 1) {
+      if (failures[i].step === 'reconcile-cluster-dns') failures.splice(i, 1);
+    }
+  };
   if (dnsReconcile && dnsReconcile.ok === false) {
+    removeDnsStepFailures();
     failures.push({
       category: 'dns',
       phase: 'dns',
@@ -716,6 +731,20 @@ function buildStatusSnapshot({
       details: dnsReconcile.error || null,
       suggestedNextStep: 'Inspect the DNS reconcile log and host k3s configuration, then reconcile again.',
       retrySafe: true,
+      logs: dnsReconcile.logFile ? [`tail -n 200 ${dnsReconcile.logFile}`] : []
+    });
+  } else if (dnsReconcile && dnsReconcile.state === 'submitted' && dnsReconcile.ok === null) {
+    removeDnsStepFailures();
+    failures.push({
+      category: 'dns',
+      phase: 'dns',
+      step: 'reconcile-cluster-dns',
+      lastAction: 'Cluster DNS activation is in progress; setup is gated until it completes.',
+      suspectedCause: 'Cluster DNS activation is in progress; setup is gated until it completes.',
+      details: dnsReconcile.activation?.error || null,
+      suggestedNextStep: 'Wait for DNS activation to finish (watch the reconcile log); if it stalls, run setup again to retry.',
+      retrySafe: true,
+      pending: true,
       logs: dnsReconcile.logFile ? [`tail -n 200 ${dnsReconcile.logFile}`] : []
     });
   }

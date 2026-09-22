@@ -9,7 +9,9 @@ import { WebSocketServer } from 'ws';
 import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
 import { createSetupRetry, installStateRunning } from './setup-retry.mjs';
+import { createSetupEngineLog, DEFAULT_SETUP_ENGINE_LOG_MAX_BYTES } from './setup-engine-log.mjs';
 import { createDnsReconciler } from './dns-reconcile-runner.mjs';
+import { dnsReconcileLaunchBlocker as evaluateDnsLaunchBlocker, dnsBlockerMessage } from './dns-launch-gate.mjs';
 import { persistSetupInputs, validateSetupInputs, runNetworkChecks, resolveReleaseManifest } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { createNativeKubernetesAdapter } from './kubernetes-client-adapter.mjs';
@@ -194,35 +196,15 @@ const setupRunOwnerFile = process.env.ALGA_APPLIANCE_SETUP_RUN_OWNER_FILE
 const SETUP_RUN_OWNER_MAX_AGE_MS = Number(process.env.ALGA_APPLIANCE_SETUP_RUN_OWNER_MAX_AGE_MS || 30 * 60 * 1000);
 const setupEngineLogFile = process.env.ALGA_APPLIANCE_SETUP_ENGINE_LOG
   || path.join(path.dirname(stateFile), 'setup-engine.log');
-const SETUP_ENGINE_LOG_MAX_BYTES = Number(process.env.ALGA_APPLIANCE_SETUP_ENGINE_LOG_MAX_BYTES || 1_000_000);
-let setupEngineLogError = null;
+const SETUP_ENGINE_LOG_MAX_BYTES = Number(process.env.ALGA_APPLIANCE_SETUP_ENGINE_LOG_MAX_BYTES || DEFAULT_SETUP_ENGINE_LOG_MAX_BYTES);
+const setupEngineLog = createSetupEngineLog({ logFile: setupEngineLogFile, maxBytes: SETUP_ENGINE_LOG_MAX_BYTES });
 
 function appendSetupEngineLog(line) {
-  try {
-    fs.appendFileSync(setupEngineLogFile, line.endsWith('\n') ? line : `${line}\n`, { mode: 0o600 });
-  } catch (error) {
-    setupEngineLogError = error instanceof Error ? error.message : String(error);
-  }
+  setupEngineLog.append(line);
 }
 
 function openSetupEngineLog() {
-  try {
-    fs.mkdirSync(path.dirname(setupEngineLogFile), { recursive: true, mode: 0o750 });
-    try {
-      const stats = fs.statSync(setupEngineLogFile);
-      if (stats.size > SETUP_ENGINE_LOG_MAX_BYTES) {
-        fs.renameSync(setupEngineLogFile, `${setupEngineLogFile}.1`);
-      }
-    } catch {
-      // No existing log yet.
-    }
-    const fd = fs.openSync(setupEngineLogFile, 'a', 0o600);
-    fs.chmodSync(setupEngineLogFile, 0o600);
-    return { fd };
-  } catch (error) {
-    setupEngineLogError = error instanceof Error ? error.message : String(error);
-    return { error: setupEngineLogError };
-  }
+  return setupEngineLog.open();
 }
 
 // Durable ownership for a detached setup run. The engine can be killed by a
@@ -280,6 +262,13 @@ const retryController = createSetupRetry({
   readInstallState: () => readInstallStateSafe(),
   workflowOwnerAlive: (state) => setupWorkflowOwnerAlive(state),
   probe: () => getNetworkProbe(),
+  // A pending/failed DNS activation defers (does not consume) an automatic
+  // retry: the launch is not attempted until cluster DNS is active.
+  readyBeforeLaunch: () => {
+    const blocker = dnsReconcileLaunchBlocker();
+    if (blocker) return { ok: false, pending: Boolean(blocker.pending), reason: blocker.error };
+    return { ok: true };
+  },
   launch: () => queueSetupWorkflow(),
   logger: console
 });
@@ -601,9 +590,50 @@ function systemNetworkSummary() {
 // a repeated retry cannot grow unbounded. If the log cannot be opened we still
 // run setup (availability), but the error is retained and surfaced rather than
 // silently reverting to stdio: 'ignore'.
+// Cluster DNS must be verified before a setup run redeems or pulls through a
+// resolver that still leaks the customer search suffix. Both a durable `failed`
+// result and an in-flight `submitted` activation block a new workflow: setup must
+// not start while DNS reconciliation is pending or failed. A pending record older
+// than the activation wait budget is treated as stale so a crashed reconciler
+// cannot wedge setup forever. The decision itself lives in dns-launch-gate.mjs.
+function dnsReconcileLaunchBlocker() {
+  let result;
+  try {
+    result = dnsReconciler.readResult();
+  } catch {
+    /* a missing or unreadable result must not wedge setup */
+    return null;
+  }
+  return evaluateDnsLaunchBlocker(result);
+}
+
+// A setup request refused because DNS is not ready must not look accepted: write
+// a retry-safe blocked state so the retry controller (or the operator) resumes
+// the workflow once activation completes, and the overview shows the blocker.
+function recordSetupBlocker({ step, phase, message, retrySafe = true }) {
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
+  fs.writeFileSync(stateFile, `${JSON.stringify({
+    status: 'setup-blocked',
+    phase,
+    lastAction: message,
+    failure: { step, phase, message, details: message, retrySafe },
+    updatedAt: new Date().toISOString()
+  }, null, 2)}\n`, { mode: 0o600 });
+}
+
 function queueSetupWorkflow() {
   if (process.env.ALGA_APPLIANCE_DISABLE_SETUP_QUEUE === '1') {
     return { ok: false, error: 'Setup queue is disabled.' };
+  }
+
+  const dnsBlocker = dnsReconcileLaunchBlocker();
+  if (dnsBlocker) {
+    return {
+      ok: false,
+      dnsBlocked: true,
+      dnsPending: Boolean(dnsBlocker.pending),
+      error: dnsBlockerMessage(dnsBlocker)
+    };
   }
 
   const opened = openSetupEngineLog();
@@ -650,6 +680,48 @@ function queueSetupWorkflow() {
   writeSetupRunOwner(child.pid);
   appendSetupEngineLog(`[${new Date().toISOString()}] launched child pid ${child.pid}`);
   return { ok: true, pid: child.pid, logFile: setupEngineLogFile, logError: opened.error || null };
+}
+
+// Shared admission path for both setup submission routes. It refuses to queue
+// while cluster DNS is pending/failed, records a durable retry-safe blocker
+// instead of leaving a misleading `setup-queued`, and only then accepts.
+function beginSetupWorkflow() {
+  const dnsBlocker = dnsReconcileLaunchBlocker();
+  if (dnsBlocker) {
+    retryController.reset('manual-setup');
+    const message = dnsBlockerMessage(dnsBlocker);
+    recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message });
+    return { ok: false, statusCode: 409, dnsPending: Boolean(dnsBlocker.pending), error: message };
+  }
+
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
+  fs.writeFileSync(stateFile, `${JSON.stringify({
+    status: 'setup-queued',
+    phase: 'setup',
+    lastAction: 'Setup accepted; background workflow is starting',
+    updatedAt: new Date().toISOString()
+  }, null, 2)}\n`, { mode: 0o600 });
+  // Fresh submit (incl. re-entering a corrected install code): reset the
+  // auto-retry counter so the new attempt is not gated by the prior code's
+  // exhausted retries. Prior history is marked resolved, not deleted.
+  retryController.reset('manual-setup');
+
+  const queued = queueSetupWorkflow();
+  // Only a DNS blocker rejects the submission. Other queue failures (queue
+  // disabled, spawn error) keep the long-standing behavior: the submission is
+  // accepted and the queue error is surfaced alongside it.
+  if (!queued.ok && queued.dnsBlocked) {
+    const message = queued.error || 'Cluster DNS is not ready.';
+    recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message });
+    return { ok: false, statusCode: 409, dnsPending: Boolean(queued.dnsPending), error: message };
+  }
+  return {
+    ok: true,
+    pid: queued.pid,
+    logFile: queued.logFile,
+    logError: queued.logError || null,
+    queueError: queued.ok ? null : (queued.error || 'Setup workflow could not be queued.')
+  };
 }
 
 // LEVERAGE: pattern detached-engine-workflow — queueSetupWorkflow and
@@ -1126,18 +1198,14 @@ const server = http.createServer(async (req, res) => {
         licenseKey: rawLicenseKey || null
       });
       persistSetupInputs(setupInputs, setupInputsFile);
-      fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
-      fs.writeFileSync(stateFile, `${JSON.stringify({
-        status: 'setup-queued',
-        phase: 'setup',
-        lastAction: 'Setup accepted; background workflow is starting',
-        updatedAt: new Date().toISOString()
-      }, null, 2)}\n`, { mode: 0o600 });
-      // Fresh submit (incl. re-entering a corrected install code): reset the
-      // auto-retry counter so the new attempt is not gated by the prior code's
-      // exhausted retries. Prior history is marked resolved, not deleted.
-      retryController.reset('manual-setup');
-      queueSetupWorkflow();
+      const started = beginSetupWorkflow();
+      if (!started.ok) {
+        jsonResponse(res, started.statusCode || 500, {
+          error: started.error,
+          dnsPending: Boolean(started.dnsPending)
+        });
+        return;
+      }
       jsonResponse(res, 202, {
         ok: true,
         redirectTo: '/',
@@ -1178,7 +1246,7 @@ const server = http.createServer(async (req, res) => {
         kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
         networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
         autoRetry: computeAutoRetrySummary(installStateForProbe),
-        setupEngineLog: { file: setupEngineLogFile, error: setupEngineLogError },
+        setupEngineLog: { file: setupEngineLogFile, error: setupEngineLog.error },
         dnsReconcile: dnsReconciler.readResult(),
         runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
       });
@@ -1673,15 +1741,12 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
-      fs.writeFileSync(stateFile, `${JSON.stringify({
-        status: 'setup-queued',
-        phase: 'setup',
-        lastAction: 'Setup accepted; background workflow is starting',
-        updatedAt: new Date().toISOString()
-      }, null, 2)}\n`, { mode: 0o600 });
-      retryController.reset('manual-setup');
-      queueSetupWorkflow();
+      const started = beginSetupWorkflow();
+      if (!started.ok) {
+        res.writeHead(started.statusCode || 500, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end(started.error || 'Setup could not be started.');
+        return;
+      }
 
       res.writeHead(303, { location: '/' });
       res.end();
@@ -1780,7 +1845,7 @@ const server = http.createServer(async (req, res) => {
       kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
       networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
       autoRetry: computeAutoRetrySummary(installStateForProbe),
-      setupEngineLog: { file: setupEngineLogFile, error: setupEngineLogError },
+      setupEngineLog: { file: setupEngineLogFile, error: setupEngineLog.error },
       dnsReconcile: dnsReconciler.readResult(),
       runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
     });
@@ -1798,8 +1863,16 @@ const server = http.createServer(async (req, res) => {
     const engineLogLine = snapshot.engineLog
       ? `<p><strong>Setup engine log:</strong> <code>${escapeHtml(snapshot.engineLog.file || 'unknown')}</code>${snapshot.engineLog.error ? ` <span style="color:#b00">(unavailable: ${escapeHtml(snapshot.engineLog.error)})</span>` : ''}</p>`
       : '';
-    const dnsReconcileLine = snapshot.dnsReconcile
-      ? `<p><strong>Cluster DNS reconcile:</strong> ${snapshot.dnsReconcile.ok ? 'active' : `failed — ${escapeHtml(snapshot.dnsReconcile.error || 'unknown error')}`}${snapshot.dnsReconcile.at ? ` <small>(${escapeHtml(snapshot.dnsReconcile.at)})</small>` : ''}${snapshot.dnsReconcile.logFile ? ` <small>log: <code>${escapeHtml(snapshot.dnsReconcile.logFile)}</code></small>` : ''}</p>`
+    const dnsReconcile = snapshot.dnsReconcile;
+    const dnsReconcileState = dnsReconcile
+      ? dnsReconcile.ok === true
+        ? 'active'
+        : (dnsReconcile.state === 'submitted'
+          ? 'pending — host activation still running (setup is gated until it completes)'
+          : `failed — ${escapeHtml(dnsReconcile.error || 'unknown error')}`)
+      : null;
+    const dnsReconcileLine = dnsReconcile
+      ? `<p><strong>Cluster DNS reconcile:</strong> ${dnsReconcileState}${dnsReconcile.at ? ` <small>(${escapeHtml(dnsReconcile.at)})</small>` : ''}${dnsReconcile.logFile ? ` <small>log: <code>${escapeHtml(dnsReconcile.logFile)}</code></small>` : ''}</p>`
       : '';
     const installerOutput = snapshot.installState?.installerOutput
       ? `${renderPreBlock('Installer stdout', snapshot.installState.installerOutput.stdout || '')}${renderPreBlock('Installer stderr', snapshot.installState.installerOutput.stderr || '')}`

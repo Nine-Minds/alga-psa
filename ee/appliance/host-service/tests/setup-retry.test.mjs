@@ -26,6 +26,7 @@ function setup(options = {}) {
     },
     readInstallState: () => state,
     workflowOwnerAlive: options.workflowOwnerAlive || (() => true),
+    readyBeforeLaunch: options.readyBeforeLaunch || null,
     logger: options.logger || { error: () => {} }
   });
   return {
@@ -175,6 +176,31 @@ test('an unwritable accounting path refuses to launch', async () => {
   const result = await harness.controller.reconcile();
   assert.equal(result.skipped, 'accounting-write-failed');
   assert.equal(harness.launches.length, 0);
+});
+
+test('a pending DNS activation defers an automatic launch without consuming the budget', async () => {
+  const harness = setup({
+    state: blockedState({ status: 'setup-blocked', phase: 'dns' }),
+    readyBeforeLaunch: async () => ({ ok: false, pending: true, reason: 'Cluster DNS activation is still running.' })
+  });
+  const result = await harness.controller.reconcile();
+  assert.equal(result.skipped, 'dns-pending');
+  assert.equal(result.attempts, 0);
+  assert.equal(harness.launches.length, 0);
+  const retry = harness.readRetry();
+  assert.equal(retry.attempts, 0);
+  assert.match(retry.lastReason, /still running/);
+});
+
+test('a ready DNS gate lets the automatic launch proceed', async () => {
+  const harness = setup({
+    state: blockedState({ status: 'setup-blocked', phase: 'dns' }),
+    readyBeforeLaunch: async () => ({ ok: true })
+  });
+  const result = await harness.controller.reconcile();
+  assert.equal(result.launched, true);
+  assert.equal(harness.launches.length, 1);
+  assert.equal(harness.readRetry().attempts, 1);
 });
 
 test('terminal workflow success marks the budget resolved without deleting history', async () => {

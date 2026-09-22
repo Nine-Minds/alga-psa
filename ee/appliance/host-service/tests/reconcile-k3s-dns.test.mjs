@@ -2,6 +2,7 @@ import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import YAML from 'yaml';
 
 const repoRoot = path.resolve(path.join(import.meta.dirname, '..', '..', '..', '..'));
 const launcher = path.join(repoRoot, 'ee', 'appliance', 'scripts', 'reconcile-k3s-dns.sh');
@@ -27,10 +28,61 @@ test('the DNS reconcile Job runs privileged in the support plane with the host h
   assert.match(manifest, /serviceAccountName: default/);
   assert.match(manifest, /hostPID: true/);
   assert.match(manifest, /privileged: true/);
+  // The image defaults to USER 10001; host configuration and activation must run
+  // as root. It has to be explicit on the pod and the reconcile container.
+  const rootRunCount = (manifest.match(/runAsUser: 0/g) || []).length;
+  const rootGroupCount = (manifest.match(/runAsGroup: 0/g) || []).length;
+  assert.ok(rootRunCount >= 2, `expected pod+container runAsUser 0, got ${rootRunCount}`);
+  assert.ok(rootGroupCount >= 2, `expected pod+container runAsGroup 0, got ${rootGroupCount}`);
   assert.match(manifest, new RegExp(`image: ${IMAGE.replace(/[.@/]/g, (m) => `\\${m}`)}`));
   assert.match(manifest, /imagePullPolicy: IfNotPresent/);
   assert.match(manifest, /configure-k3s-dns\.sh/);
   assert.match(manifest, /--activate/);
+  // Host activation is owned by a transient systemd service so it survives the
+  // Job, the control plane and the k3s restart it triggers.
+  assert.match(manifest, /systemd-run/);
+  assert.match(manifest, /alga-appliance-dns-activate/);
+});
+
+test('the dry-run manifest parses as valid YAML and runs as root with the running image', () => {
+  const result = renderManifest();
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  // Parsing (not a text match) is the contract kubectl apply depends on; nested
+  // heredocs unindented at column zero previously made this invalid YAML.
+  const job = YAML.parse(result.stdout);
+  assert.equal(job.apiVersion, 'batch/v1');
+  assert.equal(job.kind, 'Job');
+  assert.equal(job.metadata.name, 'alga-appliance-dns-reconcile');
+  assert.equal(job.metadata.namespace, 'alga-appliance-support');
+
+  const template = job.spec.template.spec;
+  assert.equal(template.hostPID, true);
+  assert.equal(template.hostNetwork, true);
+  // The control-plane image defaults to USER 10001; host configuration and a
+  // k3s restart require root on both the pod and the container.
+  assert.equal(template.securityContext.runAsUser, 0);
+  assert.equal(template.securityContext.runAsGroup, 0);
+
+  const container = template.containers[0];
+  assert.equal(container.image, IMAGE);
+  assert.equal(container.imagePullPolicy, 'IfNotPresent');
+  assert.equal(container.securityContext.privileged, true);
+  assert.equal(container.securityContext.runAsUser, 0);
+  assert.equal(container.securityContext.runAsGroup, 0);
+
+  // The command stages only the fixed helper to the host and launches the
+  // host-owned unit; it is not an arbitrary command endpoint.
+  const command = container.command[2];
+  assert.match(command, /configure-k3s-dns\.sh/);
+  assert.match(command, /--activate/);
+  assert.match(command, /systemd-run/);
+  assert.match(command, /alga-appliance-dns-activate/);
+  assert.doesNotMatch(command, /--host-root/);
+
+  // The helper writes the activation record from host root; assert the mount is
+  // present so the record lands on the shared state path.
+  assert.ok(template.volumes.some((volume) => volume.name === 'host-root' && volume.hostPath?.path === '/'));
 });
 
 test('the Job namespace and service account are overridable for tests and future layouts', () => {
