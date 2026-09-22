@@ -1,12 +1,21 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { TFunction } from 'i18next';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@alga-psa/ui/components/DropdownMenu';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import type { ColumnDefinition } from '@alga-psa/types';
@@ -15,6 +24,7 @@ import {
   getServiceRequestAnswerMappingEditorDataAction,
   publishServiceRequestAnswerMappingAction,
   removeServiceRequestAnswerMappingRuleAction,
+  removeServiceRequestAnswerMappingRulesAction,
   updateServiceRequestAnswerMappingRuleAction,
 } from './actions';
 import type { ServiceRequestAnswerMappingRuleInput } from '../../../lib/service-requests/mapping/mappingDefinitionService';
@@ -148,6 +158,48 @@ export function AnswerMappingSection({
   const [form, setForm] = useState<RuleFormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [selectedRuleIds, setSelectedRuleIds] = useState<Set<string>>(() => new Set());
+  const [visibleRuleIds, setVisibleRuleIds] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [confirmBulkRemove, setConfirmBulkRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const handleVisibleRowsChange = useCallback((rows: MappingRuleRow[]) => {
+    const ids = rows.map((row) => row.ruleId);
+    setVisibleRuleIds((previous) =>
+      previous.length === ids.length && previous.every((id, index) => id === ids[index]) ? previous : ids
+    );
+  }, []);
+
+  const allVisibleSelected = visibleRuleIds.length > 0 && visibleRuleIds.every((id) => selectedRuleIds.has(id));
+  const someVisibleSelected = visibleRuleIds.some((id) => selectedRuleIds.has(id));
+
+  const toggleVisibleRules = (checked: boolean) => {
+    setSelectedRuleIds((previous) => {
+      const next = new Set(previous);
+      visibleRuleIds.forEach((id) => checked ? next.add(id) : next.delete(id));
+      return next;
+    });
+  };
+
+  const toggleRule = (ruleId: string, checked: boolean) => {
+    setSelectedRuleIds((previous) => {
+      const next = new Set(previous);
+      if (checked) next.add(ruleId);
+      else next.delete(ruleId);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const ruleIds = new Set(data?.rules.map((rule) => rule.ruleId) ?? []);
+    setSelectedRuleIds((previous) => {
+      const next = new Set([...previous].filter((id) => ruleIds.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+    setCurrentPage((previous) => Math.min(previous, Math.max(1, Math.ceil(ruleIds.size / pageSize))));
+  }, [data?.rules, pageSize]);
 
   useEffect(() => {
     let cancelled = false;
@@ -282,6 +334,11 @@ export function AnswerMappingSection({
     try {
       const refreshed = await removeServiceRequestAnswerMappingRuleAction(definitionId, ruleId);
       setData(refreshed as unknown as MappingEditorData);
+      setSelectedRuleIds((previous) => {
+        const next = new Set(previous);
+        next.delete(ruleId);
+        return next;
+      });
       if (form?.ruleId === ruleId) {
         setForm(null);
       }
@@ -289,6 +346,26 @@ export function AnswerMappingSection({
     } catch (error) {
       console.error('Failed to remove answer mapping rule', error);
       toast.error(t('editor.answerMapping.messages.removeFailed'));
+    }
+  };
+
+  const removeSelectedRules = async () => {
+    if (selectedRuleIds.size === 0) return;
+    setRemoving(true);
+    try {
+      const refreshed = await removeServiceRequestAnswerMappingRulesAction(definitionId, [...selectedRuleIds]);
+      setData(refreshed as unknown as MappingEditorData);
+      if (form?.ruleId && selectedRuleIds.has(form.ruleId)) {
+        setForm(null);
+      }
+      setSelectedRuleIds(new Set());
+      setConfirmBulkRemove(false);
+      toast.success(t('editor.answerMapping.messages.rulesRemoved', { count: selectedRuleIds.size }));
+    } catch (error) {
+      console.error('Failed to remove selected answer mapping rules', error);
+      toast.error(t('editor.answerMapping.messages.removeFailed'));
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -307,6 +384,30 @@ export function AnswerMappingSection({
   };
 
   const columns: ColumnDefinition<MappingRuleRow>[] = [
+    {
+      title: (
+        <Checkbox
+          id="service-request-answer-mapping-select-page"
+          aria-label={t('editor.answerMapping.selection.selectPage')}
+          checked={allVisibleSelected}
+          indeterminate={!allVisibleSelected && someVisibleSelected}
+          onChange={(event) => toggleVisibleRules(event.target.checked)}
+          skipRegistration
+        />
+      ),
+      dataIndex: 'selection',
+      width: '48px',
+      sortable: false,
+      render: (_value: unknown, record) => (
+        <Checkbox
+          id={`service-request-answer-mapping-select-${record.ruleId}`}
+          aria-label={t('editor.answerMapping.selection.selectRule', { question: questionLabel(record.questionKey) })}
+          checked={selectedRuleIds.has(record.ruleId)}
+          onChange={(event) => toggleRule(record.ruleId, event.target.checked)}
+          skipRegistration
+        />
+      ),
+    },
     {
       title: t('editor.answerMapping.columns.question'),
       dataIndex: 'questionKey',
@@ -333,26 +434,29 @@ export function AnswerMappingSection({
       // DataTable keys columns by dataIndex; a second 'ruleId' column would
       // collide with the selector column and render its cell instead.
       dataIndex: 'actions',
+      width: '72px',
       sortable: false,
       render: (_value: unknown, record) => (
-        <div className="flex gap-2">
-          <Button
-            id={`service-request-answer-mapping-edit-${record.ruleId}`}
-            variant="outline"
-            size="sm"
-            onClick={() => setForm(formFromRule(record))}
-          >
-            {t('editor.answerMapping.editRule')}
-          </Button>
-          <Button
-            id={`service-request-answer-mapping-remove-${record.ruleId}`}
-            variant="destructive"
-            size="sm"
-            onClick={() => removeRule(record.ruleId)}
-          >
-            {t('editor.answerMapping.removeRule')}
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id={`service-request-answer-mapping-actions-${record.ruleId}`}
+              variant="ghost"
+              size="sm"
+              aria-label={t('editor.answerMapping.actionsFor', { question: questionLabel(record.questionKey) })}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setForm(formFromRule(record))}>
+              {t('editor.answerMapping.editRule')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void removeRule(record.ruleId)} className="text-destructive">
+              {t('editor.answerMapping.removeRule')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
@@ -524,10 +628,49 @@ export function AnswerMappingSection({
           {data && data.rules.length === 0 ? (
             <div className="text-sm text-[rgb(var(--color-text-600))]">{t('editor.answerMapping.noRules')}</div>
           ) : (
-            <DataTable id="service-request-answer-mapping-rules" data={data?.rules ?? []} columns={columns} pagination={false} />
+            <DataTable
+              id="service-request-answer-mapping-rules"
+              data={data?.rules ?? []}
+              columns={columns}
+              pagination
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onItemsPerPageChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+              onVisibleRowsChange={handleVisibleRowsChange}
+              rowClassName={(rule) => selectedRuleIds.has(rule.ruleId) ? '!bg-table-selected' : ''}
+            />
           )}
         </>
       )}
+      <BulkActionBar
+        idPrefix="service-request-answer-mapping-bulk"
+        count={selectedRuleIds.size}
+        selectedLabel={t('editor.answerMapping.selection.selectedCount', { count: selectedRuleIds.size })}
+        actions={[{
+          id: 'remove',
+          label: t('editor.answerMapping.selection.removeSelected'),
+          icon: <Trash2 className="h-4 w-4" />,
+          onClick: () => setConfirmBulkRemove(true),
+          destructive: true,
+        }]}
+        onClear={() => setSelectedRuleIds(new Set())}
+        clearLabel={t('editor.answerMapping.selection.clear')}
+      />
+      <ConfirmationDialog
+        id="service-request-answer-mapping-confirm-bulk-remove"
+        isOpen={confirmBulkRemove}
+        onClose={() => setConfirmBulkRemove(false)}
+        onConfirm={removeSelectedRules}
+        isConfirming={removing}
+        title={t('editor.answerMapping.selection.confirmTitle')}
+        message={t('editor.answerMapping.selection.confirmMessage', { count: selectedRuleIds.size })}
+        confirmLabel={t('editor.answerMapping.selection.removeSelected')}
+        cancelLabel={t('editor.answerMapping.cancel')}
+      />
     </Card>
   );
 }

@@ -271,6 +271,16 @@
       "addRule": "Añadir regla",
       "editRule": "Editar",
       "removeRule": "Quitar",
+      "actionsFor": "Acciones para {{question}}",
+      "selection": {
+        "selectPage": "Seleccionar reglas de esta página",
+        "selectRule": "Seleccionar {{question}}",
+        "selectedCount": "{{count}} seleccionadas",
+        "removeSelected": "Eliminar seleccionadas",
+        "clear": "Limpiar",
+        "confirmTitle": "¿Eliminar las reglas seleccionadas?",
+        "confirmMessage": "¿Eliminar {{count}} reglas seleccionadas del borrador? Las versiones publicadas no cambiarán hasta que vuelvas a publicar."
+      },
       "save": "Guardar regla",
       "cancel": "Cancelar",
       "publish": "Publicar asignación",
@@ -325,6 +335,8 @@
       "messages": {
         "ruleSaved": "Regla de asignación guardada",
         "ruleRemoved": "Regla de asignación eliminada",
+        "rulesRemoved_one": "Regla de asignación eliminada",
+        "rulesRemoved_other": "{{count}} reglas de asignación eliminadas",
         "published": "Asignación de respuestas publicada",
         "saveFailed": "No se pudo guardar la regla de asignación",
         "removeFailed": "No se pudo eliminar la regla de asignación",

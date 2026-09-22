@@ -271,6 +271,16 @@
       "addRule": "Add rule",
       "editRule": "Edit",
       "removeRule": "Remove",
+      "actionsFor": "Actions for {{question}}",
+      "selection": {
+        "selectPage": "Select rules on this page",
+        "selectRule": "Select {{question}}",
+        "selectedCount": "{{count}} selected",
+        "removeSelected": "Remove selected",
+        "clear": "Clear",
+        "confirmTitle": "Remove selected rules?",
+        "confirmMessage": "Remove {{count}} selected rules from the draft mapping? Published versions remain unchanged until you publish again."
+      },
       "save": "Save rule",
       "cancel": "Cancel",
       "publish": "Publish mapping",
@@ -325,6 +335,8 @@
       "messages": {
         "ruleSaved": "Mapping rule saved",
         "ruleRemoved": "Mapping rule removed",
+        "rulesRemoved_one": "Mapping rule removed",
+        "rulesRemoved_other": "{{count}} mapping rules removed",
         "published": "Answer mapping published",
         "saveFailed": "Failed to save mapping rule",
         "removeFailed": "Failed to remove mapping rule",

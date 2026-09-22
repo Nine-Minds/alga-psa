@@ -271,6 +271,16 @@
       "addRule": "⟦Ȧḓḓ řŭŀḗ⟧",
       "editRule": "⟦Ḗḓīŧ⟧",
       "removeRule": "⟦Řḗḿȯṽḗ⟧",
+      "actionsFor": "⟦Ȧƈŧīȯƞş ƒȯř {{question}}⟧",
+      "selection": {
+        "selectPage": "⟦Şḗŀḗƈŧ řŭŀḗş ȯƞ ŧħīş ƥȧɠḗ⟧",
+        "selectRule": "⟦Şḗŀḗƈŧ {{question}}⟧",
+        "selectedCount": "⟦{{count}} şḗŀḗƈŧḗḓ⟧",
+        "removeSelected": "⟦Řḗḿȯṽḗ şḗŀḗƈŧḗḓ⟧",
+        "clear": "⟦Ƈŀḗȧř⟧",
+        "confirmTitle": "⟦Řḗḿȯṽḗ şḗŀḗƈŧḗḓ řŭŀḗş?⟧",
+        "confirmMessage": "⟦Řḗḿȯṽḗ {{count}} şḗŀḗƈŧḗḓ řŭŀḗş ƒřȯḿ ŧħḗ ḓřȧƒŧ ḿȧƥƥīƞɠ? Ƥŭƀŀīşħḗḓ ṽḗřşīȯƞş řḗḿȧīƞ ŭƞƈħȧƞɠḗḓ ŭƞŧīŀ ẏȯŭ ƥŭƀŀīşħ ȧɠȧīƞ.⟧"
+      },
       "save": "⟦Şȧṽḗ řŭŀḗ⟧",
       "cancel": "⟦Ƈȧƞƈḗŀ⟧",
       "publish": "⟦Ƥŭƀŀīşħ ḿȧƥƥīƞɠ⟧",
@@ -325,6 +335,8 @@
       "messages": {
         "ruleSaved": "⟦Ḿȧƥƥīƞɠ řŭŀḗ şȧṽḗḓ⟧",
         "ruleRemoved": "⟦Ḿȧƥƥīƞɠ řŭŀḗ řḗḿȯṽḗḓ⟧",
+        "rulesRemoved_one": "⟦Ḿȧƥƥīƞɠ řŭŀḗ řḗḿȯṽḗḓ⟧",
+        "rulesRemoved_other": "⟦{{count}} ḿȧƥƥīƞɠ řŭŀḗş řḗḿȯṽḗḓ⟧",
         "published": "⟦Ȧƞşẇḗř ḿȧƥƥīƞɠ ƥŭƀŀīşħḗḓ⟧",
         "saveFailed": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ḿȧƥƥīƞɠ řŭŀḗ⟧",
         "removeFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ ḿȧƥƥīƞɠ řŭŀḗ⟧",

@@ -271,6 +271,16 @@
       "addRule": "Adicionar regra",
       "editRule": "Editar",
       "removeRule": "Remover",
+      "actionsFor": "Ações para {{question}}",
+      "selection": {
+        "selectPage": "Selecionar regras desta página",
+        "selectRule": "Selecionar {{question}}",
+        "selectedCount": "{{count}} selecionadas",
+        "removeSelected": "Remover selecionadas",
+        "clear": "Limpar",
+        "confirmTitle": "Remover regras selecionadas?",
+        "confirmMessage": "Remover {{count}} regras selecionadas do rascunho? As versões publicadas permanecem inalteradas até publicar novamente."
+      },
       "save": "Guardar regra",
       "cancel": "Cancelar",
       "publish": "Publicar mapeamento",
@@ -325,6 +335,8 @@
       "messages": {
         "ruleSaved": "Regra de mapeamento guardada",
         "ruleRemoved": "Regra de mapeamento removida",
+        "rulesRemoved_one": "Regra de mapeamento removida",
+        "rulesRemoved_other": "{{count}} regras de mapeamento removidas",
         "published": "Mapeamento de respostas publicado",
         "saveFailed": "Não foi possível guardar a regra",
         "removeFailed": "Não foi possível remover a regra",

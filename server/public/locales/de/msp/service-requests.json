@@ -271,6 +271,16 @@
       "addRule": "Regel hinzufügen",
       "editRule": "Bearbeiten",
       "removeRule": "Entfernen",
+      "actionsFor": "Aktionen für {{question}}",
+      "selection": {
+        "selectPage": "Regeln auf dieser Seite auswählen",
+        "selectRule": "{{question}} auswählen",
+        "selectedCount": "{{count}} ausgewählt",
+        "removeSelected": "Ausgewählte entfernen",
+        "clear": "Auswahl aufheben",
+        "confirmTitle": "Ausgewählte Regeln entfernen?",
+        "confirmMessage": "{{count}} ausgewählte Regeln aus dem Entwurf entfernen? Veröffentlichte Versionen bleiben bis zur nächsten Veröffentlichung unverändert."
+      },
       "save": "Regel speichern",
       "cancel": "Abbrechen",
       "publish": "Zuordnung veröffentlichen",
@@ -325,6 +335,8 @@
       "messages": {
         "ruleSaved": "Zuordnungsregel gespeichert",
         "ruleRemoved": "Zuordnungsregel entfernt",
+        "rulesRemoved_one": "Zuordnungsregel entfernt",
+        "rulesRemoved_other": "{{count}} Zuordnungsregeln entfernt",
         "published": "Antwortzuordnung veröffentlicht",
         "saveFailed": "Zuordnungsregel konnte nicht gespeichert werden",
         "removeFailed": "Zuordnungsregel konnte nicht entfernt werden",

@@ -263,6 +263,16 @@ export async function removeAnswerMappingRule(input: {
   ruleId: string;
   updatedBy?: string | null;
 }): Promise<ServiceRequestAnswerMappingRow> {
+  return removeAnswerMappingRules({ ...input, ruleIds: [input.ruleId] });
+}
+
+export async function removeAnswerMappingRules(input: {
+  knex: Knex;
+  tenant: string;
+  definitionId: string;
+  ruleIds: string[];
+  updatedBy?: string | null;
+}): Promise<ServiceRequestAnswerMappingRow> {
   const mapping = await getOrCreateAnswerMapping(
     input.knex,
     input.tenant,
@@ -270,7 +280,8 @@ export async function removeAnswerMappingRule(input: {
     input.updatedBy
   );
   const current = normalizeRulesSnapshot(mapping.rules);
-  const nextRules = current.rules.filter((rule) => rule.ruleId !== input.ruleId);
+  const selectedIds = new Set(input.ruleIds);
+  const nextRules = current.rules.filter((rule) => !selectedIds.has(rule.ruleId));
   return saveMappingRules(input.knex, input.tenant, input.definitionId, nextRules, input.updatedBy);
 }
 

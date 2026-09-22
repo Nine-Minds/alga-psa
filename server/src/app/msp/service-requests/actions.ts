@@ -50,6 +50,7 @@ import {
   previewAnswerMapping,
   publishAnswerMapping,
   removeAnswerMappingRule,
+  removeAnswerMappingRules,
   updateAnswerMappingRule,
   type AnswerMappingPreviewResult,
   type ApplyAnswerMappingResult,
@@ -675,6 +676,18 @@ export const removeServiceRequestAnswerMappingRuleAction = withAuth(async (
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'update', knex);
   await removeAnswerMappingRule({ knex, tenant, definitionId, ruleId, updatedBy: getActorId(user) });
+  return getServiceRequestAnswerMappingEditorData(knex, tenant, definitionId);
+});
+
+export const removeServiceRequestAnswerMappingRulesAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  ruleIds: string[]
+): Promise<ServiceRequestAnswerMappingEditorData> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  await removeAnswerMappingRules({ knex, tenant, definitionId, ruleIds, updatedBy: getActorId(user) });
   return getServiceRequestAnswerMappingEditorData(knex, tenant, definitionId);
 });
 

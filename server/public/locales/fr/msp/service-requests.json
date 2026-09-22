@@ -271,6 +271,16 @@
       "addRule": "Ajouter une règle",
       "editRule": "Modifier",
       "removeRule": "Supprimer",
+      "actionsFor": "Actions pour {{question}}",
+      "selection": {
+        "selectPage": "Sélectionner les règles de cette page",
+        "selectRule": "Sélectionner {{question}}",
+        "selectedCount": "{{count}} sélectionnées",
+        "removeSelected": "Supprimer la sélection",
+        "clear": "Effacer",
+        "confirmTitle": "Supprimer les règles sélectionnées ?",
+        "confirmMessage": "Supprimer {{count}} règles sélectionnées du brouillon ? Les versions publiées restent inchangées jusqu’à une nouvelle publication."
+      },
       "save": "Enregistrer la règle",
       "cancel": "Annuler",
       "publish": "Publier la correspondance",
@@ -325,6 +335,8 @@
       "messages": {
         "ruleSaved": "Règle de correspondance enregistrée",
         "ruleRemoved": "Règle de correspondance supprimée",
+        "rulesRemoved_one": "Règle de correspondance supprimée",
+        "rulesRemoved_other": "{{count}} règles de correspondance supprimées",
         "published": "Correspondance des réponses publiée",
         "saveFailed": "Impossible d’enregistrer la règle",
         "removeFailed": "Impossible de supprimer la règle",

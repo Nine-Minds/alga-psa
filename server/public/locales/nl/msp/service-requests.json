@@ -271,6 +271,16 @@
       "addRule": "Regel toevoegen",
       "editRule": "Bewerken",
       "removeRule": "Verwijderen",
+      "actionsFor": "Acties voor {{question}}",
+      "selection": {
+        "selectPage": "Regels op deze pagina selecteren",
+        "selectRule": "{{question}} selecteren",
+        "selectedCount": "{{count}} geselecteerd",
+        "removeSelected": "Selectie verwijderen",
+        "clear": "Selectie wissen",
+        "confirmTitle": "Geselecteerde regels verwijderen?",
+        "confirmMessage": "{{count}} geselecteerde regels uit het concept verwijderen? Gepubliceerde versies blijven ongewijzigd totdat je opnieuw publiceert."
+      },
       "save": "Regel opslaan",
       "cancel": "Annuleren",
       "publish": "Toewijzing publiceren",
@@ -325,6 +335,8 @@
       "messages": {
         "ruleSaved": "Toewijzingsregel opgeslagen",
         "ruleRemoved": "Toewijzingsregel verwijderd",
+        "rulesRemoved_one": "Toewijzingsregel verwijderd",
+        "rulesRemoved_other": "{{count}} toewijzingsregels verwijderd",
         "published": "Antwoordtoewijzing gepubliceerd",
         "saveFailed": "Toewijzingsregel opslaan mislukt",
         "removeFailed": "Toewijzingsregel verwijderen mislukt",

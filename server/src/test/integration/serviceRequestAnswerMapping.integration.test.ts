@@ -9,6 +9,7 @@ import {
   applyAnswerMapping,
   previewAnswerMapping,
   publishAnswerMapping,
+  removeAnswerMappingRules,
   type ServiceRequestAnswerMappingRuleInput,
 } from '../../lib/service-requests/mapping';
 
@@ -231,6 +232,35 @@ describe('service request answer mapping', () => {
     questionKey,
     destinationKind: 'account',
     targetFieldKey,
+  });
+
+  it('removes selected draft rules together without changing the published version', async () => {
+    const tenant = await createTenant();
+    const definition = await createDefinition(tenant);
+    const versionId = await publishRules(tenant, definition.definitionId, [
+      accountRule('client_name', 'account_name'),
+      accountRule('billing_cycle', 'billing_cycle'),
+      accountRule('properties.industry', 'industry'),
+    ]);
+    const before = await table(tenant, 'service_request_answer_mappings')
+      .where({ definition_id: definition.definitionId })
+      .first<{ rules: { rules: Array<{ ruleId: string; questionKey: string }> } }>('rules');
+    const ruleIds = before!.rules.rules.map((rule) => rule.ruleId);
+
+    const updated = await removeAnswerMappingRules({
+      knex: db,
+      tenant,
+      definitionId: definition.definitionId,
+      ruleIds: [ruleIds[0], ruleIds[2]],
+    });
+
+    expect(updated.rules.rules.map((rule) => rule.questionKey)).toEqual(['billing_cycle']);
+    const published = await table(tenant, 'service_request_answer_mapping_versions')
+      .where({ version_id: versionId })
+      .first<{ rules_snapshot: { rules: Array<{ questionKey: string }> } }>('rules_snapshot');
+    expect(published!.rules_snapshot.rules.map((rule) => rule.questionKey)).toEqual([
+      'account_name', 'billing_cycle', 'industry',
+    ]);
   });
 
   async function loadPayload(tenant: string, submissionId: string) {

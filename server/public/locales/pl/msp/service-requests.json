@@ -271,6 +271,16 @@
       "addRule": "Dodaj regułę",
       "editRule": "Edytuj",
       "removeRule": "Usuń",
+      "actionsFor": "Działania dla {{question}}",
+      "selection": {
+        "selectPage": "Zaznacz reguły na tej stronie",
+        "selectRule": "Zaznacz {{question}}",
+        "selectedCount": "Zaznaczono: {{count}}",
+        "removeSelected": "Usuń zaznaczone",
+        "clear": "Wyczyść",
+        "confirmTitle": "Usunąć zaznaczone reguły?",
+        "confirmMessage": "Usunąć {{count}} zaznaczonych reguł z wersji roboczej? Opublikowane wersje pozostaną bez zmian do czasu ponownej publikacji."
+      },
       "save": "Zapisz regułę",
       "cancel": "Anuluj",
       "publish": "Opublikuj mapowanie",
@@ -325,6 +335,10 @@
       "messages": {
         "ruleSaved": "Zapisano regułę mapowania",
         "ruleRemoved": "Usunięto regułę mapowania",
+        "rulesRemoved_one": "Usunięto regułę mapowania",
+        "rulesRemoved_few": "Usunięto {{count}} reguły mapowania",
+        "rulesRemoved_many": "Usunięto {{count}} reguł mapowania",
+        "rulesRemoved_other": "Usunięto reguły mapowania: {{count}}",
         "published": "Opublikowano mapowanie odpowiedzi",
         "saveFailed": "Nie udało się zapisać reguły mapowania",
         "removeFailed": "Nie udało się usunąć reguły mapowania",
