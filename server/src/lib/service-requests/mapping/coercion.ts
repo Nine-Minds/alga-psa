@@ -41,6 +41,41 @@ export function coerceToNumber(raw: unknown): MappingCoercionResult {
   return { ok: false, error: 'Value must be a number' };
 }
 
+// Integer strings are accepted only in plain decimal form: no fractions, no
+// exponent, no thousands separators. Anything else is rejected rather than
+// silently rounded or truncated.
+const INTEGER_STRING_PATTERN = /^[+-]?\d+$/;
+
+/**
+ * Integer-valued coercion for targets stored in an integer/bigint column.
+ * Fractional input (`"1200.50"`, `1200.5`), non-finite numbers and values
+ * outside the safe-integer range are rejected — never rounded. Providers use
+ * this for columns like `clients.credit_limit` (bigint) so preview and apply
+ * agree and the value never reaches Postgres to fail there.
+ */
+export function coerceToInteger(raw: unknown): MappingCoercionResult {
+  let parsed: number;
+  if (typeof raw === 'number') {
+    parsed = raw;
+  } else if (typeof raw === 'string' && raw.trim() !== '') {
+    const trimmed = raw.trim();
+    if (!INTEGER_STRING_PATTERN.test(trimmed)) {
+      return { ok: false, error: 'Value must be a whole number' };
+    }
+    parsed = Number(trimmed);
+  } else {
+    return { ok: false, error: 'Value must be a whole number' };
+  }
+
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+    return { ok: false, error: 'Value must be a whole number' };
+  }
+  if (!Number.isSafeInteger(parsed)) {
+    return { ok: false, error: 'Value must be a whole number within the supported range' };
+  }
+  return { ok: true, value: parsed };
+}
+
 export function coerceToBoolean(raw: unknown): MappingCoercionResult {
   if (typeof raw === 'boolean') {
     return { ok: true, value: raw };
@@ -58,6 +93,66 @@ export function coerceToBoolean(raw: unknown): MappingCoercionResult {
   return { ok: false, error: 'Value must be true or false' };
 }
 
+// The portal's `date` field submits a local calendar date as `YYYY-MM-DD`
+// (RequestServiceForm.toIsoDateString). Full ISO datetimes are also accepted so
+// stored/API answers round-trip. `new Date` alone is unusable here: it happily
+// normalizes impossible dates ("2027-02-30" -> 2027-03-02), silently persisting
+// a date the answer never named. We therefore parse the components explicitly
+// and verify them against real calendar rules before constructing a Date.
+const ISO_DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const ISO_DATETIME_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?(?:[Zz]|[+-]\d{2}:\d{2})?$/;
+
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+function isValidCalendarDate(year: number, month: number, day: number): boolean {
+  if (month < 1 || month > 12 || day < 1) {
+    return false;
+  }
+  const maxDay = month === 2 && isLeapYear(year) ? 29 : DAYS_IN_MONTH[month - 1];
+  return day <= maxDay;
+}
+
+function utcDate(year: number, month: number, day: number): Date {
+  // setUTCFullYear avoids Date.UTC's 0-99 -> 1900-1999 remap.
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+}
+
+function parseStrictDate(raw: string): Date | null {
+  const dateOnly = ISO_DATE_ONLY_PATTERN.exec(raw);
+  if (dateOnly) {
+    const year = Number(dateOnly[1]);
+    const month = Number(dateOnly[2]);
+    const day = Number(dateOnly[3]);
+    return isValidCalendarDate(year, month, day) ? utcDate(year, month, day) : null;
+  }
+
+  const datetime = ISO_DATETIME_PATTERN.exec(raw);
+  if (datetime) {
+    const year = Number(datetime[1]);
+    const month = Number(datetime[2]);
+    const day = Number(datetime[3]);
+    const hour = Number(datetime[4]);
+    const minute = Number(datetime[5]);
+    const second = datetime[6] === undefined ? 0 : Number(datetime[6]);
+    if (!isValidCalendarDate(year, month, day)) return null;
+    if (hour > 23 || minute > 59 || second > 59) return null;
+    // Components are proven valid, so any remaining rejection (e.g. a bogus
+    // timezone offset) is a genuine parse failure rather than normalization.
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  return null;
+}
+
 export function coerceToDate(raw: unknown): MappingCoercionResult {
   if (raw instanceof Date) {
     return Number.isNaN(raw.getTime())
@@ -65,10 +160,10 @@ export function coerceToDate(raw: unknown): MappingCoercionResult {
       : { ok: true, value: raw.toISOString() };
   }
   if (typeof raw === 'string' && raw.trim() !== '') {
-    const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime())
-      ? { ok: false, error: 'Value must be a date' }
-      : { ok: true, value: parsed.toISOString() };
+    const parsed = parseStrictDate(raw.trim());
+    return parsed
+      ? { ok: true, value: parsed.toISOString() }
+      : { ok: false, error: 'Value must be a valid calendar date (YYYY-MM-DD)' };
   }
   return { ok: false, error: 'Value must be a date' };
 }

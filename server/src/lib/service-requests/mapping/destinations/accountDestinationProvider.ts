@@ -12,6 +12,7 @@ import type {
 import {
   alwaysValid,
   coerceToBoolean,
+  coerceToInteger,
   coerceToNumber,
   coerceToString,
   mappingValuesEqual,
@@ -66,6 +67,20 @@ function numberField(fieldKey: string, displayLabel: string): MappingTargetField
   };
 }
 
+// Integer-valued columns (bigint) need integer semantics, not the generic
+// number coercion: `"1200.50"` must fail visibly in preview and apply alike
+// instead of reaching Postgres and failing there.
+function integerField(fieldKey: string, displayLabel: string): MappingTargetField {
+  return {
+    fieldKey,
+    displayLabel,
+    dataType: 'number',
+    coerce: coerceToInteger,
+    validate: alwaysValid,
+    requiredPermission: CLIENT_PERMISSION,
+  };
+}
+
 function booleanField(fieldKey: string, displayLabel: string): MappingTargetField {
   return {
     fieldKey,
@@ -101,7 +116,7 @@ const ACCOUNT_TARGET_FIELDS: MappingTargetField[] = [
   stringField('tax_id_number', 'Tax ID number'),
   stringField('payment_terms', 'Payment terms'),
   enumField('billing_cycle', 'Billing cycle', BILLING_CYCLE_VALUES),
-  numberField('credit_limit', 'Credit limit'),
+  integerField('credit_limit', 'Credit limit'),
   stringField('preferred_payment_method', 'Preferred payment method'),
   booleanField('auto_invoice', 'Auto-invoice'),
   enumField('invoice_delivery_method', 'Invoice delivery method', INVOICE_DELIVERY_VALUES),
