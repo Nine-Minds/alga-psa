@@ -23,7 +23,7 @@ async function removeDirIfExists(dirPath: string): Promise<void> {
 
 describe('validate-runtime-imports', () => {
   const tempDirs: string[] = [];
-  const scriptPath = fileURLToPath(new URL('./validate-runtime-imports.mjs', import.meta.url));
+  const scriptPath = fileURLToPath(new URL('../../scripts/validate-runtime-imports.mjs', import.meta.url));
 
   afterEach(async () => {
     while (tempDirs.length > 0) {

@@ -28,21 +28,56 @@ const REPO_ROOT = path.resolve(SERVICE_ROOT, '../..');
 const DIST_ROOT = path.resolve(
   process.env.WORKFLOW_WORKER_STORAGE_DIST_ROOT || path.join(SERVICE_ROOT, 'dist'),
 );
-const STORAGE_DIST = path.join(REPO_ROOT, 'packages', 'storage', 'dist');
+const STORAGE_DIST = path.resolve(
+  process.env.WORKFLOW_WORKER_STORAGE_DIST || path.join(REPO_ROOT, 'packages', 'storage', 'dist'),
+);
+
+// The dist directory existing is not enough: a failed or interrupted tsup run
+// can leave only tsconfig.tsbuildinfo behind. Require the exact entry outputs
+// this check (and the runtime) import, and rebuild when any is absent.
+const REQUIRED_STORAGE_OUTPUTS = [
+  'index.mjs',
+  'config/storage.mjs',
+  'StorageProviderFactory.mjs',
+];
 
 const BARREL = '@alga-psa/storage';
 const STORAGE_SPECIFIER = /(?:import\s*\(\s*|from\s*|require\s*\(\s*|import\s+)['"](@alga-psa\/storage(?:\/[^'"]*)?)['"]/g;
 
-function ensureStorageBuilt() {
-  if (fs.existsSync(STORAGE_DIST)) return;
-  const npmExec = process.env.npm_execpath;
-  const result = spawnSync(
-    npmExec ? process.execPath : 'npm',
-    npmExec ? [npmExec, 'run', 'build', '--workspace=@alga-psa/storage'] : ['run', 'build', '--workspace=@alga-psa/storage'],
-    { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'inherit' },
-  );
+function missingStorageOutputs() {
+  return REQUIRED_STORAGE_OUTPUTS.filter((rel) => !fs.existsSync(path.join(STORAGE_DIST, rel)));
+}
+
+function runStorageBuild() {
+  const injectedCommand = process.env.WORKFLOW_WORKER_STORAGE_BUILD_CMD;
+  const result = injectedCommand
+    ? spawnSync('sh', ['-c', injectedCommand], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'inherit' })
+    : (() => {
+        const npmExec = process.env.npm_execpath;
+        return spawnSync(
+          npmExec ? process.execPath : 'npm',
+          npmExec
+            ? [npmExec, 'run', 'build', '--workspace=@alga-psa/storage']
+            : ['run', 'build', '--workspace=@alga-psa/storage'],
+          { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'inherit' },
+        );
+      })();
   if (result.error || result.status !== 0) {
     throw new Error(`Unable to build @alga-psa/storage: ${result.error?.message ?? result.stderr}`);
+  }
+}
+
+function ensureStorageBuilt() {
+  let missing = missingStorageOutputs();
+  if (missing.length === 0) return;
+
+  runStorageBuild();
+
+  missing = missingStorageOutputs();
+  if (missing.length > 0) {
+    throw new Error(
+      `@alga-psa/storage dist at ${STORAGE_DIST} is incomplete after build; missing ${missing.join(', ')}`,
+    );
   }
 }
 
