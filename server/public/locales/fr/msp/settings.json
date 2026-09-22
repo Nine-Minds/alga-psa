@@ -1218,6 +1218,7 @@
         "followTheme": "Lorsque cette option est activée, le portail client utilise le thème choisi dans Paramètres → Apparence. Lorsqu’elle est désactivée, les couleurs ci-dessous le remplacent.",
         "followThemeActive": "Les couleurs ci-dessous sont conservées mais ne sont pas appliquées tant que le portail suit le thème de l’organisation."
       },
+      "cropHelp": "Faites glisser et zoomez pour choisir la partie affichée dans le panneau latéral du portail et dans tous les cadres ronds. Votre logo large n'est pas modifié.",
       "heroGradient": {
         "primaryShades": "Couleur principale vers une nuance principale",
         "primarySecondary": "Couleur principale vers couleur secondaire"
@@ -1487,7 +1488,8 @@
     "whiteLabel": {
       "title": "Personnaliser la marque de l’application MSP",
       "description": "Téléversez votre logo une seule fois. Il remplace la marque Alga dans le menu latéral MSP, et le portail client utilise les mêmes images.",
-      "logoHelp": "La marque carrée est utilisée partout où l’espace est carré : le menu latéral réduit et les cadres circulaires. Le logo large facultatif remplace la marque et le nom dans le menu latéral déployé : téléversez-en donc un qui contient déjà le nom de votre entreprise. Le menu latéral s’adapte à son propre arrière-plan : les variantes pour arrière-plans sombres sur un menu sombre, les claires sur un menu clair, et à défaut la variante que vous avez téléversée.",
+      "logoHelp": "La marque carrée est utilisée partout où l’espace est carré : le menu latéral réduit et les cadres circulaires. Déposez un logo large dans un emplacement carré et choisissez la partie qui devient le symbole ; une fois un logo large importé, vous pouvez aussi découper le symbole directement à partir de celui-ci. Le logo large facultatif remplace la marque et le nom dans le menu latéral déployé : téléversez-en donc un qui contient déjà le nom de votre entreprise. Le menu latéral s’adapte à son propre arrière-plan : les variantes pour arrière-plans sombres sur un menu sombre, les claires sur un menu clair, et à défaut la variante que vous avez téléversée.",
+      "cropHelp": "Faites glisser et zoomez pour choisir la partie affichée dans le menu latéral replié et dans tous les cadres ronds. Votre logo large n'est pas modifié.",
       "fields": {
         "mark": "Marque carrée",
         "markDark": "Marque carrée pour arrière-plans sombres",

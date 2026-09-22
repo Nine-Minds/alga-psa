@@ -6,7 +6,10 @@
  * visible only to its owner/grantees (not to other `credential:audit`
  * holders), Hudu activity is visible only to viewers whose bundle scope
  * admits the owning client, and users missing either `credential:read` or
- * `credential:audit` are refused outright. Also covers keyset pagination,
+ * `credential:audit` are refused outright. A DELETED credential keeps its
+ * history under the snapshot the deletion recorded — restricted rows stay
+ * owner/grantee-only, the rest is client-scoped, pre-snapshot deletions fall
+ * back to the client scope. Also covers keyset pagination,
  * per-credential history ordering,
  * filters, actor/name resolution, and the value-free enrichment deltas.
  *
@@ -398,6 +401,123 @@ describe('credential audit reader — scope + paging + enrichment', () => {
     expect(bCredentialIds).not.toContain(restrictedId);
     expect(bCredentialIds).not.toContain('hudu:101:42');
     expect(bPage.events.find((event) => event.operation === 'hudu_password_reveal')).toBeUndefined();
+  });
+
+  it('keeps a deleted credential in the vault-wide log with its prior history', async () => {
+    const source = new NativeCredentialSource();
+    const ctxA = { tenant: tenantId, userId: userA, user: userFor(userA) };
+    const doomed = await source.create(ctxA, {
+      clientId: clientY,
+      name: 'Retired Firewall',
+      password: 'delete-me-secret',
+    });
+    await source.reveal(ctxA, doomed.id);
+    await source.remove(ctxA, doomed.id);
+
+    const page = await callAudit(userFor(userA), { tenant: tenantId }, {});
+    const rows = page.events.filter((event) => event.credentialId === doomed.id);
+    const operations = rows.map((event) => event.operation);
+    expect(operations).toContain('credential_deleted');
+    expect(operations).toContain('credential_reveal');
+    expect(operations).toContain('credential_created');
+    // The live name lookup misses once the row is gone; the deletion snapshot
+    // supplies the name for every row of that credential.
+    expect(rows.every((event) => event.credentialName === 'Retired Firewall')).toBe(true);
+    expect(rows.every((event) => event.clientId === clientY)).toBe(true);
+
+    // The per-credential History of a deleted credential still resolves.
+    const history = await callAudit(userFor(userA), { tenant: tenantId }, { credentialId: doomed.id });
+    expect(history.events.map((event) => event.operation)).toContain('credential_deleted');
+
+    // The snapshot is metadata only.
+    expect(JSON.stringify(page.events)).not.toContain('delete-me-secret');
+  });
+
+  it('authorizes a deleted restricted credential from its snapshot grants', async () => {
+    const source = new NativeCredentialSource();
+    const ctxA = { tenant: tenantId, userId: userA, user: userFor(userA) };
+    // A third viewer with the permissions but no grant and no bundle.
+    const userC = await seedUser(`audit-user-c-${randomUUID().slice(0, 8)}`);
+    await grantCredentialAudit(userC);
+
+    // Restricted and on client Y (inside user B's bundle), so the only thing
+    // that can hide it from user C is the restriction snapshot itself.
+    const secretive = await source.create(ctxA, {
+      clientId: clientY,
+      name: 'Restricted Retired Switch',
+      password: 'restricted-delete-secret',
+    });
+    await source.setRestriction(ctxA, secretive.id, {
+      isRestricted: true,
+      grants: [{ subjectType: 'user', subjectId: userB }],
+    });
+    await source.remove(ctxA, secretive.id);
+
+    // Snapshot grantee sees it, with the snapshot name.
+    const bPage = await callAudit(userFor(userB), { tenant: tenantId }, {});
+    const bRows = bPage.events.filter((event) => event.credentialId === secretive.id);
+    expect(bRows.map((event) => event.operation)).toContain('credential_deleted');
+    expect(bRows.every((event) => event.credentialName === 'Restricted Retired Switch')).toBe(true);
+
+    // Creator (and deleting actor) sees it.
+    const aIds = (await callAudit(userFor(userA), { tenant: tenantId }, {})).events.map((event) => event.credentialId);
+    expect(aIds).toContain(secretive.id);
+
+    // Everyone else sees nothing of it — not even that it existed.
+    const cIds = (await callAudit(userFor(userC), { tenant: tenantId }, {})).events.map((event) => event.credentialId);
+    expect(cIds).not.toContain(secretive.id);
+    const cHistory = await callAudit(userFor(userC), { tenant: tenantId }, { credentialId: secretive.id });
+    expect(cHistory.events).toHaveLength(0);
+  });
+
+  it('hides a deleted credential from a viewer whose bundle excludes its client', async () => {
+    const source = new NativeCredentialSource();
+    const ctxA = { tenant: tenantId, userId: userA, user: userFor(userA) };
+    const doomed = await source.create(ctxA, {
+      clientId: clientX,
+      name: 'Client X Retired NAS',
+      password: 'x-secret',
+    });
+    await source.remove(ctxA, doomed.id);
+
+    const aPage = await callAudit(userFor(userA), { tenant: tenantId }, {});
+    expect(
+      aPage.events.some((event) => event.credentialId === doomed.id && event.operation === 'credential_deleted')
+    ).toBe(true);
+
+    const bPage = await callAudit(userFor(userB), { tenant: tenantId }, {});
+    expect(bPage.events.some((event) => event.credentialId === doomed.id)).toBe(false);
+    const bHistory = await callAudit(userFor(userB), { tenant: tenantId }, { credentialId: doomed.id });
+    expect(bHistory.events).toHaveLength(0);
+  });
+
+  it('surfaces a pre-snapshot credential_deleted row under the client scope', async () => {
+    // Deletions written before the writer stamped the ACL snapshot carry only
+    // the base details — they fall back to the client-scope rule so the fix is
+    // retroactive for rows already in audit_logs.
+    const legacyOnY = randomUUID();
+    const legacyOnX = randomUUID();
+    await writeCredentialAudit(db, tenantId, 'credential_deleted', {
+      userId: userA,
+      credentialId: legacyOnY,
+      clientId: clientY,
+    });
+    await writeCredentialAudit(db, tenantId, 'credential_deleted', {
+      userId: userA,
+      credentialId: legacyOnX,
+      clientId: clientX,
+    });
+
+    const aIds = (await callAudit(userFor(userA), { tenant: tenantId }, {})).events.map((event) => event.credentialId);
+    expect(aIds).toContain(legacyOnY);
+    expect(aIds).toContain(legacyOnX);
+
+    const bPage = await callAudit(userFor(userB), { tenant: tenantId }, {});
+    const bIds = bPage.events.map((event) => event.credentialId);
+    expect(bIds).toContain(legacyOnY);
+    expect(bIds).not.toContain(legacyOnX);
+    // No snapshot name to resolve — the screen renders its own deleted label.
+    expect(bPage.events.find((event) => event.credentialId === legacyOnY)!.credentialName).toBeNull();
   });
 
   it('includes hudu_password_reveal rows in a Hudu credential per-credential History', async () => {

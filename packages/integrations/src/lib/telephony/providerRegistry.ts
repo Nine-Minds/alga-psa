@@ -1,4 +1,3 @@
-import { RELEASE_V1_6_FEATURE_FLAG } from '@alga-psa/core/features';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { TELEPHONY_PROVIDERS } from '@alga-psa/telephony/types';
 import type { TelephonyProviderKind } from '@alga-psa/telephony/types';
@@ -18,8 +17,6 @@ export interface TelephonyProviderRegistryEntry {
   descriptionKey: string;
   /** Tier feature required beyond the class-wide edition gate, or null. */
   requiresTierFeature: TIER_FEATURES | null;
-  /** Release flag that gates the settings card only, or null. */
-  releaseFlag: string | null;
 }
 
 const TEAMS_PHONE_ENTRY: TelephonyProviderRegistryEntry = {
@@ -27,7 +24,6 @@ const TEAMS_PHONE_ENTRY: TelephonyProviderRegistryEntry = {
   labelKey: 'integrations.telephony.providers.teamsPhone.label',
   descriptionKey: 'integrations.telephony.providers.teamsPhone.description',
   requiresTierFeature: null,
-  releaseFlag: null,
 };
 
 const THREECX_ENTRY: TelephonyProviderRegistryEntry = {
@@ -35,7 +31,6 @@ const THREECX_ENTRY: TelephonyProviderRegistryEntry = {
   labelKey: 'integrations.telephony.providers.threecx.label',
   descriptionKey: 'integrations.telephony.providers.threecx.description',
   requiresTierFeature: TIER_FEATURES.PBX_TELEPHONY,
-  releaseFlag: RELEASE_V1_6_FEATURE_FLAG,
 };
 
 const REGISTRY: Record<TelephonyProviderKind, TelephonyProviderRegistryEntry> = {

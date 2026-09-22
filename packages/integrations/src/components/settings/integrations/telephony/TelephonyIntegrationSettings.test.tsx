@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   setProviderEnabled: vi.fn(async () => ({ success: true })),
   setAutoTicketPolicy: vi.fn(async () => ({ success: true })),
   searchParams: {} as Record<string, string>,
-  flagEnabled: true,
 }));
 
 vi.mock('../../../../actions/integrations/telephonyActions', () => ({
@@ -23,12 +22,6 @@ vi.mock('../../../../actions/integrations/telephonyActions', () => ({
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({ get: (key: string) => mocks.searchParams[key] ?? null }),
 }));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => ({ enabled: mocks.flagEnabled, loading: false, error: null }),
-}));
-
-vi.mock('@alga-psa/core/features', () => ({ RELEASE_V1_6_FEATURE_FLAG: 'release-v1-6-feature' }));
 
 // The 3CX panel loads its own state through server actions; the chooser test
 // only cares that selecting the card mounts it.
@@ -84,7 +77,6 @@ describe('TelephonyIntegrationSettings', () => {
     cleanup();
     vi.clearAllMocks();
     mocks.searchParams = {};
-    mocks.flagEnabled = true;
     window.history.pushState({}, '', '/msp/settings?category=communication');
   });
 
@@ -160,7 +152,7 @@ describe('TelephonyIntegrationSettings', () => {
     await waitFor(() => expect(container.querySelector('#threecx-integration-settings')).toBeTruthy());
   });
 
-  it('T105: the 3CX card stays out of the chooser without the release flag or the tier', async () => {
+  it('T105: the 3CX card stays out of the chooser without the tier', async () => {
     const threecx = {
       provider: '3cx',
       status: 'not_configured' as const,
@@ -178,13 +170,6 @@ describe('TelephonyIntegrationSettings', () => {
     await waitFor(() => expect(container.querySelector('#telephony-provider-card-3cx')).toBeTruthy());
 
     cleanup();
-    mocks.flagEnabled = false;
-    const flagOff = render(<TelephonyIntegrationSettings />);
-    await screen.findByText('Teams Phone');
-    expect(flagOff.container.querySelector('#telephony-provider-card-3cx')).toBeNull();
-
-    cleanup();
-    mocks.flagEnabled = true;
     mocks.getOverview.mockResolvedValue(overview({
       providers: [teamsPhone(), {
         ...threecx,

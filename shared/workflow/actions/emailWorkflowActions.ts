@@ -1427,7 +1427,7 @@ export function normalizeInboundEmailProvider(
 
 export function buildInboundEmailCommentMetadata(
   metadata: unknown,
-  inboundReplyEvent?: { provider: string }
+  inboundReplyEvent?: { provider: string; from?: string }
 ): CommentMetadata {
   const baseMetadata: Record<string, unknown> =
     metadata && typeof metadata === 'object' && !Array.isArray(metadata)
@@ -1451,6 +1451,12 @@ export function buildInboundEmailCommentMetadata(
   if (providerType) {
     emailMetadata.provider = providerType;
     emailMetadata.providerType = providerType;
+  }
+
+  // Without a sender address the comment carries no identity at all, so its
+  // notification event has no author to render for an unmatched sender.
+  if (!emailMetadata.fromAddress && inboundReplyEvent?.from) {
+    emailMetadata.fromAddress = inboundReplyEvent.from;
   }
 
   return {
@@ -1550,6 +1556,7 @@ export async function createCommentFromEmail(
           commentData.inboundReplyEvent
             ? {
                 provider: commentData.inboundReplyEvent.provider,
+                from: commentData.inboundReplyEvent.from,
               }
             : undefined
         )

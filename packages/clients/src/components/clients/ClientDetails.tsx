@@ -21,6 +21,7 @@ import {
   updateClient,
   uploadClientLogo,
   deleteClientLogo,
+  recropClientLogo,
   deleteClient,
   validateClientDeletion,
   reactivateClientContacts,
@@ -1781,14 +1782,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             entityId={editedClient.client_id}
             entityName={editedClient.client_name}
             imageUrl={editedClient.logoUrl ?? null}
+            wideImageUrl={editedClient.logoWideUrl ?? null}
             uploadAction={uploadClientLogo}
             deleteAction={deleteClientLogo}
-            onImageChange={async (newLogoUrl) => {
+            recropAction={recropClientLogo}
+            cropWideToSquare
+            previewShape="auto"
+            onImageChange={async (newLogoUrl, newWideUrl) => {
               setEditedClient(prev => {
                 if (!prev) return prev;
                 return {
                   ...prev,
-                  logoUrl: newLogoUrl
+                  logoUrl: newLogoUrl,
+                  logoWideUrl: newWideUrl ?? null,
                 };
               });
               

@@ -41,8 +41,6 @@ import {
   type ServiceRequestDefinitionEditorData,
   ServiceRequestDefinitionBusinessError,
   type ServiceRequestDefinitionErrorCode,
-  SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG,
-  applyStoreOnlyAuthoringGateToEditorData,
   addAnswerMappingRule,
   applyAnswerMapping,
   getServiceRequestAnswerMappingEditorData,
@@ -58,7 +56,6 @@ import {
   type ServiceRequestAnswerMappingEditorData,
   type ServiceRequestAnswerMappingRuleInput,
 } from '../../../lib/service-requests';
-import { featureFlags } from '../../../lib/feature-flags/featureFlags';
 import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
 
 type AuthUser = Parameters<Parameters<typeof withAuth>[0]>[0];
@@ -88,13 +85,6 @@ function throwHttpError(status: number, message: string): never {
   const error = new Error(message) as Error & { status?: number };
   error.status = status;
   throw error;
-}
-
-async function isStoreOnlyAuthoringEnabled(user: AuthUser, tenant: string): Promise<boolean> {
-  return featureFlags.isEnabled(SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG, {
-    userId: getActorId(user) ?? undefined,
-    tenantId: tenant,
-  });
 }
 
 async function requireServiceRequestPermission(
@@ -139,13 +129,7 @@ export const getServiceRequestDefinitionEditorDataAction = withAuth(async (
 ): Promise<ServiceRequestDefinitionEditorData | null> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'read', knex);
-  const editorData = await getServiceRequestDefinitionEditorData(knex, tenant, definitionId);
-  if (!editorData) {
-    return null;
-  }
-
-  const storeOnlyEnabled = await isStoreOnlyAuthoringEnabled(user, tenant);
-  return applyStoreOnlyAuthoringGateToEditorData(editorData, storeOnlyEnabled);
+  return getServiceRequestDefinitionEditorData(knex, tenant, definitionId);
 });
 
 export interface ServiceRequestTicketRoutingReferenceData {

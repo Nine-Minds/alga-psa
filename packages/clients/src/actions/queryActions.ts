@@ -9,6 +9,7 @@ import {
   getClientLogoUrl,
   getClientLogoUrlsBatch,
   getContactAvatarUrlsBatch,
+  getEntityImageUrl,
 } from '@alga-psa/formatting/avatarUtils';
 import { hasPermissionAsync } from '../lib/authHelpers';
 import InteractionModel from '../models/interactions';
@@ -225,11 +226,15 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
     return null;
   }
 
-  const logoUrl = await getClientLogoUrl(clientId, tenant);
+  const [logoUrl, logoWideUrl] = await Promise.all([
+    getClientLogoUrl(clientId, tenant),
+    getEntityImageUrl('client', clientId, tenant, 'wide'),
+  ]);
 
   return {
     ...clientData,
     logoUrl,
+    logoWideUrl,
   } as IClientWithLocation;
 });
 

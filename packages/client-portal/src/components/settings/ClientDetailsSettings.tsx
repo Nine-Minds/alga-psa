@@ -16,7 +16,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getCurrentUser, getUserRolesWithPermissions, getUserClientId } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getClientById } from '@alga-psa/clients/actions/queryActions';
-import { updateClient, uploadClientLogo, deleteClientLogo } from '@alga-psa/clients/actions/clientActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, recropClientLogo } from '@alga-psa/clients/actions/clientActions';
 import { IClient } from '@alga-psa/types';
 import { IPermission } from '@alga-psa/types';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
@@ -217,8 +217,11 @@ export function ClientDetailsSettings() {
             entityId={clientDetails.client_id}
             entityName={clientDetails.client_name}
             imageUrl={clientDetails.logoUrl ?? null}
+            wideImageUrl={clientDetails.logoWideUrl ?? null}
             uploadAction={uploadClientLogo}
             deleteAction={deleteClientLogo}
+            recropAction={recropClientLogo}
+            cropWideToSquare
             onImageChange={async (newLogoUrl) => {
               
               // If logo was deleted (newLogoUrl is null), refresh client data to ensure consistency

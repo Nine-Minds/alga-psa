@@ -1131,6 +1131,12 @@ export async function processInboundEmailInApp(
       return null;
     }
     if (allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite) return matched;
+    console.warn('processInboundEmailInApp: sender auth not aligned; discarding contact match', {
+      tenantId, providerId, emailId: emailData.id, senderEmail,
+      contactId: matched.contact_id ?? null,
+      contactClientId: matched.client_id ?? null,
+      authResults: senderAuthResults,
+    });
     return null;
   };
 

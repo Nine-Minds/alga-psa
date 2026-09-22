@@ -61,9 +61,12 @@ describe('computeListRewriteSender', () => {
     expect(result).toBeNull();
   });
 
-  it('returns null when From was NOT rewritten to the list address', () => {
-    // Normal list mail that preserves the author in From.
-    const result = computeListRewriteSender(groupHeaders(), {
+  it('returns null for preserved-From list mail the relay did not record an author for', () => {
+    // Normal list mail that keeps the author in From but carries no
+    // X-Original-* header; nothing vouches that the relay saw this author.
+    const headers = groupHeaders();
+    delete headers['x-original-sender'];
+    const result = computeListRewriteSender(headers, {
       email: 'jane.doe@vendor.example',
     });
     expect(result).toBeNull();
@@ -106,6 +109,74 @@ describe('computeListRewriteSender', () => {
     });
     const result = computeListRewriteSender(headers, { email: 'support@lists.example.com' });
     expect(result?.sender.email).toBe('user@mail.vendor.example');
+  });
+});
+
+describe('computeListRewriteSender (preserved-From relay)', () => {
+  // Google Groups delivering mail from an author whose domain does not enforce
+  // DMARC: From is kept, but the final MX's SPF/DKIM verdicts belong to the
+  // relay (bounce address + re-signature). Only the arc=pass annotation and the
+  // earlier ARC block vouch for the author domain.
+  const RELAY_AUTH =
+    'mx.example-mta.com; dkim=pass header.i=@lists-example-com.gappssmtp.example header.s=sel1 header.b=ZzYyXx; ' +
+    'arc=pass (i=3 spf=pass spfdomain=vendor.example dkim=pass dkdomain=vendor.example); ' +
+    'spf=pass (example-mta.com: domain of support+bounce@lists.example.com designates 203.0.113.20 as permitted sender) ' +
+    'smtp.mailfrom=support+bounce@lists.example.com; dara=fail header.i=@lists.example.com';
+
+  function preservedHeaders(overrides: Partial<HeaderBag> = {}): HeaderBag {
+    return {
+      'list-id': '<support.lists.example.com>',
+      'mailing-list': 'list support@lists.example.com; contact support+owners@lists.example.com',
+      'precedence': 'list',
+      'x-original-sender': 'jane.doe@vendor.example',
+      'authentication-results': RELAY_AUTH,
+      ...overrides,
+    };
+  }
+
+  it('resolves the preserved author when the relay recorded them and the MX vouches via ARC', () => {
+    const result = computeListRewriteSender(preservedHeaders({ sender: 'support@lists.example.com' }), {
+      email: 'jane.doe@vendor.example',
+      name: 'Jane Doe',
+    });
+    expect(result).toEqual({
+      sender: { email: 'jane.doe@vendor.example', name: 'Jane Doe' },
+      listAddress: 'support@lists.example.com',
+      via: 'preserved-from',
+    });
+  });
+
+  it('accepts X-Original-From as the relay record', () => {
+    const headers = preservedHeaders({ sender: 'support@lists.example.com', 'x-original-from': 'Jane Doe <jane.doe@vendor.example>' });
+    delete headers['x-original-sender'];
+    const result = computeListRewriteSender(headers, { email: 'jane.doe@vendor.example' });
+    expect(result?.via).toBe('preserved-from');
+  });
+
+  it('returns null when the recorded author differs from From', () => {
+    const result = computeListRewriteSender(
+      preservedHeaders({ sender: 'support@lists.example.com', 'x-original-sender': 'someone.else@vendor.example' }),
+      { email: 'jane.doe@vendor.example' }
+    );
+    expect(result).toBeNull();
+  });
+
+  it('returns null when nothing in Authentication-Results vouches for the From domain (anti-spoof)', () => {
+    const headers = preservedHeaders({
+      sender: 'support@lists.example.com',
+      'x-original-sender': 'ceo@bank.example',
+      'authentication-results': RELAY_AUTH,
+    });
+    const result = computeListRewriteSender(headers, { email: 'ceo@bank.example' });
+    expect(result).toBeNull();
+  });
+
+  it('returns null without a list address to attribute the relay to', () => {
+    const headers = preservedHeaders();
+    delete headers['mailing-list'];
+    // list-id alone flags list mail but yields no address; no Sender/List-Post either.
+    const result = computeListRewriteSender(headers, { email: 'jane.doe@vendor.example' });
+    expect(result).toBeNull();
   });
 });
 

@@ -2,6 +2,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const download = vi.fn(async () => Buffer.from('logo-bytes'));
 
+const sharpMocks = vi.hoisted(() => {
+  const toBuffer = vi.fn(async () => Buffer.from('png-bytes'));
+  const png = vi.fn(() => ({ toBuffer }));
+  const sharp = vi.fn(() => ({ png }));
+  return { available: true, toBuffer, png, sharp };
+});
+
+vi.mock('sharp', () => ({
+  get default() {
+    // A worker without the platform binaries never gets a module back at all.
+    if (!sharpMocks.available) throw new Error('Cannot find module "sharp"');
+    return sharpMocks.sharp;
+  },
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => { throw new Error('the caller must pass its own knex'); }),
   runWithTenant: (_tenant: string, fn: () => Promise<any>) => fn(),
@@ -71,15 +86,15 @@ function fakeKnex(rows: FakeRows, files: Record<string, any> = {}) {
   };
 }
 
-const logoRows = (variant: string): FakeRows => ({
-  associations: [{
+const logoRows = (...variants: string[]): FakeRows => ({
+  associations: variants.map((variant) => ({
     entity_id: TENANT,
     entity_type: 'tenant',
     is_entity_logo: true,
     entity_logo_variant: variant,
     document_id: `doc-${variant}`,
-  }],
-  documents: [{ document_id: `doc-${variant}`, file_id: `file-${variant}` }],
+  })),
+  documents: variants.map((variant) => ({ document_id: `doc-${variant}`, file_id: `file-${variant}` })),
 });
 
 const files = (variant: string, size = 2048, mimeType = 'image/png') => ({
@@ -91,11 +106,18 @@ const files = (variant: string, size = 2048, mimeType = 'image/png') => ({
   },
 });
 
+const allFiles = (...variants: string[]) =>
+  Object.assign({}, ...variants.map((variant) => files(variant)));
+
 describe('embedBrandLogo', () => {
   beforeEach(() => {
     clearBrandLogoCache();
     download.mockClear();
     download.mockResolvedValue(Buffer.from('logo-bytes'));
+    sharpMocks.available = true;
+    sharpMocks.sharp.mockClear();
+    sharpMocks.toBuffer.mockClear();
+    sharpMocks.toBuffer.mockResolvedValue(Buffer.from('png-bytes'));
   });
 
   it('attaches the bytes for a tag already in the cid form', async () => {
@@ -256,5 +278,105 @@ describe('embedBrandLogo', () => {
     }
 
     expect(knex.reads.filter((table) => table === 'tenant_settings')).toHaveLength(1);
+  });
+
+  it('attaches the dark artwork a dark-header template asks for', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'wide-dark', alt: 'Acme' });
+    const knex = fakeKnex(logoRows('wide', 'wide-dark'), allFiles('wide', 'wide-dark'));
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(result.html).toContain('src="cid:alga-brand-logo-wide-dark"');
+    expect(result.attachments).toMatchObject([{ cid: 'alga-brand-logo-wide-dark' }]);
+    expect(download).toHaveBeenCalledWith('/logos/wide-dark.png');
+  });
+
+  it('falls back wide-dark → wide → default when the dark wordmark is missing', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'wide-dark' });
+
+    const wideOnly = fakeKnex(logoRows('wide'), files('wide'));
+    expect((await embedBrandLogo(html, { tenantId: TENANT, knex: wideOnly as any })).attachments)
+      .toMatchObject([{ cid: 'alga-brand-logo-wide-dark' }]);
+    expect(download).toHaveBeenCalledWith('/logos/wide.png');
+
+    clearBrandLogoCache();
+    const squareOnly = fakeKnex(logoRows('default'), files('default'));
+    await embedBrandLogo(html, { tenantId: TENANT, knex: squareOnly as any });
+    expect(download).toHaveBeenCalledWith('/logos/default.png');
+  });
+
+  it('falls back from the dark square mark to the light one', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'dark' });
+    const knex = fakeKnex(logoRows('default'), files('default'));
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(result.html).toContain('src="cid:alga-brand-logo-dark"');
+    expect(download).toHaveBeenCalledWith('/logos/default.png');
+  });
+
+  it('attaches a stored WebP logo as PNG, which every mail client renders', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' });
+    const knex = fakeKnex(logoRows('default'), files('default', 2048, 'image/webp'));
+    download.mockResolvedValue(Buffer.from('webp-bytes'));
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(sharpMocks.png).toHaveBeenCalled();
+    expect(result.attachments).toEqual([{
+      filename: 'logo.png',
+      content: Buffer.from('png-bytes'),
+      contentType: 'image/png',
+      cid: 'alga-brand-logo',
+    }]);
+  });
+
+  it('transcodes once per tenant, not once per message', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' });
+    const knex = fakeKnex(logoRows('default'), files('default', 2048, 'image/webp'));
+
+    for (let index = 0; index < 3; index += 1) {
+      await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+    }
+
+    expect(sharpMocks.sharp).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops a WebP logo that only clears the cap before transcoding', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' });
+    const knex = fakeKnex(logoRows('default'), files('default', 2048, 'image/webp'));
+    sharpMocks.toBuffer.mockResolvedValue(Buffer.alloc(2 * 1024 * 1024));
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(result.html).not.toContain('data-alga-brand-logo');
+    expect(result.attachments).toHaveLength(0);
+  });
+
+  it('attaches the stored bytes unchanged when sharp is unavailable', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' });
+    const knex = fakeKnex(logoRows('default'), files('default', 2048, 'image/webp'));
+    download.mockResolvedValue(Buffer.from('webp-bytes'));
+    sharpMocks.available = false;
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(result.html).toContain('src="cid:alga-brand-logo"');
+    expect(result.attachments).toEqual([{
+      filename: 'logo.webp',
+      content: Buffer.from('webp-bytes'),
+      contentType: 'image/webp',
+      cid: 'alga-brand-logo',
+    }]);
+  });
+
+  it('leaves a PNG logo alone rather than re-encoding it per tenant', async () => {
+    const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'default' });
+    const knex = fakeKnex(logoRows('default'), files('default'));
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(sharpMocks.sharp).not.toHaveBeenCalled();
+    expect(result.attachments).toMatchObject([{ contentType: 'image/png', filename: 'logo.png' }]);
   });
 });
