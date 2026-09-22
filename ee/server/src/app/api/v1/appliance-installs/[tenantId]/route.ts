@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { PlatformReportAuditService as ExtensionAuditService, extractClientInfo } from '@ee/lib/platformReports';
-import { assertMasterTenantAccess, isAuthError } from '@ee/lib/applianceConsole/auth';
+import { assertMasterTenantAccess, isMasterTenantAuthError as isAuthError } from '@ee/lib/auth/masterTenantAccess';
 import { getApplianceTenant } from '@ee/lib/applianceConsole/algaLicenseAdminClient';
 
 export const runtime = 'nodejs';

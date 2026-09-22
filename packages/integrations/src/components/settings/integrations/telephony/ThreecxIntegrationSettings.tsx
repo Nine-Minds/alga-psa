@@ -11,10 +11,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Phone } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { RELEASE_V1_6_FEATURE_FLAG } from '@alga-psa/core/features';
 import {
   clearThreecxPbxCredentials,
   completeThreecxPendingContact,
@@ -41,6 +38,7 @@ import type {
   ThreecxContactQueueItem,
   TelephonyResolutionTarget,
 } from '../../../../actions/integrations/telephonyActions';
+import { TelephonyStatusBadge } from './TelephonyStatusBadge';
 
 type TFn = ReturnType<typeof useTranslation>['t'];
 type RunBusy = (fn: () => Promise<void>) => Promise<void>;
@@ -71,9 +69,18 @@ interface SectionProps {
 
 function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <h4 id={id} className="border-t pt-3 text-sm font-semibold text-foreground">
+    <h4 id={id} className="text-base font-semibold text-foreground">
       {children}
     </h4>
+  );
+}
+
+/** Each PBX area gets its own full-width card on the settings page. */
+function SectionCard({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <Card id={id}>
+      <CardContent className="space-y-2 pt-6 text-sm text-muted-foreground">{children}</CardContent>
+    </Card>
   );
 }
 
@@ -697,14 +704,13 @@ function CompletePendingContactDialog({
 }
 
 /**
- * The 3CX provider card. Hidden unless the release flag is on (client) and the
- * server reports the provider available (edition + Pro tier). Beyond the CRM
+ * The 3CX settings page. Hidden unless the server reports the provider
+ * available (edition + Pro tier). Beyond the CRM
  * template basics it hosts the PBX API sections: credentials, extension map,
  * call-history import, phonebook sync and the contact queue.
  */
-export function ThreecxProviderCard() {
+export function ThreecxIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
-  const flag = useFeatureFlag(RELEASE_V1_6_FEATURE_FLAG);
   const searchParams = useSearchParams();
   const [state, setState] = useState<ThreecxCardState | null>(null);
   const [fullKey, setFullKey] = useState<string | null>(null);
@@ -722,10 +728,8 @@ export function ThreecxProviderCard() {
   }, []);
 
   useEffect(() => {
-    if (flag.enabled) {
-      void load();
-    }
-  }, [flag.enabled, load]);
+    void load();
+  }, [load]);
 
   const runBusy: RunBusy = useCallback(async (fn) => {
     setBusy(true);
@@ -739,9 +743,6 @@ export function ThreecxProviderCard() {
     }
   }, []);
 
-  if (!flag.enabled) {
-    return null;
-  }
   if (state && !state.available) {
     return null;
   }
@@ -752,19 +753,6 @@ export function ThreecxProviderCard() {
   const hasKey = Boolean(state?.keyLastFour);
   const templateStale = Boolean(state && state.templateVersion > 0 && state.templateVersion < state.currentTemplateVersion);
   const pbxConnected = state?.pbx.status === 'connected';
-
-  const statusBadge = () => {
-    if (status === 'active') {
-      return <Badge variant="success">{t('integrations.telephony.status.active', { defaultValue: 'Active' })}</Badge>;
-    }
-    if (status === 'error') {
-      return <Badge variant="error">{t('integrations.telephony.status.error', { defaultValue: 'Error' })}</Badge>;
-    }
-    if (status === 'disabled') {
-      return <Badge variant="secondary">{t('integrations.telephony.status.disabled', { defaultValue: 'Disabled' })}</Badge>;
-    }
-    return <Badge variant="secondary">{t('integrations.telephony.status.notConfigured', { defaultValue: 'Not configured' })}</Badge>;
-  };
 
   const toggleEnabled = () =>
     runBusy(async () => {
@@ -816,163 +804,174 @@ export function ThreecxProviderCard() {
   };
 
   return (
-    <Card className="relative overflow-hidden" id="telephony-provider-card-3cx">
-      <CardHeader className="space-y-4 pb-3">
-        <div className="relative flex h-24 w-full items-center justify-center rounded-lg bg-muted/40">
-          <div className="absolute right-3 top-3">{statusBadge()}</div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgb(var(--color-primary-500))] text-white shadow-sm ring-1 ring-border">
-            <Phone className="h-5 w-5" />
-          </div>
-        </div>
-        <div className="space-y-1">
-          <CardTitle className="text-base">
-            {t('integrations.telephony.providers.threecx.label', { defaultValue: '3CX' })}
-          </CardTitle>
-          <CardDescription className="text-sm">
-            {t('integrations.telephony.providers.threecx.description', {
-              defaultValue: 'Journal 3CX calls as interactions and recognise callers in the 3CX client through the CRM template.',
-            })}
-          </CardDescription>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4 pt-0 text-xs text-muted-foreground">
-        {!canManage && (
-          <p id="threecx-permission-message">
-            {t('integrations.telephony.providers.threecx.permission', {
-              defaultValue: 'You need the system settings permission to manage the 3CX integration.',
-            })}
-          </p>
-        )}
-
-        <div className="space-y-1">
-          <span className="font-medium text-foreground/80">
-            {t('integrations.telephony.providers.threecx.endpoint', { defaultValue: 'Endpoint base URL' })}
-          </span>
-          <div className="flex items-center gap-2">
-            <code id="threecx-endpoint-url" className="truncate rounded bg-muted px-2 py-1">
-              {state?.endpointBaseUrl ?? ''}
-            </code>
-            <Button
-              id="threecx-copy-endpoint"
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() => copy(state?.endpointBaseUrl ?? '')}
-            >
-              {t('integrations.telephony.providers.threecx.copy', { defaultValue: 'Copy' })}
-            </Button>
-          </div>
-        </div>
-
-        {hasKey && (
-          <div className="space-y-1">
-            <span className="font-medium text-foreground/80">
-              {t('integrations.telephony.providers.threecx.apiKey', { defaultValue: 'API key' })}
-            </span>
-            <div className="flex items-center gap-2">
-              <code id="threecx-api-key-masked" className="rounded bg-muted px-2 py-1">
-                {`••••${state?.keyLastFour ?? ''}`}
-              </code>
-              <Button
-                id="threecx-rotate-key"
-                variant="outline"
-                size="sm"
-                disabled={!canManage || busy}
-                onClick={() => void rotate()}
-              >
-                {t('integrations.telephony.providers.threecx.rotate', { defaultValue: 'Rotate' })}
-              </Button>
+    <div className="space-y-6" id="threecx-integration-settings">
+      <Card id="threecx-overview-card">
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <CardTitle>
+                {t('integrations.telephony.providers.threecx.label', { defaultValue: '3CX' })}
+              </CardTitle>
+              <CardDescription>
+                {t('integrations.telephony.providers.threecx.description', {
+                  defaultValue: 'Journal 3CX calls as interactions and recognise callers in the 3CX client through the CRM template.',
+                })}
+              </CardDescription>
             </div>
+            <TelephonyStatusBadge status={status} />
           </div>
-        )}
+        </CardHeader>
 
-        {fullKey && (
-          <div className="space-y-1 rounded border border-[rgb(var(--color-primary-300))] p-2" id="threecx-full-key">
-            <p className="font-medium text-foreground/80">
-              {t('integrations.telephony.providers.threecx.fullKeyWarning', {
-                defaultValue: 'Copy this key now — it will not be shown again.',
+        <CardContent className="space-y-4 text-sm text-muted-foreground">
+          {!canManage && (
+            <p id="threecx-permission-message">
+              {t('integrations.telephony.providers.threecx.permission', {
+                defaultValue: 'You need the system settings permission to manage the 3CX integration.',
               })}
             </p>
+          )}
+
+          <div className="space-y-1">
+            <span className="font-medium text-foreground/80">
+              {t('integrations.telephony.providers.threecx.endpoint', { defaultValue: 'Endpoint base URL' })}
+            </span>
             <div className="flex items-center gap-2">
-              <code id="threecx-full-key-value" className="truncate rounded bg-muted px-2 py-1">{fullKey}</code>
-              <Button id="threecx-copy-key" variant="outline" size="sm" onClick={() => copy(fullKey)}>
+              <code id="threecx-endpoint-url" className="truncate rounded bg-muted px-2 py-1">
+                {state?.endpointBaseUrl ?? ''}
+              </code>
+              <Button
+                id="threecx-copy-endpoint"
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => copy(state?.endpointBaseUrl ?? '')}
+              >
                 {t('integrations.telephony.providers.threecx.copy', { defaultValue: 'Copy' })}
               </Button>
             </div>
           </div>
-        )}
 
-        <div className="flex items-center justify-between gap-2 pt-2">
-          <span className="font-medium text-foreground/80">
-            {t('integrations.telephony.autoTicket', { defaultValue: 'Create a ticket automatically for matched calls' })}
-          </span>
-          <Switch
-            id="threecx-auto-ticket-toggle"
-            checked={Boolean(state?.autoCreateTickets)}
-            disabled={!canManage || busy || !isActive}
-            onCheckedChange={(checked) => void toggleAutoTicket(checked)}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            id="threecx-download-template"
-            variant="outline"
-            size="sm"
-            disabled={!canManage || busy}
-            onClick={() => void download()}
-          >
-            {t('integrations.telephony.providers.threecx.download', { defaultValue: 'Download template' })}
-          </Button>
-          {templateStale && (
-            <span id="threecx-template-stale" className="text-[rgb(var(--color-accent-600))]">
-              {t('integrations.telephony.providers.threecx.templateStale', {
-                defaultValue: 'A newer template is available. Download and re-upload it in the 3CX console.',
-              })}
-            </span>
+          {hasKey && (
+            <div className="space-y-1">
+              <span className="font-medium text-foreground/80">
+                {t('integrations.telephony.providers.threecx.apiKey', { defaultValue: 'API key' })}
+              </span>
+              <div className="flex items-center gap-2">
+                <code id="threecx-api-key-masked" className="rounded bg-muted px-2 py-1">
+                  {`••••${state?.keyLastFour ?? ''}`}
+                </code>
+                <Button
+                  id="threecx-rotate-key"
+                  variant="outline"
+                  size="sm"
+                  disabled={!canManage || busy}
+                  onClick={() => void rotate()}
+                >
+                  {t('integrations.telephony.providers.threecx.rotate', { defaultValue: 'Rotate' })}
+                </Button>
+              </div>
+            </div>
           )}
-        </div>
 
-        {isActive && state && (
-          <>
-            <PbxSection state={state} t={t} busy={busy} canManage={canManage} runBusy={runBusy} setError={setError} reload={load} />
-            <ExtensionsSection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={runBusy} setError={setError} reload={load} />
-            <CallHistorySection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={runBusy} setError={setError} reload={load} />
-            <PhonebookSection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={runBusy} setError={setError} reload={load} />
-            <ContactQueueSection
-              t={t}
-              busy={busy}
-              canManage={canManage}
-              runBusy={runBusy}
-              setError={setError}
-              initialPendingId={searchParams?.get('threecxPending') ?? null}
+          {fullKey && (
+            <div className="space-y-1 rounded border border-[rgb(var(--color-primary-300))] p-2" id="threecx-full-key">
+              <p className="font-medium text-foreground/80">
+                {t('integrations.telephony.providers.threecx.fullKeyWarning', {
+                  defaultValue: 'Copy this key now — it will not be shown again.',
+                })}
+              </p>
+              <div className="flex items-center gap-2">
+                <code id="threecx-full-key-value" className="truncate rounded bg-muted px-2 py-1">{fullKey}</code>
+                <Button id="threecx-copy-key" variant="outline" size="sm" onClick={() => copy(fullKey)}>
+                  {t('integrations.telephony.providers.threecx.copy', { defaultValue: 'Copy' })}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-2 pt-2">
+            <span className="font-medium text-foreground/80">
+              {t('integrations.telephony.autoTicket', { defaultValue: 'Create a ticket automatically for matched calls' })}
+            </span>
+            <Switch
+              id="threecx-auto-ticket-toggle"
+              checked={Boolean(state?.autoCreateTickets)}
+              disabled={!canManage || busy || !isActive}
+              onCheckedChange={(checked) => void toggleAutoTicket(checked)}
             />
-          </>
-        )}
+          </div>
 
-        {error && (
-          <p className="text-[rgb(var(--color-accent-600))]" id="threecx-error-message">
-            {error}
-          </p>
-        )}
-      </CardContent>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              id="threecx-download-template"
+              variant="outline"
+              size="sm"
+              disabled={!canManage || busy}
+              onClick={() => void download()}
+            >
+              {t('integrations.telephony.providers.threecx.download', { defaultValue: 'Download template' })}
+            </Button>
+            {templateStale && (
+              <span id="threecx-template-stale" className="text-[rgb(var(--color-accent-600))]">
+                {t('integrations.telephony.providers.threecx.templateStale', {
+                  defaultValue: 'A newer template is available. Download and re-upload it in the 3CX console.',
+                })}
+              </span>
+            )}
+          </div>
+        </CardContent>
 
-      <CardFooter className="pt-0">
-        <Button
-          id="threecx-enable-toggle"
-          className="w-full"
-          variant={isActive ? 'outline' : 'default'}
-          disabled={!canManage || busy}
-          onClick={() => void toggleEnabled()}
-        >
-          {isActive
-            ? t('integrations.telephony.actions.disable', { defaultValue: 'Disable' })
-            : t('integrations.telephony.actions.enable', { defaultValue: 'Enable' })}
-        </Button>
-      </CardFooter>
-    </Card>
+        <CardFooter>
+          <Button
+            id="threecx-enable-toggle"
+            className="w-full"
+            variant={isActive ? 'outline' : 'default'}
+            disabled={!canManage || busy}
+            onClick={() => void toggleEnabled()}
+          >
+            {isActive
+              ? t('integrations.telephony.actions.disable', { defaultValue: 'Disable' })
+              : t('integrations.telephony.actions.enable', { defaultValue: 'Enable' })}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {isActive && state && (
+        <>
+          <SectionCard id="threecx-pbx-card">
+            <PbxSection state={state} t={t} busy={busy} canManage={canManage} runBusy={runBusy} setError={setError} reload={load} />
+          </SectionCard>
+          <SectionCard id="threecx-extensions-card">
+            <ExtensionsSection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={runBusy} setError={setError} reload={load} />
+          </SectionCard>
+          <SectionCard id="threecx-cdr-card">
+            <CallHistorySection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={runBusy} setError={setError} reload={load} />
+          </SectionCard>
+          <SectionCard id="threecx-phonebook-card">
+            <PhonebookSection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={runBusy} setError={setError} reload={load} />
+          </SectionCard>
+          {canManage && (
+            <SectionCard id="threecx-contact-queue-card">
+              <ContactQueueSection
+                t={t}
+                busy={busy}
+                canManage={canManage}
+                runBusy={runBusy}
+                setError={setError}
+                initialPendingId={searchParams?.get('threecxPending') ?? null}
+              />
+            </SectionCard>
+          )}
+        </>
+      )}
+
+      {error && (
+        <p className="text-sm text-[rgb(var(--color-accent-600))]" id="threecx-error-message">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
-export default ThreecxProviderCard;
+export default ThreecxIntegrationSettings;

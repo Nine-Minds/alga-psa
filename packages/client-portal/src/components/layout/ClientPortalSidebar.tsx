@@ -316,7 +316,7 @@ export function ClientPortalSidebar({
         <Link
           prefetch={false}
           href="/client-portal/dashboard"
-          className="p-4 flex items-center space-x-2 hover:bg-sidebar-hover cursor-pointer"
+          className="px-4 pt-4 pb-3 flex items-center space-x-2 hover:bg-sidebar-hover cursor-pointer"
           aria-label={t('sidebar.goToDashboard', 'Go to dashboard')}
           id="client-portal-logo-home-link"
         >
@@ -325,7 +325,7 @@ export function ClientPortalSidebar({
             <img
               src={wideLogoUrl}
               alt={brandLabel}
-              className="h-8 w-auto max-w-full object-contain"
+              className="h-14 w-auto max-w-full object-contain object-left"
               onError={() => setFailedWideLogoUrl(wideLogoUrl)}
             />
           ) : (
@@ -366,9 +366,9 @@ export function ClientPortalSidebar({
           </div>
         )}
 
-        {/* Nav sections */}
+        {/* Nav sections — the brand link above already pads its bottom. */}
         <nav
-          className="mt-2 flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav"
+          className="flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav"
           aria-label={t('nav.clientPortalLabel', 'Client portal')}
         >
           {visibleSections.map((section, idx) => (

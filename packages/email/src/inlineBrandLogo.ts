@@ -55,12 +55,41 @@ const LOGO_MISS_CACHE_TTL_MS = 30 * 1000;
 
 const MARKER_TAG = `<img\\b[^>]*${BRAND_LOGO_MARKER}[^>]*>`;
 
-const EXTENSIONS: Record<string, string> = {
+/** The formats every mail client renders inline; anything else is transcoded. */
+const EMBEDDABLE_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/gif': 'gif',
+};
+
+const EXTENSIONS: Record<string, string> = {
+  ...EMBEDDABLE_EXTENSIONS,
   'image/webp': 'webp',
 };
+
+/**
+ * The uploaded files each cid falls back through: a tenant who asked for the
+ * wordmark, or for the dark artwork, but never uploaded one still gets a logo.
+ */
+const ASSOCIATION_FALLBACKS: Record<EmailBrandingLogoVariant, string[]> = {
+  default: ['default'],
+  dark: ['dark', 'default'],
+  wide: ['wide', 'default'],
+  'wide-dark': ['wide-dark', 'wide', 'default'],
+};
+
+/** Optional at runtime, exactly as in packages/storage/src/StorageService.ts. */
+async function loadSharp() {
+  try {
+    const mod = await import('sharp');
+    return (mod as any).default ?? (mod as any);
+  } catch (error) {
+    throw new Error(
+      `Failed to load optional dependency "sharp" (required for image processing). ` +
+        `Ensure platform-specific sharp binaries are installed. Original error: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
 
 interface BrandLogoAsset {
   content: Buffer;
@@ -108,9 +137,12 @@ async function findLogoAssociation(
       })
       .first<{ document_id: string }>();
 
-  // A tenant who asked for the wordmark but never uploaded one still gets a logo.
-  const wide = variant === 'wide' ? await forVariant('wide') : null;
-  return wide ?? (await forVariant('default')) ?? null;
+  for (const entityLogoVariant of ASSOCIATION_FALLBACKS[variant] ?? ASSOCIATION_FALLBACKS.default) {
+    const association = await forVariant(entityLogoVariant);
+    if (association) return association;
+  }
+
+  return null;
 }
 
 async function readLogoAsset(
@@ -159,9 +191,41 @@ async function readLogoAsset(
   }
 
   const contentType = file.mime_type || 'image/png';
-  const extension = EXTENSIONS[contentType] ?? 'png';
+  if (EMBEDDABLE_EXTENSIONS[contentType]) {
+    return { content, contentType, filename: `logo.${EMBEDDABLE_EXTENSIONS[contentType]}` };
+  }
 
-  return { content, contentType, filename: `logo.${extension}` };
+  // Outlook renders no WebP at all, and the uploads stored before the logo path
+  // encoded PNG are all WebP, so they are transcoded on their way out — alpha
+  // preserved, or a logo on a colored header arrives as a black rectangle. The
+  // per-tenant cache keeps this to one transcode per TTL.
+  const png = await toPng(content, { tenant: tenantId, variant, contentType });
+  if (!png) {
+    return { content, contentType, filename: `logo.${EXTENSIONS[contentType] ?? 'png'}` };
+  }
+
+  if (png.length > MAX_LOGO_BYTES) {
+    return missing('The tenant logo is too large to embed once converted to PNG', {
+      bytes: png.length,
+      maxBytes: MAX_LOGO_BYTES,
+    });
+  }
+
+  return { content: png, contentType: 'image/png', filename: 'logo.png' };
+}
+
+/** Null on any failure: a logo nobody can transcode still mails as it is. */
+async function toPng(content: Buffer, context: Record<string, unknown>): Promise<Buffer | null> {
+  try {
+    const sharp = await loadSharp();
+    return await sharp(content).png().toBuffer();
+  } catch (error) {
+    logger.warn('[BrandLogo] Failed to convert the tenant logo to PNG; attaching it unchanged', {
+      ...context,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 }
 
 /** Keeps a worker that serves many tenants from holding every logo forever. */

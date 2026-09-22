@@ -39,7 +39,15 @@ export interface EmailPaletteOverrides extends Partial<Record<EmailPaletteOverri
   badgeAlpha?: number;
 }
 
-export type EmailBrandingLogoVariant = 'wide' | 'default';
+/** The logo shape a tenant picks, and the only thing the saved palette keeps. */
+export type EmailBrandingLogoShape = 'wide' | 'default';
+
+/**
+ * Every file a brand-logo content-id can name. The shape is the tenant's
+ * choice; the dark counterpart is chosen per template from the header the
+ * palette paints, so it is never persisted.
+ */
+export type EmailBrandingLogoVariant = EmailBrandingLogoShape | 'dark' | 'wide-dark';
 
 /** Shape persisted at `tenant_settings.settings.emailBranding`. */
 export interface EmailBrandingPalette {
@@ -48,7 +56,7 @@ export interface EmailBrandingPalette {
   secondary: string | null;
   overrides?: EmailPaletteOverrides;
   /** Enterprise only. */
-  logo?: { variant: EmailBrandingLogoVariant };
+  logo?: { variant: EmailBrandingLogoShape };
   /** Enterprise only. */
   hideAttribution?: boolean;
   /** ISO timestamp of the last successful apply. */

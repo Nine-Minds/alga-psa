@@ -1,4 +1,3 @@
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { Text } from '@radix-ui/themes';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
@@ -36,7 +35,6 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
     contacts
 }) => {
     const { t } = useTranslation('msp/clients');
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
     const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
     const [defaultTemplate, setDefaultTemplate] = useState<IInvoiceTemplate | null>(null);
     const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
@@ -87,12 +85,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
         loadTaxRegions(); // Call new function
     }, [t]);
 
-    const templateOptions = templates.filter(template =>
-        releaseV16Enabled ||
-        template.standard_invoice_template_code !== 'standard-invoice-by-ticket' ||
-        template.template_id === (billingConfig.invoice_template_id || defaultTemplate?.template_id) ||
-        !template.isStandard
-    ).map(template => ({
+    const templateOptions = templates.map(template => ({
         value: template.template_id,
         label: (
             <div className="flex items-center gap-2">

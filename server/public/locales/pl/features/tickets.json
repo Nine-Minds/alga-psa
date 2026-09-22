@@ -110,7 +110,8 @@
     "paused": "Wstrzymane",
     "allResponseStatuses": "Wszystkie statusy odpowiedzi",
     "responseStatus": "Status odpowiedzi",
-    "board": "Filtruj według tablicy"
+    "board": "Filtruj według tablicy",
+    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania"
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -2062,5 +2063,29 @@
       "systemRequired": "Wybierz system zewnętrzny.",
       "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL."
     }
+  },
+  "smartSearch": {
+    "run": "Inteligentne wyszukiwanie",
+    "runTitle": "Oceń przefiltrowane zgłoszenia względem tego zapytania",
+    "relevanceColumn": "Dopasowanie",
+    "relevance": "{{percent}}% trafności",
+    "strong": "Silne dopasowania",
+    "possible": "Możliwe dopasowania",
+    "unlikely": "Mało prawdopodobne dopasowania",
+    "emptyBucketRunning": "Jeszcze brak",
+    "emptyBucket": "Brak",
+    "scoring": "Oceniono {{scored}} z {{total}} zgłoszeń",
+    "summary": "Oceniono {{total}} zgłoszeń · {{strong}} silnych · {{possible}} możliwych",
+    "cancelled": "Wyszukiwanie anulowano po {{scored}} z {{total}} zgłoszeń",
+    "errorTitle": "Inteligentne wyszukiwanie zatrzymane",
+    "starting": "Uruchamianie inteligentnego wyszukiwania…",
+    "rerun": "Filtry się zmieniły. Uruchom ponownie",
+    "retry": "Ponów",
+    "cancel": "Anuluj",
+    "exit": "Wróć do listy",
+    "notConfigured": "Inteligentne wyszukiwanie nie jest skonfigurowane na tym serwerze",
+    "failedCount": "Nie udało się ocenić {{count}} zgłoszeń",
+    "unscored": "Nieocenione",
+    "addOnRequired": "Inteligentne wyszukiwanie wymaga dodatku Asystent AI"
   }
 }

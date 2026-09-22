@@ -566,7 +566,18 @@
       "deleteError": "Löschen fehlgeschlagen.",
       "deleteConfirm": "Möchten Sie dies wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
       "linking": "Verknüpfen...",
-      "linkDocument": "Dokument verknüpfen"
+      "linkDocument": "Dokument verknüpfen",
+      "cropTitle": "Quadratisches Zeichen wählen",
+      "cropHelp": "Ziehen und zoomen Sie das Logo, um den Ausschnitt für kleine, quadratische Flächen zu wählen. Zoomen Sie heraus, um Platz darum zu lassen. Das vollständige Logo bleibt ebenfalls erhalten.",
+      "zoom": "Zoom",
+      "zoomOut": "Verkleinern",
+      "zoomIn": "Vergrößern",
+      "cropPreview": "Vorschau",
+      "applyCrop": "Diesen Ausschnitt verwenden",
+      "adjustMark": "Zeichen anpassen",
+      "cropFromWide": "Aus breitem Logo ausschneiden",
+      "recropSuccess": "Zeichen aktualisiert.",
+      "recropError": "Das Zeichen konnte nicht aktualisiert werden."
     },
     "validation": {
       "clientNameRequired": "Firmenname ist erforderlich",

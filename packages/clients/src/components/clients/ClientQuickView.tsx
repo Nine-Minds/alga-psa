@@ -11,6 +11,7 @@ import {
   deleteClientLogo,
   markClientActiveWithContacts,
   markClientInactiveWithContacts,
+  recropClientLogo,
   updateClient,
   uploadClientLogo,
   validateClientDeletion,
@@ -935,10 +936,14 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
             entityId={editedClient.client_id}
             entityName={editedClient.client_name}
             imageUrl={editedClient.logoUrl ?? null}
+            wideImageUrl={editedClient.logoWideUrl ?? null}
             uploadAction={uploadClientLogo}
             deleteAction={deleteClientLogo}
-            onImageChange={(newLogoUrl) => {
-              setEditedClient((prev) => prev ? { ...prev, logoUrl: newLogoUrl } : prev);
+            recropAction={recropClientLogo}
+            cropWideToSquare
+            previewShape="auto"
+            onImageChange={(newLogoUrl, newWideUrl) => {
+              setEditedClient((prev) => prev ? { ...prev, logoUrl: newLogoUrl, logoWideUrl: newWideUrl ?? null } : prev);
             }}
             size="md"
           />

@@ -9,6 +9,8 @@ import { updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-
 import {
   classifyTenantTemplate,
   decorateBrandedHtml,
+  isDarkEmailHeader,
+  pickBrandLogoVariant,
   planEmailBrandingApply,
   planEmailBrandingRemoval,
   previewEmailBrandingApply,
@@ -191,7 +193,9 @@ export const getEmailBrandingStatusAction = withAuth(async (
       isEnterprise,
       logoOptions: {
         logoUrl: settings.branding?.logoUrl || undefined,
+        logoDarkUrl: isEnterprise ? settings.branding?.logoDarkUrl || undefined : undefined,
         logoWideUrl: isEnterprise ? settings.branding?.logoWideUrl || undefined : undefined,
+        logoWideDarkUrl: isEnterprise ? settings.branding?.logoWideDarkUrl || undefined : undefined,
         clientName: settings.branding?.clientName || undefined,
       },
     };
@@ -227,16 +231,23 @@ function buildBrandDecorator(
   palette: EmailBrandingPalette,
   branding: Record<string, any> | null | undefined,
   enterprise: boolean,
+  target: EmailPaletteTokens,
 ): ((html: string) => string) | undefined {
   if (!enterprise) return undefined;
 
   // The written row references the logo by content-id, never by URL: the bytes
-  // are attached at send time. Only the variant is decided here, and only one
-  // the tenant has actually uploaded may be written.
-  const variant: EmailBrandingLogoVariant =
-    palette.logo?.variant === 'wide' && branding?.logoWideUrl ? 'wide' : 'default';
-  const uploaded = variant === 'wide' ? !!branding?.logoWideUrl : !!branding?.logoUrl;
-  const logo = palette.logo && uploaded ? { variant, alt: branding?.clientName ?? '' } : undefined;
+  // are attached at send time. Only the variant is decided here — the shape the
+  // tenant picked, in the artwork that reads on the header this palette paints —
+  // and only one the tenant has actually uploaded may be written.
+  const variant: EmailBrandingLogoVariant | null = palette.logo
+    ? pickBrandLogoVariant(palette.logo.variant, isDarkEmailHeader(target), {
+        logoUrl: branding?.logoUrl || undefined,
+        logoDarkUrl: branding?.logoDarkUrl || undefined,
+        logoWideUrl: branding?.logoWideUrl || undefined,
+        logoWideDarkUrl: branding?.logoWideDarkUrl || undefined,
+      })
+    : null;
+  const logo = variant ? { variant, alt: branding?.clientName ?? '' } : undefined;
   const hideAttribution = palette.hideAttribution === true;
 
   return (html: string) => decorateBrandedHtml(html, { logo, hideAttribution });
@@ -267,15 +278,16 @@ export const previewEmailBrandingApplyAction = withAuth(async (
     return { settings, palette, ...rows };
   });
 
+  const target = resolveEmailPalette(context.palette);
   const preview = previewEmailBrandingApply({
     systemRows: context.systemTemplates,
     tenantRows: context.tenantTemplates,
-    target: resolveEmailPalette(context.palette),
+    target,
     appliedPalette: context.palette.appliedPalette ?? null,
     name,
     language,
     overwrite,
-    decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise),
+    decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target),
   });
 
   if (!preview) throw new Error(`No ${language} email template named ${name}`);
@@ -314,7 +326,7 @@ export const applyEmailBrandingAction = withAuth(async (
     target,
     appliedPalette: context.palette.appliedPalette ?? null,
     scope,
-    decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise),
+    decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target),
   });
 
   const written: EmailBrandingApplyResult['written'] = [];

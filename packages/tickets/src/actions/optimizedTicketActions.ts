@@ -1974,6 +1974,127 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
 }
 
 /**
+ * The enrichment every list-shaped ticket fetch shares: batched agent/team
+ * avatars, client logos, and tags for a set of already-authorized rows. Both the
+ * paginated list and the by-id loader (smart search hydration) end here so a
+ * row rendered from either path carries the same metadata.
+ */
+export interface TicketListRowsWithMetadata {
+  tickets: ITicketListItem[];
+  metadata: {
+    agentAvatarUrls: Record<string, string | null>;
+    teamAvatarUrls: Record<string, string | null>;
+    ticketTags: Record<string, ITag[]>;
+  };
+}
+
+async function enrichTicketListItems(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketListItems: ITicketListItem[]
+): Promise<TicketListRowsWithMetadata> {
+  // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
+  const ticketIds = ticketListItems
+    .map((t: ITicketListItem) => t.ticket_id)
+    .filter((id: string | undefined): id is string => id !== undefined);
+
+  const agentUserIds = new Set<string>();
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    if (ticket.assigned_to) {
+      agentUserIds.add(ticket.assigned_to);
+    }
+    ticket.additional_agents?.forEach((agent: { user_id: string }) => {
+      agentUserIds.add(agent.user_id);
+    });
+  });
+
+  const teamIds = new Set<string>();
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    if (ticket.assigned_team_id) {
+      teamIds.add(ticket.assigned_team_id);
+    }
+  });
+
+  const clientIds = new Set<string>();
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    if (ticket.client_id) {
+      clientIds.add(ticket.client_id);
+    }
+  });
+
+  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap] = await Promise.all([
+    agentUserIds.size > 0
+      ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
+      : Promise.resolve(new Map<string, string | null>()),
+    teamIds.size > 0
+      ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
+      : Promise.resolve(new Map<string, string | null>()),
+    ticketIds.length > 0
+      ? tenantDb(trx, tenant)
+          .tenantJoin(
+            tenantScopedTable(trx, 'tag_mappings as tm', tenant),
+            'tag_definitions as td',
+            'tm.tag_id',
+            'td.tag_id'
+          )
+          .whereIn('tm.tagged_id', ticketIds)
+          .where('tm.tagged_type', 'ticket')
+          .select(
+            'tm.mapping_id',
+            'td.tag_id',
+            'td.tag_text',
+            'tm.tagged_id',
+            'tm.tagged_type',
+            'td.board_id',
+            'td.background_color',
+            'td.text_color'
+          )
+      : Promise.resolve([]),
+    clientIds.size > 0
+      ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
+      : Promise.resolve(new Map<string, string | null>()),
+  ]);
+
+  // Attach batched client logo URLs to each row (single query, no N+1).
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
+  });
+
+  // Convert Maps to Records for serialization
+  const agentAvatarUrls: Record<string, string | null> = {};
+  agentAvatarUrlsMap.forEach((url, id) => { agentAvatarUrls[id] = url; });
+
+  const teamAvatarUrls: Record<string, string | null> = {};
+  teamAvatarUrlsMap.forEach((url, id) => { teamAvatarUrls[id] = url; });
+
+  // Group tags by ticket ID
+  const ticketTags: Record<string, ITag[]> = {};
+  ticketTagRows.forEach((tag: any) => {
+    const tagObj: ITag = {
+      tag_id: tag.mapping_id,
+      tenant,
+      tag_text: tag.tag_text,
+      tagged_id: tag.tagged_id,
+      tagged_type: tag.tagged_type,
+      background_color: tag.background_color,
+      text_color: tag.text_color,
+    };
+    if (!ticketTags[tag.tagged_id]) {
+      ticketTags[tag.tagged_id] = [];
+    }
+    ticketTags[tag.tagged_id].push(tagObj);
+  });
+  return {
+    tickets: ticketListItems as ITicketListItem[],
+    metadata: {
+      agentAvatarUrls,
+      teamAvatarUrls,
+      ticketTags,
+    },
+  };
+}
+
+/**
  * Get tickets for list with page-based pagination
  * This replaces cursor-based pagination with traditional page-based approach
  */
@@ -2046,106 +2167,11 @@ export const getTicketsForList = withAuth(async (
       ticketListItems = mapTicketListItems(paginatedAuthorizedTickets);
     }
 
-    // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
-    const ticketIds = ticketListItems
-      .map((t: ITicketListItem) => t.ticket_id)
-      .filter((id: string | undefined): id is string => id !== undefined);
-
-    const agentUserIds = new Set<string>();
-    ticketListItems.forEach((ticket: ITicketListItem) => {
-      if (ticket.assigned_to) {
-        agentUserIds.add(ticket.assigned_to);
-      }
-      ticket.additional_agents?.forEach((agent: { user_id: string }) => {
-        agentUserIds.add(agent.user_id);
-      });
-    });
-
-    const teamIds = new Set<string>();
-    ticketListItems.forEach((ticket: ITicketListItem) => {
-      if (ticket.assigned_team_id) {
-        teamIds.add(ticket.assigned_team_id);
-      }
-    });
-
-    const clientIds = new Set<string>();
-    ticketListItems.forEach((ticket: ITicketListItem) => {
-      if (ticket.client_id) {
-        clientIds.add(ticket.client_id);
-      }
-    });
-
-    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap] = await Promise.all([
-      agentUserIds.size > 0
-        ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
-        : Promise.resolve(new Map<string, string | null>()),
-      teamIds.size > 0
-        ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
-        : Promise.resolve(new Map<string, string | null>()),
-      ticketIds.length > 0
-        ? tenantDb(trx, tenant)
-            .tenantJoin(
-              tenantScopedTable(trx, 'tag_mappings as tm', tenant),
-              'tag_definitions as td',
-              'tm.tag_id',
-              'td.tag_id'
-            )
-            .whereIn('tm.tagged_id', ticketIds)
-            .where('tm.tagged_type', 'ticket')
-            .select(
-              'tm.mapping_id',
-              'td.tag_id',
-              'td.tag_text',
-              'tm.tagged_id',
-              'tm.tagged_type',
-              'td.board_id',
-              'td.background_color',
-              'td.text_color'
-            )
-        : Promise.resolve([]),
-      clientIds.size > 0
-        ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
-        : Promise.resolve(new Map<string, string | null>()),
-    ]);
-
-    // Attach batched client logo URLs to each row (single query, no N+1).
-    ticketListItems.forEach((ticket: ITicketListItem) => {
-      ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
-    });
-
-    // Convert Maps to Records for serialization
-    const agentAvatarUrls: Record<string, string | null> = {};
-    agentAvatarUrlsMap.forEach((url, id) => { agentAvatarUrls[id] = url; });
-
-    const teamAvatarUrls: Record<string, string | null> = {};
-    teamAvatarUrlsMap.forEach((url, id) => { teamAvatarUrls[id] = url; });
-
-    // Group tags by ticket ID
-    const ticketTags: Record<string, ITag[]> = {};
-    ticketTagRows.forEach((tag: any) => {
-      const tagObj: ITag = {
-        tag_id: tag.mapping_id,
-        tenant,
-        tag_text: tag.tag_text,
-        tagged_id: tag.tagged_id,
-        tagged_type: tag.tagged_type,
-        background_color: tag.background_color,
-        text_color: tag.text_color,
-      };
-      if (!ticketTags[tag.tagged_id]) {
-        ticketTags[tag.tagged_id] = [];
-      }
-      ticketTags[tag.tagged_id].push(tagObj);
-    });
-
+    const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
     return {
-      tickets: ticketListItems as ITicketListItem[],
+      tickets: enriched.tickets,
       totalCount,
-      metadata: {
-        agentAvatarUrls,
-        teamAvatarUrls,
-        ticketTags,
-      }
+      metadata: enriched.metadata,
     };
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
@@ -2211,6 +2237,79 @@ export const getAllMatchingTicketIds = withAuth(async (
         return expected;
       }
       console.error('Failed to fetch matching ticket IDs:', error);
+      throw error;
+    }
+  });
+});
+
+/**
+ * List rows for an explicit set of ticket ids, in the order the ids were given.
+ * The rows pass through the same filter, authorization, and enrichment path as
+ * the paginated list, so a caller that already knows which tickets it wants
+ * (smart search hydrating a scored batch) renders them with identical columns.
+ * Tickets the caller cannot read, or that the filters exclude, are omitted.
+ */
+export const loadTicketListItemsByIds = withAuth(async (
+  user,
+  { tenant },
+  filters: ITicketListFilters,
+  ticketIds: string[]
+): Promise<TicketListRowsWithMetadata | TicketActionError> => {
+  const {knex: db} = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const requestedIds = Array.from(new Set(ticketIds.filter((id) => typeof id === 'string' && id.length > 0)));
+      if (requestedIds.length === 0) {
+        return { tickets: [], metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} } };
+      }
+
+      const validatedFilters = cleanFilterValues(
+        validateData(ticketListFiltersSchema, filters) as ITicketListFilters
+      );
+
+      const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+
+      const scopedBaseQuery = scopedQuery.clone();
+      const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
+      let rows: any[];
+      if (authSqlResult.supported) {
+        rows = await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder)
+          .whereIn('t.ticket_id', requestedIds)
+          .clearOrder();
+      } else {
+        const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery)
+          .whereIn('t.ticket_id', requestedIds)
+          .clearOrder();
+        rows = await filterAuthorizedTickets(trx, authorizationContext, candidates);
+      }
+
+      const byId = new Map<string, any>();
+      for (const row of rows) {
+        if (row?.ticket_id) {
+          byId.set(row.ticket_id, row);
+        }
+      }
+      const ordered = requestedIds
+        .map((id) => byId.get(id))
+        .filter((row): row is any => Boolean(row));
+
+      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      console.error('Failed to load ticket list rows by id:', error);
       throw error;
     }
   });

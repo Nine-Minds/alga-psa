@@ -1,6 +1,5 @@
 'use client';
 
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { calendarDisplayDates, calendarStoredDates, moveCalendarStart } from '../../lib/calendarDateDisplay';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -216,7 +215,6 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   // the stale virtual occurrence id it was opened with.
   const [materializedEntryId, setMaterializedEntryId] = useState<string | null>(null);
   const { t } = useTranslation('msp/schedule');
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const { formatDate } = useFormatters();
 
   const endsBeforeStart = useMemo(() => {
@@ -1606,7 +1604,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   {t('entryPopup.teamsMeeting.join', { defaultValue: 'Join Teams Meeting' })}
                 </Button>
               </div>
-            ) : releaseV16Enabled && teamsMeetingCapability?.available && event?.is_recurring && !event.entry_id.includes('_') ? (
+            ) : teamsMeetingCapability?.available && event?.is_recurring && !event.entry_id.includes('_') ? (
               <div>
                 <Tooltip
                   content={t('entryPopup.teamsMeeting.recurringUnsupported', {
@@ -1626,7 +1624,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   </span>
                 </Tooltip>
               </div>
-            ) : releaseV16Enabled && teamsMeetingCapability?.available && canEditFields ? (
+            ) : teamsMeetingCapability?.available && canEditFields ? (
               <div>
                 <Button
                   id="create-teams-meeting-button"

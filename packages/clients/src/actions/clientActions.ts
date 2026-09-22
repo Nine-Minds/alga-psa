@@ -17,8 +17,9 @@ import {
   hasMspPermission,
   isClientPortalUser,
 } from '../lib/authHelpers';
-import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
+import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync, getClientWideLogoUrlAsync } from '../lib/documentsHelpers';
+import { uploadEntityImage, deleteEntityImage, recropEntityLogo, parseLogoCrop } from '@alga-psa/storage';
+import type { LogoCropRect } from '@alga-psa/storage';
 import { Knex } from 'knex';
 import { createTag, findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
@@ -358,7 +359,7 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       // Handle all other fields
       Object.entries(permittedUpdateData).forEach(([key, value]) => {
         // Exclude properties, url, tax_region, account_manager_id, logoUrl (computed field), location fields, and partition keys (tenant, client_id)
-        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'tenant', 'client_id', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_address', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name'];
+        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'logoWideUrl', 'tenant', 'client_id', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_address', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name'];
         if (!excludedFields.includes(key)) {
           // Always include the field in the update, setting null for undefined/empty values
           updateObject[key] = (value === undefined || value === '') ? null : value;
@@ -399,9 +400,12 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 
     // Email suffix functionality removed for security
 
-    // Add logoUrl to the updated client data
-    const logoUrl = await getClientLogoUrlAsync(clientId, tenant);
-    const updatedClientWithLogo = { ...updateResult.after, logoUrl } as IClientWithLocation;
+    // Add logo URLs to the updated client data
+    const [logoUrl, logoWideUrl] = await Promise.all([
+      getClientLogoUrlAsync(clientId, tenant),
+      getClientWideLogoUrlAsync(clientId, tenant),
+    ]);
+    const updatedClientWithLogo = { ...updateResult.after, logoUrl, logoWideUrl } as IClientWithLocation;
 
     const occurredAt = updateResult.occurredAt ?? updatedClientWithLogo.updated_at ?? new Date().toISOString();
     const actor = maybeUserActor(user);
@@ -1964,12 +1968,22 @@ export const importClientsFromCSV = withAuth(async (
   return results;
 });
 
+// Paths that render a client logo somewhere; refreshed after every logo change.
+const revalidateClientLogoPaths = (clientId: string) => {
+  revalidatePath(`/client-portal/client-settings`);
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath(`/msp/clients/${clientId}`);
+  revalidatePath(`/msp/clients`);
+  revalidatePath(`/settings/general`);
+  revalidatePath('/'); // Main dashboard that might show client info
+};
+
 export const uploadClientLogo = withAuth(async (
   user,
   { tenant },
   clientId: string,
   formData: FormData
-): Promise<{ success: boolean; message?: string; logoUrl?: string | null }> => {
+): Promise<{ success: boolean; message?: string; imageUrl?: string | null; wideImageUrl?: string | null }> => {
   const file = formData.get('logo') as File;
   if (!file) {
     return { success: false, message: 'No logo file provided' };
@@ -1979,7 +1993,16 @@ export const uploadClientLogo = withAuth(async (
     return { success: false, message: 'Permission denied: Cannot update client logo' };
   }
 
+  let crop: LogoCropRect | null;
   try {
+    crop = parseLogoCrop(formData.get('crop'));
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : 'Invalid logo crop' };
+  }
+
+  try {
+    // A wordmark arrives with the square zone to show in avatars; the full
+    // image is kept as the 'wide' variant for the client page and invoices.
     const result = await uploadEntityImage(
       'client',
       clientId,
@@ -1987,26 +2010,66 @@ export const uploadClientLogo = withAuth(async (
       user.user_id,
       tenant,
       undefined,
-      true
+      true,
+      'default',
+      { crop: crop ?? undefined, sourceVariant: 'wide' }
     );
 
     if (!result.success) {
       return { success: false, message: result.message };
     }
 
-    // Invalidate cache for relevant paths - be more comprehensive
-    revalidatePath(`/client-portal/client-settings`);
-    revalidatePath(`/clients/${clientId}`);
-    revalidatePath(`/msp/clients/${clientId}`);
-    revalidatePath(`/msp/clients`);
-    revalidatePath(`/settings/general`);
-    revalidatePath('/'); // Main dashboard that might show client info
+    revalidateClientLogoPaths(clientId);
 
     console.log(`[uploadClientLogo] Upload process finished successfully for client ${clientId}. Returning URL: ${result.imageUrl}`);
-    return { success: true, logoUrl: result.imageUrl };
+    return { success: true, imageUrl: result.imageUrl, wideImageUrl: result.sourceImageUrl ?? null };
   } catch (error) {
     console.error('[uploadClientLogo] Error during upload process:', error);
     const message = await clientActionMessageFrom(error, 'Failed to upload client logo');
+    return { success: false, message };
+  }
+});
+
+/**
+ * Cuts a new square mark from the stored wide logo, so the zone shown in
+ * avatars can be adjusted without uploading the file again.
+ */
+export const recropClientLogo = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  crop: LogoCropRect
+): Promise<{ success: boolean; message?: string; imageUrl?: string | null }> => {
+  if (!await hasMspOrClientPortalOwnClientPermission(user, tenant, clientId, 'client', 'update')) {
+    return { success: false, message: 'Permission denied: Cannot update client logo' };
+  }
+
+  let validCrop: LogoCropRect | null;
+  try {
+    validCrop = parseLogoCrop(crop);
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : 'Invalid logo crop' };
+  }
+  if (!validCrop) {
+    return { success: false, message: 'No crop provided' };
+  }
+
+  try {
+    const result = await recropEntityLogo('client', clientId, user.user_id, tenant, {
+      sourceVariant: 'wide',
+      targetVariant: 'default',
+      crop: validCrop,
+    });
+
+    if (!result.success) {
+      return { success: false, message: result.message };
+    }
+
+    revalidateClientLogoPaths(clientId);
+    return { success: true, imageUrl: result.imageUrl };
+  } catch (error) {
+    console.error('[recropClientLogo] Error during recrop:', error);
+    const message = await clientActionMessageFrom(error, 'Failed to update client logo');
     return { success: false, message };
   }
 });
@@ -2022,25 +2085,20 @@ export const deleteClientLogo = withAuth(async (
 
   try {
     console.log(`[deleteClientLogo] Starting deletion process for client ${clientId}, tenant: ${tenant}`);
-    const result = await deleteEntityImage(
-      'client',
-      clientId,
-      user.user_id,
-      tenant
-    );
+    // The mark and the wordmark it was cut from go together.
+    const result = await deleteEntityImage('client', clientId, user.user_id, tenant);
     console.log(`[deleteClientLogo] deleteEntityImage result:`, result);
 
     if (!result.success) {
       return { success: false, message: result.message };
     }
 
-    // Invalidate cache for relevant paths - be more comprehensive
-    revalidatePath(`/client-portal/client-settings`);
-    revalidatePath(`/clients/${clientId}`);
-    revalidatePath(`/msp/clients/${clientId}`);
-    revalidatePath(`/msp/clients`);
-    revalidatePath(`/settings/general`);
-    revalidatePath('/'); // Main dashboard that might show client info
+    const wideResult = await deleteEntityImage('client', clientId, user.user_id, tenant, undefined, 'wide');
+    if (!wideResult.success) {
+      return { success: false, message: wideResult.message };
+    }
+
+    revalidateClientLogoPaths(clientId);
 
     console.log(`[deleteClientLogo] Deletion process finished successfully for client ${clientId}.`);
     return { success: true };

@@ -142,7 +142,7 @@ describe('MSP sidebar branding', () => {
     expect(sidebar).toContain('const showWideLogo = sidebarOpen && !!tenantWideLogoUrl');
     expect(sidebar).toContain('src={tenantWideLogoUrl}');
     // Natural width, no circular frame — and the name span lives in the other branch.
-    expect(sidebar).toContain('h-8 w-auto max-w-full object-contain');
+    expect(sidebar).toContain('h-14 w-auto max-w-full object-contain');
     const wideBranch = sidebar.indexOf('{showWideLogo && tenantWideLogoUrl ? (');
     const nameSpan = sidebar.indexOf('{brandDisplayName}</span>');
     expect(wideBranch).toBeGreaterThan(-1);
