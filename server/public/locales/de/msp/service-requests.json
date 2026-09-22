@@ -212,7 +212,126 @@
       "historyOperations": {
         "service_request_submission_created": "Einreichung erstellt",
         "service_request_submission_execution_succeeded": "Ausführung erfolgreich",
-        "service_request_submission_execution_failed": "Ausführung fehlgeschlagen"
+        "service_request_submission_execution_failed": "Ausführung fehlgeschlagen",
+        "service_request_submission_mapping_applied": "Antwortzuordnung angewendet",
+        "service_request_submission_mapping_field_applied": "Zugeordnetes Feld aktualisiert",
+        "service_request_submission_mapping_field_failed": "Zugeordnetes Feld fehlgeschlagen"
+      },
+      "mapping": {
+        "title": "Antwortzuordnung",
+        "description": "Wenden Sie die veröffentlichte Antwortzuordnung an, um das Konto und seine Assets aus dieser Einreichung zu aktualisieren. Die ursprüngliche Antwort wird nie verändert.",
+        "noPublishedMapping": "Keine veröffentlichte Antwortzuordnung für diese Definition. Veröffentlichen Sie eine im Abschnitt „Antwortzuordnung“ oben.",
+        "preview": "Vorschau",
+        "previewing": "Vorschau wird erstellt…",
+        "apply": "Zuordnung anwenden",
+        "applying": "Wird angewendet…",
+        "previewTitle": "Vorschau (keine Änderungen geschrieben) · Zuordnung v{{version}}",
+        "resultsTitle": "Angewendete Läufe",
+        "noRuns": "Auf diese Einreichung wurde noch keine Zuordnung angewendet.",
+        "runLabel": "Lauf {{date}} · {{status}}",
+        "runActor": "von {{actor}}",
+        "replayed": "Dieser Lauf wurde bereits angewendet; angezeigt wird das aufgezeichnete Ergebnis.",
+        "summary": "{{applied}} angewendet · {{skipped}} übersprungen · {{failed}} fehlgeschlagen",
+        "columns": {
+          "question": "Frage",
+          "destination": "Ziel",
+          "target": "Zielobjekt",
+          "before": "Vorher",
+          "after": "Nachher",
+          "status": "Ergebnis",
+          "detail": "Details"
+        },
+        "emptyValue": "—",
+        "unresolvedTarget": "Nicht aufgelöst",
+        "status": {
+          "applied": "Angewendet",
+          "skipped_answer_absent": "Übersprungen — keine Antwort",
+          "skipped_no_change": "Übersprungen — bereits aktuell",
+          "failed_validation": "Fehlgeschlagen — ungültiger Wert",
+          "failed_type_conversion": "Fehlgeschlagen — falscher Typ",
+          "failed_permission": "Fehlgeschlagen — keine Berechtigung",
+          "failed_asset_unresolved": "Fehlgeschlagen — Asset nicht gefunden",
+          "failed_asset_ambiguous": "Fehlgeschlagen — mehrere Assets passen"
+        },
+        "runStatus": {
+          "pending": "In Bearbeitung",
+          "applied": "Angewendet",
+          "partially_applied": "Teilweise angewendet",
+          "failed": "Fehlgeschlagen",
+          "no_op": "Keine Änderungen"
+        }
+      }
+    },
+    "answerMapping": {
+      "title": "Antwortzuordnung",
+      "description": "Ordnen Sie Fragen Konto- und Asset-Feldern zu. Das Anwenden einer Einreichung aktualisiert nur die zugeordneten Felder und verändert nie die gespeicherten Antworten.",
+      "loading": "Zuordnung wird geladen…",
+      "noQuestions": "Fügen Sie Formularfelder hinzu, bevor Sie Antworten zuordnen.",
+      "noRules": "Noch keine Zuordnungsregeln.",
+      "addRule": "Regel hinzufügen",
+      "editRule": "Bearbeiten",
+      "removeRule": "Entfernen",
+      "save": "Regel speichern",
+      "cancel": "Abbrechen",
+      "publish": "Zuordnung veröffentlichen",
+      "publishing": "Wird veröffentlicht…",
+      "state": {
+        "neverPublished": "Nie veröffentlicht",
+        "published": "Veröffentlicht v{{version}}",
+        "unpublishedChanges": "Unveröffentlichte Änderungen",
+        "upToDate": "Veröffentlichte Version ist aktuell"
+      },
+      "fields": {
+        "question": "Frage",
+        "destinationKind": "Ziel",
+        "targetField": "Feld",
+        "assetStrategy": "So wird das Asset gefunden",
+        "assetRefQuestion": "Frage, deren Antwort das Asset identifiziert",
+        "matchAttribute": "Abgleich über",
+        "matchQuestion": "Frage, deren Antwort abgeglichen wird",
+        "attributeKey": "Schlüssel des benutzerdefinierten Attributs"
+      },
+      "placeholders": {
+        "question": "Frage auswählen",
+        "destinationKind": "Ziel auswählen",
+        "targetField": "Feld auswählen",
+        "attributeKey": "z. B. rack_position"
+      },
+      "targetFieldGroups": {
+        "attribute": "Benutzerdefiniertes Attribut…"
+      },
+      "strategies": {
+        "answer-asset-ref": "Die Antwort ist das Asset",
+        "match-attribute": "Antwort mit einem Asset-Attribut abgleichen"
+      },
+      "matchAttributes": {
+        "asset_tag": "Asset-Tag",
+        "serial_number": "Seriennummer",
+        "name": "Asset-Name"
+      },
+      "columns": {
+        "question": "Frage",
+        "destination": "Ziel",
+        "field": "Feld",
+        "selector": "Asset-Auswahl",
+        "actions": "Aktionen"
+      },
+      "selectorSummary": {
+        "account": "Konto der Einreichung",
+        "answerAssetRef": "Asset aus „{{question}}“",
+        "matchAttribute": "{{attribute}} = „{{question}}“"
+      },
+      "unknownQuestion": "Fehlende Frage ({{key}})",
+      "messages": {
+        "ruleSaved": "Zuordnungsregel gespeichert",
+        "ruleRemoved": "Zuordnungsregel entfernt",
+        "published": "Antwortzuordnung veröffentlicht",
+        "saveFailed": "Zuordnungsregel konnte nicht gespeichert werden",
+        "removeFailed": "Zuordnungsregel konnte nicht entfernt werden",
+        "publishFailed": "Antwortzuordnung konnte nicht veröffentlicht werden",
+        "previewFailed": "Vorschau der Antwortzuordnung fehlgeschlagen",
+        "applyFailed": "Antwortzuordnung konnte nicht angewendet werden",
+        "applied": "Antwortzuordnung angewendet"
       }
     }
   },

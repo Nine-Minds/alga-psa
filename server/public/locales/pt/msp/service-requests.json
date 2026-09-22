@@ -212,7 +212,126 @@
       "historyOperations": {
         "service_request_submission_created": "Envio criado",
         "service_request_submission_execution_succeeded": "Execução bem-sucedida",
-        "service_request_submission_execution_failed": "Falha na execução"
+        "service_request_submission_execution_failed": "Falha na execução",
+        "service_request_submission_mapping_applied": "Mapeamento de respostas aplicado",
+        "service_request_submission_mapping_field_applied": "Campo mapeado atualizado",
+        "service_request_submission_mapping_field_failed": "Falha no campo mapeado"
+      },
+      "mapping": {
+        "title": "Mapeamento de respostas",
+        "description": "Aplique o mapeamento de respostas publicado para atualizar a conta e os seus ativos a partir desta submissão. A resposta original nunca é alterada.",
+        "noPublishedMapping": "Não há mapeamento de respostas publicado para esta definição. Publique um na secção «Mapeamento de respostas» acima.",
+        "preview": "Pré-visualizar",
+        "previewing": "A pré-visualizar…",
+        "apply": "Aplicar mapeamento",
+        "applying": "A aplicar…",
+        "previewTitle": "Pré-visualização (sem alterações gravadas) · mapeamento v{{version}}",
+        "resultsTitle": "Execuções aplicadas",
+        "noRuns": "Ainda não foi aplicado nenhum mapeamento a esta submissão.",
+        "runLabel": "Execução {{date}} · {{status}}",
+        "runActor": "por {{actor}}",
+        "replayed": "Esta execução já tinha sido aplicada; é apresentado o resultado registado.",
+        "summary": "{{applied}} aplicados · {{skipped}} ignorados · {{failed}} com falha",
+        "columns": {
+          "question": "Pergunta",
+          "destination": "Destino",
+          "target": "Alvo",
+          "before": "Antes",
+          "after": "Depois",
+          "status": "Resultado",
+          "detail": "Detalhe"
+        },
+        "emptyValue": "—",
+        "unresolvedTarget": "Não resolvido",
+        "status": {
+          "applied": "Aplicado",
+          "skipped_answer_absent": "Ignorado — sem resposta",
+          "skipped_no_change": "Ignorado — já atualizado",
+          "failed_validation": "Falha — valor inválido",
+          "failed_type_conversion": "Falha — tipo incorreto",
+          "failed_permission": "Falha — permissão negada",
+          "failed_asset_unresolved": "Falha — ativo não encontrado",
+          "failed_asset_ambiguous": "Falha — vários ativos correspondem"
+        },
+        "runStatus": {
+          "pending": "Em curso",
+          "applied": "Aplicado",
+          "partially_applied": "Parcialmente aplicado",
+          "failed": "Falhou",
+          "no_op": "Sem alterações"
+        }
+      }
+    },
+    "answerMapping": {
+      "title": "Mapeamento de respostas",
+      "description": "Associe perguntas a campos da conta e dos ativos. Aplicar uma submissão atualiza apenas os campos mapeados e nunca altera as respostas guardadas.",
+      "loading": "A carregar mapeamento…",
+      "noQuestions": "Adicione campos ao formulário antes de mapear respostas.",
+      "noRules": "Ainda não há regras de mapeamento.",
+      "addRule": "Adicionar regra",
+      "editRule": "Editar",
+      "removeRule": "Remover",
+      "save": "Guardar regra",
+      "cancel": "Cancelar",
+      "publish": "Publicar mapeamento",
+      "publishing": "A publicar…",
+      "state": {
+        "neverPublished": "Nunca publicado",
+        "published": "Publicado v{{version}}",
+        "unpublishedChanges": "Alterações não publicadas",
+        "upToDate": "A versão publicada está atualizada"
+      },
+      "fields": {
+        "question": "Pergunta",
+        "destinationKind": "Destino",
+        "targetField": "Campo",
+        "assetStrategy": "Como encontrar o ativo",
+        "assetRefQuestion": "Pergunta cuja resposta identifica o ativo",
+        "matchAttribute": "Corresponder por",
+        "matchQuestion": "Pergunta cuja resposta é comparada",
+        "attributeKey": "Chave do atributo personalizado"
+      },
+      "placeholders": {
+        "question": "Selecione uma pergunta",
+        "destinationKind": "Selecione um destino",
+        "targetField": "Selecione um campo",
+        "attributeKey": "ex.: rack_position"
+      },
+      "targetFieldGroups": {
+        "attribute": "Atributo personalizado…"
+      },
+      "strategies": {
+        "answer-asset-ref": "A resposta é o ativo",
+        "match-attribute": "Comparar uma resposta com um atributo do ativo"
+      },
+      "matchAttributes": {
+        "asset_tag": "Etiqueta do ativo",
+        "serial_number": "Número de série",
+        "name": "Nome do ativo"
+      },
+      "columns": {
+        "question": "Pergunta",
+        "destination": "Destino",
+        "field": "Campo",
+        "selector": "Seleção do ativo",
+        "actions": "Ações"
+      },
+      "selectorSummary": {
+        "account": "Conta da submissão",
+        "answerAssetRef": "Ativo de «{{question}}»",
+        "matchAttribute": "{{attribute}} = «{{question}}»"
+      },
+      "unknownQuestion": "Pergunta em falta ({{key}})",
+      "messages": {
+        "ruleSaved": "Regra de mapeamento guardada",
+        "ruleRemoved": "Regra de mapeamento removida",
+        "published": "Mapeamento de respostas publicado",
+        "saveFailed": "Não foi possível guardar a regra",
+        "removeFailed": "Não foi possível remover a regra",
+        "publishFailed": "Não foi possível publicar o mapeamento",
+        "previewFailed": "Não foi possível pré-visualizar o mapeamento",
+        "applyFailed": "Não foi possível aplicar o mapeamento",
+        "applied": "Mapeamento de respostas aplicado"
       }
     }
   },

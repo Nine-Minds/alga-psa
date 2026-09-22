@@ -212,7 +212,126 @@
       "historyOperations": {
         "service_request_submission_created": "Envío creado",
         "service_request_submission_execution_succeeded": "Ejecución correcta",
-        "service_request_submission_execution_failed": "Error de ejecución"
+        "service_request_submission_execution_failed": "Error de ejecución",
+        "service_request_submission_mapping_applied": "Asignación de respuestas aplicada",
+        "service_request_submission_mapping_field_applied": "Campo asignado actualizado",
+        "service_request_submission_mapping_field_failed": "Campo asignado con error"
+      },
+      "mapping": {
+        "title": "Asignación de respuestas",
+        "description": "Aplique la asignación de respuestas publicada para actualizar la cuenta y sus activos a partir de este envío. La respuesta original nunca se modifica.",
+        "noPublishedMapping": "No hay ninguna asignación de respuestas publicada para esta definición. Publique una en la sección «Asignación de respuestas» de arriba.",
+        "preview": "Vista previa",
+        "previewing": "Generando vista previa…",
+        "apply": "Aplicar asignación",
+        "applying": "Aplicando…",
+        "previewTitle": "Vista previa (sin cambios escritos) · asignación v{{version}}",
+        "resultsTitle": "Ejecuciones aplicadas",
+        "noRuns": "Todavía no se ha aplicado ninguna asignación a este envío.",
+        "runLabel": "Ejecución {{date}} · {{status}}",
+        "runActor": "por {{actor}}",
+        "replayed": "Esta ejecución ya se aplicó; se muestra el resultado registrado.",
+        "summary": "{{applied}} aplicados · {{skipped}} omitidos · {{failed}} con error",
+        "columns": {
+          "question": "Pregunta",
+          "destination": "Destino",
+          "target": "Objetivo",
+          "before": "Antes",
+          "after": "Después",
+          "status": "Resultado",
+          "detail": "Detalle"
+        },
+        "emptyValue": "—",
+        "unresolvedTarget": "No resuelto",
+        "status": {
+          "applied": "Aplicado",
+          "skipped_answer_absent": "Omitido — sin respuesta",
+          "skipped_no_change": "Omitido — ya actualizado",
+          "failed_validation": "Error — valor no válido",
+          "failed_type_conversion": "Error — tipo incorrecto",
+          "failed_permission": "Error — permiso denegado",
+          "failed_asset_unresolved": "Error — activo no encontrado",
+          "failed_asset_ambiguous": "Error — varios activos coinciden"
+        },
+        "runStatus": {
+          "pending": "En curso",
+          "applied": "Aplicado",
+          "partially_applied": "Aplicado parcialmente",
+          "failed": "Con error",
+          "no_op": "Sin cambios"
+        }
+      }
+    },
+    "answerMapping": {
+      "title": "Asignación de respuestas",
+      "description": "Asigne preguntas a campos de la cuenta y de los activos. Aplicar un envío actualiza solo los campos asignados y nunca modifica las respuestas guardadas.",
+      "loading": "Cargando asignación…",
+      "noQuestions": "Añada campos al formulario antes de asignar respuestas.",
+      "noRules": "Todavía no hay reglas de asignación.",
+      "addRule": "Añadir regla",
+      "editRule": "Editar",
+      "removeRule": "Quitar",
+      "save": "Guardar regla",
+      "cancel": "Cancelar",
+      "publish": "Publicar asignación",
+      "publishing": "Publicando…",
+      "state": {
+        "neverPublished": "Nunca publicada",
+        "published": "Publicada v{{version}}",
+        "unpublishedChanges": "Cambios sin publicar",
+        "upToDate": "La versión publicada está al día"
+      },
+      "fields": {
+        "question": "Pregunta",
+        "destinationKind": "Destino",
+        "targetField": "Campo",
+        "assetStrategy": "Cómo encontrar el activo",
+        "assetRefQuestion": "Pregunta cuya respuesta identifica el activo",
+        "matchAttribute": "Coincidir por",
+        "matchQuestion": "Pregunta cuya respuesta se compara",
+        "attributeKey": "Clave del atributo personalizado"
+      },
+      "placeholders": {
+        "question": "Seleccione una pregunta",
+        "destinationKind": "Seleccione un destino",
+        "targetField": "Seleccione un campo",
+        "attributeKey": "p. ej. rack_position"
+      },
+      "targetFieldGroups": {
+        "attribute": "Atributo personalizado…"
+      },
+      "strategies": {
+        "answer-asset-ref": "La respuesta es el activo",
+        "match-attribute": "Comparar una respuesta con un atributo del activo"
+      },
+      "matchAttributes": {
+        "asset_tag": "Etiqueta del activo",
+        "serial_number": "Número de serie",
+        "name": "Nombre del activo"
+      },
+      "columns": {
+        "question": "Pregunta",
+        "destination": "Destino",
+        "field": "Campo",
+        "selector": "Selección del activo",
+        "actions": "Acciones"
+      },
+      "selectorSummary": {
+        "account": "Cuenta del envío",
+        "answerAssetRef": "Activo de «{{question}}»",
+        "matchAttribute": "{{attribute}} = «{{question}}»"
+      },
+      "unknownQuestion": "Pregunta ausente ({{key}})",
+      "messages": {
+        "ruleSaved": "Regla de asignación guardada",
+        "ruleRemoved": "Regla de asignación eliminada",
+        "published": "Asignación de respuestas publicada",
+        "saveFailed": "No se pudo guardar la regla de asignación",
+        "removeFailed": "No se pudo eliminar la regla de asignación",
+        "publishFailed": "No se pudo publicar la asignación de respuestas",
+        "previewFailed": "No se pudo generar la vista previa de la asignación",
+        "applyFailed": "No se pudo aplicar la asignación de respuestas",
+        "applied": "Asignación de respuestas aplicada"
       }
     }
   },

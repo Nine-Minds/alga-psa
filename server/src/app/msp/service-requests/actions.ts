@@ -43,6 +43,19 @@ import {
   type ServiceRequestDefinitionErrorCode,
   SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG,
   applyStoreOnlyAuthoringGateToEditorData,
+  addAnswerMappingRule,
+  applyAnswerMapping,
+  getServiceRequestAnswerMappingEditorData,
+  listApplicationsForSubmission,
+  previewAnswerMapping,
+  publishAnswerMapping,
+  removeAnswerMappingRule,
+  updateAnswerMappingRule,
+  type AnswerMappingPreviewResult,
+  type ApplyAnswerMappingResult,
+  type MappingApplicationRecord,
+  type ServiceRequestAnswerMappingEditorData,
+  type ServiceRequestAnswerMappingRuleInput,
 } from '../../../lib/service-requests';
 import { featureFlags } from '../../../lib/feature-flags/featureFlags';
 import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
@@ -607,4 +620,130 @@ export const unarchiveServiceRequestDefinitionAction = withAuth(async (
   } catch (error) {
     return mapServiceRequestDefinitionError(error);
   }
+});
+
+// ---------------------------------------------------------------------------
+// Questionnaire answer → account/asset mapping
+// (docs/plans/2026-09-20-questionnaire-answer-mapping-plan.md §6.1, §8)
+//
+// Configuring mappings is gated exactly like the definition editor (service
+// resource). Applying additionally enforces the destination write permission
+// per field inside the engine (client:update / asset:update).
+// ---------------------------------------------------------------------------
+
+export const getServiceRequestAnswerMappingEditorDataAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string
+): Promise<ServiceRequestAnswerMappingEditorData> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'read', knex);
+  return getServiceRequestAnswerMappingEditorData(knex, tenant, definitionId);
+});
+
+export const addServiceRequestAnswerMappingRuleAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  rule: ServiceRequestAnswerMappingRuleInput
+): Promise<ServiceRequestAnswerMappingEditorData> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  await addAnswerMappingRule({ knex, tenant, definitionId, rule, updatedBy: getActorId(user) });
+  return getServiceRequestAnswerMappingEditorData(knex, tenant, definitionId);
+});
+
+export const updateServiceRequestAnswerMappingRuleAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  ruleId: string,
+  rule: ServiceRequestAnswerMappingRuleInput
+): Promise<ServiceRequestAnswerMappingEditorData> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  await updateAnswerMappingRule({ knex, tenant, definitionId, ruleId, rule, updatedBy: getActorId(user) });
+  return getServiceRequestAnswerMappingEditorData(knex, tenant, definitionId);
+});
+
+export const removeServiceRequestAnswerMappingRuleAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  ruleId: string
+): Promise<ServiceRequestAnswerMappingEditorData> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  await removeAnswerMappingRule({ knex, tenant, definitionId, ruleId, updatedBy: getActorId(user) });
+  return getServiceRequestAnswerMappingEditorData(knex, tenant, definitionId);
+});
+
+export const publishServiceRequestAnswerMappingAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string
+): Promise<ServiceRequestAnswerMappingEditorData> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  await publishAnswerMapping({ knex, tenant, definitionId, publishedBy: getActorId(user) });
+  return getServiceRequestAnswerMappingEditorData(knex, tenant, definitionId);
+});
+
+function requireActorId(user: AuthUser): string {
+  const actorId = getActorId(user);
+  if (!actorId) {
+    throwHttpError(401, 'Authenticated user required');
+  }
+  return actorId;
+}
+
+/**
+ * Dry run: resolves targets, coerces/validates, and computes before→after for
+ * every rule without writing. Runs against the published mapping version by
+ * default, or an explicit version id.
+ */
+export const previewServiceRequestAnswerMappingAction = withAuth(async (
+  user,
+  { tenant },
+  submissionId: string,
+  mappingVersionId?: string | null
+): Promise<AnswerMappingPreviewResult> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'read', knex);
+  return previewAnswerMapping({
+    knex,
+    tenant,
+    submissionId,
+    mappingVersionId: mappingVersionId ?? null,
+    actorUserId: requireActorId(user),
+    actorUser: user as IUser,
+  });
+});
+
+export const applyServiceRequestAnswerMappingAction = withAuth(async (
+  user,
+  { tenant },
+  submissionId: string,
+  mappingVersionId?: string | null
+): Promise<ApplyAnswerMappingResult> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  return applyAnswerMapping({
+    knex,
+    tenant,
+    submissionId,
+    mappingVersionId: mappingVersionId ?? null,
+    actorUserId: requireActorId(user),
+    actorUser: user as IUser,
+  });
+});
+
+export const listServiceRequestSubmissionMappingApplicationsAction = withAuth(async (
+  user,
+  { tenant },
+  submissionId: string
+): Promise<MappingApplicationRecord[]> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'read', knex);
+  return listApplicationsForSubmission(knex, tenant, submissionId);
 });

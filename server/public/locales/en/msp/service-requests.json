@@ -212,7 +212,126 @@
       "historyOperations": {
         "service_request_submission_created": "Submission created",
         "service_request_submission_execution_succeeded": "Execution succeeded",
-        "service_request_submission_execution_failed": "Execution failed"
+        "service_request_submission_execution_failed": "Execution failed",
+        "service_request_submission_mapping_applied": "Answer mapping applied",
+        "service_request_submission_mapping_field_applied": "Mapped field updated",
+        "service_request_submission_mapping_field_failed": "Mapped field failed"
+      },
+      "mapping": {
+        "title": "Answer mapping",
+        "description": "Apply the published answer mapping to update the account and its assets from this submission. The original response is never changed.",
+        "noPublishedMapping": "No published answer mapping for this definition. Publish one in the Answer Mapping section above.",
+        "preview": "Preview",
+        "previewing": "Previewing…",
+        "apply": "Apply mapping",
+        "applying": "Applying…",
+        "previewTitle": "Preview (no changes written) · mapping v{{version}}",
+        "resultsTitle": "Applied runs",
+        "noRuns": "This submission has not had a mapping applied yet.",
+        "runLabel": "Run {{date}} · {{status}}",
+        "runActor": "by {{actor}}",
+        "replayed": "This run was already applied; the results shown are the recorded outcome.",
+        "summary": "{{applied}} applied · {{skipped}} skipped · {{failed}} failed",
+        "columns": {
+          "question": "Question",
+          "destination": "Destination",
+          "target": "Target",
+          "before": "Before",
+          "after": "After",
+          "status": "Result",
+          "detail": "Detail"
+        },
+        "emptyValue": "—",
+        "unresolvedTarget": "Not resolved",
+        "status": {
+          "applied": "Applied",
+          "skipped_answer_absent": "Skipped — no answer",
+          "skipped_no_change": "Skipped — already up to date",
+          "failed_validation": "Failed — invalid value",
+          "failed_type_conversion": "Failed — wrong type",
+          "failed_permission": "Failed — permission denied",
+          "failed_asset_unresolved": "Failed — asset not found",
+          "failed_asset_ambiguous": "Failed — multiple assets match"
+        },
+        "runStatus": {
+          "pending": "In progress",
+          "applied": "Applied",
+          "partially_applied": "Partially applied",
+          "failed": "Failed",
+          "no_op": "No changes"
+        }
+      }
+    },
+    "answerMapping": {
+      "title": "Answer Mapping",
+      "description": "Map questions to account and asset fields. Applying a submission updates only the mapped fields and never changes the stored answers.",
+      "loading": "Loading mapping…",
+      "noQuestions": "Add form fields before mapping answers.",
+      "noRules": "No mapping rules yet.",
+      "addRule": "Add rule",
+      "editRule": "Edit",
+      "removeRule": "Remove",
+      "save": "Save rule",
+      "cancel": "Cancel",
+      "publish": "Publish mapping",
+      "publishing": "Publishing…",
+      "state": {
+        "neverPublished": "Never published",
+        "published": "Published v{{version}}",
+        "unpublishedChanges": "Unpublished changes",
+        "upToDate": "Published version is current"
+      },
+      "fields": {
+        "question": "Question",
+        "destinationKind": "Destination",
+        "targetField": "Field",
+        "assetStrategy": "How to find the asset",
+        "assetRefQuestion": "Question whose answer identifies the asset",
+        "matchAttribute": "Match on",
+        "matchQuestion": "Question whose answer to match",
+        "attributeKey": "Custom attribute key"
+      },
+      "placeholders": {
+        "question": "Select a question",
+        "destinationKind": "Select a destination",
+        "targetField": "Select a field",
+        "attributeKey": "e.g. rack_position"
+      },
+      "targetFieldGroups": {
+        "attribute": "Custom attribute…"
+      },
+      "strategies": {
+        "answer-asset-ref": "The answer is the asset",
+        "match-attribute": "Match an answer to an asset attribute"
+      },
+      "matchAttributes": {
+        "asset_tag": "Asset tag",
+        "serial_number": "Serial number",
+        "name": "Asset name"
+      },
+      "columns": {
+        "question": "Question",
+        "destination": "Destination",
+        "field": "Field",
+        "selector": "Asset selection",
+        "actions": "Actions"
+      },
+      "selectorSummary": {
+        "account": "Submission account",
+        "answerAssetRef": "Asset from “{{question}}”",
+        "matchAttribute": "{{attribute}} = “{{question}}”"
+      },
+      "unknownQuestion": "Missing question ({{key}})",
+      "messages": {
+        "ruleSaved": "Mapping rule saved",
+        "ruleRemoved": "Mapping rule removed",
+        "published": "Answer mapping published",
+        "saveFailed": "Failed to save mapping rule",
+        "removeFailed": "Failed to remove mapping rule",
+        "publishFailed": "Failed to publish answer mapping",
+        "previewFailed": "Failed to preview answer mapping",
+        "applyFailed": "Failed to apply answer mapping",
+        "applied": "Answer mapping applied"
       }
     }
   },

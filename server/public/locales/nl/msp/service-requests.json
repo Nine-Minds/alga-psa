@@ -212,7 +212,126 @@
       "historyOperations": {
         "service_request_submission_created": "Inzending aangemaakt",
         "service_request_submission_execution_succeeded": "Uitvoering geslaagd",
-        "service_request_submission_execution_failed": "Uitvoering mislukt"
+        "service_request_submission_execution_failed": "Uitvoering mislukt",
+        "service_request_submission_mapping_applied": "Antwoordtoewijzing toegepast",
+        "service_request_submission_mapping_field_applied": "Toegewezen veld bijgewerkt",
+        "service_request_submission_mapping_field_failed": "Toegewezen veld mislukt"
+      },
+      "mapping": {
+        "title": "Antwoordtoewijzing",
+        "description": "Pas de gepubliceerde antwoordtoewijzing toe om het account en de bijbehorende assets vanuit deze inzending bij te werken. Het oorspronkelijke antwoord wordt nooit gewijzigd.",
+        "noPublishedMapping": "Geen gepubliceerde antwoordtoewijzing voor deze definitie. Publiceer er een in de sectie ‘Antwoordtoewijzing’ hierboven.",
+        "preview": "Voorbeeld",
+        "previewing": "Voorbeeld wordt gemaakt…",
+        "apply": "Toewijzing toepassen",
+        "applying": "Toepassen…",
+        "previewTitle": "Voorbeeld (geen wijzigingen geschreven) · toewijzing v{{version}}",
+        "resultsTitle": "Toegepaste runs",
+        "noRuns": "Op deze inzending is nog geen toewijzing toegepast.",
+        "runLabel": "Run {{date}} · {{status}}",
+        "runActor": "door {{actor}}",
+        "replayed": "Deze run was al toegepast; het vastgelegde resultaat wordt getoond.",
+        "summary": "{{applied}} toegepast · {{skipped}} overgeslagen · {{failed}} mislukt",
+        "columns": {
+          "question": "Vraag",
+          "destination": "Bestemming",
+          "target": "Doel",
+          "before": "Voor",
+          "after": "Na",
+          "status": "Resultaat",
+          "detail": "Details"
+        },
+        "emptyValue": "—",
+        "unresolvedTarget": "Niet gevonden",
+        "status": {
+          "applied": "Toegepast",
+          "skipped_answer_absent": "Overgeslagen — geen antwoord",
+          "skipped_no_change": "Overgeslagen — al actueel",
+          "failed_validation": "Mislukt — ongeldige waarde",
+          "failed_type_conversion": "Mislukt — verkeerd type",
+          "failed_permission": "Mislukt — geen toestemming",
+          "failed_asset_unresolved": "Mislukt — asset niet gevonden",
+          "failed_asset_ambiguous": "Mislukt — meerdere assets komen overeen"
+        },
+        "runStatus": {
+          "pending": "Bezig",
+          "applied": "Toegepast",
+          "partially_applied": "Gedeeltelijk toegepast",
+          "failed": "Mislukt",
+          "no_op": "Geen wijzigingen"
+        }
+      }
+    },
+    "answerMapping": {
+      "title": "Antwoordtoewijzing",
+      "description": "Wijs vragen toe aan account- en assetvelden. Het toepassen van een inzending werkt alleen de toegewezen velden bij en wijzigt nooit de opgeslagen antwoorden.",
+      "loading": "Toewijzing laden…",
+      "noQuestions": "Voeg formuliervelden toe voordat u antwoorden toewijst.",
+      "noRules": "Nog geen toewijzingsregels.",
+      "addRule": "Regel toevoegen",
+      "editRule": "Bewerken",
+      "removeRule": "Verwijderen",
+      "save": "Regel opslaan",
+      "cancel": "Annuleren",
+      "publish": "Toewijzing publiceren",
+      "publishing": "Publiceren…",
+      "state": {
+        "neverPublished": "Nooit gepubliceerd",
+        "published": "Gepubliceerd v{{version}}",
+        "unpublishedChanges": "Niet-gepubliceerde wijzigingen",
+        "upToDate": "Gepubliceerde versie is actueel"
+      },
+      "fields": {
+        "question": "Vraag",
+        "destinationKind": "Bestemming",
+        "targetField": "Veld",
+        "assetStrategy": "Hoe de asset te vinden",
+        "assetRefQuestion": "Vraag waarvan het antwoord de asset identificeert",
+        "matchAttribute": "Vergelijken op",
+        "matchQuestion": "Vraag waarvan het antwoord wordt vergeleken",
+        "attributeKey": "Sleutel van aangepast kenmerk"
+      },
+      "placeholders": {
+        "question": "Selecteer een vraag",
+        "destinationKind": "Selecteer een bestemming",
+        "targetField": "Selecteer een veld",
+        "attributeKey": "bijv. rack_position"
+      },
+      "targetFieldGroups": {
+        "attribute": "Aangepast kenmerk…"
+      },
+      "strategies": {
+        "answer-asset-ref": "Het antwoord is de asset",
+        "match-attribute": "Een antwoord vergelijken met een assetkenmerk"
+      },
+      "matchAttributes": {
+        "asset_tag": "Assettag",
+        "serial_number": "Serienummer",
+        "name": "Assetnaam"
+      },
+      "columns": {
+        "question": "Vraag",
+        "destination": "Bestemming",
+        "field": "Veld",
+        "selector": "Assetselectie",
+        "actions": "Acties"
+      },
+      "selectorSummary": {
+        "account": "Account van de inzending",
+        "answerAssetRef": "Asset uit ‘{{question}}’",
+        "matchAttribute": "{{attribute}} = ‘{{question}}’"
+      },
+      "unknownQuestion": "Ontbrekende vraag ({{key}})",
+      "messages": {
+        "ruleSaved": "Toewijzingsregel opgeslagen",
+        "ruleRemoved": "Toewijzingsregel verwijderd",
+        "published": "Antwoordtoewijzing gepubliceerd",
+        "saveFailed": "Toewijzingsregel opslaan mislukt",
+        "removeFailed": "Toewijzingsregel verwijderen mislukt",
+        "publishFailed": "Antwoordtoewijzing publiceren mislukt",
+        "previewFailed": "Voorbeeld van antwoordtoewijzing mislukt",
+        "applyFailed": "Antwoordtoewijzing toepassen mislukt",
+        "applied": "Antwoordtoewijzing toegepast"
       }
     }
   },
