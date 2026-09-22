@@ -4,6 +4,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import toast from 'react-hot-toast';
 import {
   handleError,
+  isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -73,6 +74,10 @@ const ClientDefaultTimeEntryServiceSettings: React.FC<ClientDefaultTimeEntryServ
       });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
+        return;
+      }
+      if (isActionMessageError(result)) {
+        handleError(result.actionError);
         return;
       }
       if (result.success) {

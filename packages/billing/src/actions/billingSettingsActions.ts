@@ -9,6 +9,10 @@ import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib
 import { assertBoardScopedTicketStatusSelection } from '@shared/lib/boardScopedTicketStatusValidation';
 import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
 import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
+import {
+  assertValidTenantDefaultTimeEntryService,
+  InvalidDefaultTimeEntryServiceError,
+} from '@shared/billingClients/defaultTimeEntryServiceValidation';
 import type { CadenceOwner } from '@alga-psa/types';
 
 function tenantScopedTable(
@@ -175,6 +179,12 @@ export const updateDefaultBillingSettings = withAuth(async (
       });
     }
 
+    // The migration has no FK, so validate a non-null default before writing it.
+    // Null (clear) and undefined (leave unchanged) skip validation.
+    if (has('defaultTimeEntryServiceId') && data.defaultTimeEntryServiceId != null) {
+      await assertValidTenantDefaultTimeEntryService(trx, tenant, data.defaultTimeEntryServiceId);
+    }
+
     const renewalMode =
       data.defaultRenewalMode === 'none' ||
       data.defaultRenewalMode === 'manual' ||
@@ -271,6 +281,9 @@ export const updateDefaultBillingSettings = withAuth(async (
     if (error instanceof Error && error.name === 'BoardScopedTicketStatusSelectionError') {
       return actionError(error.message);
     }
+    if (error instanceof InvalidDefaultTimeEntryServiceError) {
+      return actionError(error.message);
+    }
     throw error;
   }
 
@@ -331,29 +344,36 @@ export const updateClientContractLineSettings = withAuth(async (
   }
   const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await updateClientBillingSettingsShared(
-      trx,
-      tenant,
-      clientId,
-      data
-        ? {
-            zeroDollarInvoiceHandling: data.zeroDollarInvoiceHandling,
-            suppressZeroDollarInvoices: data.suppressZeroDollarInvoices,
-            enableCreditExpiration: data.enableCreditExpiration,
-            creditExpirationDays: data.creditExpirationDays,
-            creditExpirationNotificationDays: data.creditExpirationNotificationDays,
-            hasExternalCredit: data.hasExternalCredit,
-            externalCreditNote: data.externalCreditNote,
-            creditAutoApplyEnabled: data.creditAutoApplyEnabled,
-            creditApplicationOrder: data.creditApplicationOrder,
-            creditServiceTypeRestrictionMode: data.creditServiceTypeRestrictionMode,
-            creditEligibleServiceTypeIds: data.creditEligibleServiceTypeIds,
-            defaultTimeEntryServiceId: data.defaultTimeEntryServiceId,
-          }
-        : null
-    );
-  });
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await updateClientBillingSettingsShared(
+        trx,
+        tenant,
+        clientId,
+        data
+          ? {
+              zeroDollarInvoiceHandling: data.zeroDollarInvoiceHandling,
+              suppressZeroDollarInvoices: data.suppressZeroDollarInvoices,
+              enableCreditExpiration: data.enableCreditExpiration,
+              creditExpirationDays: data.creditExpirationDays,
+              creditExpirationNotificationDays: data.creditExpirationNotificationDays,
+              hasExternalCredit: data.hasExternalCredit,
+              externalCreditNote: data.externalCreditNote,
+              creditAutoApplyEnabled: data.creditAutoApplyEnabled,
+              creditApplicationOrder: data.creditApplicationOrder,
+              creditServiceTypeRestrictionMode: data.creditServiceTypeRestrictionMode,
+              creditEligibleServiceTypeIds: data.creditEligibleServiceTypeIds,
+              defaultTimeEntryServiceId: data.defaultTimeEntryServiceId,
+            }
+          : null
+      );
+    });
+  } catch (error) {
+    if (error instanceof InvalidDefaultTimeEntryServiceError) {
+      return actionError(error.message);
+    }
+    throw error;
+  }
 
   return { success: true };
 });

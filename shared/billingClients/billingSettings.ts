@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { ensureDefaultContractForClient } from './defaultContract';
+import { assertValidClientDefaultTimeEntryService } from './defaultTimeEntryServiceValidation';
 
 export type CreditServiceTypeRestrictionMode = 'all' | 'restricted';
 
@@ -157,6 +158,13 @@ export async function updateClientBillingSettings(
   if (settings === null) {
     await tenantDb(knexOrTrx, tenant).table('client_billing_settings').where({ client_id: clientId }).del();
     return;
+  }
+
+  // A non-null default must be usable before it is persisted; the migration has
+  // no FK, so this is the write-time guard. Stale values are still re-checked at
+  // resolution time. Null clears the override and needs no validation.
+  if (settings.defaultTimeEntryServiceId !== undefined && settings.defaultTimeEntryServiceId !== null) {
+    await assertValidClientDefaultTimeEntryService(knexOrTrx, tenant, clientId, settings.defaultTimeEntryServiceId);
   }
 
   const updates: Record<string, unknown> = {};

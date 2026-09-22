@@ -17,6 +17,17 @@ const mockState: MockState = {
 const mockCreateTenantKnex = vi.fn(async () => ({ knex: {} }));
 const mockHasPermission = vi.fn(async () => true);
 const mockUpdateClientBillingSettingsShared = vi.fn(async () => undefined);
+const mockAssertTenantDefault = vi.fn(async () => undefined);
+const mockAssertClientDefault = vi.fn(async () => undefined);
+
+class MockInvalidDefaultTimeEntryServiceError extends Error {
+  readonly reason: string;
+  constructor(reason: string, message: string) {
+    super(message);
+    this.name = 'InvalidDefaultTimeEntryServiceError';
+    this.reason = reason;
+  }
+}
 
 function createMockQuery(
   table: string,
@@ -102,6 +113,12 @@ vi.mock('@shared/billingClients/billingSettings', () => ({
   updateClientBillingSettings: (...args: unknown[]) => mockUpdateClientBillingSettingsShared(...args),
 }));
 
+vi.mock('@shared/billingClients/defaultTimeEntryServiceValidation', () => ({
+  assertValidTenantDefaultTimeEntryService: (...args: unknown[]) => mockAssertTenantDefault(...(args as [])),
+  assertValidClientDefaultTimeEntryService: (...args: unknown[]) => mockAssertClientDefault(...(args as [])),
+  InvalidDefaultTimeEntryServiceError: MockInvalidDefaultTimeEntryServiceError,
+}));
+
 describe('default time-entry service — tenant settings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -110,6 +127,9 @@ describe('default time-entry service — tenant settings', () => {
     mockState.updates = [];
     mockState.inserts = [];
     mockHasPermission.mockResolvedValue(true);
+    mockUpdateClientBillingSettingsShared.mockResolvedValue(undefined);
+    mockAssertTenantDefault.mockResolvedValue(undefined);
+    mockAssertClientDefault.mockResolvedValue(undefined);
   });
 
   it('loads the stored tenant default service', async () => {
@@ -181,6 +201,39 @@ describe('default time-entry service — tenant settings', () => {
     expect(mockState.updates[0]?.payload).toMatchObject({
       default_time_entry_service_id: null,
     });
+    expect(mockAssertTenantDefault).not.toHaveBeenCalled();
+  });
+
+  it('rejects a tenant default that is not an active hourly service in this tenant', async () => {
+    mockState.defaultSettings = {
+      tenant: 'tenant-1',
+      zero_dollar_invoice_handling: 'normal',
+      suppress_zero_dollar_invoices: false,
+      default_time_entry_service_id: null,
+    };
+    mockAssertTenantDefault.mockRejectedValueOnce(
+      new MockInvalidDefaultTimeEntryServiceError(
+        'not_active_hourly_service',
+        'The default time-entry service must be an active hourly service in this tenant.'
+      )
+    );
+
+    const { updateDefaultBillingSettings } = await import('../src/actions/billingSettingsActions');
+    const result = await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultTimeEntryServiceId: 'cross-tenant-or-inactive-service' }
+    );
+
+    expect(result).toMatchObject({ actionError: expect.any(String) });
+    expect(mockAssertTenantDefault).toHaveBeenCalledWith(
+      expect.anything(),
+      'tenant-1',
+      'cross-tenant-or-inactive-service'
+    );
+    // The invalid value must not be persisted or reported as saved.
+    expect(mockState.updates).toHaveLength(0);
+    expect(mockState.inserts).toHaveLength(0);
   });
 
   it('inserts the tenant default service when no settings row exists', async () => {
@@ -208,6 +261,9 @@ describe('default time-entry service — client settings', () => {
     mockState.updates = [];
     mockState.inserts = [];
     mockHasPermission.mockResolvedValue(true);
+    mockUpdateClientBillingSettingsShared.mockResolvedValue(undefined);
+    mockAssertTenantDefault.mockResolvedValue(undefined);
+    mockAssertClientDefault.mockResolvedValue(undefined);
   });
 
   it('loads the stored client default service', async () => {
@@ -245,6 +301,25 @@ describe('default time-entry service — client settings', () => {
       'client-1',
       expect.objectContaining({ defaultTimeEntryServiceId: 'service-client' })
     );
+  });
+
+  it('returns an actionable error when the shared client writer rejects the default', async () => {
+    mockUpdateClientBillingSettingsShared.mockRejectedValueOnce(
+      new MockInvalidDefaultTimeEntryServiceError(
+        'not_applicable_to_client',
+        'The default time-entry service must be covered by an active contract for this client.'
+      )
+    );
+
+    const { updateClientContractLineSettings } = await import('../src/actions/billingSettingsActions');
+    const result = await updateClientContractLineSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      'client-1',
+      { defaultTimeEntryServiceId: 'client-inapplicable-service' } as any
+    );
+
+    expect(result).toMatchObject({ actionError: expect.any(String) });
   });
 
   it('does not let a client write carry a different client id', async () => {
