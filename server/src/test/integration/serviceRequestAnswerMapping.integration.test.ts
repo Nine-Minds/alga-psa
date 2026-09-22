@@ -638,4 +638,208 @@ describe('service request answer mapping', () => {
     const applications = await table(tenant, 'service_request_submission_applications').where({ submission_id: submissionId });
     expect(applications).toHaveLength(0);
   });
+
+  it('isolates a destination SQL rejection to one field and still finishes the run', async () => {
+    const tenant = await createTenant();
+    const actor = await createFullAdmin(tenant);
+    const clientId = await createClient(tenant, 'SQL Account', { credit_limit: 500 });
+    await createAsset(tenant, clientId, { name: 'SQL asset', asset_tag: 'SQL-1', serial_number: 'SN-SQL' });
+    const definition = await createDefinition(tenant);
+    // `tax_id_number` is varchar(255); a 300-char answer passes coercion and
+    // model validation, then is rejected by Postgres (22001). That is a genuine
+    // SQL-level rejection, which must not abort the run.
+    const payload = {
+      account_name: 'SQL Account Renamed',
+      notes: 'x'.repeat(300),
+      credit_limit: '1000',
+      device_serial: 'SN-SQL',
+      device_tag: 'SQL-TAG',
+    };
+    const submissionId = await createSubmission(tenant, definition, clientId, payload);
+    const before = await loadPayload(tenant, submissionId);
+    await publishRules(tenant, definition.definitionId, [
+      accountRule('client_name', 'account_name'),
+      accountRule('tax_id_number', 'notes'),
+      accountRule('credit_limit', 'credit_limit'),
+      serialRule('asset_tag', 'device_tag'),
+    ]);
+
+    const run = await applyAnswerMapping({ knex: db, tenant, submissionId, actorUserId: actor.user_id, actorUser: actor });
+
+    // Terminal status, one result per rule — the SQL rejection did not abort.
+    expect(run.status).toBe('partially_applied');
+    expect(run.results).toHaveLength(4);
+    const results = byField(run.results);
+    expect(results.get('client_name')?.status).toBe('applied');
+    expect(results.get('tax_id_number')).toMatchObject({
+      status: 'failed_type_conversion',
+      error_code: 'destination_rejected',
+    });
+    expect(results.get('credit_limit')).toMatchObject({ status: 'applied', after_value: 1000 });
+    expect(results.get('asset_tag')?.status).toBe('applied');
+
+    // Applied fields committed; the rejected field's destination is untouched.
+    const client = await table(tenant, 'clients').where({ client_id: clientId }).first();
+    expect(client.client_name).toBe('SQL Account Renamed');
+    expect(Number(client.credit_limit)).toBe(1000);
+    expect(client.tax_id_number).toBeNull();
+    const asset = await table(tenant, 'assets').where({ client_id: clientId }).first();
+    expect(asset.asset_tag).toBe('SQL-TAG');
+
+    // Raw submission is byte-identical and not re-stamped.
+    const after = await loadPayload(tenant, submissionId);
+    expect(after?.submitted_payload).toEqual(before?.submitted_payload);
+    expect(new Date(after!.updated_at).getTime()).toBe(new Date(before!.updated_at).getTime());
+
+    // A per-field audit row exists for every rule plus the run-level event.
+    const fieldApplied = await table(tenant, 'audit_logs')
+      .where({
+        table_name: 'service_request_submissions',
+        record_id: submissionId,
+        operation: 'service_request_submission_mapping_field_applied',
+      })
+      .count<{ count: string }[]>('* as count');
+    const fieldFailed = await table(tenant, 'audit_logs')
+      .where({
+        table_name: 'service_request_submissions',
+        record_id: submissionId,
+        operation: 'service_request_submission_mapping_field_failed',
+      })
+      .count<{ count: string }[]>('* as count');
+    expect(Number(fieldApplied[0].count)).toBe(3);
+    expect(Number(fieldFailed[0].count)).toBe(1);
+    const runAudit = await table(tenant, 'audit_logs')
+      .where({
+        table_name: 'service_request_submissions',
+        record_id: submissionId,
+        operation: 'service_request_submission_mapping_applied',
+      })
+      .count<{ count: string }[]>('* as count');
+    expect(Number(runAudit[0].count)).toBe(1);
+
+    const application = await table(tenant, 'service_request_submission_applications')
+      .where({ application_id: run.application_id })
+      .first<{ status: string }>('status');
+    expect(application?.status).toBe('partially_applied');
+  });
+
+  it('takes over an abandoned pending claim without waiting for the settle timeout', async () => {
+    const tenant = await createTenant();
+    const actor = await createFullAdmin(tenant);
+    const clientId = await createClient(tenant, 'Abandoned');
+    const definition = await createDefinition(tenant);
+    const submissionId = await createSubmission(tenant, definition, clientId, { account_name: 'Recovered' });
+    const versionId = await publishRules(tenant, definition.definitionId, [
+      accountRule('client_name', 'account_name'),
+    ]);
+
+    // A crashed run left the row pending with a stale heartbeat and no owner.
+    const applicationId = uuidv4();
+    const staleClaim = new Date(Date.now() - 60 * 60 * 1000);
+    await table(tenant, 'service_request_submission_applications').insert({
+      tenant,
+      application_id: applicationId,
+      submission_id: submissionId,
+      mapping_version_id: versionId,
+      applied_by: actor.user_id,
+      status: 'pending',
+      summary: {},
+      claimed_at: staleClaim,
+      applied_at: staleClaim,
+    });
+
+    const startedAt = Date.now();
+    const run = await applyAnswerMapping({ knex: db, tenant, submissionId, actorUserId: actor.user_id, actorUser: actor });
+    const elapsed = Date.now() - startedAt;
+
+    expect(elapsed).toBeLessThan(5000);
+    expect(run.replayed).toBe(false);
+    expect(run.application_id).toBe(applicationId);
+    expect(run.status).toBe('applied');
+    expect(run.results).toHaveLength(1);
+
+    const client = await table(tenant, 'clients').where({ client_id: clientId }).first();
+    expect(client.client_name).toBe('Recovered');
+    const rows = await table(tenant, 'service_request_submission_applications').where({ submission_id: submissionId });
+    expect(rows).toHaveLength(1);
+  });
+
+  it('applies integer semantics to credit_limit in preview and apply alike', async () => {
+    const tenant = await createTenant();
+    const actor = await createFullAdmin(tenant);
+    const clientId = await createClient(tenant, 'Credit', { credit_limit: 500 });
+    const definition = await createDefinition(tenant);
+    await publishRules(tenant, definition.definitionId, [
+      accountRule('credit_limit', 'credit_limit'),
+    ]);
+
+    // Fractional input is rejected identically in preview and apply.
+    const fractionalSubmission = await createSubmission(tenant, definition, clientId, { credit_limit: '1200.50' });
+    const preview = await previewAnswerMapping({ knex: db, tenant, submissionId: fractionalSubmission, actorUserId: actor.user_id, actorUser: actor });
+    expect(preview.results[0].status).toBe('failed_type_conversion');
+    const fractionalRun = await applyAnswerMapping({ knex: db, tenant, submissionId: fractionalSubmission, actorUserId: actor.user_id, actorUser: actor });
+    expect(fractionalRun.results[0].status).toBe('failed_type_conversion');
+    expect(fractionalRun.results[0].error_detail).toBe(preview.results[0].errorDetail);
+    const afterFractional = await table(tenant, 'clients').where({ client_id: clientId }).first();
+    expect(Number(afterFractional.credit_limit)).toBe(500);
+
+    // A whole-number string applies and persists exactly (no rounding).
+    const integerSubmission = await createSubmission(tenant, definition, clientId, { credit_limit: '1200' });
+    const integerRun = await applyAnswerMapping({ knex: db, tenant, submissionId: integerSubmission, actorUserId: actor.user_id, actorUser: actor });
+    expect(integerRun.results[0].status).toBe('applied');
+    const afterInteger = await table(tenant, 'clients').where({ client_id: clientId }).first();
+    expect(Number(afterInteger.credit_limit)).toBe(1200);
+
+    // Out-of-range input is rejected, leaving the destination at its last value.
+    const hugeSubmission = await createSubmission(tenant, definition, clientId, { credit_limit: '99999999999999999999' });
+    const hugePreview = await previewAnswerMapping({ knex: db, tenant, submissionId: hugeSubmission, actorUserId: actor.user_id, actorUser: actor });
+    expect(hugePreview.results[0].status).toBe('failed_type_conversion');
+    const hugeRun = await applyAnswerMapping({ knex: db, tenant, submissionId: hugeSubmission, actorUserId: actor.user_id, actorUser: actor });
+    expect(hugeRun.results[0].status).toBe('failed_type_conversion');
+    const afterHuge = await table(tenant, 'clients').where({ client_id: clientId }).first();
+    expect(Number(afterHuge.credit_limit)).toBe(1200);
+  });
+
+  it('rejects impossible calendar dates instead of normalizing them', async () => {
+    const tenant = await createTenant();
+    const actor = await createFullAdmin(tenant);
+    const clientId = await createClient(tenant, 'Dates');
+    const assetId = await createAsset(tenant, clientId, {
+      name: 'Warranty asset',
+      asset_tag: 'W-1',
+      serial_number: 'SN-DATE',
+    });
+    const definition = await createDefinition(tenant);
+    await publishRules(tenant, definition.definitionId, [
+      serialRule('warranty_end_date', 'warranty_end'),
+    ]);
+
+    for (const value of ['2027-02-30', '2027-02-29', '2027-04-31', '2100-02-29']) {
+      const submissionId = await createSubmission(tenant, definition, clientId, {
+        device_serial: 'SN-DATE',
+        warranty_end: value,
+      });
+      const before = await loadPayload(tenant, submissionId);
+      const run = await applyAnswerMapping({ knex: db, tenant, submissionId, actorUserId: actor.user_id, actorUser: actor });
+      expect(run.results[0].status).toBe('failed_type_conversion');
+
+      const asset = await table(tenant, 'assets').where({ asset_id: assetId }).first();
+      expect(asset.warranty_end_date).toBeNull();
+
+      const after = await loadPayload(tenant, submissionId);
+      expect(after?.submitted_payload).toEqual(before?.submitted_payload);
+      expect(after?.submitted_payload.warranty_end).toBe(value);
+    }
+
+    for (const [value, expected] of [['2028-02-29', '2028-02-29'], ['2027-02-28', '2027-02-28']] as const) {
+      const submissionId = await createSubmission(tenant, definition, clientId, {
+        device_serial: 'SN-DATE',
+        warranty_end: value,
+      });
+      const run = await applyAnswerMapping({ knex: db, tenant, submissionId, actorUserId: actor.user_id, actorUser: actor });
+      expect(run.results[0].status).toBe('applied');
+      const asset = await table(tenant, 'assets').where({ asset_id: assetId }).first();
+      expect(new Date(asset.warranty_end_date).toISOString().slice(0, 10)).toBe(expected);
+    }
+  });
 });
