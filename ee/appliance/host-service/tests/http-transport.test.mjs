@@ -15,7 +15,7 @@ function makeTlsFixture() {
     'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
     '-keyout', key, '-out', cert, '-days', '1',
     '-subj', '/CN=127.0.0.1',
-    '-addext', 'subjectAltName=IP:127.0.0.1'
+    '-addext', 'subjectAltName=IP:127.0.0.1,DNS:localhost'
   ], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   return { key, cert, ca: fs.readFileSync(cert) };
@@ -89,5 +89,72 @@ test('httpsRequest rejects a redirect for credential-bearing requests', async ()
     );
   } finally {
     server.close();
+  }
+});
+
+test('httpsRequest rejects a non-HTTPS or unparseable URL clearly', async () => {
+  await assert.rejects(
+    () => httpsRequest('http://example.test/register', 1000, []),
+    /only https:/
+  );
+  await assert.rejects(
+    () => httpsRequest('not-a-url', 1000, []),
+    /Unsupported request URL/
+  );
+});
+
+test('httpsRequest verifies the server certificate and records its own lookup address on failure', async () => {
+  const fixture = makeTlsFixture();
+  const { server, port } = await startServer((_req, res) => res.end('ok'), fixture);
+  try {
+    let error;
+    try {
+      await httpsRequest(`https://example.test:${port}/`, 5000, [], {
+        lookup: (_hostname, options, callback) => {
+          if (options && options.all) callback(null, [{ address: '127.0.0.1', family: 4 }]);
+          else callback(null, '127.0.0.1', 4);
+        },
+        requestOptions: { ca: fixture.ca }
+      });
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error, 'a certificate-name mismatch must reject');
+    // TLS certificate verification is enforced (the cert is not valid for
+    // example.test); SNI uses the URL hostname, never the resolved address.
+    assert.match(String(error.code || error.message), /ERR_TLS_CERT_ALTNAME_INVALID|certificate|altnames/i);
+    // The failed connection's own lookup is recorded for diagnostics.
+    assert.deepEqual(error.lookupAddresses, ['127.0.0.1']);
+    assert.equal(error.lookupHostname, 'example.test');
+  } finally {
+    server.close();
+  }
+});
+
+test('an OCI-style redirect drops Authorization on a cross-host hop', async () => {
+  const fixture = makeTlsFixture();
+  const receivedAuthorization = [];
+  const { server: target, port: targetPort } = await startServer((req, res) => {
+    receivedAuthorization.push(req.headers.authorization || null);
+    res.writeHead(200);
+    res.end('blob');
+  }, fixture);
+  const { server: redirector, port: redirectorPort } = await startServer((_req, res) => {
+    res.writeHead(307, { location: `https://localhost:${targetPort}/blob` });
+    res.end();
+  }, fixture);
+
+  try {
+    const response = await httpsRequest(`https://127.0.0.1:${redirectorPort}/v2/x/blobs/abc`, 5000, [], {
+      headers: { Authorization: 'Bearer secret-token' },
+      followRedirects: true,
+      requestOptions: { ca: fixture.ca }
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body, 'blob');
+    assert.equal(receivedAuthorization[0], null, 'Authorization must not cross to the redirect host');
+  } finally {
+    redirector.close();
+    target.close();
   }
 });

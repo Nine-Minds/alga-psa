@@ -71,6 +71,26 @@ export function resolverLookup(servers) {
   };
 }
 
+// Wrap a Node lookup so the addresses it actually returned are observed, while
+// preserving the callback contract (including `all: true`). Used only to enrich
+// failure diagnostics; a throwing observer never affects the request.
+function capturingLookup(baseLookup, onResolved) {
+  return (hostname, options, callback) => {
+    const done = typeof options === 'function' ? options : callback;
+    baseLookup(hostname, options, (error, address, family) => {
+      if (!error && address) {
+        const records = Array.isArray(address) ? address : [{ address, family }];
+        try {
+          onResolved(hostname, records);
+        } catch {
+          // diagnostics only
+        }
+      }
+      done(error, address, family);
+    });
+  };
+}
+
 // A later diagnostic lookup is labeled as such elsewhere; this helper only
 // reports what a fresh query returns, never the failed connection's peer.
 export async function diagnoseResolution(servers, hostname) {
@@ -90,8 +110,31 @@ function redirectStatus(status) {
   return status >= 300 && status < 400;
 }
 
+// The transport is HTTPS-only: TLS SNI/certificate verification is the security
+// boundary for both registry pulls and credential-bearing redemption. Reject a
+// non-HTTPS (or unparseable) URL up front with an actionable error instead of
+// letting https.request surface a cryptic one.
+export function requireHttpsUrl(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(`Unsupported request URL: ${url}`);
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error(`Unsupported request URL protocol "${parsed.protocol}"; only https: is supported for ${parsed.host || url}.`);
+  }
+  return parsed;
+}
+
 export function httpsRequest(url, timeoutMs = 8000, lookupServers = [], extra = {}) {
   return new Promise((resolve, reject) => {
+    try {
+      requireHttpsUrl(url);
+    } catch (error) {
+      reject(error);
+      return;
+    }
     const requestOptions = {
       method: extra.method || 'GET',
       timeout: timeoutMs,
@@ -104,9 +147,29 @@ export function httpsRequest(url, timeoutMs = 8000, lookupServers = [], extra = 
       bodyBuffer = Buffer.isBuffer(body) ? body : Buffer.from(String(body));
       requestOptions.headers = { ...requestOptions.headers, 'content-length': bodyBuffer.byteLength };
     }
-    if (lookupServers && lookupServers.length > 0) {
-      requestOptions.lookup = resolverLookup(lookupServers);
+    // Record what the transport's own lookup resolved so a failure can name the
+    // address the failed connection actually used. A later diagnostic query is
+    // reported separately (and labeled as later), never as this destination.
+    const observedAddresses = [];
+    let observedHostname = null;
+    const recordLookup = (hostname, records) => {
+      if (typeof hostname === 'string' && hostname) observedHostname = hostname;
+      for (const record of records || []) {
+        if (record && record.address) observedAddresses.push(record.address);
+      }
+    };
+    if (typeof extra.lookup === 'function') {
+      requestOptions.lookup = capturingLookup(extra.lookup, recordLookup);
+    } else if (lookupServers && lookupServers.length > 0) {
+      requestOptions.lookup = capturingLookup(resolverLookup(lookupServers), recordLookup);
     }
+    const annotate = (error) => {
+      if (error && typeof error === 'object' && observedAddresses.length > 0 && !error.lookupAddresses) {
+        error.lookupAddresses = observedAddresses.slice();
+        if (observedHostname) error.lookupHostname = observedHostname;
+      }
+      return error;
+    };
 
     const req = https.request(url, requestOptions, (res) => {
       const status = res.statusCode || 0;
@@ -160,9 +223,9 @@ export function httpsRequest(url, timeoutMs = 8000, lookupServers = [], extra = 
     });
 
     req.on('timeout', () => {
-      req.destroy(new Error(`Request timed out for ${url}`));
+      req.destroy(annotate(new Error(`Request timed out for ${url}`)));
     });
-    req.on('error', reject);
+    req.on('error', (error) => reject(annotate(error)));
     if (bodyBuffer) {
       req.write(bodyBuffer);
     }

@@ -13,7 +13,7 @@
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import { httpsRequest, diagnoseResolution } from './http-transport.mjs';
+import { httpsRequest, diagnoseResolution, requireHttpsUrl } from './http-transport.mjs';
 
 /**
  * Stable per-appliance id for /register (appliances are keyed by it, so check-in
@@ -51,21 +51,29 @@ function reachabilityError(url, error, diagnostics) {
   const hostname = hostnameOf(url);
   const cause = error instanceof Error ? error.message : String(error);
   const code = error && typeof error === 'object' ? (error.code || error.errno || null) : null;
+  // Addresses the failing connection itself looked up (captured by the
+  // transport) are reported as the destination; a later query is labeled as a
+  // later diagnostic lookup, never as the failed connection's destination.
+  const lookupAddresses = Array.isArray(error?.lookupAddresses) ? error.lookupAddresses : [];
   const parts = [`Could not reach the license service at ${url} to redeem the install code: ${cause}`];
   if (code) parts.push(`(${code})`);
   if (diagnostics && diagnostics.servers?.length) {
     parts.push(`DNS servers: ${diagnostics.servers.join(', ')}.`);
   }
+  if (lookupAddresses.length > 0) {
+    parts.push(`The failed connection resolved ${hostname} to ${lookupAddresses.join(', ')}.`);
+  }
   if (diagnostics) {
     parts.push(diagnostics.ok
       ? `A later diagnostic lookup of ${hostname} returned: ${diagnostics.addresses.join(', ')}.`
-      : `DNS lookup of ${hostname} also failed: ${diagnostics.error}`);
+      : `A later diagnostic lookup of ${hostname} also failed: ${diagnostics.error}`);
   }
   const wrapped = new Error(parts.join(' '));
   wrapped.cause = error;
   wrapped.network = {
     hostname,
     servers: diagnostics?.servers || [],
+    lookupAddresses,
     addresses: diagnostics?.addresses || [],
     dnsOk: Boolean(diagnostics?.ok),
     dnsError: diagnostics?.error || null,
@@ -85,7 +93,15 @@ export async function redeemInstallCode({ serviceUrl, installCode, applianceId, 
   if (!serviceUrl) {
     throw new Error('License service URL is not configured (ALGA_LICENSE_SERVICE_URL); cannot redeem the install code.');
   }
-  const url = `${String(serviceUrl).replace(/\/$/, '')}/register`;
+  // Reject a non-HTTPS or unparseable service URL clearly instead of letting the
+  // transport surface a cryptic error; the claim code must only travel over TLS.
+  const baseUrl = String(serviceUrl).replace(/\/$/, '');
+  try {
+    requireHttpsUrl(baseUrl);
+  } catch (error) {
+    throw new Error(`Invalid license service URL (ALGA_LICENSE_SERVICE_URL): ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const url = `${baseUrl}/register`;
   const code = String(installCode || '').trim().toUpperCase();
   const hostname = hostnameOf(url);
 

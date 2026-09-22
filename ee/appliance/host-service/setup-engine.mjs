@@ -1052,8 +1052,9 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
       });
     } catch (error) {
       const network = error && typeof error === 'object' ? error.network : null;
+      const connectionAddresses = (network?.lookupAddresses || []).join(', ');
       const networkDetail = network
-        ? ` Destination: ${network.hostname}; DNS servers: ${(network.servers || []).join(', ') || 'none'}; resolved addresses: ${(network.addresses || []).join(', ') || 'none'}; DNS lookup: ${network.dnsOk ? 'ok' : (network.dnsError || 'failed')}; socket/TLS code: ${network.code || 'n/a'}.`
+        ? ` Destination: ${network.hostname}; DNS servers: ${(network.servers || []).join(', ') || 'none'};${connectionAddresses ? ` failed connection resolved: ${connectionAddresses};` : ''} resolved addresses: ${(network.addresses || []).join(', ') || 'none'}; DNS lookup: ${network.dnsOk ? 'ok' : (network.dnsError || 'failed')}; socket/TLS code: ${network.code || 'n/a'}.`
         : '';
       const failure = preflightFailure(
         'registry-release-source',

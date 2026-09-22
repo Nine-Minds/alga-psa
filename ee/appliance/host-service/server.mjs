@@ -682,13 +682,45 @@ function queueSetupWorkflow() {
   return { ok: true, pid: child.pid, logFile: setupEngineLogFile, logError: opened.error || null };
 }
 
+// A custom DNS selection must reach the cluster resolver before the workflow
+// redeems or pulls through it. The helper is a content-based no-op when nothing
+// changed, but a real change restarts k3s and replaces this control plane, so a
+// retry-safe blocker is recorded first: the periodic retry loop then resumes the
+// workflow once the host reports activation active. System mode stays on the
+// periodic reconciler so a fresh install never depends on a privileged Job here.
+async function reconcileClusterDnsBeforeSetup(setupInputs) {
+  if (setupInputs?.dnsMode !== 'custom') return;
+  const message = 'Applying the custom DNS selection to the cluster resolver before setup.';
+  recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message });
+  try {
+    const outcome = await dnsReconciler.runOnce('setup-inputs');
+    if (outcome && (outcome.skipped === 'running' || outcome.skipped === 'setup-in-progress')) {
+      recordSetupBlocker({
+        step: 'reconcile-cluster-dns',
+        phase: 'dns',
+        message: 'Cluster DNS reconciliation is already running; setup will resume when it completes.'
+      });
+    }
+  } catch (error) {
+    recordSetupBlocker({
+      step: 'reconcile-cluster-dns',
+      phase: 'dns',
+      message: `Could not reconcile cluster DNS before setup: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+}
+
 // Shared admission path for both setup submission routes. It refuses to queue
 // while cluster DNS is pending/failed, records a durable retry-safe blocker
 // instead of leaving a misleading `setup-queued`, and only then accepts.
-function beginSetupWorkflow() {
+async function beginSetupWorkflow(setupInputs) {
+  // A manual submission resets the active retry budget but keeps prior history as
+  // evidence; this also lets a custom-DNS restart resume through the retry loop.
+  retryController.reset('manual-setup');
+  await reconcileClusterDnsBeforeSetup(setupInputs);
+
   const dnsBlocker = dnsReconcileLaunchBlocker();
   if (dnsBlocker) {
-    retryController.reset('manual-setup');
     const message = dnsBlockerMessage(dnsBlocker);
     recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message });
     return { ok: false, statusCode: 409, dnsPending: Boolean(dnsBlocker.pending), error: message };
@@ -1198,7 +1230,7 @@ const server = http.createServer(async (req, res) => {
         licenseKey: rawLicenseKey || null
       });
       persistSetupInputs(setupInputs, setupInputsFile);
-      const started = beginSetupWorkflow();
+      const started = await beginSetupWorkflow(setupInputs);
       if (!started.ok) {
         jsonResponse(res, started.statusCode || 500, {
           error: started.error,
@@ -1620,7 +1652,8 @@ const server = http.createServer(async (req, res) => {
       dnsMode: payload?.dnsMode,
       dnsServers: payload?.dnsServers,
       kube: manageKube,
-      releaseSelectionFile
+      releaseSelectionFile,
+      setupInputsFile
     });
     if (result.ok) jsonResponse(res, 200, { ok: true });
     else jsonResponse(res, result.status || 400, { error: result.error });
@@ -1741,7 +1774,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const started = beginSetupWorkflow();
+      const started = await beginSetupWorkflow(setupInputs);
       if (!started.ok) {
         res.writeHead(started.statusCode || 500, { 'content-type': 'text/plain; charset=utf-8' });
         res.end(started.error || 'Setup could not be started.');

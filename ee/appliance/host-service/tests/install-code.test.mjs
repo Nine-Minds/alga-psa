@@ -118,6 +118,38 @@ test('redeemInstallCode network failure names the destination and resolver path 
   );
 });
 
+test('redeemInstallCode rejects a non-HTTPS service URL clearly', async () => {
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'http://lic.example', installCode: 'X', applianceId: 'a', requestImpl: async () => ({ statusCode: 200, body: '{}' }) }),
+    /Invalid license service URL.*only https:/s
+  );
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'file:///etc/passwd', installCode: 'X', applianceId: 'a', requestImpl: async () => ({ statusCode: 200, body: '{}' }) }),
+    /Invalid license service URL.*only https:/s
+  );
+});
+
+test('redeemInstallCode reports the failed connection address and labels a later diagnostic lookup', async () => {
+  const requestImpl = async () => {
+    const error = new Error('self signed certificate');
+    error.code = 'DEPTH_ZERO_SELF_SIGNED_CERT';
+    error.lookupAddresses = ['203.0.113.7'];
+    error.lookupHostname = 'lic.example';
+    throw error;
+  };
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'https://lic.example', installCode: 'SECRETCODE', applianceId: 'a', lookupServers: [], requestImpl }),
+    (error) => {
+      assert.match(error.message, /The failed connection resolved lic\.example to 203\.0\.113\.7/);
+      assert.match(error.message, /later diagnostic lookup of lic\.example/);
+      assert.deepEqual(error.network.lookupAddresses, ['203.0.113.7']);
+      assert.equal(error.network.code, 'DEPTH_ZERO_SELF_SIGNED_CERT');
+      assert.doesNotMatch(error.message, /SECRETCODE/);
+      return true;
+    }
+  );
+});
+
 test('licenseSeedFromRedeem maps editions to seed literals', () => {
   const paid = licenseSeedFromRedeem({ edition: 'pro', licenseToken: 'jwt', applianceCredential: 'c', checkInUrl: 'u', applianceId: 'app' });
   assert.equal(paid.EDITION_CHOICE, 'ee');
