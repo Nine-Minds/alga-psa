@@ -4,6 +4,7 @@ import Invoice from '@alga-psa/billing/models/invoice';
 
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: vi.fn(async () => null),
+  getClientDocumentLogoUrl: vi.fn(async () => null),
 }));
 
 type Row = Record<string, any>;

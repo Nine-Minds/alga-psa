@@ -334,6 +334,7 @@ vi.mock('@alga-psa/shared/billingClients', () => ({
 
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: mocks.getClientLogoUrl,
+  getClientDocumentLogoUrl: mocks.getClientLogoUrl,
 }));
 
 vi.mock('../../../../../packages/billing/src/services/purchaseOrderService', () => ({

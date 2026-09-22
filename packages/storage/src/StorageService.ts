@@ -16,6 +16,7 @@ import { StorageProviderFactory, generateStoragePath } from './StorageProviderFa
 import { FileStoreModel } from './models/storage';
 import type { FileStore } from './types/storage';
 import { StorageError } from './providers/StorageProvider';
+import { renderSquareMark, type LogoCropRect } from './imageCrop';
 import fs from 'fs';
 import type { Knex } from 'knex';
 
@@ -147,6 +148,10 @@ export class StorageService {
       // Browser tab icon: raster input is flattened to a 32x32 PNG, SVG/ICO are
       // stored untouched. Takes precedence over isEntityLogo.
       isFavicon?: boolean;
+      // Square mark cut from a logo: the chosen zone (fractions of the source)
+      // rendered at avatar size. SVG sources are rasterized for this. Takes
+      // precedence over every other image branch.
+      cropRect?: LogoCropRect;
       // Derived artifacts (e.g. preview/thumbnail regenerations) are not
       // first-class documents. Set this to skip DOCUMENT_UPLOADED /
       // MEDIA_PROCESSING_SUCCEEDED so a preview upload can't re-trigger the
@@ -195,7 +200,19 @@ export class StorageService {
         const isSvg = originalName.toLowerCase().endsWith('.svg') ||
           options.mime_type === 'image/svg+xml';
 
-        if (isSvg) {
+        if (options.cropRect) {
+          if (!isSvg) {
+            const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
+            if (!detectedType || !['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(detectedType.mime)) {
+              throw new Error('Invalid file format. Only JPEG, PNG, GIF, WebP, SVG are allowed for avatars/logos.');
+            }
+          }
+          const sharp = await loadSharp();
+          processedBuffer = await renderSquareMark(sharp, fileBuffer, options.cropRect, isSvg);
+          processedMimeType = 'image/webp';
+          processedFileSize = processedBuffer.length;
+          processedOriginalName = changeFileExtension(originalName, 'webp');
+        } else if (isSvg) {
           // SVGs are vector and don't need raster processing — store as-is
           processedBuffer = fileBuffer;
           processedMimeType = 'image/svg+xml';
