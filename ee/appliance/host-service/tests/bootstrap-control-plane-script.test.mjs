@@ -26,6 +26,7 @@ test('T001 host bootstrap dry-run plans minimal k3s, image import, storage/contr
   fs.writeFileSync(path.join(manifestDir, 'namespace.yaml'), 'kind: Namespace\n');
   fs.writeFileSync(path.join(storageDir, 'local-path-storage.yaml'), 'kind: List\n');
   fs.writeFileSync(path.join(scriptsDir, 'install-storage.sh'), '#!/usr/bin/env bash\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(scriptsDir, 'configure-k3s-dns.sh'), '#!/usr/bin/env bash\n', { mode: 0o755 });
   fs.writeFileSync(tokenFile, 'token-123\n');
 
   const result = spawnSync(bootstrapScript, [
@@ -41,6 +42,8 @@ test('T001 host bootstrap dry-run plans minimal k3s, image import, storage/contr
   const expectedInOrder = [
     'Substrate: reserving local-path storage for the appliance provisioner',
     'persist --disable local-storage in the k3s service and configuration',
+    'Substrate: owning the cluster resolver configuration',
+    'write the nameserver-only k3s resolver and config.yaml.d/30-alga-dns.yaml (--initial)',
     'Substrate: ensuring k3s is installed and running',
     'ensure k3s service is enabled and running with minimal local substrate options',
     'Substrate: waiting for Kubernetes API',

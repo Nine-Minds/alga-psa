@@ -23,8 +23,16 @@ type Blocker = {
   severity?: string;
   component?: string;
   layer?: string;
+  step?: string | null;
   reason?: string;
+  details?: string | null;
   nextAction?: string;
+  autoRetry?: {
+    attempts?: number;
+    maxAttempts?: number;
+    exhausted?: boolean;
+    nextAttemptInSeconds?: number;
+  } | null;
   loginBlocking?: boolean;
 };
 type EventItem = {
@@ -69,8 +77,17 @@ type StatusResponse = {
   failures?: Array<{
     category?: string;
     phase?: string;
+    step?: string | null;
+    details?: string | null;
     suspectedCause?: string;
     suggestedNextStep?: string;
+    retrySafe?: boolean;
+    autoRetry?: {
+      attempts?: number;
+      maxAttempts?: number;
+      exhausted?: boolean;
+      nextAttemptInSeconds?: number;
+    };
   }>;
   bootstrap?: {
     job?: {
@@ -87,7 +104,22 @@ type StatusResponse = {
     phase?: string;
     lastAction?: string;
     updatedAt?: string;
+    failure?: {
+      step?: string | null;
+      message?: string;
+      details?: string | null;
+      retrySafe?: boolean;
+      suspectedCause?: string;
+      suggestedNextStep?: string;
+    } | null;
   };
+  engineLog?: { file?: string | null; error?: string | null } | null;
+  dnsReconcile?: {
+    ok?: boolean;
+    error?: string | null;
+    at?: string | null;
+    logFile?: string | null;
+  } | null;
   kubernetes?: {
     nodes?: Array<{ name?: string; ready?: boolean }>;
     podCount?: number;
@@ -241,15 +273,40 @@ function tierEntries(status: StatusResponse | null) {
 
 function blockers(status: StatusResponse | null): Blocker[] {
   if (status?.topBlockers?.length) return status.topBlockers;
-  return (status?.failures || []).map((failure) => ({
+  const fromFailures = (status?.failures || []).map((failure) => ({
     severity:
       failure.category === "background-services" ? "background" : "critical",
     component: failure.category,
     layer: failure.phase,
+    step: failure.step,
     reason: failure.suspectedCause,
+    details: failure.details,
     nextAction: failure.suggestedNextStep,
+    autoRetry: failure.autoRetry,
     loginBlocking: failure.category !== "background-services",
   }));
+  if (fromFailures.length > 0) return fromFailures;
+  // A retained install-state failure must always read as a blocker, even when
+  // the derived failure list is momentarily empty.
+  const retained = status?.installState?.failure;
+  if (retained) {
+    return [
+      {
+        severity: "critical",
+        component: retained.step || status?.installState?.phase || "setup",
+        layer: status?.installState?.phase,
+        step: retained.step,
+        reason: retained.message || retained.suspectedCause || "Setup failed.",
+        details: retained.details,
+        nextAction:
+          retained.suggestedNextStep ||
+          retained.details ||
+          "Review the setup engine log and retry setup.",
+        loginBlocking: true,
+      },
+    ];
+  }
+  return [];
 }
 
 function ageFrom(date?: string | null) {
@@ -937,8 +994,21 @@ export default function StatusPage() {
                     key={index}
                   >
                     <strong>{blocker.component || blocker.layer}</strong>
+                    {blocker.step ? (
+                      <p className={styles.muted}>Failed step: {blocker.step}</p>
+                    ) : null}
                     <p>{blocker.reason}</p>
+                    {blocker.details ? (
+                      <small className={styles.muted}>{blocker.details}</small>
+                    ) : null}
                     <small>{blocker.nextAction}</small>
+                    {typeof blocker.autoRetry?.attempts === "number" ? (
+                      <small>
+                        {blocker.autoRetry.exhausted
+                          ? `Automatic retries exhausted after ${blocker.autoRetry.attempts} of ${blocker.autoRetry.maxAttempts} attempts.`
+                          : `Automatic retry attempt ${blocker.autoRetry.attempts} of ${blocker.autoRetry.maxAttempts}.`}
+                      </small>
+                    ) : null}
                   </div>
                 ))
               )}

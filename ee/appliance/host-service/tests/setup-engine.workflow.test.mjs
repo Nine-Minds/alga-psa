@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, installFlux, installStorage, resolveChannelMetadata } from '../setup-engine.mjs';
+import { acknowledgeSetupSuccess, applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, installFlux, installStorage, resolveChannelMetadata } from '../setup-engine.mjs';
 
 const initialTenant = {
   tenantName: 'Acme MSP',
@@ -264,6 +264,86 @@ test('applyRuntimeValuesAndReleaseSelection blocks the install when redeem fails
     assert.equal(result.ok, false);
     assert.equal(result.step, 'redeem-install-code');
     assert.match(result.details, /already been used/);
+  } finally {
+    process.env.PATH = oldPath;
+  }
+});
+
+test('an unresolved failure is retained across an intermediate *-complete phase', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-retain-failure-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const releaseSelectionFile = path.join(tmp, 'etc', 'release-selection.json');
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true });
+  fs.writeFileSync(stateFile, JSON.stringify({
+    status: 'preflight-blocked',
+    phase: 'dns',
+    lastAction: 'DNS lookup failed for ghcr.io.',
+    failure: { phase: 'dns', step: 'resolve-registry-host', message: 'DNS lookup failed for ghcr.io.', details: 'no address resolved', retrySafe: true }
+  }));
+
+  const result = applyReleaseSelectionConfiguration({
+    channel: 'stable', appHostname: 'psa.example.com', dnsMode: 'system', dnsServers: ''
+  }, {
+    ok: true, channel: 'stable', releaseVersion: '1.2.3', registryHost: 'ghcr.io',
+    repository: 'nine-minds/alga-appliance-release', manifestDigest: 'sha256:abc'
+  }, { stateFile, releaseSelectionFile });
+
+  assert.equal(result.ok, true);
+  const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(persisted.status, 'release-config-complete');
+  assert.equal(persisted.failure.step, 'resolve-registry-host');
+  assert.equal(persisted.failure.details, 'no address resolved');
+});
+
+test('whole-workflow success clears the retained failure and marks the state terminal', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-terminal-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true });
+  fs.writeFileSync(stateFile, JSON.stringify({
+    status: 'runtime-values-blocked',
+    phase: 'registry-release-source',
+    failure: { phase: 'registry-release-source', step: 'redeem-install-code', message: 'Could not redeem the install code.', details: 'unreachable', retrySafe: true }
+  }));
+
+  acknowledgeSetupSuccess(stateFile, path.join(tmp, 'release-selection.json'));
+  const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(persisted.terminalSuccess, true);
+  assert.equal(persisted.failure, null);
+  assert.equal(persisted.status, 'release-config-complete');
+});
+
+test('applyRuntimeValuesAndReleaseSelection surfaces network diagnostics in the redeem failure', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-redeem-diag-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const runtimeValuesDir = path.join(tmp, 'runtime');
+  const binDir = path.join(tmp, 'bin');
+  const oldPath = process.env.PATH;
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, 'kubectl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  process.env.PATH = `${binDir}:${oldPath}`;
+
+  try {
+    const result = await applyRuntimeValuesAndReleaseSelection({
+      channel: 'stable', appHostname: 'psa.example.test', initialTenant, installCode: 'NETFAIL1'
+    }, { ok: true, releaseVersion: '1.2.3' }, {
+      stateFile, runtimeValuesDir,
+      releaseManifestOverride: makeReleaseManifest(),
+      kubeconfigPath: path.join(tmp, 'k3s.yaml'),
+      tokenFile: path.join(tmp, 'setup-token'),
+      redeemInstallCode: async () => {
+        const error = new Error('Could not reach the license service at https://lic.example/register: ENOTFOUND');
+        error.network = { hostname: 'lic.example', servers: ['192.0.2.53'], addresses: [], dnsOk: false, dnsError: 'no address resolved', code: 'ENOTFOUND' };
+        throw error;
+      }
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.step, 'redeem-install-code');
+    assert.match(result.details, /Destination: lic\.example/);
+    assert.match(result.details, /resolved addresses: none/);
+    assert.match(result.details, /socket\/TLS code: ENOTFOUND/);
+    const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.equal(persisted.failure.step, 'redeem-install-code');
+    assert.match(persisted.failure.details, /Destination: lic\.example/);
   } finally {
     process.env.PATH = oldPath;
   }

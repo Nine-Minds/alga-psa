@@ -96,6 +96,8 @@ FALLBACK_SCRIPT="$REPO_ROOT/ee/appliance/bin/alga-control-plane-reapply"
 RESET_ADMIN_SCRIPT="$REPO_ROOT/ee/appliance/bin/alga-appliance-reset-admin"
 BOOTSTRAP_SCRIPT="$REPO_ROOT/ee/appliance/scripts/bootstrap-control-plane.sh"
 STORAGE_SCRIPT="$REPO_ROOT/ee/appliance/scripts/install-storage.sh"
+DNS_CONFIGURE_SCRIPT="$REPO_ROOT/ee/appliance/scripts/configure-k3s-dns.sh"
+DNS_RECONCILE_SCRIPT="$REPO_ROOT/ee/appliance/scripts/reconcile-k3s-dns.sh"
 BOOTSTRAP_SERVICE="$REPO_ROOT/ee/appliance/systemd/alga-appliance-bootstrap.service"
 HOST_AGENT_SERVICE="$REPO_ROOT/ee/appliance/systemd/alga-host-agent.service"
 SYSUSERS_CONF="$REPO_ROOT/ee/appliance/systemd/alga-appliance.sysusers"
@@ -130,6 +132,16 @@ if [ ! -f "$STORAGE_SCRIPT" ]; then
   exit 1
 fi
 
+if [ ! -f "$DNS_CONFIGURE_SCRIPT" ]; then
+  echo "DNS configure script not found: $DNS_CONFIGURE_SCRIPT" >&2
+  exit 1
+fi
+
+if [ ! -f "$DNS_RECONCILE_SCRIPT" ]; then
+  echo "DNS reconcile script not found: $DNS_RECONCILE_SCRIPT" >&2
+  exit 1
+fi
+
 if [ ! -f "$BOOTSTRAP_SERVICE" ]; then
   echo "Bootstrap service not found: $BOOTSTRAP_SERVICE" >&2
   exit 1
@@ -161,6 +173,8 @@ if [ -n "$K3S_BINARY" ]; then
 fi
 install -m 0755 "$BOOTSTRAP_SCRIPT" "$TARGET_SCRIPTS/bootstrap-control-plane.sh"
 install -m 0755 "$STORAGE_SCRIPT" "$TARGET_SCRIPTS/install-storage.sh"
+install -m 0755 "$DNS_CONFIGURE_SCRIPT" "$TARGET_SCRIPTS/configure-k3s-dns.sh"
+install -m 0755 "$DNS_RECONCILE_SCRIPT" "$TARGET_SCRIPTS/reconcile-k3s-dns.sh"
 install -m 0644 "$BOOTSTRAP_SERVICE" "$TARGET_SYSTEMD/alga-appliance-bootstrap.service"
 install -m 0644 "$HOST_AGENT_SERVICE" "$TARGET_SYSTEMD/alga-host-agent.service"
 install -m 0644 "$SYSUSERS_CONF" "$TARGET_SYSUSERS/alga-appliance.conf"

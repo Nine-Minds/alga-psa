@@ -8,6 +8,8 @@ import { URL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
+import { createSetupRetry, installStateRunning } from './setup-retry.mjs';
+import { createDnsReconciler } from './dns-reconcile-runner.mjs';
 import { persistSetupInputs, validateSetupInputs, runNetworkChecks, resolveReleaseManifest } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { createNativeKubernetesAdapter } from './kubernetes-client-adapter.mjs';
@@ -16,7 +18,7 @@ import { PortForwardManager } from './port-forward-manager.mjs';
 import { ensurePodAccessRbac } from './pod-access-rbac.mjs';
 import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-common.mjs';
 import { createUpdateCoordinator } from './update-controller.mjs';
-import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS } from './update-ownership.mjs';
+import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS, isPidAlive } from './update-ownership.mjs';
 import {
   collectManageStatus,
   readLicenseStatus,
@@ -186,98 +188,124 @@ const AUTO_RETRY_MAX_ATTEMPTS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX
 const AUTO_RETRY_BASE_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_BASE_MS || 15_000);
 const AUTO_RETRY_MAX_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_MS || 300_000);
 const RECONCILE_INTERVAL_MS = Number(process.env.ALGA_APPLIANCE_RECONCILE_INTERVAL_MS || 15_000);
-const NETWORK_CLASS_PHASES = ['network', 'dns', 'registry-release-source'];
 const retryStateFile = path.join(path.dirname(stateFile), 'auto-retry-state.json');
-let reconcileRunning = false;
+const setupRunOwnerFile = process.env.ALGA_APPLIANCE_SETUP_RUN_OWNER_FILE
+  || path.join(path.dirname(stateFile), 'setup-run-owner.json');
+const SETUP_RUN_OWNER_MAX_AGE_MS = Number(process.env.ALGA_APPLIANCE_SETUP_RUN_OWNER_MAX_AGE_MS || 30 * 60 * 1000);
+const setupEngineLogFile = process.env.ALGA_APPLIANCE_SETUP_ENGINE_LOG
+  || path.join(path.dirname(stateFile), 'setup-engine.log');
+const SETUP_ENGINE_LOG_MAX_BYTES = Number(process.env.ALGA_APPLIANCE_SETUP_ENGINE_LOG_MAX_BYTES || 1_000_000);
+let setupEngineLogError = null;
 
-function installStateBlocked(state) {
-  const isAppUpdate = state?.update?.scope === 'application-only';
-  return !isAppUpdate
-    && Boolean(state?.failure)
-    && state.failure.retrySafe !== false
-    && String(state.status || '').includes('blocked');
-}
-
-function installStateRunning(state) {
-  const status = String(state?.status || '');
-  return status === 'setup-queued' || status.endsWith('-running');
-}
-
-function failureCategory(state) {
-  const phase = String(state?.failure?.phase || state?.phase || '').toLowerCase();
-  return NETWORK_CLASS_PHASES.find((candidate) => phase.includes(candidate)) || phase;
-}
-
-function backoffMs(attempts) {
-  return Math.min(AUTO_RETRY_MAX_MS, AUTO_RETRY_BASE_MS * 2 ** Math.max(0, attempts - 1));
-}
-
-function readRetryState() {
+function appendSetupEngineLog(line) {
   try {
-    return fs.existsSync(retryStateFile) ? JSON.parse(fs.readFileSync(retryStateFile, 'utf8')) : {};
-  } catch {
-    return {};
+    fs.appendFileSync(setupEngineLogFile, line.endsWith('\n') ? line : `${line}\n`, { mode: 0o600 });
+  } catch (error) {
+    setupEngineLogError = error instanceof Error ? error.message : String(error);
   }
 }
 
-function writeRetryState(value) {
+function openSetupEngineLog() {
   try {
-    fs.mkdirSync(path.dirname(retryStateFile), { recursive: true });
-    fs.writeFileSync(retryStateFile, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
-  } catch { /* best effort */ }
-}
-
-function clearRetryState() {
-  try {
-    if (fs.existsSync(retryStateFile)) fs.unlinkSync(retryStateFile);
-  } catch { /* best effort */ }
-}
-
-// Summary used by the status snapshot so the UI shows "retrying automatically"
-// instead of a dead-end "re-run setup" instruction.
-function computeAutoRetrySummary(state) {
-  if (AUTO_RETRY_DISABLED || !installStateBlocked(state)) return undefined;
-  const retry = readRetryState();
-  const attempts = Number(retry.attempts || 0);
-  if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) {
-    return { willRetry: false, exhausted: true, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS };
-  }
-  const nextAttemptInSeconds = retry.nextAttemptAt ? Math.max(0, Math.round((retry.nextAttemptAt - Date.now()) / 1000)) : 0;
-  return { willRetry: true, exhausted: false, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS, nextAttemptInSeconds };
-}
-
-async function reconcileBlockedSetup() {
-  if (AUTO_RETRY_DISABLED || reconcileRunning) return;
-  reconcileRunning = true;
-  try {
-    const state = readInstallStateSafe();
-    if (!state || !installStateBlocked(state)) {
-      clearRetryState();
-      return;
-    }
-    if (installStateRunning(state)) return;
-
-    const retry = readRetryState();
-    const attempts = Number(retry.attempts || 0);
-    if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) return; // exhausted; leave for manual action
-    const now = Date.now();
-    if (retry.nextAttemptAt && now < retry.nextAttemptAt) return; // still in backoff window
-
-    if (NETWORK_CLASS_PHASES.includes(failureCategory(state))) {
-      const probe = await getNetworkProbe();
-      if (!probe.ok) {
-        writeRetryState({ attempts, nextAttemptAt: now + backoffMs(attempts || 1), lastReason: 'network still unhealthy' });
-        return;
+    fs.mkdirSync(path.dirname(setupEngineLogFile), { recursive: true, mode: 0o750 });
+    try {
+      const stats = fs.statSync(setupEngineLogFile);
+      if (stats.size > SETUP_ENGINE_LOG_MAX_BYTES) {
+        fs.renameSync(setupEngineLogFile, `${setupEngineLogFile}.1`);
       }
+    } catch {
+      // No existing log yet.
     }
-
-    const nextAttempts = attempts + 1;
-    writeRetryState({ attempts: nextAttempts, lastAttemptAt: new Date(now).toISOString(), nextAttemptAt: now + backoffMs(nextAttempts) });
-    queueSetupWorkflow();
-  } finally {
-    reconcileRunning = false;
+    const fd = fs.openSync(setupEngineLogFile, 'a', 0o600);
+    fs.chmodSync(setupEngineLogFile, 0o600);
+    return { fd };
+  } catch (error) {
+    setupEngineLogError = error instanceof Error ? error.message : String(error);
+    return { error: setupEngineLogError };
   }
 }
+
+// Durable ownership for a detached setup run. The engine can be killed by a
+// k3s restart (DNS activation) or a control-plane replacement; a *-running
+// status is only trusted while this owner is alive.
+function readSetupRunOwner() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(setupRunOwnerFile, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSetupRunOwner(pid) {
+  try {
+    fs.mkdirSync(path.dirname(setupRunOwnerFile), { recursive: true, mode: 0o750 });
+    fs.writeFileSync(setupRunOwnerFile, `${JSON.stringify({ pid, startedAt: new Date().toISOString() })}\n`, { mode: 0o600 });
+  } catch (error) {
+    appendSetupEngineLog(`[${new Date().toISOString()}] could not record setup run owner: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function clearSetupRunOwner(pid) {
+  try {
+    const owner = readSetupRunOwner();
+    if (owner && owner.pid === pid && fs.existsSync(setupRunOwnerFile)) fs.unlinkSync(setupRunOwnerFile);
+  } catch {
+    /* best effort */
+  }
+}
+
+function setupWorkflowOwnerAlive(state) {
+  const owner = readSetupRunOwner();
+  if (owner && Number.isInteger(owner.pid) && owner.pid > 0) {
+    return isPidAlive(owner.pid);
+  }
+  // No owner recorded: only abandon once the running state itself is stale, so
+  // the window between the status write and the owner write cannot trigger a
+  // duplicate launch.
+  const updatedAt = Date.parse(state?.updatedAt || '');
+  if (Number.isFinite(updatedAt)) return Date.now() - updatedAt <= SETUP_RUN_OWNER_MAX_AGE_MS;
+  return true;
+}
+
+// The retry lifecycle lives in setup-retry.mjs so it is testable with an
+// injectable clock, probe and launcher. server.mjs only supplies the real ones.
+const retryController = createSetupRetry({
+  stateFile,
+  retryStateFile,
+  maxAttempts: AUTO_RETRY_MAX_ATTEMPTS,
+  baseMs: AUTO_RETRY_BASE_MS,
+  maxMs: AUTO_RETRY_MAX_MS,
+  disable: AUTO_RETRY_DISABLED,
+  readInstallState: () => readInstallStateSafe(),
+  workflowOwnerAlive: (state) => setupWorkflowOwnerAlive(state),
+  probe: () => getNetworkProbe(),
+  launch: () => queueSetupWorkflow(),
+  logger: console
+});
+
+function computeAutoRetrySummary(state) {
+  return retryController.computeAutoRetrySummary(state);
+}
+
+// Owns cluster-DNS activation independently of the setup retry budget: it must
+// still run when setup is blocked/exhausted, and it must never fire while a
+// setup run owns the host (the activation restarts k3s).
+const dnsReconcileScript = process.env.ALGA_APPLIANCE_DNS_RECONCILE_SCRIPT
+  || path.resolve(import.meta.dirname, '..', 'scripts', 'reconcile-k3s-dns.sh');
+const dnsReconciler = createDnsReconciler({
+  scriptPath: dnsReconcileScript,
+  kubeconfigPath,
+  stateFile,
+  disabled: process.env.ALGA_APPLIANCE_DISABLE_DNS_RECONCILE === '1',
+  intervalMs: Number(process.env.ALGA_APPLIANCE_DNS_RECONCILE_INTERVAL_MS || 5 * 60 * 1000),
+  startupDelayMs: Number(process.env.ALGA_APPLIANCE_DNS_RECONCILE_STARTUP_DELAY_MS ?? 10 * 1000),
+  shouldSkip: () => {
+    const state = readInstallStateSafe();
+    return installStateRunning(state) && setupWorkflowOwnerAlive(state);
+  },
+  logger: console
+});
 
 function currentMode() {
   if (!fs.existsSync(stateFile)) {
@@ -568,24 +596,60 @@ function systemNetworkSummary() {
   return { addresses, resolvers };
 }
 
+// Launch the detached setup engine, appending both its stdout and stderr to
+// <state-dir>/setup-engine.log (0600). The log is rotated between launches so
+// a repeated retry cannot grow unbounded. If the log cannot be opened we still
+// run setup (availability), but the error is retained and surfaced rather than
+// silently reverting to stdio: 'ignore'.
 function queueSetupWorkflow() {
   if (process.env.ALGA_APPLIANCE_DISABLE_SETUP_QUEUE === '1') {
-    return;
+    return { ok: false, error: 'Setup queue is disabled.' };
   }
 
-  const child = spawn(process.execPath, [
-    new URL('./setup-engine.mjs', import.meta.url).pathname,
-    'run',
-    '--setup-inputs', setupInputsFile,
-    '--state-file', stateFile,
-    '--release-selection-file', releaseSelectionFile,
-    '--kubeconfig', kubeconfigPath
-  ], {
-    detached: true,
-    stdio: 'ignore',
-    env: process.env
+  const opened = openSetupEngineLog();
+  appendSetupEngineLog(`[${new Date().toISOString()}] launching setup engine (parent pid ${process.pid})`);
+  // If the log cannot be opened, inherit the service journal rather than
+  // silently discarding engine output; the open error is surfaced separately.
+  const stdio = typeof opened.fd === 'number' ? ['ignore', opened.fd, opened.fd] : 'inherit';
+
+  let child;
+  try {
+    child = spawn(process.execPath, [
+      new URL('./setup-engine.mjs', import.meta.url).pathname,
+      'run',
+      '--setup-inputs', setupInputsFile,
+      '--state-file', stateFile,
+      '--release-selection-file', releaseSelectionFile,
+      '--kubeconfig', kubeconfigPath
+    ], {
+      detached: true,
+      stdio,
+      env: process.env
+    });
+  } catch (error) {
+    if (typeof opened.fd === 'number') {
+      try { fs.closeSync(opened.fd); } catch { /* best effort */ }
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    appendSetupEngineLog(`[${new Date().toISOString()}] spawn error: ${message}`);
+    return { ok: false, error: message, logFile: setupEngineLogFile, logError: opened.error || null };
+  }
+  if (typeof opened.fd === 'number') {
+    try { fs.closeSync(opened.fd); } catch { /* best effort */ }
+  }
+
+  child.on('error', (error) => {
+    appendSetupEngineLog(`[${new Date().toISOString()}] child ${child.pid} error: ${error instanceof Error ? error.message : String(error)}`);
+    clearSetupRunOwner(child.pid);
+  });
+  child.on('exit', (code, signal) => {
+    appendSetupEngineLog(`[${new Date().toISOString()}] child ${child.pid} exited code=${code ?? 'null'} signal=${signal || 'none'}`);
+    clearSetupRunOwner(child.pid);
   });
   child.unref();
+  writeSetupRunOwner(child.pid);
+  appendSetupEngineLog(`[${new Date().toISOString()}] launched child pid ${child.pid}`);
+  return { ok: true, pid: child.pid, logFile: setupEngineLogFile, logError: opened.error || null };
 }
 
 // LEVERAGE: pattern detached-engine-workflow — queueSetupWorkflow and
@@ -1071,8 +1135,8 @@ const server = http.createServer(async (req, res) => {
       }, null, 2)}\n`, { mode: 0o600 });
       // Fresh submit (incl. re-entering a corrected install code): reset the
       // auto-retry counter so the new attempt is not gated by the prior code's
-      // exhausted retries.
-      clearRetryState();
+      // exhausted retries. Prior history is marked resolved, not deleted.
+      retryController.reset('manual-setup');
       queueSetupWorkflow();
       jsonResponse(res, 202, {
         ok: true,
@@ -1114,6 +1178,8 @@ const server = http.createServer(async (req, res) => {
         kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
         networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
         autoRetry: computeAutoRetrySummary(installStateForProbe),
+        setupEngineLog: { file: setupEngineLogFile, error: setupEngineLogError },
+        dnsReconcile: dnsReconciler.readResult(),
         runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
       });
     if (!includeDiagnostics && !cacheUsable) {
@@ -1614,6 +1680,7 @@ const server = http.createServer(async (req, res) => {
         lastAction: 'Setup accepted; background workflow is starting',
         updatedAt: new Date().toISOString()
       }, null, 2)}\n`, { mode: 0o600 });
+      retryController.reset('manual-setup');
       queueSetupWorkflow();
 
       res.writeHead(303, { location: '/' });
@@ -1713,11 +1780,27 @@ const server = http.createServer(async (req, res) => {
       kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
       networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
       autoRetry: computeAutoRetrySummary(installStateForProbe),
+      setupEngineLog: { file: setupEngineLogFile, error: setupEngineLogError },
+      dnsReconcile: dnsReconciler.readResult(),
       runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
     });
     const failureItems = (snapshot.failures || [])
-      .map((failure) => `<li><strong>${escapeHtml(failure.category)}</strong>: ${escapeHtml(failure.suspectedCause)}<br/><em>Next:</em> ${escapeHtml(failure.suggestedNextStep)}<br/><em>Retry safe:</em> ${failure.retrySafe ? 'yes' : 'no'}${failure.logs?.length ? `<br/><em>Useful commands:</em><pre>${escapeHtml(failure.logs.join('\n'))}</pre>` : ''}</li>`)
+      .map((failure) => {
+        const retryLine = failure.autoRetry
+          ? `<br/><em>Retry:</em> ${failure.autoRetry.exhausted ? 'exhausted' : 'in progress'} — attempt ${failure.autoRetry.attempts} of ${failure.autoRetry.maxAttempts}`
+          : '';
+        const stepLine = failure.step ? `<br/><em>Failed step:</em> ${escapeHtml(failure.step)}` : '';
+        const detailLine = failure.details ? `<br/><em>Details:</em> ${escapeHtml(failure.details)}` : '';
+        const logLine = failure.logs?.length ? `<br/><em>Useful commands:</em><pre>${escapeHtml(failure.logs.join('\n'))}</pre>` : '';
+        return `<li><strong>${escapeHtml(failure.category)}</strong>: ${escapeHtml(failure.suspectedCause)}${stepLine}${detailLine}<br/><em>Next:</em> ${escapeHtml(failure.suggestedNextStep)}${retryLine}<br/><em>Retry safe:</em> ${failure.retrySafe ? 'yes' : 'no'}${logLine}</li>`;
+      })
       .join('');
+    const engineLogLine = snapshot.engineLog
+      ? `<p><strong>Setup engine log:</strong> <code>${escapeHtml(snapshot.engineLog.file || 'unknown')}</code>${snapshot.engineLog.error ? ` <span style="color:#b00">(unavailable: ${escapeHtml(snapshot.engineLog.error)})</span>` : ''}</p>`
+      : '';
+    const dnsReconcileLine = snapshot.dnsReconcile
+      ? `<p><strong>Cluster DNS reconcile:</strong> ${snapshot.dnsReconcile.ok ? 'active' : `failed — ${escapeHtml(snapshot.dnsReconcile.error || 'unknown error')}`}${snapshot.dnsReconcile.at ? ` <small>(${escapeHtml(snapshot.dnsReconcile.at)})</small>` : ''}${snapshot.dnsReconcile.logFile ? ` <small>log: <code>${escapeHtml(snapshot.dnsReconcile.logFile)}</code></small>` : ''}</p>`
+      : '';
     const installerOutput = snapshot.installState?.installerOutput
       ? `${renderPreBlock('Installer stdout', snapshot.installState.installerOutput.stdout || '')}${renderPreBlock('Installer stderr', snapshot.installState.installerOutput.stderr || '')}`
       : '<p>No installer output recorded for the current phase.</p>';
@@ -1735,6 +1818,8 @@ const server = http.createServer(async (req, res) => {
       <p><strong>Current phase:</strong> ${escapeHtml(snapshot.currentPhase || 'unknown')}</p>
       <p><strong>Status:</strong> ${escapeHtml(snapshot.status || 'unknown')}</p>
       <p><strong>Last action:</strong> ${escapeHtml(snapshot.installState?.lastAction || 'n/a')}</p>
+      ${engineLogLine}
+      ${dnsReconcileLine}
       <h2>Readiness</h2>
       <p>platform=${snapshot.tiers.platformReady} core=${snapshot.tiers.coreReady} bootstrap=${snapshot.tiers.bootstrapReady} login=${snapshot.tiers.loginReady} background=${snapshot.tiers.backgroundReady} fullyHealthy=${snapshot.tiers.fullyHealthy}</p>
       <h2>Failures</h2>
@@ -1814,6 +1899,7 @@ function shutdownControlPlane(signal) {
   process.stdout.write(`alga-appliance host service shutting down (${signal})\n`);
   podExecManager.shutdown();
   portForwardManager.shutdown();
+  dnsReconciler.shutdown();
   execWebSocketServer.close();
   server.close(() => process.exit(0));
   const forceExit = setTimeout(() => process.exit(0), 5_000);
@@ -1824,7 +1910,10 @@ process.once('SIGTERM', () => shutdownControlPlane('SIGTERM'));
 process.once('SIGINT', () => shutdownControlPlane('SIGINT'));
 
 if (!AUTO_RETRY_DISABLED) {
-  const reconcileTimer = setInterval(() => { reconcileBlockedSetup().catch(() => {}); }, RECONCILE_INTERVAL_MS);
+  const reconcileTimer = setInterval(() => { retryController.reconcile().catch(() => {}); }, RECONCILE_INTERVAL_MS);
   reconcileTimer.unref();
   process.stdout.write(`alga-appliance auto-retry reconciler enabled (every ${RECONCILE_INTERVAL_MS}ms, max ${AUTO_RETRY_MAX_ATTEMPTS} attempts)\n`);
 }
+
+dnsReconciler.start();
+
