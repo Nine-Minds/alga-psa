@@ -7,7 +7,6 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { ThreecxCardState } from '../../../../actions/integrations/telephonyActions';
 
 const mocks = vi.hoisted(() => ({
-  flagEnabled: true,
   cardState: null as ThreecxCardState | null,
   getCardState: vi.fn(),
   setProviderEnabled: vi.fn(async (): Promise<any> => ({ success: true })),
@@ -37,12 +36,6 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => ({ enabled: mocks.flagEnabled, loading: false, error: null }),
-}));
-
-vi.mock('@alga-psa/core/features', () => ({ RELEASE_V1_6_FEATURE_FLAG: 'release-v1-6-feature' }));
-
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
   return { useTranslation: () => ({ t }), useFormatters: () => ({ locale: 'en' }) };
@@ -70,7 +63,7 @@ vi.mock('../../../../actions/integrations/telephonyActions', () => ({
   listTelephonyResolutionTargets: mocks.listTargets,
 }));
 
-import { ThreecxProviderCard } from './ThreecxProviderCard';
+import { ThreecxIntegrationSettings } from './ThreecxIntegrationSettings';
 
 function cardState(over: Partial<ThreecxCardState> = {}): ThreecxCardState {
   return {
@@ -112,11 +105,10 @@ const connectedPbx = (): ThreecxCardState['pbx'] => ({
   capabilities: { xapi: true, callControl: true },
 });
 
-describe('ThreecxProviderCard', () => {
+describe('ThreecxIntegrationSettings', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    mocks.flagEnabled = true;
     mocks.getCardState.mockResolvedValue(cardState());
     mocks.setProviderEnabled.mockResolvedValue({ success: true });
     mocks.rotate.mockResolvedValue({ success: true, apiKey: 'rotated-full-key' });
@@ -125,27 +117,20 @@ describe('ThreecxProviderCard', () => {
 
   afterEach(() => cleanup());
 
-  it('T102: with the flag off the card renders nothing', () => {
-    mocks.flagEnabled = false;
-    const { container } = render(<ThreecxProviderCard />);
-    expect(container.querySelector('#telephony-provider-card-3cx')).toBeNull();
-    expect(mocks.getCardState).not.toHaveBeenCalled();
-  });
-
-  it('T103: with the flag on and the provider available the card renders', async () => {
-    render(<ThreecxProviderCard />);
+  it('T103: when the provider is available the panel renders', async () => {
+    render(<ThreecxIntegrationSettings />);
     expect(await screen.findByText('3CX')).toBeTruthy();
   });
 
-  it('T104/T069: when the server reports the provider unavailable (tier below Pro) the card is hidden', async () => {
+  it('T104/T069: when the server reports the provider unavailable (tier below Pro) the panel is hidden', async () => {
     mocks.getCardState.mockResolvedValue(cardState({ available: false, reason: 'tier_required' }));
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await waitFor(() => expect(mocks.getCardState).toHaveBeenCalled());
-    expect(container.querySelector('#telephony-provider-card-3cx')).toBeNull();
+    expect(container.querySelector('#threecx-integration-settings')).toBeNull();
   });
 
   it('T106: shows the endpoint base URL with the tenant slug and a copy button', async () => {
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() =>
       expect(container.querySelector('#threecx-endpoint-url')?.textContent).toContain('abcdef012345'),
@@ -154,7 +139,7 @@ describe('ThreecxProviderCard', () => {
   });
 
   it('T107: shows the key masked to its last four with a Rotate button', async () => {
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() =>
       expect(container.querySelector('#threecx-api-key-masked')?.textContent).toContain('wxyz'),
@@ -164,14 +149,14 @@ describe('ThreecxProviderCard', () => {
 
   it('T108: Enable calls setTelephonyProviderEnabled with provider 3cx', async () => {
     mocks.getCardState.mockResolvedValue(cardState({ status: 'disabled', keyLastFour: null }));
-    render(<ThreecxProviderCard />);
+    render(<ThreecxIntegrationSettings />);
     const enable = await screen.findByRole('button', { name: 'Enable' });
     fireEvent.click(enable);
     await waitFor(() => expect(mocks.setProviderEnabled).toHaveBeenCalledWith({ provider: '3cx', enabled: true }));
   });
 
   it('T109: Auto-create tickets calls setTelephonyAutoCreateTickets with provider 3cx', async () => {
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     const toggle = await waitFor(() => {
       const node = container.querySelector('#threecx-auto-ticket-toggle');
@@ -185,7 +170,7 @@ describe('ThreecxProviderCard', () => {
   it('T110: after Enable returns a full key the card shows it once with the warning', async () => {
     mocks.getCardState.mockResolvedValue(cardState({ status: 'disabled', keyLastFour: null }));
     mocks.setProviderEnabled.mockResolvedValue({ success: true, apiKey: 'brand-new-full-key' });
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     const enable = await screen.findByRole('button', { name: 'Enable' });
     fireEvent.click(enable);
     await waitFor(() => expect(container.querySelector('#threecx-full-key-value')?.textContent).toBe('brand-new-full-key'));
@@ -193,14 +178,14 @@ describe('ThreecxProviderCard', () => {
   });
 
   it('T111: after Rotate returns a new key the card shows it once', async () => {
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     const rotate = await screen.findByRole('button', { name: 'Rotate' });
     fireEvent.click(rotate);
     await waitFor(() => expect(container.querySelector('#threecx-full-key-value')?.textContent).toBe('rotated-full-key'));
   });
 
   it('T112: every interactive element in the source carries a kebab-case id', () => {
-    const source = fs.readFileSync(path.resolve(__dirname, 'ThreecxProviderCard.tsx'), 'utf8');
+    const source = fs.readFileSync(path.resolve(__dirname, 'ThreecxIntegrationSettings.tsx'), 'utf8');
     // Each <Button ...> and <Switch ...> opening tag declares a kebab-case id.
     const controls = source.match(/<(Button|Switch)\b[^>]*>/g) ?? [];
     expect(controls.length).toBeGreaterThan(0);
@@ -214,7 +199,7 @@ describe('ThreecxProviderCard', () => {
 
   it('T113: without canManage the controls are disabled and the permission message shows', async () => {
     mocks.getCardState.mockResolvedValue(cardState({ canManage: false }));
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-permission-message')).toBeTruthy());
     expect((screen.getByRole('button', { name: 'Disable' }) as HTMLButtonElement).disabled).toBe(true);
@@ -224,7 +209,7 @@ describe('ThreecxProviderCard', () => {
 
   it('T220: the PBX section saves credentials with a write-only secret and shows capability chips', async () => {
     mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx() }));
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-pbx-section')).toBeTruthy());
     expect(container.querySelector('#threecx-pbx-client-secret')).toBeNull();
@@ -240,7 +225,7 @@ describe('ThreecxProviderCard', () => {
   });
 
   it('T220: capability chips read not granted and the dependent sections show the hint when the PBX is not connected', async () => {
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-pbx-section')).toBeTruthy());
     expect(container.querySelector('#threecx-pbx-capability-xapi')?.textContent).toContain('not granted');
@@ -256,7 +241,7 @@ describe('ThreecxProviderCard', () => {
         { dn: '102', pbxDisplayName: 'Bob', pbxEmail: 'bob@example.com', userId: 'u1', mappedBy: 'auto' },
       ],
     }));
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-extensions-table')).toBeTruthy());
     expect(container.querySelector('#threecx-extension-row-101')?.className).toContain('badge-warning');
@@ -267,7 +252,7 @@ describe('ThreecxProviderCard', () => {
 
   it('T222/T223: call-history and phonebook controls call their actions', async () => {
     mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx() }));
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-cdr-toggle')).toBeTruthy());
     fireEvent.click(container.querySelector('#threecx-cdr-toggle')!);
@@ -288,7 +273,7 @@ describe('ThreecxProviderCard', () => {
         { kind: 'pending', pendingId: 'p1', firstName: 'No', lastName: 'Mail', number: '+15550001111', companyName: '', suggestedClientId: null, suggestedClientName: null },
       ],
     });
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-contact-queue-row-c1')).toBeTruthy());
     expect(container.querySelector('#threecx-contact-queue-row-p1')).toBeTruthy();
@@ -308,15 +293,15 @@ describe('ThreecxProviderCard', () => {
 
   it('T225: the template-stale hint shows when the uploaded version is older than the current one', async () => {
     mocks.getCardState.mockResolvedValue(cardState({ templateVersion: 1, currentTemplateVersion: 2 }));
-    const { container } = render(<ThreecxProviderCard />);
+    const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-template-stale')).toBeTruthy());
   });
 
   it('T114: the component source wraps every visible string in t()', () => {
-    const source = fs.readFileSync(path.resolve(__dirname, 'ThreecxProviderCard.tsx'), 'utf8');
+    const source = fs.readFileSync(path.resolve(__dirname, 'ThreecxIntegrationSettings.tsx'), 'utf8');
     // Only inspect the JSX return block, so TS generics above it are ignored.
-    const jsx = source.slice(source.indexOf('<Card className="relative overflow-hidden"'));
+    const jsx = source.slice(source.indexOf('<div className="space-y-6" id="threecx-integration-settings"'));
     // No JSX text node of bare English words between tags — all copy goes through t().
     const bareText = jsx.match(/>\s*[A-Za-z][A-Za-z ]{2,}\s*</g) ?? [];
     expect(bareText).toEqual([]);

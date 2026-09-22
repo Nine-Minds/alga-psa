@@ -3731,6 +3731,12 @@
         "disabled": "Deaktiviert",
         "notConfigured": "Nicht eingerichtet"
       },
+      "setup": {
+        "configure": "Integration konfigurieren",
+        "selectedAction": "Ausgewählt",
+        "currentIntegration": "Telefonie-Integration",
+        "changeIntegration": "Andere auswählen"
+      },
       "providers": {
         "teamsPhone": {
           "description": "Protokolliert Teams-Phone-Anrufe nach Gesprächsende als Interaktionen. Anrufverlauf, kein Live-Screenpop.",

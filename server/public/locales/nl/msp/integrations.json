@@ -3731,6 +3731,12 @@
         "disabled": "Uitgeschakeld",
         "notConfigured": "Niet ingesteld"
       },
+      "setup": {
+        "configure": "Integratie configureren",
+        "selectedAction": "Geselecteerd",
+        "currentIntegration": "Telefonie-integratie",
+        "changeIntegration": "Andere kiezen"
+      },
       "providers": {
         "teamsPhone": {
           "description": "Legt Teams Phone-gesprekken na afloop vast als interacties. Gespreksgeschiedenis, geen live schermmelding.",

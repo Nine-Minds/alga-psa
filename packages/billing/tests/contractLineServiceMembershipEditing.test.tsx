@@ -22,9 +22,8 @@ const actionMocks = vi.hoisted(() => ({
   upsertBucketConfiguration: vi.fn(),
 }));
 
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({getNextContractServiceBoundary: vi.fn(async () => '2026-10-01')}));
@@ -236,7 +235,6 @@ const renderContractLines = () => render(
 
 describe('contract line service membership editing', () => {
   beforeEach(() => {
-    releaseFlag.enabled = true;
     vi.clearAllMocks();
     actionMocks.applyContractLineServiceMembershipChanges.mockResolvedValue(true);
     actionMocks.checkContractHasInvoices.mockResolvedValue(false);

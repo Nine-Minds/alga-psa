@@ -3731,6 +3731,12 @@
         "disabled": "Disabled",
         "notConfigured": "Not configured"
       },
+      "setup": {
+        "configure": "Configure",
+        "selectedAction": "Selected",
+        "currentIntegration": "Telephony provider",
+        "changeIntegration": "Choose another"
+      },
       "providers": {
         "teamsPhone": {
           "description": "Journal Teams Phone calls as interactions once each call ends. Call history, not live screen pop.",

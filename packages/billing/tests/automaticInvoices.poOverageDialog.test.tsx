@@ -21,9 +21,8 @@ const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn();
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 const mockGenerateInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -316,7 +315,6 @@ describe('AutomaticInvoices PO overage dialog', () => {
   });
 
   beforeEach(() => {
-    releaseFlag.enabled = true;
     cleanup();
     mockGetAvailableRecurringDueWork.mockReset();
     mockGetPurchaseOrderOverageForSelectionInput.mockReset();
